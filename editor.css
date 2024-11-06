@@ -1,0 +1,106 @@
+html, body, .dx-theme-compact {
+    font-family: 'Assistant', sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background-color: white;
+}
+
+svg {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    
+}
+
+#menu-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 10;
+}
+
+#toolbar {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: calc(100% - 40px);
+    z-index: 10;
+}
+
+#bottom-toolbar {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: calc(100% - 40px);
+    z-index: 10;
+}
+
+#chat-popup {
+    display: flex;
+    justify-content: center;
+}
+
+.resize-handle {
+    fill: white;
+    stroke: rgb(165, 216, 255);
+    cursor: pointer;
+}
+
+.rotation-handle {
+    fill: white;
+    stroke: rgb(165, 216, 255);
+    cursor: pointer;
+    rx: 5px;
+    ry: 5px;
+}
+
+.bounding-box {
+    stroke: rgb(165, 216, 255);
+    stroke-dasharray: 1;
+    fill: transparent;
+    cursor: move;
+}
+
+svg.pan-available {
+    cursor: grab;
+}
+
+svg:active.pan-available {
+    cursor: grabbing;
+}
+
+.minimap-container {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 150px;
+    height: 150px;
+    border: 1px solid rgba(128, 128, 128, 0.8);
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+.minimap-container img {
+    width: 100%;
+    height: 100%;
+}
+
+@font-face {
+    font-family: 'LatinModernMath';
+    src: url('fonts/latinmodern-math.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+.dx-toolbar-after,
+.dx-toolbar-before,
+.dx-toolbar-center {
+    top: 0;
+    display: table;
+    height: 100%;
+    background-color: #fff;
+    border-radius: 4px;
+    padding-left: 10px;
+    padding-right: 10px;
+    box-shadow: rgba(0,0,0,.12) 0 2px 7.2px 0,rgba(0,0,0,.14) 0 8px 16px 0;
+}
