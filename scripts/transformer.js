@@ -13,7 +13,7 @@ class Transformer {
         this.boundingBox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         this.boundingBox.setAttribute("class", "bounding-box");
         this.svg.appendChild(this.boundingBox);
-        this.boundingBox.addEventListener('mousedown', (e) => this.onBoundingBoxDragStart(e));
+        this.boundingBox.addEventListener("mousedown", (e) => this.onBoundingBoxDragStart(e));
         this.updateBoundingBox();
     }
 
@@ -29,11 +29,11 @@ class Transformer {
     }
 
     createHandles() {
-        this.handles.push(this.createResizeHandle('top-left'));
-        this.handles.push(this.createResizeHandle('top-right'));
-        this.handles.push(this.createResizeHandle('bottom-left'));
-        this.handles.push(this.createResizeHandle('bottom-right'));
-        this.handles.push(this.createRotationHandle('rotate'));
+        this.handles.push(this.createResizeHandle("top-left"));
+        this.handles.push(this.createResizeHandle("top-right"));
+        this.handles.push(this.createResizeHandle("bottom-left"));
+        this.handles.push(this.createResizeHandle("bottom-right"));
+        this.handles.push(this.createRotationHandle("rotate"));
         this.updateHandles();
     }
 
@@ -42,7 +42,7 @@ class Transformer {
         handle.setAttribute("class", "handle resize-handle");
         handle.setAttribute("data-type", type);
         this.svg.appendChild(handle);
-        handle.addEventListener('mousedown', (e) => this.onHandleDragStart(e, type));
+        handle.addEventListener("mousedown", (e) => this.onHandleDragStart(e, type));
         return handle;
     }
 
@@ -51,7 +51,7 @@ class Transformer {
         handle.setAttribute("class", "handle rotation-handle");
         handle.setAttribute("data-type", type);
         this.svg.appendChild(handle);
-        handle.addEventListener('mousedown', (e) => this.onHandleDragStart(e, type));
+        handle.addEventListener("mousedown", (e) => this.onHandleDragStart(e, type));
         return handle;
     }
 
@@ -85,24 +85,24 @@ class Transformer {
         this.draggingType = type;
         this.startX = event.clientX;
         this.startY = event.clientY;
-        document.addEventListener('mousemove', this.onHandleDrag);
-        document.addEventListener('mouseup', this.onHandleDragEnd);
+        document.addEventListener("mousemove", this.onHandleDrag);
+        document.addEventListener("mouseup", this.onHandleDragEnd);
     }
 
     onHandleDrag = (event) => {
         const dx = event.clientX - this.startX;
         const dy = event.clientY - this.startY;
-        if (this.draggingType.startsWith('top') || this.draggingType.startsWith('bottom')) {
-            const newHeight = this.shape.height + (this.draggingType.includes('bottom') ? dy : -dy);
+        if (this.draggingType.startsWith("top") || this.draggingType.startsWith("bottom")) {
+            const newHeight = this.shape.height + (this.draggingType.includes("bottom") ? dy : -dy);
             if (newHeight > 0) this.shape.resize(this.shape.width, newHeight);
-            if (this.draggingType.includes('top')) this.shape.move(this.shape.x, this.shape.y + dy);
+            if (this.draggingType.includes("top")) this.shape.move(this.shape.x, this.shape.y + dy);
         }
-        if (this.draggingType.includes('left') || this.draggingType.includes('right')) {
-            const newWidth = this.shape.width + (this.draggingType.includes('right') ? dx : -dx);
+        if (this.draggingType.includes("left") || this.draggingType.includes("right")) {
+            const newWidth = this.shape.width + (this.draggingType.includes("right") ? dx : -dx);
             if (newWidth > 0) this.shape.resize(newWidth, this.shape.height);
-            if (this.draggingType.includes('left')) this.shape.move(this.shape.x + dx, this.shape.y);
+            if (this.draggingType.includes("left")) this.shape.move(this.shape.x + dx, this.shape.y);
         }
-        if (this.draggingType === 'rotate') {
+        if (this.draggingType === "rotate") {
             const angle = Math.atan2(event.clientY - (this.shape.y + this.shape.height / 2), event.clientX - (this.shape.x + this.shape.width / 2)) * 180 / Math.PI;
             this.shape.rotate(angle);
         }
@@ -112,19 +112,19 @@ class Transformer {
     }
 
     onHandleDragEnd = () => {
-        document.removeEventListener('mousemove', this.onHandleDrag);
-        document.removeEventListener('mouseup', this.onHandleDragEnd);
+        document.removeEventListener("mousemove", this.onHandleDrag);
+        document.removeEventListener("mouseup", this.onHandleDragEnd);
     }
 
     onBoundingBoxDragStart = (event) => {
-        if (event.target.classList.contains('handle')) 
+        if (event.target.classList.contains("handle")) 
             return;
         event.preventDefault();
         this.dragging = true;
         this.startX = event.clientX;
         this.startY = event.clientY;
-        document.addEventListener('mousemove', this.onBoundingBoxDrag);
-        document.addEventListener('mouseup', this.onBoundingBoxDragEnd);
+        document.addEventListener("mousemove", this.onBoundingBoxDrag);
+        document.addEventListener("mouseup", this.onBoundingBoxDragEnd);
     }
 
     onBoundingBoxDrag = (event) => {
@@ -140,8 +140,8 @@ class Transformer {
 
     onBoundingBoxDragEnd = () => {
         this.dragging = false;
-        document.removeEventListener('mousemove', this.onBoundingBoxDrag);
-        document.removeEventListener('mouseup', this.onBoundingBoxDragEnd);
+        document.removeEventListener("mousemove", this.onBoundingBoxDrag);
+        document.removeEventListener("mouseup", this.onBoundingBoxDragEnd);
     }
 
     hide() {

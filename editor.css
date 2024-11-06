@@ -43,20 +43,20 @@ svg {
 
 .resize-handle {
     fill: white;
-    stroke: rgb(165, 216, 255);
+    stroke: #4039d7;
     cursor: pointer;
 }
 
 .rotation-handle {
     fill: white;
-    stroke: rgb(165, 216, 255);
+    stroke: #4039d7;
     cursor: pointer;
     rx: 5px;
     ry: 5px;
 }
 
 .bounding-box {
-    stroke: rgb(165, 216, 255);
+    stroke: #4039d7;
     stroke-dasharray: 1;
     fill: transparent;
     cursor: move;

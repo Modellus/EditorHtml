@@ -9,17 +9,17 @@ class SVG {
         this.viewBox.y = this.viewBox.y || 0;
         this.viewBox.width = this.viewBox.width || this.svg.clientWidth;
         this.viewBox.height = this.viewBox.height || this.svg.clientHeight;
-        this.svg.addEventListener('mousedown', this.onMouseDown.bind(this));
-        this.svg.addEventListener('mousemove', this.onMouseMove.bind(this));
-        this.svg.addEventListener('mouseup', this.onMouseUp.bind(this));
-        this.svg.addEventListener('mouseleave', this.onMouseLeave.bind(this));
-        this.svg.addEventListener('wheel', this.onWheel.bind(this));
-        this.svg.addEventListener('mouseover', this.onMouseOver.bind(this));
-        this.svg.addEventListener('mouseout', this.onMouseOut.bind(this));
+        this.svg.addEventListener("mousedown", this.onMouseDown.bind(this));
+        this.svg.addEventListener("mousemove", this.onMouseMove.bind(this));
+        this.svg.addEventListener("mouseup", this.onMouseUp.bind(this));
+        this.svg.addEventListener("mouseleave", this.onMouseLeave.bind(this));
+        this.svg.addEventListener("wheel", this.onWheel.bind(this));
+        this.svg.addEventListener("mouseover", this.onMouseOver.bind(this));
+        this.svg.addEventListener("mouseout", this.onMouseOut.bind(this));
     }
 
     dispatchPanEvent() {
-        const panEvent = new CustomEvent('pan', {
+        const panEvent = new CustomEvent("pan", {
             detail: {
                 x: this.viewBox.x,
                 y: this.viewBox.y,
@@ -31,7 +31,7 @@ class SVG {
     }
 
     dispatchZoomEvent() {
-        const zoomEvent = new CustomEvent('zoom', {
+        const zoomEvent = new CustomEvent("zoom", {
             detail: {
                 x: this.viewBox.x,
                 y: this.viewBox.y,
@@ -47,7 +47,7 @@ class SVG {
             this.isPanning = true;
             this.startX = event.clientX;
             this.startY = event.clientY;
-            this.svg.classList.add('pan-available');
+            this.svg.classList.add("pan-available");
         }
     }
 
@@ -62,18 +62,18 @@ class SVG {
         this.viewBox.y -= dy * scaleY;        
         this.startX = event.clientX;
         this.startY = event.clientY;
-        this.svg.setAttribute('viewBox', `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
+        this.svg.setAttribute("viewBox", `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
         this.dispatchPanEvent();
     }
 
     onMouseUp() {
         this.isPanning = false;
-        this.svg.classList.remove('pan-available');
+        this.svg.classList.remove("pan-available");
     }
 
     onMouseLeave() {
         this.isPanning = false;
-        this.svg.classList.remove('pan-available');
+        this.svg.classList.remove("pan-available");
     }
 
     onWheel(event) {
@@ -91,18 +91,18 @@ class SVG {
         this.viewBox.y += (this.viewBox.height * (1 - zoomFactor)) * scaleY;
         this.viewBox.width *= zoomFactor;
         this.viewBox.height *= zoomFactor;
-        this.svg.setAttribute('viewBox', `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
+        this.svg.setAttribute("viewBox", `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
         this.dispatchZoomEvent();
     }
 
     onMouseOver(event) {
         if (event.target === this.svg)
-            this.svg.classList.add('pan-available');
+            this.svg.classList.add("pan-available");
     }
 
     onMouseOut(event) {
         if (event.target === this.svg)
-            this.svg.classList.remove('pan-available');
+            this.svg.classList.remove("pan-available");
     }
 
     getPan() {

@@ -131,7 +131,8 @@ function createTopToolbar() {
                         circle.setAttribute('r', radius);
                         circle.setAttribute('fill', color);
                         svg.svg.appendChild(circle);
-                        new Shape(svg, circle);
+                        var data = { name: "particle", backgroundColor: color, foreGroundColor: color, xVariable: "", yVariable: "" };
+                        new Shape(svg, circle, data);
                     }
                 }
             },
@@ -311,13 +312,102 @@ function createChat() {
     });
 }
 
+function createShapePopup() {
+    const pastelColors = [
+        { color: "#FFB3BA", name: "Light Pink" },
+        { color: "#FFDFBA", name: "Peach" },
+        { color: "#FFFFBA", name: "Light Yellow" },
+        { color: "#BAFFC9", name: "Mint" },
+        { color: "#BAE1FF", name: "Light Blue" }
+    ];
+    $("#shape-popup").dxPopup({
+        width: 300,
+        height: 400,
+        shading: false,
+        showTitle: false,
+        dragEnabled: false,
+        hideOnOutsideClick: false,
+        animation: null,
+        contentTemplate: function () {
+            return $("<div id='shape-form'></div>").dxForm({
+                colCount: 1,
+                items: [
+                  {
+                    itemType: "group",
+                    items: [
+                      {
+                        dataField: "name",
+                        label: { text: "Name" },
+                        editorType: "dxTextBox"
+                      },
+                      {
+                        itemType: "group",
+                        label: { text: "Background Color" },
+                        colCount: 5,
+                        items: pastelColors.map(color => ({
+                          editorType: "dxButton",
+                          editorOptions: {
+                            text: "",
+                            elementAttr: { style: `background-color: ${color.color}` },
+                            onClick: () => {
+                              shapeData.backgroundColor = color.color;
+                            }
+                          }
+                        }))
+                      },
+                      {
+                        dataField: "foregroundColor",
+                        label: { text: "Foreground Color" },
+                        editorType: "dxColorBox"
+                      },
+                      {
+                        dataField: "xVariable",
+                        label: { text: "X Variable" },
+                        editorType: "dxTextBox"
+                      },
+                      {
+                        dataField: "yVariable",
+                        label: { text: "Y Variable" },
+                        editorType: "dxTextBox"
+                      }
+                    ]
+                  }
+                ]
+              });
+        },
+        target: "#toolbar",
+        position: {
+            my: "bottom right",
+            at: "top right",
+            of: "#chat-button",
+            offset: "0 -20"
+        }
+    });
+}
+
+function onSelected(e) {
+    debugger
+    var shapePopup = $("#shape-popup").dxPopup("instance");
+    shapePopup.show();
+    var shapeForm = $("#shape-form").dxForm("instance");
+    shapeForm.updateData(e.detail.shape.data);
+}
+
+function onDeselected(e) {
+    var shapePopup = $("#shape-popup").dxPopup("instance");
+    shapePopup.hide();
+}
+
 DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQxCn0=.RwzuszxP0EZpb1mjikhmz6G0g5QUrgDILiiRTePC1SeHd3o9co5aGr7mMPuysN6kKb16+UZ0uwtnUXeiOwJcvFTd9wDPT8UqhPXr3uBXmEonDisUwgOBZrfrbZc1satfHazSYg=="});
 const system = new Modellus.System("t");
 const parser = new Modellus.Parser(system);
-var svg = new SVG(document.getElementById("svgCanvas"));
-new Selection(document.getElementById("svgCanvas"));
+var svg = new SVG(document.getElementById("svg"));
+new Selection(document.getElementById("svg"));
 new MiniMap(svg, document.getElementById('minimap-image'), document.getElementById('minimap-viewport'));
 createContextMenu();
 createTopToolbar();
 createBottomToolbar();
 createChat();
+createShapePopup();
+svg.svg.addEventListener("selected", (e) => onSelected(e));
+svg.svg.addEventListener("deselected", (e) => onDeselected(e));

@@ -1,5 +1,5 @@
 class Shape {
-    constructor(svg, element) {
+    constructor(svg, element, data) {
         this.svg = svg;
         var box = element.getBoundingClientRect();
         this.x = box.x;
@@ -9,6 +9,7 @@ class Shape {
         this.rotation = 0;
         this.element = element;
         this.isCircle = element.tagName.toLowerCase() === 'circle';
+        this.data = data;
         shapes.add(this, element);
         this.dispatchAddShapeEvent();
     }

@@ -35,7 +35,14 @@ class MiniMap {
 
     createMinimap() {
         const svgString = new XMLSerializer().serializeToString(this.svg.svg);
-        const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+        const parser = new DOMParser();
+        const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+        const handles = svgDoc.querySelectorAll('.handle');
+        handles.forEach(handle => handle.parentNode.removeChild(handle));
+        const boundingBoxes = svgDoc.querySelectorAll('.bounding-box');
+        boundingBoxes.forEach(boundingBox => boundingBox.parentNode.removeChild(boundingBox));
+        const svgStringNoHandles = new XMLSerializer().serializeToString(svgDoc);
+        const svgBlob = new Blob([svgStringNoHandles], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(svgBlob);
         this.minimapImage.src = url;
     }
