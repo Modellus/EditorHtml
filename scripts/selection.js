@@ -19,6 +19,7 @@ class Selection {
     dispatchDeselectedEvent() {
         const deselectedEvent = new CustomEvent('deselected', {
             detail: {
+                shape: this.selectedShape
             }
         });
         this.svg.dispatchEvent(deselectedEvent);
@@ -35,9 +36,9 @@ class Selection {
     deselect() {
         if (this.transformer)
             this.transformer.hide();
+        this.dispatchDeselectedEvent();
         this.selectedShape = null;
         this.transformer = null;
-        this.dispatchDeselectedEvent();
     }
 
     onClickOutside(event) {

@@ -72,7 +72,7 @@ function createContextMenu() {
             my: "top left",
             at: "bottom left",
             of: "#menu-button",
-            offset: "0 40"
+            offset: "0 10"
         }
     });
 }
@@ -313,15 +313,22 @@ function createChat() {
 }
 
 function createShapePopup() {
-    const pastelColors = [
-        { color: "#FFB3BA", name: "Light Pink" },
-        { color: "#FFDFBA", name: "Peach" },
-        { color: "#FFFFBA", name: "Light Yellow" },
-        { color: "#BAFFC9", name: "Mint" },
-        { color: "#BAE1FF", name: "Light Blue" }
+    const strokeColors = [
+        { color: "#1e1e1e"},
+        { color: "#ffc9c9" },
+        { color: "#b1f2ba" },
+        { color: "#a4d8ff" },
+        { color: "#ffec99" }
+    ];
+    const backgroundColors = [
+        { color: "#ebebeb"},
+        { color: "#e03130" },
+        { color: "#2f9e44" },
+        { color: "#1871c2" },
+        { color: "#f08c02" }
     ];
     $("#shape-popup").dxPopup({
-        width: 300,
+        width: 200,
         height: 400,
         shading: false,
         showTitle: false,
@@ -332,69 +339,96 @@ function createShapePopup() {
             return $("<div id='shape-form'></div>").dxForm({
                 colCount: 1,
                 items: [
-                  {
-                    itemType: "group",
-                    items: [
                       {
                         dataField: "name",
-                        label: { text: "Name" },
-                        editorType: "dxTextBox"
+                        label: { text: "Name", visible: false },
+                        editorType: "dxTextBox",
+                        editorOptions: {
+                            stylingMode: "filled"
+                        }
                       },
                       {
-                        itemType: "group",
-                        label: { text: "Background Color" },
-                        colCount: 5,
-                        items: pastelColors.map(color => ({
-                          editorType: "dxButton",
-                          editorOptions: {
-                            text: "",
-                            elementAttr: { style: `background-color: ${color.color}` },
-                            onClick: () => {
-                              shapeData.backgroundColor = color.color;
-                            }
-                          }
-                        }))
+                        dataField: "backgroundColor",
+                        label: { text: "Background color" },
+                        editorType: "dxButtonGroup",
+                        editorOptions: {
+                            onContentReady: function(e) {
+                                e.component.option('items').forEach((item, index) => {
+                                    const buttonElement = e.element.find(`.dx-button:eq(${index})`);
+                                    buttonElement.find(".dx-icon").css("color", item.color);
+                                });
+                            },
+                            items: backgroundColors.map(c => ({
+                                icon: "fa-solid fa-square",
+                                color: c.color
+                            })),
+                            keyExpr: "color",
+                            stylingMode: "text"
+                        }
                       },
                       {
                         dataField: "foregroundColor",
-                        label: { text: "Foreground Color" },
-                        editorType: "dxColorBox"
+                        label: { text: "Foreground color" },
+                        editorType: "dxButtonGroup",
+                        editorOptions: {
+                            onContentReady: function(e) {
+                                e.component.option('items').forEach((item, index) => {
+                                    const buttonElement = e.element.find(`.dx-button:eq(${index})`);
+                                    buttonElement.find(".dx-icon").css("color", item.color);
+                                });
+                            },
+                            items: strokeColors.map(c => ({
+                                icon: "fa-solid fa-square",
+                                color: c.color
+                            })),
+                            keyExpr: "color",
+                            stylingMode: "text"
+                        }
                       },
                       {
                         dataField: "xVariable",
                         label: { text: "X Variable" },
-                        editorType: "dxTextBox"
+                        editorType: "dxTextBox",
+                        editorOptions: {
+                            stylingMode: "filled"
+                        }
                       },
                       {
                         dataField: "yVariable",
                         label: { text: "Y Variable" },
-                        editorType: "dxTextBox"
+                        editorType: "dxTextBox",
+                        editorOptions: {
+                            stylingMode: "filled"
+                        }
                       }
                     ]
-                  }
-                ]
               });
         },
-        target: "#toolbar",
+        target: "#svg",
         position: {
-            my: "bottom right",
-            at: "top right",
-            of: "#chat-button",
-            offset: "0 -20"
+            my: "left center",
+            at: "left center",
+            of: "#svg",
+            offset: "20, 0"
         }
     });
 }
 
 function onSelected(e) {
-    debugger
     var shapePopup = $("#shape-popup").dxPopup("instance");
     shapePopup.show();
     var shapeForm = $("#shape-form").dxForm("instance");
+    shapeForm.formData = e.detail.shape.data;
     shapeForm.updateData(e.detail.shape.data);
 }
 
 function onDeselected(e) {
     var shapePopup = $("#shape-popup").dxPopup("instance");
+    var shapeForm = $("#shape-form").dxForm("instance");
+    if (shapeForm != undefined) {
+        var data = shapeForm.option("formData");
+        Object.assign(e.detail.shape.data, data);
+    }
     shapePopup.hide();
 }
 
