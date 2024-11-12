@@ -36,7 +36,8 @@ class Selection {
     deselect() {
         if (this.transformer)
             this.transformer.hide();
-        this.dispatchDeselectedEvent();
+        if (this.selectedShape != null)
+            this.dispatchDeselectedEvent();
         this.selectedShape = null;
         this.transformer = null;
     }
