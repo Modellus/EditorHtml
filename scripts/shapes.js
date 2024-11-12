@@ -18,6 +18,10 @@ class Shapes {
     getShape(id) {
         return this.shapes.get(id);
     }
+
+    remove(shape) {
+        this.shapes.delete(shape.element.id);
+    }
 }
 
 const shapes = new Shapes();

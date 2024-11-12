@@ -1,14 +1,3 @@
-function getRandomPastelColor() {
-    const r = Math.floor((Math.random() * 127) + 127);
-    const g = Math.floor((Math.random() * 127) + 127);
-    const b = Math.floor((Math.random() * 127) + 127);
-    return `rgb(${r},${g},${b})`;
-}
-
-function getRandomRadius(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
 function createShape(width, height) {
     const svgRect = svg.svg.getBoundingClientRect();
     const divRect = svg.svg.parentNode.getBoundingClientRect();
@@ -29,6 +18,18 @@ function createShape(width, height) {
     svg.svg.appendChild(foreignObject);
     new Shape(svg, foreignObject);
     return $div;
+}
+
+function addBody() {
+    commands.execute(new AddBodyCommand(svg));
+}
+
+function undo() {
+    commands.undo();
+}
+
+function redo() {
+    commands.redo();
 }
 
 function createContextMenu() {
@@ -122,18 +123,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-circle",
-                    onClick: function() {
-                        const radius = getRandomRadius(50, 150);
-                        const color = getRandomPastelColor();
-                        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                        circle.setAttribute('cx', svg.svg.clientWidth / 2);
-                        circle.setAttribute('cy', svg.svg.clientHeight / 2);
-                        circle.setAttribute('r', radius);
-                        circle.setAttribute('fill', color);
-                        svg.svg.appendChild(circle);
-                        var data = { name: "particle", backgroundColor: color, foreGroundColor: color, xVariable: "", yVariable: "" };
-                        new Shape(svg, circle, data);
-                    }
+                    onClick: _ => addBody()
                 }
             },
             {
@@ -182,12 +172,41 @@ function createBottomToolbar() {
             {
                 widget: "dxButton",
                 options: {
-                    icon: "fa-light fa-play",
-                    onClick: function () {
-                        console.log("Play clicked");
-                    }
+                    icon: "fa-light fa-circle-minus"
                 },
-                location: "center"
+                location: "before"
+            },
+            {
+                widget: "dxButton",
+                options: {
+                    stylingMode: "text",
+                    text: "90 %",
+                    onClick: e => e.component.option("text", "100 %")
+                },
+                location: "before"
+            },
+            {
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-circle-plus"
+                },
+                location: "before"
+            },
+            {
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-rotate-left",
+                    onClick: _ => undo()
+                },
+                location: "before"
+            },
+            {
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-rotate-right",
+                    onClick: _ => redo()
+                },
+                location: "before"
             },
             {
                 widget: "dxButton",
