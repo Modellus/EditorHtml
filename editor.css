@@ -45,6 +45,8 @@ svg {
     fill: white;
     stroke: #4039d7;
     cursor: pointer;
+    rx: 1px;
+    ry: 1px;
 }
 
 .rotation-handle {
