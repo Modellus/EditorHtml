@@ -25,7 +25,7 @@ class AddBodyCommand extends Command {
         circle.setAttribute('r', radius);
         circle.setAttribute('fill', color);
         this.svg.svg.appendChild(circle);
-        var data = { name: "particle", backgroundColor: color, foreGroundColor: color, xVariable: "", yVariable: "" };
+        var data = { name: "Particle", backgroundColor: color, foreGroundColor: color, xVariable: "", yVariable: "" };
         this.body = new Shape(this.svg, circle, data);
     }
     

@@ -24,6 +24,10 @@ function addBody() {
     commands.execute(new AddBodyCommand(svg));
 }
 
+function addExpresssion() {
+    commands.execute(new AddExpressionCommand(svg));
+}
+
 function undo() {
     commands.undo();
 }
@@ -103,19 +107,7 @@ function createTopToolbar() {
                         style: "font-family: cursive; font-size: 16px"
                     },
                     text: "X",
-                    onClick: function() {
-                        $expression = createShape(200, 50);
-                        $expression.addClass("mq-editable-field mq-math-mode");
-                        var MQ = MathQuill.getInterface(2);
-                        var mathField = MQ.MathField($expression[0], {
-                            spaceBehavesLikeTab: true,
-                            handlers: {
-                                edit: function() { 
-                                    
-                                }
-                            }
-                        });
-                    }
+                    onClick: _ => addExpresssion()
                 }
             },
             {
