@@ -17,6 +17,7 @@ class AddBodyCommand extends Command {
     }    
     
     execute() {
+        debugger
         const radius = this.getRandomRadius(50, 150);
         const color = this.getRandomPastelColor();
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');

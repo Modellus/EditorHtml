@@ -345,6 +345,7 @@ function createShapePopup() {
         showTitle: false,
         dragEnabled: false,
         hideOnOutsideClick: false,
+        focusStateEnabled: false,
         animation: null,
         contentTemplate: function () {
             return $("<div id='shape-form'></div>").dxForm({
