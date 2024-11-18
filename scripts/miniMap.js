@@ -1,12 +1,12 @@
 class MiniMap {
-    constructor(svg, minimapImage, minimapViewPort) {
-        this.svg = svg;
+    constructor(board, minimapImage, minimapViewPort) {
+        this.board = board;
         this.minimapImage = minimapImage;
         this.minimapViewPort = minimapViewPort;
         this.minimapScaleFactor = 3;
-        this.svg.svg.addEventListener("pan", (e) => this.onPan(e));
-        this.svg.svg.addEventListener("zoom", (e) => this.onZoom(e));
-        this.svg.svg.addEventListener("addShape", (e) => this.onAddShape(e));
+        this.board.svg.addEventListener("pan", (e) => this.onPan(e));
+        this.board.svg.addEventListener("zoom", (e) => this.onZoom(e));
+        this.board.svg.addEventListener("addShape", (e) => this.onAddShape(e));
         this.createMinimap();
     }
 
@@ -23,8 +23,8 @@ class MiniMap {
     }
 
     updateMinimapViewport() {
-        const mainRect = svgContainer.getBoundingClientRect();
-        const viewBox = this.svg.svg.viewBox.baseVal;
+        const mainRect = this.board.svg.parentNode.getBoundingClientRect();
+        const viewBox = this.board.svg.viewBox.baseVal;
         const viewportWidth = mainRect.width / zoom / this.minimapScaleFactor;
         const viewportHeight = mainRect.height / zoom / this.minimapScaleFactor;
         this.minimapViewport.style.width = viewportWidth + 'px';
@@ -34,7 +34,7 @@ class MiniMap {
     }
 
     createMinimap() {
-        const svgString = new XMLSerializer().serializeToString(this.svg.svg);
+        const svgString = new XMLSerializer().serializeToString(this.board.svg);
         const parser = new DOMParser();
         const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
         const handles = svgDoc.querySelectorAll('.handle');

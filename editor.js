@@ -1,12 +1,27 @@
+const strokeColors = [
+    { color: "#1e1e1e"},
+    { color: "#ffc9c9" },
+    { color: "#b1f2ba" },
+    { color: "#a4d8ff" },
+    { color: "#ffec99" }
+];
+const backgroundColors = [
+    { color: "#ebebeb"},
+    { color: "#e03130" },
+    { color: "#2f9e44" },
+    { color: "#1871c2" },
+    { color: "#f08c02" }
+];
+
 function createShape(width, height) {
-    const svgRect = svg.svg.getBoundingClientRect();
-    const divRect = svg.svg.parentNode.getBoundingClientRect();
+    const svgRect = board.svg.getBoundingClientRect();
+    const divRect = board.svg.parentNode.getBoundingClientRect();
     const divCenterX = divRect.left + divRect.width / 2;
     const divCenterY = divRect.top + divRect.height / 2;
-    const svgPoint = svg.svg.createSVGPoint();
+    const svgPoint = board.svg.createSVGPoint();
     svgPoint.x = divCenterX;
     svgPoint.y = divCenterY;
-    const svgCTM = svg.svg.getScreenCTM().inverse();
+    const svgCTM = board.svg.getScreenCTM().inverse();
     const svgCoords = svgPoint.matrixTransform(svgCTM);
     const foreignObject = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
     foreignObject.setAttribute("cx", svgCoords.x);
@@ -15,17 +30,19 @@ function createShape(width, height) {
     foreignObject.setAttribute("height", height);
     const $div = $("<div>").appendTo(foreignObject);
     $div.css({ "width": "100%", "height": "100%" });
-    svg.svg.appendChild(foreignObject);
-    new Shape(svg, foreignObject);
+    board.svg.appendChild(foreignObject);
+    new Shape(board, foreignObject);
     return $div;
 }
 
 function addBody() {
-    commands.execute(new AddBodyCommand(svg));
+    var center = this.board.getClientCenter();
+    var shape = board.shapes.createShape("Body", { name: "Body", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0, color: backgroundColors[1].color });
+    commands.execute(new AddShapeCommand(board, shape));
 }
 
 function addExpresssion() {
-    commands.execute(new AddExpressionCommand(svg));
+    commands.execute(new AddExpressionCommand(board));
 }
 
 function undo() {
@@ -324,20 +341,6 @@ function createChat() {
 }
 
 function createShapePopup() {
-    const strokeColors = [
-        { color: "#1e1e1e"},
-        { color: "#ffc9c9" },
-        { color: "#b1f2ba" },
-        { color: "#a4d8ff" },
-        { color: "#ffec99" }
-    ];
-    const backgroundColors = [
-        { color: "#ebebeb"},
-        { color: "#e03130" },
-        { color: "#2f9e44" },
-        { color: "#1871c2" },
-        { color: "#f08c02" }
-    ];
     $("#shape-popup").dxPopup({
         width: 200,
         height: 400,
@@ -350,6 +353,7 @@ function createShapePopup() {
         contentTemplate: function () {
             return $("<div id='shape-form'></div>").dxForm({
                 colCount: 1,
+                onFieldDataChanged: e => onFieldDataChanged(e),
                 items: [
                       {
                         dataField: "name",
@@ -426,34 +430,36 @@ function createShapePopup() {
     });
 }
 
+function onFieldDataChanged(e) {
+    var properties = e.component.option("formData");
+    Object.assign(selection.selectedShape.properties, properties);
+}
+
 function onSelected(e) {
     var shapePopup = $("#shape-popup").dxPopup("instance");
     shapePopup.show();
     var shapeForm = $("#shape-form").dxForm("instance");
-    shapeForm.formData = e.detail.shape.data;
-    shapeForm.updateData(e.detail.shape.data);
+    shapeForm.formData = e.detail.shape.properties;
+    shapeForm.updateData(e.detail.shape.properties);
 }
 
 function onDeselected(e) {
     var shapePopup = $("#shape-popup").dxPopup("instance");
-    var shapeForm = $("#shape-form").dxForm("instance");
-    if (shapeForm != undefined) {
-        var data = shapeForm.option("formData");
-        Object.assign(e.detail.shape.data, data);
-    }
     shapePopup.hide();
 }
+
 
 DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQxCn0=.RwzuszxP0EZpb1mjikhmz6G0g5QUrgDILiiRTePC1SeHd3o9co5aGr7mMPuysN6kKb16+UZ0uwtnUXeiOwJcvFTd9wDPT8UqhPXr3uBXmEonDisUwgOBZrfrbZc1satfHazSYg=="});
 const system = new Modellus.System("t");
 const parser = new Modellus.Parser(system);
-var svg = new SVG(document.getElementById("svg"));
-new Selection(document.getElementById("svg"));
-new MiniMap(svg, document.getElementById('minimap-image'), document.getElementById('minimap-viewport'));
+var board = new Board(document.getElementById("svg"));
+var selection = new Selection(board);
+new MiniMap(board, document.getElementById('minimap-image'), document.getElementById('minimap-viewport'));
 createContextMenu();
 createTopToolbar();
 createBottomToolbar();
 createChat();
 createShapePopup();
-svg.svg.addEventListener("selected", (e) => onSelected(e));
-svg.svg.addEventListener("deselected", (e) => onDeselected(e));
+board.svg.addEventListener("selected", (e) => onSelected(e));
+board.svg.addEventListener("deselected", (e) => onDeselected(e));
+board.shapes.registerShape(BodyShape);

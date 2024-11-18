@@ -1,10 +1,10 @@
 class Selection {
-    constructor(svg) {
-        this.svg = svg;
+    constructor(board) {
+        this.board = board;
         this.selectedShape = null;
         this.transformer = null;
-        this.svg.addEventListener("mousedown", (e) => this.onClickOutside(e));
-        this.svg.addEventListener("mousedown", (e) => this.onSelectShape(e));
+        this.board.svg.addEventListener("mousedown", (e) => this.onClickOutside(e));
+        this.board.svg.addEventListener("mousedown", (e) => this.onSelectShape(e));
     }
 
     dispatchSelectedEvent() {
@@ -13,7 +13,7 @@ class Selection {
                 shape: this.selectedShape
             }
         });
-        this.svg.dispatchEvent(selectedEvent);
+        this.board.svg.dispatchEvent(selectedEvent);
     }
 
     dispatchDeselectedEvent() {
@@ -22,13 +22,13 @@ class Selection {
                 shape: this.selectedShape
             }
         });
-        this.svg.dispatchEvent(deselectedEvent);
+        this.board.svg.dispatchEvent(deselectedEvent);
     }
 
     select(shape) {
         this.deselect();
         this.selectedShape = shape;
-        this.transformer = new Transformer(this.svg, shape);
+        this.transformer = new Transformer(this.board, shape);
         this.transformer.show();
         this.dispatchSelectedEvent();
     }
@@ -57,7 +57,7 @@ class Selection {
     findShape(element) {
         var current = element;
         while(current != null) {
-            var shape = shapes.getShape(current.id);
+            var shape = board.shapes.getShape(current.id);
             if (shape != undefined)
                 return shape;
             current = current.parentElement;

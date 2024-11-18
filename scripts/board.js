@@ -1,5 +1,6 @@
-class SVG {
+class Board {
     constructor(svgElement) {
+        this.shapes = new Shapes();
         this.svg = svgElement;
         this.isPanning = false;
         this.startX = 0;
@@ -16,6 +17,38 @@ class SVG {
         this.svg.addEventListener("wheel", this.onWheel.bind(this));
         this.svg.addEventListener("mouseover", this.onMouseOver.bind(this));
         this.svg.addEventListener("mouseout", this.onMouseOut.bind(this));
+    }
+
+    dispatchAddShapeEvent(shape) {
+        const addShapeEvent = new CustomEvent("addShape", {
+            detail: {
+                shape: shape
+            }
+        });
+        this.svg.dispatchEvent(addShapeEvent);
+    }
+
+    addShape(shape) {
+        this.svg.appendChild(shape.element);
+        this.shapes.addShape(shape);
+        this.dispatchAddShapeEvent(shape);
+    }
+
+    removeShape(shape) {
+        this.svg.removeShild(shape.element);
+        this.shapes.removeShape(shape);
+    }
+
+    getClientCenter() {
+        const svgRect = this.svg.getBoundingClientRect();
+        const parentRect = this.svg.parentNode.getBoundingClientRect();
+        const parentCenterX = parentRect.left + parentRect.width / 2;
+        const parentCenterY = parentRect.top + parentRect.height / 2;
+        const svgPoint = this.svg.createSVGPoint();
+        svgPoint.x = parentCenterX;
+        svgPoint.y = parentCenterY;
+        const svgCTM = board.svg.getScreenCTM().inverse();
+        return svgPoint.matrixTransform(svgCTM);
     }
 
     dispatchPanEvent() {

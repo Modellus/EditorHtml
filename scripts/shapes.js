@@ -2,11 +2,23 @@ class Shapes {
     constructor() {
         this.lastId = 0;
         this.shapes = new Map();
+        this.shapeRegistry = {};
     }
 
-    add(shape, element) {
+    registerShape(shapeClass) {
+        this.shapeRegistry[shapeClass.getType()] = shapeClass;
+    }
+
+    createShape(shapeType, properties) {
+        const ShapeClass = this.shapeRegistry[shapeType];
+        if (ShapeClass)
+            return new ShapeClass(properties);
+        throw new Error(`Shape type "${shapeType}" is not registered.`);
+    }
+
+    addShape(shape) {
         var id = this.getNextId();
-        element.id = id;
+        shape.element.id = id;
         this.shapes.set(id.toString(), shape);
     }
 
@@ -22,6 +34,4 @@ class Shapes {
     remove(shape) {
         this.shapes.delete(shape.element.id);
     }
-}
-
-const shapes = new Shapes();
+}   
