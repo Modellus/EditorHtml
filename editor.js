@@ -37,7 +37,7 @@ function createShape(width, height) {
 
 function addBody() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("Body", { name: "Body", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0, color: backgroundColors[1].color });
+    var shape = board.shapes.createShape("BodyShape", { name: "Body", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0, color: backgroundColors[1].color });
     commands.execute(new AddShapeCommand(board, shape));
 }
 
@@ -53,35 +53,69 @@ function redo() {
     commands.redo();
 }
 
+function clear() {
+    board.clear();    
+}
+
+async function open() {
+    const [fileHandle] = await window.showOpenFilePicker();
+    const file = await fileHandle.getFile();
+    const content = await file.text();
+    board.deserialize(JSON.parse(content));
+}
+
+async function save() {
+    const fileHandle = await window.showSaveFilePicker({
+        suggestedName: "model.json",
+        types: [
+            {
+                description: "Model Files",
+                accept: {
+                    "application/json": [".json"]
+                }
+            }
+        ]
+    });
+    const writableStream = await fileHandle.createWritable();
+    var content = board.serialize();
+    await writableStream.write(content);
+    await writableStream.close();
+}
+
 function createContextMenu() {
     var menuItems = [
         {
             text: 'New',
             icon: 'fa-light fa-file',
-            shortcut: 'Ctrl+N'
+            shortcut: 'Ctrl+N',
+            name: "New"
         },
         {
             text: 'Open...',
             icon: 'fa-light fa-folder',
-            shortcut: 'Ctrl+O'
+            shortcut: 'Ctrl+O',
+            name: "Open"
         },
         {
             text: 'Save...',
             icon: 'fa-light fa-arrow-down-to-bracket',
-            shortcut: 'Ctrl+S'
+            shortcut: 'Ctrl+S',
+            name: "Save"
         },
         {
             text: 'Close',
             icon: 'fa-light fa-times',
-            shortcut: 'Ctrl+W'
+            shortcut: 'Ctrl+W',
+            name: "Close"
         }
     ];
     $("#context-menu").dxContextMenu({
-        items: menuItems.map(item => ({
-            text: item.text,
-            icon: item.icon,
-            shortcut: item.shortcut,
-            template: function (itemData) {
+        items: menuItems.map(i => ({
+            text: i.text,
+            icon: i.icon,
+            shortcut: i.shortcut,
+            name: i.name,
+            template: (itemData) => {
                 return `<div style="display: flex; justify-content: space-between; align-items: center;width: 100%">
                             <span class="${itemData.icon}" style="width: 15px; margin-right: 10px; text-align: left; display: inline-block"></span>
                             <span style="text-align: left; padding-right: 5px; flex-grow: 1">${itemData.text}</span>
@@ -89,6 +123,14 @@ function createContextMenu() {
                         </div>`;
             }
         })),
+        onItemClick: (e) => {
+            if (e.itemData.name == "New")
+                clear();
+            if (e.itemData.name == "Open")
+                open();
+            if (e.itemData.name == "Save")
+                save();
+        },
         target: "#toolbar",
         position: {
             my: "top left",

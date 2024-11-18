@@ -3,14 +3,14 @@ class BodyShape extends BaseShape {
         super(properties);
     }
 
-    static getType() {
-        return "Body";
-    }
-
     createElement() {
         const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         circle.setAttribute('fill', this.properties.color);
         return circle;
+    }
+
+    static deserialize(data) {
+        return new BodyShape(data);
     }
 
     draw() {

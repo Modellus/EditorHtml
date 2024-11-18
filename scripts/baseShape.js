@@ -2,27 +2,21 @@ class BaseShape {
     constructor(properties) {
         this.properties = {};
         Object.assign(this.properties, properties);
+        this.properties.type = this.constructor.name;
         this.element = this.createElement();
         this.draw();
     }
 
-    static getType() {
-        throw new Error("getType should be implemented in subclasses.");
+    serialize() {
+        return this.properties;
     }
 
     createElement() {
         throw new Error("createElement should be implemented in subclasses.");
     }
 
-    save() {
-        return {
-            type: this.constructor.name,
-            properties: { ...this.properties }
-        };
-    }
-
-    static load(state) {
-        return shapeFactory.createShape(state.type, state.properties);
+    static deserialize(data) {
+        throw new Error('Deserialize method not implemented');
     }
 
     draw() {

@@ -6,7 +6,7 @@ class Shapes {
     }
 
     registerShape(shapeClass) {
-        this.shapeRegistry[shapeClass.getType()] = shapeClass;
+        this.shapeRegistry[shapeClass.name] = shapeClass;
     }
 
     createShape(shapeType, properties) {
@@ -22,6 +22,11 @@ class Shapes {
         this.shapes.set(id.toString(), shape);
     }
 
+    clear() {
+        this.shapes.clear();
+        this.lastId = 0;
+    }
+
     getNextId() {
         this.lastId++;
         return this.lastId;
@@ -33,5 +38,19 @@ class Shapes {
 
     remove(shape) {
         this.shapes.delete(shape.element.id);
+    }
+
+    serialize() {
+        const data = [];
+        this.shapes.forEach(shape => data.push(shape.serialize()));
+        return JSON.stringify(data);
+    }
+
+    deserialize(data) {
+        const ShapeClass = this.shapeRegistry[data.type];
+        if (!ShapeClass) {
+            throw new Error(`Shape type "${type}" is not registered`);
+        }
+        return ShapeClass.deserialize(data);
     }
 }   

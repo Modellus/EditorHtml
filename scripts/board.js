@@ -19,6 +19,25 @@ class Board {
         this.svg.addEventListener("mouseout", this.onMouseOut.bind(this));
     }
 
+    clear() {
+        while (this.svg.firstChild)
+            this.svg.removeChild(this.svg.firstChild);
+        this.shapes.clear();
+    }
+
+    deserialize(content) {
+        this.clear();
+        content.map(shapeData => {
+            var shape = this.shapes.deserialize(shapeData);
+            this.svg.appendChild(shape.element);
+        });
+    }
+
+    serialize() {
+        var content = this.shapes.serialize();
+        return content;
+    }
+
     dispatchAddShapeEvent(shape) {
         const addShapeEvent = new CustomEvent("addShape", {
             detail: {
