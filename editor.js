@@ -42,7 +42,10 @@ function addBody() {
 }
 
 function addExpresssion() {
-    commands.execute(new AddExpressionCommand(board));
+    var center = this.board.getClientCenter();
+    var shape = board.shapes.createShape("ExpressionShape", { name: "Expression", x: center.x - 150, y: center.y - 25, width: 300, height: 50, rotation: 0 });
+    commands.execute(new AddShapeCommand(board, shape));
+    debugger
 }
 
 function undo() {
@@ -505,3 +508,4 @@ createShapePopup();
 board.svg.addEventListener("selected", (e) => onSelected(e));
 board.svg.addEventListener("deselected", (e) => onDeselected(e));
 board.shapes.registerShape(BodyShape);
+board.shapes.registerShape(ExpressionShape);

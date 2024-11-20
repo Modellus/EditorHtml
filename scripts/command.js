@@ -1,4 +1,0 @@
-class Command {
-    execute() {}
-    undo() {}
-}
