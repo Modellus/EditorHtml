@@ -11,15 +11,21 @@ class ExpressionShape extends BaseShape {
         div.classList.add("mq-editable-field", "mq-math-mode");
         foreignObject.appendChild(div);
         var MQ = MathQuill.getInterface(2);
-        var mathField = MQ.MathField(div, {
+        var shape = this;
+        this.mathField = MQ.MathField(div, {
             spaceBehavesLikeTab: true,
             handlers: {
-                edit: function() { 
-                }
+                edit: _ => shape.onEdit()
             }
         });
-        mathField.latex("{\\frac{dx}{dt}}=y");
+        this.mathField.latex("{\\frac{dx}{dt}}=y");
         return foreignObject;
+    }
+
+    onEdit() {
+        this.expression = this.mathField.latex();
+        var detail = { expression: this.expression };
+        this.dispatchChangedEvent(detail);
     }
 
     static deserialize(data) {

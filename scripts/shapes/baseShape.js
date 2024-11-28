@@ -19,8 +19,18 @@ class BaseShape {
         throw new Error('Deserialize method not implemented');
     }
 
+    dispatchChangedEvent(detail) {
+        if (this.element === undefined)
+            return;
+        detail.shape = this;
+        const changedEvent = new CustomEvent("changed", { detail: detail });
+        this.element.dispatchEvent(changedEvent);
+    }
+
+    update() {
+    }
+
     draw() {
-        throw new Error("draw should be implemented in subclasses.");
     }
 
     resize(width, height) {

@@ -17,6 +17,7 @@ class Selection {
     }
 
     dispatchDeselectedEvent() {
+        return;
         const deselectedEvent = new CustomEvent('deselected', {
             detail: {
                 shape: this.selectedShape
@@ -57,7 +58,7 @@ class Selection {
     findShape(element) {
         var current = element;
         while(current != null) {
-            var shape = board.shapes.getShape(current.id);
+            var shape = board.getShape(current.id);
             if (shape != undefined)
                 return shape;
             current = current.parentElement;

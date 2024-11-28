@@ -7,13 +7,14 @@ class Transformer {
         this.dragging = false;
         this.createBoundingBox();
         this.createHandles();
+        this.updateHandles();
+        this.updateBoundingBox();
     }
 
     createBoundingBox() {
         this.boundingBox = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         this.boundingBox.setAttribute("class", "bounding-box");
         this.board.svg.appendChild(this.boundingBox);
-        this.boundingBox.addEventListener("mousedown", (e) => this.onBoundingBoxDragStart(e));
         this.updateBoundingBox();
     }
 
@@ -77,21 +78,30 @@ class Transformer {
         this.handles.forEach(handle => {
             handle.setAttribute("transform", `rotate(${rotation} ${centerX} ${centerY})`);
         });
-        this.updateBoundingBox();
+    }
+
+    getMouseToSVGPoint(event) {
+        const point = svg.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        const svgPoint = point.matrixTransform(svg.getScreenCTM().inverse());
+        return svgPoint;
     }
 
     onHandleDragStart = (event, type) => {
         event.preventDefault();
         this.draggingType = type;
-        this.startX = event.clientX;
-        this.startY = event.clientY;
+        var point = this.getMouseToSVGPoint(event);
+        this.startX = point.x;
+        this.startY = point.y;
         document.addEventListener("mousemove", this.onHandleDrag);
         document.addEventListener("mouseup", this.onHandleDragEnd);
     }
 
     onHandleDrag = (event) => {
-        const dx = event.clientX - this.startX;
-        const dy = event.clientY - this.startY;
+        var point = this.getMouseToSVGPoint(event);
+        const dx = point.x - this.startX;
+        const dy = point.y - this.startY;
         if (this.draggingType.startsWith("top") || this.draggingType.startsWith("bottom")) {
             const newHeight = this.shape.properties.height + (this.draggingType.includes("bottom") ? dy : -dy);
             if (newHeight > 0) this.shape.resize(this.shape.properties.width, newHeight);
@@ -108,8 +118,9 @@ class Transformer {
             this.shape.rotate(angle);
         }
         this.updateHandles();
-        this.startX = event.clientX;
-        this.startY = event.clientY;
+        this.updateBoundingBox();
+        this.startX = point.x;
+        this.startY = point.y;
     }
 
     onHandleDragEnd = () => {
@@ -122,36 +133,41 @@ class Transformer {
             return;
         event.preventDefault();
         this.dragging = true;
-        this.startX = event.clientX;
-        this.startY = event.clientY;
-        document.addEventListener("mousemove", this.onBoundingBoxDrag);
-        document.addEventListener("mouseup", this.onBoundingBoxDragEnd);
+        var point = this.getMouseToSVGPoint(event);
+        this.startX = point.x;
+        this.startY = point.y;
     }
 
     onBoundingBoxDrag = (event) => {
         if (!this.dragging) 
             return;
-        const dx = event.clientX - this.startX;
-        const dy = event.clientY - this.startY;
+        var point = this.getMouseToSVGPoint(event);
+        const dx = point.x - this.startX;
+        const dy = point.y - this.startY;
         this.shape.move(this.shape.properties.x + dx, this.shape.properties.y + dy);
         this.updateHandles();
-        this.startX = event.clientX;
-        this.startY = event.clientY;
+        this.updateBoundingBox();
+        this.startX = point.x;
+        this.startY = point.y;
     }
 
     onBoundingBoxDragEnd = () => {
         this.dragging = false;
-        document.removeEventListener("mousemove", this.onBoundingBoxDrag);
-        document.removeEventListener("mouseup", this.onBoundingBoxDragEnd);
     }
 
     hide() {
         this.handles.forEach(handle => handle.setAttribute("visibility", "hidden"));
         this.boundingBox.setAttribute("visibility", "hidden");
+        this.boundingBox.removeEventListener("mousedown", this.onBoundingBoxDragStart);
+        this.board.svg.removeEventListener("mousemove", this.onBoundingBoxDrag);
+        this.board.svg.removeEventListener("mouseup", this.onBoundingBoxDragEnd);
     }
 
     show() {
         this.handles.forEach(handle => handle.setAttribute("visibility", "visible"));
         this.boundingBox.setAttribute("visibility", "visible");
+        this.boundingBox.addEventListener("mousedown", this.onBoundingBoxDragStart);
+        this.board.svg.addEventListener("mousemove", this.onBoundingBoxDrag);
+        this.board.svg.addEventListener("mouseup", this.onBoundingBoxDragEnd);
     }
 }

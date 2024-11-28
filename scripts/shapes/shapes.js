@@ -16,7 +16,7 @@ class Shapes {
         throw new Error(`Shape type "${shapeType}" is not registered.`);
     }
 
-    addShape(shape) {
+    add(shape) {
         var id = this.getNextId();
         shape.element.id = id;
         this.shapes.set(id.toString(), shape);
@@ -32,7 +32,7 @@ class Shapes {
         return this.lastId;
     }
 
-    getShape(id) {
+    get(id) {
         return this.shapes.get(id);
     }
 
@@ -52,5 +52,13 @@ class Shapes {
             throw new Error(`Shape type "${type}" is not registered`);
         }
         return ShapeClass.deserialize(data);
+    }
+
+    update() {
+        this.shapes.forEach(s => s.update());
+    }
+
+    draw() {
+        this.shapes.forEach(s => s.draw());
     }
 }   

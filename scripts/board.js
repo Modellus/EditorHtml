@@ -49,13 +49,17 @@ class Board {
 
     addShape(shape) {
         this.svg.appendChild(shape.element);
-        this.shapes.addShape(shape);
+        this.shapes.add(shape);
         this.dispatchAddShapeEvent(shape);
     }
 
     removeShape(shape) {
-        this.svg.removeShild(shape.element);
-        this.shapes.removeShape(shape);
+        this.svg.removeChild(shape.element);
+        this.shapes.remove(shape);
+    }
+
+    getShape(id) {
+        return this.shapes.get(id);
     }
 
     getClientCenter() {
@@ -158,5 +162,18 @@ class Board {
     }
 
     getPan() {
+    }
+
+    refresh() {
+        this.update();
+        this.draw();
+    }
+
+    update() {
+        this.shapes.update();
+    }
+
+    draw() {
+        this.shapes.draw();
     }
 }
