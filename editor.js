@@ -492,8 +492,8 @@ async function save() {
 }
 
 function onFieldDataChanged(e) {
-    var properties = e.component.option("formData");
-    selection.selectedShape.properties[e.dataField] = e.value;
+    if (selection.selectedShape)
+        selection.selectedShape.properties[e.dataField] = e.value;
 }
 
 function onSelected(e) {

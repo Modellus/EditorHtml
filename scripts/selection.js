@@ -17,7 +17,6 @@ class Selection {
     }
 
     dispatchDeselectedEvent() {
-        return;
         const deselectedEvent = new CustomEvent('deselected', {
             detail: {
                 shape: this.selectedShape
