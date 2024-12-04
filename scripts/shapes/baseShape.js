@@ -1,5 +1,6 @@
 class BaseShape {
-    constructor(properties) {
+    constructor(calculator, properties) {
+        this.calculator = calculator;
         this.properties = {};
         Object.assign(this.properties, properties);
         this.properties.type = this.constructor.name;

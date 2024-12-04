@@ -49,25 +49,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-chart-line",
-                    onClick: function() {
-                        $chart = createShape(400, 400);
-                        $chart.dxChart({
-                            dataSource: [
-                                { day: "Monday", sales: 10 },
-                                { day: "Tuesday", sales: 20 },
-                                { day: "Wednesday", sales: 30 },
-                                { day: "Thursday", sales: 40 },
-                                { day: "Friday", sales: 50 }
-                            ],
-                            series: {
-                                argumentField: "day",
-                                valueField: "sales",
-                                name: "Sales",
-                                type: "bar",
-                                color: "#ffaa66"
-                            }
-                        });
-                    }
+                    onClick: _ => addChart()
                 }
             }
         ]
@@ -404,38 +386,21 @@ function sendToBackend(message, chat) {
     };
 }
 
-function createShape(width, height) {
-    const svgRect = board.svg.getBoundingClientRect();
-    const divRect = board.svg.parentNode.getBoundingClientRect();
-    const divCenterX = divRect.left + divRect.width / 2;
-    const divCenterY = divRect.top + divRect.height / 2;
-    const svgPoint = board.svg.createSVGPoint();
-    svgPoint.x = divCenterX;
-    svgPoint.y = divCenterY;
-    const svgCTM = board.svg.getScreenCTM().inverse();
-    const svgCoords = svgPoint.matrixTransform(svgCTM);
-    const foreignObject = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
-    foreignObject.setAttribute("cx", svgCoords.x);
-    foreignObject.setAttribute("cy", svgCoords.y);
-    foreignObject.setAttribute("width", width);
-    foreignObject.setAttribute("height", height);
-    const $div = $("<div>").appendTo(foreignObject);
-    $div.css({ "width": "100%", "height": "100%" });
-    board.svg.appendChild(foreignObject);
-    new Shape(board, foreignObject);
-    return $div;
+function addChart() {
+    var center = this.board.getClientCenter();
+    var shape = board.shapes.createShape("ChartShape", calculator, { name: "Chart", x: center.x - 250, y: center.y - 250, width: 500, height: 500, rotation: 0, color: backgroundColors[1].color });
+    commands.execute(new AddShapeCommand(board, shape));
 }
 
 function addBody() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("BodyShape", { name: "Body", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0, color: backgroundColors[1].color });
-    shape.calculator = calculator;
+    var shape = board.shapes.createShape("BodyShape", calculator, { name: "Body", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0, color: backgroundColors[1].color });
     commands.execute(new AddShapeCommand(board, shape));
 }
 
 function addExpresssion() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("ExpressionShape", { name: "Expression", x: center.x - 150, y: center.y - 25, width: 300, height: 50, rotation: 0 });
+    var shape = board.shapes.createShape("ExpressionShape", calculator, { name: "Expression", x: center.x - 150, y: center.y - 25, width: 300, height: 50, rotation: 0 });
     shape.element.addEventListener("changed", e => onChanged(e));
     commands.execute(new AddShapeCommand(board, shape));
 }
@@ -536,4 +501,5 @@ board.svg.addEventListener("selected", e => onSelected(e));
 board.svg.addEventListener("deselected", e => onDeselected(e));
 board.shapes.registerShape(BodyShape);
 board.shapes.registerShape(ExpressionShape);
+board.shapes.registerShape(ChartShape);
 calculator.on("iterate", e => onIterate(e))

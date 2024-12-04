@@ -1,6 +1,6 @@
 class BodyShape extends BaseShape {
-    constructor(properties) {
-        super(properties);
+    constructor(calculator, properties) {
+        super(calculator, properties);
     }
 
     createElement() {

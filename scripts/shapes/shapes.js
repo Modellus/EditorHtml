@@ -9,10 +9,10 @@ class Shapes {
         this.shapeRegistry[shapeClass.name] = shapeClass;
     }
 
-    createShape(shapeType, properties) {
+    createShape(shapeType, calculator, properties) {
         const ShapeClass = this.shapeRegistry[shapeType];
         if (ShapeClass)
-            return new ShapeClass(properties);
+            return new ShapeClass(calculator, properties);
         throw new Error(`Shape type "${shapeType}" is not registered.`);
     }
 
