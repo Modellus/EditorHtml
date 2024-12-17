@@ -10,21 +10,21 @@ class ChartShape extends BaseShape {
             colCount: 1,
             onFieldDataChanged: e => onFieldDataChanged(e),
             items: [
-                  {
+                {
                     dataField: "name",
                     label: { text: "Name", visible: false },
                     editorType: "dxTextBox",
                     editorOptions: {
                         stylingMode: "filled"
                     }
-                  },
-                  {
+                },
+                {
                     dataField: "backgroundColor",
                     label: { text: "Background color" },
                     editorType: "dxButtonGroup",
                     editorOptions: {
-                        onContentReady: function(e) {
-                            e.component.option('items').forEach((item, index) => {
+                        onContentReady: function (e) {
+                            e.component.option("items").forEach((item, index) => {
                                 const buttonElement = e.element.find(`.dx-button:eq(${index})`);
                                 buttonElement.find(".dx-icon").css("color", item.color);
                             });
@@ -36,40 +36,40 @@ class ChartShape extends BaseShape {
                         keyExpr: "color",
                         stylingMode: "text"
                     }
-                  },
-                  {
+                },
+                {
                     dataField: "chartType",
                     label: { text: "Type" },
                     editorType: "dxButtonGroup",
                     editorOptions: {
                         items: [
-                            { id: "scatter", icon: "fa-solid fa-square"},
-                            { id: "line", icon: "fa-solid fa-square"},
-                            { id: "area", icon: "fa-solid fa-square"}, 
-                            { id: "bar", icon: "fa-solid fa-square"}
+                            { id: "scatter", icon: "fa-solid fa-square" },
+                            { id: "line", icon: "fa-solid fa-square" },
+                            { id: "area", icon: "fa-solid fa-square" },
+                            { id: "bar", icon: "fa-solid fa-square" }
                         ],
                         keyExpr: "id",
                         stylingMode: "text"
                     }
-                  },
-                  {
+                },
+                {
                     dataField: "xTerm",
                     label: { text: "X Variable" },
                     editorType: "dxTextBox",
                     editorOptions: {
                         stylingMode: "filled"
                     }
-                  },
-                  {
+                },
+                {
                     dataField: "yTerm",
                     label: { text: "Y Variable" },
                     editorType: "dxTextBox",
                     editorOptions: {
                         stylingMode: "filled"
                     }
-                  }
-                ]
-          });
+                }
+            ]
+        });
     }
 
     createElement() {
@@ -77,26 +77,42 @@ class ChartShape extends BaseShape {
         const $div = $("<div>").appendTo(foreignObject);
         $div.css({ "width": "100%", "height": "100%" });
         this.chart = $div.dxChart({
-            dataSource: this.calculator.system.values,
+            commonSeriesSettings: {
+                argumentField: "x",
+                label: {
+                    visible: true, 
+                    customizeText: e => e.argument === this.calculator.get()["x"] ? e.valueText : ""
+                }
+            },
             series: [
                 {
-                    argumentField: "x",
                     name: "y",
                     valueField: "y",
                     type: "line",
                     color: "#b1f2ba",
                     point: {
                         size: 4
+                    },
+                    label: {
+                        format: {
+                            type: "fixedPoint",
+                            precision: 2
+                        }
                     }
                 },
                 {
-                    argumentField: "x",
                     name: "z",
                     valueField: "z",
                     type: "line",
                     color: "#a4d8ff",
                     point: {
                         size: 4
+                    },
+                    label: {
+                        format: {
+                            type: "fixedPoint",
+                            precision: 2
+                        }
                     }
                 }
             ],
@@ -107,12 +123,23 @@ class ChartShape extends BaseShape {
             },
             crosshair: {
                 enabled: true,
-                color: '#949494',
+                color: "#949494",
                 width: 2,
-                dashStyle: 'dot',
+                dashStyle: "dot",
                 label: {
                     visible: true,
-                    backgroundColor: '#949494'
+                    backgroundColor: "#949494",
+                    format: {
+                        type: "fixedPoint",
+                        precision: 2
+                    }
+                }
+            },
+            tooltip: {
+                enabled: true,
+                format: {
+                    type: "fixedPoint",
+                    precision: 2
                 }
             }
         }).dxChart("instance");
@@ -124,7 +151,7 @@ class ChartShape extends BaseShape {
     }
 
     update() {
-        this.chart.refresh();
+        this.chart.option("dataSource", this.calculator.getValues());
     }
 
     draw() {

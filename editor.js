@@ -113,7 +113,7 @@ function createBottomToolbar() {
                     elementAttr: {
                         id: "playPauseButton"
                     },
-                    onClick: e => playPausePressed(e)
+                    onClick: _ => playPausePressed()
                 },
                 location: "center"
             },
@@ -122,12 +122,13 @@ function createBottomToolbar() {
                 cssClass: "slider",
                 options: {
                     min: 0,
-                    max: 100,
+                    max: 0,
                     value: 0,
                     width: 400,
-                    onValueChanged: function (e) {
-                        console.log("Slider value:", e.value);
-                    }
+                    elementAttr: {
+                        id: "slider"
+                    },
+                    onValueChanged: e => iterationChanged(e.value)
                 },
                 location: "center"
             },
@@ -135,7 +136,7 @@ function createBottomToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-stop", 
-                    onClick: e => stopPressed(e)
+                    onClick: _ => stopPressed()
                 },
                 location: "center"
             },
@@ -154,7 +155,7 @@ function createBottomToolbar() {
                 options: {
                     icon: "fa-light fa-map",
                     onClick: function () {
-                        console.log("Replay clicked");
+                        console.log("Map clicked");
                     }
                 },
                 location: "after"
@@ -346,7 +347,7 @@ function setPlayPauseButton() {
     button.repaint();
 }
 
-function playPausePressed(e) {
+function playPausePressed() {
     if (calculator.isPlaying)
         calculator.pause();
     else
@@ -354,10 +355,17 @@ function playPausePressed(e) {
     setPlayPauseButton();
 }
 
-function stopPressed(e) {
+function stopPressed() {
     calculator.stop();
     board.refresh();
+    var slider = $("#slider").dxSlider("instance");
+    slider.option("max", 0);
+    slider.option("value", 0);
     setPlayPauseButton();
+}
+
+function iterationChanged(iteration) {
+    calculator.setIteration(iteration);
 }
 
 function clear() {
@@ -367,7 +375,6 @@ function clear() {
 
 function reset() {
     calculator.clear();
-    debugger;
     board.shapes.shapes.forEach(shape => {
         if (shape.properties.type == 'ExpressionShape')
             calculator.parse(shape.properties.expression);
@@ -423,6 +430,9 @@ function onChanged(e) {
 
 function onIterate(e) {
     board.refresh();
+    var slider = $("#slider").dxSlider("instance");
+    slider.option("max", calculator.getLastIteration());
+    slider.option("value", calculator.getIteration());
 }
 
 DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQxCn0=.RwzuszxP0EZpb1mjikhmz6G0g5QUrgDILiiRTePC1SeHd3o9co5aGr7mMPuysN6kKb16+UZ0uwtnUXeiOwJcvFTd9wDPT8UqhPXr3uBXmEonDisUwgOBZrfrbZc1satfHazSYg=="});
@@ -441,4 +451,5 @@ board.shapes.registerShape(BodyShape);
 board.shapes.registerShape(ExpressionShape);
 board.shapes.registerShape(ChartShape);
 board.shapes.registerShape(TableShape);
-calculator.on("iterate", e => onIterate(e))
+calculator.on("iterate", e => onIterate(e));
+calculator.on("iterationChanged", e => onIterationChanged(e));
