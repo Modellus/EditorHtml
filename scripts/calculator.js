@@ -24,7 +24,7 @@ class Calculator extends EventTarget {
         this.timer = setInterval(() => {
             this.engine.iterate();
             this.emit("iterate", { calculator: this }); 
-        }, 10);
+        }, 100);
         this.isPlaying = true;
     }
 
@@ -33,7 +33,13 @@ class Calculator extends EventTarget {
         this.isPlaying = false;
     }
 
-    reset() {
+    stop() {
+        this.engine.reset();
+        clearInterval(this.timer);
+        this.isPlaying = false;
+    }
+
+    clear() {
         this.engine.reset();
         this.system.clear();
         clearInterval(this.timer);

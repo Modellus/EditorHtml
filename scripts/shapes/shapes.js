@@ -46,12 +46,12 @@ class Shapes {
         return JSON.stringify(data);
     }
 
-    deserialize(data) {
+    deserialize(calculator, data) {
         const ShapeClass = this.shapeRegistry[data.type];
         if (!ShapeClass) {
             throw new Error(`Shape type "${type}" is not registered`);
         }
-        return ShapeClass.deserialize(data);
+        return ShapeClass.deserialize(calculator, data);
     }
 
     update() {

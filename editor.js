@@ -51,6 +51,14 @@ function createTopToolbar() {
                     icon: "fa-light fa-chart-line",
                     onClick: _ => addChart()
                 }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-table",
+                    onClick: _ => addTable()
+                }
             }
         ]
     });
@@ -127,9 +135,7 @@ function createBottomToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-stop", 
-                    onClick: function () {
-                        console.log("Stop clicked");
-                    }
+                    onClick: e => stopPressed(e)
                 },
                 location: "center"
             },
@@ -220,76 +226,6 @@ function createShapePopup() {
         hideOnOutsideClick: false,
         focusStateEnabled: false,
         animation: null,
-        contentTemplate: function () {
-            return $("<div id='shape-form'></div>").dxForm({
-                colCount: 1,
-                onFieldDataChanged: e => onFieldDataChanged(e),
-                items: [
-                      {
-                        dataField: "name",
-                        label: { text: "Name", visible: false },
-                        editorType: "dxTextBox",
-                        editorOptions: {
-                            stylingMode: "filled"
-                        }
-                      },
-                      {
-                        dataField: "backgroundColor",
-                        label: { text: "Background color" },
-                        editorType: "dxButtonGroup",
-                        editorOptions: {
-                            onContentReady: function(e) {
-                                e.component.option('items').forEach((item, index) => {
-                                    const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                    buttonElement.find(".dx-icon").css("color", item.color);
-                                });
-                            },
-                            items: backgroundColors.map(c => ({
-                                icon: "fa-solid fa-square",
-                                color: c.color
-                            })),
-                            keyExpr: "color",
-                            stylingMode: "text"
-                        }
-                      },
-                      {
-                        dataField: "foregroundColor",
-                        label: { text: "Foreground color" },
-                        editorType: "dxButtonGroup",
-                        editorOptions: {
-                            onContentReady: function(e) {
-                                e.component.option('items').forEach((item, index) => {
-                                    const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                    buttonElement.find(".dx-icon").css("color", item.color);
-                                });
-                            },
-                            items: strokeColors.map(c => ({
-                                icon: "fa-solid fa-square",
-                                color: c.color
-                            })),
-                            keyExpr: "color",
-                            stylingMode: "text"
-                        }
-                      },
-                      {
-                        dataField: "xTerm",
-                        label: { text: "X Variable" },
-                        editorType: "dxTextBox",
-                        editorOptions: {
-                            stylingMode: "filled"
-                        }
-                      },
-                      {
-                        dataField: "yTerm",
-                        label: { text: "Y Variable" },
-                        editorType: "dxTextBox",
-                        editorOptions: {
-                            stylingMode: "filled"
-                        }
-                      }
-                    ]
-              });
-        },
         target: "#svg",
         position: {
             my: "left center",
@@ -359,21 +295,6 @@ function createContextMenu() {
     });
 }
 
-const strokeColors = [
-    { color: "#1e1e1e"},
-    { color: "#ffc9c9" },
-    { color: "#b1f2ba" },
-    { color: "#a4d8ff" },
-    { color: "#ffec99" }
-];
-const backgroundColors = [
-    { color: "#ebebeb"},
-    { color: "#e03130" },
-    { color: "#2f9e44" },
-    { color: "#1871c2" },
-    { color: "#f08c02" }
-];
-
 function sendToBackend(message, chat) {
     const answer = (message) => {
         setTimeout(() => {
@@ -388,13 +309,19 @@ function sendToBackend(message, chat) {
 
 function addChart() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("ChartShape", calculator, { name: "Chart", x: center.x - 250, y: center.y - 250, width: 500, height: 500, rotation: 0, color: backgroundColors[1].color });
+    var shape = board.shapes.createShape("ChartShape", calculator, { name: "Chart", x: center.x - 250, y: center.y - 250, width: 500, height: 500, rotation: 0 });
+    commands.execute(new AddShapeCommand(board, shape));
+}
+
+function addTable() {
+    var center = this.board.getClientCenter();
+    var shape = board.shapes.createShape("TableShape", calculator, { name: "Table", x: center.x - 250, y: center.y - 250, width: 500, height: 500, rotation: 0 });
     commands.execute(new AddShapeCommand(board, shape));
 }
 
 function addBody() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("BodyShape", calculator, { name: "Body", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0, color: backgroundColors[1].color });
+    var shape = board.shapes.createShape("BodyShape", calculator, { name: "Body", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0 });
     commands.execute(new AddShapeCommand(board, shape));
 }
 
@@ -427,15 +354,33 @@ function playPausePressed(e) {
     setPlayPauseButton();
 }
 
+function stopPressed(e) {
+    calculator.stop();
+    board.refresh();
+    setPlayPauseButton();
+}
+
 function clear() {
+    calculator.clear();
     board.clear();    
+}
+
+function reset() {
+    calculator.clear();
+    debugger;
+    board.shapes.shapes.forEach(shape => {
+        if (shape.properties.type == 'ExpressionShape')
+            calculator.parse(shape.properties.expression);
+    });
+    setPlayPauseButton();
 }
 
 async function open() {
     const [fileHandle] = await window.showOpenFilePicker();
     const file = await fileHandle.getFile();
     const content = await file.text();
-    board.deserialize(JSON.parse(content));
+    board.deserialize(calculator, JSON.parse(content));
+    reset();
 }
 
 async function save() {
@@ -456,17 +401,15 @@ async function save() {
     await writableStream.close();
 }
 
-function onFieldDataChanged(e) {
-    if (selection.selectedShape)
-        selection.selectedShape.properties[e.dataField] = e.value;
-}
-
 function onSelected(e) {
+    var shape = e.detail.shape;
+    var form = shape.getForm();
+    if (form == null)
+        return;
     var shapePopup = $("#shape-popup").dxPopup("instance");
+    shapePopup.content().empty();
+    shapePopup.content().append(form);
     shapePopup.show();
-    var shapeForm = $("#shape-form").dxForm("instance");
-    shapeForm.formData = null;
-    shapeForm.updateData(e.detail.shape.properties);
 }
 
 function onDeselected(e) {
@@ -475,12 +418,7 @@ function onDeselected(e) {
 }
 
 function onChanged(e) {
-    calculator.reset();
-    board.shapes.shapes.forEach(shape => {
-        if (shape.properties.type == 'ExpressionShape')
-            calculator.parse(shape.expression);
-    });
-    setPlayPauseButton();
+    reset();
 }
 
 function onIterate(e) {
@@ -502,4 +440,5 @@ board.svg.addEventListener("deselected", e => onDeselected(e));
 board.shapes.registerShape(BodyShape);
 board.shapes.registerShape(ExpressionShape);
 board.shapes.registerShape(ChartShape);
+board.shapes.registerShape(TableShape);
 calculator.on("iterate", e => onIterate(e))

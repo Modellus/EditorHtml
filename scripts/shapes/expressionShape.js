@@ -18,18 +18,19 @@ class ExpressionShape extends BaseShape {
                 edit: _ => shape.onEdit()
             }
         });
-        this.mathField.latex("{\\frac{dx}{dt}}=y");
+        var expression = this.properties.expression ?? "{\\frac{dx}{dt}}=y";
+        this.mathField.latex(expression);
         return foreignObject;
     }
 
     onEdit() {
-        this.expression = this.mathField.latex();
-        var detail = { expression: this.expression };
+        this.properties.expression = this.mathField.latex();
+        var detail = { expression: this.properties.expression };
         this.dispatchChangedEvent(detail);
     }
 
-    static deserialize(data) {
-        return new ExpressionShape(data);
+    static deserialize(calculator, data) {
+        return new ExpressionShape(calculator, data);
     }
 
     draw() {

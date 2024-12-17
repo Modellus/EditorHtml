@@ -1,6 +1,6 @@
 class Board {
     constructor(svgElement) {
-        this.shapes = new Shapes();
+        this.shapes = new Shapes(calculator);
         this.svg = svgElement;
         this.isPanning = false;
         this.startX = 0;
@@ -25,11 +25,11 @@ class Board {
         this.shapes.clear();
     }
 
-    deserialize(content) {
+    deserialize(calculator, content) {
         this.clear();
         content.map(shapeData => {
-            var shape = this.shapes.deserialize(shapeData);
-            this.svg.appendChild(shape.element);
+            var shape = this.shapes.deserialize(calculator, shapeData);
+            this.addShape(shape);
         });
     }
 
