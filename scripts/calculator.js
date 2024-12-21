@@ -1,10 +1,12 @@
+const STATUS = { PLAYING: 0, PAUSED: 1, REPLAYING: 2, STOPPED: 3 };
+
 class Calculator extends EventTarget {
     constructor() {
         super();
         this.system = new Modellus.System("t");
         this.parser = new Modellus.Parser(this.system);
         this.engine = new Modellus.Engine(this.system);
-        this.isPlaying = false;
+        this.status = STATUS.PAUSED;
     }
 
     emit(eventName, detail = {}) {
@@ -24,19 +26,19 @@ class Calculator extends EventTarget {
         this.timer = setInterval(() => {
             this.engine.iterate();
             this.emit("iterate", { calculator: this }); 
-        }, 100);
-        this.isPlaying = true;
+        }, 10);
+        this.status = STATUS.PLAYING;
     }
 
     pause() {
         clearInterval(this.timer);
-        this.isPlaying = false;
+        this.status = STATUS.PAUSED;
     }
 
     stop() {
         this.engine.reset();
         clearInterval(this.timer);
-        this.isPlaying = false;
+        this.status = STATUS.STOPPED;
     }
 
     replay() {
@@ -44,19 +46,17 @@ class Calculator extends EventTarget {
         this.timer = setInterval(() => {
             this.system.iteration = iteration++;
             this.emit("iterate", { calculator: this }); 
-            if (this.system.iteration == this.system.lastIteration) {
-                clearInterval(this.timer);
-                this.isPlaying = false;
-            }
-        }, 50);
-        this.isPlaying = true;
+            if (this.system.iteration == this.system.lastIteration)
+                iteration = 0;
+        }, 20);
+        this.status = STATUS.PLAYING;
     }
 
     clear() {
         this.engine.reset();
         this.system.clear();
         clearInterval(this.timer);
-        this.isPlaying = false;
+        this.status = STATUS.STOPPED;
     }
 
     parse(expression) {
@@ -81,7 +81,7 @@ class Calculator extends EventTarget {
     }
 
     getIndependentValue() {
-        return this.system.independentValue;
+        return this.system.getIndependentOnIteration(this.system.iteration);
     }
 
     get() {

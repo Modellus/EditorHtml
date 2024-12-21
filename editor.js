@@ -126,8 +126,14 @@ function createBottomToolbar() {
                     value: 0,
                     width: 400,
                     elementAttr: {
-                        id: "slider"
+                        id: "playHeadSlider"
                     },
+                    tooltip: {
+                        enabled: true,
+                        format: _ => calculator.getIndependentValue().toFixed(2),
+                        showMode: "always",
+                        position: "top",
+                    }, 
                     onValueChanged: e => iterationChanged(e.value)
                 },
                 location: "center"
@@ -136,6 +142,9 @@ function createBottomToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-stop", 
+                    elementAttr: {
+                        id: "stopButton"
+                    },
                     onClick: _ => stopPressed()
                 },
                 location: "center"
@@ -144,9 +153,10 @@ function createBottomToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-repeat",
-                    onClick: function () {
-                        console.log("Replay clicked");
-                    }
+                    elementAttr: {
+                        id: "replayButton"
+                    },
+                    onClick: _ => replayPressed()
                 },
                 location: "center"
             },
@@ -341,27 +351,29 @@ function redoPressed() {
     commands.redo();
 }
 
-function setPlayPauseButton() {
-    var button = $("#playPauseButton").dxButton("instance");
-    button.option("icon", calculator.isPlaying ? "fa-light fa-pause" : "fa-light fa-play");
-    button.repaint();
+function updatePlayer() {
+    playPause.option("icon", calculator.status == STATUS.PLAYING || calculator.status == STATUS.REPLAYING ? "fa-light fa-pause" : "fa-light fa-play");
+    playPause.repaint();
+    stop.option("disabled", calculator.status == STATUS.PLAYING || calculator.status == STATUS.REPLAYING);
+    replay.option("disabled", calculator.status == STATUS.PLAYING || calculator.status == STATUS.REPLAYING);
+    playHead.option("max", calculator.getLastIteration());
+    playHead.option("value", calculator.getIteration());
 }
 
 function playPausePressed() {
-    if (calculator.isPlaying)
-        calculator.pause();
-    else
-        calculator.play();
-    setPlayPauseButton();
+    calculator.status === STATUS.PLAYING ? calculator.pause() : calculator.play();
+    updatePlayer();
 }
 
 function stopPressed() {
     calculator.stop();
     board.refresh();
-    var slider = $("#slider").dxSlider("instance");
-    slider.option("max", 0);
-    slider.option("value", 0);
-    setPlayPauseButton();
+    updatePlayer();
+}
+
+function replayPressed() {
+    calculator.replay();
+    updatePlayer();
 }
 
 function iterationChanged(iteration) {
@@ -379,7 +391,7 @@ function reset() {
         if (shape.properties.type == 'ExpressionShape')
             calculator.parse(shape.properties.expression);
     });
-    setPlayPauseButton();
+    updatePlayer();
 }
 
 async function open() {
@@ -430,9 +442,7 @@ function onChanged(e) {
 
 function onIterate(e) {
     board.refresh();
-    var slider = $("#slider").dxSlider("instance");
-    slider.option("max", calculator.getLastIteration());
-    slider.option("value", calculator.getIteration());
+    updatePlayer();
 }
 
 DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQxCn0=.RwzuszxP0EZpb1mjikhmz6G0g5QUrgDILiiRTePC1SeHd3o9co5aGr7mMPuysN6kKb16+UZ0uwtnUXeiOwJcvFTd9wDPT8UqhPXr3uBXmEonDisUwgOBZrfrbZc1satfHazSYg=="});
@@ -445,6 +455,10 @@ createTopToolbar();
 createBottomToolbar();
 createChat();
 createShapePopup();
+var playPause = $("#playPauseButton").dxButton("instance");
+var stop = $("#stopButton").dxButton("instance");
+var replay = $("#replayButton").dxButton("instance");
+var playHead = $("#playHeadSlider").dxSlider("instance");
 board.svg.addEventListener("selected", e => onSelected(e));
 board.svg.addEventListener("deselected", e => onDeselected(e));
 board.shapes.registerShape(BodyShape);

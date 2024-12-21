@@ -107,6 +107,10 @@ svg:active.pan-available {
     box-shadow: rgba(0,0,0,.12) 0 2px 7.2px 0,rgba(0,0,0,.14) 0 8px 16px 0;
 }
 
+.dx-slider-tooltip-position-top {
+    padding-top: 0 !important;
+}
+
 .mq-editable-field,
 .mq-math-mode .mq-editable-field {
   border: 0px solid gray;
