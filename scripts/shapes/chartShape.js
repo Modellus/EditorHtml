@@ -8,7 +8,7 @@ class ChartShape extends BaseShape {
     getForm() {
         return $("<div id='shape-form'></div>").dxForm({
             colCount: 1,
-            onFieldDataChanged: e => onFieldDataChanged(e),
+            onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
             items: [
                 {
                     dataField: "name",

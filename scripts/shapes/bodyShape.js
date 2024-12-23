@@ -8,7 +8,7 @@ class BodyShape extends BaseShape {
     createForm() {
         return $("<div id='shape-form'></div>").dxForm({
             colCount: 1,
-            onFieldDataChanged: e => this.properties[e.dataField] = e.value,
+            onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
             items: [
                   {
                     dataField: "name",

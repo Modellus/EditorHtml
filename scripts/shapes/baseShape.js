@@ -57,6 +57,12 @@ class BaseShape {
         throw new Error("createElement should be implemented in subclasses.");
     }
 
+    setProperty(name, value) {
+        this.properties[name] = value;
+        this.draw();
+        this.dispatchChangedEvent({ property: name, value: value });
+    }
+
     update() {
     }
 

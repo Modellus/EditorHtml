@@ -59,6 +59,14 @@ function createTopToolbar() {
                     icon: "fa-light fa-table",
                     onClick: _ => addTable()
                 }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-image",
+                    onClick: _ => addImage()
+                }
             }
         ]
     });
@@ -343,6 +351,12 @@ function addExpresssion() {
     commands.execute(new AddShapeCommand(board, shape));
 }
 
+function addImage() {
+    var center = this.board.getClientCenter();
+    var shape = board.shapes.createShape("ImageShape", calculator, { name: "Image", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0 });
+    commands.execute(new AddShapeCommand(board, shape));
+}
+
 function undoPressed() {
     commands.undo();
 }
@@ -465,5 +479,6 @@ board.shapes.registerShape(BodyShape);
 board.shapes.registerShape(ExpressionShape);
 board.shapes.registerShape(ChartShape);
 board.shapes.registerShape(TableShape);
+board.shapes.registerShape(ImageShape);
 calculator.on("iterate", e => onIterate(e));
 calculator.on("iterationChanged", e => onIterationChanged(e));
