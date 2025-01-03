@@ -1,26 +1,16 @@
 class BaseShape {
-    constructor(calculator, properties) {
-        this.strokeColors = [
-            { color: "#1e1e1e"},
-            { color: "#ffc9c9" },
-            { color: "#b1f2ba" },
-            { color: "#a4d8ff" },
-            { color: "#ffec99" }
-        ];
-        this.backgroundColors = [
-            { color: "#ebebeb"},
-            { color: "#e03130" },
-            { color: "#2f9e44" },
-            { color: "#1871c2" },
-            { color: "#f08c02" }
-        ];
+    constructor(board, calculator, properties, parent) {
+        this.board = board;
         this.calculator = calculator;
         this.properties = {};
+        this.parent = parent;
+        this.children = [];
+        if (parent !== undefined)
+            parent.children.push(this);
         Object.assign(this.properties, properties);
         this.properties.type = this.constructor.name;
         this.element = this.createElement();
         this.draw();
-        this.form = null;
     }
 
     getForm() {
@@ -49,6 +39,9 @@ class BaseShape {
         this.element.dispatchEvent(changedEvent);
     }
 
+    createTransformer() {
+    }
+
     createForm() {
         return null;
     }
@@ -67,6 +60,7 @@ class BaseShape {
     }
 
     draw() {
+        this.children.forEach(child => child.draw());
     }
 
     resize(width, height) {
@@ -84,5 +78,16 @@ class BaseShape {
         this.properties.x = x;
         this.properties.y = y;
         this.draw();
+    }
+
+    getBounds() {
+        var parentBounds = this.parent !== undefined ? this.parent.getBounds() : { x: 0, y: 0, width: 0, height: 0, rotation: 0 };
+        return {
+            x: this.properties.x + parentBounds.x,
+            y: this.properties.y + parentBounds.y,
+            width: this.properties.width + parentBounds.width,
+            height: this.properties.height + parentBounds.height,
+            rotation: this.properties.rotation + parentBounds.rotation
+        };
     }
 }

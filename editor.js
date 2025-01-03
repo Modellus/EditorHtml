@@ -39,9 +39,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-arrow-right-long",
-                    onClick: function() {
-                        alert("Pointer button clicked!");
-                    }
+                    onClick: _ => addVector()
                 }
             },
             {
@@ -328,32 +326,38 @@ function sendToBackend(message, chat) {
 
 function addChart() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("ChartShape", calculator, { name: "Chart", x: center.x - 250, y: center.y - 250, width: 500, height: 500, rotation: 0 });
+    var shape = board.shapes.createShape("ChartShape", this.board, calculator, { name: "Chart", x: center.x - 250, y: center.y - 250, width: 500, height: 500, rotation: 0 });
     commands.execute(new AddShapeCommand(board, shape));
 }
 
 function addTable() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("TableShape", calculator, { name: "Table", x: center.x - 250, y: center.y - 250, width: 500, height: 500, rotation: 0 });
+    var shape = board.shapes.createShape("TableShape", this.board, calculator, { name: "Table", x: center.x - 250, y: center.y - 250, width: 500, height: 500, rotation: 0 });
     commands.execute(new AddShapeCommand(board, shape));
 }
 
 function addBody() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("BodyShape", calculator, { name: "Body", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0 });
+    var shape = board.shapes.createShape("BodyShape", this.board, calculator, { name: "Body", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0 });
     commands.execute(new AddShapeCommand(board, shape));
 }
 
 function addExpresssion() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("ExpressionShape", calculator, { name: "Expression", x: center.x - 150, y: center.y - 25, width: 300, height: 50, rotation: 0 });
+    var shape = board.shapes.createShape("ExpressionShape", this.board, calculator, { name: "Expression", x: center.x - 150, y: center.y - 25, width: 300, height: 50, rotation: 0 });
     shape.element.addEventListener("changed", e => onChanged(e));
     commands.execute(new AddShapeCommand(board, shape));
 }
 
 function addImage() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("ImageShape", calculator, { name: "Image", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0 });
+    var shape = board.shapes.createShape("ImageShape", this.board, calculator, { name: "Image", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0 });
+    commands.execute(new AddShapeCommand(board, shape));
+}
+
+function addVector() {
+    var center = this.board.getClientCenter();
+    var shape = board.shapes.createShape("VectorShape", this.board, calculator, { name: "Vector", x: 30, y: 30 }, selection.selectedShape);
     commands.execute(new AddShapeCommand(board, shape));
 }
 
@@ -435,7 +439,7 @@ async function save() {
 }
 
 function onSelected(e) {
-    var shape = e.detail.shape;
+    shape = e.detail.shape;
     var form = shape.getForm();
     if (form == null)
         return;
@@ -475,10 +479,6 @@ var replay = $("#replayButton").dxButton("instance");
 var playHead = $("#playHeadSlider").dxSlider("instance");
 board.svg.addEventListener("selected", e => onSelected(e));
 board.svg.addEventListener("deselected", e => onDeselected(e));
-board.shapes.registerShape(BodyShape);
-board.shapes.registerShape(ExpressionShape);
-board.shapes.registerShape(ChartShape);
-board.shapes.registerShape(TableShape);
-board.shapes.registerShape(ImageShape);
+board.shapes.registerShapes([BodyShape, ExpressionShape, ChartShape, TableShape, ImageShape, VectorShape]);
 calculator.on("iterate", e => onIterate(e));
 calculator.on("iterationChanged", e => onIterationChanged(e));

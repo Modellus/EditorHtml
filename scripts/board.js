@@ -17,6 +17,15 @@ class Board {
         this.svg.addEventListener("wheel", this.onWheel.bind(this));
         this.svg.addEventListener("mouseover", this.onMouseOver.bind(this));
         this.svg.addEventListener("mouseout", this.onMouseOut.bind(this));
+        this.theme = new BaseTheme();
+    }
+
+    createSvgElement(name) {
+        return document.createElementNS("http://www.w3.org/2000/svg", name);
+    }
+
+    createElement(name) {
+        return document.createElement(name);
     }
 
     clear() {
@@ -54,6 +63,7 @@ class Board {
     }
 
     removeShape(shape) {
+        this.svg.removeChild(shape.element);
         this.svg.removeChild(shape.element);
         this.shapes.remove(shape);
     }
@@ -159,6 +169,14 @@ class Board {
     onMouseOut(event) {
         if (event.target === this.svg)
             this.svg.classList.remove("pan-available");
+    }
+
+    getMouseToSvgPoint(event) {
+        const point = this.svg.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        const svgPoint = point.matrixTransform(this.svg.getScreenCTM().inverse());
+        return svgPoint;
     }
 
     getPan() {

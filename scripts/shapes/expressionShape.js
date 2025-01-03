@@ -1,11 +1,15 @@
 class ExpressionShape extends BaseShape {
-    constructor(calculator, properties) {
-        super(calculator, properties);
+    constructor(board, calculator, properties) {
+        super(board, calculator, properties);
+    }
+
+    createTransformer() { 
+        return new RectangleTransformer(this.board, this);
     }
 
     createElement() {
-        const foreignObject = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
-        const div = document.createElement("div");
+        const foreignObject = this.board.createSvgElement("foreignObject");
+        const div = this.board.createElement("div");
         div.style.width = "100%";
         div.style.height = "100%";
         div.classList.add("mq-editable-field", "mq-math-mode");

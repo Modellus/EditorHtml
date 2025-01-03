@@ -1,8 +1,12 @@
 class ChartShape extends BaseShape {
-    constructor(calculator, properties) {
-        super(calculator, properties);
+    constructor(board, calculator, properties) {
+        super(board, calculator, properties);
         this.properties.chartType = "line";
         this.hasForm = true;
+    }
+
+    createTransformer() { 
+        return new RectangleTransformer(this.board, this);
     }
 
     getForm() {
@@ -29,7 +33,7 @@ class ChartShape extends BaseShape {
                                 buttonElement.find(".dx-icon").css("color", item.color);
                             });
                         },
-                        items: this.backgroundColors.map(c => ({
+                        items: this.board.theme.getBackgroundColors().map(c => ({
                             icon: "fa-solid fa-square",
                             color: c.color
                         })),
@@ -73,7 +77,7 @@ class ChartShape extends BaseShape {
     }
 
     createElement() {
-        const foreignObject = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+        const foreignObject = this.board.createSvgElement("foreignObject");
         const $div = $("<div>").appendTo(foreignObject);
         $div.css({ "width": "100%", "height": "100%" });
         this.chart = $div.dxChart({

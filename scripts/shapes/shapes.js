@@ -5,14 +5,14 @@ class Shapes {
         this.shapeRegistry = {};
     }
 
-    registerShape(shapeClass) {
-        this.shapeRegistry[shapeClass.name] = shapeClass;
+    registerShapes(shapeClasses) {
+        shapeClasses.forEach(shapeClass => this.shapeRegistry[shapeClass.name] = shapeClass);
     }
 
-    createShape(shapeType, calculator, properties) {
+    createShape(shapeType, board, calculator, properties, parent) {
         const ShapeClass = this.shapeRegistry[shapeType];
         if (ShapeClass)
-            return new ShapeClass(calculator, properties);
+            return new ShapeClass(board, calculator, properties, parent);
         throw new Error(`Shape type "${shapeType}" is not registered.`);
     }
 

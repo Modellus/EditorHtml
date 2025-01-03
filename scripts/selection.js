@@ -28,7 +28,7 @@ class Selection {
     select(shape) {
         this.deselect();
         this.selectedShape = shape;
-        this.transformer = new Transformer(this.board, shape);
+        this.transformer = shape.createTransformer();
         this.transformer.show();
         this.dispatchSelectedEvent();
     }

@@ -1,12 +1,8 @@
-class BodyShape extends BaseShape {
+class VectorShape extends BaseShape {
     constructor(board, calculator, properties, parent) {
         super(board, calculator, properties, parent);
         this.hasForm = true;
-        this.properties.color = this.board.theme.getBackgroundColors()[1].color;
-    }
-
-    createTransformer() { 
-        return new CircleTransformer(this.board, this);
+        this.properties.color = this.board.theme.getBackgroundColors()[2].color;
     }
 
     createForm() {
@@ -33,7 +29,7 @@ class BodyShape extends BaseShape {
                                 buttonElement.find(".dx-icon").css("color", item.color);
                             });
                         },
-                        items: this.board.theme.getBackgroundColors().map(c => ({
+                        items: this.board.theme.backgroundColors.map(c => ({
                             icon: "fa-solid fa-square",
                             color: c.color
                         })),
@@ -52,7 +48,7 @@ class BodyShape extends BaseShape {
                                 buttonElement.find(".dx-icon").css("color", item.color);
                             });
                         },
-                        items: this.board.theme.getStrokeColors().map(c => ({
+                        items: this.strokeColors.map(c => ({
                             icon: "fa-solid fa-square",
                             color: c.color
                         })),
@@ -81,12 +77,12 @@ class BodyShape extends BaseShape {
     }
 
     createElement() {
-        const circle = this.board.createSvgElement("circle");
-        return circle;
+        const path = this.board.createSvgElement("path");
+        return path;
     }    
 
     static deserialize(calculator, data) {
-        return new BodyShape(calculator, data);
+        return new VectorShape(calculator, data);
     }
 
     update() {
@@ -95,12 +91,19 @@ class BodyShape extends BaseShape {
     }
 
     draw() {
-        super.draw();
-        this.element.setAttribute("cx", this.properties.x + this.properties.width / 2);
-        this.element.setAttribute("cy", this.properties.y + this.properties.height / 2);
-        this.element.setAttribute("r", Math.min(this.properties.width, this.properties.height) / 2);
-        this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
-            ${this.properties.y + this.properties.height / 2})`);
-        this.element.setAttribute("fill", this.properties.color ?? this.board.theme.getBackgroundColors()[1].color);
+        var x1 = this.parent ? this.parent.properties.x + this.parent.properties.width / 2 : 0;
+        var y1 = this.parent ? this.parent.properties.y + this.parent.properties.height / 2 : 0;
+        var x2 = this.properties.x + x1;
+        var y2 = this.properties.y + y1;
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const arrowheadSize = 5;
+        const arrowheadX1 = x2 - arrowheadSize * Math.cos(angle - Math.PI / 6);
+        const arrowheadY1 = y2 - arrowheadSize * Math.sin(angle - Math.PI / 6);
+        const arrowheadX2 = x2 - arrowheadSize * Math.cos(angle + Math.PI / 6);
+        const arrowheadY2 = y2 - arrowheadSize * Math.sin(angle + Math.PI / 6);
+        const pathData = `M ${x1} ${y1} L ${x2} ${y2} L ${arrowheadX1} ${arrowheadY1} L ${arrowheadX2} ${arrowheadY2} L ${x2} ${y2} Z`;
+        this.element.setAttribute("d", pathData);
+        this.element.setAttribute("fill", this.properties.color ?? this.board.theme.getBackgroundColors()[2].color);
+        this.element.setAttribute("stroke", this.properties.color ?? this.board.theme.getBackgroundColors()[2].color);
     }
 }

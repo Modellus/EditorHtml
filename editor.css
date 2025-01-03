@@ -41,6 +41,60 @@ svg {
     justify-content: center;
 }
 
+.handle {
+    fill: white;
+    stroke: #4039d7;
+    rx: 2px;
+    ry: 2px;
+}
+
+.handle.top-left {
+    cursor: nwse-resize;
+    width: 8px;
+    height: 8px;
+}
+
+.handle.top-right {
+    cursor: nesw-resize;
+    width: 8px;
+    height: 8px;
+}
+
+.handle.bottom-left {
+    cursor: nesw-resize;
+    width: 8px;
+    height: 8px;
+}
+
+.handle.bottom-right {
+    cursor: nwse-resize;
+    width: 8px;
+    height: 8px;
+}
+
+.handle.move {
+    fill: #4039d7;
+    stroke: transparent;
+    cursor: move;
+    rx: 0px;
+    ry: 0px;
+}
+
+.handle.rotation {
+    transform: translateY(-10px);
+    rx: 4px;
+    ry: 4px;
+    cursor: url("rotate-reverse-regular.png"), auto;
+}
+
+.rotation-handle {
+    fill: white;
+    stroke: #4039d7;
+    cursor: pointer;
+    rx: 5px;
+    ry: 5px;
+}
+
 .resize-handle {
     fill: white;
     stroke: #4039d7;

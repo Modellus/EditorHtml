@@ -1,10 +1,14 @@
 class TableShape extends BaseShape {
-    constructor(calculator, properties) {
-        super(calculator, properties);
+    constructor(board, calculator, properties) {
+        super(board, calculator, properties);
+    }
+
+    createTransformer() { 
+        return new RectangleTransformer(this.board, this);
     }
 
     createElement() {
-        const foreignObject = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+        const foreignObject = this.board.createSvgElement("foreignObject");
         const $div = $("<div>").appendTo(foreignObject);
         $div.css({ "width": "100%", "height": "100%" });
         this.dataGrid = $div.dxDataGrid({
