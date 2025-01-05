@@ -90,4 +90,11 @@ class BaseShape {
             rotation: this.properties.rotation + parentBounds.rotation
         };
     }
+
+    getBoardPosition() {
+        return {
+            x: this.properties.x + (this.parent ? this.parent.properties.x + this.parent.properties.width / 2 : 0),
+            y: this.properties.y + (this.parent ? this.parent.properties.y + this.parent.properties.height / 2 : 0)
+        };
+    }
 }

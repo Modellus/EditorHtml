@@ -19,8 +19,8 @@ class BaseTransformer {
 
     createHandles() {
         var handles = this.getHandles();
-        handles.forEach(({ className, attributes, event }) =>
-            this.addHandle(className, handle => this.setAttributes(handle, attributes()), event)
+        handles.forEach(({ className, getAttributes, getTransform }) =>
+            this.addHandle(className, handle => this.setAttributes(handle, getAttributes()), getTransform)
         );
     }
 

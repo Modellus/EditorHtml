@@ -357,7 +357,7 @@ function addImage() {
 
 function addVector() {
     var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("VectorShape", this.board, calculator, { name: "Vector", x: 30, y: 30 }, selection.selectedShape);
+    var shape = board.shapes.createShape("VectorShape", this.board, calculator, { name: "Vector", x: 0, y: 0, width: 30, height: 30 }, selection.selectedShape);
     commands.execute(new AddShapeCommand(board, shape));
 }
 
