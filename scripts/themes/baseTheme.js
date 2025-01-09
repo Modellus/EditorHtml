@@ -8,7 +8,8 @@ class BaseTheme {
             { color: "#ffc9c9" },
             { color: "#b1f2ba" },
             { color: "#a4d8ff" },
-            { color: "#ffec99" }
+            { color: "#ffec99" },
+            { color: "#ffffff" }
         ];
     }
 
@@ -18,7 +19,8 @@ class BaseTheme {
             { color: "#e03130" },
             { color: "#2f9e44" },
             { color: "#1871c2" },
-            { color: "#f08c02" }
+            { color: "#f08c02" },
+            { color: "#ffffff" }
         ];
     }
 }

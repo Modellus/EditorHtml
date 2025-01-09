@@ -28,6 +28,43 @@ function createTopToolbar() {
             },
             {
                 location: "center",
+                template() {
+                  return $("<div class='toolbar-separator'>|</div>");
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-shapes",
+                    elementAttr1: {
+                        style: "font-family: cursive; font-size: 16px"
+                    },
+                    onClick: _ => addReferential(),
+                    template1: function() {
+                        return $(`<span class="fa-stack">
+                            <i class="fa-light fa-square fa-stack-1x"></i>
+                            <i class="fa-light fa-circle fa-2xs fa-stack-2x"></i>
+                        </span>`);
+                    }
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-image",
+                    onClick: _ => addImage()
+                }
+            },
+            {
+                location: "center",
+                template() {
+                  return $("<div class='toolbar-separator'>|</div>");
+                }
+            },
+            {
+                location: "center",
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-circle",
@@ -38,8 +75,25 @@ function createTopToolbar() {
                 location: "center",
                 widget: "dxButton",
                 options: {
-                    icon: "fa-light fa-arrow-right-long",
+                    icon: "fa-light fa-arrow-right-long fa-rotate-by",
+                    elementAttr: {
+                        style: "--fa-rotate-angle: -45deg;"
+                    },
                     onClick: _ => addVector()
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-regular fa-child-reaching",
+                    disabled: true,
+                }
+            },
+            {
+                location: "center",
+                template() {
+                  return $("<div class='toolbar-separator'>|</div>");
                 }
             },
             {
@@ -56,14 +110,6 @@ function createTopToolbar() {
                 options: {
                     icon: "fa-light fa-table",
                     onClick: _ => addTable()
-                }
-            },
-            {
-                location: "center",
-                widget: "dxButton",
-                options: {
-                    icon: "fa-light fa-image",
-                    onClick: _ => addImage()
                 }
             }
         ]
@@ -95,6 +141,12 @@ function createBottomToolbar() {
                     icon: "fa-light fa-circle-plus"
                 },
                 location: "before"
+            },
+            {
+                location: "before",
+                template() {
+                  return $("<div class='toolbar-separator'>|</div>");
+                }
             },
             {
                 widget: "dxButton",
@@ -204,8 +256,8 @@ function createChat() {
         hideOnOutsideClick: true,
         animation: null,
         contentTemplate: function () {
-            const firstUser = { id: '1', name: 'User' };
-            const secondUser = { id:'2', name: 'Modellus', avatarUrl: 'https://devexpress.github.io/DevExtreme/images/icons/bot.png' };
+            const firstUser = { id: "1", name: "User" };
+            const secondUser = { id: "2", name: "Modellus", avatarUrl: "https://devexpress.github.io/DevExtreme/images/icons/bot.png" };
             const initialMessages = [{
                 timestamp: Date.now(),
                 author: secondUser,
@@ -256,27 +308,27 @@ function createShapePopup() {
 function createContextMenu() {
     var menuItems = [
         {
-            text: 'New',
-            icon: 'fa-light fa-file',
-            shortcut: 'Ctrl+N',
+            text: "New",
+            icon: "fa-light fa-file",
+            shortcut: "Ctrl+N",
             name: "New"
         },
         {
-            text: 'Open...',
-            icon: 'fa-light fa-folder',
-            shortcut: 'Ctrl+O',
+            text: "Open...",
+            icon: "fa-light fa-folder",
+            shortcut: "Ctrl+O",
             name: "Open"
         },
         {
-            text: 'Save...',
-            icon: 'fa-light fa-arrow-down-to-bracket',
-            shortcut: 'Ctrl+S',
+            text: "Save...",
+            icon: "fa-light fa-arrow-down-to-bracket",
+            shortcut: "Ctrl+S",
             name: "Save"
         },
         {
-            text: 'Close',
-            icon: 'fa-light fa-times',
-            shortcut: 'Ctrl+W',
+            text: "Close",
+            icon: "fa-light fa-times",
+            shortcut: "Ctrl+W",
             name: "Close"
         }
     ];
@@ -361,6 +413,12 @@ function addVector() {
     commands.execute(new AddShapeCommand(board, shape));
 }
 
+function addReferential() {
+    var center = this.board.getClientCenter();
+    var shape = board.shapes.createShape("ReferentialShape", this.board, calculator, { name: "Referential", x: center.x - 200, y: center.y - 100, width: 400, height: 200, rotation: 0, originX: 200, originY: 100 });
+    commands.execute(new AddShapeCommand(board, shape));
+}
+
 function undoPressed() {
     commands.undo();
 }
@@ -406,7 +464,7 @@ function clear() {
 function reset() {
     calculator.clear();
     board.shapes.shapes.forEach(shape => {
-        if (shape.properties.type == 'ExpressionShape')
+        if (shape.properties.type == "ExpressionShape")
             calculator.parse(shape.properties.expression);
     });
     updatePlayer();
@@ -467,7 +525,7 @@ DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImN
 var calculator = new Calculator();
 var board = new Board(document.getElementById("svg"));
 var selection = new Selection(board);
-new MiniMap(board, document.getElementById('minimap-image'), document.getElementById('minimap-viewport'));
+new MiniMap(board, document.getElementById("minimap-image"), document.getElementById("minimap-viewport"));
 createContextMenu();
 createTopToolbar();
 createBottomToolbar();
@@ -479,6 +537,6 @@ var replay = $("#replayButton").dxButton("instance");
 var playHead = $("#playHeadSlider").dxSlider("instance");
 board.svg.addEventListener("selected", e => onSelected(e));
 board.svg.addEventListener("deselected", e => onDeselected(e));
-board.shapes.registerShapes([BodyShape, ExpressionShape, ChartShape, TableShape, ImageShape, VectorShape]);
+board.shapes.registerShapes([BodyShape, ExpressionShape, ChartShape, TableShape, ImageShape, VectorShape, ReferentialShape]);
 calculator.on("iterate", e => onIterate(e));
 calculator.on("iterationChanged", e => onIterationChanged(e));

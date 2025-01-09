@@ -53,10 +53,8 @@ class BaseTransformer {
         point.dx = point.x - this.startX;
         point.dy = point.y - this.startY;
         const transform = this.draggedHandle.getTransform(point);
-        this.shape.resize(transform.width, transform.height);
-        this.shape.move(transform.x, transform.y);
-        if (transform.angle) 
-            this.shape.rotate(transform.angle);
+        this.transformShape(transform);
+        this.shape.draw();
         this.updateHandles();
         this.startX = point.x;
         this.startY = point.y;
@@ -66,6 +64,15 @@ class BaseTransformer {
         this.draggedHandle = null;
         document.removeEventListener("mousemove", this.onHandleDrag);
         document.removeEventListener("mouseup", this.onHandleDragEnd);
+    }
+
+    transformShape(transform) {
+        if (transform.width && transform.height)
+            this.shape.resize(transform.width, transform.height);
+        if (transform.x && transform.y)
+            this.shape.move(transform.x, transform.y);
+        if (transform.angle) 
+            this.shape.rotate(transform.angle);
     }
 
     hide() {
