@@ -8,16 +8,22 @@ class ReferentialTransformer extends RectangleTransformer {
         var handles = super.getHandles();
         handles.push({
             className: "handle origin",
-            getAttributes: _ => ({
-                x: this.shape.properties.x + this.shape.properties.originX - size / 2,
-                y: this.shape.properties.y + this.shape.properties.originY - size / 2,
-                width: size,
-                height: size
-            }),
-            getTransform: e => ({
-                originX: e.x - this.shape.properties.x,
-                originY: e.y - this.shape.properties.y
-            })
+            getAttributes: _ => {
+                const position = this.shape.getBoardPosition();
+                return {
+                    x: position.x + (this.shape.properties.originX ?? this.shape.properties.width / 2) - size / 2,
+                    y: position.y + (this.shape.properties.originY ?? this.shape.properties.height / 2) - size / 2,
+                    width: size,
+                    height: size
+                }
+            },
+            getTransform: e => {
+                const position = this.shape.getBoardPosition();
+                return {
+                    originX: e.x - position.x,
+                    originY: e.y - position.y
+                }
+            }
         });
         return handles;
     }

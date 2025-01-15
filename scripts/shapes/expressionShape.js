@@ -29,7 +29,10 @@ class ExpressionShape extends BaseShape {
 
     onEdit() {
         this.properties.expression = this.mathField.latex();
-        var detail = { expression: this.properties.expression };
+        var detail = { 
+            shape: this,
+            expression: this.properties.expression 
+        };
         this.dispatchChangedEvent(detail);
     }
 

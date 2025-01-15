@@ -5,9 +5,10 @@ class BaseShape {
         this.properties = {};
         this.parent = parent;
         this.children = [];
-        if (parent !== undefined)
+        if (parent != null)
             parent.children.push(this);
         Object.assign(this.properties, properties);
+        this.properties.rotation = 0;
         this.properties.type = this.constructor.name;
         this.element = this.createElement();
         this.draw();
@@ -63,35 +64,24 @@ class BaseShape {
         this.children.forEach(child => child.draw());
     }
 
-    resize(width, height) {
-        this.properties.width = width;
-        this.properties.height = height;
-    }
-
-    rotate(angle) {
-        this.properties.rotation = angle;
-    }
-
-    move(x, y) {
-        this.properties.x = x;
-        this.properties.y = y;
-    }
-
     getBounds() {
-        var parentBounds = this.parent !== undefined ? this.parent.getBounds() : { x: 0, y: 0, width: 0, height: 0, rotation: 0 };
+        var parentBounds = this.parent?.getBounds() ?? {};
         return {
-            x: this.properties.x + parentBounds.x,
-            y: this.properties.y + parentBounds.y,
-            width: this.properties.width + parentBounds.width,
-            height: this.properties.height + parentBounds.height,
-            rotation: this.properties.rotation + parentBounds.rotation
+            x: this.properties.x + (parentBounds.originX ?? 0),
+            y: this.properties.y + (parentBounds.originY ?? 0),
+            width: this.properties.width,
+            height: this.properties.height,
+            originX: this.properties.x + (parentBounds.originX ?? 0) + this.properties.width / 2,
+            originY: this.properties.y + (parentBounds.originY ?? 0) + this.properties.height / 2,
+            rotation: this.properties.rotation + (parentBounds.rotation ?? 0)
         };
     }
 
     getBoardPosition() {
+        const parentPosition = this.parent?.getBoardPosition() ?? { x: 0, y: 0 };
         return {
-            x: this.properties.x + (this.parent ? this.parent.properties.x + this.parent.properties.width / 2 : 0),
-            y: this.properties.y + (this.parent ? this.parent.properties.y + this.parent.properties.height / 2 : 0)
+            x: this.properties.x + parentPosition.x + (this.parent?.properties.originX ?? 0),
+            y: this.properties.y + parentPosition.y + (this.parent?.properties.originY ?? 0)
         };
     }
 }

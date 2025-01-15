@@ -23,7 +23,7 @@ function createTopToolbar() {
                         style: "font-family: cursive; font-size: 16px"
                     },
                     text: "X",
-                    onClick: _ => addExpresssion()
+                    onClick: _ => addShape("ExpressionShape", "Expression", 300, 50),
                 }
             },
             {
@@ -40,7 +40,7 @@ function createTopToolbar() {
                     elementAttr1: {
                         style: "font-family: cursive; font-size: 16px"
                     },
-                    onClick: _ => addReferential(),
+                    onClick: _ => addShape("ReferentialShape", "Referential", 400, 200),
                     template1: function() {
                         return $(`<span class="fa-stack">
                             <i class="fa-light fa-square fa-stack-1x"></i>
@@ -54,7 +54,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-image",
-                    onClick: _ => addImage()
+                    onClick: _ => addShape("ImageShape", "Image", 100, 100)
                 }
             },
             {
@@ -68,7 +68,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-circle",
-                    onClick: _ => addBody()
+                    onClick: _ => addShape("BodyShape", "Body", 20, 20)
                 }
             },
             {
@@ -79,7 +79,7 @@ function createTopToolbar() {
                     elementAttr: {
                         style: "--fa-rotate-angle: -45deg;"
                     },
-                    onClick: _ => addVector()
+                    onClick: _ => addShape("VectorShape", "Vector", 30, 30)
                 }
             },
             {
@@ -101,7 +101,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-chart-line",
-                    onClick: _ => addChart()
+                    onClick: _ => addShape("ChartShape", "Chart", 500, 500)
                 }
             },
             {
@@ -109,7 +109,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-table",
-                    onClick: _ => addTable()
+                    onClick: _ => addShape("TableShape", "Table", 500, 500)
                 }
             }
         ]
@@ -376,46 +376,10 @@ function sendToBackend(message, chat) {
     };
 }
 
-function addChart() {
-    var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("ChartShape", this.board, calculator, { name: "Chart", x: center.x - 250, y: center.y - 250, width: 500, height: 500, rotation: 0 });
-    commands.execute(new AddShapeCommand(board, shape));
-}
-
-function addTable() {
-    var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("TableShape", this.board, calculator, { name: "Table", x: center.x - 250, y: center.y - 250, width: 500, height: 500, rotation: 0 });
-    commands.execute(new AddShapeCommand(board, shape));
-}
-
-function addBody() {
-    var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("BodyShape", this.board, calculator, { name: "Body", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0 });
-    commands.execute(new AddShapeCommand(board, shape));
-}
-
-function addExpresssion() {
-    var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("ExpressionShape", this.board, calculator, { name: "Expression", x: center.x - 150, y: center.y - 25, width: 300, height: 50, rotation: 0 });
+function addShape(type, name, width, height) {
+    var center = selection.selectedShape == null ? this.board.getClientCenter() : { x: 0, y: 0};
+    var shape = board.shapes.createShape(type, this.board, calculator, { name: name, x: center.x, y: center.y, width: width, height: height }, selection.selectedShape);
     shape.element.addEventListener("changed", e => onChanged(e));
-    commands.execute(new AddShapeCommand(board, shape));
-}
-
-function addImage() {
-    var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("ImageShape", this.board, calculator, { name: "Image", x: center.x - 50, y: center.y - 50, width: 100, height: 100, rotation: 0 });
-    commands.execute(new AddShapeCommand(board, shape));
-}
-
-function addVector() {
-    var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("VectorShape", this.board, calculator, { name: "Vector", x: 0, y: 0, width: 30, height: 30 }, selection.selectedShape);
-    commands.execute(new AddShapeCommand(board, shape));
-}
-
-function addReferential() {
-    var center = this.board.getClientCenter();
-    var shape = board.shapes.createShape("ReferentialShape", this.board, calculator, { name: "Referential", x: center.x - 200, y: center.y - 100, width: 400, height: 200, rotation: 0, originX: 200, originY: 100 });
     commands.execute(new AddShapeCommand(board, shape));
 }
 
@@ -513,7 +477,8 @@ function onDeselected(e) {
 }
 
 function onChanged(e) {
-    reset();
+    if (e.detail.shape.properties.type == "ExpressionShape")
+        reset();
 }
 
 function onIterate(e) {

@@ -3,6 +3,8 @@ class ReferentialShape extends BaseShape {
         super(board, calculator, properties, parent);
         this.hasForm = true;
         this.properties.color = this.board.theme.getStrokeColors()[1].color;
+        this.properties.originX = this.properties.width / 2;
+        this.properties.originY = this.properties.height / 2;
     }
 
     createTransformer() { 
@@ -103,23 +105,24 @@ class ReferentialShape extends BaseShape {
 
     draw() {
         super.draw();
-        this.container.setAttribute("x", this.properties.x);
-        this.container.setAttribute("y", this.properties.y);
+        const position = this.getBoardPosition();
+        this.container.setAttribute("x", position.x);
+        this.container.setAttribute("y", position.y);
         this.container.setAttribute("width", this.properties.width);
         this.container.setAttribute("height", this.properties.height);
-        this.container.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
-            ${this.properties.y + this.properties.height / 2})`);
+        this.container.setAttribute("transform", `rotate(${this.properties.rotation}, ${position.x + this.properties.width / 2}, 
+            ${position.y + this.properties.height / 2})`);
         this.container.setAttribute("fill", this.properties.backgroundColor ?? this.board.theme.getBackgroundColors()[5].color);
         this.container.setAttribute("stroke", this.properties.color ?? this.board.theme.getStrokeColors()[0].color);
-        this.horizontalAxis.setAttribute("x1", this.properties.x);
-        this.horizontalAxis.setAttribute("y1", this.properties.y + this.properties.originY ?? this.properties.height / 2);
-        this.horizontalAxis.setAttribute("x2", this.properties.x + this.properties.width);
-        this.horizontalAxis.setAttribute("y2", this.properties.y + this.properties.originY ?? this.properties.height / 2);
+        this.horizontalAxis.setAttribute("x1", position.x);
+        this.horizontalAxis.setAttribute("y1", position.y + (this.properties.originY ?? this.properties.height / 2));
+        this.horizontalAxis.setAttribute("x2", position.x + this.properties.width);
+        this.horizontalAxis.setAttribute("y2", position.y + (this.properties.originY ?? this.properties.height / 2));
         this.horizontalAxis.setAttribute("stroke", this.properties.color ?? this.board.theme.getStrokeColors()[0].color);
-        this.verticalAxis.setAttribute("x1", this.properties.x + this.properties.originX ?? this.properties.width / 2);
-        this.verticalAxis.setAttribute("y1", this.properties.y);
-        this.verticalAxis.setAttribute("x2", this.properties.x + this.properties.originX ?? this.properties.width / 2);
-        this.verticalAxis.setAttribute("y2", this.properties.y + this.properties.height);
+        this.verticalAxis.setAttribute("x1", position.x + (this.properties.originX ?? this.properties.width / 2));
+        this.verticalAxis.setAttribute("y1", position.y);
+        this.verticalAxis.setAttribute("x2", position.x + (this.properties.originX ?? this.properties.width / 2));
+        this.verticalAxis.setAttribute("y2", position.y + this.properties.height);
         this.verticalAxis.setAttribute("stroke", this.properties.color ?? this.board.theme.getStrokeColors()[0].color);
     }
 }

@@ -67,12 +67,8 @@ class BaseTransformer {
     }
 
     transformShape(transform) {
-        if (transform.width && transform.height)
-            this.shape.resize(transform.width, transform.height);
-        if (transform.x && transform.y)
-            this.shape.move(transform.x, transform.y);
-        if (transform.angle) 
-            this.shape.rotate(transform.angle);
+        for (const [attribute, value] of Object.entries(transform))
+            this.shape.properties[attribute] = value;
     }
 
     hide() {
