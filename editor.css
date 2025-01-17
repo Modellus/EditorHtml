@@ -1,5 +1,5 @@
 html, body, .dx-theme-compact {
-    font-family: 'Assistant', sans-serif;
+    font-family: "Assistant", sans-serif;
     margin: 0;
     padding: 0;
     height: 100%;
@@ -148,8 +148,8 @@ svg:active.pan-available {
 }
 
 @font-face {
-    font-family: 'LatinModernMath';
-    src: url('fonts/latinmodern-math.otf') format('opentype');
+    font-family: "LatinModernMath";
+    src: url("fonts/latinmodern-math.otf") format("opentype");
     font-weight: normal;
     font-style: normal;
 }
@@ -165,6 +165,21 @@ svg:active.pan-available {
     padding-left: 10px;
     padding-right: 10px;
     box-shadow: rgba(0,0,0,.12) 0 2px 7.2px 0,rgba(0,0,0,.14) 0 8px 16px 0;
+}
+
+.dx-datagrid .dx-header-row .dx-datagrid-text-content {
+    font-family: "Times New Roman";
+    font-size: 18.4px;
+    font-style: italic !important;
+    font-weight: normal;
+}
+
+.dxc-legend .dxc-item {
+    font-family: "Times New Roman" !important;
+    font-size: 18.4px !important;
+    font-style: italic;
+    font-weight: normal;
+    color: #242424 !important;
 }
 
 .dx-slider-tooltip-position-top {

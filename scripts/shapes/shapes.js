@@ -17,19 +17,12 @@ class Shapes {
     }
 
     add(shape) {
-        var id = this.getNextId();
-        shape.element.id = id;
-        this.shapes.set(id.toString(), shape);
+        this.shapes.set(shape.id.toString(), shape);
     }
 
     clear() {
         this.shapes.clear();
         this.lastId = 0;
-    }
-
-    getNextId() {
-        this.lastId++;
-        return this.lastId;
     }
 
     get(id) {

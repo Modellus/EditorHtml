@@ -93,6 +93,13 @@ class ReferentialShape extends BaseShape {
         this.verticalAxis = this.board.createSvgElement("line");
         this.verticalAxis.setAttribute("stroke-width", 1);
         g.appendChild(this.verticalAxis);
+        const defs = this.board.createSvgElement("defs");
+        g.appendChild(defs);
+        const clipPath = this.board.createSvgElement("clipPath");
+        clipPath.setAttribute("id", this.getClipId());
+        defs.appendChild(clipPath);
+        this.containerClip = this.board.createSvgElement("rect");
+        clipPath.appendChild(this.containerClip);
         return g;
     }    
 
@@ -112,6 +119,12 @@ class ReferentialShape extends BaseShape {
         this.container.setAttribute("height", this.properties.height);
         this.container.setAttribute("transform", `rotate(${this.properties.rotation}, ${position.x + this.properties.width / 2}, 
             ${position.y + this.properties.height / 2})`);
+        this.containerClip.setAttribute("x", position.x);
+        this.containerClip.setAttribute("y", position.y);
+        this.containerClip.setAttribute("width", this.properties.width);
+        this.containerClip.setAttribute("height", this.properties.height);
+        this.containerClip.setAttribute("transform", `rotate(${this.properties.rotation}, ${position.x + this.properties.width / 2}, 
+            ${position.y + this.properties.height / 2})`);
         this.container.setAttribute("fill", this.properties.backgroundColor ?? this.board.theme.getBackgroundColors()[5].color);
         this.container.setAttribute("stroke", this.properties.color ?? this.board.theme.getStrokeColors()[0].color);
         this.horizontalAxis.setAttribute("x1", position.x);
@@ -124,5 +137,9 @@ class ReferentialShape extends BaseShape {
         this.verticalAxis.setAttribute("x2", position.x + (this.properties.originX ?? this.properties.width / 2));
         this.verticalAxis.setAttribute("y2", position.y + this.properties.height);
         this.verticalAxis.setAttribute("stroke", this.properties.color ?? this.board.theme.getStrokeColors()[0].color);
+    }
+
+    getClipId() {
+        return `clip-${this.id}`;
     }
 }

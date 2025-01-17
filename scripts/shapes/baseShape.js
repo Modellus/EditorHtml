@@ -1,16 +1,27 @@
 class BaseShape {
     constructor(board, calculator, properties, parent) {
+        this.id = crypto.randomUUID();
         this.board = board;
         this.calculator = calculator;
-        this.properties = {};
         this.parent = parent;
         this.children = [];
         if (parent != null)
             parent.children.push(this);
+        this.setProperties(properties);
+        this.initializeElement();
+    }
+
+    setProperties(properties) {
+        this.properties = {};
         Object.assign(this.properties, properties);
         this.properties.rotation = 0;
         this.properties.type = this.constructor.name;
+    }
+
+    initializeElement() {
         this.element = this.createElement();
+        this.element.setAttribute("id", this.id);
+        this.element.setAttribute("clip-path", `url(#${this.getClipId()})`);
         this.draw();
     }
 
@@ -83,5 +94,9 @@ class BaseShape {
             x: this.properties.x + parentPosition.x + (this.parent?.properties.originX ?? 0),
             y: this.properties.y + parentPosition.y + (this.parent?.properties.originY ?? 0)
         };
+    }
+
+    getClipId() {
+        return this.parent?.getClipId();
     }
 }

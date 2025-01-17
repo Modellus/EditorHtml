@@ -101,7 +101,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-chart-line",
-                    onClick: _ => addShape("ChartShape", "Chart", 200, 100)
+                    onClick: _ => addShape("ChartShape", "Chart", 200, 200)
                 }
             },
             {

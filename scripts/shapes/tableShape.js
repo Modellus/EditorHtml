@@ -16,9 +16,11 @@ class TableShape extends BaseShape {
             scrolling: {
                 mode: "virtual"
             },
+            showBorders: true,
             columns: [
                 {
                     dataField: "x",
+                    caption: "x",
                     format: {
                         type: "fixedPoint",
                         precision: 2
@@ -26,6 +28,7 @@ class TableShape extends BaseShape {
                 },
                 {
                     dataField: "y",
+                    caption: "y",
                     format: {
                         type: "fixedPoint",
                         precision: 2
@@ -33,6 +36,7 @@ class TableShape extends BaseShape {
                 },
                 {
                     dataField: "z",
+                    caption: "z",
                     format: {
                         type: "fixedPoint",
                         precision: 2

@@ -88,6 +88,20 @@ class ChartShape extends BaseShape {
                     customizeText: e => e.argument === this.calculator.get()["x"] ? e.valueText : ""
                 }
             },
+            commonPaneSettings: {
+                border: {
+                    visible: true
+                }
+            },
+            commonAxisSettings: {
+                color: "#d3d3d3",
+                grid: {
+                    visible: true
+                },
+                tick: {
+                    visible: false
+                }
+            },
             series: [
                 {
                     name: "y",
