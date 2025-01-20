@@ -16,10 +16,10 @@ class Selection {
         this.board.svg.dispatchEvent(selectedEvent);
     }
 
-    dispatchDeselectedEvent() {
+    dispatchDeselectedEvent(deselectedShape) {
         const deselectedEvent = new CustomEvent('deselected', {
             detail: {
-                shape: this.selectedShape
+                shape: deselectedShape
             }
         });
         this.board.svg.dispatchEvent(deselectedEvent);
@@ -34,12 +34,14 @@ class Selection {
     }
 
     deselect() {
-        if (this.transformer)
-            this.transformer.hide();
-        if (this.selectedShape != null)
-            this.dispatchDeselectedEvent();
+        var selectedShape = this.selectedShape;
+        var transformer = this.transformer;
         this.selectedShape = null;
         this.transformer = null;
+        if (transformer)
+            transformer.hide();
+        if (selectedShape != null)
+            this.dispatchDeselectedEvent(selectedShape);
     }
 
     onClickOutside(event) {

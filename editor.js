@@ -23,7 +23,7 @@ function createTopToolbar() {
                         style: "font-family: cursive; font-size: 16px"
                     },
                     text: "X",
-                    onClick: _ => addShape("ExpressionShape", "Expression", 300, 50),
+                    onClick: _ => addShape("ExpressionShape", "Expression", 300, 50, false),
                 }
             },
             {
@@ -40,7 +40,7 @@ function createTopToolbar() {
                     elementAttr1: {
                         style: "font-family: cursive; font-size: 16px"
                     },
-                    onClick: _ => addShape("ReferentialShape", "Referential", 400, 200),
+                    onClick: _ => addShape("ReferentialShape", "Referential", 400, 200, false),
                     template1: function() {
                         return $(`<span class="fa-stack">
                             <i class="fa-light fa-square fa-stack-1x"></i>
@@ -54,7 +54,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-image",
-                    onClick: _ => addShape("ImageShape", "Image", 100, 100)
+                    onClick: _ => addShape("ImageShape", "Image", 100, 100, true)
                 }
             },
             {
@@ -68,7 +68,9 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-circle",
-                    onClick: _ => addShape("BodyShape", "Body", 20, 20)
+                    disabled: true,
+                    onClick: _ => addShape("BodyShape", "Body", 20, 20, true),
+                    onInitialized: e => bodyButton = e.component
                 }
             },
             {
@@ -79,7 +81,9 @@ function createTopToolbar() {
                     elementAttr: {
                         style: "--fa-rotate-angle: -45deg;"
                     },
-                    onClick: _ => addShape("VectorShape", "Vector", 30, 30)
+                    disabled: true,
+                    onClick: _ => addShape("VectorShape", "Vector", 30, 30, true),
+                    onInitialized: e => vectorButton = e.component
                 }
             },
             {
@@ -101,7 +105,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-chart-line",
-                    onClick: _ => addShape("ChartShape", "Chart", 200, 200)
+                    onClick: _ => addShape("ChartShape", "Chart", 200, 200, false)
                 }
             },
             {
@@ -109,7 +113,7 @@ function createTopToolbar() {
                 widget: "dxButton",
                 options: {
                     icon: "fa-light fa-table",
-                    onClick: _ => addShape("TableShape", "Table", 200, 200)
+                    onClick: _ => addShape("TableShape", "Table", 200, 200, false)
                 }
             }
         ]
@@ -376,9 +380,10 @@ function sendToBackend(message, chat) {
     };
 }
 
-function addShape(type, name, width, height) {
+function addShape(type, name, width, height, useSelected) {
     var center = selection.selectedShape == null ? this.board.getClientCenter() : { x: 0, y: 0};
-    var shape = board.shapes.createShape(type, this.board, calculator, { name: name, x: center.x, y: center.y, width: width, height: height }, selection.selectedShape);
+    var shape = board.shapes.createShape(type, this.board, calculator, { name: name, x: center.x, y: center.y, width: width, height: height }, 
+        useSelected ? selection.selectedShape : null);
     shape.element.addEventListener("changed", e => onChanged(e));
     commands.execute(new AddShapeCommand(board, shape));
 }
@@ -389,6 +394,12 @@ function undoPressed() {
 
 function redoPressed() {
     commands.redo();
+}
+
+function updateToolbar() {
+    var disabled = selection.selectedShape == null || !["BodyShape", "VectorShape", "ReferentialShape"].includes(selection.selectedShape.properties.type);
+    bodyButton.option("disabled", disabled);
+    vectorButton.option("disabled", disabled);
 }
 
 function updatePlayer() {
@@ -462,6 +473,7 @@ async function save() {
 
 function onSelected(e) {
     shape = e.detail.shape;
+    updateToolbar();
     var form = shape.getForm();
     if (form == null)
         return;
@@ -472,6 +484,7 @@ function onSelected(e) {
 }
 
 function onDeselected(e) {
+    updateToolbar();
     var shapePopup = $("#shape-popup").dxPopup("instance");
     shapePopup.hide();
 }
