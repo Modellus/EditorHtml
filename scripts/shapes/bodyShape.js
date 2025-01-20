@@ -92,8 +92,10 @@ class BodyShape extends BaseShape {
     }
 
     update() {
-        this.properties.x = this.properties.xTerm != "" ? this.calculator.getByName(this.properties.xTerm) : this.properties.x;
-        this.properties.y = this.properties.yTerm != "" ? this.calculator.getByName(this.properties.yTerm) : this.properties.y; 
+        var x = this.calculator.getByName(this.properties.xTerm);
+        var y = this.calculator.getByName(this.properties.yTerm)
+        this.properties.x = x ?? this.properties.x;
+        this.properties.y = y ?? this.properties.y; 
     }
 
     draw() {
