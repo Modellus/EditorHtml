@@ -43,12 +43,12 @@ class BaseShape {
         throw new Error('Deserialize method not implemented');
     }
 
-    dispatchChangedEvent(detail) {
+    dispatchEvent(name, detail) {
         if (this.element === undefined)
             return;
         detail.shape = this;
-        const changedEvent = new CustomEvent("changed", { detail: detail });
-        this.element.dispatchEvent(changedEvent);
+        const event = new CustomEvent(name, { detail: detail });
+        this.element.dispatchEvent(event);
     }
 
     createTransformer() {
@@ -65,7 +65,7 @@ class BaseShape {
     setProperty(name, value) {
         this.properties[name] = value;
         this.draw();
-        this.dispatchChangedEvent({ property: name, value: value });
+        this.dispatchEvent("changed", { property: name, value: value });
     }
 
     update() {

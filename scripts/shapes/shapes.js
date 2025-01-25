@@ -1,6 +1,5 @@
 class Shapes {
     constructor() {
-        this.lastId = 0;
         this.shapes = new Map();
         this.shapeRegistry = {};
     }
@@ -22,7 +21,6 @@ class Shapes {
 
     clear() {
         this.shapes.clear();
-        this.lastId = 0;
     }
 
     get(id) {

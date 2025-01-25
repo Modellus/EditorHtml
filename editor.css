@@ -149,10 +149,25 @@ svg:active.pan-available {
 
 @font-face {
     font-family: "LatinModernMath";
-    src: url("fonts/latinmodern-math.otf") format("opentype");
+    src: url("ibraries/css/font/latinmodern-math.otf") format("opentype");
     font-weight: normal;
     font-style: normal;
 }
+
+@font-face {
+    font-family: "KatexMainRegular";
+    src: url("libraries/css/font/KaTeX_Main-Regular.woff2") format("woff2");
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "KatexMainItalic";
+    src: url("libraries/css/font/KaTeX_Main-Italic.woff2") format("woff2");
+    font-weight: normal;
+    font-style: normal;
+}
+
 
 .dx-toolbar-after,
 .dx-toolbar-before,
@@ -190,4 +205,23 @@ svg:active.pan-available {
 .mq-math-mode .mq-editable-field {
   border: 0px solid gray;
   border-color: #4039d7;
+}
+
+math-field::part(menu-toggle) {
+    display: none;
+}
+
+math-field::part(virtual-keyboard-toggle) {
+    display: none;
+}
+
+math-field:focus-within {
+    outline: none;
+}
+
+math-field {
+    border: none;
+    width: 100%;
+    height: 100%;
+    display: block;
 }

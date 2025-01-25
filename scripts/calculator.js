@@ -59,8 +59,10 @@ class Calculator extends EventTarget {
         this.status = STATUS.STOPPED;
     }
 
-    parse(expression) {
-        this.parser.parse(expression);
+    parse(text) {
+        const cleanedInput = text.replace(/^\\displaylines\{|\}$/g, '');
+        const expressions = cleanedInput.split('\\\\').map(line => line.trim());
+        expressions.forEach(e => this.parser.parse(e));
     }
 
     getByName(name) {

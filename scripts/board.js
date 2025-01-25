@@ -109,12 +109,12 @@ class Board {
     }
 
     onMouseDown(event) {
-        if (event.target === this.svg) {
-            this.isPanning = true;
-            this.startX = event.clientX;
-            this.startY = event.clientY;
-            this.svg.classList.add("pan-available");
-        }
+        if (event.target !== this.svg)
+            return;
+        this.isPanning = true;
+        this.startX = event.clientX;
+        this.startY = event.clientY;
+        this.svg.classList.add("pan-available");
     }
 
     onMouseMove(event) {
@@ -143,6 +143,8 @@ class Board {
     }
 
     onWheel(event) {
+        if (event.target !== this.svg)
+            return;
         event.preventDefault();
         const zoomScale = 1.05;
         const direction = event.deltaY < 0 ? 1 : -1;

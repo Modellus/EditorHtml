@@ -385,6 +385,7 @@ function addShape(type, name, width, height, useSelected) {
     var shape = board.shapes.createShape(type, this.board, calculator, { name: name, x: center.x, y: center.y, width: width, height: height }, 
         useSelected ? selection.selectedShape : null);
     shape.element.addEventListener("changed", e => onChanged(e));
+    shape.element.addEventListener("focused", e => onFocused(e));
     commands.execute(new AddShapeCommand(board, shape));
 }
 
@@ -492,6 +493,10 @@ function onDeselected(e) {
 function onChanged(e) {
     if (e.detail.shape.properties.type == "ExpressionShape")
         reset();
+}
+
+function onFocused(e) {
+    selection.select(e.detail.shape);
 }
 
 function onIterate(e) {

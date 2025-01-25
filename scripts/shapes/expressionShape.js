@@ -10,30 +10,34 @@ class ExpressionShape extends BaseShape {
     createElement() {
         const foreignObject = this.board.createSvgElement("foreignObject");
         const div = this.board.createElement("div");
-        div.style.width = "100%";
-        div.style.height = "100%";
-        div.classList.add("mq-editable-field", "mq-math-mode");
+        $(div).css({ "width": "100%", "height": "100%" });
         foreignObject.appendChild(div);
-        var MQ = MathQuill.getInterface(2);
-        var shape = this;
-        this.mathField = MQ.MathField(div, {
-            spaceBehavesLikeTab: true,
-            handlers: {
-                edit: _ => shape.onEdit()
-            }
+        this.mathfield = new MathfieldElement();
+        this.mathfield.smartMode = true;
+        this.mathfield.popoverPolicy = "none";
+        this.mathfield.virtualKeyboardMode = "off";
+        this.mathfield.mathVirtualKeyboardPolicy = "manual";
+        this.mathfield.addEventListener("change", _ => this.onChange());
+        this.mathfield.addEventListener("focus", _ => this.onFocus());
+        div.appendChild(this.mathfield);
+        $(div).dxScrollView({
+            showScrollbar: "always",
+            bounceEnabled: true,
+            scrollByContent: true, 
+            scrollByThumb: true
         });
         var expression = this.properties.expression ?? "{\\frac{dx}{dt}}=y";
-        this.mathField.latex(expression);
+        this.mathfield.value = expression;
         return foreignObject;
     }
 
-    onEdit() {
-        this.properties.expression = this.mathField.latex();
-        var detail = { 
-            shape: this,
-            expression: this.properties.expression 
-        };
-        this.dispatchChangedEvent(detail);
+    onChange() {
+        this.properties.expression = this.mathfield.getValue();
+        this.dispatchEvent("changed", { expression: this.properties.expression });
+    }
+
+    onFocus() {
+        this.dispatchEvent("focused", {});
     }
 
     static deserialize(calculator, data) {
