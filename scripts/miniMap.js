@@ -6,7 +6,7 @@ class MiniMap {
         this.minimapScaleFactor = 3;
         this.board.svg.addEventListener("pan", (e) => this.onPan(e));
         this.board.svg.addEventListener("zoom", (e) => this.onZoom(e));
-        this.board.svg.addEventListener("addShape", (e) => this.onAddShape(e));
+        this.board.svg.addEventListener("shapeAdded", (e) => this.onShapeAdded(e));
         this.createMinimap();
     }
 
@@ -18,7 +18,7 @@ class MiniMap {
         //this.updateMinimapViewport();
     }
 
-    onAddShape(event) {
+    onShapeAdded(event) {
         this.createMinimap();
     }
 

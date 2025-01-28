@@ -1,5 +1,5 @@
 class BaseShape {
-    constructor(board, calculator, properties, parent) {
+    constructor(board, calculator, parent) {
         this.id = crypto.randomUUID();
         this.board = board;
         this.calculator = calculator;
@@ -7,7 +7,8 @@ class BaseShape {
         this.children = [];
         if (parent != null)
             parent.children.push(this);
-        this.setProperties(properties);
+        this.properties = {};
+        this.setDefaults();
         this.initializeElement();
     }
 

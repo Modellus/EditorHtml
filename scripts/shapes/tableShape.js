@@ -1,10 +1,18 @@
 class TableShape extends BaseShape {
-    constructor(board, calculator, properties) {
-        super(board, calculator, properties);
+    constructor(board, calculator) {
+        super(board, calculator);
     }
 
     createTransformer() { 
         return new RectangleTransformer(this.board, this);
+    }
+
+    setDefaults() {
+        var center = this.board.getClientCenter();
+        this.properties.x = center.x - 100;
+        this.properties.y = center.y - 100;
+        this.properties.width = 200;
+        this.properties.height = 200;
     }
 
     createElement() {

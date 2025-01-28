@@ -1,10 +1,7 @@
 class BodyShape extends BaseShape {
-    constructor(board, calculator, properties, parent) {
-        super(board, calculator, properties, parent);
+    constructor(board, calculator, parent) {
+        super(board, calculator, parent);
         this.hasForm = true;
-        this.properties.color = this.board.theme.getBackgroundColors()[1].color;
-        this.properties.angle = 0;
-        this.properties.radius = (properties.width ** 2 + properties.height ** 2) ** 0.5;
     }
 
     createTransformer() { 
@@ -87,6 +84,16 @@ class BodyShape extends BaseShape {
         return circle;
     }    
 
+    setDefaults() {
+        this.properties.x = 0;
+        this.properties.y = 0;
+        this.properties.angle = 0;
+        this.properties.width = 30;
+        this.properties.height = 30;
+        this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
+        this.properties.color = this.board.theme.getBackgroundColors()[1].color;
+    }
+
     static deserialize(calculator, data) {
         return new BodyShape(calculator, data);
     }
@@ -103,7 +110,7 @@ class BodyShape extends BaseShape {
         const position = this.getBoardPosition();
         this.element.setAttribute("cx", position.x);
         this.element.setAttribute("cy", position.y);
-        this.element.setAttribute("r", this.properties.radius ?? (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5);
-        this.element.setAttribute("fill", this.properties.color ?? this.board.theme.getBackgroundColors()[1].color);
+        this.element.setAttribute("r", this.properties.radius);
+        this.element.setAttribute("fill", this.properties.color);
     }
 }

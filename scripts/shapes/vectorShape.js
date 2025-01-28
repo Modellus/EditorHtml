@@ -1,6 +1,6 @@
 class VectorShape extends BaseShape {
-    constructor(board, calculator, properties, parent) {
-        super(board, calculator, properties, parent);
+    constructor(board, calculator, parent) {
+        super(board, calculator, parent);
         this.hasForm = true;
         this.properties.color = this.board.theme.getBackgroundColors()[3].color;
     }
@@ -61,6 +61,14 @@ class VectorShape extends BaseShape {
             });
     }
 
+    setDefaults() {
+        this.properties.x = 0;
+        this.properties.y = 0;
+        this.properties.width = 30;
+        this.properties.height = 30;
+        this.properties.color = this.board.theme.getBackgroundColors()[3].color;
+    }
+
     createElement() {
         const path = this.board.createSvgElement("path");
         return path;
@@ -94,8 +102,8 @@ class VectorShape extends BaseShape {
             L ${leftX} ${leftY} L ${rightX} ${rightY} L ${tipX} ${tipY} Z
         `;
         this.element.setAttribute("d", arrowPath);
-        this.element.setAttribute("fill", this.properties.color ?? this.board.theme.getBackgroundColors()[3].color);
-        this.element.setAttribute("stroke", this.properties.color ?? this.board.theme.getBackgroundColors()[3].color);
+        this.element.setAttribute("fill", this.properties.color);
+        this.element.setAttribute("stroke", this.properties.color);
         this.element.setAttribute("stroke-width", 1);
     }
 }

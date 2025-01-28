@@ -1,10 +1,19 @@
 class ExpressionShape extends BaseShape {
-    constructor(board, calculator, properties) {
-        super(board, calculator, properties);
+    constructor(board, calculator) {
+        super(board, calculator);
     }
 
     createTransformer() { 
         return new RectangleTransformer(this.board, this);
+    }
+
+    setDefaults() {
+        var center = this.board.getClientCenter();
+        this.properties.x = center.x - 150;
+        this.properties.y = center.y - 25;
+        this.properties.width = 300;
+        this.properties.height = 50;
+        this.properties.rotation = 0;
     }
 
     createElement() {

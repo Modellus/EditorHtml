@@ -1,6 +1,6 @@
 class ChartShape extends BaseShape {
-    constructor(board, calculator, properties) {
-        super(board, calculator, properties);
+    constructor(board, calculator) {
+        super(board, calculator);
         this.properties.chartType = "line";
         this.hasForm = true;
     }
@@ -74,6 +74,14 @@ class ChartShape extends BaseShape {
                 }
             ]
         });
+    }
+
+    setDefaults() {
+        var center = this.board.getClientCenter();
+        this.properties.x = center.x - 100;
+        this.properties.y = center.y - 100;
+        this.properties.width = 200;
+        this.properties.height = 200;
     }
 
     createElement() {

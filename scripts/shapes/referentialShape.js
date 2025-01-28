@@ -1,6 +1,6 @@
 class ReferentialShape extends BaseShape {
-    constructor(board, calculator, properties, parent) {
-        super(board, calculator, properties, parent);
+    constructor(board, calculator) {
+        super(board, calculator);
         this.hasForm = true;
         this.properties.color = this.board.theme.getStrokeColors()[1].color;
         this.properties.originX = this.properties.width / 2;
@@ -82,6 +82,17 @@ class ReferentialShape extends BaseShape {
             });
     }
 
+    setDefaults() {
+        var center = this.board.getClientCenter();
+        this.properties.x = center.x - 200;
+        this.properties.y = center.y - 100;
+        this.properties.width = 400;
+        this.properties.height = 200;
+        this.properties.rotation = 0;
+        this.properties.color = this.board.theme.getStrokeColors()[0].color;
+        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[5].color;
+    }
+
     createElement() {
         const g = this.board.createSvgElement("g");
         this.container = this.board.createSvgElement("rect");
@@ -125,18 +136,18 @@ class ReferentialShape extends BaseShape {
         this.containerClip.setAttribute("height", this.properties.height);
         this.containerClip.setAttribute("transform", `rotate(${this.properties.rotation}, ${position.x + this.properties.width / 2}, 
             ${position.y + this.properties.height / 2})`);
-        this.container.setAttribute("fill", this.properties.backgroundColor ?? this.board.theme.getBackgroundColors()[5].color);
-        this.container.setAttribute("stroke", this.properties.color ?? this.board.theme.getStrokeColors()[0].color);
+        this.container.setAttribute("fill", this.properties.backgroundColor);
+        this.container.setAttribute("stroke", this.properties.color);
         this.horizontalAxis.setAttribute("x1", position.x);
         this.horizontalAxis.setAttribute("y1", position.y + (this.properties.originY ?? this.properties.height / 2));
         this.horizontalAxis.setAttribute("x2", position.x + this.properties.width);
         this.horizontalAxis.setAttribute("y2", position.y + (this.properties.originY ?? this.properties.height / 2));
-        this.horizontalAxis.setAttribute("stroke", this.properties.color ?? this.board.theme.getStrokeColors()[0].color);
+        this.horizontalAxis.setAttribute("stroke", this.properties.color);
         this.verticalAxis.setAttribute("x1", position.x + (this.properties.originX ?? this.properties.width / 2));
         this.verticalAxis.setAttribute("y1", position.y);
         this.verticalAxis.setAttribute("x2", position.x + (this.properties.originX ?? this.properties.width / 2));
         this.verticalAxis.setAttribute("y2", position.y + this.properties.height);
-        this.verticalAxis.setAttribute("stroke", this.properties.color ?? this.board.theme.getStrokeColors()[0].color);
+        this.verticalAxis.setAttribute("stroke", this.properties.color);
     }
 
     getClipId() {

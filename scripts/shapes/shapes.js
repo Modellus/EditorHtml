@@ -1,5 +1,7 @@
 class Shapes {
-    constructor() {
+    constructor(board, calculator) {
+        this.board = board;
+        this.calculator = calculator;
         this.shapes = new Map();
         this.shapeRegistry = {};
     }
@@ -8,10 +10,10 @@ class Shapes {
         shapeClasses.forEach(shapeClass => this.shapeRegistry[shapeClass.name] = shapeClass);
     }
 
-    createShape(shapeType, board, calculator, properties, parent) {
+    createShape(shapeType, parent) {
         const ShapeClass = this.shapeRegistry[shapeType];
         if (ShapeClass)
-            return new ShapeClass(board, calculator, properties, parent);
+            return new ShapeClass(this.board, this.calculator, parent);
         throw new Error(`Shape type "${shapeType}" is not registered.`);
     }
 

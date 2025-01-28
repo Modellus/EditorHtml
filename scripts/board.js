@@ -1,6 +1,6 @@
 class Board {
-    constructor(svgElement) {
-        this.shapes = new Shapes(calculator);
+    constructor(svgElement, calculator) {
+        this.shapes = new Shapes(this, calculator);
         this.svg = svgElement;
         this.isPanning = false;
         this.startX = 0;
@@ -18,6 +18,7 @@ class Board {
         this.svg.addEventListener("mouseover", this.onMouseOver.bind(this));
         this.svg.addEventListener("mouseout", this.onMouseOut.bind(this));
         this.theme = new BaseTheme();
+        this.selection = new Selection(this);
     }
 
     createSvgElement(name) {
@@ -47,19 +48,21 @@ class Board {
         return content;
     }
 
-    dispatchAddShapeEvent(shape) {
-        const addShapeEvent = new CustomEvent("addShape", {
+    dispatchShapeEvent(name, shape) {
+        const shapeEvent = new CustomEvent(name, {
             detail: {
                 shape: shape
             }
         });
-        this.svg.dispatchEvent(addShapeEvent);
+        this.svg.dispatchEvent(shapeEvent);
     }
 
     addShape(shape) {
         this.svg.appendChild(shape.element);
         this.shapes.add(shape);
-        this.dispatchAddShapeEvent(shape);
+        this.dispatchShapeEvent("shapeAdded", shape);
+        shape.element.addEventListener("focused", e => this.onShapeFocused(e));
+        shape.element.addEventListener("changed", e => this.onShapeChanged(e));
     }
 
     removeShape(shape) {
@@ -72,6 +75,14 @@ class Board {
         return this.shapes.get(id);
     }
 
+    onShapeFocused(e) {
+        this.selection.select(e.detail.shape);
+    }
+
+    onShapeChanged(e) {
+        this.dispatchShapeEvent("shapeChanged", e.detail.shape);
+    }
+
     getClientCenter() {
         const svgRect = this.svg.getBoundingClientRect();
         const parentRect = this.svg.parentNode.getBoundingClientRect();
@@ -80,7 +91,7 @@ class Board {
         const svgPoint = this.svg.createSVGPoint();
         svgPoint.x = parentCenterX;
         svgPoint.y = parentCenterY;
-        const svgCTM = board.svg.getScreenCTM().inverse();
+        const svgCTM = this.svg.getScreenCTM().inverse();
         return svgPoint.matrixTransform(svgCTM);
     }
 

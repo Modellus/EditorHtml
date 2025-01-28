@@ -1,31 +1,13 @@
 class Commands {
-    constructor() {
-        this.history = [];
-        this.redoStack = [];
-        this.commandRegistry = {};
+    constructor(shell) {
+        this.shell = shell;
+        this.invoker = new CommandsInvoker();
     }
 
-    execute(command) {
-        command.execute();
-        this.history.push(command);
-        this.redoStack = [];
-    }
-    
-    undo() {
-        if (this.history.length > 0) {
-            const command = this.history.pop();
-            command.undo();
-            this.redoStack.push(command);
-        }
-    }
-    
-    redo() {
-        if (this.redoStack.length > 0) {
-            const command = this.redoStack.pop();
-            command.execute();
-            this.history.push(command);
-        }
+    addShape(type) {
+        var shape = this.shell.board.shapes.createShape(type, this.shell.board.selection.selectedShape);
+        shape.element.addEventListener("changed", e => this.shell.onShapeChanged(e));
+        const command = new AddShapeCommand(this.shell.board, shape);
+        this.invoker.execute(command);
     }
 }
-
-const commands = new Commands();

@@ -59,7 +59,7 @@ class Selection {
     findShape(element) {
         var current = element;
         while(current != null) {
-            var shape = board.getShape(current.id);
+            var shape = this.board.getShape(current.id);
             if (shape != undefined)
                 return shape;
             current = current.parentElement;
