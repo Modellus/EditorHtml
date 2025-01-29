@@ -1,6 +1,7 @@
 class Board {
     constructor(svgElement, calculator) {
         this.shapes = new Shapes(this, calculator);
+        this.calculator = calculator;
         this.svg = svgElement;
         this.isPanning = false;
         this.startX = 0;
@@ -35,10 +36,10 @@ class Board {
         this.shapes.clear();
     }
 
-    deserialize(calculator, content) {
+    deserialize(content) {
         this.clear();
-        content.map(shapeData => {
-            var shape = this.shapes.deserialize(calculator, shapeData);
+        content.map(data => {
+            var shape = this.shapes.deserialize(this, data);
             this.addShape(shape);
         });
     }
@@ -55,6 +56,10 @@ class Board {
             }
         });
         this.svg.dispatchEvent(shapeEvent);
+    }
+
+    createShape(type, parent, id) {
+        return this.shapes.createShape(type, parent, id);
     }
 
     addShape(shape) {

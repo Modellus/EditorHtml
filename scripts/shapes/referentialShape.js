@@ -1,6 +1,6 @@
 class ReferentialShape extends BaseShape {
-    constructor(board, calculator) {
-        super(board, calculator);
+    constructor(board, parent, id) {
+        super(board, parent, id);
         this.hasForm = true;
         this.properties.color = this.board.theme.getStrokeColors()[1].color;
         this.properties.originX = this.properties.width / 2;
@@ -113,10 +113,6 @@ class ReferentialShape extends BaseShape {
         clipPath.appendChild(this.containerClip);
         return g;
     }    
-
-    static deserialize(calculator, data) {
-        return new ReferencialShape(calculator, data);
-    }
 
     update() {
     }

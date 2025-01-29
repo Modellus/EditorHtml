@@ -1,6 +1,6 @@
 class ChartShape extends BaseShape {
-    constructor(board, calculator) {
-        super(board, calculator);
+    constructor(board, parent, id) {
+        super(board), parent, id;
         this.properties.chartType = "line";
         this.hasForm = true;
     }
@@ -93,7 +93,7 @@ class ChartShape extends BaseShape {
                 argumentField: "x",
                 label: {
                     visible: true, 
-                    customizeText: e => e.argument === this.calculator.get()["x"] ? e.valueText : ""
+                    customizeText: e => e.argument === this.board.calculator.get()["x"] ? e.valueText : ""
                 }
             },
             commonPaneSettings: {
@@ -172,12 +172,8 @@ class ChartShape extends BaseShape {
         return foreignObject;
     }
 
-    static deserialize(calculator, data) {
-        return new ChartShape(calculator, data);
-    }
-
     update() {
-        this.chart.option("dataSource", this.calculator.getValues());
+        this.chart.option("dataSource", this.board.calculator.getValues());
     }
 
     draw() {

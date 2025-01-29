@@ -1,8 +1,7 @@
 class BaseShape {
-    constructor(board, calculator, parent) {
-        this.id = crypto.randomUUID();
+    constructor(board, parent, id) {
+        this.id = id ?? crypto.randomUUID();
         this.board = board;
-        this.calculator = calculator;
         this.parent = parent;
         this.children = [];
         if (parent != null)
@@ -13,10 +12,7 @@ class BaseShape {
     }
 
     setProperties(properties) {
-        this.properties = {};
         Object.assign(this.properties, properties);
-        this.properties.rotation = 0;
-        this.properties.type = this.constructor.name;
     }
 
     initializeElement() {
@@ -37,12 +33,16 @@ class BaseShape {
     };
 
     serialize() {
-        return this.properties;
+        return { type: this.constructor.name, id: this.id, parent: this.parent?.id, properties: this.properties };
     }
 
-    static deserialize(calculator, data) {
-        throw new Error('Deserialize method not implemented');
+    static deserialize(board, data) {
+        var parent = board.getShape(data.parent);
+        var shape = board.createShape(data.type, parent, data.id);
+        shape.setProperties(data.properties);
+        return shape;
     }
+
 
     dispatchEvent(name, detail) {
         if (this.element === undefined)

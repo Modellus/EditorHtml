@@ -1,6 +1,6 @@
 class VectorShape extends BaseShape {
-    constructor(board, calculator, parent) {
-        super(board, calculator, parent);
+    constructor(board, parent, id) {
+        super(board, parent, id);
         this.hasForm = true;
         this.properties.color = this.board.theme.getBackgroundColors()[3].color;
     }
@@ -74,13 +74,9 @@ class VectorShape extends BaseShape {
         return path;
     }    
 
-    static deserialize(calculator, data) {
-        return new VectorShape(calculator, data);
-    }
-
     update() {
-        this.properties.width = this.properties.xTerm != "" ? this.calculator.getByName(this.properties.xTerm) : this.properties.width;
-        this.properties.height = this.properties.yTerm != "" ? this.calculator.getByName(this.properties.yTerm) : this.properties.height; 
+        this.properties.width = this.properties.xTerm != "" ? this.board.calculator.getByName(this.properties.xTerm) : this.properties.width;
+        this.properties.height = this.properties.yTerm != "" ? this.board.calculator.getByName(this.properties.yTerm) : this.properties.height; 
     }
 
     draw() {

@@ -10,10 +10,10 @@ class Shapes {
         shapeClasses.forEach(shapeClass => this.shapeRegistry[shapeClass.name] = shapeClass);
     }
 
-    createShape(shapeType, parent) {
+    createShape(shapeType, parent, id) {
         const ShapeClass = this.shapeRegistry[shapeType];
         if (ShapeClass)
-            return new ShapeClass(this.board, this.calculator, parent);
+            return new ShapeClass(this.board, parent, id);
         throw new Error(`Shape type "${shapeType}" is not registered.`);
     }
 
@@ -39,12 +39,12 @@ class Shapes {
         return JSON.stringify(data);
     }
 
-    deserialize(calculator, data) {
+    deserialize(board, data) {
         const ShapeClass = this.shapeRegistry[data.type];
         if (!ShapeClass) {
             throw new Error(`Shape type "${type}" is not registered`);
         }
-        return ShapeClass.deserialize(calculator, data);
+        return ShapeClass.deserialize(board, data);
     }
 
     update() {

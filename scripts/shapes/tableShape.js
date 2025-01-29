@@ -1,6 +1,6 @@
 class TableShape extends BaseShape {
-    constructor(board, calculator) {
-        super(board, calculator);
+    constructor(board, parent, id) {
+        super(board, parent, id);
     }
 
     createTransformer() { 
@@ -20,7 +20,7 @@ class TableShape extends BaseShape {
         const $div = $("<div>").appendTo(foreignObject);
         $div.css({ "width": "100%", "height": "100%" });
         this.dataGrid = $div.dxDataGrid({
-            dataSource: this.calculator.system.values,
+            dataSource: this.board.calculator.system.values,
             scrolling: {
                 mode: "virtual"
             },
@@ -53,10 +53,6 @@ class TableShape extends BaseShape {
             ]
         }).dxDataGrid("instance");
         return foreignObject;
-    }
-
-    static deserialize(calculator, data) {
-        return new TableShape(calculator, data);
     }
 
     update() {

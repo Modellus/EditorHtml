@@ -1,6 +1,6 @@
 class BodyShape extends BaseShape {
-    constructor(board, calculator, parent) {
-        super(board, calculator, parent);
+    constructor(board, parent, id) {
+        super(board, parent, id);
         this.hasForm = true;
     }
 
@@ -94,13 +94,9 @@ class BodyShape extends BaseShape {
         this.properties.color = this.board.theme.getBackgroundColors()[1].color;
     }
 
-    static deserialize(calculator, data) {
-        return new BodyShape(calculator, data);
-    }
-
     update() {
-        var x = this.calculator.getByName(this.properties.xTerm);
-        var y = this.calculator.getByName(this.properties.yTerm)
+        var x = this.board.calculator.getByName(this.properties.xTerm);
+        var y = this.board.calculator.getByName(this.properties.yTerm)
         this.properties.x = x ?? this.properties.x;
         this.properties.y = y ?? this.properties.y; 
     }

@@ -1,6 +1,6 @@
 class ExpressionShape extends BaseShape {
-    constructor(board, calculator) {
-        super(board, calculator);
+    constructor(board, parent, id) {
+        super(board, parent, id);
     }
 
     createTransformer() { 
@@ -40,6 +40,12 @@ class ExpressionShape extends BaseShape {
         return foreignObject;
     }
 
+    static deserialize(board, data) {
+        var shape = super.deserialize(board, data);
+        shape.mathfield.value = data.properties.expression;
+        return shape;
+    }
+
     onChange() {
         this.properties.expression = this.mathfield.getValue();
         this.dispatchEvent("changed", { expression: this.properties.expression });
@@ -47,10 +53,6 @@ class ExpressionShape extends BaseShape {
 
     onFocus() {
         this.dispatchEvent("focused", {});
-    }
-
-    static deserialize(calculator, data) {
-        return new ExpressionShape(calculator, data);
     }
 
     draw() {

@@ -464,8 +464,9 @@ class Shell  {
         const [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
         const content = await file.text();
-        this.board.deserialize(this.calculator, JSON.parse(content));
+        this.board.deserialize(JSON.parse(content));
         this.reset();
+        this.board.refresh();
     }
     
     async save() {
