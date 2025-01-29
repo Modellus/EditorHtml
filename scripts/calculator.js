@@ -41,6 +41,16 @@ class Calculator extends EventTarget {
         this.status = STATUS.STOPPED;
     }
 
+    stepBackward() {
+        this.system.iteration--;
+        this.emit("iterate", { calculator: this });
+    }
+
+    stepForward() {
+        this.system.iteration++;
+        this.emit("iterate", { calculator: this });
+    }
+
     replay() {
         var iteration = 0;
         this.timer = setInterval(() => {
@@ -48,7 +58,7 @@ class Calculator extends EventTarget {
             this.emit("iterate", { calculator: this }); 
             if (this.system.iteration == this.system.lastIteration)
                 iteration = 0;
-        }, 20);
+        }, 10);
         this.status = STATUS.PLAYING;
     }
 

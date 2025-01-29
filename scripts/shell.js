@@ -13,6 +13,8 @@ class Shell  {
         this.stop = $("#stopButton").dxButton("instance");
         this.replay = $("#replayButton").dxButton("instance");
         this.playHead = $("#playHeadSlider").dxSlider("instance");
+        this.stepBackward = $("#stepBackwardButton").dxButton("instance");
+        this.stepForward = $("#stepForwardButton").dxButton("instance");
         this.board.svg.addEventListener("selected", e => this.onSelected(e));
         this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
@@ -203,6 +205,17 @@ class Shell  {
                     location: "center"
                 },
                 {
+                    widget: "dxButton",
+                    options: {
+                        icon: "fa-light fa-stop", 
+                        elementAttr: {
+                            id: "stopButton"
+                        },
+                        onClick: _ => this.stopPressed()
+                    },
+                    location: "center"
+                },
+                {
                     widget: "dxSlider",
                     cssClass: "slider",
                     options: {
@@ -226,11 +239,22 @@ class Shell  {
                 {
                     widget: "dxButton",
                     options: {
-                        icon: "fa-light fa-stop", 
+                        icon: "fa-light fa-backward-step", 
                         elementAttr: {
-                            id: "stopButton"
+                            id: "stepBackwardButton"
                         },
-                        onClick: _ => this.stopPressed()
+                        onClick: _ => this.stepBackwardPressed()
+                    },
+                    location: "center"
+                },
+                {
+                    widget: "dxButton",
+                    options: {
+                        icon: "fa-light fa-forward-step", 
+                        elementAttr: {
+                            id: "stepForwardButton"
+                        },
+                        onClick: _ => this.stepForwardPressed()
                     },
                     location: "center"
                 },
@@ -418,16 +442,30 @@ class Shell  {
     }
     
     updatePlayer() {
+        var lastIteration = this.calculator.getLastIteration();
+        var iteration = this.calculator.getIteration();
         this.playPause.option("icon", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING ? "fa-light fa-pause" : "fa-light fa-play");
         this.playPause.repaint();
         this.stop.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING);
         this.replay.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING);
-        this.playHead.option("max", this.calculator.getLastIteration());
-        this.playHead.option("value", this.calculator.getIteration());
+        this.stepBackward.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING || iteration == 0);
+        this.stepForward.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING || iteration == lastIteration);
+        this.playHead.option("max", lastIteration);
+        this.playHead.option("value", iteration);
     }
     
     playPausePressed() {
         this.calculator.status === STATUS.PLAYING ? this.calculator.pause() : this.calculator.play();
+        this.updatePlayer();
+    }
+
+    stepBackwardPressed() {
+        this.calculator.stepBackward();
+        this.updatePlayer();
+    }
+
+    stepForwardPressed() {
+        this.calculator.stepForward();
         this.updatePlayer();
     }
     
