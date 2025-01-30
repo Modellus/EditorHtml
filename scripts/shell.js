@@ -18,7 +18,7 @@ class Shell  {
         this.board.svg.addEventListener("selected", e => this.onSelected(e));
         this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
-        this.board.shapes.registerShapes([BodyShape, ExpressionShape, ChartShape, TableShape, ImageShape, VectorShape, ReferentialShape]);
+        this.board.shapes.registerShapes([BodyShape, ExpressionShape, ChartShape, TableShape, ImageShape, VectorShape, ReferentialShape, TextShape]);
         this.calculator.on("iterate", e => this.onIterate(e));
         this.calculator.on("iterationChanged", e => this.onIterationChanged(e));
     }
@@ -62,9 +62,6 @@ class Shell  {
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-shapes",
-                        elementAttr1: {
-                            style: "font-family: cursive; font-size: 16px"
-                        },
                         onClick: _ => this.commands.addShape("ReferentialShape"),
                         template1: function() {
                             return $(`<span class="fa-stack">
@@ -80,6 +77,18 @@ class Shell  {
                     options: {
                         icon: "fa-light fa-image",
                         onClick: _ => this.commands.addShape("ImageShape")
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
+                    options: {
+                        icon: "fa-light fa-quotes",
+                        elementAttr: {
+                            "data-fa-transform": "shrink-8 up-6"
+                        },
+                        template1: () => $("<i class='fa-light fa-quote-right fa-2xs' data-fa-transform='shrink-8 up-6'></i>"),
+                        onClick: _ => this.commands.addShape("TextShape")
                     }
                 },
                 {

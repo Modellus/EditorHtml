@@ -201,10 +201,9 @@ svg:active.pan-available {
     padding-top: 0 !important;
 }
 
-.mq-editable-field,
-.mq-math-mode .mq-editable-field {
-  border: 0px solid gray;
-  border-color: #4039d7;
+.dx-htmleditor {
+    border: none !important;
+    box-shadow: none !important;
 }
 
 math-field::part(menu-toggle) {

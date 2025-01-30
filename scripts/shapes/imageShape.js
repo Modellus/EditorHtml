@@ -66,6 +66,7 @@ class ImageShape extends BaseShape {
         this.properties.y = center.y - 50;
         this.properties.width = 100;
         this.properties.height = 100;
+        this.properties.rotation = 0;
     }
 
     createElement() {
