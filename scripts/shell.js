@@ -453,8 +453,12 @@ class Shell  {
     updatePlayer() {
         var lastIteration = this.calculator.getLastIteration();
         var iteration = this.calculator.getIteration();
-        this.playPause.option("icon", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING ? "fa-light fa-pause" : "fa-light fa-play");
-        this.playPause.repaint();
+        var icon = this.playPause.option("icon");
+        var shouldPause = this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING;
+        if (shouldPause && icon != "fa-light fa-pause" || !shouldPause && icon != "fa-light fa-play") {
+            this.playPause.option("icon", shouldPause ? "fa-light fa-pause" : "fa-light fa-play");
+            this.playPause.repaint();
+        }
         this.stop.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING);
         this.replay.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING);
         this.stepBackward.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING || iteration == 0);
@@ -464,7 +468,10 @@ class Shell  {
     }
     
     playPausePressed() {
-        this.calculator.status === STATUS.PLAYING ? this.calculator.pause() : this.calculator.play();
+        if(this.calculator.status === STATUS.PLAYING)
+            this.calculator.pause();
+        else
+            this.calculator.play();
         this.updatePlayer();
     }
 
