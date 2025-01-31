@@ -43,7 +43,6 @@ class BaseShape {
         return shape;
     }
 
-
     dispatchEvent(name, detail) {
         if (this.element === undefined)
             return;

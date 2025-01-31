@@ -46,6 +46,14 @@ class ExpressionShape extends BaseShape {
         return shape;
     }
 
+    setProperties(properties) {
+        super.setProperties(properties);
+        if (properties.expression == undefined)
+            return;
+        this.mathfield.value = properties.expression;
+        this.onChange();
+    }
+
     onChange() {
         this.properties.expression = this.mathfield.getValue();
         this.dispatchEvent("changed", { expression: this.properties.expression });

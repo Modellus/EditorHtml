@@ -72,16 +72,25 @@ class Board {
 
     removeShape(shape) {
         this.svg.removeChild(shape.element);
-        this.svg.removeChild(shape.element);
         this.shapes.remove(shape);
     }
 
     getShape(id) {
-        return this.shapes.get(id);
+        return this.shapes.getById(id);
     }
 
+    selectShape(shape) {
+        this.selection.select(shape);
+    }
+
+    setShapeProperties(shape, properties) {
+        shape.setProperties(properties);
+        this.refresh();
+    }
+
+
     onShapeFocused(e) {
-        this.selection.select(e.detail.shape);
+        this.selectShape(e.detail.shape);
     }
 
     onShapeChanged(e) {

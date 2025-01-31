@@ -6,8 +6,8 @@ class Shapes {
         this.shapeRegistry = {};
     }
 
-    registerShapes(shapeClasses) {
-        shapeClasses.forEach(shapeClass => this.shapeRegistry[shapeClass.name] = shapeClass);
+    registerShape(shapeClass) {
+        this.shapeRegistry[shapeClass.name] = shapeClass;
     }
 
     createShape(shapeType, parent, id) {
@@ -25,8 +25,15 @@ class Shapes {
         this.shapes.clear();
     }
 
-    get(id) {
+    getById(id) {
         return this.shapes.get(id);
+    }
+
+    getByName(name) {
+        for (const shape of this.shapes.values())
+            if (shape.properties.name === name)
+                return shape;
+        return null;
     }
 
     remove(shape) {

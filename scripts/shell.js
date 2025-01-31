@@ -18,7 +18,7 @@ class Shell  {
         this.board.svg.addEventListener("selected", e => this.onSelected(e));
         this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
-        this.board.shapes.registerShapes([BodyShape, ExpressionShape, ChartShape, TableShape, ImageShape, VectorShape, ReferentialShape, TextShape]);
+        [BodyShape, ExpressionShape, ChartShape, TableShape, ImageShape, VectorShape, ReferentialShape, TextShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.calculator.on("iterate", e => this.onIterate(e));
         this.calculator.on("iterationChanged", e => this.onIterationChanged(e));
     }

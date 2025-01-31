@@ -1,4 +1,4 @@
-class AddShapeCommand extends Command {
+class RemoveShapeCommand extends Command {
     constructor(board, shape) {
         super();
         this.board = board;
@@ -6,10 +6,10 @@ class AddShapeCommand extends Command {
     }
 
     execute() {
-        this.board.addShape(this.shape);
+        this.board.removeShape(this.shape);
     }
     
     undo() {
-        this.board.removeShape(this.shape);
+        this.board.addShape(this.shape);
     }
 }
