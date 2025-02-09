@@ -3,7 +3,6 @@ const DEFAULTIMAGE = "iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAACXBIWXMAAA
 class ImageShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, parent, id);
-        this.hasForm = true;
     }
 
     createTransformer() { 
@@ -11,53 +10,30 @@ class ImageShape extends BaseShape {
     }
 
     createForm() {
-        return $("<div id='shape-form'></div>").dxForm({
-            colCount: 1,
-            onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
-            items: [
-                  {
-                    dataField: "name",
-                    label: { text: "Name", visible: false },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
+        var form = super.createForm();
+        var instance = form.dxForm("instance");
+        var items = instance.option("items");
+        items.push(
+            {
+                dataField: "file",
+                label: { text: "File" },
+                editorType: "dxFileUploader",
+                editorOptions: {
+                    accept: "image/*",
+                    onFilesUploaded: e => {
+                        const file = e.component.option("value")[0];
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            this.properties.imageBase64 = e.target.result.split(',')[1];
+                            this.element.setAttribute("href", "data:image/png;base64," + this.properties.imageBase64);
+                        };
+                        reader.readAsDataURL(file);
                     }
-                  },
-                  {
-                    dataField: "file",
-                    label: { text: "File" },
-                    editorType: "dxFileUploader",
-                    editorOptions: {
-                        accept: "image/*",
-                        onFilesUploaded: e => {
-                            const file = e.component.option("value")[0];
-                            const reader = new FileReader();
-                            reader.onload = e => {
-                                this.properties.imageBase64 = e.target.result.split(',')[1];
-                                this.element.setAttribute("href", "data:image/png;base64," + this.properties.imageBase64);
-                            };
-                            reader.readAsDataURL(file);
-                        }
-                    }
-                  },
-                  {
-                    dataField: "xTerm",
-                    label: { text: "X Variable" },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                  },
-                  {
-                    dataField: "yTerm",
-                    label: { text: "Y Variable" },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                  }
-                ]
-            });
+                }
+            }
+        );
+        instance.option("items", items);
+        return form;
     }
 
     setDefaults() {

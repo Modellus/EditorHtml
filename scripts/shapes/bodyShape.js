@@ -1,7 +1,6 @@
 class BodyShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, parent, id);
-        this.hasForm = true;
     }
 
     createTransformer() { 
@@ -9,74 +8,29 @@ class BodyShape extends BaseShape {
     }
 
     createForm() {
-        return $("<div id='shape-form'></div>").dxForm({
-            colCount: 1,
-            onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
-            items: [
-                  {
-                    dataField: "name",
-                    label: { text: "Name", visible: false },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                  },
-                  {
-                    dataField: "backgroundColor",
-                    label: { text: "Background color" },
-                    editorType: "dxButtonGroup",
-                    editorOptions: {
-                        onContentReady: function(e) {
-                            e.component.option("items").forEach((item, index) => {
-                                const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                buttonElement.find(".dx-icon").css("color", item.color);
-                            });
-                        },
-                        items: this.board.theme.getBackgroundColors().map(c => ({
-                            icon: "fa-solid fa-square",
-                            color: c.color
-                        })),
-                        keyExpr: "color",
-                        stylingMode: "text"
-                    }
-                  },
-                  {
-                    dataField: "foregroundColor",
-                    label: { text: "Foreground color" },
-                    editorType: "dxButtonGroup",
-                    editorOptions: {
-                        onContentReady: function(e) {
-                            e.component.option("items").forEach((item, index) => {
-                                const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                buttonElement.find(".dx-icon").css("color", item.color);
-                            });
-                        },
-                        items: this.board.theme.getStrokeColors().map(c => ({
-                            icon: "fa-solid fa-square",
-                            color: c.color
-                        })),
-                        keyExpr: "color",
-                        stylingMode: "text"
-                    }
-                  },
-                  {
-                    dataField: "xTerm",
-                    label: { text: "X Variable" },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                  },
-                  {
-                    dataField: "yTerm",
-                    label: { text: "Y Variable" },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                  }
-                ]
-            });
+        var form = super.createForm();
+        var instance = form.dxForm("instance");
+        var items = instance.option("items");
+        items.push(
+            {
+                dataField: "xTerm",
+                label: { text: "Horizontal Variable" },
+                editorType: "dxTextBox",
+                editorOptions: {
+                    stylingMode: "filled"
+                }
+            },
+            {
+                dataField: "yTerm",
+                label: { text: "Vertical Variable" },
+                editorType: "dxTextBox",
+                editorOptions: {
+                    stylingMode: "filled"
+                }
+            }
+        );
+        instance.option("items", items);
+        return form;
     }
 
     createElement() {
@@ -91,7 +45,8 @@ class BodyShape extends BaseShape {
         this.properties.width = 30;
         this.properties.height = 30;
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
-        this.properties.color = this.board.theme.getBackgroundColors()[1].color;
+        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[1].color;
+        this.properties.foregroundColor = this.board.theme.getBackgroundColors()[1].color;
     }
 
     update() {
@@ -107,6 +62,7 @@ class BodyShape extends BaseShape {
         this.element.setAttribute("cx", position.x);
         this.element.setAttribute("cy", position.y);
         this.element.setAttribute("r", this.properties.radius);
-        this.element.setAttribute("fill", this.properties.color);
+        this.element.setAttribute("fill", this.properties.backgroundColor);
+        this.element.setAttribute("stroke", this.properties.foregroundColor);
     }
 }

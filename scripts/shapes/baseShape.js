@@ -54,12 +54,97 @@ class BaseShape {
     createTransformer() {
     }
 
-    createForm() {
-        return null;
-    }
-
     createElement() {
         throw new Error("createElement should be implemented in subclasses.");
+    }
+
+    createForm() {
+        return $("<div id='shape-form'></div>").dxForm({
+            colCount: 1,
+            onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
+            items: [
+                  {
+                    dataField: "name",
+                    label: { text: "Name", visible: false },
+                    editorType: "dxTextBox",
+                    editorOptions: {
+                        stylingMode: "filled"
+                    }
+                  },
+                  {
+                    label: { text: "Actions" },
+                    editorType: "dxButton",
+                    editorOptions: {
+                        template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                        onClick: _ => this.remove(),
+                        stylingMode: "text"
+                    }
+                  },
+                  {
+                    dataField: "backgroundColor",
+                    label: { text: "Background color" },
+                    editorType: "dxButtonGroup",
+                    editorOptions: {
+                        onContentReady: function(e) {
+                            e.component.option("items").forEach((item, index) => {
+                                const buttonElement = e.element.find(`.dx-button:eq(${index})`);
+                                buttonElement.find(".dx-icon").css("color", item.color);
+                            });
+                        },
+                        items: this.board.theme.getBackgroundColors().map(c => ({
+                            icon: "fa-solid fa-square",
+                            color: c.color
+                        })),
+                        keyExpr: "color",
+                        stylingMode: "text",
+                        selectedItemKeys: [this.properties.backgroundColor],
+                        onItemClick: e => {
+                            let formInstance = $("#shape-form").dxForm("instance");
+                            formInstance.updateData("backgroundColor", e.itemData.color);
+                            this.setProperty("backgroundColor", e.itemData.color);
+                        }
+                    }
+                  },
+                  {
+                    dataField: "foregroundColor",
+                    label: { text: "Foreground color" },
+                    editorType: "dxButtonGroup",
+                    editorOptions: {
+                        onContentReady: function(e) {
+                            e.component.option("items").forEach((item, index) => {
+                                const buttonElement = e.element.find(`.dx-button:eq(${index})`);
+                                buttonElement.find(".dx-icon").css("color", item.color);
+                            });
+                        },
+                        items: this.board.theme.getStrokeColors().map(c => ({
+                            icon: "fa-solid fa-square",
+                            color: c.color
+                        })),
+                        keyExpr: "color",
+                        stylingMode: "text",
+                        selectedItemKeys: [this.properties.foregroundColor],
+                        onItemClick: e => {
+                            let formInstance = $("#shape-form").dxForm("instance");
+                            formInstance.updateData("foregroundColor", e.itemData.color);
+                            this.setProperty("foregroundColor", e.itemData.color);
+                        }
+                    }
+                  },
+                  {
+                    label: { text: "Layers" },
+                    editorType: "dxButtonGroup",
+                    editorOptions: {
+                        items: [
+                            { icon: "fa-light fa-send-back" },
+                            { icon: "fa-light fa-send-backward" },
+                            { icon: "fa-light fa-bring-forward" },
+                            { icon: "fa-light fa-bring-front" }                            
+                        ],
+                        stylingMode: "text"
+                    }
+                  }
+                ]
+            });
     }
 
     setProperty(name, value) {
@@ -98,5 +183,9 @@ class BaseShape {
 
     getClipId() {
         return this.parent?.getClipId();
+    }
+
+    remove() {
+        this.board.removeShape(this);
     }
 }

@@ -64,7 +64,7 @@ class Shell  {
                         icon: "fa-light fa-shapes",
                         onClick: _ => this.commands.addShape("ReferentialShape"),
                         template1: function() {
-                            return $(`<span class="fa-stack">
+                            return $(`<span class="fa-stack dx-icon">
                                 <i class="fa-light fa-square fa-stack-1x"></i>
                                 <i class="fa-light fa-circle fa-2xs fa-stack-2x"></i>
                             </span>`);
@@ -508,7 +508,7 @@ class Shell  {
     reset() {
         this.calculator.clear();
         this.board.shapes.shapes.forEach(shape => {
-            if (shape.constructor.name == "ExpressionShape")
+            if (shape.constructor.name == "ExpressionShape" && shape.properties.expression != undefined)
                 this.calculator.parse(shape.properties.expression);
         });
         this.updatePlayer();
@@ -517,8 +517,18 @@ class Shell  {
     async open() {
         const [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
-        const content = await file.text();
-        this.board.deserialize(JSON.parse(content));
+        const model = await file.text();
+        this.addModel(model);
+    }
+
+    async openFromPath(filePath) {
+        const file = await fetch(filePath);
+        const model = await file.text();
+        this.addModel(model);
+    }
+
+    openModel(model) {
+        this.board.deserialize(JSON.parse(model));
         this.reset();
         this.board.refresh();
     }
@@ -535,10 +545,19 @@ class Shell  {
                 }
             ]
         });
+        await this.saveFromModel(writableStream);
+    }
+
+    async saveModel(fileHandle) {
         const writableStream = await fileHandle.createWritable();
-        var content = this.board.serialize();
-        await writableStream.write(content);
+        var model = this.board.serialize();
+        await writableStream.write(model);
         await writableStream.close();
+    }
+
+    async saveToPath(filePath) {
+        const fileHandle = await fetch(filePath);
+        const writableStream = await fileHandle.createWritable();
     }
     
     onSelected(e) {
@@ -559,7 +578,8 @@ class Shell  {
     }
     
     onShapeChanged(e) {
-        if (e.detail.shape.constructor.name == "ExpressionShape")
+        var shape = e.detail.shape;
+        if (shape.constructor.name == "ExpressionShape")
             this.reset();
     }
     

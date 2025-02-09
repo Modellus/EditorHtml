@@ -43,6 +43,13 @@ class TextShape extends BaseShape {
         return foreignObject;
     }
 
+    setProperties(properties) {
+        super.setProperties(properties);
+        if (properties.text == undefined)
+            return;
+        this.htmlEditor.option("value", properties.text);
+    }
+
     draw() {
         this.element.setAttribute("x", this.properties.x);
         this.element.setAttribute("y", this.properties.y);

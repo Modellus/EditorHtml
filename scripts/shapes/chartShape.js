@@ -1,79 +1,51 @@
 class ChartShape extends BaseShape {
     constructor(board, parent, id) {
-        super(board), parent, id;
-        this.properties.chartType = "line";
-        this.hasForm = true;
+        super(board, parent, id);
     }
 
     createTransformer() { 
         return new RectangleTransformer(this.board, this);
     }
 
-    getForm() {
-        return $("<div id='shape-form'></div>").dxForm({
-            colCount: 1,
-            onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
-            items: [
-                {
-                    dataField: "name",
-                    label: { text: "Name", visible: false },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                },
-                {
-                    dataField: "backgroundColor",
-                    label: { text: "Background color" },
-                    editorType: "dxButtonGroup",
-                    editorOptions: {
-                        onContentReady: function (e) {
-                            e.component.option("items").forEach((item, index) => {
-                                const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                buttonElement.find(".dx-icon").css("color", item.color);
-                            });
-                        },
-                        items: this.board.theme.getBackgroundColors().map(c => ({
-                            icon: "fa-solid fa-square",
-                            color: c.color
-                        })),
-                        keyExpr: "color",
-                        stylingMode: "text"
-                    }
-                },
-                {
-                    dataField: "chartType",
-                    label: { text: "Type" },
-                    editorType: "dxButtonGroup",
-                    editorOptions: {
-                        items: [
-                            { id: "scatter", icon: "fa-solid fa-square" },
-                            { id: "line", icon: "fa-solid fa-square" },
-                            { id: "area", icon: "fa-solid fa-square" },
-                            { id: "bar", icon: "fa-solid fa-square" }
-                        ],
-                        keyExpr: "id",
-                        stylingMode: "text"
-                    }
-                },
-                {
-                    dataField: "xTerm",
-                    label: { text: "X Variable" },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                },
-                {
-                    dataField: "yTerm",
-                    label: { text: "Y Variable" },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
+    createForm() {
+        var form = super.createForm();
+        var instance = form.dxForm("instance");
+        var items = instance.option("items");
+        items.push(
+            {
+                dataField: "chartType",
+                label: { text: "Type" },
+                editorType: "dxButtonGroup",
+                editorOptions: {
+                    items: [
+                        { id: "scatter", icon: "fa-solid fa-square" },
+                        { id: "line", icon: "fa-solid fa-square" },
+                        { id: "area", icon: "fa-solid fa-square" },
+                        { id: "bar", icon: "fa-solid fa-square" }
+                    ],
+                    keyExpr: "id",
+                    stylingMode: "text"
                 }
-            ]
-        });
+            },
+            {
+                dataField: "xTerm",
+                label: { text: "Argument Axis" },
+                editorType: "dxTextBox",
+                editorOptions: {
+                    stylingMode: "filled"
+                }
+            },
+            {
+                dataField: "yTerm",
+                label: { text: "Value Axis" },
+                editorType: "dxTextBox",
+                editorOptions: {
+                    stylingMode: "filled"
+                }
+            }
+        );
+        instance.option("items", items);
+        return form;
     }
 
     setDefaults() {
@@ -83,6 +55,7 @@ class ChartShape extends BaseShape {
         this.properties.width = 200;
         this.properties.height = 200;
         this.properties.rotation = 0;
+        this.properties.chartType = "line";
     }
 
     createElement() {

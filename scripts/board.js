@@ -36,9 +36,9 @@ class Board {
         this.shapes.clear();
     }
 
-    deserialize(content) {
+    deserialize(model) {
         this.clear();
-        content.map(data => {
+        model.map(data => {
             var shape = this.shapes.deserialize(this, data);
             this.addShape(shape);
         });
@@ -68,11 +68,19 @@ class Board {
         this.dispatchShapeEvent("shapeAdded", shape);
         shape.element.addEventListener("focused", e => this.onShapeFocused(e));
         shape.element.addEventListener("changed", e => this.onShapeChanged(e));
+        this.selectShape(shape);
     }
 
     removeShape(shape) {
+        shape.children.forEach(c => this.removeShape(c));
+        if (shape.parent) {
+            var index = shape.parent.children.indexOf(shape);
+            shape.parent.children.splice(index, 1);
+        }
         this.svg.removeChild(shape.element);
         this.shapes.remove(shape);
+        this.selection.deselect(shape);
+        this.dispatchShapeEvent("shapeRemoved", shape);
     }
 
     getShape(id) {

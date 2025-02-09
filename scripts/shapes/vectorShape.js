@@ -1,8 +1,6 @@
 class VectorShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, parent, id);
-        this.hasForm = true;
-        this.properties.color = this.board.theme.getBackgroundColors()[3].color;
     }
 
     createTransformer() { 
@@ -10,55 +8,29 @@ class VectorShape extends BaseShape {
     }
 
     createForm() {
-        return $("<div id='shape-form'></div>").dxForm({
-            colCount: 1,
-            onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
-            items: [
-                  {
-                    dataField: "name",
-                    label: { text: "Name", visible: false },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                  },
-                  {
-                    dataField: "foregroundColor",
-                    label: { text: "Foreground color" },
-                    editorType: "dxButtonGroup",
-                    editorOptions: {
-                        onContentReady: function(e) {
-                            e.component.option("items").forEach((item, index) => {
-                                const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                buttonElement.find(".dx-icon").css("color", item.color);
-                            });
-                        },
-                        items: this.board.theme.getStrokeColors().map(c => ({
-                            icon: "fa-solid fa-square",
-                            color: c.color
-                        })),
-                        keyExpr: "color",
-                        stylingMode: "text"
-                    }
-                  },
-                  {
-                    dataField: "xTerm",
-                    label: { text: "X Variable" },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                  },
-                  {
-                    dataField: "yTerm",
-                    label: { text: "Y Variable" },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                  }
-                ]
-            });
+        var form = super.createForm();
+        var instance = form.dxForm("instance");
+        var items = instance.option("items");
+        items.push(
+            {
+                dataField: "xTerm",
+                label: { text: "Horizontal Variable" },
+                editorType: "dxTextBox",
+                editorOptions: {
+                    stylingMode: "filled"
+                }
+            },
+            {
+                dataField: "yTerm",
+                label: { text: "Vertical Variable" },
+                editorType: "dxTextBox",
+                editorOptions: {
+                    stylingMode: "filled"
+                }
+            }
+        );
+        instance.option("items", items);
+        return form;
     }
 
     setDefaults() {
