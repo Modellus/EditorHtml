@@ -518,13 +518,13 @@ class Shell  {
         const [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
         const model = await file.text();
-        this.addModel(model);
+        this.openModel(model);
     }
 
     async openFromPath(filePath) {
         const file = await fetch(filePath);
         const model = await file.text();
-        this.addModel(model);
+        this.openModel(model);
     }
 
     openModel(model) {
@@ -545,7 +545,7 @@ class Shell  {
                 }
             ]
         });
-        await this.saveFromModel(writableStream);
+        await this.saveModel(fileHandle);
     }
 
     async saveModel(fileHandle) {
@@ -557,7 +557,7 @@ class Shell  {
 
     async saveToPath(filePath) {
         const fileHandle = await fetch(filePath);
-        const writableStream = await fileHandle.createWritable();
+        await this.saveModel(fileHandle);
     }
     
     onSelected(e) {

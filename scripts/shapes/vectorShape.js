@@ -38,7 +38,8 @@ class VectorShape extends BaseShape {
         this.properties.y = 0;
         this.properties.width = 30;
         this.properties.height = 30;
-        this.properties.color = this.board.theme.getBackgroundColors()[3].color;
+        this.properties.foregroundColor = this.board.theme.getStrokeColors()[0].color;
+        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[1].color;
     }
 
     createElement() {
@@ -70,8 +71,8 @@ class VectorShape extends BaseShape {
             L ${leftX} ${leftY} L ${rightX} ${rightY} L ${tipX} ${tipY} Z
         `;
         this.element.setAttribute("d", arrowPath);
-        this.element.setAttribute("fill", this.properties.color);
-        this.element.setAttribute("stroke", this.properties.color);
+        this.element.setAttribute("fill", this.properties.backgroundColor);
+        this.element.setAttribute("stroke", this.properties.foregroundColor);
         this.element.setAttribute("stroke-width", 1);
     }
 }

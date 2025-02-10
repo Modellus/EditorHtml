@@ -59,6 +59,9 @@ class Shapes {
     }
 
     draw() {
-        this.shapes.forEach(s => s.draw());
+        this.shapes.forEach(s => {
+            if (s.parent)
+                s.draw();
+        });
     }
 }   

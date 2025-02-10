@@ -88,11 +88,11 @@ class BaseShape {
                         onContentReady: function(e) {
                             e.component.option("items").forEach((item, index) => {
                                 const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                buttonElement.find(".dx-icon").css("color", item.color);
+                                buttonElement.find(".dx-icon").css("color", item.color == "#00000000" ? "#cccccc" : item.color);
                             });
                         },
                         items: this.board.theme.getBackgroundColors().map(c => ({
-                            icon: "fa-solid fa-square",
+                            icon: "fa-solid " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
                             color: c.color
                         })),
                         keyExpr: "color",
@@ -113,11 +113,11 @@ class BaseShape {
                         onContentReady: function(e) {
                             e.component.option("items").forEach((item, index) => {
                                 const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                buttonElement.find(".dx-icon").css("color", item.color);
+                                buttonElement.find(".dx-icon").css("color", item.color == "#00000000" ? "#cccccc" : item.color);
                             });
                         },
                         items: this.board.theme.getStrokeColors().map(c => ({
-                            icon: "fa-solid fa-square",
+                            icon: "fa-solid " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
                             color: c.color
                         })),
                         keyExpr: "color",

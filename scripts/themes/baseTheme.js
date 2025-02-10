@@ -4,6 +4,7 @@ class BaseTheme {
 
     getStrokeColors() {
         return [
+            { color: "#00000000" },
             { color: "#1e1e1e" },
             { color: "#ffc9c9" },
             { color: "#b1f2ba" },
@@ -15,6 +16,7 @@ class BaseTheme {
 
     getBackgroundColors() {
         return [
+            { color: "#00000000" },
             { color: "#ebebeb" },
             { color: "#e03130" },
             { color: "#2f9e44" },

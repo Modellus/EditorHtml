@@ -45,8 +45,8 @@ class BodyShape extends BaseShape {
         this.properties.width = 30;
         this.properties.height = 30;
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
-        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[1].color;
-        this.properties.foregroundColor = this.board.theme.getBackgroundColors()[1].color;
+        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[2].color;
+        this.properties.foregroundColor = this.board.theme.getBackgroundColors()[0].color;
     }
 
     update() {

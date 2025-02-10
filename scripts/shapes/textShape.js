@@ -1,6 +1,6 @@
 class TextShape extends BaseShape {
     constructor(board, parent, id) {
-        super(board, parent, id);
+        super(board, null, id);
     }
 
     createTransformer() { 

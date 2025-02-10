@@ -1,6 +1,6 @@
 class ExpressionShape extends BaseShape {
     constructor(board, parent, id) {
-        super(board, parent, id);
+        super(board, null, id);
     }
 
     createTransformer() { 
@@ -14,6 +14,8 @@ class ExpressionShape extends BaseShape {
         this.properties.width = 300;
         this.properties.height = 50;
         this.properties.rotation = 0;
+        this.properties.foregroundColor = this.board.theme.getStrokeColors()[0].color;
+        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[0].color;
     }
 
     createElement() {
