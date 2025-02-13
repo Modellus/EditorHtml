@@ -117,8 +117,8 @@ class Board {
         return svgPoint.matrixTransform(svgCTM);
     }
 
-    dispatchPanEvent() {
-        const panEvent = new CustomEvent("pan", {
+    dispatchSvgEvent(name) {
+        const panEvent = new CustomEvent(name, {
             detail: {
                 x: this.viewBox.x,
                 y: this.viewBox.y,
@@ -127,18 +127,6 @@ class Board {
             }
         });
         this.svg.dispatchEvent(panEvent);
-    }
-
-    dispatchZoomEvent() {
-        const zoomEvent = new CustomEvent("zoom", {
-            detail: {
-                x: this.viewBox.x,
-                y: this.viewBox.y,
-                width: this.viewBox.width,
-                height: this.viewBox.height
-            }
-        });
-        this.svg.dispatchEvent(zoomEvent);
     }
 
     onMouseDown(event) {
@@ -162,7 +150,7 @@ class Board {
         this.startX = event.clientX;
         this.startY = event.clientY;
         this.svg.setAttribute("viewBox", `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
-        this.dispatchPanEvent();
+        this.dispatchSvgEvent("pan");
     }
 
     onMouseUp() {
@@ -193,7 +181,7 @@ class Board {
         this.viewBox.width *= zoomFactor;
         this.viewBox.height *= zoomFactor;
         this.svg.setAttribute("viewBox", `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
-        this.dispatchZoomEvent();
+        this.dispatchSvgEvent("zoom");
     }
 
     onMouseOver(event) {
@@ -228,5 +216,9 @@ class Board {
 
     draw() {
         this.shapes.draw();
+    }
+
+    deselect() {     
+        this.selection.deselect();
     }
 }

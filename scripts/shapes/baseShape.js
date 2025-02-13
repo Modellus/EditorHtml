@@ -60,10 +60,11 @@ class BaseShape {
 
     createForm() {
         return $("<div id='shape-form'></div>").dxForm({
-            colCount: 1,
+            colCount: 2,
             onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
             items: [
                   {
+                    colSpan: 2,
                     dataField: "name",
                     label: { text: "Name", visible: false },
                     editorType: "dxTextBox",
@@ -72,6 +73,7 @@ class BaseShape {
                     }
                   },
                   {
+                    colSpan: 2,
                     label: { text: "Actions" },
                     editorType: "dxButton",
                     editorOptions: {
@@ -81,6 +83,7 @@ class BaseShape {
                     }
                   },
                   {
+                    colSpan: 2,
                     dataField: "backgroundColor",
                     label: { text: "Background color" },
                     editorType: "dxButtonGroup",
@@ -106,6 +109,7 @@ class BaseShape {
                     }
                   },
                   {
+                    colSpan: 2,
                     dataField: "foregroundColor",
                     label: { text: "Foreground color" },
                     editorType: "dxButtonGroup",
@@ -131,6 +135,8 @@ class BaseShape {
                     }
                   },
                   {
+                    visible: false,
+                    colSpan: 2,
                     label: { text: "Layers" },
                     editorType: "dxButtonGroup",
                     editorOptions: {

@@ -584,6 +584,7 @@ class Shell  {
     }
     
     onIterate(e) {
+        this.board.deselect();
         this.board.refresh();
         this.updatePlayer();
     }    
