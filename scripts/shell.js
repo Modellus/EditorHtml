@@ -1,5 +1,5 @@
 class Shell  {
-    constructor() {
+    constructor(model) {
         this.calculator = new Calculator();
         this.board = new Board(document.getElementById("svg"), this.calculator);
         this.commands = new Commands(this);
@@ -21,6 +21,8 @@ class Shell  {
         [BodyShape, ExpressionShape, ChartShape, TableShape, ImageShape, VectorShape, ReferentialShape, TextShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.calculator.on("iterate", e => this.onIterate(e));
         this.calculator.on("iterationChanged", e => this.onIterationChanged(e));
+        if (model != undefined)
+            this.openModel(model);
     }
 
     createTopToolbar() {
