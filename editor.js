@@ -4,6 +4,7 @@ const modelName = urlParams.get("model");
 var shell = null;
 if (modelName)
     fetch(`resources/models/${modelName}.json`)
+        .then(r => r.text())
         .then(r => shell = new Shell(r));
 else
     shell = new Shell();
