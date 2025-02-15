@@ -3,7 +3,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const modelName = urlParams.get("model");
 const shell = null;
 if (modelName)
-    fetch(`resources/models/${modelName}.mdl`)
+    fetch(`resources/models/${modelName}.json`)
         .then(r => shell = new Shell(r));
 else
     shell = new Shell(model);
