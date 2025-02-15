@@ -93,6 +93,19 @@ svg {
     cursor: url("rotate-reverse-regular.png"), auto;
 }
 
+.handle.origin {
+    rx: 4px;
+    ry: 4px;
+    cursor: url("rotate-reverse-regular.png"), auto;
+}
+
+.handle.radius {
+    transform: translate(-4px, -4px);
+    rx: 4px;
+    ry: 4px;
+    cursor: url("rotate-reverse-regular.png"), auto;
+}
+
 .rotation-handle {
     fill: white;
     stroke: #4039d7;

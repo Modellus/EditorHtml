@@ -36,7 +36,7 @@ class ReferentialShape extends BaseShape {
                         this.setProperty("axisColor", e.itemData.color);
                     }
                 }
-              }
+            }
         );
         instance.option("items", items);
         return form;

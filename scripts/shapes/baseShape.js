@@ -111,7 +111,7 @@ class BaseShape {
                   {
                     colSpan: 2,
                     dataField: "foregroundColor",
-                    label: { text: "Foreground color" },
+                    label: { text: "Color" },
                     editorType: "dxButtonGroup",
                     editorOptions: {
                         onContentReady: function(e) {
@@ -155,6 +155,7 @@ class BaseShape {
 
     setProperty(name, value) {
         this.properties[name] = value;
+        this.update();
         this.draw();
         this.dispatchEvent("changed", { property: name, value: value });
     }

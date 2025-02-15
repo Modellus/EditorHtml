@@ -13,31 +13,40 @@ class ChartShape extends BaseShape {
         var items = instance.option("items");
         items.push(
             {
+                colSpan: 2,
                 dataField: "chartType",
                 label: { text: "Type" },
                 editorType: "dxButtonGroup",
                 editorOptions: {
                     items: [
-                        { id: "scatter", icon: "fa-solid fa-square" },
-                        { id: "line", icon: "fa-solid fa-square" },
-                        { id: "area", icon: "fa-solid fa-square" },
-                        { id: "bar", icon: "fa-solid fa-square" }
+                        { type: "scatter", icon: "fa-light fa-chart-scatter" },
+                        { type: "line", icon: "fa-light fa-chart-line" },
+                        { type: "area", icon: "fa-light fa-chart-area" },
+                        { type: "bar", icon: "fa-light fa-chart-column" }
                     ],
-                    keyExpr: "id",
-                    stylingMode: "text"
+                    keyExpr: "type",
+                    stylingMode: "text",
+                    selectedItemKeys: [this.properties.chartType],
+                    onItemClick: e => {
+                        let formInstance = $("#shape-form").dxForm("instance");
+                        formInstance.updateData("chartType", e.itemData.type);
+                        this.setProperty("chartType", e.itemData.type);
+                    }
                 }
             },
             {
+                colSpan: 1,
                 dataField: "xTerm",
-                label: { text: "Argument Axis" },
+                label: { text: "Horizontal" },
                 editorType: "dxTextBox",
                 editorOptions: {
                     stylingMode: "filled"
                 }
             },
             {
+                colSpan: 1,
                 dataField: "yTerm",
-                label: { text: "Value Axis" },
+                label: { text: "Vertical" },
                 editorType: "dxTextBox",
                 editorOptions: {
                     stylingMode: "filled"
@@ -64,10 +73,9 @@ class ChartShape extends BaseShape {
         $div.css({ "width": "100%", "height": "100%" });
         this.chart = $div.dxChart({
             commonSeriesSettings: {
-                argumentField: "x",
                 label: {
                     visible: true, 
-                    customizeText: e => e.argument === this.board.calculator.get()["x"] ? e.valueText : ""
+                    customizeText1: e => e.argument === this.board.calculator.get()["x"] ? e.valueText : ""
                 }
             },
             commonPaneSettings: {
@@ -76,6 +84,13 @@ class ChartShape extends BaseShape {
                 }
             },
             commonAxisSettings: {
+                title: {
+                    font: {
+                        family: "Katex_Math",
+                        size: "1em",
+                        weight: 400
+                    }
+                },
                 color: "#d3d3d3",
                 grid: {
                     visible: true
@@ -86,29 +101,11 @@ class ChartShape extends BaseShape {
             },
             series: [
                 {
-                    name: "y",
-                    valueField: "y",
-                    type: "line",
-                    color: "#b1f2ba",
                     point: {
                         size: 4
                     },
                     label: {
-                        format: {
-                            type: "fixedPoint",
-                            precision: 2
-                        }
-                    }
-                },
-                {
-                    name: "z",
-                    valueField: "z",
-                    type: "line",
-                    color: "#a4d8ff",
-                    point: {
-                        size: 4
-                    },
-                    label: {
+                        visible: false,
                         format: {
                             type: "fixedPoint",
                             precision: 2
@@ -117,6 +114,7 @@ class ChartShape extends BaseShape {
                 }
             ],
             legend: {
+                visible: false,
                 verticalAlignment: "bottom",
                 horizontalAlignment: "center",
                 itemTextPosition: "bottom",
@@ -147,7 +145,16 @@ class ChartShape extends BaseShape {
     }
 
     update() {
+        this.chart.beginUpdate();
+        this.chart.option("commonSeriesSettings.type", this.properties.chartType);
+        this.chart.option("commonSeriesSettings.argumentField", this.properties.xTerm);
+        this.chart.option("commonSeriesSettings.valueField", this.properties.yTerm);
+        this.chart.option("commonSeriesSettings.color", this.properties.foregroundColor);
+        this.chart.option("commonPaneSettings.backgroundColor", this.properties.backgroundColor);
+        this.chart.option("argumentAxis.title.text", this.properties.xTerm);
+        this.chart.option("valueAxis.title.text", this.properties.yTerm);
         this.chart.option("dataSource", this.board.calculator.getValues());
+        this.chart.endUpdate();
     }
 
     draw() {

@@ -149,7 +149,7 @@ class RectangleTransformer extends CircleTransformer {
                     width: this.shape.properties.width + e.dx,
                     height: this.shape.properties.height + e.dy
                 })
-            },
+            }/*,
             {
                 className: "handle rotation",
                 getAttributes: _ => ({
@@ -161,7 +161,7 @@ class RectangleTransformer extends CircleTransformer {
                 getTransform: e => ({
                     rotation: Math.atan2(e.y + this.shape.properties.height / 2 - e.y, e.x + this.shape.properties.width / 2 - e.x) * 180 / Math.PI
                 })
-            }
+            }*/
         ];
     }
 }

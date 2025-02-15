@@ -65,6 +65,10 @@ class ExpressionShape extends BaseShape {
         this.dispatchEvent("focused", {});
     }
 
+    update() {
+        this.element.setAttribute("backgroundColor", this.properties.backgroundColor);
+    }
+
     draw() {
         this.element.setAttribute("x", this.properties.x);
         this.element.setAttribute("y", this.properties.y);
