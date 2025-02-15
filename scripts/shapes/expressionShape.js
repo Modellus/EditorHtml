@@ -14,14 +14,14 @@ class ExpressionShape extends BaseShape {
         this.properties.width = 300;
         this.properties.height = 50;
         this.properties.rotation = 0;
-        this.properties.foregroundColor = this.board.theme.getStrokeColors()[0].color;
+        this.properties.foregroundColor = this.board.theme.getStrokeColors()[1].color;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[0].color;
     }
 
     createElement() {
         const foreignObject = this.board.createSvgElement("foreignObject");
         const div = this.board.createElement("div");
-        $(div).css({ "width": "100%", "height": "100%" });
+        $(div).css({ "width": "100%", "height": "100%", "background-color": "transparent" });
         foreignObject.appendChild(div);
         this.mathfield = new MathfieldElement();
         this.mathfield.smartMode = true;
@@ -66,7 +66,8 @@ class ExpressionShape extends BaseShape {
     }
 
     update() {
-        this.element.setAttribute("backgroundColor", this.properties.backgroundColor);
+        this.element.style.backgroundColor = this.properties.backgroundColor;
+        this.mathfield.style.color = this.properties.foregroundColor;
     }
 
     draw() {
