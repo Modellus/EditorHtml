@@ -102,6 +102,23 @@ class BodyShape extends BaseShape {
                     step: 0.1,
                     stylingMode: "filled"
                 }
+            },
+            {
+                colSpan: 2,
+                dataField: "file",
+                label: { text: "File" },
+                editorType: "dxFileUploader",
+                editorOptions: {
+                    accept: "image/*",
+                    onFilesUploaded: e => {
+                        const file = e.component.option("value")[0];
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            this.setProperties({ imageBase64: e.target.result.split(',')[1] });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
             }
         );
         instance.option("items", items);
@@ -112,6 +129,8 @@ class BodyShape extends BaseShape {
         const element = this.board.createSvgElement("g");
         this.circle = this.board.createSvgElement("circle");
         element.appendChild(this.circle);
+        this.image = this.board.createSvgElement("image");
+        element.appendChild(this.image);
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [] };
         this.trajectory.element.setAttribute("fill", "none");
         element.appendChild(this.trajectory.element);
@@ -133,6 +152,7 @@ class BodyShape extends BaseShape {
         this.properties.stroboscopyColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.stroboscopyInterval = 10;
         this.properties.stroboscopyOpacity = 0.5;
+        this.properties.imageBase64 = "";
     }
 
     update() {
@@ -145,6 +165,11 @@ class BodyShape extends BaseShape {
             const position = this.getBoardPosition();
             this.trajectory.values.push({ x: position.x, y: position.y });
         }
+        if (this.properties.imageBase64 != "") {
+            this.image.setAttribute("href", `data:image/png;base64,${this.properties.imageBase64}`);
+        }
+        else
+            this.image.removeAttribute("href");
     }
 
     draw() {

@@ -19,6 +19,7 @@ class Board {
         this.svg.addEventListener("mouseover", this.onMouseOver.bind(this));
         this.svg.addEventListener("mouseout", this.onMouseOut.bind(this));
         this.theme = new BaseTheme();
+        this.translations = new BaseTranslations();
         this.selection = new Selection(this);
     }
 
@@ -95,7 +96,6 @@ class Board {
         shape.setProperties(properties);
         this.refresh();
     }
-
 
     onShapeFocused(e) {
         this.selectShape(e.detail.shape);
@@ -220,5 +220,9 @@ class Board {
 
     deselect() {     
         this.selection.deselect();
+    }
+
+    enableSelection(enable) {
+        this.selection.enabled = enable;
     }
 }

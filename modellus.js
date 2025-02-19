@@ -2,9 +2,9 @@ var modellus = {
     version: "2025.0.1",
     undo: _ => shell.commands.undo(),
     redo: _ => shell.commands.redo(),
-    addBody: name => shell.commands.addShape("BodyShape", name),
+    addBody: name => shell.commands.addShape("BodyShape", name, parentName),
     addReferential: name => shell.commands.addShape("ReferentialShape", name),
-    addVector: name => shell.commands.addShape("VectorShape", name),
+    addVector: name => shell.commands.addShape("VectorShape", name, parentName),
     addChart: name => shell.commands.addShape("ChartShape", name),
     addText: name => shell.commands.addShape("TextShape", name),
     addImage: name => shell.commands.addShape("ImageShape", name),
@@ -12,6 +12,7 @@ var modellus = {
     addExpression: name => shell.commands.addShape("ExpressionShape", name),
     remove: name => shell.commands.removeShape(name),
     select: name => shell.commands.selectShape(name),
+    deselect: _ => shell.commands.deselectShape(), // Todo
     setProperties: (name, properties) => shell.commands.setShapeProperties(name, properties),
     getProperties: name => shell.board.shapes.getByName(name).properties,
     open: _ => shell.open(),
@@ -19,5 +20,6 @@ var modellus = {
     new: _ => shell.new(),
     openFromPath: filePath => shell.openFromPath(filePath),
     saveToPath: filePath => shell.saveToPath(filePath),
-    openModel: model => shell.openModel(model)
+    openModel: model => shell.openModel(model),
+    getModel: _ => shell.getModel(),
 } 

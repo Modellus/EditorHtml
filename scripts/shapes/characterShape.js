@@ -1,4 +1,4 @@
-class ImageShape extends BaseShape {
+class CharacterShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, parent, id);
     }

@@ -16,8 +16,9 @@ class Commands {
         this.invoker.execute(command);
     }
 
-    addShape(type, name) {
-        var shape = this.shell.board.shapes.createShape(type, this.shell.board.selection.selectedShape);
+    addShape(type, name, parentName) {
+        var parentShape = parentName ? this.shell.board.shapes.getByName(parentName) : this.shell.board.selection.selectedShape;
+        var shape = this.shell.board.shapes.createShape(type, parentShape);
         shape.setProperties({ name: name });
         shape.element.addEventListener("changed", e => this.shell.onShapeChanged(e));
         const command = new AddShapeCommand(this.shell.board, shape);

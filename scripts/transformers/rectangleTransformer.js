@@ -7,67 +7,13 @@ class RectangleTransformer extends CircleTransformer {
         const size = 8;
         return [
             {
-                className: "handle move top",
+                className: "handle move",
                 getAttributes: _ => {
                     const position = this.shape.getBoardPosition();
                     return {
                         x: position.x,
                         y: position.y,
                         width: this.shape.properties.width,
-                        height: 1
-                    }
-                },
-                getTransform: e => ({
-                    x: this.shape.properties.x + e.dx,
-                    y: this.shape.properties.y + e.dy,
-                    width: this.shape.properties.width,
-                    height: this.shape.properties.height
-                })
-            },
-            {
-                className: "handle move bottom",
-                getAttributes: _ => {
-                    const position = this.shape.getBoardPosition();
-                    return {
-                        x: position.x,
-                        y: position.y + this.shape.properties.height,
-                        width: this.shape.properties.width,
-                        height: 1
-                    }
-                },
-                getTransform: e => ({
-                    x: this.shape.properties.x + e.dx,
-                    y: this.shape.properties.y + e.dy,
-                    width: this.shape.properties.width,
-                    height: this.shape.properties.height
-                })
-            },
-            {
-                className: "handle move left",
-                getAttributes: _ => {
-                    const position = this.shape.getBoardPosition();
-                    return {
-                        x: position.x,
-                        y: position.y,
-                        width: 1,
-                        height: this.shape.properties.height
-                    }
-                },
-                getTransform: e => ({
-                    x: this.shape.properties.x + e.dx,
-                    y: this.shape.properties.y + e.dy,
-                    width: this.shape.properties.width,
-                    height: this.shape.properties.height
-                })
-            },
-            {
-                className: "handle move right",
-                getAttributes: _ => {
-                    const position = this.shape.getBoardPosition();
-                    return {
-                        x: position.x + this.shape.properties.width,
-                        y: position.y,
-                        width: 1,
                         height: this.shape.properties.height
                     }
                 },

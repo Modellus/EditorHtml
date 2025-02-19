@@ -50,40 +50,44 @@ svg {
 .handle {
     fill: white;
     stroke: #4039d7;
-    rx: 2px;
-    ry: 2px;
+    stroke-width: 1px;
 }
 
 .handle.top-left {
     cursor: nwse-resize;
     width: 8px;
     height: 8px;
+    rx: 2px;
+    ry: 2px;
 }
 
 .handle.top-right {
     cursor: nesw-resize;
     width: 8px;
     height: 8px;
+    rx: 2px;
+    ry: 2px;
 }
 
 .handle.bottom-left {
     cursor: nesw-resize;
     width: 8px;
     height: 8px;
+    rx: 2px;
+    ry: 2px;
 }
 
 .handle.bottom-right {
     cursor: nwse-resize;
     width: 8px;
     height: 8px;
+    rx: 2px;
+    ry: 2px;
 }
 
 .handle.move {
-    fill: #4039d7;
-    stroke: transparent;
+    fill: transparent;
     cursor: move;
-    rx: 0px;
-    ry: 0px;
 }
 
 .handle.rotation {
@@ -229,10 +233,15 @@ svg:active.pan-available {
 .dx-button:hover .trash {
     display: none;
 }
+
 .dx-button:hover .trash-hover {
     display: inline-block;
     font-weight: 900;
     color: red;
+}
+
+.tooltip {
+    text-wrap-mode: wrap; 
 }
 
 /* Initially hide the trash-xmark */

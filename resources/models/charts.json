@@ -1,1 +1,113 @@
-[{"type":"ChartShape","id":"4bcca8be-36f5-4096-9c94-dafde0f9c8bf","properties":{"x":433.5,"y":385,"width":372,"height":191,"rotation":0,"chartType":"line","xTerm":"t","yTerm":"x","foregroundColor":"#ffc9c9"}},{"type":"ExpressionShape","id":"deda5f6d-6dd3-48eb-8959-d9432864af79","properties":{"x":476.5,"y":298,"width":300,"height":50,"rotation":0,"foregroundColor":"#00000000","backgroundColor":"#00000000","expression":"x=\\sin\\left(t\\right)\\cdot t\\cdot10"}},{"type":"ChartShape","id":"4ad16ee3-aed3-4153-bacc-4af28acccc6f","properties":{"x":828.5,"y":385,"width":343,"height":184,"rotation":0,"chartType":"line","xTerm":"t","yTerm":"x","foregroundColor":"#b1f2ba"}},{"type":"ExpressionShape","id":"56d35233-33da-4c8c-ac5e-93c86cd50396","properties":{"x":851.5,"y":289,"width":300,"height":50,"rotation":0,"foregroundColor":"#00000000","backgroundColor":"#00000000","expression":"y=\\cos\\left(t\\right)\\cdot t\\cdot10"}},{"type":"ChartShape","id":"7eac51b3-073d-420b-b73e-976331cf741e","properties":{"x":1256.5,"y":387,"width":299,"height":163,"rotation":0,"chartType":"scatter","xTerm":"x","yTerm":"y","foregroundColor":"#a4d8ff"}},{"type":"ReferentialShape","id":"1ba0b8a3-fd33-45ac-8c25-44e5931f67ca","properties":{"x":796.5,"y":632,"width":400,"height":200,"rotation":0,"foregroundColor":"#1e1e1e","backgroundColor":"#00000000","axisColor":"#1871c2","originX":200,"originY":100}},{"type":"BodyShape","id":"3043c7d8-444a-4e8c-aaab-489776c1ba81","parent":"1ba0b8a3-fd33-45ac-8c25-44e5931f67ca","properties":{"x":116.66130597154991,"y":-91.0721674772941,"angle":0.1283232276857948,"width":30,"height":30,"radius":15.628499608087784,"backgroundColor":"#1871c2","foregroundColor":"#00000000","trajectoryColor":"#00000000","stroboscopyColor":"#e03130","stroboscopyInterval":10,"stroboscopyOpacity":0.5,"xTerm":"x","yTerm":"y"}}]
+[
+  {
+    "type": "ChartShape",
+    "id": "4bcca8be-36f5-4096-9c94-dafde0f9c8bf",
+    "properties": {
+      "x": 433.5,
+      "y": 385,
+      "width": 372,
+      "height": 191,
+      "rotation": 0,
+      "chartType": "line",
+      "xTerm": "t",
+      "yTerm": "x",
+      "foregroundColor": "#ffc9c9"
+    }
+  },
+  {
+    "type": "ExpressionShape",
+    "id": "deda5f6d-6dd3-48eb-8959-d9432864af79",
+    "properties": {
+      "x": 476.5,
+      "y": 298,
+      "width": 300,
+      "height": 50,
+      "rotation": 0,
+      "foregroundColor": "#1e1e1e",
+      "backgroundColor": "#00000000",
+      "expression": "x=\\sin\\left(t\\right)\\cdot t\\cdot10"
+    }
+  },
+  {
+    "type": "ChartShape",
+    "id": "4ad16ee3-aed3-4153-bacc-4af28acccc6f",
+    "properties": {
+      "x": 828.5,
+      "y": 385,
+      "width": 343,
+      "height": 184,
+      "rotation": 0,
+      "chartType": "line",
+      "xTerm": "t",
+      "yTerm": "x",
+      "foregroundColor": "#b1f2ba"
+    }
+  },
+  {
+    "type": "ExpressionShape",
+    "id": "56d35233-33da-4c8c-ac5e-93c86cd50396",
+    "properties": {
+      "x": 851.5,
+      "y": 289,
+      "width": 300,
+      "height": 50,
+      "rotation": 0,
+      "foregroundColor": "#1e1e1e",
+      "backgroundColor": "#00000000",
+      "expression": "y=\\cos\\left(t\\right)\\cdot t\\cdot10"
+    }
+  },
+  {
+    "type": "ChartShape",
+    "id": "7eac51b3-073d-420b-b73e-976331cf741e",
+    "properties": {
+      "x": 1256.5,
+      "y": 387,
+      "width": 299,
+      "height": 163,
+      "rotation": 0,
+      "chartType": "scatter",
+      "xTerm": "x",
+      "yTerm": "y",
+      "foregroundColor": "#a4d8ff"
+    }
+  },
+  {
+    "type": "ReferentialShape",
+    "id": "1ba0b8a3-fd33-45ac-8c25-44e5931f67ca",
+    "properties": {
+      "x": 796.5,
+      "y": 632,
+      "width": 400,
+      "height": 200,
+      "rotation": 0,
+      "foregroundColor": "#1e1e1e",
+      "backgroundColor": "#00000000",
+      "originX": 200,
+      "originY": 100,
+      "axisColor": "#1871c2"
+    }
+  },
+  {
+    "type": "BodyShape",
+    "id": "3043c7d8-444a-4e8c-aaab-489776c1ba81",
+    "parent": "1ba0b8a3-fd33-45ac-8c25-44e5931f67ca",
+    "properties": {
+      "x": 0,
+      "y": 0,
+      "angle": 0.1283232276857948,
+      "width": 30,
+      "height": 30,
+      "radius": 15.628499608087784,
+      "backgroundColor": "#1871c2",
+      "foregroundColor": "#00000000",
+      "trajectoryColor": "#00000000",
+      "stroboscopyColor": "#e03130",
+      "stroboscopyInterval": 10,
+      "stroboscopyOpacity": 0.5,
+      "imageBase64": "",
+      "xTerm": "x",
+      "yTerm": "y"
+    }
+  }
+]

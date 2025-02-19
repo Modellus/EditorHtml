@@ -150,7 +150,7 @@ class ChartShape extends BaseShape {
         this.chart.option("commonSeriesSettings.argumentField", this.properties.xTerm);
         this.chart.option("commonSeriesSettings.valueField", this.properties.yTerm);
         this.chart.option("commonSeriesSettings.color", this.properties.foregroundColor);
-        this.chart.option("commonPaneSettings.backgroundColor", this.properties.backgroundColor);
+        this.chart.option("containerBackgroundColor", this.properties.backgroundColor);
         this.chart.option("argumentAxis.title.text", this.properties.xTerm);
         this.chart.option("valueAxis.title.text", this.properties.yTerm);
         this.chart.option("dataSource", this.board.calculator.getValues());

@@ -3,26 +3,18 @@ class Selection {
         this.board = board;
         this.selectedShape = null;
         this.transformer = null;
+        this.enabled = true;
         this.board.svg.addEventListener("mousedown", (e) => this.onClickOutside(e));
         this.board.svg.addEventListener("mousedown", (e) => this.onSelectShape(e));
     }
 
-    dispatchSelectedEvent() {
-        const selectedEvent = new CustomEvent('selected', {
+    dispatchEvent(name, shape) {
+        const selectedEvent = new CustomEvent(name, {
             detail: {
-                shape: this.selectedShape
+                shape: shape
             }
         });
         this.board.svg.dispatchEvent(selectedEvent);
-    }
-
-    dispatchDeselectedEvent(deselectedShape) {
-        const deselectedEvent = new CustomEvent('deselected', {
-            detail: {
-                shape: deselectedShape
-            }
-        });
-        this.board.svg.dispatchEvent(deselectedEvent);
     }
 
     select(shape) {
@@ -30,7 +22,7 @@ class Selection {
         this.selectedShape = shape;
         this.transformer = shape.createTransformer();
         this.transformer.show();
-        this.dispatchSelectedEvent();
+        this.dispatchEvent("selected", this.selectedShape);
     }
 
     deselect() {
@@ -41,7 +33,7 @@ class Selection {
         if (transformer)
             transformer.hide();
         if (selectedShape != null)
-            this.dispatchDeselectedEvent(selectedShape);
+            this.dispatchEvent("deselected", selectedShape);
     }
 
     onClickOutside(event) {
@@ -50,6 +42,8 @@ class Selection {
     }
 
     onSelectShape(event) {
+        if (!this.enabled)
+            return;
         const targetShape = event.target;
         var shape = this.findShape(targetShape);
         if (shape != undefined && targetShape !== this.selectedShape?.element)

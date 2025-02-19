@@ -3,6 +3,8 @@ class Shell  {
         this.calculator = new Calculator();
         this.board = new Board(document.getElementById("svg"), this.calculator);
         this.commands = new Commands(this);
+        this.properties = {};
+        this.setDefaults();
         new MiniMap(this.board, document.getElementById("minimap-image"), document.getElementById("minimap-viewport"));
         this.createContextMenu();
         this.createTopToolbar();
@@ -18,11 +20,35 @@ class Shell  {
         this.board.svg.addEventListener("selected", e => this.onSelected(e));
         this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
-        [BodyShape, ExpressionShape, ChartShape, TableShape, ImageShape, VectorShape, ReferentialShape, TextShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyShape, ExpressionShape, ChartShape, TableShape, BackgroundShape, VectorShape, ImageShape, ReferentialShape, TextShape, CharacterShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.calculator.on("iterate", e => this.onIterate(e));
         this.calculator.on("iterationChanged", e => this.onIterationChanged(e));
         if (model != undefined)
             this.openModel(model);
+    }
+
+    setDefaults() {
+        this.properties.language = "en-US";
+    }
+
+    createTooltip(e, html, width) {
+        $("<div>")
+            .appendTo("body")
+            .dxTooltip({
+                target: e.component.element(),
+                contentTemplate: function (contentElement) {
+                    contentElement.append(
+                        $("<div class='tooltip'/>").html(html)
+                    )
+                },
+                showEvent: {
+                    delay: 1000,
+                    name: "mouseenter" 
+                },
+                hideEvent: "mouseleave",
+                position: "top",
+                width: width ?? 200
+            });
     }
 
     createTopToolbar() {
@@ -50,7 +76,7 @@ class Shell  {
                             style: "font-family: cursive; font-size: 16px"
                         },
                         text: "X",
-                        onClick: _ => this.commands.addShape("ExpressionShape"),
+                        onClick: _ => this.commands.addShape("ExpressionShape")
                     }
                 },
                 {
@@ -64,21 +90,30 @@ class Shell  {
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-shapes",
+                        attribute: {
+                            id: "shapes-button"
+                        },
                         onClick: _ => this.commands.addShape("ReferentialShape"),
-                        template1: function() {
-                            return $(`<span class="fa-stack dx-icon">
-                                <i class="fa-light fa-square fa-stack-1x"></i>
-                                <i class="fa-light fa-circle fa-2xs fa-stack-2x"></i>
-                            </span>`);
-                        }
+                        template1: `<div class='dx-icon'>
+                                <span class="fa-layers">
+                                    <i class="fa-regular fa-circle" data-fa-transform="shrink-12 right-1 up-2"></i>
+                                    <i class="fa-regular fa-arrow-right-long fa-rotate-by" data-fa-transform="shrink-12 right-3 up-2"></i>
+                                    <i class="fa-thin fa-horizontal-rule" data-fa-transform="down-1"></i>
+                                    <i class="fa-thin fa-pipe" data-fa-transform="shrink-4 left-4"></i>
+                                    <i class="fa-thin fa-rectangle-wide"></i>
+                                </span>
+                            </div>`,
+                            onInitialized: e => this.createTooltip(e, this.board.translations.getReferentialShapeTooltip(this.properties.language))
                     }
                 },
                 {
                     location: "center",
                     widget: "dxButton",
                     options: {
-                        icon: "fa-light fa-image",
-                        onClick: _ => this.commands.addShape("ImageShape")
+                        template: `<div class='dx-icon'>
+                                <i class='fa-light fa-panorama fa-lg'></i>
+                            </div>`,
+                        onClick: _ => this.commands.addShape("BackgroundShape")
                     }
                 },
                 {
@@ -126,8 +161,18 @@ class Shell  {
                     location: "center",
                     widget: "dxButton",
                     options: {
+                        icon: "fa-light fa-image",
+                        onClick: _ => this.commands.addShape("ImageShape")
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
+                    options: {
                         icon: "fa-regular fa-child-reaching",
                         disabled: true,
+                        onClick: _ => this.commands.addShape("CharacterShape"),
+                        onInitialized: e => this.characterButton = e.component
                     }
                 },
                 {
@@ -154,6 +199,7 @@ class Shell  {
                 }
             ]
         });
+        this.topToolbar = $("#toolbar").dxToolbar("instance");
     }
     
     createBottomToolbar() {
@@ -298,14 +344,12 @@ class Shell  {
                         elementAttr: {
                             id: "chat-button"
                         },
-                        onClick: function() {
-                            var chatPopup = $("#chat-popup").dxPopup("instance");
-                            chatPopup.show();
-                        }
+                        onClick: _ => this.chatPopup.show()
                     }
                 }
             ]
         });
+        this.bottomToolbar = $("#bottom-toolbar").dxToolbar("instance");
     }
         
     createChat() {
@@ -345,6 +389,7 @@ class Shell  {
                 offset: "0 -20"
             }
         });
+        this.chatPopup = $("#chat-popup").dxPopup("instance");
     }
     
     createShapePopup() {
@@ -365,6 +410,7 @@ class Shell  {
                 offset: "20, 0"
             }
         });
+        this.shapePopup = $("#shape-popup").dxPopup("instance");
     }
     
     createContextMenu() {
@@ -424,6 +470,7 @@ class Shell  {
                 offset: "0 10"
             }
         });
+        this.contextMenu = $("#context-menu").dxContextMenu("instance");
     }
     
     sendToBackend(message, chat) {
@@ -456,17 +503,20 @@ class Shell  {
         var lastIteration = this.calculator.getLastIteration();
         var iteration = this.calculator.getIteration();
         var icon = this.playPause.option("icon");
-        var shouldPause = this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING;
-        if (shouldPause && icon != "fa-light fa-pause" || !shouldPause && icon != "fa-light fa-play") {
-            this.playPause.option("icon", shouldPause ? "fa-light fa-pause" : "fa-light fa-play");
+        var isRunning = this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING;
+        var isStopped = this.calculator.status == STATUS.STOPPED;
+        if (isRunning && icon != "fa-light fa-pause" || !isRunning && icon != "fa-light fa-play") {
+            this.playPause.option("icon", isRunning ? "fa-light fa-pause" : "fa-light fa-play");
             this.playPause.repaint();
         }
-        this.stop.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING);
-        this.replay.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING);
-        this.stepBackward.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING || iteration == 0);
-        this.stepForward.option("disabled", this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING || iteration == lastIteration);
+        this.stop.option("disabled", isRunning);
+        this.replay.option("disabled", isRunning);
+        this.stepBackward.option("disabled", isRunning || iteration == 0);
+        this.stepForward.option("disabled", isRunning || iteration == lastIteration);
         this.playHead.option("max", lastIteration);
         this.playHead.option("value", iteration);
+        this.board.enableSelection(isStopped);
+        this.topToolbar.option("visible", isStopped);
     }
     
     playPausePressed() {
@@ -561,22 +611,24 @@ class Shell  {
         const fileHandle = await fetch(filePath);
         await this.saveModel(fileHandle);
     }
+
+    getModel() {
+        return JSON.stringify(this.board.serialize());
+    }
     
     onSelected(e) {
         this.updateToolbar();
         var form = e.detail.shape.getForm();
         if (form == null)
             return;
-        var shapePopup = $("#shape-popup").dxPopup("instance");
-        shapePopup.content().empty();
-        shapePopup.content().append(form);
-        shapePopup.show();
+        this.shapePopup.content().empty();
+        this.shapePopup.content().append(form);
+        this.shapePopup.show();
     }
     
     onDeselected(e) {
         this.updateToolbar();
-        var shapePopup = $("#shape-popup").dxPopup("instance");
-        shapePopup.hide();
+        this.shapePopup.hide();
     }
     
     onShapeChanged(e) {
