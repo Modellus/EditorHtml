@@ -6,7 +6,7 @@ class Calculator extends EventTarget {
         this.system = new Modellus.System("t");
         this.parser = new Modellus.Parser(this.system);
         this.engine = new Modellus.Engine(this.system);
-        this.status = STATUS.PAUSED;
+        this.status = STATUS.STOPPED;
     }
 
     emit(eventName, detail = {}) {

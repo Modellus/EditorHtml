@@ -8,6 +8,7 @@ class TextShape extends BaseShape {
     }
 
     setDefaults() {
+        this.properties.name = this.board.translations.get("Text Name");
         var center = this.board.getClientCenter();
         this.properties.x = center.x - 200;
         this.properties.y = center.y - 100;

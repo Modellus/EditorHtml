@@ -8,6 +8,7 @@ class ExpressionShape extends BaseShape {
     }
 
     setDefaults() {
+        this.properties.name = this.board.translations.get("Expression Name");
         var center = this.board.getClientCenter();
         this.properties.x = center.x - 150;
         this.properties.y = center.y - 25;
@@ -28,6 +29,8 @@ class ExpressionShape extends BaseShape {
         this.mathfield.popoverPolicy = "none";
         this.mathfield.virtualKeyboardMode = "off";
         this.mathfield.mathVirtualKeyboardPolicy = "manual";
+        this.mathfield.placeholder = "\\text{Enter a formula}";
+        debugger
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());
         div.appendChild(this.mathfield);
@@ -37,8 +40,7 @@ class ExpressionShape extends BaseShape {
             scrollByContent: true, 
             scrollByThumb: true
         });
-        var expression = this.properties.expression ?? "{\\frac{dx}{dt}}=y";
-        this.mathfield.value = expression;
+        this.mathfield.value = this.properties.expression;
         return foreignObject;
     }
 
@@ -50,9 +52,8 @@ class ExpressionShape extends BaseShape {
 
     setProperties(properties) {
         super.setProperties(properties);
-        if (properties.expression == undefined)
-            return;
-        this.mathfield.value = properties.expression;
+        if (properties.expression != undefined)
+            this.mathfield.value = properties.expression;
         this.onChange();
     }
 

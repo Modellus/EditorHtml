@@ -140,6 +140,7 @@ class CharacterShape extends BaseShape {
     }    
 
     setDefaults() {
+        this.properties.name = this.board.translations.get("Character Name");
         this.properties.x = 0;
         this.properties.y = 0;
         this.properties.angle = 0;

@@ -19,7 +19,7 @@ class Board {
         this.svg.addEventListener("mouseover", this.onMouseOver.bind(this));
         this.svg.addEventListener("mouseout", this.onMouseOut.bind(this));
         this.theme = new BaseTheme();
-        this.translations = new BaseTranslations();
+        this.translations = new BaseTranslations("en-US");
         this.selection = new Selection(this);
     }
 
@@ -143,10 +143,8 @@ class Board {
             return;
         const dx = event.clientX - this.startX;
         const dy = event.clientY - this.startY;
-        const scaleX = this.viewBox.width / this.svg.clientWidth;
-        const scaleY = this.viewBox.height / this.svg.clientHeight;
-        this.viewBox.x -= dx * scaleX;
-        this.viewBox.y -= dy * scaleY;        
+        this.viewBox.x -= dx;
+        this.viewBox.y -= dy;        
         this.startX = event.clientX;
         this.startY = event.clientY;
         this.svg.setAttribute("viewBox", `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);

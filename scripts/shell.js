@@ -6,17 +6,12 @@ class Shell  {
         this.properties = {};
         this.setDefaults();
         new MiniMap(this.board, document.getElementById("minimap-image"), document.getElementById("minimap-viewport"));
+        this.createSettingsPopup();
         this.createContextMenu();
         this.createTopToolbar();
         this.createBottomToolbar();
         this.createChat();
         this.createShapePopup();
-        this.playPause = $("#playPauseButton").dxButton("instance");
-        this.stop = $("#stopButton").dxButton("instance");
-        this.replay = $("#replayButton").dxButton("instance");
-        this.playHead = $("#playHeadSlider").dxSlider("instance");
-        this.stepBackward = $("#stepBackwardButton").dxButton("instance");
-        this.stepForward = $("#stepForwardButton").dxButton("instance");
         this.board.svg.addEventListener("selected", e => this.onSelected(e));
         this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
@@ -29,6 +24,7 @@ class Shell  {
 
     setDefaults() {
         this.properties.language = "en-US";
+
     }
 
     createTooltip(e, html, width) {
@@ -51,6 +47,67 @@ class Shell  {
             });
     }
 
+    createSettingsPopup() {
+        $("#settings-popup").dxPopup({
+            width: 400,
+            height: 200,
+            dragEnabled: false,
+            shading: false,
+            title: this.board.translations.get("Settings Title"),
+            showTitle: false,
+            hideOnOutsideClick: true,
+            contentTemplate: () => {
+                const $form = $("<div>").appendTo("#settings-popup");
+                const form = $form.dxForm({
+                    formData: this.properties,
+                    colCount: 4,
+                    items: [
+                        {
+                            colSpan: 4,
+                            dataField: "language",
+                            editorType: "dxSelectBox",
+                            editorOptions: {
+                                items: ["en-US", "pt-BR"],
+                                value: this.properties.language
+                            }
+                        },
+                        {
+                            colSpan: 2,
+                            dataField: "independent.start",
+                            label: { 
+                                text: this.board.translations.get("Independent Start") 
+                            },
+                            editorType: "dxTextBox",
+                            editorOptions: {
+                                stylingMode: "filled"
+                            }
+                        },
+                        {
+                            colSpan: 2,
+                            dataField: "independent.end",
+                            label: { 
+                                text: this.board.translations.get("Independent End") 
+                            },
+                            editorType: "dxTextBox",
+                            editorOptions: {
+                                stylingMode: "filled"
+                            }
+                        }
+                    ],
+                    onFieldDataChanged: e => {
+                        this.properties[e.dataField] = e.value;
+                    }
+                });
+                return $form;
+            },
+            position: {
+                at: "center",
+                of: window
+            }
+        });
+        this.settingsPopup = $("#settings-popup").dxPopup("instance");
+    }
+
     createTopToolbar() {
         $("#toolbar").dxToolbar({
             items: [
@@ -62,10 +119,7 @@ class Shell  {
                         elementAttr: {
                             id: "menu-button"
                         },
-                        onClick: function() {
-                            var contextMenu = $("#context-menu").dxContextMenu("instance");
-                            contextMenu.show();
-                        }
+                        onClick: _ => this.contextMenu.show()
                     }
                 },
                 {
@@ -73,6 +127,7 @@ class Shell  {
                     widget: "dxButton",
                     options: {
                         elementAttr: {
+                            id: "expression-button",
                             style: "font-family: cursive; font-size: 16px"
                         },
                         text: "X",
@@ -82,7 +137,7 @@ class Shell  {
                 {
                     location: "center",
                     template() {
-                      return $("<div class='toolbar-separator'>|</div>");
+                      return $("<div id='representation-tools-separator' class='toolbar-separator'>|</div>");
                     }
                 },
                 {
@@ -90,8 +145,8 @@ class Shell  {
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-shapes",
-                        attribute: {
-                            id: "shapes-button"
+                        elementAttr: {
+                            id: "referential-button"
                         },
                         onClick: _ => this.commands.addShape("ReferentialShape"),
                         template1: `<div class='dx-icon'>
@@ -103,13 +158,99 @@ class Shell  {
                                     <i class="fa-thin fa-rectangle-wide"></i>
                                 </span>
                             </div>`,
-                            onInitialized: e => this.createTooltip(e, this.board.translations.getReferentialShapeTooltip(this.properties.language))
+                            onInitialized: e => this.createTooltip(e, this.board.translations.get("Referential Tooltip"))
                     }
                 },
                 {
                     location: "center",
                     widget: "dxButton",
                     options: {
+                        elementAttr: {
+                            id: "chart-button"
+                        },
+                        icon: "fa-light fa-chart-line",
+                        onClick: _ => this.commands.addShape("ChartShape")
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
+                    options: {
+                        elementAttr: {
+                            id: "table-button"
+                        },
+                        icon: "fa-light fa-table",
+                        onClick: _ => this.commands.addShape("TableShape")
+                    }
+                },
+                {
+                    location: "center",
+                    template() {
+                      return $("<div id='shape-tools-separator' class='toolbar-separator'>|</div>");
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
+                    options: {
+                        elementAttr: {
+                            id: "body-button"
+                        },
+                        icon: "fa-light fa-circle",
+                        disabled: true,
+                        onClick: _ => this.commands.addShape("BodyShape")
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
+                    options: {
+                        icon: "fa-light fa-arrow-right-long fa-rotate-by",
+                        elementAttr: {
+                            id: "vector-button",
+                            style: "--fa-rotate-angle: -45deg;"
+                        },
+                        disabled: true,
+                        onClick: _ => this.commands.addShape("VectorShape")
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
+                    options: {
+                        elementAttr: {
+                            id: "image-button"
+                        },
+                        icon: "fa-light fa-image",
+                        onClick: _ => this.commands.addShape("ImageShape")
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
+                    options: {
+                        elementAttr: {
+                            id: "character-button"
+                        },
+                        icon: "fa-regular fa-child-reaching",
+                        disabled: true,
+                        onClick: _ => this.commands.addShape("CharacterShape"),
+                        onInitialized: e => this.characterButton = e.component
+                    }
+                },
+                {
+                    location: "center",
+                    template() {
+                      return $("<div id='description-tools-separator' class='toolbar-separator'>|</div>");
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
+                    options: {
+                        elementAttr: {
+                            id: "background-button"
+                        },
                         template: `<div class='dx-icon'>
                                 <i class='fa-light fa-panorama fa-lg'></i>
                             </div>`,
@@ -122,84 +263,53 @@ class Shell  {
                     options: {
                         icon: "fa-light fa-quotes",
                         elementAttr: {
+                            id: "text-button",
                             "data-fa-transform": "shrink-8 up-6"
                         },
-                        template1: () => $("<i class='fa-light fa-quote-right fa-2xs' data-fa-transform='shrink-8 up-6'></i>"),
                         onClick: _ => this.commands.addShape("TextShape")
                     }
                 },
                 {
                     location: "center",
                     template() {
-                      return $("<div class='toolbar-separator'>|</div>");
+                      return $("<div id='measurement-tools-separator' class='toolbar-separator'>|</div>");
                     }
                 },
                 {
                     location: "center",
                     widget: "dxButton",
                     options: {
-                        icon: "fa-light fa-circle",
-                        disabled: true,
-                        onClick: _ => this.commands.addShape("BodyShape"),
-                        onInitialized: e => this.bodyButton = e.component
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-arrow-right-long fa-rotate-by",
+                        icon: "fa-light fa-ruler",
                         elementAttr: {
-                            style: "--fa-rotate-angle: -45deg;"
-                        },
-                        disabled: true,
-                        onClick: _ => this.commands.addShape("VectorShape"),
-                        onInitialized: e => this.vectorButton = e.component
+                            id: "ruler-button"
+                        }
                     }
                 },
                 {
                     location: "center",
                     widget: "dxButton",
                     options: {
-                        icon: "fa-light fa-image",
-                        onClick: _ => this.commands.addShape("ImageShape")
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-regular fa-child-reaching",
-                        disabled: true,
-                        onClick: _ => this.commands.addShape("CharacterShape"),
-                        onInitialized: e => this.characterButton = e.component
-                    }
-                },
-                {
-                    location: "center",
-                    template() {
-                      return $("<div class='toolbar-separator'>|</div>");
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-chart-line",
-                        onClick: _ => this.commands.addShape("ChartShape")
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-table",
-                        onClick: _ => this.commands.addShape("TableShape")
+                        icon: "fa-light fa-angle",
+                        elementAttr: {
+                            id: "protractor-button"
+                        }
                     }
                 }
             ]
         });
         this.topToolbar = $("#toolbar").dxToolbar("instance");
+        this.expressionButton = $("#expression-button").dxButton("instance");
+        this.referentialButton = $("#referential-button").dxButton("instance");
+        this.chartButton = $("#chart-button").dxButton("instance");
+        this.tableButton = $("#table-button").dxButton("instance");
+        this.bodyButton = $("#body-button").dxButton("instance");
+        this.vectorButton = $("#vector-button").dxButton("instance");
+        this.imageButton = $("#image-button").dxButton("instance");
+        this.characterButton = $("#character-button").dxButton("instance");
+        this.backgroundButton = $("#background-button").dxButton("instance");
+        this.textButton = $("#text-button").dxButton("instance");
+        this.rulerButton = $("#ruler-button").dxButton("instance");
+        this.protractorButton = $("#protractor-button").dxButton("instance");
     }
     
     createBottomToolbar() {
@@ -350,6 +460,12 @@ class Shell  {
             ]
         });
         this.bottomToolbar = $("#bottom-toolbar").dxToolbar("instance");
+        this.playPause = $("#playPauseButton").dxButton("instance");
+        this.stop = $("#stopButton").dxButton("instance");
+        this.replay = $("#replayButton").dxButton("instance");
+        this.playHead = $("#playHeadSlider").dxSlider("instance");
+        this.stepBackward = $("#stepBackwardButton").dxButton("instance");
+        this.stepForward = $("#stepForwardButton").dxButton("instance");
     }
         
     createChat() {
@@ -416,28 +532,28 @@ class Shell  {
     createContextMenu() {
         var menuItems = [
             {
-                text: "New",
+                text: this.board.translations.get("New"),
                 icon: "fa-light fa-file",
                 shortcut: "Ctrl+N",
                 name: "New"
             },
             {
-                text: "Open...",
+                text: this.board.translations.get("Open..."),
                 icon: "fa-light fa-folder",
                 shortcut: "Ctrl+O",
                 name: "Open"
             },
             {
-                text: "Save...",
+                text: this.board.translations.get("Save..."),
                 icon: "fa-light fa-arrow-down-to-bracket",
                 shortcut: "Ctrl+S",
                 name: "Save"
             },
             {
-                text: "Close",
-                icon: "fa-light fa-times",
-                shortcut: "Ctrl+W",
-                name: "Close"
+                text: this.board.translations.get("Settings..."),
+                icon: "fa-light fa-gear",
+                shortcut: "",
+                name: "Settings"
             }
         ];
         $("#context-menu").dxContextMenu({
@@ -461,6 +577,8 @@ class Shell  {
                     this.open();
                 if (e.itemData.name == "Save")
                     this.save();
+                if (e.itemData.name == "Settings")
+                    this.openSettings();
             },
             target: "#toolbar",
             position: {
@@ -497,6 +615,9 @@ class Shell  {
         var disabled = this.board.selection.selectedShape == null || !["BodyShape", "VectorShape", "ReferentialShape"].includes(this.board.selection.selectedShape.constructor.name);
         this.bodyButton.option("disabled", disabled);
         this.vectorButton.option("disabled", disabled);
+        var isStopped = this.calculator.status == STATUS.STOPPED;
+        for (var tool = 1; tool < 15; tool++)
+            this.topToolbar.option(`items[${tool}].visible`, isStopped);
     }
     
     updatePlayer() {
@@ -516,7 +637,6 @@ class Shell  {
         this.playHead.option("max", lastIteration);
         this.playHead.option("value", iteration);
         this.board.enableSelection(isStopped);
-        this.topToolbar.option("visible", isStopped);
     }
     
     playPausePressed() {
@@ -525,6 +645,7 @@ class Shell  {
         else
             this.calculator.play();
         this.updatePlayer();
+        this.updateToolbar();
     }
 
     stepBackwardPressed() {
@@ -541,6 +662,7 @@ class Shell  {
         this.calculator.stop();
         this.board.refresh();
         this.updatePlayer();
+        this.updateToolbar();
     }
     
     replayPressed() {
@@ -564,6 +686,11 @@ class Shell  {
                 this.calculator.parse(shape.properties.expression);
         });
         this.updatePlayer();
+    }
+
+    openSettings() {
+        this.board.deselect();
+        this.settingsPopup.show();
     }
     
     async open() {

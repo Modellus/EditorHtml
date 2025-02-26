@@ -267,4 +267,5 @@ math-field {
     height: 100%;
     display: block;
     background-color: transparent;
+    --placeholder-color: #000;
 }

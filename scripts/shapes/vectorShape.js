@@ -34,6 +34,7 @@ class VectorShape extends BaseShape {
     }
 
     setDefaults() {
+        this.properties.name = this.board.translations.get("Vector Name");
         this.properties.x = 0;
         this.properties.y = 0;
         this.properties.width = 30;

@@ -10,7 +10,7 @@ class BaseShape {
         this.setDefaults();
         this.initializeElement();
     }
-
+    
     setProperties(properties) {
         Object.assign(this.properties, properties);
     }
