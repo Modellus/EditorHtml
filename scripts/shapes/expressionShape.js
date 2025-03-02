@@ -7,6 +7,33 @@ class ExpressionShape extends BaseShape {
         return new RectangleTransformer(this.board, this);
     }
 
+    createForm() {
+        var form = super.createForm();
+        var instance = form.dxForm("instance");
+        var items = instance.option("items");
+        items.push(
+            {
+                colSpan: 1,
+                itemType: "button",
+                buttonOptions: {
+                    height: 40,
+                    stylingMode: "text",
+                    template1: function(data, container) {
+                        let mathField = $("<math-field>")
+                            .attr("read-only", true)
+                            .css("display", "inline-block")
+                            .css("font-size", "1.2em")
+                            .text('\\frac{\\differentialD x}{\\differentialD t}');
+                        container.append(mathField);
+                    },
+                    onClick: e => this.insert("\\frac{dx}{dt}")
+                }
+            }
+        );
+        instance.option("items", items);
+        return form;
+    }
+
     setDefaults() {
         this.properties.name = this.board.translations.get("Expression Name");
         var center = this.board.getClientCenter();
@@ -17,6 +44,7 @@ class ExpressionShape extends BaseShape {
         this.properties.rotation = 0;
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[1].color;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[0].color;
+        this.properties.expression = "\\frac{dx}{dt}=y";
     }
 
     createElement() {
@@ -29,8 +57,7 @@ class ExpressionShape extends BaseShape {
         this.mathfield.popoverPolicy = "none";
         this.mathfield.virtualKeyboardMode = "off";
         this.mathfield.mathVirtualKeyboardPolicy = "manual";
-        this.mathfield.placeholder = "\\text{Enter a formula}";
-        debugger
+        this.mathfield.placeholder = "Enter a formula";
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());
         div.appendChild(this.mathfield);
@@ -40,7 +67,12 @@ class ExpressionShape extends BaseShape {
             scrollByContent: true, 
             scrollByThumb: true
         });
-        this.mathfield.value = this.properties.expression;
+        this.mathfield.value = this.properties.expression ?? "{\\frac{dx}{dt}=y";
+        this.mathfield.addEventListener('mount', e =>
+            ["dx", "dy", "dt"].forEach(v => {
+                this.mathfield.inlineShortcuts[v] = null;
+                delete this.mathfield.inlineShortcuts[v];
+            }));
         return foreignObject;
     }
 
@@ -78,5 +110,10 @@ class ExpressionShape extends BaseShape {
         this.element.setAttribute("height", this.properties.height);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
             ${this.properties.y + this.properties.height / 2})`);
+    }
+
+    insert(text) {
+        debugger   
+        this.mathfield.insertText(text);
     }
 }

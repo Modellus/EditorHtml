@@ -257,6 +257,10 @@ math-field::part(virtual-keyboard-toggle) {
     display: none;
 }
 
+math-field::part(placeholder) {
+    color: #000;
+}
+
 math-field:focus-within {
     outline: none;
 }
@@ -268,4 +272,5 @@ math-field {
     display: block;
     background-color: transparent;
     --placeholder-color: #000;
+    --placeholder-opacity: 0.5;
 }
