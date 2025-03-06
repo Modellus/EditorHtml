@@ -7,6 +7,34 @@ class TableShape extends BaseShape {
         return new RectangleTransformer(this.board, this);
     }
 
+    createForm() {
+        var form = super.createForm();
+        var instance = form.dxForm("instance");
+        var items = instance.option("items");
+        items.push(
+            {
+                colSpan: 1,
+                dataField: "column1Term",
+                label: { text: "Column 1" },
+                editorType: "dxTextBox",
+                editorOptions: {
+                    stylingMode: "filled"
+                }
+            },
+            {
+                colSpan: 1,
+                dataField: "column2Term",
+                label: { text: "Column 2" },
+                editorType: "dxTextBox",
+                editorOptions: {
+                    stylingMode: "filled"
+                }
+            }
+        );
+        instance.option("items", items);
+        return form;
+    }
+
     setDefaults() {
         this.properties.name = this.board.translations.get("Table Name");
         var center = this.board.getClientCenter();
@@ -29,24 +57,22 @@ class TableShape extends BaseShape {
             showBorders: true,
             columns: [
                 {
-                    dataField: "x",
-                    caption: "x",
+                    font: {
+                        family: "Katex_Math",
+                        size: "1em",
+                        weight: 400
+                    },
                     format: {
                         type: "fixedPoint",
                         precision: 2
                     }
                 },
                 {
-                    dataField: "y",
-                    caption: "y",
-                    format: {
-                        type: "fixedPoint",
-                        precision: 2
-                    }
-                },
-                {
-                    dataField: "z",
-                    caption: "z",
+                    font: {
+                        family: "Katex_Math",
+                        size: "1em",
+                        weight: 400
+                    },
                     format: {
                         type: "fixedPoint",
                         precision: 2
@@ -58,6 +84,12 @@ class TableShape extends BaseShape {
     }
 
     update() {
+        this.dataGrid.beginUpdate();
+        this.dataGrid.option("columns[0].dataField", this.properties.column1Term);
+        this.dataGrid.option("columns[1].dataField", this.properties.column2Term);
+        this.dataGrid.option("columns[0].caption", this.properties.column1Term);
+        this.dataGrid.option("columns[1].caption", this.properties.column2Term);
+        this.dataGrid.endUpdate();
         this.dataGrid.refresh();
     }
 

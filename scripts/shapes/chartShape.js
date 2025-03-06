@@ -75,8 +75,7 @@ class ChartShape extends BaseShape {
         this.chart = $div.dxChart({
             commonSeriesSettings: {
                 label: {
-                    visible: true, 
-                    customizeText1: e => e.argument === this.board.calculator.get()["x"] ? e.valueText : ""
+                    visible: true
                 }
             },
             commonPaneSettings: {
