@@ -166,9 +166,8 @@ class BodyShape extends BaseShape {
             const position = this.getBoardPosition();
             this.trajectory.values.push({ x: position.x, y: position.y });
         }
-        if (this.properties.imageBase64 != "") {
+        if (this.properties.imageBase64 != "")
             this.image.setAttribute("href", `data:image/png;base64,${this.properties.imageBase64}`);
-        }
         else
             this.image.removeAttribute("href");
     }

@@ -11,25 +11,44 @@ class ExpressionShape extends BaseShape {
         var form = super.createForm();
         var instance = form.dxForm("instance");
         var items = instance.option("items");
-        items.push(
-            {
-                colSpan: 1,
-                itemType: "button",
-                buttonOptions: {
-                    height: 40,
-                    stylingMode: "text",
-                    template1: function(data, container) {
-                        let mathField = $("<math-field>")
-                            .attr("read-only", true)
-                            .css("display", "inline-block")
-                            .css("font-size", "1.2em")
-                            .text('\\frac{\\differentialD x}{\\differentialD t}');
-                        container.append(mathField);
-                    },
-                    onClick: e => this.insert("\\frac{dx}{dt}")
+        items.push({
+            itemType: "group",
+            caption: "Actions", 
+            items: [
+                {
+                    colSpan: 1,
+                    itemType: "button",
+                    buttonOptions: {
+                        height: 40,
+                        stylingMode: "text",
+                        template: function(data, container) {
+                            let mathField = $("<math-field>")
+                                .attr("read-only", true)
+                                .html('\\frac{dx}{dt}')
+                                .addClass("form-math-field")
+                                .appendTo(container);
+                        },
+                        onClick: _ => this.insert("\\frac{dx}{dt}")
+                    }
+                },
+                {
+                    colSpan: 1,
+                    itemType: "button",
+                    buttonOptions: {
+                        height: 40,
+                        stylingMode: "text",
+                        template: function(data, container) {
+                            let mathField = $("<math-field>")
+                                .attr("read-only", true)
+                                .html('\\frac{dx}{dt}')
+                                .addClass("form-math-field")
+                                .appendTo(container);
+                        },
+                        onClick: _ => this.insert("x=sin(t)")
+                    }
                 }
-            }
-        );
+            ]
+        });
         instance.option("items", items);
         return form;
     }
@@ -68,11 +87,14 @@ class ExpressionShape extends BaseShape {
             scrollByThumb: true
         });
         this.mathfield.value = this.properties.expression ?? "{\\frac{dx}{dt}=y";
-        this.mathfield.addEventListener('mount', e =>
+        this.mathfield.addEventListener('mount', e => {
+            var inlineShortcuts = this.mathfield.inlineShortcuts;
             ["dx", "dy", "dt"].forEach(v => {
-                this.mathfield.inlineShortcuts[v] = null;
-                delete this.mathfield.inlineShortcuts[v];
-            }));
+                inlineShortcuts[v] = null;
+                delete inlineShortcuts[v];
+            })
+            this.mathfield.inlineShortcuts = inlineShortcuts;
+        });
         return foreignObject;
     }
 
@@ -113,7 +135,6 @@ class ExpressionShape extends BaseShape {
     }
 
     insert(text) {
-        debugger   
-        this.mathfield.insertText(text);
+        this.mathfield.executeCommand("insert", text);
     }
 }

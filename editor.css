@@ -274,3 +274,7 @@ math-field {
     --placeholder-color: #000;
     --placeholder-opacity: 0.5;
 }
+
+.form-math-field::part(container) {
+    pointer-events: none;
+}
