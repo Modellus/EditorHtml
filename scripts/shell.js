@@ -17,14 +17,14 @@ class Shell  {
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         [BodyShape, ExpressionShape, ChartShape, TableShape, BackgroundShape, VectorShape, ImageShape, ReferentialShape, TextShape, CharacterShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.calculator.on("iterate", e => this.onIterate(e));
-        this.calculator.on("iterationChanged", e => this.onIterationChanged(e));
         if (model != undefined)
             this.openModel(model);
     }
 
     setDefaults() {
         this.properties.language = "en-US";
-
+        this.properties.name = "Model";
+        this.properties.independent = { name: "t", start: 0, end: 10 };
     }
 
     createTooltip(e, html, width) {
@@ -64,6 +64,15 @@ class Shell  {
                     items: [
                         {
                             colSpan: 4,
+                            dataField: "name",
+                            label: { text: "Name", visible: false },
+                            editorType: "dxTextBox",
+                            editorOptions: {
+                                stylingMode: "filled"
+                            }
+                        },
+                        {
+                            colSpan: 4,
                             dataField: "language",
                             editorType: "dxSelectBox",
                             editorOptions: {
@@ -72,7 +81,18 @@ class Shell  {
                             }
                         },
                         {
-                            colSpan: 2,
+                            colSpan: 1,
+                            dataField: "independent.name",
+                            label: { 
+                                text: this.board.translations.get("Independent Name") 
+                            },
+                            editorType: "dxTextBox",
+                            editorOptions: {
+                                stylingMode: "filled"
+                            }
+                        },
+                        {
+                            colSpan: 1,
                             dataField: "independent.start",
                             label: { 
                                 text: this.board.translations.get("Independent Start") 
@@ -83,7 +103,7 @@ class Shell  {
                             }
                         },
                         {
-                            colSpan: 2,
+                            colSpan: 1,
                             dataField: "independent.end",
                             label: { 
                                 text: this.board.translations.get("Independent End") 
@@ -426,6 +446,12 @@ class Shell  {
                     location: "center"
                 },
                 {
+                    location: "center",
+                    template() {
+                      return $("<div id='representation-tools-separator' class='toolbar-separator'>|</div>");
+                    }
+                },
+                {
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-repeat",
@@ -535,51 +561,50 @@ class Shell  {
                 text: this.board.translations.get("New"),
                 icon: "fa-light fa-file",
                 shortcut: "Ctrl+N",
-                name: "New"
+                name: "New",
+                action: _ => this.clear()
             },
             {
                 text: this.board.translations.get("Open..."),
                 icon: "fa-light fa-folder",
                 shortcut: "Ctrl+O",
-                name: "Open"
+                name: "Open",
+                action: _ => this.open()
             },
             {
                 text: this.board.translations.get("Save..."),
                 icon: "fa-light fa-arrow-down-to-bracket",
                 shortcut: "Ctrl+S",
-                name: "Save"
+                name: "Save",
+                action: _ => this.save()
+            },
+            {
+                text: this.board.translations.get("Export..."),
+                icon: "fa-light fa-file-excel",
+                shortcut: "",
+                beginGroup: true,
+                name: "Export",
+                action: _ => this.export()
             },
             {
                 text: this.board.translations.get("Settings..."),
                 icon: "fa-light fa-gear",
                 shortcut: "",
-                name: "Settings"
+                beginGroup: true,
+                name: "Settings",
+                action: _ => this.openSettings()
             }
         ];
         $("#context-menu").dxContextMenu({
-            items: menuItems.map(i => ({
-                text: i.text,
-                icon: i.icon,
-                shortcut: i.shortcut,
-                name: i.name,
-                template: (itemData) => {
-                    return `<div style="display: flex; justify-content: space-between; align-items: center;width: 100%">
-                                <span class="${itemData.icon}" style="width: 15px; margin-right: 10px; text-align: left; display: inline-block"></span>
-                                <span style="text-align: left; padding-right: 5px; flex-grow: 1">${itemData.text}</span>
-                                <span style="color: #999;">${itemData.shortcut}</span>
-                            </div>`;
-                }
-            })),
-            onItemClick: (e) => {
-                if (e.itemData.name == "New")
-                    this.clear();
-                if (e.itemData.name == "Open")
-                    this.open();
-                if (e.itemData.name == "Save")
-                    this.save();
-                if (e.itemData.name == "Settings")
-                    this.openSettings();
+            dataSource: menuItems,
+            itemTemplate: itemData => {
+                return `<div style="display: flex; justify-content: space-between; align-items: center;width: 100%">
+                            <span class="${itemData.icon}" style="width: 15px; margin-right: 10px; text-align: left; display: inline-block"></span>
+                            <span style="text-align: left; padding-right: 5px; flex-grow: 1">${itemData.text}</span>
+                            <span style="color: #999;">${itemData.shortcut}</span>
+                        </div>`;
             },
+            onItemClick: e => e.itemData.action(),
             target: "#toolbar",
             position: {
                 my: "top left",
@@ -741,6 +766,20 @@ class Shell  {
 
     getModel() {
         return JSON.stringify(this.board.serialize());
+    }
+
+    export() {
+        var values = this.calculator.getValues();
+        var csv = "data:text/csv;charset=utf-8,";
+        const headers = Object.keys(values[0]).join(",");
+        const rows = values.map(v => Object.values(v).join(",")).join("\n");
+        csv += `${headers}\n${rows}`;
+        var encodedUri = encodeURI(csv);
+        var link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", this.properties.name + ".csv");
+        document.body.appendChild(link);
+        link.click();
     }
     
     onSelected(e) {
