@@ -22,4 +22,5 @@ var modellus = {
     saveToPath: filePath => shell.saveToPath(filePath),
     openModel: model => shell.openModel(model),
     getModel: _ => shell.getModel(),
+    getValues: _ => shell.getValues(),
 } 

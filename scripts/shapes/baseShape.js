@@ -161,6 +161,7 @@ class BaseShape {
     }
 
     update() {
+        this.children.forEach(child => child.update());
     }
 
     draw() {

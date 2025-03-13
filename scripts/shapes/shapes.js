@@ -55,13 +55,16 @@ class Shapes {
     }
 
     update() {
-        this.shapes.forEach(s => s.update());
+        this.shapes.forEach(shape => {
+            if (!shape.parent)
+                shape.update();
+        });
     }
 
     draw() {
-        this.shapes.forEach(s => {
-            if (s.parent)
-                s.draw();
+        this.shapes.forEach(shape => {
+            if (!shape.parent)
+                shape.draw();
         });
     }
 }   

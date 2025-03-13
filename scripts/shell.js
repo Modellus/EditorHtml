@@ -24,7 +24,6 @@ class Shell  {
     setDefaults() {
         this.properties.language = "en-US";
         this.properties.name = "Model";
-        this.properties.independent = { name: "t", start: 0, end: 10 };
     }
 
     createTooltip(e, html, width) {
@@ -84,7 +83,7 @@ class Shell  {
                             colSpan: 1,
                             dataField: "independent.name",
                             label: { 
-                                text: this.board.translations.get("Independent Name") 
+                                text: this.board.translations.get("Independent.Name") 
                             },
                             editorType: "dxTextBox",
                             editorOptions: {
@@ -95,7 +94,7 @@ class Shell  {
                             colSpan: 1,
                             dataField: "independent.start",
                             label: { 
-                                text: this.board.translations.get("Independent Start") 
+                                text: this.board.translations.get("Independent.Start") 
                             },
                             editorType: "dxTextBox",
                             editorOptions: {
@@ -106,7 +105,18 @@ class Shell  {
                             colSpan: 1,
                             dataField: "independent.end",
                             label: { 
-                                text: this.board.translations.get("Independent End") 
+                                text: this.board.translations.get("Independent.End") 
+                            },
+                            editorType: "dxTextBox",
+                            editorOptions: {
+                                stylingMode: "filled"
+                            }
+                        },
+                        {
+                            colSpan: 1,
+                            dataField: "independent.step",
+                            label: { 
+                                text: this.board.translations.get("Independent.Step") 
                             },
                             editorType: "dxTextBox",
                             editorOptions: {
@@ -114,9 +124,7 @@ class Shell  {
                             }
                         }
                     ],
-                    onFieldDataChanged: e => {
-                        this.properties[e.dataField] = e.value;
-                    }
+                    onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
                 });
                 return $form;
             },
@@ -616,6 +624,15 @@ class Shell  {
         this.contextMenu = $("#context-menu").dxContextMenu("instance");
     }
     
+    setProperty(name, value) {
+        this.properties[name] = value;
+        if(name.contains("independent")) {
+            this.calculator.setProperty(name, value);
+            this.updatePlayer();
+            this.updateToolbar();
+        }
+    }
+
     sendToBackend(message, chat) {
         const answer = (message) => {
             setTimeout(() => {
@@ -701,7 +718,9 @@ class Shell  {
     
     clear() {
         this.calculator.clear();
-        this.board.clear();    
+        this.board.clear();   
+        this.updatePlayer();
+        this.updateToolbar();
     }
     
     reset() {
@@ -765,7 +784,11 @@ class Shell  {
     }
 
     getModel() {
-        return JSON.stringify(this.board.serialize());
+        return this.board.serialize();
+    }
+
+    getValues() {
+        return this.calculator.getValues();
     }
 
     export() {

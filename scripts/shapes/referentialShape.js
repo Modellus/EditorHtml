@@ -43,6 +43,7 @@ class ReferentialShape extends BaseShape {
     }    
 
     update() {
+        super.update();
     }
 
     draw() {

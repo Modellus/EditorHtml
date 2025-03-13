@@ -64,6 +64,7 @@ class ExpressionShape extends BaseShape {
         this.mathfield.virtualKeyboardMode = "off";
         this.mathfield.mathVirtualKeyboardPolicy = "manual";
         this.mathfield.placeholder = "Enter a formula";
+        this.mathfield.smartMode = false;
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());
         div.appendChild(this.mathfield);

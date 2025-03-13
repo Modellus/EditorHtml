@@ -7,6 +7,19 @@ class Calculator extends EventTarget {
         this.parser = new Modellus.Parser(this.system);
         this.engine = new Modellus.Engine(this.system);
         this.status = STATUS.STOPPED;
+        this.setDefaults();
+    }
+
+    setDefaults() {
+        this.properties = { independent: { name: "t", start: 0, end: 10, step: 0.1 } };
+    }
+
+    serProperty(name, value) {
+        this.properties[name] = value;
+        this.system.setIndependent(properties.independent.name);
+        this.system.setInitialIndependent(properties.independent.start);
+        this.engine.step = properties.independent.step;
+        this.stop();
     }
 
     emit(eventName, detail = {}) {
@@ -24,8 +37,12 @@ class Calculator extends EventTarget {
 
     play() {
         this.timer = setInterval(() => {
-            this.engine.iterate();
-            this.emit("iterate", { calculator: this }); 
+            if (this.properties.independent.end == this.system.getIndependent())
+                this.pause();
+            else {
+                this.engine.iterate();
+                this.emit("iterate", { calculator: this }); 
+            }
         }, 10);
         this.status = STATUS.PLAYING;
     }
@@ -70,8 +87,9 @@ class Calculator extends EventTarget {
     }
 
     parse(text) {
-        const cleanedInput = text.replace(/^\\displaylines\{|\}$/g, '');
-        const expressions = cleanedInput.split('\\\\').map(line => line.trim());
+        if (text.startsWith("\\displaylines{") && text.endsWith("}"))
+            text = text.substring(13, text.length - 1);
+        const expressions = text.split('\\\\').map(line => line.trim());
         expressions.forEach(e => this.parser.parse(e));
     }
 

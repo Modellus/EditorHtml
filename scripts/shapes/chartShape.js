@@ -139,6 +139,10 @@ class ChartShape extends BaseShape {
                     type: "fixedPoint",
                     precision: 2
                 }
+            },
+            onIncidentOccurred: e => {
+                if (e.target.type === "error")
+                    console.log(e.target.errorText);
             }
         }).dxChart("instance");
         return foreignObject;

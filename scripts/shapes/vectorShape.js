@@ -49,11 +49,13 @@ class VectorShape extends BaseShape {
     }    
 
     update() {
+        super.update();
         this.properties.width = this.properties.xTerm != "" ? this.board.calculator.getByName(this.properties.xTerm) : this.properties.width;
         this.properties.height = this.properties.yTerm != "" ? this.board.calculator.getByName(this.properties.yTerm) : this.properties.height; 
     }
 
     draw() {
+        super.draw();
         const arrowHeadSize = 5;
         const position = this.getBoardPosition();
         const startX = position.x;

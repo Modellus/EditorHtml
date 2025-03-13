@@ -157,6 +157,7 @@ class BodyShape extends BaseShape {
     }
 
     update() {
+        super.update();
         const calculator = this.board.calculator;
         this.properties.x = calculator.getByName(this.properties.xTerm) ?? this.properties.x;
         this.properties.y = calculator.getByName(this.properties.yTerm) ?? this.properties.y; 

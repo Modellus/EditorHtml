@@ -57,10 +57,14 @@ class TableShape extends BaseShape {
             showBorders: true,
             columns: [
                 {
-                    font: {
-                        family: "Katex_Math",
-                        size: "1em",
-                        weight: 400
+                    headerCellTemplate: container => {
+                        $("<div>")
+                            .css({
+                                "font-family": "Katex_Math",
+                                "font-size": "16px"
+                            })
+                            .text(this.properties.column1Term)
+                            .appendTo(container);
                     },
                     format: {
                         type: "fixedPoint",
@@ -68,10 +72,14 @@ class TableShape extends BaseShape {
                     }
                 },
                 {
-                    font: {
-                        family: "Katex_Math",
-                        size: "1em",
-                        weight: 400
+                    headerCellTemplate: container => {
+                        $("<div>")
+                            .css({
+                                "font-family": "Katex_Math",
+                                "font-size": "16px"
+                            })
+                            .text(this.properties.column2Term)
+                            .appendTo(container);
                     },
                     format: {
                         type: "fixedPoint",
