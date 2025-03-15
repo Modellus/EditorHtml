@@ -16,7 +16,7 @@ class ReferentialShape extends BaseShape {
         this.properties.height = 200;
         this.properties.rotation = 0;
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[1].color;
-        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[1].color;
+        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[6].color;
         this.properties.originX = this.properties.width / 2;
         this.properties.originY = this.properties.height / 2;
     }

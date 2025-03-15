@@ -49,7 +49,7 @@ class ExpressionShape extends BaseShape {
         this.properties.height = 50;
         this.properties.rotation = 0;
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[1].color;
-        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[0].color;
+        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[6].color;
         this.properties.expression = "\\frac{dx}{dt}=y";
     }
 
@@ -82,6 +82,7 @@ class ExpressionShape extends BaseShape {
                 delete inlineShortcuts[v];
             })
             this.mathfield.inlineShortcuts = inlineShortcuts;
+            this.mathfield.focus();
         });
         return foreignObject;
     }
@@ -120,9 +121,11 @@ class ExpressionShape extends BaseShape {
         this.element.setAttribute("height", this.properties.height);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
             ${this.properties.y + this.properties.height / 2})`);
+        this.element.setAttribute("border-color", this.properties.foregroundColor);
     }
 
     insert(text) {
         this.mathfield.executeCommand("insert", text);
+        this.mathfield.focus();
     }
 }
