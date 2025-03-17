@@ -161,9 +161,8 @@ class BodyShape extends BaseShape {
         const calculator = this.board.calculator;
         this.properties.x = calculator.getByName(this.properties.xTerm) ?? this.properties.x;
         this.properties.y = calculator.getByName(this.properties.yTerm) ?? this.properties.y; 
-        var currentIteration = this.trajectory.values.length;
         this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
-        if (calculator.getLastIteration() > currentIteration || calculator.getLastIteration() == 0) {
+        if (this.trajectory.values.length <= calculator.getLastIteration()) {
             const position = this.getBoardPosition();
             this.trajectory.values.push({ x: position.x, y: position.y });
         }
@@ -181,6 +180,11 @@ class BodyShape extends BaseShape {
         this.circle.setAttribute("r", this.properties.radius);
         this.circle.setAttribute("fill", this.properties.backgroundColor);
         this.circle.setAttribute("stroke", this.properties.foregroundColor);
+        this.drawTrajectory();
+        this.drawStroboscopy();
+    }
+
+    drawTrajectory() {
         if (this.properties.trajectoryColor != this.board.theme.getBackgroundColors()[0].color) {
             const trajectoryPolyLine = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
             this.trajectory.element.setAttribute("points", trajectoryPolyLine);
@@ -188,6 +192,9 @@ class BodyShape extends BaseShape {
             this.trajectory.element.setAttribute("stroke-width", 1);
         } else
             this.trajectory.element.removeAttribute("points");
+    }
+
+    drawStroboscopy() {
         const calculator = this.board.calculator;
         if (this.properties.stroboscopyColor != this.board.theme.getBackgroundColors()[0].color) {
             if (calculator.getLastIteration() == 0)

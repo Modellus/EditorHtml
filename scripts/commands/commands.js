@@ -18,7 +18,10 @@ class Commands {
     }
 
     getFreePosition(shape) {
-        var position = shape.getBoardPosition();
+        var position = { x: shape.properties.x, y: shape.properties.y };
+        if (shape.parent !== null) 
+            return position;
+        position = shape.getBoardPosition();
         while(true) {
             var overlaps = false;
             for(const s of this.shapes.shapes.values()) {

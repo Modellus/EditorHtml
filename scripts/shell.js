@@ -513,7 +513,7 @@ class Shell  {
             animation: null,
             contentTemplate: () => {
                 const firstUser = { id: "1", name: "User" };
-                const secondUser = { id: "2", name: "Modellus", avatarUrl: "https://devexpress.github.io/DevExtreme/images/icons/bot.png" };
+                const secondUser = { id: "2", name: "Modellus", avatarUrl: "/scripts/themes/modellus bot.svg" };
                 const initialMessages = [{
                     timestamp: Date.now(),
                     author: secondUser,

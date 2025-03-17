@@ -87,7 +87,6 @@ class VectorShape extends BaseShape {
         const calculator = this.board.calculator;
         this.properties.width = calculator.getByName(this.properties.xTerm) ?? this.properties.width;
         this.properties.height = calculator.getByName(this.properties.yTerm) ?? this.properties.height; 
-        var currentIteration = this.trajectory.values.length;
         this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
         if (this.trajectory.values.length <= calculator.getLastIteration()) {
             const position = this.getBoardPosition();
@@ -118,6 +117,10 @@ class VectorShape extends BaseShape {
         this.path.setAttribute("fill", this.properties.backgroundColor);
         this.path.setAttribute("stroke", this.properties.foregroundColor);
         this.path.setAttribute("stroke-width", 1);
+        this.drawTrajectory();
+    }
+
+    drawTrajectory () {
         if (this.properties.trajectoryColor != this.board.theme.getBackgroundColors()[0].color) {
             const trajectoryPolyLine = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
             this.trajectory.element.setAttribute("points", trajectoryPolyLine);
