@@ -15,6 +15,7 @@ class BackgroundShape extends BaseShape {
         var items = instance.option("items");
         items.push(
             {
+                colSpan: 2,
                 dataField: "file",
                 label: { text: "File" },
                 editorType: "dxFileUploader",
@@ -53,13 +54,14 @@ class BackgroundShape extends BaseShape {
     }    
 
     update() {
-        this.properties.x = this.properties.xTerm != "" ? this.board.calculator.getByName(this.properties.xTerm) : this.properties.x;
-        this.properties.y = this.properties.yTerm != "" ? this.board.calculator.getByName(this.properties.yTerm) : this.properties.y; 
+        super.update();
     }
 
     draw() {
-        this.element.setAttribute("x", this.properties.x);
-        this.element.setAttribute("y", this.properties.y);
+        super.draw();
+        const position = this.getBoardPosition();
+        this.element.setAttribute("x", position.x);
+        this.element.setAttribute("y", position.y);
         this.element.setAttribute("width", this.properties.width);
         this.element.setAttribute("height", this.properties.height);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
