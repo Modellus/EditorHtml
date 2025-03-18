@@ -1,4 +1,4 @@
-DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQxCn0=.RwzuszxP0EZpb1mjikhmz6G0g5QUrgDILiiRTePC1SeHd3o9co5aGr7mMPuysN6kKb16+UZ0uwtnUXeiOwJcvFTd9wDPT8UqhPXr3uBXmEonDisUwgOBZrfrbZc1satfHazSYg=="});
+DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQyCn0=.TTX6Poy2dCPV9Dcrb5Q2r+H+8s1jHV4tvntU/EMPIve2JwJ2KFGoAXzk/R3c4dhEg1nomyae+I97HS6bNVeBcugyjySlHFBedv46LdF3HcdezvM9EdPrli3Tuq/DhyjKrfAi+w=="});
 const urlParams = new URLSearchParams(window.location.search);
 const modelName = urlParams.get("model");
 var shell = null;

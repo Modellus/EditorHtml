@@ -524,8 +524,18 @@ class Shell  {
                     width: "100%",
                     height: "100%", 
                     user: firstUser,
-                    onMessageSend: (e) => {
-                        sendToBackend(e.message, chat);
+                    onMessageEntered: (e) => {
+                        var instance = chat.dxChat("instance");
+                        instance.renderMessage({
+                            text: e.message.text, 
+                            author: firstUser,
+                            timestamp: Date.now() 
+                        });
+                        instance.renderMessage({
+                            text: e.message.text + "? OK.", 
+                            author: secondUser,
+                            timestamp: Date.now() 
+                        });
                     },
                     items: initialMessages
                 });
@@ -631,18 +641,6 @@ class Shell  {
             this.updatePlayer();
             this.updateToolbar();
         }
-    }
-
-    sendToBackend(message, chat) {
-        const answer = (message) => {
-            setTimeout(() => {
-                chat.renderMessage({
-                text: message, 
-                author: secondUser,
-                timestamp: Date.now() 
-                });
-            }, 1000);
-        };
     }
     
     undoPressed() {
