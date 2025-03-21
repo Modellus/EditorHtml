@@ -7,18 +7,23 @@ class Calculator extends EventTarget {
         this.parser = new Modellus.Parser(this.system);
         this.engine = new Modellus.Engine(this.system);
         this.status = STATUS.STOPPED;
+        this.properties = {};
         this.setDefaults();
     }
 
     setDefaults() {
-        this.properties = { independent: { name: "t", start: 0, end: 10, step: 0.1 } };
+        this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
     }
 
-    serProperty(name, value) {
-        this.properties[name] = value;
-        this.system.setIndependent(properties.independent.name);
-        this.system.setInitialIndependent(properties.independent.start);
-        this.engine.step = properties.independent.step;
+    setProperty(name, value) {
+        const keys = name.split('.');
+        let current = this.properties;
+        for (let i = 0; i < keys.length - 1; i++)
+            current = current[keys[i]];
+        current[keys[keys.length - 1]] = value;
+        this.system.independent = this.properties.independent.name;
+        this.system.setInitialIndependent(this.properties.independent.start);
+        this.engine.step = this.properties.independent.step;
         this.stop();
     }
 
@@ -36,8 +41,10 @@ class Calculator extends EventTarget {
     }
 
     play() {
+        if (this.system.getIndependent() >= this.properties.independent.end)
+            return;
         this.timer = setInterval(() => {
-            if (this.properties.independent.end == this.system.getIndependent())
+            if (this.system.getIndependent() >= this.properties.independent.end)
                 this.pause();
             else {
                 this.engine.iterate();

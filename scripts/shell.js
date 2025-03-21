@@ -24,6 +24,7 @@ class Shell  {
     setDefaults() {
         this.properties.language = "en-US";
         this.properties.name = "Model";
+        this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
     }
 
     createTooltip(e, html, width) {
@@ -96,7 +97,7 @@ class Shell  {
                             label: { 
                                 text: this.board.translations.get("Independent.Start") 
                             },
-                            editorType: "dxTextBox",
+                            editorType: "dxNumberBox",
                             editorOptions: {
                                 stylingMode: "filled"
                             }
@@ -107,7 +108,7 @@ class Shell  {
                             label: { 
                                 text: this.board.translations.get("Independent.End") 
                             },
-                            editorType: "dxTextBox",
+                            editorType: "dxNumberBox",
                             editorOptions: {
                                 stylingMode: "filled"
                             }
@@ -118,7 +119,7 @@ class Shell  {
                             label: { 
                                 text: this.board.translations.get("Independent.Step") 
                             },
-                            editorType: "dxTextBox",
+                            editorType: "dxNumberBox",
                             editorOptions: {
                                 stylingMode: "filled"
                             }
@@ -635,8 +636,12 @@ class Shell  {
     }
     
     setProperty(name, value) {
-        this.properties[name] = value;
-        if(name.contains("independent")) {
+        const keys = name.split('.');
+        let current = this.properties;
+        for (let i = 0; i < keys.length - 1; i++)
+            current = current[keys[i]];
+        current[keys[keys.length - 1]] = value;
+        if(name.includes("independent")) {
             this.calculator.setProperty(name, value);
             this.updatePlayer();
             this.updateToolbar();

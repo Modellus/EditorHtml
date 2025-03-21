@@ -240,6 +240,10 @@ svg:active.pan-available {
     color: red;
 }
 
+.dx-numberbox .dx-texteditor-input {
+    text-align: right;
+}
+
 .tooltip {
     text-wrap-mode: wrap; 
 }
