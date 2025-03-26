@@ -56,85 +56,87 @@ class Shell  {
             title: this.board.translations.get("Settings Title"),
             showTitle: false,
             hideOnOutsideClick: true,
-            contentTemplate: () => {
-                const $form = $("<div>").appendTo("#settings-popup");
-                const form = $form.dxForm({
-                    formData: this.properties,
-                    colCount: 4,
-                    items: [
-                        {
-                            colSpan: 4,
-                            dataField: "name",
-                            label: { text: "Name", visible: false },
-                            editorType: "dxTextBox",
-                            editorOptions: {
-                                stylingMode: "filled"
-                            }
-                        },
-                        {
-                            colSpan: 4,
-                            dataField: "language",
-                            editorType: "dxSelectBox",
-                            editorOptions: {
-                                items: ["en-US", "pt-BR"],
-                                value: this.properties.language
-                            }
-                        },
-                        {
-                            colSpan: 1,
-                            dataField: "independent.name",
-                            label: { 
-                                text: this.board.translations.get("Independent.Name") 
-                            },
-                            editorType: "dxTextBox",
-                            editorOptions: {
-                                stylingMode: "filled"
-                            }
-                        },
-                        {
-                            colSpan: 1,
-                            dataField: "independent.start",
-                            label: { 
-                                text: this.board.translations.get("Independent.Start") 
-                            },
-                            editorType: "dxNumberBox",
-                            editorOptions: {
-                                stylingMode: "filled"
-                            }
-                        },
-                        {
-                            colSpan: 1,
-                            dataField: "independent.end",
-                            label: { 
-                                text: this.board.translations.get("Independent.End") 
-                            },
-                            editorType: "dxNumberBox",
-                            editorOptions: {
-                                stylingMode: "filled"
-                            }
-                        },
-                        {
-                            colSpan: 1,
-                            dataField: "independent.step",
-                            label: { 
-                                text: this.board.translations.get("Independent.Step") 
-                            },
-                            editorType: "dxNumberBox",
-                            editorOptions: {
-                                stylingMode: "filled"
-                            }
-                        }
-                    ],
-                    onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
-                });
-                return $form;
-            },
+            contentTemplate: () => this.createSettingsForm(),
             position: {
                 at: "center",
                 of: window
             }
         });
         this.settingsPopup = $("#settings-popup").dxPopup("instance");
+    }
+
+    createSettingsForm() {
+        const $form = $("<div id='settings-form'></div>").dxForm({
+            colCount: 4,
+            formData: this.properties,
+            items: [
+                {
+                    colSpan: 4,
+                    dataField: "name",
+                    label: { text: "Name", visible: false },
+                    editorType: "dxTextBox",
+                    editorOptions: {
+                        stylingMode: "filled"
+                    }
+                },
+                {
+                    colSpan: 4,
+                    dataField: "language",
+                    editorType: "dxSelectBox",
+                    editorOptions: {
+                        items: ["en-US", "pt-BR"],
+                        value: this.properties.language
+                    }
+                },
+                {
+                    colSpan: 1,
+                    dataField: "independent.name",
+                    label: { 
+                        text: this.board.translations.get("Independent.Name") 
+                    },
+                    editorType: "dxTextBox",
+                    editorOptions: {
+                        stylingMode: "filled"
+                    }
+                },
+                {
+                    colSpan: 1,
+                    dataField: "independent.start",
+                    label: { 
+                        text: this.board.translations.get("Independent.Start") 
+                    },
+                    editorType: "dxNumberBox",
+                    editorOptions: {
+                        stylingMode: "filled"
+                    }
+                },
+                {
+                    colSpan: 1,
+                    dataField: "independent.end",
+                    label: { 
+                        text: this.board.translations.get("Independent.End") 
+                    },
+                    editorType: "dxNumberBox",
+                    editorOptions: {
+                        stylingMode: "filled"
+                    }
+                },
+                {
+                    colSpan: 1,
+                    dataField: "independent.step",
+                    label: { 
+                        text: this.board.translations.get("Independent.Step") 
+                    },
+                    editorType: "dxNumberBox",
+                    editorOptions: {
+                        stylingMode: "filled"
+                    }
+                }
+            ],
+            onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
+        });
+        this.settingsForm = $form.dxForm("instance");
+        return $form;
     }
 
     createTopToolbar() {
@@ -634,6 +636,11 @@ class Shell  {
         });
         this.contextMenu = $("#context-menu").dxContextMenu("instance");
     }
+
+    setProperties(properties) {
+        Utils.mergeProperties(properties, this.properties);
+        this.calculator.setProperties(properties.independent);
+    }
     
     setProperty(name, value) {
         const keys = name.split('.');
@@ -736,7 +743,11 @@ class Shell  {
     }
 
     openSettings() {
-        this.board.deselect();
+        this.board.deselect();        
+        if (this.settingsForm) {
+            this.settingsForm.formData = null;
+            this.settingsForm.updateData(this.properties);
+        }
         this.settingsPopup.show();
     }
     

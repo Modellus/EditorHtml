@@ -73,6 +73,11 @@ class Commands {
         this.invoker.execute(command);
     }
 
+    setProperties(properties) {
+        const command = new SetPropertiesCommand(this.shell, properties);
+        this.invoker.execute(command);
+    }
+
     undo() {
         this.invoker.undo();
     }

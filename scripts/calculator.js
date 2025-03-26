@@ -15,16 +15,14 @@ class Calculator extends EventTarget {
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
     }
 
+    setProperties(properties) {
+        Utils.mergeProperties(properties, this.properties);
+        this.clear();
+    }
+
     setProperty(name, value) {
-        const keys = name.split('.');
-        let current = this.properties;
-        for (let i = 0; i < keys.length - 1; i++)
-            current = current[keys[i]];
-        current[keys[keys.length - 1]] = value;
-        this.system.independent = this.properties.independent.name;
-        this.system.setInitialIndependent(this.properties.independent.start);
-        this.engine.step = this.properties.independent.step;
-        this.stop();
+        Utils.setProperty(name, value, this.properties);
+        this.clear();
     }
 
     emit(eventName, detail = {}) {
@@ -87,6 +85,9 @@ class Calculator extends EventTarget {
     }
 
     clear() {
+        this.system.independent = this.properties.independent.name;
+        this.system.setInitialIndependent(this.properties.independent.start);
+        this.engine.step = this.properties.independent.step;
         this.engine.reset();
         this.system.clear();
         clearInterval(this.timer);
