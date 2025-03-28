@@ -104,12 +104,11 @@ class TableShape extends BaseShape {
                 },
                 {
                     headerCellTemplate: container => {
-                        $("<div>")
-                            .css({
-                                "font-family": "Katex_Math",
-                                "font-size": "16px"
-                            })
-                            .text(this.properties.column2Term)
+                        $("<math-field>")
+                            .attr("read-only", true)
+                            .html(this.properties.column2Term)
+                            .css("height", "auto", "width", "auto")
+                            .addClass("form-math-field")
                             .appendTo(container);
                     },
                     format: {
