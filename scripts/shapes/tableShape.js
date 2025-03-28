@@ -16,18 +16,50 @@ class TableShape extends BaseShape {
                 colSpan: 1,
                 dataField: "column1Term",
                 label: { text: "Column 1" },
-                editorType: "dxTextBox",
-                editorOptions: {
-                    stylingMode: "filled"
+                template: function(data, itemElement) {
+                    var mathfield = new MathfieldElement();
+                    mathfield.smartMode = true;
+                    mathfield.popoverPolicy = "none";
+                    mathfield.virtualKeyboardMode = "off";
+                    mathfield.mathVirtualKeyboardPolicy = "manual";
+                    mathfield.placeholder = "Enter a formula";
+                    mathfield.smartMode = false;
+                    mathfield.style.backgroundColor = "#f5f5f5";
+                    mathfield.value = data.component.option("formData")[data.dataField];
+                    data.mathfieldInstance = mathfield;
+                    mathfield.addEventListener("input", () => {
+                        data.component.updateData(data.dataField, mathfield.value);
+                    });
+                    data.component.option("onOptionChanged", function(args) {
+                        if(args.fullName === "formData." + data.dataField)
+                            mathfield.value = args.value;
+                    });
+                    itemElement.append(mathfield);
                 }
             },
             {
                 colSpan: 1,
                 dataField: "column2Term",
                 label: { text: "Column 2" },
-                editorType: "dxTextBox",
-                editorOptions: {
-                    stylingMode: "filled"
+                template: function(data, itemElement) {
+                    var mathfield = new MathfieldElement();
+                    mathfield.smartMode = true;
+                    mathfield.popoverPolicy = "none";
+                    mathfield.virtualKeyboardMode = "off";
+                    mathfield.mathVirtualKeyboardPolicy = "manual";
+                    mathfield.placeholder = "Enter a formula";
+                    mathfield.smartMode = false;
+                    mathfield.style.backgroundColor = "#f5f5f5";
+                    mathfield.value = data.component.option("formData")[data.dataField];
+                    data.mathfieldInstance = mathfield;
+                    mathfield.addEventListener("input", () => {
+                        data.component.updateData(data.dataField, mathfield.value);
+                    });
+                    data.component.option("onOptionChanged", function(args) {
+                        if(args.fullName === "formData." + data.dataField)
+                            mathfield.value = args.value;
+                    });
+                    itemElement.append(mathfield);
                 }
             }
         );
@@ -58,12 +90,11 @@ class TableShape extends BaseShape {
             columns: [
                 {
                     headerCellTemplate: container => {
-                        $("<div>")
-                            .css({
-                                "font-family": "Katex_Math",
-                                "font-size": "16px"
-                            })
-                            .text(this.properties.column1Term)
+                        $("<math-field>")
+                            .attr("read-only", true)
+                            .html(this.properties.column1Term)
+                            .css("height", "auto", "width", "auto")
+                            .addClass("form-math-field")
                             .appendTo(container);
                     },
                     format: {

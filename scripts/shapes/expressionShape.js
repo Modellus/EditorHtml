@@ -31,7 +31,6 @@ class ExpressionShape extends BaseShape {
                     { name: "Index", text: "x_{t-1}" }
                 ],
                 keyExpr: "name",
-                stylingMode: "text",
                 selectionMode: "none",
                 onItemClick: e => this.insert(e.itemData.text)
             }
@@ -74,7 +73,7 @@ class ExpressionShape extends BaseShape {
             scrollByContent: true, 
             scrollByThumb: true
         });
-        this.mathfield.value = this.properties.expression ?? "{\\frac{dx}{dt}=y";
+        this.mathfield.value = this.properties.expression ?? "{\\frac{dx}{dt}=y}";
         this.mathfield.addEventListener('mount', e => {
             var inlineShortcuts = this.mathfield.inlineShortcuts;
             ["dx", "dy", "dt"].forEach(v => {

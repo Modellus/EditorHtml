@@ -129,4 +129,8 @@ class Calculator extends EventTarget {
     getValues() {
         return this.system.values;
     }
+    
+    getTermsNames() {
+        return this.system.getTermsNames();
+    }
 }
