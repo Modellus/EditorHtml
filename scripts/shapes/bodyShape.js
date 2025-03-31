@@ -201,6 +201,7 @@ class BodyShape extends BaseShape {
                 while (this.stroboscopy.firstChild)
                     this.stroboscopy.removeChild(this.stroboscopy.firstChild);
             if (this.stroboscopy.children.length < calculator.getLastIteration() / this.properties.stroboscopyInterval) {
+                const position = this.getBoardPosition();
                 const stroboscopyCircle = this.board.createSvgElement("circle");
                 stroboscopyCircle.setAttribute("cx", position.x);
                 stroboscopyCircle.setAttribute("cy", position.y);

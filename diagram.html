@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="libraries/scripts/jquery.min.js"></script>
+    <link rel="stylesheet" href="libraries/css/dx.fluent.blue.light.compact.css"></script>
+    <script src="https://unpkg.com/devextreme-quill@1.7.1/dist/dx-quill.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/devexpress-diagram/2.2.15/dx-diagram.min.js"></script>
+    <script src="libraries/scripts/dx.all.js"></script>
+    <style>
+        #diagram {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div id="diagram"></div>
+    <script>
+        $(function() {
+            $("#diagram").dxDiagram({
+                nodes: [{
+                    id: "chartNode",
+                    text: "My Chart",
+                    type: "Content",
+                    content: "<div id='chartContainer' style='width: 400px; height: 300px;'></div>" // Container for the chart
+                }],
+                edges: [],
+                onContentReady: function(e) {
+                    // Initialize the dxChart *after* the diagram is ready
+                    $("#chartContainer").dxChart({
+                        dataSource: [
+                            { argument: "Jan", value: 5 },
+                            { argument: "Feb", value: 8 },
+                            { argument: "Mar", value: 6 },
+                            { argument: "Apr", value: 9 }
+                        ],
+                        series: {
+                            type: "bar",
+                            argumentField: "argument",
+                            valueField: "value"
+                        },
+                        title: "Monthly Sales"
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

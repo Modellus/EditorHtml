@@ -44,10 +44,9 @@ class Calculator extends EventTarget {
         this.timer = setInterval(() => {
             if (this.system.getIndependent() >= this.properties.independent.end)
                 this.pause();
-            else {
+            else
                 this.engine.iterate();
-                this.emit("iterate", { calculator: this }); 
-            }
+            this.emit("iterate", { calculator: this });     
         }, 10);
         this.status = STATUS.PLAYING;
     }
@@ -89,7 +88,7 @@ class Calculator extends EventTarget {
         this.system.setInitialIndependent(this.properties.independent.start);
         this.engine.step = this.properties.independent.step;
         this.engine.reset();
-        this.system.clear();
+        this.system.reset();
         clearInterval(this.timer);
         this.status = STATUS.STOPPED;
     }

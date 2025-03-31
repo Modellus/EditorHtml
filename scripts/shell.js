@@ -5,6 +5,7 @@ class Shell  {
         this.commands = new Commands(this);
         this.properties = {};
         this.setDefaults();
+        new PanAndZoom(this.board);
         new MiniMap(this.board, document.getElementById("minimap-image"), document.getElementById("minimap-viewport"));
         this.createSettingsPopup();
         this.createContextMenu();
