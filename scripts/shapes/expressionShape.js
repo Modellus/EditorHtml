@@ -49,7 +49,7 @@ class ExpressionShape extends BaseShape {
         this.properties.rotation = 0;
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[1].color;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[6].color;
-        this.properties.expression = "\\frac{dx}{dt}=y";
+        this.properties.expression = "\\placeholder{}";
     }
 
     createElement() {
@@ -73,7 +73,7 @@ class ExpressionShape extends BaseShape {
             scrollByContent: true, 
             scrollByThumb: true
         });
-        this.mathfield.value = this.properties.expression ?? "{\\frac{dx}{dt}=y}";
+        this.mathfield.value = this.properties.expression ?? "\\placeholder{}";
         this.mathfield.addEventListener('mount', e => {
             var inlineShortcuts = this.mathfield.inlineShortcuts;
             ["dx", "dy", "dt"].forEach(v => {
@@ -81,6 +81,7 @@ class ExpressionShape extends BaseShape {
                 delete inlineShortcuts[v];
             })
             this.mathfield.inlineShortcuts = inlineShortcuts;
+            this.mathfield.executeCommand("selectAll");
             this.mathfield.focus();
         });
         return foreignObject;
