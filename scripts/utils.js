@@ -16,9 +16,9 @@ class Utils {
     static setProperty(name, value, properties) {
         const parts = name.split(".");
         let target = properties;
-        for (let i = 0; i < parts.length - 1; i++) {
-            target[parts[i]] = target[parts[i]] || {};
-            target = target[parts[i]];
+        for (let index = 0; index < parts.length - 1; index++) {
+            target[parts[index]] = target[parts[index]] || {};
+            target = target[parts[index]];
         }
         target[parts[parts.length - 1]] = value;
     }
