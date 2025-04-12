@@ -38,27 +38,31 @@ class Calculator extends EventTarget {
         this.removeEventListener(eventName, callback);
     }
 
-    play() {
-        if (this.system.getIndependent() >= this.properties.independent.end)
+    iterate = () => {
+        if (this.status != STATUS.PLAYING)
             return;
-        this.timer = setInterval(() => {
-            if (this.system.getIndependent() >= this.properties.independent.end)
-                this.pause();
-            else
-                this.engine.iterate();
-            this.emit("iterate", { calculator: this });     
-        }, 10);
+        if (this.system.getIndependent() >= this.properties.independent.end)
+            this.pause();
+        else
+            this.engine.iterate();
+        this.emit("iterate", { calculator: this });     
+        if (this.status == STATUS.PLAYING)
+            requestIdleCallback(this.iterate);
+    }
+
+    play() {
         this.status = STATUS.PLAYING;
+        this.iterate();
     }
 
     pause() {
-        clearInterval(this.timer);
+        //clearInterval(this.timer);
         this.status = STATUS.PAUSED;
     }
 
     stop() {
         this.engine.reset();
-        clearInterval(this.timer);
+        //clearInterval(this.timer);
         this.status = STATUS.STOPPED;
     }
 
@@ -84,18 +88,21 @@ class Calculator extends EventTarget {
     }
 
     clear() {
+        this.system.clear();
         this.system.independent = this.properties.independent.name;
         this.system.setInitialIndependent(this.properties.independent.start);
         this.engine.step = this.properties.independent.step;
         this.engine.reset();
         this.system.reset();
-        clearInterval(this.timer);
+        //clearInterval(this.timer);
         this.status = STATUS.STOPPED;
     }
 
     parse(text) {
-        if (text.startsWith("\\displaylines{") && text.endsWith("}"))
-            text = text.substring(13, text.length - 1);
+        var start = "\\displaylines{";
+        var end = "}";
+        if (text.startsWith(start) && text.endsWith(end))
+            text = text.substring(start.length, text.length - end.length);
         const expressions = text.split('\\\\').map(line => line.trim());
         expressions.forEach(e => this.parser.parse(e));
     }

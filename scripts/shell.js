@@ -649,11 +649,9 @@ class Shell  {
         for (let i = 0; i < keys.length - 1; i++)
             current = current[keys[i]];
         current[keys[keys.length - 1]] = value;
-        if(name.includes("independent")) {
-            this.calculator.setProperty(name, value);
-            this.updatePlayer();
-            this.updateToolbar();
-        }
+        if(name.includes("independent"))
+            this.calculator.setProperty(name, value);    
+        this.reset();
     }
     
     undoPressed() {
@@ -665,6 +663,7 @@ class Shell  {
     }
     
     updateToolbar() {
+        return;
         var disabled = this.board.selection.selectedShape == null || !["BodyShape", "VectorShape", "ReferentialShape"].includes(this.board.selection.selectedShape.constructor.name);
         this.bodyButton.option("disabled", disabled);
         this.vectorButton.option("disabled", disabled);
@@ -689,7 +688,6 @@ class Shell  {
         this.stepForward.option("disabled", isRunning || iteration == lastIteration);
         this.playHead.option("max", lastIteration);
         this.playHead.option("value", iteration);
-        this.board.enableSelection(isStopped);
     }
     
     playPausePressed() {
@@ -741,6 +739,7 @@ class Shell  {
                 this.calculator.parse(shape.properties.expression);
         });
         this.updatePlayer();
+        this.updateToolbar();
     }
 
     openSettings() {

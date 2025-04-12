@@ -80,6 +80,8 @@ class PanAndZoom {
     }
 
     onWheel(event) {
+        if (event.target.tagName !== "svg")
+            return;
         event.preventDefault();
         let scaleFactor = 1 + event.deltaY * -0.002;
         this.handleZoom(scaleFactor);

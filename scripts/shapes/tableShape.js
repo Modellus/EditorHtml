@@ -129,6 +129,10 @@ class TableShape extends BaseShape {
         this.dataGrid.option("columns[1].caption", this.properties.column2Term);
         this.dataGrid.endUpdate();
         this.dataGrid.refresh();
+        this.dataGrid.repaint();
+        const rowCount = this.dataGrid.totalCount();
+        if (rowCount > 0)
+            this.dataGrid.option("focusedRowIndex", rowCount - 1);
     }
 
     draw() {

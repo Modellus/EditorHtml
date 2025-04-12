@@ -73,6 +73,7 @@ class ChartShape extends BaseShape {
         const $div = $("<div>").appendTo(foreignObject);
         $div.css({ "width": "100%", "height": "100%" });
         this.chart = $div.dxChart({
+            dataSource: this.board.calculator.system.values,
             commonSeriesSettings: {
                 label: {
                     visible: true
@@ -95,8 +96,14 @@ class ChartShape extends BaseShape {
                 grid: {
                     visible: true
                 },
+                minorGrid: {
+                    visible: true
+                },
                 tick: {
-                    visible: false
+                    visible: true
+                },
+                minorTick: {
+                    visible: true
                 }
             },
             series: [
@@ -157,8 +164,9 @@ class ChartShape extends BaseShape {
         this.chart.option("containerBackgroundColor", this.properties.backgroundColor);
         this.chart.option("argumentAxis.title.text", this.properties.xTerm);
         this.chart.option("valueAxis.title.text", this.properties.yTerm);
-        this.chart.option("dataSource", this.board.calculator.getValues());
         this.chart.endUpdate();
+        this.chart.refresh();
+        this.chart.render();
     }
 
     draw() {
