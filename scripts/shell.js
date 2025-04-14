@@ -427,7 +427,10 @@ class Shell  {
                         },
                         tooltip: {
                             enabled: true,
-                            format: _ => this.calculator.getIndependentValue().toFixed(2),
+                            format: v => {
+                                var precision = Utils.getPrecision(this.calculator.properties.independent.step);
+                                return this.calculator.getIndependentValue(v).toFixed(precision);
+                            },
                             showMode: "always",
                             position: "top",
                         }, 
@@ -664,12 +667,6 @@ class Shell  {
     
     updateToolbar() {
         return;
-        var disabled = this.board.selection.selectedShape == null || !["BodyShape", "VectorShape", "ReferentialShape"].includes(this.board.selection.selectedShape.constructor.name);
-        this.bodyButton.option("disabled", disabled);
-        this.vectorButton.option("disabled", disabled);
-        var isStopped = this.calculator.status == STATUS.STOPPED;
-        for (var tool = 1; tool < 15; tool++)
-            this.topToolbar.option(`items[${tool}].visible`, isStopped);
     }
     
     updatePlayer() {
@@ -677,7 +674,6 @@ class Shell  {
         var iteration = this.calculator.getIteration();
         var icon = this.playPause.option("icon");
         var isRunning = this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING;
-        var isStopped = this.calculator.status == STATUS.STOPPED;
         if (isRunning && icon != "fa-light fa-pause" || !isRunning && icon != "fa-light fa-play") {
             this.playPause.option("icon", isRunning ? "fa-light fa-pause" : "fa-light fa-play");
             this.playPause.repaint();

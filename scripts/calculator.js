@@ -38,31 +38,29 @@ class Calculator extends EventTarget {
         this.removeEventListener(eventName, callback);
     }
 
-    iterate = () => {
+    _iterate = () => {
         if (this.status != STATUS.PLAYING)
             return;
-        if (this.system.getIndependent() >= this.properties.independent.end)
+        if (Math.abs(this.system.getIndependent() - this.properties.independent.end) < this.properties.independent.step)
             this.pause();
         else
             this.engine.iterate();
         this.emit("iterate", { calculator: this });     
         if (this.status == STATUS.PLAYING)
-            requestIdleCallback(this.iterate);
+            requestIdleCallback(this._iterate);
     }
 
     play() {
         this.status = STATUS.PLAYING;
-        this.iterate();
+        this._iterate();
     }
 
     pause() {
-        //clearInterval(this.timer);
         this.status = STATUS.PAUSED;
     }
 
     stop() {
         this.engine.reset();
-        //clearInterval(this.timer);
         this.status = STATUS.STOPPED;
     }
 
@@ -76,15 +74,20 @@ class Calculator extends EventTarget {
         this.emit("iterate", { calculator: this });
     }
 
+    _replay = () => {
+        this.emit("iterate", { calculator: this }); 
+        if (this.system.iteration == this.system.lastIteration)
+            this.system.iteration = 0;
+        if (this.status == STATUS.PLAYING) {
+            this.system.iteration++;
+            requestIdleCallback(this._replay);
+        }
+    }
+
     replay() {
-        var iteration = 0;
-        this.timer = setInterval(() => {
-            this.system.iteration = iteration++;
-            this.emit("iterate", { calculator: this }); 
-            if (this.system.iteration == this.system.lastIteration)
-                iteration = 0;
-        }, 10);
         this.status = STATUS.PLAYING;
+        this.system.iteration = 0;
+        this._replay();
     }
 
     clear() {
@@ -94,7 +97,6 @@ class Calculator extends EventTarget {
         this.engine.step = this.properties.independent.step;
         this.engine.reset();
         this.system.reset();
-        //clearInterval(this.timer);
         this.status = STATUS.STOPPED;
     }
 
@@ -124,8 +126,8 @@ class Calculator extends EventTarget {
         return this.system.lastIteration;
     }
 
-    getIndependentValue() {
-        return this.system.getIndependentOnIteration(this.system.iteration);
+    getIndependentValue(iteration) {
+        return this.system.getIndependentOnIteration(iteration);
     }
 
     get() {

@@ -22,4 +22,10 @@ class Utils {
         }
         target[parts[parts.length - 1]] = value;
     }
+
+    static getPrecision(value) {
+        const valueString = value.toString();
+        return valueString.includes('.') ? valueString.split('.')[1].length : 0;
+    }
+      
 }
