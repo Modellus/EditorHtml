@@ -75,20 +75,32 @@ class TableShape extends BaseShape {
         this.properties.width = 200;
         this.properties.height = 200;
         this.properties.rotation = 0;
+        this.properties.column1Term = this.board.calculator.system.independent.name;
     }
 
     createElement() {
         const foreignObject = this.board.createSvgElement("foreignObject");
         const $div = $("<div>").appendTo(foreignObject);
         $div.css({ "width": "100%", "height": "100%" });
+        this.arrayStore = new DevExpress.data.ArrayStore({ key: "iteration"});
+        this.lastSyncedIndex = 0;
         this.dataGrid = $div.dxDataGrid({
-            dataSource: this.board.calculator.system.values,
+            dataSource: new DevExpress.data.DataSource({
+                store: this.arrayStore,
+                reshapeOnPush: true,
+            }),
             scrolling: {
                 mode: "virtual"
             },
             showBorders: true,
+            selection: {
+                mode: "single"
+            },
+            noDataText: "",
             columns: [
                 {
+                    dataField: this.properties.column1Term,
+                    caption: this.properties.column1Term,
                     headerCellTemplate: container => {
                         $("<math-field>")
                             .attr("read-only", true)
@@ -121,18 +133,41 @@ class TableShape extends BaseShape {
         return foreignObject;
     }
 
+    updateValues() {
+        var system = this.board.calculator.system;
+        const values = system.values;
+        if (this.lastSyncedIndex > values.length) {
+            this.lastSyncedIndex = 0;
+            this.arrayStore.clear();
+            this.dataGrid.getDataSource().load();
+            this.dataGrid.refresh();
+        }
+        const newItems = values.slice(this.lastSyncedIndex);
+        newItems.forEach(i => this.arrayStore.push([{ type: "insert", data: i }]));
+        this.lastSyncedIndex = values.length;
+    }
+
+    updateFocus() {
+        if (this.properties.column1Term == null && this.properties.column2Term == null)
+            return;
+        var system = this.board.calculator.system;
+        if (this.dataGrid.option("focusedRowKey") == system.iteration)
+            return;
+        this.dataGrid.navigateToRow(system.iteration);
+        this.dataGrid.selectRows([system.iteration]);
+    }
+
     update() {
+        var column1 = this.properties.column1Term;
+        var column2 = this.properties.column2Term;
         this.dataGrid.beginUpdate();
-        this.dataGrid.option("columns[0].dataField", this.properties.column1Term);
-        this.dataGrid.option("columns[1].dataField", this.properties.column2Term);
-        this.dataGrid.option("columns[0].caption", this.properties.column1Term);
-        this.dataGrid.option("columns[1].caption", this.properties.column2Term);
+        this.dataGrid.option("columns[0].dataField", column1);
+        this.dataGrid.option("columns[0].caption", column1);
+        this.dataGrid.option("columns[1].dataField", column2);
+        this.dataGrid.option("columns[1].caption", column2);
+        this.updateValues();
         this.dataGrid.endUpdate();
-        this.dataGrid.refresh();
-        this.dataGrid.repaint();
-        const rowCount = this.dataGrid.totalCount();
-        if (rowCount > 0)
-            this.dataGrid.option("focusedRowIndex", rowCount - 1);
+        this.updateFocus();
     }
 
     draw() {

@@ -72,8 +72,10 @@ class ChartShape extends BaseShape {
         const foreignObject = this.board.createSvgElement("foreignObject");
         const $div = $("<div>").appendTo(foreignObject);
         $div.css({ "width": "100%", "height": "100%" });
+        this.arrayStore = new DevExpress.data.ArrayStore();
+        this.lastSyncedIndex = 0;
         this.chart = $div.dxChart({
-            dataSource: this.board.calculator.system.values,
+            dataSource: this.arrayStore,
             commonSeriesSettings: {
                 label: {
                     visible: true
@@ -155,6 +157,31 @@ class ChartShape extends BaseShape {
         return foreignObject;
     }
 
+    updateValues() {
+        var system = this.board.calculator.system;
+        const values = system.values;
+        if (this.lastSyncedIndex > values.length) {
+            this.lastSyncedIndex = 0;
+            this.arrayStore.clear();
+            this.chart.getDataSource().load();
+        }
+        const newItems = values.slice(this.lastSyncedIndex);
+        newItems.forEach(i => this.arrayStore.push([{ type: "insert", data: i }]));
+        this.lastSyncedIndex = values.length;
+    }
+
+    updateFocus() {
+        var system = this.board.calculator.system;
+        var series = this.chart.getAllSeries();
+        if (this.properties.xTerm == null || this.properties.yTerm == null)
+            return;
+        series.forEach(s => {
+            var value = system.getValueAtIteration(system.iteration, s.getArgumentField());
+            var points = s.getPointsByArg(value);
+            points.forEach(p => p.showTooltip())
+        });
+    }
+
     update() {
         this.chart.beginUpdate();
         this.chart.option("commonSeriesSettings.type", this.properties.chartType);
@@ -164,9 +191,9 @@ class ChartShape extends BaseShape {
         this.chart.option("containerBackgroundColor", this.properties.backgroundColor);
         this.chart.option("argumentAxis.title.text", this.properties.xTerm);
         this.chart.option("valueAxis.title.text", this.properties.yTerm);
+        this.updateValues();
         this.chart.endUpdate();
-        this.chart.refresh();
-        this.chart.render();
+        this.updateFocus();
     }
 
     draw() {

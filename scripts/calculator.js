@@ -39,6 +39,8 @@ class Calculator extends EventTarget {
     }
 
     _iterate = () => {
+        if (this.frameId)
+            cancelAnimationFrame(this.frameId);
         if (this.status != STATUS.PLAYING)
             return;
         if (Math.abs(this.system.getIndependent() - this.properties.independent.end) < this.properties.independent.step)
@@ -47,7 +49,7 @@ class Calculator extends EventTarget {
             this.engine.iterate();
         this.emit("iterate", { calculator: this });     
         if (this.status == STATUS.PLAYING)
-            requestIdleCallback(this._iterate);
+            this.frameId = requestAnimationFrame(this._iterate);
     }
 
     play() {
@@ -75,12 +77,14 @@ class Calculator extends EventTarget {
     }
 
     _replay = () => {
+        if (this.frameId)
+            cancelAnimationFrame(this.frameId);
         this.emit("iterate", { calculator: this }); 
-        if (this.system.iteration == this.system.lastIteration)
+        if (this.system.iteration >= this.system.lastIteration)
             this.system.iteration = 0;
         if (this.status == STATUS.PLAYING) {
             this.system.iteration++;
-            requestIdleCallback(this._replay);
+            this.frameId = requestAnimationFrame(this._replay);
         }
     }
 
