@@ -224,12 +224,11 @@ svg:active.pan-available {
 }
 
 .dx-button .trash {
-    font-weight: 300; /* Light */
+    font-weight: 300;
     color: red;
     transition: opacity 0.2s ease-in-out;
 }
 
-/* Hover: Hide trash, show trash-xmark */
 .dx-button:hover .trash {
     display: none;
 }

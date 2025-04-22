@@ -90,6 +90,22 @@ class Board {
         this.dispatchShapeEvent("shapeChanged", e.detail.shape);
     }
 
+    bringForward(shape) {
+        this.shapes.bringForward(shape);
+    }
+
+    sendBackward(shape) {
+        this.shapes.sendBackward(shape);
+    }
+
+    bringToFront(shape) {
+        this.shapes.bringToFront(shape);
+    }
+
+    sendToBack(shape) {
+        this.shapes.sendToBack(shape);
+    }
+
     getClientCenter() {
         const svgRect = this.svg.getBoundingClientRect();
         const parentRect = this.svg.parentNode.getBoundingClientRect();

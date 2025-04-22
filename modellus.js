@@ -20,7 +20,7 @@ var modellus = {
     file: {
         open: () => shell.open(),
         save: () => shell.save(),
-        new: () => shell.new(),
+        new: () => shell.clear(),
         openFromPath: filePath => shell.openFromPath(filePath),
         saveToPath: filePath => shell.saveToPath(filePath)
     },

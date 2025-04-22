@@ -38,6 +38,7 @@ class BackgroundShape extends BaseShape {
     }
 
     setDefaults() {
+        super.setDefaults();
         var center = this.board.getClientCenter();
         this.properties.x = center.x - 50;
         this.properties.y = center.y - 50;

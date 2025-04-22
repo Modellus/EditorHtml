@@ -15,6 +15,10 @@ class BaseShape {
         Object.assign(this.properties, properties);
     }
 
+    setDefaults() {
+        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[1].color;
+    }
+
     initializeElement() {
         this.element = this.createElement();
         this.element.setAttribute("id", this.id);
@@ -91,11 +95,14 @@ class BaseShape {
                         onContentReady: function(e) {
                             e.component.option("items").forEach((item, index) => {
                                 const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                buttonElement.find(".dx-icon").css("color", item.color == "#00000000" ? "#cccccc" : item.color);
+                                const color = item.color == "#00000000" ? "#cccccc" : item.color;
+                                buttonElement.find(".dx-icon").css("color", color);
+                                if (item.color == "#ffffff")
+                                    buttonElement[0].style.setProperty("--fa-primary-color", "#000000");
                             });
                         },
                         items: this.board.theme.getBackgroundColors().map(c => ({
-                            icon: "fa-solid " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
+                            icon: "fa-duotone fa-thin " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
                             color: c.color
                         })),
                         keyExpr: "color",
@@ -117,11 +124,14 @@ class BaseShape {
                         onContentReady: function(e) {
                             e.component.option("items").forEach((item, index) => {
                                 const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                buttonElement.find(".dx-icon").css("color", item.color == "#00000000" ? "#cccccc" : item.color);
+                                const color = item.color == "#00000000" ? "#cccccc" : item.color;
+                                buttonElement.find(".dx-icon").css("color", color);
+                                if (item.color == "#ffffff")
+                                    buttonElement[0].style.setProperty("--fa-primary-color", "#000000");
                             });
                         },
                         items: this.board.theme.getStrokeColors().map(c => ({
-                            icon: "fa-solid " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
+                            icon: "fa-duotone fa-thin " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
                             color: c.color
                         })),
                         keyExpr: "color",
@@ -135,18 +145,20 @@ class BaseShape {
                     }
                   },
                   {
-                    visible: false,
+                    visible: true,
                     colSpan: 2,
                     label: { text: "Layers" },
                     editorType: "dxButtonGroup",
                     editorOptions: {
+                        selectionMode: "none",
                         items: [
-                            { icon: "fa-light fa-send-back" },
-                            { icon: "fa-light fa-send-backward" },
-                            { icon: "fa-light fa-bring-forward" },
-                            { icon: "fa-light fa-bring-front" }                            
+                            { icon: "fa-light fa-send-back", action: () => this.board.sendToBack(this) },
+                            { icon: "fa-light fa-send-backward", action: () => this.board.sendBackward(this) },
+                            { icon: "fa-light fa-bring-forward", action: () => this.board.bringForward(this) },
+                            { icon: "fa-light fa-bring-front", action: () => this.board.bringToFront(this) }                            
                         ],
-                        stylingMode: "text"
+                        stylingMode: "text",
+                        onItemClick: e => e.itemData.action()
                     }
                   }
                 ]

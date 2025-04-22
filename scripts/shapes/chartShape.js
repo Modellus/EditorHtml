@@ -58,6 +58,7 @@ class ChartShape extends BaseShape {
     }
 
     setDefaults() {
+        super.setDefaults();
         this.properties.name = this.board.translations.get("Chart Name");
         var center = this.board.getClientCenter();
         this.properties.x = center.x - 100;
@@ -191,6 +192,7 @@ class ChartShape extends BaseShape {
         this.chart.option("containerBackgroundColor", this.properties.backgroundColor);
         this.chart.option("argumentAxis.title.text", this.properties.xTerm);
         this.chart.option("valueAxis.title.text", this.properties.yTerm);
+        this.element.style.backgroundColor = this.properties.backgroundColor;
         this.updateValues();
         this.chart.endUpdate();
         this.updateFocus();

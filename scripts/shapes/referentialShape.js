@@ -8,6 +8,7 @@ class ReferentialShape extends BaseShape {
     }
 
     setDefaults() {
+        super.setDefaults();
         this.properties.name = this.board.translations.get("Referential Name");
         var center = this.board.getClientCenter();
         this.properties.x = center.x - 200;

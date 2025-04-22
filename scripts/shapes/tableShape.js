@@ -68,6 +68,7 @@ class TableShape extends BaseShape {
     }
 
     setDefaults() {
+        super.setDefaults();
         this.properties.name = this.board.translations.get("Table Name");
         var center = this.board.getClientCenter();
         this.properties.x = center.x - 100;
