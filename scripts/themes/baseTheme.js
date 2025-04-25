@@ -18,7 +18,7 @@ class BaseTheme {
         return [
             { color: "#00000000" },
             { color: "#ffffff" },
-            { color: "#ebebeb" },
+            { color: "#f7f7f7" },
             { color: "#e03130" },
             { color: "#2f9e44" },
             { color: "#1871c2" },

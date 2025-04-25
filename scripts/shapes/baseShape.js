@@ -16,7 +16,8 @@ class BaseShape {
     }
 
     setDefaults() {
-        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[1].color;
+        this.properties.foregroundColor = this.board.theme.getStrokeColors()[2].color;
+        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[2].color;
     }
 
     initializeElement() {
