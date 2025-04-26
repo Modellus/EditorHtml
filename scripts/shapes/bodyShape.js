@@ -148,10 +148,10 @@ class BodyShape extends BaseShape {
         this.properties.width = 30;
         this.properties.height = 30;
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
-        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[2].color;
-        this.properties.foregroundColor = this.board.theme.getBackgroundColors()[0].color;
-        this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
-        this.properties.stroboscopyColor = this.board.theme.getBackgroundColors()[0].color;
+        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[3].color;
+        this.properties.foregroundColor = this.board.theme.getBackgroundColors()[3].color;
+        this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[3].color;
+        this.properties.stroboscopyColor = this.board.theme.getBackgroundColors()[3].color;
         this.properties.stroboscopyInterval = 10;
         this.properties.stroboscopyOpacity = 0.5;
         this.properties.imageBase64 = "";
