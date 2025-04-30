@@ -5,8 +5,9 @@ class Shell  {
         this.commands = new Commands(this);
         this.properties = {};
         this.setDefaults();
-        new PanAndZoom(this.board);
-        new MiniMap(this.board, document.getElementById("minimap-image"), document.getElementById("minimap-viewport"));
+        this.panAndZoom = new PanAndZoom(this.board);
+        this.board.svg.addEventListener("zoom", e => this.onZoom(e));
+        this.miniMap = new MiniMap(this.board, document.getElementById("MinimapImage"), document.getElementById("MinimapViewport"));
         this.createSettingsPopup();
         this.createContextMenu();
         this.createTopToolbar();
@@ -352,14 +353,18 @@ class Shell  {
                     options: {
                         icon: "fa-light fa-circle-minus"
                     },
-                    location: "before"
+                    location: "before",
+                    onClick: e => this.panAndZoom.setZoom(this.panAndZoom.getZoom() - 0.1)
                 },
                 {
                     widget: "dxButton",
                     options: {
+                        elementAttr: {
+                            id: "zoomButton"
+                        },
                         stylingMode: "text",
-                        text: "90 %",
-                        onClick: e => e.component.option("text", "100 %")
+                        text: "100 %",
+                        onClick: e => this.panAndZoom.setZoom(1)
                     },
                     location: "before"
                 },
@@ -368,7 +373,8 @@ class Shell  {
                     options: {
                         icon: "fa-light fa-circle-plus"
                     },
-                    location: "before"
+                    location: "before",
+                    onClick: e => this.panAndZoom.setZoom(this.panAndZoom.getZoom() + 0.1)
                 },
                 {
                     location: "before",
@@ -481,9 +487,7 @@ class Shell  {
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-map",
-                        onClick: () => {
-                            console.log("Map clicked");
-                        }
+                        onClick: () => this.miniMapPressed()
                     },
                     location: "after"
                 },
@@ -501,6 +505,7 @@ class Shell  {
             ]
         });
         this.bottomToolbar = $("#bottom-toolbar").dxToolbar("instance");
+        this.zoom = $("#zoomButton").dxButton("instance");
         this.playPause = $("#playPauseButton").dxButton("instance");
         this.stop = $("#stopButton").dxButton("instance");
         this.replay = $("#replayButton").dxButton("instance");
@@ -718,6 +723,10 @@ class Shell  {
         this.calculator.replay();
         this.updatePlayer();
     }
+
+    miniMapPressed() {
+        this.miniMap.toggle();
+    }
     
     iterationChanged(iteration) {
         this.calculator.setIteration(iteration);
@@ -843,4 +852,8 @@ class Shell  {
         this.board.refresh();
         this.updatePlayer();
     }    
+
+    onZoom(e) {
+        this.zoom.option("text", `${Math.round(e.detail.zoom * 100)} %`);
+    }
 }

@@ -18,17 +18,19 @@ class PanAndZoom {
       this.svg.addEventListener("mouseout", this.onMouseOut.bind(this));
   }
 
-  dispatchSvgEvent(name) {
-      const panEvent = new CustomEvent(name, {
+  dispatchEvent(name) {
+      const event = new CustomEvent(name, {
           detail: {
               x: this.viewBox.x,
               y: this.viewBox.y,
               width: this.viewBox.width,
-              height: this.viewBox.height
+              height: this.viewBox.height,
+              zoom: this.getZoom(),
+              pan: this.getPan()
           }
       });
-      this.svg.dispatchEvent(panEvent);
-  }
+      this.svg.dispatchEvent(event);
+    }
 
   onMouseDown(event) {
       if (event.target !== this.svg)
@@ -49,7 +51,7 @@ class PanAndZoom {
       this.startX = event.clientX;
       this.startY = event.clientY;
       this.svg.setAttribute("viewBox", `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
-      this.dispatchSvgEvent("pan");
+      this.dispatchEvent("pan");
   }
 
   onMouseUp() {
@@ -66,7 +68,7 @@ class PanAndZoom {
       if (event.target !== this.svg)
           return;
       event.preventDefault();
-      const zoomScale = 1.05;
+      const zoomScale = 1.01;
       const direction = event.deltaY < 0 ? 1 : -1;
       const zoomFactor = direction > 0 ? 1 / zoomScale : zoomScale;
       const mouseX = event.clientX - this.svg.getBoundingClientRect().left;
@@ -80,7 +82,7 @@ class PanAndZoom {
       this.viewBox.width *= zoomFactor;
       this.viewBox.height *= zoomFactor;
       this.svg.setAttribute("viewBox", `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
-      this.dispatchSvgEvent("zoom");
+      this.dispatchEvent("zoom");
   }
 
   onMouseOver(event) {
@@ -93,6 +95,30 @@ class PanAndZoom {
           this.svg.classList.remove("pan-available");
   }
 
+  setZoom(zoom) {
+      this.viewBox.width = this.svg.clientWidth / zoom;
+      this.viewBox.height = this.svg.clientHeight / zoom;
+      this.viewBox.x = (this.svg.clientWidth - this.viewBox.width) / 2;
+      this.viewBox.y = (this.svg.clientHeight - this.viewBox.height) / 2;
+      this.svg.setAttribute("viewBox", `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
+      this.dispatchEvent("zoom");
+  }
+
+  getZoom() {
+      return this.svg.clientWidth / this.viewBox.width;
+  }
+
   getPan() {
+      return {
+          x: this.viewBox.x,
+          y: this.viewBox.y
+      };
+  }
+
+  setPan(x, y) {
+      this.viewBox.x = x;
+      this.viewBox.y = y;
+      this.svg.setAttribute("viewBox", `${this.viewBox.x} ${this.viewBox.y} ${this.viewBox.width} ${this.viewBox.height}`);
+      this.dispatchEvent("pan");
   }
 }

@@ -1,49 +1,90 @@
 class MiniMap {
-    constructor(board, minimapImage, minimapViewPort) {
+    constructor(board, minimapImage, minimapViewport) {
         this.board = board;
         this.minimapImage = minimapImage;
-        this.minimapViewPort = minimapViewPort;
-        this.minimapScaleFactor = 3;
-        this.board.svg.addEventListener("pan", (e) => this.onPan(e));
-        this.board.svg.addEventListener("zoom", (e) => this.onZoom(e));
-        this.board.svg.addEventListener("shapeAdded", (e) => this.onShapeAdded(e));
-        this.createMinimap();
+        this.minimapViewport = minimapViewport;
+        this.board.svg.addEventListener("pan", e => this.onPan(e));
+        this.board.svg.addEventListener("zoom", e => this.onZoom(e));
+        this.board.svg.addEventListener("shapeAdded", e => this.onShapeAdded(e));
+        this.board.svg.addEventListener("shapeRemoved", e => this.onShapeRemoved(e));
+        this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
+        this.refresh();
     }
 
     onPan(event) {
-        //this.updateMinimapViewport();
+        this.pan = event.detail.pan;
+        this.refresh();
     }
 
     onZoom(event) {
-        //this.updateMinimapViewport();
+        this.zoom = event.detail.zoom; 
+        this.refresh();
     }
 
     onShapeAdded(event) {
+        this.refresh();
+    }
+
+    onShapeRemoved(event) {
+        this.refresh();
+    }
+
+    onShapeChanged(event) {
+        this.refresh();
+    }
+
+    refresh() {
+        this.updateMinimapViewport();
         this.createMinimap();
     }
 
     updateMinimapViewport() {
-        const mainRect = this.board.svg.parentNode.getBoundingClientRect();
         const viewBox = this.board.svg.viewBox.baseVal;
-        const viewportWidth = mainRect.width / zoom / this.minimapScaleFactor;
-        const viewportHeight = mainRect.height / zoom / this.minimapScaleFactor;
-        this.minimapViewport.style.width = viewportWidth + 'px';
-        this.minimapViewport.style.height = viewportHeight + 'px';
-        this.minimapViewport.style.left = (-pan.x / zoom) / this.minimapScaleFactor + 'px';
-        this.minimapViewport.style.top = (-pan.y / zoom) / this.minimapScaleFactor + 'px';
+        const boundingBox = this.board.svg.getBBox();
+        const x1 = Math.min(boundingBox.x, viewBox.x);
+        const y1 = Math.min(boundingBox.y, viewBox.y);
+        const x2 = Math.max(boundingBox.x + boundingBox.width, viewBox.x + viewBox.width, viewBox.width);
+        const y2 = Math.max(boundingBox.y + boundingBox.height, viewBox.y + viewBox.height, viewBox.height);
+        const zoomX = this.minimapImage.offsetWidth / (x2 - x1);
+        const zoomY = this.minimapImage.offsetHeight / (y2 - y1);
+        const normalizedViewBox = { x: viewBox.x - x1, y: viewBox.y - y1, width: viewBox.width, height: viewBox.height };
+        this.minimapViewport.style.width = normalizedViewBox.width * zoomX + "px";
+        this.minimapViewport.style.height = normalizedViewBox.height * zoomY + "px";
+        this.minimapViewport.style.left = normalizedViewBox.x * zoomX + "px";
+        this.minimapViewport.style.top = normalizedViewBox.y * zoomY + "px";
     }
 
     createMinimap() {
-        const svgString = new XMLSerializer().serializeToString(this.board.svg);
-        const parser = new DOMParser();
-        const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-        const handles = svgDoc.querySelectorAll('.handle');
-        handles.forEach(handle => handle.parentNode.removeChild(handle));
-        const boundingBoxes = svgDoc.querySelectorAll('.bounding-box');
-        boundingBoxes.forEach(boundingBox => boundingBox.parentNode.removeChild(boundingBox));
-        const svgStringNoHandles = new XMLSerializer().serializeToString(svgDoc);
-        const svgBlob = new Blob([svgStringNoHandles], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(svgBlob);
-        this.minimapImage.src = url;
+        const viewBox = this.board.svg.viewBox.baseVal;
+        const boundingBox = this.board.svg.getBBox();
+        const x1 = Math.min(boundingBox.x, viewBox.x);
+        const y1 = Math.min(boundingBox.y, viewBox.y);
+        const x2 = Math.max(boundingBox.x + boundingBox.width, viewBox.x + viewBox.width, viewBox.width);
+        const y2 = Math.max(boundingBox.y + boundingBox.height, viewBox.y + viewBox.height, viewBox.height);
+        const fullSpace = { 
+            x: Math.min(boundingBox.x, viewBox.x),
+            y: Math.min(boundingBox.y, viewBox.y), 
+            width: Math.max(boundingBox.width, viewBox.width) - Math.min(boundingBox.x, viewBox.x),
+            height: Math.max(boundingBox.height, viewBox.height) - Math.min(boundingBox.y, viewBox.y) 
+        };
+        const xml = new XMLSerializer().serializeToString(this.board.svg);
+        const document = new DOMParser().parseFromString(xml, "image/svg+xml");
+        document.querySelectorAll(".handle, .bounding-box")
+           .forEach(el => el.remove());
+        const svg = document.documentElement;
+        svg.setAttribute("viewBox", `${x1} ${y1} ${x2 - x1} ${y2 - y1}`);
+        svg.setAttribute("width",  x2 - x1);
+        svg.setAttribute("height", y2 - y1);
+        const finalString = new XMLSerializer().serializeToString(document);
+        const blob = new Blob([finalString], { type: "image/svg+xml" });
+        this.minimapImage.src = URL.createObjectURL(blob);
+      }
+
+    toggle() {
+        const shouldDisplay = this.minimapImage.style.display === "none";
+        this.minimapImage.style.display = shouldDisplay ? "block" : "none";
+        this.minimapViewport.style.display = shouldDisplay ? "block" : "none";
+        if (shouldDisplay)
+            this.refresh();
     }
 }

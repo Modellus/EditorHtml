@@ -51,10 +51,10 @@ class Board {
     addShape(shape) {
         this.svg.appendChild(shape.element);
         this.shapes.add(shape);
-        this.dispatchShapeEvent("shapeAdded", shape);
         shape.element.addEventListener("focused", e => this.onShapeFocused(e));
         shape.element.addEventListener("changed", e => this.onShapeChanged(e));
         this.selectShape(shape);
+        this.dispatchShapeEvent("shapeAdded", shape);
     }
 
     removeShape(shape) {
@@ -116,18 +116,6 @@ class Board {
         svgPoint.y = parentCenterY;
         const svgCTM = this.svg.getScreenCTM().inverse();
         return svgPoint.matrixTransform(svgCTM);
-    }
-
-    dispatchSvgEvent(name) {
-        const panEvent = new CustomEvent(name, {
-            detail: {
-                x: this.viewBox.x,
-                y: this.viewBox.y,
-                width: this.viewBox.width,
-                height: this.viewBox.height
-            }
-        });
-        this.svg.dispatchEvent(panEvent);
     }
 
     getMouseToSvgPoint(event) {
