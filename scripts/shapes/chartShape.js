@@ -77,6 +77,13 @@ class ChartShape extends BaseShape {
         this.lastSyncedIndex = 0;
         this.chart = $div.dxChart({
             dataSource: this.arrayStore,
+            zoomAndPan: {
+                valueAxis: "both",
+                argumentAxis: "both",
+                dragToZoom: true,
+                allowMouseWheel: true,
+                panKey: "shift"
+            },
             commonSeriesSettings: {
                 label: {
                     visible: true
