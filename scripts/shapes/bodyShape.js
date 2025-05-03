@@ -150,8 +150,8 @@ class BodyShape extends BaseShape {
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[3].color;
         this.properties.foregroundColor = this.board.theme.getBackgroundColors()[3].color;
-        this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[3].color;
-        this.properties.stroboscopyColor = this.board.theme.getBackgroundColors()[3].color;
+        this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
+        this.properties.stroboscopyColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.stroboscopyInterval = 10;
         this.properties.stroboscopyOpacity = 0.5;
         this.properties.imageBase64 = "";
@@ -161,7 +161,8 @@ class BodyShape extends BaseShape {
         super.update();
         const calculator = this.board.calculator;
         this.properties.x = calculator.getByName(this.properties.xTerm) ?? this.properties.x;
-        this.properties.y = calculator.getByName(this.properties.yTerm) ?? this.properties.y; 
+        var y = calculator.getByName(this.properties.yTerm);
+        this.properties.y = y != undefined ? -y : this.properties.y; 
         this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
         if (this.trajectory.values.length <= calculator.getLastIteration()) {
             const position = this.getBoardPosition();
