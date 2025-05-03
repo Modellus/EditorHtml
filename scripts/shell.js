@@ -733,6 +733,7 @@ class Shell  {
     }
     
     clear() {
+        this.setDefaults();
         this.calculator.clear();
         this.board.clear();   
         this.updatePlayer();
@@ -740,7 +741,7 @@ class Shell  {
     }
     
     reset() {
-        this.calculator.clear();
+        this.calculator.reset();
         this.board.shapes.shapes.forEach(shape => {
             if (shape.constructor.name == "ExpressionShape" && shape.properties.expression != undefined)
                 this.calculator.parse(shape.properties.expression);
@@ -772,7 +773,7 @@ class Shell  {
     }
 
     openModel(model) {
-        this.board.deserialize(JSON.parse(model));
+        this.deserialise(JSON.parse(model));
         this.reset();
         this.board.refresh();
     }
@@ -794,9 +795,21 @@ class Shell  {
 
     async saveModel(fileHandle) {
         const writableStream = await fileHandle.createWritable();
-        var model = this.board.serialize();
+        var model = JSON.stringify(this.serialize());
         await writableStream.write(model);
         await writableStream.close();
+    }
+
+    serialize() {
+        return {
+            properties: this.properties,
+            board: this.board.serialize()
+        };
+    }
+
+    deserialise(model) {
+        this.setProperties(model.properties);
+        this.board.deserialize(model.board);
     }
 
     async saveToPath(filePath) {

@@ -45,7 +45,7 @@ class Shapes {
     }
 
     serialize() {
-        return JSON.stringify(this.shapes.map(shape => shape.serialize()));
+        return this.shapes.map(shape => shape.serialize());
     }
 
     deserialize(board, data) {

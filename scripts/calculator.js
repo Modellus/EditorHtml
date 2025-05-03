@@ -17,12 +17,12 @@ class Calculator extends EventTarget {
 
     setProperties(properties) {
         Utils.mergeProperties(properties, this.properties);
-        this.clear();
+        this.reset();
     }
 
     setProperty(name, value) {
         Utils.setProperty(name, value, this.properties);
-        this.clear();
+        this.reset();
     }
 
     emit(eventName, detail = {}) {
@@ -95,10 +95,15 @@ class Calculator extends EventTarget {
     }
 
     clear() {
-        this.system.clear();
+        this.setDefaults();
+        this.reset();
+    }
+
+    reset() {
+        this.system.reset();
         this.system.independent = this.properties.independent.name;
         this.system.setInitialIndependent(this.properties.independent.start);
-        this.engine.step = this.properties.independent.step;
+        this.system.step = this.properties.independent.step;
         this.engine.reset();
         this.system.reset();
         this.status = STATUS.STOPPED;
