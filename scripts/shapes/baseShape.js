@@ -7,6 +7,7 @@ class BaseShape {
         if (parent != null)
             parent.children.push(this);
         this.properties = {};
+        this.isReferential = false;
         this.setDefaults();
         this.initializeElement();
     }
@@ -103,7 +104,7 @@ class BaseShape {
                             });
                         },
                         items: this.board.theme.getBackgroundColors().map(c => ({
-                            icon: "fa-duotone fa-thin " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
+                            icon: c.color == "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square",
                             color: c.color
                         })),
                         keyExpr: "color",
@@ -132,7 +133,7 @@ class BaseShape {
                             });
                         },
                         items: this.board.theme.getStrokeColors().map(c => ({
-                            icon: "fa-duotone fa-thin " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
+                            icon: c.color == "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square",
                             color: c.color
                         })),
                         keyExpr: "color",
@@ -204,6 +205,16 @@ class BaseShape {
 
     getClipId() {
         return this.parent?.getClipId();
+    }
+
+    getScale() {
+        var referential = this.parent;
+        while (referential != null && !referential.isReferential)
+            referential = referential.parent;
+        return {
+            x: referential?.properties.scaleX ?? 1,
+            y: referential?.properties.scaleY ?? 1,
+        };
     }
 
     remove() {

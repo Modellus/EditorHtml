@@ -145,8 +145,8 @@ class BodyShape extends BaseShape {
         this.properties.x = 0;
         this.properties.y = 0;
         this.properties.angle = 0;
-        this.properties.width = 30;
-        this.properties.height = 30;
+        this.properties.width = 10;
+        this.properties.height = 10;
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[3].color;
         this.properties.foregroundColor = this.board.theme.getBackgroundColors()[3].color;
@@ -160,9 +160,11 @@ class BodyShape extends BaseShape {
     update() {
         super.update();
         const calculator = this.board.calculator;
-        this.properties.x = calculator.getByName(this.properties.xTerm) ?? this.properties.x;
+        var scale = this.getScale();
+        var x = calculator.getByName(this.properties.xTerm);
+        this.properties.x = x != undefined ? (scale.x != 0 ? x / scale.x : 0) : this.properties.x; 
         var y = calculator.getByName(this.properties.yTerm);
-        this.properties.y = y != undefined ? -y : this.properties.y; 
+        this.properties.y = y != undefined ? (scale.y != 0 ? -y / scale.y : 0) : this.properties.y; 
         this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
         if (this.trajectory.values.length <= calculator.getLastIteration()) {
             const position = this.getBoardPosition();

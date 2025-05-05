@@ -1,10 +1,39 @@
 class ReferentialShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, null, id);
+        this.isReferential = true;
     }
 
     createTransformer() { 
         return new ReferentialTransformer(this.board, this);
+    }
+
+    createForm() {
+        var form = super.createForm();
+        var instance = form.dxForm("instance");
+        var items = instance.option("items");
+        items.push(
+            {
+                colSpan: 1,
+                dataField: "scaleX",
+                label: { text: "Horizontal Scale" },
+                editorType: "dxTextBox",
+                editorOptions: {
+                    stylingMode: "filled"
+                }
+            },
+            {
+                colSpan: 1,
+                dataField: "scaleY",
+                label: { text: "Vertical Scale" },
+                editorType: "dxTextBox",
+                editorOptions: {
+                    stylingMode: "filled"
+                }
+            }
+        );
+        instance.option("items", items);
+        return form;
     }
 
     setDefaults() {
@@ -18,6 +47,8 @@ class ReferentialShape extends BaseShape {
         this.properties.rotation = 0;
         this.properties.originX = this.properties.width / 2;
         this.properties.originY = this.properties.height / 2;
+        this.properties.scaleX = 1;
+        this.properties.scaleY = 1;
     }
 
     createElement() {
