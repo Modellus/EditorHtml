@@ -17,7 +17,7 @@ class ExpressionShape extends BaseShape {
             editorType: "dxButtonGroup",
             editorOptions: {
                 buttonTemplate: function(data, container) {
-                    let mathField = $("<math-field>")
+                    $("<math-field>")
                         .attr("read-only", true)
                         .html(data.text)
                         .css("height", "auto", "width", "auto")

@@ -255,6 +255,7 @@ class Shell  {
                             id: "image-button"
                         },
                         icon: "fa-light fa-image",
+                        disabled: true,
                         onClick: _ => this.commands.addShape("ImageShape")
                     }
                 },
@@ -671,9 +672,10 @@ class Shell  {
     }
     
     updateToolbar() {
-        var disabled = this.board.selection.selectedShape == null || !["BodyShape", "VectorShape", "ReferentialShape"].includes(this.board.selection.selectedShape.constructor.name);
+        var disabled = this.board.selection.selectedShape == null || !["BodyShape", "VectorShape", "ImageShape", "ReferentialShape"].includes(this.board.selection.selectedShape.constructor.name);
         this.bodyButton.option("disabled", disabled);
         this.vectorButton.option("disabled", disabled);
+        this.imageButton.option("disabled", disabled);
     }
     
     updatePlayer() {

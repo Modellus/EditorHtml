@@ -11,58 +11,8 @@ class TableShape extends BaseShape {
         var form = super.createForm();
         var instance = form.dxForm("instance");
         var items = instance.option("items");
-        items.push(
-            {
-                colSpan: 1,
-                dataField: "column1Term",
-                label: { text: "Column 1" },
-                template: function(data, itemElement) {
-                    var mathfield = new MathfieldElement();
-                    mathfield.smartMode = true;
-                    mathfield.popoverPolicy = "none";
-                    mathfield.virtualKeyboardMode = "off";
-                    mathfield.mathVirtualKeyboardPolicy = "manual";
-                    mathfield.placeholder = "Enter a formula";
-                    mathfield.smartMode = false;
-                    mathfield.style.backgroundColor = "#f5f5f5";
-                    mathfield.value = data.component.option("formData")[data.dataField];
-                    data.mathfieldInstance = mathfield;
-                    mathfield.addEventListener("input", () => {
-                        data.component.updateData(data.dataField, mathfield.value);
-                    });
-                    data.component.option("onOptionChanged", function(args) {
-                        if(args.fullName === "formData." + data.dataField)
-                            mathfield.value = args.value;
-                    });
-                    itemElement.append(mathfield);
-                }
-            },
-            {
-                colSpan: 1,
-                dataField: "column2Term",
-                label: { text: "Column 2" },
-                template: function(data, itemElement) {
-                    var mathfield = new MathfieldElement();
-                    mathfield.smartMode = true;
-                    mathfield.popoverPolicy = "none";
-                    mathfield.virtualKeyboardMode = "off";
-                    mathfield.mathVirtualKeyboardPolicy = "manual";
-                    mathfield.placeholder = "Enter a formula";
-                    mathfield.smartMode = false;
-                    mathfield.style.backgroundColor = "#f5f5f5";
-                    mathfield.value = data.component.option("formData")[data.dataField];
-                    data.mathfieldInstance = mathfield;
-                    mathfield.addEventListener("input", () => {
-                        data.component.updateData(data.dataField, mathfield.value);
-                    });
-                    data.component.option("onOptionChanged", function(args) {
-                        if(args.fullName === "formData." + data.dataField)
-                            mathfield.value = args.value;
-                    });
-                    itemElement.append(mathfield);
-                }
-            }
-        );
+        this.addTermToForm("column1Term", "Column 1", false);
+        this.addTermToForm("column2Term", "Column 2", false);
         instance.option("items", items);
         return form;
     }
@@ -164,8 +114,10 @@ class TableShape extends BaseShape {
         this.dataGrid.beginUpdate();
         this.dataGrid.option("columns[0].dataField", column1);
         this.dataGrid.option("columns[0].caption", column1);
+        this.dataGrid.option("columns[0].name", "Column1Term");
         this.dataGrid.option("columns[1].dataField", column2);
         this.dataGrid.option("columns[1].caption", column2);
+        this.dataGrid.option("columns[1].name", "Column2Term");
         this.updateValues();
         this.dataGrid.endUpdate();
         this.updateFocus();

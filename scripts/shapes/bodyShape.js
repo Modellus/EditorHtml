@@ -11,25 +11,9 @@ class BodyShape extends BaseShape {
         var form = super.createForm();
         var instance = form.dxForm("instance");
         var items = instance.option("items");
+        this.addTermToForm("xTerm", "Horizontal");
+        this.addTermToForm("yTerm", "Vertical");
         items.push(
-            {
-                colSpan: 1,
-                dataField: "xTerm",
-                label: { text: "Horizontal" },
-                editorType: "dxTextBox",
-                editorOptions: {
-                    stylingMode: "filled"
-                }
-            },
-            {
-                colSpan: 1,
-                dataField: "yTerm",
-                label: { text: "Vertical" },
-                editorType: "dxTextBox",
-                editorOptions: {
-                    stylingMode: "filled"
-                }
-            },
             {
                 colSpan: 2,
                 dataField: "trajectoryColor",
@@ -141,6 +125,8 @@ class BodyShape extends BaseShape {
 
     setDefaults() {
         super.setDefaults();
+        this.properties.xTerm = "0";
+        this.properties.yTerm = "0";
         this.properties.name = this.board.translations.get("Body Name");
         this.properties.x = 0;
         this.properties.y = 0;
@@ -149,7 +135,7 @@ class BodyShape extends BaseShape {
         this.properties.height = 10;
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[3].color;
-        this.properties.foregroundColor = this.board.theme.getBackgroundColors()[3].color;
+        this.properties.foregroundColor = this.board.theme.getStrokeColors()[3].color;
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.stroboscopyColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.stroboscopyInterval = 10;
@@ -161,10 +147,12 @@ class BodyShape extends BaseShape {
         super.update();
         const calculator = this.board.calculator;
         var scale = this.getScale();
-        var x = calculator.getByName(this.properties.xTerm);
-        this.properties.x = x != undefined ? (scale.x != 0 ? x / scale.x : 0) : this.properties.x; 
-        var y = calculator.getByName(this.properties.yTerm);
-        this.properties.y = y != undefined ? (scale.y != 0 ? -y / scale.y : 0) : this.properties.y; 
+        const xTerm = this.properties.xTerm;
+        var x = calculator.getByName(xTerm) ?? parseFloat(xTerm);
+        this.properties.x = Number.isNaN(x) ? this.properties.x : (scale.x != 0 ? x / scale.x : 0); 
+        const yTerm = this.properties.yTerm;
+        var y = calculator.getByName(yTerm) ?? parseFloat(yTerm);
+        this.properties.y = Number.isNaN(y) ? this.properties.y : (scale.y != 0 ? -y / scale.y : 0); 
         this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
         if (this.trajectory.values.length <= calculator.getLastIteration()) {
             const position = this.getBoardPosition();

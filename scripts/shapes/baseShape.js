@@ -65,7 +65,7 @@ class BaseShape {
     }
 
     createForm() {
-        return $("<div id='shape-form'></div>").dxForm({
+        this.form = $("<div id='shape-form'></div>").dxForm({
             colCount: 2,
             onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
             items: [
@@ -164,7 +164,9 @@ class BaseShape {
                     }
                   }
                 ]
-            });
+            }
+        );
+        return this.form;
     }
 
     setProperty(name, value) {
@@ -219,5 +221,40 @@ class BaseShape {
 
     remove() {
         this.board.removeShape(this);
+    }
+
+    addTermToForm(term, title, isEditable = true) {
+        if (this.form == null)
+            return;
+        var instance = this.form.dxForm("instance");
+        var items = instance.option("items");
+        items.push(
+            {
+                colSpan: 1,
+                dataField: term,
+                label: { text: title },
+                editorType: "dxSelectBox",
+                editorOptions: {
+                    items: Utils.getTerms(this.board.calculator.getTermsNames()),
+                    stylingMode: "filled",
+                    displayExpr: "text",
+                    valueExpr: "term",
+                    placeholder: "",
+                    acceptCustomValue: isEditable,
+                    inputAttr: { class: "mdl-variable-selector" },
+                    elementAttr: { class: "mdl-variable-selector" },
+                    itemTemplate: function (data, index, element) {
+                        const item = $("<div>").text(data.text);
+                        item.addClass("mdl-variable-selector");
+                        element.append(item);
+                    },
+                    onCustomItemCreating: function(e) {
+                        instance.updateData(term, e.text);
+                        e.component.option("value", e.text);
+                        e.customItem = { text: e.text, term: e.text };
+                    }
+                }
+            }
+        );
     }
 }

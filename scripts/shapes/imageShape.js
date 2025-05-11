@@ -11,25 +11,9 @@ class ImageShape extends BaseShape {
         var form = super.createForm();
         var instance = form.dxForm("instance");
         var items = instance.option("items");
+        this.addTermToForm("xTerm", "Horizontal");
+        this.addTermToForm("yTerm", "Vertical");
         items.push(
-            {
-                colSpan: 1,
-                dataField: "xTerm",
-                label: { text: "Horizontal" },
-                editorType: "dxTextBox",
-                editorOptions: {
-                    stylingMode: "filled"
-                }
-            },
-            {
-                colSpan: 1,
-                dataField: "yTerm",
-                label: { text: "Vertical" },
-                editorType: "dxTextBox",
-                editorOptions: {
-                    stylingMode: "filled"
-                }
-            },
             {
                 colSpan: 2,
                 dataField: "trajectoryColor",

@@ -114,6 +114,7 @@ class Calculator extends EventTarget {
         var end = "}";
         if (text.startsWith(start) && text.endsWith(end))
             text = text.substring(start.length, text.length - end.length);
+        text = text.replace(/\\placeholder\{\}/g, '');
         const expressions = text.split('\\\\').map(line => line.trim());
         expressions.forEach(e => this.parser.parse(e));
     }

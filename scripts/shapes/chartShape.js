@@ -33,26 +33,10 @@ class ChartShape extends BaseShape {
                         this.setProperty("chartType", e.itemData.type);
                     }
                 }
-            },
-            {
-                colSpan: 1,
-                dataField: "xTerm",
-                label: { text: "Horizontal" },
-                editorType: "dxTextBox",
-                editorOptions: {
-                    stylingMode: "filled"
-                }
-            },
-            {
-                colSpan: 1,
-                dataField: "yTerm",
-                label: { text: "Vertical" },
-                editorType: "dxTextBox",
-                editorOptions: {
-                    stylingMode: "filled"
-                }
             }
         );
+        this.addTermToForm("xTerm", "Horizontal", false);
+        this.addTermToForm("yTerm", "Vertical", false);
         instance.option("items", items);
         return form;
     }
