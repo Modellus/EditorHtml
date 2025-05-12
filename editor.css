@@ -94,20 +94,20 @@ svg {
     transform: translateY(-10px);
     rx: 4px;
     ry: 4px;
-    cursor: url("rotate-reverse-regular.png"), auto;
+    cursor: url("scripts/themes/cursors/rotate-reverse-regular.png"), auto;
 }
 
 .handle.origin {
     rx: 4px;
     ry: 4px;
-    cursor: url("rotate-reverse-regular.png"), auto;
+    cursor: url("scripts/themes/cursors/rotate-reverse-regular.png"), auto;
 }
 
 .handle.radius {
     transform: translate(-4px, -4px);
     rx: 4px;
     ry: 4px;
-    cursor: url("rotate-reverse-regular.png"), auto;
+    cursor: url("scripts/themes/cursors/rotate-reverse-regular.png"), auto;
 }
 
 .rotation-handle {
@@ -166,8 +166,8 @@ svg:active.pan-available {
 
 .minimap-viewport {
     position: absolute;
-    border: 1px solid rgba(25, 25, 25, 0.2);
-    background-color: rgba(25, 25, 25, 0.1);
+    border: 1px solid rgba(50, 50, 50, 0.2);
+    background-color: rgba(200, 200, 200, 0.1);
 }
 
 @font-face {

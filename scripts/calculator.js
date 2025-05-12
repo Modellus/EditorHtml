@@ -100,7 +100,7 @@ class Calculator extends EventTarget {
     }
 
     reset() {
-        this.system.reset();
+        this.system.clear();
         this.system.independent = this.properties.independent.name;
         this.system.setInitialIndependent(this.properties.independent.start);
         this.system.step = this.properties.independent.step;
