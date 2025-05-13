@@ -743,7 +743,7 @@ class Shell  {
     }
     
     reset() {
-        this.calculator.clear();
+        this.calculator.reset();
         this.board.shapes.shapes.forEach(shape => {
             if (shape.constructor.name == "ExpressionShape" && shape.properties.expression != undefined)
                 this.calculator.parse(shape.properties.expression);

@@ -43,7 +43,7 @@ class Calculator extends EventTarget {
             cancelAnimationFrame(this.frameId);
         if (this.status != STATUS.PLAYING)
             return;
-        if (Math.abs(this.system.getIndependent() - this.properties.independent.end) < this.properties.independent.step)
+        if (Math.abs(this.system.getIndependent() - this.properties.independent.end) < this.properties.independent.step / 10.0)
             this.pause();
         else
             this.engine.iterate();
@@ -120,7 +120,8 @@ class Calculator extends EventTarget {
     }
 
     getByName(name) {
-        return this.system.getByName(name);
+        const iteration = this.getIteration();
+        return this.system.getByNameOnIteration(iteration, name);
     }
 
     setIteration(iteration) {
