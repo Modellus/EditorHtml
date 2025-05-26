@@ -821,6 +821,7 @@ class Shell  {
     openModel(model) {
         this.deserialise(JSON.parse(model));
         this.reset();
+        this.calculator.stop();
         this.board.refresh();
     }
     
