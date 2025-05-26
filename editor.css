@@ -249,6 +249,10 @@ svg:active.pan-available {
     text-align: right;
 }
 
+.dx-datagrid .dx-revert-button {
+    display: none !important;
+}
+
 .tooltip {
     text-wrap-mode: wrap; 
 }

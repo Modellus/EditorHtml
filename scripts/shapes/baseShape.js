@@ -19,6 +19,8 @@ class BaseShape {
     setDefaults() {
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[2].color;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[2].color;
+        var name = this.constructor.name.split(/(?=[A-Z])/)[0];
+        this.properties.name = name;
     }
 
     initializeElement() {
@@ -35,6 +37,8 @@ class BaseShape {
         var instance = form.dxForm("instance");
         instance.formData = null;
         instance.updateData(this.properties);
+        const observer = new ResizeObserver(e => instance.option("colCount", e[0].contentRect.width > 300 ? 2 : 1));
+        observer.observe(form[0]);
         return form;
     };
 
@@ -66,106 +70,117 @@ class BaseShape {
 
     createForm() {
         this.form = $("<div id='shape-form'></div>").dxForm({
-            colCount: 2,
             onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
+            colCount: "1",
+            minColWidth: 300,
             items: [
-                  {
-                    colSpan: 2,
-                    dataField: "name",
-                    label: { text: "Name", visible: false },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                  },
-                  {
-                    colSpan: 2,
-                    label: { text: "Actions" },
-                    editorType: "dxButton",
-                    editorOptions: {
-                        template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
-                        onClick: _ => this.remove(),
-                        stylingMode: "text"
-                    }
-                  },
-                  {
-                    colSpan: 2,
-                    dataField: "backgroundColor",
-                    label: { text: "Background color" },
-                    editorType: "dxButtonGroup",
-                    editorOptions: {
-                        onContentReady: function(e) {
-                            e.component.option("items").forEach((item, index) => {
-                                const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                const color = item.color == "#00000000" ? "#cccccc" : item.color;
-                                buttonElement.find(".dx-icon").css("color", color);
-                                if (item.color == "#ffffff")
-                                    buttonElement[0].style.setProperty("--fa-primary-color", "#000000");
-                            });
+                {
+                    itemType: "group",
+                    colCount: 2,
+                    items: [
+                        {
+                            colSpan: 2,
+                            dataField: "name",
+                            label: { text: "Name", visible: false },
+                            editorType: "dxTextBox",
+                            editorOptions: {
+                                stylingMode: "filled"
+                            }
                         },
-                        items: this.board.theme.getBackgroundColors().map(c => ({
-                            icon: c.color == "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square",
-                            color: c.color
-                        })),
-                        keyExpr: "color",
-                        stylingMode: "text",
-                        selectedItemKeys: [this.properties.backgroundColor],
-                        onItemClick: e => {
-                            let formInstance = $("#shape-form").dxForm("instance");
-                            formInstance.updateData("backgroundColor", e.itemData.color);
-                            this.setProperty("backgroundColor", e.itemData.color);
-                        }
-                    }
-                  },
-                  {
-                    colSpan: 2,
-                    dataField: "foregroundColor",
-                    label: { text: "Color" },
-                    editorType: "dxButtonGroup",
-                    editorOptions: {
-                        onContentReady: function(e) {
-                            e.component.option("items").forEach((item, index) => {
-                                const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                                const color = item.color == "#00000000" ? "#cccccc" : item.color;
-                                buttonElement.find(".dx-icon").css("color", color);
-                                if (item.color == "#ffffff")
-                                    buttonElement[0].style.setProperty("--fa-primary-color", "#000000");
-                            });
+                        {
+                            colSpan: 1,
+                            label: { text: "Layers" },
+                            editorType: "dxButtonGroup",
+                            editorOptions: {
+                                selectionMode: "none",
+                                items: [
+                                    { icon: "fa-light fa-send-back", action: () => this.board.sendToBack(this) },
+                                    { icon: "fa-light fa-send-backward", action: () => this.board.sendBackward(this) },
+                                    { icon: "fa-light fa-bring-forward", action: () => this.board.bringForward(this) },
+                                    { icon: "fa-light fa-bring-front", action: () => this.board.bringToFront(this) }                            
+                                ],
+                                stylingMode: "text",
+                                onItemClick: e => e.itemData.action()
+                            }
                         },
-                        items: this.board.theme.getStrokeColors().map(c => ({
-                            icon: c.color == "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square",
-                            color: c.color
-                        })),
-                        keyExpr: "color",
-                        stylingMode: "text",
-                        selectedItemKeys: [this.properties.foregroundColor],
-                        onItemClick: e => {
-                            let formInstance = $("#shape-form").dxForm("instance");
-                            formInstance.updateData("foregroundColor", e.itemData.color);
-                            this.setProperty("foregroundColor", e.itemData.color);
+                        {
+                            colSpan: 1,
+                            label: { text: "Actions" },
+                            editorType: "dxButton",
+                            editorOptions: {
+                                template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                                onClick: _ => this.remove(),
+                                stylingMode: "text"
+                            }
                         }
-                    }
-                  },
-                  {
-                    visible: true,
-                    colSpan: 2,
-                    label: { text: "Layers" },
-                    editorType: "dxButtonGroup",
-                    editorOptions: {
-                        selectionMode: "none",
-                        items: [
-                            { icon: "fa-light fa-send-back", action: () => this.board.sendToBack(this) },
-                            { icon: "fa-light fa-send-backward", action: () => this.board.sendBackward(this) },
-                            { icon: "fa-light fa-bring-forward", action: () => this.board.bringForward(this) },
-                            { icon: "fa-light fa-bring-front", action: () => this.board.bringToFront(this) }                            
-                        ],
-                        stylingMode: "text",
-                        onItemClick: e => e.itemData.action()
-                    }
-                  }
-                ]
-            }
-        );
+                    ]
+                },
+                {
+                    itemType: "group",
+                    colCount: 2,
+                    items: [
+                        {
+                            colSpan: 2,
+                            dataField: "backgroundColor",
+                            label: { text: "Background color" },
+                            editorType: "dxButtonGroup",
+                            editorOptions: {
+                                onContentReady: function(e) {
+                                    e.component.option("items").forEach((item, index) => {
+                                        const buttonElement = e.element.find(`.dx-button:eq(${index})`);
+                                        const color = item.color == "#00000000" ? "#cccccc" : item.color;
+                                        buttonElement.find(".dx-icon").css("color", color);
+                                        if (item.color == "#ffffff")
+                                            buttonElement[0].style.setProperty("--fa-primary-color", "#000000");
+                                    });
+                                },
+                                items: this.board.theme.getBackgroundColors().map(c => ({
+                                    icon: c.color == "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square",
+                                    color: c.color
+                                })),
+                                keyExpr: "color",
+                                stylingMode: "text",
+                                selectedItemKeys: [this.properties.backgroundColor],
+                                onItemClick: e => {
+                                    let formInstance = $("#shape-form").dxForm("instance");
+                                    formInstance.updateData("backgroundColor", e.itemData.color);
+                                    this.setProperty("backgroundColor", e.itemData.color);
+                                }
+                            }
+                        },
+                        {
+                            colSpan: 2,
+                            dataField: "foregroundColor",
+                            label: { text: "Color" },
+                            editorType: "dxButtonGroup",
+                            editorOptions: {
+                                onContentReady: function(e) {
+                                    e.component.option("items").forEach((item, index) => {
+                                        const buttonElement = e.element.find(`.dx-button:eq(${index})`);
+                                        const color = item.color == "#00000000" ? "#cccccc" : item.color;
+                                        buttonElement.find(".dx-icon").css("color", color);
+                                        if (item.color == "#ffffff")
+                                            buttonElement[0].style.setProperty("--fa-primary-color", "#000000");
+                                    });
+                                },
+                                items: this.board.theme.getStrokeColors().map(c => ({
+                                    icon: c.color == "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square",
+                                    color: c.color
+                                })),
+                                keyExpr: "color",
+                                stylingMode: "text",
+                                selectedItemKeys: [this.properties.foregroundColor],
+                                onItemClick: e => {
+                                    let formInstance = $("#shape-form").dxForm("instance");
+                                    formInstance.updateData("foregroundColor", e.itemData.color);
+                                    this.setProperty("foregroundColor", e.itemData.color);
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
         return this.form;
     }
 
@@ -223,14 +238,14 @@ class BaseShape {
         this.board.removeShape(this);
     }
 
-    addTermToForm(term, title, isEditable = true) {
+    addTermToForm(term, title, isEditable = true, colSpan = 1) {
         if (this.form == null)
             return;
         var instance = this.form.dxForm("instance");
         var items = instance.option("items");
         items.push(
             {
-                colSpan: 1,
+                colSpan: colSpan,
                 dataField: term,
                 label: { text: title },
                 editorType: "dxSelectBox",

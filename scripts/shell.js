@@ -164,7 +164,7 @@ class Shell  {
                             style: "font-family: cursive; font-size: 16px"
                         },
                         text: "X",
-                        onClick: _ => this.commands.addShape("ExpressionShape")
+                        onClick: _ => this.commands.addShape("ExpressionShape", "Expression")
                     }
                 },
                 {
@@ -181,7 +181,7 @@ class Shell  {
                         elementAttr: {
                             id: "referential-button"
                         },
-                        onClick: _ => this.commands.addShape("ReferentialShape"),
+                        onClick: _ => this.commands.addShape("ReferentialShape", "Simulation"),
                         template1: `<div class='dx-icon'>
                                 <span class="fa-layers">
                                     <i class="fa-regular fa-circle" data-fa-transform="shrink-12 right-1 up-2"></i>
@@ -202,7 +202,7 @@ class Shell  {
                             id: "chart-button"
                         },
                         icon: "fa-light fa-chart-line",
-                        onClick: _ => this.commands.addShape("ChartShape")
+                        onClick: _ => this.commands.addShape("ChartShape", "Chart")
                     }
                 },
                 {
@@ -213,7 +213,7 @@ class Shell  {
                             id: "table-button"
                         },
                         icon: "fa-light fa-table",
-                        onClick: _ => this.commands.addShape("TableShape")
+                        onClick: _ => this.commands.addShape("TableShape", "Table")
                     }
                 },
                 {
@@ -231,7 +231,7 @@ class Shell  {
                         },
                         icon: "fa-light fa-circle",
                         disabled: true,
-                        onClick: _ => this.commands.addShape("BodyShape")
+                        onClick: _ => this.commands.addShape("BodyShape", "Body")
                     }
                 },
                 {
@@ -244,7 +244,7 @@ class Shell  {
                             style: "--fa-rotate-angle: -45deg;"
                         },
                         disabled: true,
-                        onClick: _ => this.commands.addShape("VectorShape")
+                        onClick: _ => this.commands.addShape("VectorShape", "Vector")
                     }
                 },
                 {
@@ -256,7 +256,7 @@ class Shell  {
                         },
                         icon: "fa-light fa-image",
                         disabled: true,
-                        onClick: _ => this.commands.addShape("ImageShape")
+                        onClick: _ => this.commands.addShape("ImageShape", "Image")
                     }
                 },
                 {
@@ -268,7 +268,7 @@ class Shell  {
                         },
                         icon: "fa-regular fa-child-reaching",
                         disabled: true,
-                        onClick: _ => this.commands.addShape("CharacterShape"),
+                        onClick: _ => this.commands.addShape("CharacterShape", "Character"),
                         onInitialized: e => this.characterButton = e.component
                     }
                 },
@@ -288,7 +288,7 @@ class Shell  {
                         template: `<div class='dx-icon'>
                                 <i class='fa-light fa-panorama fa-lg'></i>
                             </div>`,
-                        onClick: _ => this.commands.addShape("BackgroundShape")
+                        onClick: _ => this.commands.addShape("BackgroundShape", "Background")
                     }
                 },
                 {
@@ -300,7 +300,7 @@ class Shell  {
                             id: "text-button",
                             "data-fa-transform": "shrink-8 up-6"
                         },
-                        onClick: _ => this.commands.addShape("TextShape")
+                        onClick: _ => this.commands.addShape("TextShape", "Text")
                     }
                 },
                 {
@@ -425,9 +425,9 @@ class Shell  {
                     widget: "dxSlider",
                     cssClass: "slider",
                     options: {
-                        min: 0,
-                        max: 0,
-                        value: 0,
+                        min: 1,
+                        max: 1,
+                        value: 1,
                         width: 400,
                         elementAttr: {
                             id: "playHeadSlider"
@@ -566,23 +566,67 @@ class Shell  {
     }
     
     createShapePopup() {
+        let savedPosition = null;
+        let savedSize = { width: 240, height: 400 };
+
         $("#shape-popup").dxPopup({
-            width: 200,
-            height: 400,
+            width: savedSize.width,
+            height: savedSize.height,
             shading: false,
-            showTitle: false,
-            dragEnabled: false,
+            showTitle: true,
+            dragEnabled: true,
+            resizeEnabled: true,
             hideOnOutsideClick: false,
             focusStateEnabled: false,
+            showCloseButton: false,
             animation: null,
-            target: "#svg",
+            title: "",
             position: {
-                my: "left center",
-                at: "left center",
+                my: "left top",
+                at: "left top",
                 of: "#svg",
                 offset: "20, 0"
+            },
+            onInitialized(e) {
+                this.shapePopup = e.component;
+            },
+            onPositioned(e) {
+                const position = e.component.option("position");
+                const $content = e.component.content();
+                savedSize = {
+                    width: $content.outerWidth(),
+                    height: $content.outerHeight()
+                };
+                savedPosition = {
+                    my: position.my,
+                    at: position.at,
+                    of: position.of,
+                    offset: position.offset
+                };
+            },
+            onHiding(e) {
+                const position = e.component.option("position");
+                const $content = e.component.content();
+                savedSize = {
+                    width: $content.outerWidth(),
+                    height: $content.outerHeight()
+                };
+                savedPosition = {
+                    my: position.my,
+                    at: position.at,
+                    of: position.of,
+                    offset: position.offset
+                };
+            },
+            onShowing(e) {
+                if (savedPosition) {
+                    e.component.option("position", savedPosition);
+                    e.component.option("width", savedSize.width);
+                    e.component.option("height", savedSize.height);
+                }
             }
         });
+
         this.shapePopup = $("#shape-popup").dxPopup("instance");
     }
     
@@ -689,7 +733,7 @@ class Shell  {
         }
         this.stop.option("disabled", isRunning);
         this.replay.option("disabled", isRunning);
-        this.stepBackward.option("disabled", isRunning || iteration == 0);
+        this.stepBackward.option("disabled", isRunning || iteration == 1);
         this.stepForward.option("disabled", isRunning || iteration == lastIteration);
         this.playHead.option("max", lastIteration);
         this.playHead.option("value", iteration);
@@ -843,9 +887,11 @@ class Shell  {
     
     onSelected(e) {
         this.updateToolbar();
+        this.shapeForm = null;
         var form = e.detail.shape.getForm();
         if (form == null)
             return;
+        this.shapeForm = form.dxForm("instance");
         this.shapePopup.content().empty();
         this.shapePopup.content().append(form);
         this.shapePopup.show();

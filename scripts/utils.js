@@ -57,4 +57,27 @@ class Utils {
         };
         return terms.map(t => ({ text: greekLetters[t] || t, term: t }));
     }
+
+    static throttle(func, delay) {
+        let timeoutId;
+        let lastArgs;
+        let lastThis;
+        let lastExecTime = 0;
+
+        return function(...args) {
+            lastArgs = args;
+            lastThis = this;
+            const currentTime = Date.now();
+            if (currentTime - lastExecTime > delay) {
+                lastExecTime = currentTime;
+                func.apply(lastThis, lastArgs);
+            } else {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    lastExecTime = Date.now();
+                    func.apply(lastThis, lastArgs);
+                }, delay - (currentTime - lastExecTime));
+            }
+        };
+    }
 }

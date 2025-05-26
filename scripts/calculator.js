@@ -80,8 +80,8 @@ class Calculator extends EventTarget {
         if (this.frameId)
             cancelAnimationFrame(this.frameId);
         this.emit("iterate", { calculator: this }); 
-        if (this.system.iteration >= this.system.lastIteration)
-            this.system.iteration = 0;
+        if (this.system.iteration > this.system.lastIteration)
+            this.system.iteration = 1;
         if (this.status == STATUS.PLAYING) {
             this.system.iteration++;
             this.frameId = requestAnimationFrame(this._replay);
@@ -90,7 +90,7 @@ class Calculator extends EventTarget {
 
     replay() {
         this.status = STATUS.PLAYING;
-        this.system.iteration = 0;
+        this.system.iteration = 1;
         this._replay();
     }
 

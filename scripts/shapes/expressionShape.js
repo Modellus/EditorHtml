@@ -12,28 +12,35 @@ class ExpressionShape extends BaseShape {
         var instance = form.dxForm("instance");
         var items = instance.option("items");
         items.push({
-            colSpan: 2,
-            label: { text: "Shortcuts" },
-            editorType: "dxButtonGroup",
-            editorOptions: {
-                buttonTemplate: function(data, container) {
-                    $("<math-field>")
-                        .attr("read-only", true)
-                        .html(data.text)
-                        .css("height", "auto", "width", "auto")
-                        .addClass("form-math-field")
-                        .appendTo(container);
-                },
-                items: [
-                    { name: "Differential", text: "\\frac{dx}{dt}" },
-                    { name: "Power", text: "x^2" },
-                    { name: "Squareroot", text: "\\sqrt{x}" },
-                    { name: "Index", text: "x_{t-1}" }
-                ],
-                keyExpr: "name",
-                selectionMode: "none",
-                onItemClick: e => this.insert(e.itemData.text)
-            }
+            itemType: "group",
+                    colCount: "auto",
+                    minColWidth: 200,
+                    items: [
+                        {
+                            colSpan: 2,
+                            label: { text: "Shortcuts" },
+                            editorType: "dxButtonGroup",
+                            editorOptions: {
+                                buttonTemplate: function(data, container) {
+                                    $("<math-field>")
+                                        .attr("read-only", true)
+                                        .html(data.text)
+                                        .css("height", "auto", "width", "auto")
+                                        .addClass("form-math-field")
+                                        .appendTo(container);
+                                },
+                                items: [
+                                    { name: "Differential", text: "\\frac{dx}{dt}" },
+                                    { name: "Power", text: "x^2" },
+                                    { name: "Squareroot", text: "\\sqrt{x}" },
+                                    { name: "Index", text: "x_{t-1}" }
+                                ],
+                                keyExpr: "name",
+                                selectionMode: "none",
+                                onItemClick: e => this.insert(e.itemData.text)
+                            }
+                        }
+                    ]
         });
         instance.option("items", items);
         return form;

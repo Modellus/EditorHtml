@@ -7,6 +7,24 @@ class ChartShape extends BaseShape {
         return new RectangleTransformer(this.board, this);
     }
 
+    updateGridData(e) {
+        const data = gridData;
+        if (e && e.dataField) {
+          data[e.rowIndex][e.dataField] = e.value;
+        }
+        const allFilled = data.every(row => row.variable && row.color);
+        const emptyRows = data.filter(row => !row.variable && !row.color);
+        if (allFilled) {
+          data.push({ variable: null, color: null });
+        } else if (emptyRows.length > 1) {
+          gridData = data.filter(row => row.variable || row.color);
+          gridData.push({ variable: null, color: null });
+        } else {
+          gridData = data;
+        }
+        $("#dataGrid").dxDataGrid("option", "dataSource", gridData);
+      }
+
     createForm() {
         var form = super.createForm();
         var instance = form.dxForm("instance");
@@ -35,8 +53,69 @@ class ChartShape extends BaseShape {
                 }
             }
         );
-        this.addTermToForm("xTerm", "Horizontal", false);
+        this.addTermToForm("xTerm", "Horizontal", false, 2);
         this.addTermToForm("yTerm", "Vertical", false);
+        /*
+        items.push(
+            {
+                colSpan: 2,
+                dataField: "yTerms",
+                label: { text: "Vertical" },
+                template: (data, itemElement) => {
+                    return $("<div>").attr("id", "dataGrid").dxDataGrid({
+                        dataSource: [...this.properties.yTerms, { term: "", color: "" }],
+                        editing: {
+                            mode: "cell",
+                            allowUpdating: true,
+                            allowAdding: false,
+                            allowDeleting: false
+                        },
+                        showColumnHeaders: false,
+                        columns: [
+                            {
+                                dataField: "term",
+                                lookup: {
+                                    dataSource: ['Temperature', 'Pressure', 'Humidity']
+                                }
+                            },
+                            {
+                                dataField: "color",
+                                caption: "Color",
+                                lookup: {
+                                    dataSource: this.board.theme.getStrokeColors().map(c => ({
+                                        icon: c.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square",
+                                        color: c.color
+                                    })),
+                                    displayExpr: "color",
+                                    valueExpr: "color",
+                                    itemTemplate: function (itemData) {
+                                        return $("<div>")
+                                            .addClass("color-item")
+                                            .append($("<i>")
+                                                    .addClass(itemData.icon)
+                                                    .css("color", itemData.color)
+                                            );
+                                    },
+                                    valueTemplate: function (itemData) {
+                                        if (!itemData) 
+                                            return "";
+                                        const iconClass = itemData === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
+                                        return $("<div>")
+                                            .addClass("color-value")
+                                            .append(
+                                                $("<i>")
+                                                    .addClass(iconClass)
+                                                    .css("color", itemData.color)
+                                            );
+                                    }
+                                }
+                            }
+                        ],
+                        onCellValueChanged: this.updateGridData
+                    });
+                }
+            });
+*/
         instance.option("items", items);
         return form;
     }
@@ -51,6 +130,8 @@ class ChartShape extends BaseShape {
         this.properties.height = 200;
         this.properties.rotation = 0;
         this.properties.chartType = "line";
+        this.properties.xTerm = null;
+        this.properties.yTerms = [];
     }
 
     createElement() {
