@@ -3,7 +3,7 @@ const STATUS = { PLAYING: 0, PAUSED: 1, REPLAYING: 2, STOPPED: 3 };
 class Calculator extends EventTarget {
     constructor() {
         super();
-        this.system = new Modellus.System("t");
+        this.system = new Modellus.System("t", "n");
         this.parser = new Modellus.Parser(this.system);
         this.engine = new Modellus.Engine(this.system);
         this.status = STATUS.STOPPED;
@@ -13,6 +13,7 @@ class Calculator extends EventTarget {
 
     setDefaults() {
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
+        this.properties.iterationTerm = "n";
     }
 
     setProperties(properties) {
@@ -104,6 +105,7 @@ class Calculator extends EventTarget {
         this.system.independent = this.properties.independent.name;
         this.system.setInitialIndependent(this.properties.independent.start);
         this.system.step = this.properties.independent.step;
+        this.system.iterationTerm = this.properties.iterationTerm;
         this.engine.reset();
         this.system.reset();
         this.status = STATUS.STOPPED;

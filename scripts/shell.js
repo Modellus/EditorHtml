@@ -27,6 +27,7 @@ class Shell  {
         this.properties.language = "en-US";
         this.properties.name = "Model";
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
+        this.properties.iterationTerm = "n";
     }
 
     createTooltip(e, html, width) {
@@ -130,6 +131,17 @@ class Shell  {
                         text: this.board.translations.get("Independent.Step") 
                     },
                     editorType: "dxNumberBox",
+                    editorOptions: {
+                        stylingMode: "filled"
+                    }
+                },
+                {
+                    colSpan: 1,
+                    dataField: "iterationTerm",
+                    label: { 
+                        text: this.board.translations.get("IterationTerm") 
+                    },
+                    editorType: "dxTextBox",
                     editorOptions: {
                         stylingMode: "filled"
                     }
@@ -693,7 +705,7 @@ class Shell  {
 
     setProperties(properties) {
         Utils.mergeProperties(properties, this.properties);
-        this.calculator.setProperties(properties.independent);
+        this.calculator.setProperties(properties.independent, properties.iterationTerm);
     }
     
     setProperty(name, value) {
@@ -702,7 +714,7 @@ class Shell  {
         for (let i = 0; i < keys.length - 1; i++)
             current = current[keys[i]];
         current[keys[keys.length - 1]] = value;
-        if(name.includes("independent"))
+        if(name.includes("independent") || name.includes("iteration"))
             this.calculator.setProperty(name, value);    
         this.reset();
     }

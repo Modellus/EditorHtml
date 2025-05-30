@@ -36,10 +36,10 @@ class RectangleTransformer extends CircleTransformer {
                     }
                 },
                 getTransform: e => ({
-                    x: this.shape.properties.x + e.dx,
-                    y: this.shape.properties.y + e.dy,
-                    width: this.shape.properties.width - e.dx,
-                    height: this.shape.properties.height - e.dy
+                    x: this.shape.properties.width - e.dx > 10 ? this.shape.properties.x + e.dx : this.shape.properties.x,
+                    y: this.shape.properties.height - e.dy > 10 ? this.shape.properties.y + e.dy : this.shape.properties.y,
+                    width: this.shape.properties.width - e.dx > 10 ? this.shape.properties.width - e.dx : this.shape.properties.width,
+                    height: this.shape.properties.height - e.dy > 10 ? this.shape.properties.height - e.dy : this.shape.properties.height
                 })
             },
             {
@@ -55,9 +55,9 @@ class RectangleTransformer extends CircleTransformer {
                 },
                 getTransform: e => ({
                     x: this.shape.properties.x,
-                    y: this.shape.properties.y + e.dy,
-                    width: this.shape.properties.width + e.dx,
-                    height: this.shape.properties.height - e.dy
+                    y: this.shape.properties.height - e.dy > 10 ? this.shape.properties.y + e.dy : this.shape.properties.y,
+                    width: this.shape.properties.width + e.dx > 10 ? this.shape.properties.width + e.dx : this.shape.properties.width,
+                    height: this.shape.properties.height - e.dy > 10 ? this.shape.properties.height - e.dy : this.shape.properties.height
                 })
             },
             {
@@ -72,10 +72,10 @@ class RectangleTransformer extends CircleTransformer {
                     }
                 },
                 getTransform: e => ({
-                    x: this.shape.properties.x + e.dx,
+                    x: this.shape.properties.width - e.dx > 10 ? this.shape.properties.x + e.dx : this.shape.properties.x,
                     y: this.shape.properties.y,
-                    width: this.shape.properties.width - e.dx,
-                    height: this.shape.properties.height + e.dy
+                    width: this.shape.properties.width - e.dx > 10 ? this.shape.properties.width - e.dx : this.shape.properties.width,
+                    height: this.shape.properties.height + e.dy > 10 ? this.shape.properties.height + e.dy : this.shape.properties.height
                 })
             },
             {
@@ -92,8 +92,8 @@ class RectangleTransformer extends CircleTransformer {
                 getTransform: e => ({
                     x: this.shape.properties.x,
                     y: this.shape.properties.y,
-                    width: this.shape.properties.width + e.dx,
-                    height: this.shape.properties.height + e.dy
+                    width: this.shape.properties.width + e.dx > 10 ? this.shape.properties.width + e.dx : this.shape.properties.width,
+                    height: this.shape.properties.height + e.dy > 10 ? this.shape.properties.height + e.dy : this.shape.properties.height
                 })
             }/*,
             {

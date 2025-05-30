@@ -9,21 +9,19 @@ class ChartShape extends BaseShape {
 
     updateGridData(e) {
         const data = gridData;
-        if (e && e.dataField) {
-          data[e.rowIndex][e.dataField] = e.value;
-        }
+        if (e && e.dataField)
+            data[e.rowIndex][e.dataField] = e.value;
         const allFilled = data.every(row => row.variable && row.color);
         const emptyRows = data.filter(row => !row.variable && !row.color);
-        if (allFilled) {
-          data.push({ variable: null, color: null });
-        } else if (emptyRows.length > 1) {
-          gridData = data.filter(row => row.variable || row.color);
-          gridData.push({ variable: null, color: null });
-        } else {
-          gridData = data;
-        }
+        if (allFilled)
+            data.push({ variable: null, color: null });
+        else if (emptyRows.length > 1) {
+            gridData = data.filter(row => row.variable || row.color);
+            gridData.push({ variable: null, color: null });
+        } else
+            gridData = data;
         $("#dataGrid").dxDataGrid("option", "dataSource", gridData);
-      }
+    }
 
     createForm() {
         var form = super.createForm();
@@ -54,8 +52,7 @@ class ChartShape extends BaseShape {
             }
         );
         this.addTermToForm("xTerm", "Horizontal", false, 2);
-        this.addTermToForm("yTerm", "Vertical", false);
-        /*
+        //this.addTermToForm("yTerm", "Vertical", false);
         items.push(
             {
                 colSpan: 2,
@@ -115,7 +112,6 @@ class ChartShape extends BaseShape {
                     });
                 }
             });
-*/
         instance.option("items", items);
         return form;
     }
