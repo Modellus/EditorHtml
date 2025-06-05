@@ -8,19 +8,148 @@ class ChartShape extends BaseShape {
     }
 
     updateGridData(e) {
-        const data = gridData;
-        if (e && e.dataField)
-            data[e.rowIndex][e.dataField] = e.value;
-        const allFilled = data.every(row => row.variable && row.color);
-        const emptyRows = data.filter(row => !row.variable && !row.color);
-        if (allFilled)
-            data.push({ variable: null, color: null });
-        else if (emptyRows.length > 1) {
-            gridData = data.filter(row => row.variable || row.color);
-            gridData.push({ variable: null, color: null });
-        } else
-            gridData = data;
-        $("#dataGrid").dxDataGrid("option", "dataSource", gridData);
+        const data = [...this.properties.yTerms];
+        const filledData = data.filter(row => row.term || row.color);
+        if (e && filledData.length == 0 && (e.data.color || e.data.term))
+            filledData.push(e.data);
+        filledData.push({ term: "", color: "" });
+        this.properties.yTerms = filledData;
+        $("#dataGrid").dxDataGrid("option", "dataSource", this.properties.yTerms);
+    }
+
+    createYTermsGrid(itemElement) {
+        var grid = $("<div>").attr("id", "dataGrid").dxDataGrid({
+            dataSource: this.properties.yTerms,
+            editing: {
+                mode: "cell",
+                allowUpdating: true,
+                allowAdding: false,
+                allowDeleting: false
+            },
+            showColumnHeaders: false,
+            columns: [
+                {
+                    dataField: "term",
+                    lookup: {
+                        displayExpr: "text",
+                        valueExpr: "term",
+                        dataSource: Utils.getTerms(this.board.calculator.getTermsNames())
+                    },
+                    editorOptions: {
+                        stylingMode: "filled",
+                        placeholder: "",
+                        inputAttr: { class: "mdl-variable-selector" },
+                        elementAttr: { class: "mdl-variable-selector" },
+                        itemTemplate: (data, index, element) => {
+                            const item = $("<div>").text(data.text);
+                            item.addClass("mdl-variable-selector");
+                            element.append(item);
+                            return item;
+                        },
+                        fieldTemplate(data, element) {
+                            const item = $("<div>").dxTextBox({
+                                value: data?.text,
+                                readOnly: true,
+                                inputAttr: { class: "mdl-variable-selector" }
+                            });
+                            item.addClass("mdl-variable-selector");
+                            element.append(item);
+                            return item;
+                        }
+                    },
+                    cssClass: "mdl-variable-selector"
+                },
+                {
+                    dataField: "color",
+                    caption: "Color",
+                    width: 100,
+                    lookup: {
+                        dataSource: this.board.theme.getStrokeColors().map(c => ({
+                            icon: c.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square",
+                            color: c.color
+                        })),
+                        displayExpr: "color",
+                        valueExpr: "color"
+                    },
+                    cellTemplate: function(container, options) {
+                        if (!options.value)
+                            return;
+                        const iconClass = options.value === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
+                        const color = options.value == "#00000000" ? "#cccccc" : options.value;
+                        const icon = $("<i>")
+                            .addClass(iconClass)
+                            .css({
+                                color: color,
+                                fontSize: "16px",
+                                marginRight: "6px"
+                            });
+                        if (options.value === "#ffffff")
+                            icon.css("--fa-primary-color", "#000000");
+                        const wrapper = $("<div>").css({
+                            display: "flex",
+                            alignItems: "center"
+                        }).append(icon);
+                        container.append(wrapper);
+                    },
+                    editorOptions: {
+                        stylingMode: "filled",
+                        placeholder: "",
+                        itemTemplate: (data, index, element) => {
+                            const iconClass = data.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
+                            const color = data.color == "#00000000" ? "#cccccc" : data.color;
+                            const icon = $("<i>")
+                                .addClass(iconClass)
+                                .css({
+                                    color: color,
+                                    fontSize: "16px",
+                                    display: "flex",
+                                    alignItems: "center"
+                                });
+                            if (data.color === "#ffffff")
+                                icon.css("--fa-primary-color", "#000000");
+                            const item = $("<div>")
+                                .css({
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "flex-start",
+                                    width: "100%"
+                                })
+                                .append(icon);
+                            element.append(item);
+                            return item;
+                        },
+                        fieldTemplate(data, element) {
+                            const textBox = $("<div>").dxTextBox({
+                                readOnly: true,
+                                value: ""
+                            });
+                            element.append(textBox);
+                            if (!data?.color)
+                                return textBox;
+                            const iconClass = data.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
+                            const color = data.color == "#00000000" ? "#cccccc" : data.color;
+                            textBox.find("input")
+                                .before(
+                                    $("<i>")
+                                        .addClass(iconClass)
+                                            .css({
+                                                color: color,
+                                                fontSize: "16px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "flex-start",
+                                                width: "100%"
+                                            })
+                                );
+                            return textBox;
+                        }
+                    }
+                }
+            ],
+            onRowUpdated: this.updateGridData.bind(this)
+        });
+        this.updateGridData();
+        return grid;
     }
 
     createForm() {
@@ -29,88 +158,41 @@ class ChartShape extends BaseShape {
         var items = instance.option("items");
         items.push(
             {
-                colSpan: 2,
-                dataField: "chartType",
-                label: { text: "Type" },
-                editorType: "dxButtonGroup",
-                editorOptions: {
-                    items: [
-                        { type: "scatter", icon: "fa-light fa-chart-scatter" },
-                        { type: "line", icon: "fa-light fa-chart-line" },
-                        { type: "area", icon: "fa-light fa-chart-area" },
-                        { type: "bar", icon: "fa-light fa-chart-column" }
-                    ],
-                    keyExpr: "type",
-                    stylingMode: "text",
-                    selectedItemKeys: [this.properties.chartType],
-                    onItemClick: e => {
-                        let formInstance = $("#shape-form").dxForm("instance");
-                        formInstance.updateData("chartType", e.itemData.type);
-                        this.setProperty("chartType", e.itemData.type);
+                itemType: "group",
+                colCount: 2,
+                items: [
+                    {
+                        colSpan: 2,
+                        dataField: "chartType",
+                        label: { text: "Type" },
+                        editorType: "dxButtonGroup",
+                        editorOptions: {
+                            items: [
+                                { type: "scatter", icon: "fa-light fa-chart-scatter" },
+                                { type: "line", icon: "fa-light fa-chart-line" },
+                                { type: "area", icon: "fa-light fa-chart-area" },
+                                { type: "bar", icon: "fa-light fa-chart-column" }
+                            ],
+                            keyExpr: "type",
+                            stylingMode: "text",
+                            selectedItemKeys: [this.properties.chartType],
+                            onItemClick: e => {
+                                let formInstance = $("#shape-form").dxForm("instance");
+                                formInstance.updateData("chartType", e.itemData.type);
+                                this.setProperty("chartType", e.itemData.type);
+                            }
+                        }
                     }
-                }
+                ]
             }
         );
         this.addTermToForm("xTerm", "Horizontal", false, 2);
-        //this.addTermToForm("yTerm", "Vertical", false);
         items.push(
             {
                 colSpan: 2,
                 dataField: "yTerms",
                 label: { text: "Vertical" },
-                template: (data, itemElement) => {
-                    return $("<div>").attr("id", "dataGrid").dxDataGrid({
-                        dataSource: [...this.properties.yTerms, { term: "", color: "" }],
-                        editing: {
-                            mode: "cell",
-                            allowUpdating: true,
-                            allowAdding: false,
-                            allowDeleting: false
-                        },
-                        showColumnHeaders: false,
-                        columns: [
-                            {
-                                dataField: "term",
-                                lookup: {
-                                    dataSource: ['Temperature', 'Pressure', 'Humidity']
-                                }
-                            },
-                            {
-                                dataField: "color",
-                                caption: "Color",
-                                lookup: {
-                                    dataSource: this.board.theme.getStrokeColors().map(c => ({
-                                        icon: c.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square",
-                                        color: c.color
-                                    })),
-                                    displayExpr: "color",
-                                    valueExpr: "color",
-                                    itemTemplate: function (itemData) {
-                                        return $("<div>")
-                                            .addClass("color-item")
-                                            .append($("<i>")
-                                                    .addClass(itemData.icon)
-                                                    .css("color", itemData.color)
-                                            );
-                                    },
-                                    valueTemplate: function (itemData) {
-                                        if (!itemData) 
-                                            return "";
-                                        const iconClass = itemData === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
-                                        return $("<div>")
-                                            .addClass("color-value")
-                                            .append(
-                                                $("<i>")
-                                                    .addClass(iconClass)
-                                                    .css("color", itemData.color)
-                                            );
-                                    }
-                                }
-                            }
-                        ],
-                        onCellValueChanged: this.updateGridData
-                    });
-                }
+                template: (data, itemElement) => this.createYTermsGrid(itemElement)
             });
         instance.option("items", items);
         return form;
@@ -147,7 +229,10 @@ class ChartShape extends BaseShape {
             },
             commonSeriesSettings: {
                 label: {
-                    visible: true
+                    visible: false
+                },
+                point: {
+                    visible: false
                 }
             },
             commonPaneSettings: {
@@ -177,25 +262,12 @@ class ChartShape extends BaseShape {
                     visible: true
                 }
             },
-            series: [
-                {
-                    point: {
-                        size: 4
-                    },
-                    label: {
-                        visible: false,
-                        format: {
-                            type: "fixedPoint",
-                            precision: 2
-                        }
-                    }
-                }
-            ],
             legend: {
-                visible: false,
-                verticalAlignment: "bottom",
+                visible: true,
+                verticalAlignment: "top",
                 horizontalAlignment: "center",
-                itemTextPosition: "bottom",
+                orientation: "horizontal",
+                itemTextPosition: "right"
             },
             crosshair: {
                 enabled: true,
@@ -242,7 +314,7 @@ class ChartShape extends BaseShape {
     updateFocus() {
         var system = this.board.calculator.system;
         var series = this.chart.getAllSeries();
-        if (this.properties.xTerm == null || this.properties.yTerm == null)
+        if (this.properties.xTerm == null || this.properties.yTerms == null)
             return;
         series.forEach(s => {
             var value = system.getValueAtIteration(system.iteration, s.getArgumentField());
@@ -255,7 +327,11 @@ class ChartShape extends BaseShape {
         this.chart.beginUpdate();
         this.chart.option("commonSeriesSettings.type", this.properties.chartType);
         this.chart.option("commonSeriesSettings.argumentField", this.properties.xTerm);
-        this.chart.option("commonSeriesSettings.valueField", this.properties.yTerm);
+        this.chart.option("series", this.properties.yTerms.filter(y => y.color || y.term).map(term => ({
+            valueField: term.term,
+            name: term.term,
+            color: term.color
+        })));
         this.chart.option("commonSeriesSettings.color", this.properties.foregroundColor);
         this.chart.option("containerBackgroundColor", this.properties.backgroundColor);
         this.chart.option("argumentAxis.title.text", this.properties.xTerm);

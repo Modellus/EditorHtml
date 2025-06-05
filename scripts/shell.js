@@ -580,7 +580,6 @@ class Shell  {
     createShapePopup() {
         let savedPosition = null;
         let savedSize = { width: 240, height: 400 };
-
         $("#shape-popup").dxPopup({
             width: savedSize.width,
             height: savedSize.height,
@@ -593,9 +592,10 @@ class Shell  {
             showCloseButton: false,
             animation: null,
             title: "",
+            target: "#svg",
             position: {
-                my: "left top",
-                at: "left top",
+                my: "left center",
+                at: "left center",
                 of: "#svg",
                 offset: "20, 0"
             },
@@ -630,7 +630,7 @@ class Shell  {
                     offset: position.offset
                 };
             },
-            onShowing(e) {
+            onShowing1(e) {
                 if (savedPosition) {
                     e.component.option("position", savedPosition);
                     e.component.option("width", savedSize.width);
@@ -638,7 +638,6 @@ class Shell  {
                 }
             }
         });
-
         this.shapePopup = $("#shape-popup").dxPopup("instance");
     }
     
@@ -704,7 +703,10 @@ class Shell  {
     }
 
     setProperties(properties) {
-        Utils.mergeProperties(properties, this.properties);
+        if (!properties)
+            properties = this.properties;
+        else
+            Utils.mergeProperties(properties, this.properties);
         this.calculator.setProperties(properties.independent, properties.iterationTerm);
     }
     
