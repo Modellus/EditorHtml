@@ -1,5 +1,6 @@
 class Shell  {
     constructor(model) {
+        this.aiLogic = new AILogic(this);
         this.calculator = new Calculator();
         this.board = new Board(document.getElementById("svg"), this.calculator);
         this.commands = new Commands(this);
@@ -561,6 +562,7 @@ class Shell  {
                             author: secondUser,
                             timestamp: Date.now() 
                         });
+                        this.aiLogic.sendToBackend(e.message, instance);
                     },
                     items: initialMessages
                 });
@@ -798,6 +800,8 @@ class Shell  {
         this.board.clear();   
         this.updatePlayer();
         this.updateToolbar();
+        this.aiLogic.resetSimulation();
+        this.resetChat();
     }
     
     reset() {
@@ -808,6 +812,23 @@ class Shell  {
         });
         this.updatePlayer();
         this.updateToolbar();
+    }
+
+    resetChat() {
+        const popup = $("#chat-popup").dxPopup("instance");
+        if (popup) {
+            const chatElement = popup.$content().find(".dx-chat");
+            if (chatElement.length > 0) {
+                const chat = chatElement.dxChat("instance");
+                const secondUser = { id: "2", name: "Modellus", avatarUrl: "/scripts/themes/modellus bot.svg" };
+                const initialMessages = [{
+                    timestamp: Date.now(),
+                    author: secondUser,
+                    text: "Hello! I'm here to help you craft your own model. Ask me to create a model."
+                }];
+                chat.option("items", initialMessages);
+            }
+        }
     }
 
     openSettings() {
