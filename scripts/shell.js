@@ -29,6 +29,7 @@ class Shell  {
         this.properties.name = "Model";
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
         this.properties.iterationTerm = "n";
+        this.properties.AIApiKey = this.aiLogic.getApiKey();
     }
 
     createTooltip(e, html, width) {
@@ -141,6 +142,20 @@ class Shell  {
                     dataField: "iterationTerm",
                     label: { 
                         text: this.board.translations.get("IterationTerm") 
+                    },
+                    editorType: "dxTextBox",
+                    editorOptions: {
+                        stylingMode: "filled"
+                    }
+                },
+                {
+                    colSpan: 3
+                },
+                {
+                    colSpan: 4,
+                    dataField: "AIApiKey",
+                    label: { 
+                        text: this.board.translations.get("AIApiKey") 
                     },
                     editorType: "dxTextBox",
                     editorOptions: {
@@ -513,7 +528,7 @@ class Shell  {
                         elementAttr: {
                             id: "chat-button"
                         },
-                        onClick: _ => this.chatPopup.show()
+                        onClick: _ => this.chatPressed()
                     }
                 }
             ]
@@ -720,6 +735,10 @@ class Shell  {
         current[keys[keys.length - 1]] = value;
         if(name.includes("independent") || name.includes("iteration"))
             this.calculator.setProperty(name, value);    
+        if (name == "AIApiKey") {
+            this.aiLogic.setApiKey(value);
+            this.resetChat();
+        }
         this.reset();
     }
     
@@ -789,7 +808,11 @@ class Shell  {
     miniMapPressed() {
         this.miniMap.toggle();
     }
-    
+
+    chatPressed() {
+        this.chatPopup.toggle();
+    }
+
     iterationChanged(iteration) {
         this.calculator.setIteration(iteration);
     }

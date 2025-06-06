@@ -1,6 +1,4 @@
 
-// AI Logic Variables
-const apiKey = "sk-proj-ocWzllU2zPqEuLigU1jQT3BlbkFJMKOWn66uIuaXUkm71Opj";
 const apiUrl = 'https://api.openai.com/v1/chat/completions';
 
 const prompt = String.raw`**Role (R):**
@@ -909,6 +907,7 @@ When creating financial models, follow all the same variable consistency rules a
 
 class AILogic {
   constructor(shell) {
+    this.apiKey = localStorage.getItem("AIApiKey");
     this.shell = shell;
     this.conversationHistory = [
       { role: "system", content: prompt }
@@ -1033,6 +1032,14 @@ class AILogic {
     };
   }
 
+  setApiKey(apiKey) {
+    this.apiKey = apiKey;
+    localStorage.setItem("AIApiKey", apiKey);
+  }
+
+  getApiKey() {
+    return this.apiKey;
+  }
 
   async sendToBackend(message, chat) {
     const typingIndicatorMessage = {
@@ -1178,7 +1185,7 @@ createModelSummary(modelObjects) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify(requestBody)
       });

@@ -81,7 +81,7 @@ class BaseShape {
                         {
                             colSpan: 2,
                             dataField: "name",
-                            label: { text: "Name", visible: false },
+                            label: { text: "Name" },
                             editorType: "dxTextBox",
                             editorOptions: {
                                 stylingMode: "filled"
