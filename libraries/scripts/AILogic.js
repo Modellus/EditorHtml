@@ -907,7 +907,10 @@ When creating financial models, follow all the same variable consistency rules a
 
 class AILogic {
   constructor(shell) {
+<<<<<<< HEAD
     this.apiKey = localStorage.getItem("AIApiKey");
+=======
+>>>>>>> 650a21a (Added chat bot AI support.)
     this.shell = shell;
     this.conversationHistory = [
       { role: "system", content: prompt }
@@ -1032,6 +1035,7 @@ class AILogic {
     };
   }
 
+<<<<<<< HEAD
   setApiKey(apiKey) {
     this.apiKey = apiKey;
     localStorage.setItem("AIApiKey", apiKey);
@@ -1040,6 +1044,8 @@ class AILogic {
   getApiKey() {
     return this.apiKey;
   }
+=======
+>>>>>>> 650a21a (Added chat bot AI support.)
 
   async sendToBackend(message, chat) {
     const typingIndicatorMessage = {
@@ -1185,7 +1191,11 @@ createModelSummary(modelObjects) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+<<<<<<< HEAD
           'Authorization': `Bearer ${this.apiKey}`
+=======
+          'Authorization': `Bearer ${apiKey}`
+>>>>>>> 650a21a (Added chat bot AI support.)
         },
         body: JSON.stringify(requestBody)
       });
