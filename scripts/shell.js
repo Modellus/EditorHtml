@@ -810,7 +810,7 @@ class Shell  {
     }
 
     chatPressed() {
-        this.chatPopup.toggle();
+        this.chatPopup.show();
     }
 
     iterationChanged(iteration) {
