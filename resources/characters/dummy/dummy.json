@@ -1,0 +1,10 @@
+{
+    "name": "Dummy",
+    "description": "A basic character used for testing purposes.",
+    "animations": [
+        {
+            "name": "walk",
+            "frames": 32
+        }
+    ]
+}
