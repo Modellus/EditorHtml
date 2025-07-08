@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modellus – Sign in</title>
+
+  <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg">
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; width: 100%; margin: 0; }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      font-family: var(--dx-font-family, "Roboto", "Helvetica Neue", Arial, sans-serif);
+    }
+
+    #login-card {
+      width: 360px;
+      padding: 2.5rem 3rem;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.85);
+      box-shadow: 0 6px 24px rgba(0,0,0,.2);
+      text-align: center;
+      backdrop-filter: blur(5px);
+    }
+
+    #login-card h2 {
+      font-weight: 500;
+      margin: 1.2rem 0 2rem;
+    }
+
+    .dx-button.dx-theme-material-primary .dx-button-content {
+      font-weight: 500;
+    }
+  </style>
+
+   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&display=swap" rel="stylesheet">
+    <script src="libraries/scripts/fc365cfb25.js"></script>
+    <script src="libraries/scripts/jquery.min.js"></script>
+    <link rel="stylesheet" href="libraries/css/dx.fluent.blue.light.compact.css"></script>
+    <script src="libraries/scripts/dx.all.js"></script>
+  <!-- Google Identity Services SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body style="display:none">
+  <div id="login-card">
+    <i class="fa-solid fa-atom fa-3x"></i>
+    <h2>Sign in to Modellus</h2>
+    <div id="google-login-btn" class="mb-3"></div>
+    <p style="font-size:.85rem; opacity:.7">Access to the app requires a Google account</p>
+  </div>
+
+<script>
+    DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQyCn0=.TTX6Poy2dCPV9Dcrb5Q2r+H+8s1jHV4tvntU/EMPIve2JwJ2KFGoAXzk/R3c4dhEg1nomyae+I97HS6bNVeBcugyjySlHFBedv46LdF3HcdezvM9EdPrli3Tuq/DhyjKrfAi+w=="});
+  const GOOGLE_CLIENT_ID = "616832441203-a45kghte7c05vdkj5ri5ejp8qu81vcae.apps.googleusercontent.com";
+  const TOKEN_STORAGE_KEY = "modellus_id_token";
+  const APP_HOME = "/";
+
+  const images = [
+    "images/photo1.jpg",
+    "images/photo2.jpg",
+    "images/photo3.jpg",
+    "images/photo4.jpg",
+  ];
+  document.body.style.backgroundImage = `url('${images[Math.floor(Math.random()*images.length)]}')`;
+
+  const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (storedToken) {
+    window.location.href = APP_HOME;
+  } else {
+    document.body.style.display = "flex";
+  }
+
+  window.handleCredentialResponse = function (response) {
+    if (response.credential) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, response.credential);
+      window.location.href = APP_HOME;
+    } else {
+      alert("Google Sign-In failed. Please try again.");
+    }
+  };
+
+  window.onload = function () {
+    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes("REPLACE_WITH")) {
+      alert("Google Client ID is not set. Please configure it.");
+      return;
+    }
+
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse,
+      ux_mode: "popup",
+    });
+
+    $(function () {
+      const iconMarkup = "<i class='fab fa-google'></i>";
+      $("#google-login-btn").dxButton({
+        width: "100%",
+        type: "default",
+        stylingMode: "contained",
+        icon: iconMarkup,
+        text: "Sign in with Google",
+        onClick: function () {
+          google.accounts.id.prompt();
+        },
+      });
+    });
+  };
+</script>
+</body>
+</html>
