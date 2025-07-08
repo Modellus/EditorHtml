@@ -1,117 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Modellus – Sign in</title>
+  <meta charset="UTF-8" />
+  
+    
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modellus – Sign in</title>
 
-  <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg">
+<link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="libraries/css/dx.fluent.blue.light.compact.css">
+<script src="libraries/scripts/jquery.min.js"></script>
+<script src="libraries/scripts/dx.all.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <style>
-    * { box-sizing: border-box; }
-    html, body { height: 100%; width: 100%; margin: 0; }
+<style>
+  /* RESET & BASE ---------------------------------------------------------- */
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;font-family:'Assistant',sans-serif;}
 
-    body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      font-family: var(--dx-font-family, "Roboto", "Helvetica Neue", Arial, sans-serif);
-    }
+  /* FULL-SCREEN BACKGROUND ------------------------------------------------ */
+  body::before{                       /* photo layer */
+    content:"";
+    position:fixed;
+    inset:0;
+    background:url('/resources/backgrounds/Education.png') center/cover no-repeat;
+    z-index:-2;
+  }
+  body::after{                        /* optional darken/blur layer */
+    content:"";
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.25);       /* tweak opacity to taste   */
+    backdrop-filter:blur(2px);        /* remove if you dislike it */
+    z-index:-1;
+  }
 
-    #login-card {
-      width: 360px;
-      padding: 2.5rem 3rem;
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.85);
-      box-shadow: 0 6px 24px rgba(0,0,0,.2);
-      text-align: center;
-      backdrop-filter: blur(5px);
-    }
+  /* CARD ------------------------------------------------------------------ */
+  #login-card{
+    position:fixed;                   /* keep centred on scroll   */
+    top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    width:360px;
+    padding:3rem 2.5rem;
+    border-radius:24px;
+    background:#007bff;               /* same blue as “Standard plan” */
+    color:#fff;
+    text-align:center;
+    box-shadow:0 12px 32px rgba(0,0,0,.30);
+  }
+  #login-card h2{margin:1rem 0;font-size:1.75rem;font-weight:600;}
+  #login-card p{margin-top:1rem;font-size:.9rem;opacity:.9;}
+  .fa-atom{font-size:3rem;margin-bottom:.5rem;}
+  .dx-button{
+    height: 56px;
+    border-radius: 44px;
+    margin-top:2rem;
+}
 
-    #login-card h2 {
-      font-weight: 500;
-      margin: 1.2rem 0 2rem;
-    }
+  /* GOOGLE SIGN-IN BUTTON TWEAKS --------------------------- */
+    #google-login-btn .dx-button{
+    height:64px;                 /*  ➜   taller                */
+    border:none;
+    border-radius:32px;          /*  ➜   rounder (pill)        */
+    padding:0;                   /*  remove extra vertical gap */
+    font-weight:600;
+  }
 
-    .dx-button.dx-theme-material-primary .dx-button-content {
-      font-weight: 500;
-    }
-  </style>
+  /* make the inner flex box fill the new height & inherit radius */
+  #google-login-btn .dx-button .dx-button-content,
+  .google-btn-content{
+    height:100%;
+    border-radius:inherit;
+  }
 
-   <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&display=swap" rel="stylesheet">
-    <script src="libraries/scripts/fc365cfb25.js"></script>
-    <script src="libraries/scripts/jquery.min.js"></script>
-    <link rel="stylesheet" href="libraries/css/dx.fluent.blue.light.compact.css"></script>
-    <script src="libraries/scripts/dx.all.js"></script>
-  <!-- Google Identity Services SDK -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  /* optionally bump the G-logo so it matches the new scale  */
+  .google-btn-content img{
+    width:32px;
+    height:32px;
+    margin-right:12px;
+  }
+</style>
 </head>
-<body style="display:none">
+
+<body>
   <div id="login-card">
-    <i class="fa-solid fa-atom fa-3x"></i>
+    <i class="fa-solid fa-atom"></i>
     <h2>Sign in to Modellus</h2>
-    <div id="google-login-btn" class="mb-3"></div>
-    <p style="font-size:.85rem; opacity:.7">Access to the app requires a Google account</p>
+    <div id="google-login-btn"></div>
+    <p>Access to the app requires a Google account</p>
   </div>
 
 <script>
-    DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQyCn0=.TTX6Poy2dCPV9Dcrb5Q2r+H+8s1jHV4tvntU/EMPIve2JwJ2KFGoAXzk/R3c4dhEg1nomyae+I97HS6bNVeBcugyjySlHFBedv46LdF3HcdezvM9EdPrli3Tuq/DhyjKrfAi+w=="});
-  const GOOGLE_CLIENT_ID = "616832441203-a45kghte7c05vdkj5ri5ejp8qu81vcae.apps.googleusercontent.com";
+  /* -------------------- DevExtreme & Google ID Logic (unchanged) --------- */
+  DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQyCn0=.TTX6Poy2dCPV9Dcrb5Q2r+H+8s1jHV4tvntU/EMPIve2JwJ2KFGoAXzk/R3c4dhEg1nomyae+I97HS6bNVeBcugyjySlHFBedv46LdF3HcdezvM9EdPrli3Tuq/DhyjKrfAi+w=="});
+
+  const GOOGLE_CLIENT_ID  = "616832441203-a45kghte7c05vdkj5ri5ejp8qu81vcae.apps.googleusercontent.com";
   const TOKEN_STORAGE_KEY = "modellus_id_token";
-  const APP_HOME = "/";
+  const APP_HOME          = "/";
 
-  const images = [
-    "images/photo1.jpg",
-    "images/photo2.jpg",
-    "images/photo3.jpg",
-    "images/photo4.jpg",
-  ];
-  document.body.style.backgroundImage = `url('${images[Math.floor(Math.random()*images.length)]}')`;
-
-  const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
-  if (storedToken) {
-    window.location.href = APP_HOME;
-  } else {
-    document.body.style.display = "flex";
+  if(localStorage.getItem(TOKEN_STORAGE_KEY)){
+    location.href = APP_HOME;
   }
 
-  window.handleCredentialResponse = function (response) {
-    if (response.credential) {
-      localStorage.setItem(TOKEN_STORAGE_KEY, response.credential);
-      window.location.href = APP_HOME;
-    } else {
+  window.handleCredentialResponse = ({credential})=>{
+    if(credential){
+      localStorage.setItem(TOKEN_STORAGE_KEY, credential);
+      location.href = APP_HOME;
+    }else{
       alert("Google Sign-In failed. Please try again.");
     }
   };
 
-  window.onload = function () {
-    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes("REPLACE_WITH")) {
-      alert("Google Client ID is not set. Please configure it.");
-      return;
-    }
-
+  window.onload = ()=>{
     google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleCredentialResponse,
-      ux_mode: "popup",
+      client_id:GOOGLE_CLIENT_ID,
+      callback:handleCredentialResponse,
+      ux_mode:"popup"
     });
 
-    $(function () {
-      const iconMarkup = "<i class='fab fa-google'></i>";
-      $("#google-login-btn").dxButton({
+    $("#google-login-btn").dxButton({
         width: "100%",
-        type: "default",
-        stylingMode: "contained",
-        icon: iconMarkup,
+        stylingMode: "contained",      // keeps DevExtreme colours
         text: "Sign in with Google",
-        onClick: function () {
-          google.accounts.id.prompt();
+        template: function (data, $content) {
+            $("<img>", {
+            src: "https://developers.google.com/identity/images/g-logo.png",
+            alt: "Google logo"
+            }).appendTo($content);
+            $("<span>")
+            .text(data.text)
+            .appendTo($content);
+            $content.addClass("google-btn-content");
         },
-      });
-    });
+        onClick: () => google.accounts.id.prompt()
+        });
   };
 </script>
 </body>
