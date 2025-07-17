@@ -1,4 +1,8 @@
 class BaseShape {
+    
+    static setup() {
+    }
+    
     constructor(board, parent, id) {
         this.id = id ?? crypto.randomUUID();
         this.board = board;

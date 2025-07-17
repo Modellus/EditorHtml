@@ -1,9 +1,11 @@
 {
     "name": "Dummy",
     "description": "A basic character used for testing purposes.",
+    "image": "Dummy.png",
     "animations": [
         {
-            "name": "walk",
+            "name": "Walk",
+            "folder": "walk",
             "frames": 32
         }
     ]

@@ -7,6 +7,7 @@ class Commands {
 
     registerShape(shapeClass) {
         this.shapes.registerShape(shapeClass);
+        shapeClass.setup();
     }
 
     selectShape(name) {

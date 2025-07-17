@@ -294,8 +294,8 @@ class Shell  {
                         elementAttr: {
                             id: "character-button"
                         },
-                        icon: "fa-regular fa-child-reaching",
                         disabled: true,
+                        icon: "fa-regular fa-child-reaching",
                         onClick: _ => this.commands.addShape("CharacterShape", "Character"),
                         onInitialized: e => this.characterButton = e.component
                     }
@@ -751,10 +751,11 @@ class Shell  {
     }
     
     updateToolbar() {
-        var disabled = this.board.selection.selectedShape == null || !["BodyShape", "VectorShape", "ImageShape", "ReferentialShape"].includes(this.board.selection.selectedShape.constructor.name);
+        var disabled = this.board.selection.selectedShape == null || !["BodyShape", "VectorShape", "ImageShape", "CharacterShape", "ReferentialShape"].includes(this.board.selection.selectedShape.constructor.name);
         this.bodyButton.option("disabled", disabled);
         this.vectorButton.option("disabled", disabled);
         this.imageButton.option("disabled", disabled);
+        this.characterButton.option("disabled", disabled);
     }
     
     updatePlayer() {
