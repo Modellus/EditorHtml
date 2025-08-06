@@ -12,16 +12,19 @@
 <title>Modellus – Sign in</title>
 
 <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg">
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="libraries/css/dx.fluent.blue.light.compact.css">
 <script src="libraries/scripts/jquery.min.js"></script>
 <script src="libraries/scripts/dx.all.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Nunito:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
+
 
 <style>
   /* RESET & BASE ---------------------------------------------------------- */
   *{box-sizing:border-box;}
-  html,body{height:100%;margin:0;font-family:'Assistant',sans-serif;}
+  html,body{height:100%;margin:0;font-family:'Nunito', sans-serif;}
 
   /* FULL-SCREEN BACKGROUND ------------------------------------------------ */
   body::before{                       /* photo layer */
@@ -46,7 +49,7 @@
     top:50%;left:50%;
     transform:translate(-50%,-50%);
     width:360px;
-    padding:3rem 2.5rem;
+    padding:3rem;
     border-radius:24px;
     background:#007bff;               /* same blue as “Standard plan” */
     color:#fff;
@@ -88,58 +91,62 @@
 </head>
 
 <body>
-  <div id="login-card">
-    <i class="fa-solid fa-atom"></i>
-    <h2>Sign in to Modellus</h2>
-    <div id="google-login-btn"></div>
-    <p>Access to the app requires a Google account</p>
-  </div>
+    <div id="login-card" style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+        <!-- Icon + Heading Row -->
+        <div style="display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
+            <img src="/scripts/themes/modellus.svg" alt="Modellus logo" style="width: 48px; height: 48px;">
+            <h2 style="margin: 0;">Sign in to Modellus</h2>
+        </div>
+        <!-- Button -->
+        <div id="google-login-btn"></div>
+        <!-- Text -->
+        <p style="margin: 0;">Access to the app requires a Google account</p>
+    </div>
+    <script>
+    /* -------------------- DevExtreme & Google ID Logic (unchanged) --------- */
+    DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQyCn0=.TTX6Poy2dCPV9Dcrb5Q2r+H+8s1jHV4tvntU/EMPIve2JwJ2KFGoAXzk/R3c4dhEg1nomyae+I97HS6bNVeBcugyjySlHFBedv46LdF3HcdezvM9EdPrli3Tuq/DhyjKrfAi+w=="});
 
-<script>
-  /* -------------------- DevExtreme & Google ID Logic (unchanged) --------- */
-  DevExpress.config({ licenseKey: "ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjQyCn0=.TTX6Poy2dCPV9Dcrb5Q2r+H+8s1jHV4tvntU/EMPIve2JwJ2KFGoAXzk/R3c4dhEg1nomyae+I97HS6bNVeBcugyjySlHFBedv46LdF3HcdezvM9EdPrli3Tuq/DhyjKrfAi+w=="});
+    const GOOGLE_CLIENT_ID  = "616832441203-a45kghte7c05vdkj5ri5ejp8qu81vcae.apps.googleusercontent.com";
+    const TOKEN_STORAGE_KEY = "modellus_id_token";
+    const APP_HOME          = "/editor.html";
 
-  const GOOGLE_CLIENT_ID  = "616832441203-a45kghte7c05vdkj5ri5ejp8qu81vcae.apps.googleusercontent.com";
-  const TOKEN_STORAGE_KEY = "modellus_id_token";
-  const APP_HOME          = "/editor.html";
-
-  if(localStorage.getItem(TOKEN_STORAGE_KEY)){
-    location.href = APP_HOME;
-  }
-
-  window.handleCredentialResponse = ({credential})=>{
-    if(credential){
-      localStorage.setItem(TOKEN_STORAGE_KEY, credential);
-      location.href = APP_HOME;
-    }else{
-      alert("Google Sign-In failed. Please try again.");
+    if(localStorage.getItem(TOKEN_STORAGE_KEY)){
+        location.href = APP_HOME;
     }
-  };
 
-  window.onload = ()=>{
-    google.accounts.id.initialize({
-      client_id:GOOGLE_CLIENT_ID,
-      callback:handleCredentialResponse,
-      ux_mode:"popup"
-    });
+    window.handleCredentialResponse = ({credential})=>{
+        if(credential){
+        localStorage.setItem(TOKEN_STORAGE_KEY, credential);
+        location.href = APP_HOME;
+        }else{
+        alert("Google Sign-In failed. Please try again.");
+        }
+    };
 
-    $("#google-login-btn").dxButton({
-        width: "100%",
-        stylingMode: "contained",      // keeps DevExtreme colours
-        text: "Sign in with Google",
-        template: function (data, $content) {
-            $("<img>", {
-            src: "https://developers.google.com/identity/images/g-logo.png",
-            alt: "Google logo"
-            }).appendTo($content);
-            $("<span>")
-            .text(data.text)
-            .appendTo($content);
-            $content.addClass("google-btn-content");
-        },
-        onClick: () => google.accounts.id.prompt()
+    window.onload = ()=>{
+        google.accounts.id.initialize({
+        client_id:GOOGLE_CLIENT_ID,
+        callback:handleCredentialResponse,
+        ux_mode:"popup"
         });
-  };
-</script>
+
+        $("#google-login-btn").dxButton({
+            width: "100%",
+            stylingMode: "contained",      // keeps DevExtreme colours
+            text: "Sign in with Google",
+            template: function (data, $content) {
+                $("<img>", {
+                src: "https://developers.google.com/identity/images/g-logo.png",
+                alt: "Google logo"
+                }).appendTo($content);
+                $("<span>")
+                .text(data.text)
+                .appendTo($content);
+                $content.addClass("google-btn-content");
+            },
+            onClick: () => google.accounts.id.prompt()
+            });
+    };
+    </script>
 </body>
 </html>

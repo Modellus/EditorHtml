@@ -64,8 +64,7 @@ class ExpressionShape extends BaseShape {
         $(div).css({ "width": "100%", "height": "100%", "background-color": "transparent" });
         foreignObject.appendChild(div);
         this.mathfield = new MathfieldElement();
-        this.mathfield.smartMode = true;
-        this.mathfield.popoverPolicy = "none";
+        this.mathfield.popoverPolicy = "off";
         this.mathfield.virtualKeyboardMode = "off";
         this.mathfield.mathVirtualKeyboardPolicy = "manual";
         this.mathfield.placeholder = "Enter a formula";
