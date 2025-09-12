@@ -3,6 +3,7 @@ class MiniMap {
         this.board = board;
         this.minimapImage = minimapImage;
         this.minimapViewport = minimapViewport;
+        this._rafId = null;
         this.board.svg.addEventListener("pan", e => this.onPan(e));
         this.board.svg.addEventListener("zoom", e => this.onZoom(e));
         this.board.svg.addEventListener("shapeAdded", e => this.onShapeAdded(e));
@@ -13,24 +14,33 @@ class MiniMap {
 
     onPan(event) {
         this.pan = event.detail.pan;
-        this.refresh();
+        this.requestRefresh();
     }
 
     onZoom(event) {
         this.zoom = event.detail.zoom; 
-        this.refresh();
+        this.requestRefresh();
     }
 
     onShapeAdded(event) {
-        this.refresh();
+        this.requestRefresh();
     }
 
     onShapeRemoved(event) {
-        this.refresh();
+        this.requestRefresh();
     }
 
     onShapeChanged(event) {
-        this.refresh();
+        this.requestRefresh();
+    }
+
+    requestRefresh() {
+        if (this._rafId != null)
+            return;
+        this._rafId = requestAnimationFrame(() => {
+            this._rafId = null;
+            this.refresh();
+        });
     }
 
     refresh() {

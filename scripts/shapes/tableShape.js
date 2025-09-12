@@ -81,6 +81,7 @@ class TableShape extends BaseShape {
                 }
             ]
         }).dxDataGrid("instance");
+        this._appliedColumns = { c1: this.properties.column1Term, c2: this.properties.column2Term };
         return foreignObject;
     }
 
@@ -109,18 +110,19 @@ class TableShape extends BaseShape {
     }
 
     update() {
-        var column1 = this.properties.column1Term;
-        var column2 = this.properties.column2Term;
-        this.dataGrid.beginUpdate();
-        this.dataGrid.option("columns[0].dataField", column1);
-        this.dataGrid.option("columns[0].caption", column1);
-        this.dataGrid.option("columns[0].name", "Column1Term");
-        this.dataGrid.option("columns[1].dataField", column2);
-        this.dataGrid.option("columns[1].caption", column2);
-        this.dataGrid.option("columns[1].name", "Column2Term");
-        this.updateValues();
-        this.dataGrid.endUpdate();
-        this.updateFocus();
+        const column1 = this.properties.column1Term;
+        const column2 = this.properties.column2Term;
+        if (this._appliedColumns.c1 !== column1 || this._appliedColumns.c2 !== column2) {
+            this.dataGrid.beginUpdate();
+            this.dataGrid.option("columns[0].dataField", column1);
+            this.dataGrid.option("columns[0].caption", column1);
+            this.dataGrid.option("columns[0].name", "Column1Term");
+            this.dataGrid.option("columns[1].dataField", column2);
+            this.dataGrid.option("columns[1].caption", column2);
+            this.dataGrid.option("columns[1].name", "Column2Term");
+            this.dataGrid.endUpdate();
+            this._appliedColumns = { c1: column1, c2: column2 };
+        }
     }
 
     draw() {
@@ -130,5 +132,16 @@ class TableShape extends BaseShape {
         this.element.setAttribute("height", this.properties.height);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
             ${this.properties.y + this.properties.height / 2})`);
+    }
+
+    tick() {
+        // Sync data and focus; grid updates on push
+        this.updateValues();
+        const now = performance.now();
+        if (!this._lastFocusTs || now - this._lastFocusTs > 33) { // ~30 FPS focus updates
+            this.updateFocus();
+            this._lastFocusTs = now;
+        }
+        super.tick();
     }
 }

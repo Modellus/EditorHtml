@@ -190,8 +190,8 @@ class BaseShape {
 
     setProperty(name, value) {
         this.properties[name] = value;
-        this.update();
-        this.draw();
+        // Mark the shape as dirty and let Board coalesce the refresh
+        this.board.markDirty(this);
         this.dispatchEvent("changed", { property: name, value: value });
     }
 
@@ -201,6 +201,11 @@ class BaseShape {
 
     draw() {
         this.children.forEach(child => child.draw());
+    }
+
+    tick() {
+        // Per-iteration lightweight updates; default propagates to children
+        this.children.forEach(child => child.tick());
     }
 
     getBounds() {

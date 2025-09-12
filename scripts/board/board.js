@@ -6,6 +6,8 @@ class Board {
         this.theme = new BaseTheme();
         this.translations = new BaseTranslations("en-US");
         this.selection = new Selection(this);
+        this._refreshId = null;
+        this._dirtyShapes = new Set();
     }
 
     createSvgElement(name) {
@@ -130,8 +132,26 @@ class Board {
     }
 
     refresh() {
-        this.update();
-        this.draw();
+        if (this._refreshId != null)
+            return;
+        this._refreshId = requestAnimationFrame(() => {
+            this._refreshId = null;
+            if (this._dirtyShapes.size > 0) {
+                // Update/draw only dirty shapes
+                const dirty = Array.from(this._dirtyShapes);
+                this._dirtyShapes.clear();
+                dirty.forEach(shape => shape.update());
+                dirty.forEach(shape => shape.draw());
+            } else {
+                this.update();
+                this.draw();
+            }
+        });
+    }
+
+    markDirty(shape) {
+        this._dirtyShapes.add(shape);
+        this.refresh();
     }
 
     update() {

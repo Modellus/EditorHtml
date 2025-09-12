@@ -969,7 +969,8 @@ class Shell  {
     }
     
     onIterate(e) {
-        this.board.deselect();
+        // Per-iteration: let shapes update lightweight state, then coalesced draw
+        this.board.shapes.shapes.forEach(s => s.tick());
         this.board.refresh();
         this.updatePlayer();
     }    

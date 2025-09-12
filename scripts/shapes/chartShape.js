@@ -295,6 +295,7 @@ class ChartShape extends BaseShape {
                     console.log(e.target.errorText);
             }
         }).dxChart("instance");
+        this._appliedConfig = {};
         return foreignObject;
     }
 
@@ -324,22 +325,33 @@ class ChartShape extends BaseShape {
     }
 
     update() {
-        this.chart.beginUpdate();
-        this.chart.option("commonSeriesSettings.type", this.properties.chartType);
-        this.chart.option("commonSeriesSettings.argumentField", this.properties.xTerm);
-        this.chart.option("series", this.properties.yTerms.filter(y => y.color || y.term).map(term => ({
-            valueField: term.term,
-            name: term.term,
-            color: term.color
-        })));
-        this.chart.option("commonSeriesSettings.color", this.properties.foregroundColor);
-        this.chart.option("containerBackgroundColor", this.properties.backgroundColor);
-        this.chart.option("argumentAxis.title.text", this.properties.xTerm);
-        this.chart.option("valueAxis.title.text", this.properties.yTerm);
-        this.element.style.backgroundColor = this.properties.backgroundColor;
-        this.updateValues();
-        this.chart.endUpdate();
-        this.updateFocus();
+        const config = {
+            chartType: this.properties.chartType,
+            argField: this.properties.xTerm,
+            series: this.properties.yTerms.filter(y => y.color || y.term).map(term => ({
+                valueField: term.term,
+                name: term.term,
+                color: term.color
+            })),
+            color: this.properties.foregroundColor,
+            bg: this.properties.backgroundColor,
+            argTitle: this.properties.xTerm,
+            valTitle: this.properties.yTerm
+        };
+        const changed = JSON.stringify(config) !== JSON.stringify(this._appliedConfig);
+        if (changed) {
+            this.chart.beginUpdate();
+            this.chart.option("commonSeriesSettings.type", config.chartType);
+            this.chart.option("commonSeriesSettings.argumentField", config.argField);
+            this.chart.option("series", config.series);
+            this.chart.option("commonSeriesSettings.color", config.color);
+            this.chart.option("containerBackgroundColor", config.bg);
+            this.chart.option("argumentAxis.title.text", config.argTitle);
+            this.chart.option("valueAxis.title.text", config.valTitle);
+            this.element.style.backgroundColor = config.bg;
+            this.chart.endUpdate();
+            this._appliedConfig = config;
+        }
     }
 
     draw() {
@@ -349,5 +361,17 @@ class ChartShape extends BaseShape {
         this.element.setAttribute("height", this.properties.height);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
             ${this.properties.y + this.properties.height / 2})`);
+    }
+
+    tick() {
+        // Sync new calculator values and focus without reconfiguring the chart
+        this.updateValues();
+        const now = performance.now();
+        if (!this._lastFocusTs || now - this._lastFocusTs > 33) { // ~30 FPS focus updates
+            this.updateFocus();
+            this._lastFocusTs = now;
+        }
+        // No board.markDirty: DevExtreme handles UI updates on data push
+        super.tick();
     }
 }

@@ -109,14 +109,7 @@ class CharacterShape extends BaseShape {
 
     update() {
         super.update();
-        const calculator = this.board.calculator;
-        var scale = this.getScale();
-        const xTerm = this.properties.xTerm;
-        var x = calculator.getByName(xTerm) ?? parseFloat(xTerm);
-        this.properties.x = Number.isNaN(x) ? this.properties.x : (scale.x != 0 ? x / scale.x : 0); 
-        const yTerm = this.properties.yTerm;
-        var y = calculator.getByName(yTerm) ?? parseFloat(yTerm);
-        this.properties.y = Number.isNaN(y) ? this.properties.y : (scale.y != 0 ? -y / scale.y : 0); 
+        // Property-driven updates only; per-iteration movement in tick()
     }
 
     draw() {
@@ -131,8 +124,27 @@ class CharacterShape extends BaseShape {
             const name = this.character.name;
             const frameIndex = iteration % this.character.animations[0].frames;
             const animation = this.character.animations[0].name;
-            const frame = name + " " + animation + " " + String(frameIndex).padStart(4, '0') + ".png";
-            this.image.setAttribute("href", `resources/characters/${name}/${animation}/${frame}`);
+            if (this._lastFrameIndex !== frameIndex || this._lastAnimation !== animation || this._lastCharacter !== name) {
+                const frame = name + " " + animation + " " + String(frameIndex).padStart(4, '0') + ".png";
+                this.image.setAttribute("href", `resources/characters/${name}/${animation}/${frame}`);
+                this._lastFrameIndex = frameIndex;
+                this._lastAnimation = animation;
+                this._lastCharacter = name;
+            }
         }
+    }
+
+    tick() {
+        super.tick();
+        const calculator = this.board.calculator;
+        const scale = this.getScale();
+        const xTerm = this.properties.xTerm;
+        const x = calculator.getByName(xTerm) ?? parseFloat(xTerm);
+        this.properties.x = Number.isNaN(x) ? this.properties.x : (scale.x != 0 ? x / scale.x : 0);
+        const yTerm = this.properties.yTerm;
+        const y = calculator.getByName(yTerm) ?? parseFloat(yTerm);
+        this.properties.y = Number.isNaN(y) ? this.properties.y : (scale.y != 0 ? -y / scale.y : 0);
+        // Always draw to update animation frame
+        this.board.markDirty(this);
     }
 }

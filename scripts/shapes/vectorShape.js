@@ -61,7 +61,7 @@ class VectorShape extends BaseShape {
         const element = this.board.createSvgElement("g");
         this.path = this.board.createSvgElement("path");
         element.appendChild(this.path);
-        this.trajectory = { element: this.board.createSvgElement("polyline"), values: [] };
+        this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
         this.trajectory.element.setAttribute("fill", "none");
         element.appendChild(this.trajectory.element);
         return element;
@@ -69,14 +69,7 @@ class VectorShape extends BaseShape {
 
     update() {
         super.update();
-        const calculator = this.board.calculator;
-        this.properties.width = calculator.getByName(this.properties.xTerm) ?? this.properties.width;
-        this.properties.height = calculator.getByName(this.properties.yTerm) ?? this.properties.height; 
-        this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
-        if (this.trajectory.values.length <= calculator.getLastIteration()) {
-            const position = this.getBoardPosition();
-            this.trajectory.values.push({ x: position.x + this.properties.width, y: position.y + this.properties.height });
-        }
+        // Property-driven updates only
     }
 
     draw() {
@@ -107,11 +100,35 @@ class VectorShape extends BaseShape {
 
     drawTrajectory () {
         if (this.properties.trajectoryColor != this.board.theme.getBackgroundColors()[0].color) {
-            const trajectoryPolyLine = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
-            this.trajectory.element.setAttribute("points", trajectoryPolyLine);
+            this.trajectory.element.setAttribute("points", this.trajectory.pointsString);
             this.trajectory.element.setAttribute("stroke", this.properties.trajectoryColor);
             this.trajectory.element.setAttribute("stroke-width", 1);
         } else
             this.trajectory.element.removeAttribute("points");
+    }
+
+    tick() {
+        super.tick();
+        const calculator = this.board.calculator;
+        const newW = calculator.getByName(this.properties.xTerm);
+        const newH = calculator.getByName(this.properties.yTerm);
+        if (newW != null) this.properties.width = newW;
+        if (newH != null) this.properties.height = newH;
+        this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
+        if (this.trajectory.values.length <= calculator.getLastIteration()) {
+            const position = this.getBoardPosition();
+            this.trajectory.values.push({ x: position.x + this.properties.width, y: position.y + this.properties.height });
+        }
+        // Maintain cached string
+        if (this.trajectory.values.length < this.trajectory.lastCount) {
+            this.trajectory.pointsString = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
+            this.trajectory.lastCount = this.trajectory.values.length;
+        } else if (this.trajectory.values.length > this.trajectory.lastCount) {
+            const newPoints = this.trajectory.values.slice(this.trajectory.lastCount)
+                .map(v => `${v.x},${v.y}`).join(" ");
+            this.trajectory.pointsString += (this.trajectory.pointsString && newPoints ? " " : "") + newPoints;
+            this.trajectory.lastCount = this.trajectory.values.length;
+        }
+        this.board.markDirty(this);
     }
 }

@@ -40,7 +40,7 @@ class ImageShape extends BodyShape {
         element.appendChild(this.circle);
         this.image = this.board.createSvgElement("image");
         element.appendChild(this.image);
-        this.trajectory = { element: this.board.createSvgElement("polyline"), values: [] };
+        this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
         this.trajectory.element.setAttribute("fill", "none");
         element.appendChild(this.trajectory.element);
         this.stroboscopy = this.board.createSvgElement("g");
@@ -55,15 +55,7 @@ class ImageShape extends BodyShape {
     }
 
     update() {
-        const calculator = this.board.calculator;
-        this.properties.x = calculator.getByName(this.properties.xTerm) ?? this.properties.x;
-        this.properties.y = calculator.getByName(this.properties.yTerm) ?? this.properties.y; 
-        var currentIteration = this.trajectory.values.length;
-        this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
-        if (calculator.getLastIteration() > currentIteration || calculator.getLastIteration() == 0) {
-            const position = this.getBoardPosition();
-            this.trajectory.values.push({ x: position.x, y: position.y });
-        }
+        // Property-driven updates only; per-iteration updates handled by BodyShape.tick
         if (this.properties.imageBase64 != "")
             this.image.setAttribute("href", `data:image/png;base64,${this.properties.imageBase64}`);
         else

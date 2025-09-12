@@ -115,11 +115,12 @@ class BodyShape extends BaseShape {
         element.appendChild(this.circle);
         this.image = this.board.createSvgElement("image");
         element.appendChild(this.image);
-        this.trajectory = { element: this.board.createSvgElement("polyline"), values: [] };
+        this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
         this.trajectory.element.setAttribute("fill", "none");
         element.appendChild(this.trajectory.element);
         this.stroboscopy = this.board.createSvgElement("g");
         element.appendChild(this.stroboscopy);
+        this._lastStrobeCount = 0;
         return element;
     }    
 
@@ -145,23 +146,18 @@ class BodyShape extends BaseShape {
 
     update() {
         super.update();
-        const calculator = this.board.calculator;
-        var scale = this.getScale();
-        const xTerm = this.properties.xTerm;
-        var x = calculator.getByName(xTerm) ?? parseFloat(xTerm);
-        this.properties.x = Number.isNaN(x) ? this.properties.x : (scale.x != 0 ? x / scale.x : 0); 
-        const yTerm = this.properties.yTerm;
-        var y = calculator.getByName(yTerm) ?? parseFloat(yTerm);
-        this.properties.y = Number.isNaN(y) ? this.properties.y : (scale.y != 0 ? -y / scale.y : 0); 
-        this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
-        if (this.trajectory.values.length <= calculator.getLastIteration()) {
-            const position = this.getBoardPosition();
-            this.trajectory.values.push({ x: position.x, y: position.y });
-        }
+        // Property-driven updates remain here (colors, radius, etc.)
         if (this.properties.imageBase64 != "")
             this.image.setAttribute("href", `data:image/png;base64,${this.properties.imageBase64}`);
         else
             this.image.removeAttribute("href");
+        // Update colors for existing stroboscopy marks if needed
+        if (this.stroboscopy && this.stroboscopy.children) {
+            Array.from(this.stroboscopy.children).forEach(c => {
+                c.setAttribute("fill", this.properties.stroboscopyColor);
+                c.setAttribute("opacity", this.properties.stroboscopyOpacity);
+            });
+        }
     }
 
     draw() {
@@ -173,13 +169,65 @@ class BodyShape extends BaseShape {
         this.circle.setAttribute("fill", this.properties.backgroundColor);
         this.circle.setAttribute("stroke", this.properties.foregroundColor);
         this.drawTrajectory();
-        this.drawStroboscopy();
+    }
+
+    tick() {
+        super.tick();
+        const calculator = this.board.calculator;
+        const scale = this.getScale();
+        const xTerm = this.properties.xTerm;
+        const x = calculator.getByName(xTerm) ?? parseFloat(xTerm);
+        this.properties.x = Number.isNaN(x) ? this.properties.x : (scale.x != 0 ? x / scale.x : 0);
+        const yTerm = this.properties.yTerm;
+        const y = calculator.getByName(yTerm) ?? parseFloat(yTerm);
+        this.properties.y = Number.isNaN(y) ? this.properties.y : (scale.y != 0 ? -y / scale.y : 0);
+        // Trajectory update per iteration
+        this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
+        if (this.trajectory.values.length <= calculator.getLastIteration()) {
+            const position = this.getBoardPosition();
+            this.trajectory.values.push({ x: position.x, y: position.y });
+        }
+        // Maintain cached points string
+        if (this.trajectory.values.length < this.trajectory.lastCount) {
+            // Rebuild when shrunk (reset/replay)
+            this.trajectory.pointsString = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
+            this.trajectory.lastCount = this.trajectory.values.length;
+        } else if (this.trajectory.values.length > this.trajectory.lastCount) {
+            const newPoints = this.trajectory.values.slice(this.trajectory.lastCount)
+                .map(v => `${v.x},${v.y}`).join(" ");
+            this.trajectory.pointsString += (this.trajectory.pointsString && newPoints ? " " : "") + newPoints;
+            this.trajectory.lastCount = this.trajectory.values.length;
+        }
+        // Stroboscopy update per iteration (incremental)
+        if (this.properties.stroboscopyColor != this.board.theme.getBackgroundColors()[0].color) {
+            const lastIter = calculator.getLastIteration();
+            if (lastIter === 0) {
+                while (this.stroboscopy.firstChild)
+                    this.stroboscopy.removeChild(this.stroboscopy.firstChild);
+                this._lastStrobeCount = 0;
+            }
+            const interval = Math.max(1, this.properties.stroboscopyInterval);
+            const desired = Math.floor(lastIter / interval);
+            while (this._lastStrobeCount < desired && this.trajectory.values.length > this._lastStrobeCount * interval) {
+                const idx = this._lastStrobeCount * interval;
+                const pos = this.trajectory.values[idx] ?? this.getBoardPosition();
+                const stroboscopyCircle = this.board.createSvgElement("circle");
+                stroboscopyCircle.setAttribute("cx", pos.x);
+                stroboscopyCircle.setAttribute("cy", pos.y);
+                stroboscopyCircle.setAttribute("r", this.properties.radius);
+                stroboscopyCircle.setAttribute("fill", this.properties.stroboscopyColor);
+                stroboscopyCircle.setAttribute("opacity", this.properties.stroboscopyOpacity);
+                this.stroboscopy.appendChild(stroboscopyCircle);
+                this._lastStrobeCount++;
+            }
+        }
+        // Mark for draw this frame
+        this.board.markDirty(this);
     }
 
     drawTrajectory() {
         if (this.properties.trajectoryColor != this.board.theme.getBackgroundColors()[0].color) {
-            const trajectoryPolyLine = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
-            this.trajectory.element.setAttribute("points", trajectoryPolyLine);
+            this.trajectory.element.setAttribute("points", this.trajectory.pointsString);
             this.trajectory.element.setAttribute("stroke", this.properties.trajectoryColor);
             this.trajectory.element.setAttribute("stroke-width", 1);
         } else
