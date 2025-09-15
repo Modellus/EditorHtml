@@ -229,12 +229,24 @@ class BaseShape {
 
     syncAxis(calculator, term, propertyName, scaleFactor, directionSign) {
         const propertyValue = this.properties[propertyName];
-        if (calculator.isTermEditable(term) && calculator.setTermValue(term, directionSign * (scaleFactor ?? 1) * propertyValue)) return;
-        const current = this.resolveTermNumeric(term, calculator);
-        this.properties[propertyName] = directionSign * (current / (scaleFactor || 1));
+        calculator.setTermValue(term, directionSign * (scaleFactor ?? 1) * propertyValue);
     }
 
-    applyDragToTerms(_point) {
+    updateFromTerms() {
+        const calculator = this.board.calculator;
+        const xTerm = this.properties.xTerm;
+        const yTerm = this.properties.yTerm;
+        const { xPropertyName, yPropertyName, useScale, invertYAxis } = this.getDragTermMapping();
+        const scale = useScale && this.getScale ? this.getScale() : { x: 1, y: 1 };
+        const xValue = calculator.getByName(xTerm) ?? parseFloat(xTerm);
+        if (typeof xValue === 'number' && !Number.isNaN(xValue))
+            this.properties[xPropertyName] = (scale.x !== 0 ? xValue / (scale.x ?? 1) : 0);
+        const yValue = calculator.getByName(yTerm) ?? parseFloat(yTerm);
+        if (typeof yValue === 'number' && !Number.isNaN(yValue))
+            this.properties[yPropertyName] = (invertYAxis ? -1 : 1) * (scale.y !== 0 ? yValue / (scale.y ?? 1) : 0);
+    }
+
+    applyDragToTerms() {
         const calculator = this.board.calculator;
         const xTerm = this.properties.xTerm;
         const yTerm = this.properties.yTerm;

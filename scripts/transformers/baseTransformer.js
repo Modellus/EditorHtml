@@ -75,6 +75,8 @@ class BaseTransformer {
                 this.transformShape(transform);
                 if (this.shape.applyDragToTerms)
                     this.shape.applyDragToTerms(point);
+                if (this.shape.updateFromTerms)
+                    this.shape.updateFromTerms();
                 this.shape.draw();
                 this.updateHandles();
                 this.startX = point.x;
