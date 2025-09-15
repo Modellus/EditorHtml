@@ -107,7 +107,6 @@ class ExpressionShape extends BaseShape {
 
     onChange() {
         this.properties.expression = this.mathfield.getValue();
-        // Debounce changed event to avoid resetting calculator on every keystroke
         clearTimeout(this._changeTimer);
         this._changeTimer = setTimeout(() => {
             this.dispatchEvent("changed", { expression: this.properties.expression });

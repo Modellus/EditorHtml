@@ -109,7 +109,6 @@ class CharacterShape extends BaseShape {
 
     update() {
         super.update();
-        // Property-driven updates only; per-iteration movement in tick()
     }
 
     draw() {
@@ -130,9 +129,11 @@ class CharacterShape extends BaseShape {
                 this._lastFrameIndex = frameIndex;
                 this._lastAnimation = animation;
                 this._lastCharacter = name;
-            }
         }
     }
+
+    // Inherits BaseShape.applyDragToTerms (x/y mapping)
+}
 
     tick() {
         super.tick();
@@ -144,7 +145,6 @@ class CharacterShape extends BaseShape {
         const yTerm = this.properties.yTerm;
         const y = calculator.getByName(yTerm) ?? parseFloat(yTerm);
         this.properties.y = Number.isNaN(y) ? this.properties.y : (scale.y != 0 ? -y / scale.y : 0);
-        // Always draw to update animation frame
         this.board.markDirty(this);
     }
 }

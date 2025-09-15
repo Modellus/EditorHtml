@@ -154,4 +154,46 @@ class Calculator extends EventTarget {
     getTermsNames() {
         return this.system.getTermsNames();
     }
+
+    // Returns true if a term can be directly edited (not independent and not function)
+    isTermEditable(name) {
+        if (!name) return false;
+        const sys = this.system;
+        if (sys.independent && sys.independent.name === name)
+            return false;
+        const isFunc = (arr) => Array.isArray(arr) && arr.some(e => e?.name === name);
+        if (isFunc(sys.functionExpressionsWithCondition) || isFunc(sys.functionExpressionsWithoutCondition))
+            return false;
+        return true;
+    }
+
+    // Safely set a term value at a given iteration, with validation
+    setTermValue(name, value, iteration = this.system.iteration) {
+        const sys = this.system;
+        if (!this.isTermEditable(name))
+            return false;
+        if (!sys.terms || sys.terms[name] === undefined)
+            return false;
+        const idx = Math.max(1, iteration) - 1;
+        if (idx < 0 || idx >= sys.values.length)
+            return false;
+        sys.values[idx][name] = value;
+        return true;
+    }
+
+    getFinalIteration() {
+        return this.properties.independent.start + Math.floor((this.properties.independent.end - this.properties.independent.start) / this.properties.independent.step) + 1;
+    }
+
+    getEnd() {
+        return this.properties.independent.end;
+    }
+
+    getStep() {
+        return this.properties.independent.step;
+    }      
+
+    getStart() {
+        return this.properties.independent.start;
+    }
 }

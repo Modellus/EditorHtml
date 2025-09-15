@@ -131,4 +131,9 @@ class VectorShape extends BaseShape {
         }
         this.board.markDirty(this);
     }
+
+    getDragTermMapping() {
+        // Vector uses width/height as term values, no referential scaling, no Y inversion
+        return { xProp: 'width', yProp: 'height', useScale: false, invertY: false };
+    }
 }

@@ -1,4 +1,6 @@
 {
+  "name": "modellus-editor",
+  "private": true,
   "dependencies": {
     "devextreme": "24.2.1-alpha-24256-1935",
     "mathlive": "^0.103.0"

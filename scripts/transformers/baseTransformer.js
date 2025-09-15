@@ -33,7 +33,6 @@ class BaseTransformer {
         handle.setAttribute("class", className);
         this.board.svg.appendChild(handle);
         this.handles.push(handle);
-        // Use Pointer Events for dragging
         handle.addEventListener("pointerdown", e => this.onHandleDragStart(e, handle));
         handle.update = update;
         handle.getTransform = getTransform;
@@ -56,10 +55,11 @@ class BaseTransformer {
         handle.addEventListener("pointerup", this.onHandleDragEnd);
         handle.addEventListener("pointercancel", this.onHandleDragEnd);
         handle.addEventListener("pointerout", this.onHandleDragEnd);
+        if (this.shape.onDragStart)
+            this.shape.onDragStart();
     }
 
     onHandleDrag = event => {
-        // Cache latest mouse point; coalesce updates to a single RAF
         const p = this.board.getMouseToSvgPoint(event);
         p.dx = p.x - this.startX;
         p.dy = p.y - this.startY;
@@ -73,6 +73,8 @@ class BaseTransformer {
                 this._pendingPoint = null;
                 const transform = this.draggedHandle.getTransform(point);
                 this.transformShape(transform);
+                if (this.shape.applyDragToTerms)
+                    this.shape.applyDragToTerms(point);
                 this.shape.draw();
                 this.updateHandles();
                 this.startX = point.x;
@@ -96,6 +98,8 @@ class BaseTransformer {
             this._dragRaf = null;
         }
         this._pendingPoint = null;
+        if (this.shape.onDragEnd)
+            this.shape.onDragEnd();
     }
 
     transformShape(transform) {

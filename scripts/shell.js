@@ -22,6 +22,11 @@ class Shell  {
         this.calculator.on("iterate", e => this.onIterate(e));
         if (model != undefined)
             this.openModel(model);
+        // Spacebar hold-to-pause wiring
+        this._resumeOnSpaceUp = false;
+        window.addEventListener('keydown', e => this.onKeyDown(e));
+        window.addEventListener('keyup', e => this.onKeyUp(e));
+        this.reset();
     }
 
     setDefaults() {
@@ -450,6 +455,10 @@ class Shell  {
                     location: "center"
                 },
                 {
+                    location: "center",
+                    template: _ => $("<div id='playHeadMinLabel'></div>")
+                },
+                {
                     widget: "dxSlider",
                     cssClass: "slider",
                     options: {
@@ -472,6 +481,10 @@ class Shell  {
                         onValueChanged: e => this.iterationChanged(e.value)
                     },
                     location: "center"
+                },
+                {
+                    location: "center",
+                    template: _ => $("<div id='playHeadMaxLabel'></div>")
                 },
                 {
                     widget: "dxButton",
@@ -541,6 +554,8 @@ class Shell  {
         this.playHead = $("#playHeadSlider").dxSlider("instance");
         this.stepBackward = $("#stepBackwardButton").dxButton("instance");
         this.stepForward = $("#stepForwardButton").dxButton("instance");
+        this.$playHeadMin = $("#playHeadMinLabel");
+        this.$playHeadMax = $("#playHeadMaxLabel");
     }
         
     createChat() {
@@ -759,7 +774,7 @@ class Shell  {
     }
     
     updatePlayer() {
-        var lastIteration = this.calculator.getLastIteration();
+        var lastIteration = this.calculator.getFinalIteration();
         var iteration = this.calculator.getIteration();
         var icon = this.playPause.option("icon");
         var isRunning = this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING;
@@ -773,6 +788,8 @@ class Shell  {
         this.stepForward.option("disabled", isRunning || iteration == lastIteration);
         this.playHead.option("max", lastIteration);
         this.playHead.option("value", iteration);
+        this.$playHeadMin.text(this.calculator.getStart().toFixed(Utils.getPrecision(this.calculator.properties.independent.step)));
+        this.$playHeadMax.text(this.calculator.getEnd().toFixed(Utils.getPrecision(this.calculator.properties.independent.step)));
     }
     
     playPausePressed() {
@@ -817,7 +834,7 @@ class Shell  {
     iterationChanged(iteration) {
         this.calculator.setIteration(iteration);
     }
-    
+
     clear() {
         this.setDefaults();
         this.calculator.clear();
@@ -977,5 +994,47 @@ class Shell  {
 
     onZoom(e) {
         this.zoom.option("text", `${Math.round(e.detail.zoom * 100)} %`);
+    }
+
+    onKeyDown(e) {
+        if (e.code !== 'Space' && e.key !== ' ')
+            return;
+        if (e.repeat)
+            return; // ignore auto-repeat
+        // Pause only if simulation is currently playing (started and not finished)
+        if (this.calculator.status === STATUS.PLAYING) {
+            e.preventDefault();
+            this.calculator.pause();
+            this._resumeOnSpaceUp = true;
+            // Pulse the play/pause button while space is held
+            if (this.playPause && this.playPause.element)
+                this.playPause.element().addClass('pulsing');
+        }
+    }
+
+    onKeyUp(e) {
+        if (e.code !== 'Space' && e.key !== ' ')
+            return;
+        if (!this._resumeOnSpaceUp)
+            return;
+        // Resume only if simulation hasn't finished
+        const sys = this.calculator.system;
+        const end = this.calculator.properties.independent.end;
+        const step = this.calculator.properties.independent.step;
+        let current;
+        try {
+            current = typeof sys.getIndependent === 'function' ? sys.getIndependent() : this.calculator.getIndependentValue(sys.iteration);
+        } catch (_) {
+            current = this.calculator.getIndependentValue(sys.iteration);
+        }
+        const finished = Math.abs(current - end) < step / 10.0;
+        if (!finished) {
+            e.preventDefault();
+            this.calculator.play();
+        }
+        // Stop pulsing when space is released
+        if (this.playPause && this.playPause.element)
+            this.playPause.element().removeClass('pulsing');
+        this._resumeOnSpaceUp = false;
     }
 }

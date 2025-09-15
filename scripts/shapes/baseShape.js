@@ -204,8 +204,40 @@ class BaseShape {
     }
 
     tick() {
-        // Per-iteration lightweight updates; default propagates to children
         this.children.forEach(child => child.tick());
+    }
+
+    // Hooks for transformer-driven interactions
+    onDragStart() {
+        this.isDragging = true;
+    }
+
+    onDragEnd() {
+        this.isDragging = false;
+    }
+
+    // Customize which visual properties map back to x/y terms, and how scaling applies
+    getDragTermMapping() {
+        return { xProp: 'x', yProp: 'y', useScale: true, invertY: true };
+    }
+
+    // Map visual drag back into model terms using mapping from getDragTermMapping()
+    applyDragToTerms(point) {
+        const xt = this.properties?.xTerm;
+        const yt = this.properties?.yTerm;
+        if (!xt && !yt)
+            return;
+        const system = this.board?.calculator?.system;
+        if (!system)
+            return;
+        const { xProp, yProp, useScale, invertY } = this.getDragTermMapping();
+        const scale = (useScale && this.getScale) ? this.getScale() : { x: 1, y: 1 };
+        const xVal = this.properties?.[xProp];
+        const yVal = this.properties?.[yProp];
+        if (xt && typeof xVal === 'number')
+            this.board.calculator.setTermValue(xt, (scale.x ?? 1) * xVal);
+        if (yt && typeof yVal === 'number')
+            this.board.calculator.setTermValue(yt, (invertY ? -1 : 1) * (scale.y ?? 1) * yVal);
     }
 
     getBounds() {

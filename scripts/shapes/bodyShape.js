@@ -146,12 +146,10 @@ class BodyShape extends BaseShape {
 
     update() {
         super.update();
-        // Property-driven updates remain here (colors, radius, etc.)
         if (this.properties.imageBase64 != "")
             this.image.setAttribute("href", `data:image/png;base64,${this.properties.imageBase64}`);
         else
             this.image.removeAttribute("href");
-        // Update colors for existing stroboscopy marks if needed
         if (this.stroboscopy && this.stroboscopy.children) {
             Array.from(this.stroboscopy.children).forEach(c => {
                 c.setAttribute("fill", this.properties.stroboscopyColor);
@@ -181,15 +179,12 @@ class BodyShape extends BaseShape {
         const yTerm = this.properties.yTerm;
         const y = calculator.getByName(yTerm) ?? parseFloat(yTerm);
         this.properties.y = Number.isNaN(y) ? this.properties.y : (scale.y != 0 ? -y / scale.y : 0);
-        // Trajectory update per iteration
         this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
         if (this.trajectory.values.length <= calculator.getLastIteration()) {
             const position = this.getBoardPosition();
             this.trajectory.values.push({ x: position.x, y: position.y });
         }
-        // Maintain cached points string
         if (this.trajectory.values.length < this.trajectory.lastCount) {
-            // Rebuild when shrunk (reset/replay)
             this.trajectory.pointsString = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
             this.trajectory.lastCount = this.trajectory.values.length;
         } else if (this.trajectory.values.length > this.trajectory.lastCount) {
@@ -198,7 +193,6 @@ class BodyShape extends BaseShape {
             this.trajectory.pointsString += (this.trajectory.pointsString && newPoints ? " " : "") + newPoints;
             this.trajectory.lastCount = this.trajectory.values.length;
         }
-        // Stroboscopy update per iteration (incremental)
         if (this.properties.stroboscopyColor != this.board.theme.getBackgroundColors()[0].color) {
             const lastIter = calculator.getLastIteration();
             if (lastIter === 0) {
@@ -221,7 +215,6 @@ class BodyShape extends BaseShape {
                 this._lastStrobeCount++;
             }
         }
-        // Mark for draw this frame
         this.board.markDirty(this);
     }
 
@@ -252,4 +245,6 @@ class BodyShape extends BaseShape {
             }
         }
     }
+
+    // Inherits BaseShape.applyDragToTerms (x/y mapping)
 }

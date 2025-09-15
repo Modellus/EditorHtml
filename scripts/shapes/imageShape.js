@@ -55,7 +55,6 @@ class ImageShape extends BodyShape {
     }
 
     update() {
-        // Property-driven updates only; per-iteration updates handled by BodyShape.tick
         if (this.properties.imageBase64 != "")
             this.image.setAttribute("href", `data:image/png;base64,${this.properties.imageBase64}`);
         else
