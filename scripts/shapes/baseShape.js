@@ -218,26 +218,30 @@ class BaseShape {
 
     // Customize which visual properties map back to x/y terms, and how scaling applies
     getDragTermMapping() {
-        return { xProp: 'x', yProp: 'y', useScale: true, invertY: true };
+        return { xPropertyName: 'x', yPropertyName: 'y', useScale: true, invertYAxis: true };
     }
 
-    // Map visual drag back into model terms using mapping from getDragTermMapping()
-    applyDragToTerms(point) {
-        const xt = this.properties?.xTerm;
-        const yt = this.properties?.yTerm;
-        if (!xt && !yt)
-            return;
-        const system = this.board?.calculator?.system;
-        if (!system)
-            return;
-        const { xProp, yProp, useScale, invertY } = this.getDragTermMapping();
-        const scale = (useScale && this.getScale) ? this.getScale() : { x: 1, y: 1 };
-        const xVal = this.properties?.[xProp];
-        const yVal = this.properties?.[yProp];
-        if (xt && typeof xVal === 'number')
-            this.board.calculator.setTermValue(xt, (scale.x ?? 1) * xVal);
-        if (yt && typeof yVal === 'number')
-            this.board.calculator.setTermValue(yt, (invertY ? -1 : 1) * (scale.y ?? 1) * yVal);
+    resolveTermNumeric(term, calculator) {
+        const value = calculator.getByName(term);
+        if (typeof value === 'number' && !Number.isNaN(value)) return value;
+        return parseFloat(term);
+    }
+
+    syncAxis(calculator, term, propertyName, scaleFactor, directionSign) {
+        const propertyValue = this.properties[propertyName];
+        if (calculator.isTermEditable(term) && calculator.setTermValue(term, directionSign * (scaleFactor ?? 1) * propertyValue)) return;
+        const current = this.resolveTermNumeric(term, calculator);
+        this.properties[propertyName] = directionSign * (current / (scaleFactor || 1));
+    }
+
+    applyDragToTerms(_point) {
+        const calculator = this.board.calculator;
+        const xTerm = this.properties.xTerm;
+        const yTerm = this.properties.yTerm;
+        const { xPropertyName, yPropertyName, useScale, invertYAxis } = this.getDragTermMapping();
+        const scale = useScale && this.getScale ? this.getScale() : { x: 1, y: 1 };
+        this.syncAxis(calculator, xTerm, xPropertyName, (scale.x ?? 1), 1);
+        this.syncAxis(calculator, yTerm, yPropertyName, (scale.y ?? 1), (invertYAxis ? -1 : 1));
     }
 
     getBounds() {
