@@ -125,6 +125,8 @@ class Calculator extends EventTarget {
         text = text.replace(/\\placeholder\{\}/g, '');
         const expressions = text.split('\\\\').map(line => line.trim());
         expressions.forEach(e => this.parser.parse(e));
+        this.engine.reset();
+        this.system.reset();
     }
 
     getByName(name) {
@@ -168,12 +170,11 @@ class Calculator extends EventTarget {
 
     setTermValue(name, value, iteration = this.system.iteration) {
         const system = this.system;
-        if (!this.isEditable(name))
-            return;
-        const index = Math.max(1, iteration) - 1;
-        if (index < 0 || index >= system.values.length)
-            return;
-        system.values[index][name] = Utils.roundToPrecision(value, this.properties.precision);
+        var value = Utils.roundToPrecision(value, this.properties.precision);
+        var term = system.getTerm(name);
+        system.set(term, value);
+        if (iteration == 1)
+            system.setInitialByName(name, value);
     }
 
     getFinalIteration() {

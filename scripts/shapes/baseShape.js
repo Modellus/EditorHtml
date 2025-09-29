@@ -207,14 +207,14 @@ class BaseShape {
             this.properties[property] = parseFloat(this.properties[property]) + delta;
         this.tick();
         this.board.markDirty(this);
-        this.dispatchEvent("changed", { property: property, value: value });
+        this.dispatchEvent("shapeChanged", { property: property, value: value });
     }
 
     setProperty(name, value) {
         this.properties[name] = value;
         this.tick();
         this.board.markDirty(this);
-        this.dispatchEvent("changed", { property: name, value: value });
+        this.dispatchEvent("shapeChanged", { property: name, value: value });
     }
 
     update() {

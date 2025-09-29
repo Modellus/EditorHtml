@@ -60,4 +60,9 @@ class Selection {
         }
         return undefined;
     }
+
+    update() {
+        if (this.transformer)
+            this.transformer.updateHandles();
+    }
 }
