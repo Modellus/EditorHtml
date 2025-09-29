@@ -11,6 +11,7 @@ class BaseShape {
         if (parent != null)
             parent.children.push(this);
         this.properties = {};
+        this.termsMapping = [];
         this.isReferential = false;
         this.setDefaults();
         this.initializeElement();
@@ -189,8 +190,19 @@ class BaseShape {
     }
 
     setProperty(name, value) {
-        this.properties[name] = value;
-        // Mark the shape as dirty and let Board coalesce the refresh
+        var termMapping = this.termsMapping.find(t => t.property === name);
+        if (termMapping != null) {
+            const calculator = this.board.calculator;
+            var term = this.properties[termMapping.termProperty];
+            if (calculator.isTerm(term)) {
+                calculator.setTermValue(term, value);
+                calculator.iterate();
+            } else {
+                this.properties[name] = value;
+                termMapping.termProperty = value;
+            }
+        } else
+            this.properties[name] = value;
         this.board.markDirty(this);
         this.dispatchEvent("changed", { property: name, value: value });
     }
@@ -207,8 +219,7 @@ class BaseShape {
         this.children.forEach(child => child.tick());
     }
 
-    // Hooks for transformer-driven interactions
-    onDragStart() {
+    /*onDragStart() {
         this.isDragging = true;
     }
 
@@ -216,45 +227,40 @@ class BaseShape {
         this.isDragging = false;
     }
 
-    // Customize which visual properties map back to x/y terms, and how scaling applies
     getDragTermMapping() {
         return { xPropertyName: 'x', yPropertyName: 'y', useScale: true, invertYAxis: true };
     }
 
-    resolveTermNumeric(term, calculator) {
-        const value = calculator.getByName(term);
-        if (typeof value === 'number' && !Number.isNaN(value)) return value;
-        return parseFloat(term);
-    }
-
-    syncAxis(calculator, term, propertyName, scaleFactor, directionSign) {
-        const propertyValue = this.properties[propertyName];
-        calculator.setTermValue(term, directionSign * (scaleFactor ?? 1) * propertyValue);
+    syncAxis(term, propertyName, scaleFactor, directionSign) {
+        const calculator = this.board.calculator;
+        const propertyValue = directionSign * (scaleFactor ?? 1) * this.properties[propertyName];
+        if (calculator.isTerm(term))
+            calculator.setTermValue(term, propertyValue);
+        else 
+            this.properties[term] = propertyValue;
     }
 
     updateFromTerms() {
-        const calculator = this.board.calculator;
         const xTerm = this.properties.xTerm;
         const yTerm = this.properties.yTerm;
         const { xPropertyName, yPropertyName, useScale, invertYAxis } = this.getDragTermMapping();
         const scale = useScale && this.getScale ? this.getScale() : { x: 1, y: 1 };
-        const xValue = calculator.getByName(xTerm) ?? parseFloat(xTerm);
+        const xValue = this.resolveTermNumeric(xTerm);
         if (typeof xValue === 'number' && !Number.isNaN(xValue))
             this.properties[xPropertyName] = (scale.x !== 0 ? xValue / (scale.x ?? 1) : 0);
-        const yValue = calculator.getByName(yTerm) ?? parseFloat(yTerm);
+        const yValue = this.resolveTermNumeric(yTerm);
         if (typeof yValue === 'number' && !Number.isNaN(yValue))
             this.properties[yPropertyName] = (invertYAxis ? -1 : 1) * (scale.y !== 0 ? yValue / (scale.y ?? 1) : 0);
     }
 
     applyDragToTerms() {
-        const calculator = this.board.calculator;
         const xTerm = this.properties.xTerm;
         const yTerm = this.properties.yTerm;
         const { xPropertyName, yPropertyName, useScale, invertYAxis } = this.getDragTermMapping();
         const scale = useScale && this.getScale ? this.getScale() : { x: 1, y: 1 };
-        this.syncAxis(calculator, xTerm, xPropertyName, (scale.x ?? 1), 1);
-        this.syncAxis(calculator, yTerm, yPropertyName, (scale.y ?? 1), (invertYAxis ? -1 : 1));
-    }
+        this.syncAxis(xTerm, xPropertyName, (scale.x ?? 1), 1);
+        this.syncAxis(yTerm, yPropertyName, (scale.y ?? 1), (invertYAxis ? -1 : 1));
+    }*/
 
     getBounds() {
         var parentBounds = this.parent?.getBounds() ?? {};
@@ -295,6 +301,11 @@ class BaseShape {
         this.board.removeShape(this);
     }
 
+    addTerm(termProperty, property, title, isEditable = true, colSpan = 1) {
+        this.termsMapping.push({ termProperty: termProperty, property: property});
+        this.addTermToForm(termProperty, title, isEditable, colSpan);
+    }
+
     addTermToForm(term, title, isEditable = true, colSpan = 1) {
         if (this.form == null)
             return;
@@ -328,5 +339,12 @@ class BaseShape {
                 }
             }
         );
+    }
+
+    resolveTermNumeric(term) {
+        const calculator = this.board.calculator;
+        if (calculator.isTerm(term))
+            return calculator.getByName(term);
+        return parseFloat(term);
     }
 }
