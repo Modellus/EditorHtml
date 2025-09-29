@@ -9,19 +9,19 @@ class CircleTransformer extends BaseTransformer {
             {
                 className: "handle origin",
                 getAttributes: _ => {
-                    const position = this.shape.getBoardPosition();
+                    const boardPosition = this.shape.getBoardPosition();
                     return {
-                        x: position.x - size / 2,
-                        y: position.y - size / 2,
+                        x: boardPosition.x - size / 2,
+                        y: boardPosition.y - size / 2,
                         width: size,
                         height: size
                     }
                 },
                 getTransform: e => {
-                    const position = this.shape.getBoardPosition();
+                    const boardPosition = this.shape.getBoardPosition();
                     return {
-                        x: this.shape.properties.x + e.dx,
-                        y: this.shape.properties.y + e.dy
+                        x: this.shape.delta("x", e.dx),
+                        y: this.shape.delta("y", e.dy)
                     }
                 }
             },

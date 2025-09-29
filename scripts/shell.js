@@ -22,16 +22,16 @@ class Shell  {
         this.calculator.on("iterate", e => this.onIterate(e));
         if (model != undefined)
             this.openModel(model);
-        // Spacebar hold-to-pause wiring
         this._resumeOnSpaceUp = false;
-        window.addEventListener('keydown', e => this.onKeyDown(e));
-        window.addEventListener('keyup', e => this.onKeyUp(e));
+        window.addEventListener("keydown", e => this.onKeyDown(e));
+        window.addEventListener("keyup", e => this.onKeyUp(e));
         this.reset();
     }
 
     setDefaults() {
         this.properties.language = "en-US";
         this.properties.name = "Model";
+        this.properties.precision = 2;
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
         this.properties.iterationTerm = "n";
         this.properties.AIApiKey = this.aiLogic.getApiKey();
@@ -86,6 +86,21 @@ class Shell  {
                     label: { text: "Name", visible: false },
                     editorType: "dxTextBox",
                     editorOptions: {
+                        stylingMode: "filled"
+                    }
+                },
+                {
+                    colSpan: 1,
+                    dataField: "precision",
+                    label: { 
+                        text: this.board.translations.get("Precision") 
+                    },
+                    editorType: "dxNumberBox",
+                    editorOptions: {
+                        min: 0,
+                        max: 10,
+                        step: 1,
+                        showSpinButtons: true,
                         stylingMode: "filled"
                     }
                 },
@@ -739,7 +754,7 @@ class Shell  {
             properties = this.properties;
         else
             Utils.mergeProperties(properties, this.properties);
-        this.calculator.setProperties(properties.independent, properties.iterationTerm);
+        this.calculator.setProperties(properties.precision, properties.independent, properties.iterationTerm);
     }
     
     setProperty(name, value) {
@@ -961,11 +976,11 @@ class Shell  {
         document.body.appendChild(link);
         link.click();
     }
-    
-    onSelected(e) {
+
+    selectShape(shape) {
         this.updateToolbar();
         this.shapeForm = null;
-        var form = e.detail.shape.getForm();
+        var form = shape.getForm();
         if (form == null)
             return;
         this.shapeForm = form.dxForm("instance");
@@ -973,10 +988,18 @@ class Shell  {
         this.shapePopup.content().append(form);
         this.shapePopup.show();
     }
-    
-    onDeselected(e) {
+
+    deselectShape() {
         this.updateToolbar();
         this.shapePopup.hide();
+    }
+    
+    onSelected(e) {
+        this.selectShape(e.detail.shape);
+    }
+    
+    onDeselected(e) {
+        this.deselectShape();
     }
     
     onShapeChanged(e) {
@@ -984,9 +1007,8 @@ class Shell  {
         if (shape.constructor.name == "ExpressionShape")
             this.reset();
     }
-    
+
     onIterate(e) {
-        // Per-iteration: let shapes update lightweight state, then coalesced draw
         this.board.shapes.shapes.forEach(s => s.tick());
         this.board.refresh();
         this.updatePlayer();

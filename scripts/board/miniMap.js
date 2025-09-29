@@ -4,6 +4,7 @@ class MiniMap {
         this.minimapImage = minimapImage;
         this.minimapViewport = minimapViewport;
         this._rafId = null;
+        this._minimapUrl = null;
         this.board.svg.addEventListener("pan", e => this.onPan(e));
         this.board.svg.addEventListener("zoom", e => this.onZoom(e));
         this.board.svg.addEventListener("shapeAdded", e => this.onShapeAdded(e));
@@ -87,7 +88,20 @@ class MiniMap {
         svg.setAttribute("height", y2 - y1);
         const finalString = new XMLSerializer().serializeToString(document);
         const blob = new Blob([finalString], { type: "image/svg+xml" });
-        this.minimapImage.src = URL.createObjectURL(blob);
+        if (this._minimapUrl)
+            URL.revokeObjectURL(this._minimapUrl);
+        const url = URL.createObjectURL(blob);
+        this._minimapUrl = url;
+        const revokeUrl = () => {
+            if (this._minimapUrl === url)
+                this._minimapUrl = null;
+            URL.revokeObjectURL(url);
+            this.minimapImage.onload = null;
+            this.minimapImage.onerror = null;
+        };
+        this.minimapImage.onload = revokeUrl;
+        this.minimapImage.onerror = revokeUrl;
+        this.minimapImage.src = url;
       }
 
     toggle() {

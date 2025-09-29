@@ -12,6 +12,7 @@ class Calculator extends EventTarget {
     }
 
     setDefaults() {
+        this.properties.precision = 2;
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
         this.properties.iterationTerm = "n";
     }
@@ -51,6 +52,11 @@ class Calculator extends EventTarget {
         this.emit("iterate", { calculator: this });     
         if (this.status == STATUS.PLAYING)
             this.frameId = requestAnimationFrame(this._iterate);
+    }
+
+    calculate() {
+        this.system.calculate();
+        this.emit("iterate", { calculator: this });
     }
 
     play() {
@@ -155,27 +161,19 @@ class Calculator extends EventTarget {
         return this.system.getTermsNames();
     }
 
-    isTermEditable(name) {
-        const system = this.system;
-        if (system.independent && system.independent.name === name)
-            return false;
-        const isFunc = (arr) => Array.isArray(arr) && arr.some(e => e?.name === name);
-        if (isFunc(system.functionExpressionsWithCondition) || isFunc(system.functionExpressionsWithoutCondition))
-            return false;
-        return true;
+    isEditable(name) {
+        var term = this.system.getTerm(name);
+        return !term || this.system.isEditable(term);
     }
 
     setTermValue(name, value, iteration = this.system.iteration) {
         const system = this.system;
-        if (!this.isTermEditable(name))
-            return false;
-        if (!system.terms || system.terms[name] === undefined)
-            return false;
+        if (!this.isEditable(name))
+            return;
         const index = Math.max(1, iteration) - 1;
         if (index < 0 || index >= system.values.length)
-            return false;
-        system.values[index][name] = value;
-        return true;
+            return;
+        system.values[index][name] = Utils.roundToPrecision(value, this.properties.precision);
     }
 
     getFinalIteration() {
@@ -192,5 +190,13 @@ class Calculator extends EventTarget {
 
     getStart() {
         return this.properties.independent.start;
+    }
+
+    getPrecision() {
+        return this.properties.precision;
+    }
+
+    isTerm(name) {
+        return this.system.terms[name] !== undefined;
     }
 }

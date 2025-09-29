@@ -189,20 +189,30 @@ class BaseShape {
         return this.form;
     }
 
-    setProperty(name, value) {
-        var termMapping = this.termsMapping.find(t => t.property === name);
+    delta(property, delta) {
+        var termMapping = this.termsMapping.find(t => t.property === property);
         if (termMapping != null) {
-            const calculator = this.board.calculator;
             var term = this.properties[termMapping.termProperty];
-            if (calculator.isTerm(term)) {
-                calculator.setTermValue(term, value);
-                calculator.iterate();
-            } else {
-                this.properties[name] = value;
-                termMapping.termProperty = value;
-            }
+            const calculator = this.board.calculator;   
+            var isTerm = calculator.isTerm(term); 
+            delta = delta * (termMapping.isInverted ? -1 : 1);
+            if (isTerm) {
+                var value = calculator.getByName(term);
+                calculator.setTermValue(term, value + delta);
+                calculator.calculate();
+            } else
+                this.properties[termMapping.termProperty] = Utils.roundToPrecision(
+                    parseFloat(this.properties[termMapping.termProperty]) + delta, calculator.getPrecision());
         } else
-            this.properties[name] = value;
+            this.properties[property] = parseFloat(this.properties[property]) + delta;
+        this.tick();
+        this.board.markDirty(this);
+        this.dispatchEvent("changed", { property: property, value: value });
+    }
+
+    setProperty(name, value) {
+        this.properties[name] = value;
+        this.tick();
         this.board.markDirty(this);
         this.dispatchEvent("changed", { property: name, value: value });
     }
@@ -218,49 +228,6 @@ class BaseShape {
     tick() {
         this.children.forEach(child => child.tick());
     }
-
-    /*onDragStart() {
-        this.isDragging = true;
-    }
-
-    onDragEnd() {
-        this.isDragging = false;
-    }
-
-    getDragTermMapping() {
-        return { xPropertyName: 'x', yPropertyName: 'y', useScale: true, invertYAxis: true };
-    }
-
-    syncAxis(term, propertyName, scaleFactor, directionSign) {
-        const calculator = this.board.calculator;
-        const propertyValue = directionSign * (scaleFactor ?? 1) * this.properties[propertyName];
-        if (calculator.isTerm(term))
-            calculator.setTermValue(term, propertyValue);
-        else 
-            this.properties[term] = propertyValue;
-    }
-
-    updateFromTerms() {
-        const xTerm = this.properties.xTerm;
-        const yTerm = this.properties.yTerm;
-        const { xPropertyName, yPropertyName, useScale, invertYAxis } = this.getDragTermMapping();
-        const scale = useScale && this.getScale ? this.getScale() : { x: 1, y: 1 };
-        const xValue = this.resolveTermNumeric(xTerm);
-        if (typeof xValue === 'number' && !Number.isNaN(xValue))
-            this.properties[xPropertyName] = (scale.x !== 0 ? xValue / (scale.x ?? 1) : 0);
-        const yValue = this.resolveTermNumeric(yTerm);
-        if (typeof yValue === 'number' && !Number.isNaN(yValue))
-            this.properties[yPropertyName] = (invertYAxis ? -1 : 1) * (scale.y !== 0 ? yValue / (scale.y ?? 1) : 0);
-    }
-
-    applyDragToTerms() {
-        const xTerm = this.properties.xTerm;
-        const yTerm = this.properties.yTerm;
-        const { xPropertyName, yPropertyName, useScale, invertYAxis } = this.getDragTermMapping();
-        const scale = useScale && this.getScale ? this.getScale() : { x: 1, y: 1 };
-        this.syncAxis(xTerm, xPropertyName, (scale.x ?? 1), 1);
-        this.syncAxis(yTerm, yPropertyName, (scale.y ?? 1), (invertYAxis ? -1 : 1));
-    }*/
 
     getBounds() {
         var parentBounds = this.parent?.getBounds() ?? {};
@@ -301,8 +268,16 @@ class BaseShape {
         this.board.removeShape(this);
     }
 
-    addTerm(termProperty, property, title, isEditable = true, colSpan = 1) {
-        this.termsMapping.push({ termProperty: termProperty, property: property});
+    dragStart() {
+        this.dispatchEvent("shapeDragStart", {});
+    }
+
+    dragEnd() {
+        this.dispatchEvent("shapeDragEnd", {});
+    }
+
+    addTerm(termProperty, property, title, isInverted = false, isEditable = true, colSpan = 1) {
+        this.termsMapping.push({ termProperty: termProperty, termValue: 0, property: property, isInverted: isInverted });
         this.addTermToForm(termProperty, title, isEditable, colSpan);
     }
 

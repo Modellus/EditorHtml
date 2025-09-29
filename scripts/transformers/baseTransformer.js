@@ -43,6 +43,7 @@ class BaseTransformer {
     }
 
     onHandleDragStart = (event, handle) => {
+        this.shape.dragStart();
         event.preventDefault();
         this.draggedHandle = handle;
         const point = this.board.getMouseToSvgPoint(event);
@@ -55,8 +56,6 @@ class BaseTransformer {
         handle.addEventListener("pointerup", this.onHandleDragEnd);
         handle.addEventListener("pointercancel", this.onHandleDragEnd);
         handle.addEventListener("pointerout", this.onHandleDragEnd);
-        if (this.shape.onDragStart)
-            this.shape.onDragStart();
     }
 
     onHandleDrag = event => {
@@ -73,11 +72,6 @@ class BaseTransformer {
                 this._pendingPoint = null;
                 const transform = this.draggedHandle.getTransform(point);
                 this.transformShape(transform);
-                if (this.shape.applyDragToTerms)
-                    this.shape.applyDragToTerms(point);
-                if (this.shape.updateFromTerms)
-                    this.shape.updateFromTerms();
-                this.shape.draw();
                 this.updateHandles();
                 this.startX = point.x;
                 this.startY = point.y;
@@ -100,13 +94,12 @@ class BaseTransformer {
             this._dragRaf = null;
         }
         this._pendingPoint = null;
-        if (this.shape.onDragEnd)
-            this.shape.onDragEnd();
+        this.shape.dragEnd();
     }
 
     transformShape(transform) {
         for (const [attribute, value] of Object.entries(transform))
-            this.shape.properties[attribute] = value;
+            this.shape.setProperty(attribute, value);
     }
 
     hide() {

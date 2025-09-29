@@ -55,6 +55,8 @@ class Board {
         this.shapes.add(shape);
         shape.element.addEventListener("focused", e => this.onShapeFocused(e));
         shape.element.addEventListener("changed", e => this.onShapeChanged(e));
+        shape.element.addEventListener("shapeDragStart", e => this.onShapeDragStart(e));
+        shape.element.addEventListener("shapeDragEnd", e => this.onShapeDragEnd(e));
         this.selectShape(shape);
         this.dispatchShapeEvent("shapeAdded", shape);
     }
@@ -90,6 +92,14 @@ class Board {
 
     onShapeChanged(e) {
         this.dispatchShapeEvent("shapeChanged", e.detail.shape);
+    }
+
+    onShapeDragStart() {
+        this.deselect();
+    }
+
+    onShapeDragEnd(e) {
+        this.selectShape(e.detail.shape);
     }
 
     bringForward(shape) {
@@ -137,7 +147,6 @@ class Board {
         this._refreshId = requestAnimationFrame(() => {
             this._refreshId = null;
             if (this._dirtyShapes.size > 0) {
-                // Update/draw only dirty shapes
                 const dirty = Array.from(this._dirtyShapes);
                 this._dirtyShapes.clear();
                 dirty.forEach(shape => shape.update());

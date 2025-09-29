@@ -11,8 +11,8 @@ class BodyShape extends BaseShape {
         var form = super.createForm();
         var instance = form.dxForm("instance");
         var items = instance.option("items");
-        this.addTermToForm("xTerm", "Horizontal");
-        this.addTermToForm("yTerm", "Vertical");
+        this.addTerm("xTerm", "x", "Horizontal");
+        this.addTerm("yTerm", "y", "Vertical", true);
         items.push(
             {
                 colSpan: 2,
@@ -120,7 +120,7 @@ class BodyShape extends BaseShape {
         element.appendChild(this.trajectory.element);
         this.stroboscopy = this.board.createSvgElement("g");
         element.appendChild(this.stroboscopy);
-        this._lastStrobeCount = 0;
+        this._stroboscopyPositions = [];
         return element;
     }    
 
@@ -150,72 +150,72 @@ class BodyShape extends BaseShape {
             this.image.setAttribute("href", `data:image/png;base64,${this.properties.imageBase64}`);
         else
             this.image.removeAttribute("href");
-        if (this.stroboscopy && this.stroboscopy.children) {
-            Array.from(this.stroboscopy.children).forEach(c => {
-                c.setAttribute("fill", this.properties.stroboscopyColor);
-                c.setAttribute("opacity", this.properties.stroboscopyOpacity);
-            });
-        }
     }
 
     draw() {
         super.draw();
+        this.drawShape();
+        this.drawTrajectory();
+        this.drawStroboscopy();
+    }
+
+    drawShape() {
         const position = this.getBoardPosition();
         this.circle.setAttribute("cx", position.x);
         this.circle.setAttribute("cy", position.y);
         this.circle.setAttribute("r", this.properties.radius);
         this.circle.setAttribute("fill", this.properties.backgroundColor);
         this.circle.setAttribute("stroke", this.properties.foregroundColor);
-        this.drawTrajectory();
     }
 
     tick() {
         super.tick();
-        const calculator = this.board.calculator;
+        this.tickShape();
+        this.tickTrajectory();
+        this.tickStroboscopy();
+        this.board.markDirty(this);
+    }
+
+    tickShape() {
         const scale = this.getScale();
-        const xTerm = this.properties.xTerm;
-        const x = calculator.getByName(xTerm) ?? parseFloat(xTerm);
-        this.properties.x = Number.isNaN(x) ? this.properties.x : (scale.x != 0 ? x / scale.x : 0);
-        const yTerm = this.properties.yTerm;
-        const y = calculator.getByName(yTerm) ?? parseFloat(yTerm);
-        this.properties.y = Number.isNaN(y) ? this.properties.y : (scale.y != 0 ? -y / scale.y : 0);
-        this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
-        if (this.trajectory.values.length <= calculator.getLastIteration()) {
+        const x = this.resolveTermNumeric(this.properties.xTerm);
+        this.properties.x = scale.x !== 0 ? x / scale.x : 0;
+        const y = -this.resolveTermNumeric(this.properties.yTerm);
+        this.properties.y = scale.y !== 0 ? y / scale.y : 0;
+    }
+
+    tickTrajectory() {
+        const lastIteration = this.board.calculator.getLastIteration();
+        this.trajectory.values = this.trajectory.values.slice(0, lastIteration);
+        if (this.trajectory.values.length <= lastIteration) {
             const position = this.getBoardPosition();
             this.trajectory.values.push({ x: position.x, y: position.y });
         }
-        if (this.trajectory.values.length < this.trajectory.lastCount) {
+        const currentCount = this.trajectory.values.length;
+        if (currentCount !== this.trajectory.lastCount) {
             this.trajectory.pointsString = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
-            this.trajectory.lastCount = this.trajectory.values.length;
-        } else if (this.trajectory.values.length > this.trajectory.lastCount) {
-            const newPoints = this.trajectory.values.slice(this.trajectory.lastCount)
-                .map(v => `${v.x},${v.y}`).join(" ");
-            this.trajectory.pointsString += (this.trajectory.pointsString && newPoints ? " " : "") + newPoints;
-            this.trajectory.lastCount = this.trajectory.values.length;
+            this.trajectory.lastCount = currentCount;
         }
-        if (this.properties.stroboscopyColor != this.board.theme.getBackgroundColors()[0].color) {
-            const lastIter = calculator.getLastIteration();
-            if (lastIter === 0) {
-                while (this.stroboscopy.firstChild)
-                    this.stroboscopy.removeChild(this.stroboscopy.firstChild);
-                this._lastStrobeCount = 0;
-            }
-            const interval = Math.max(1, this.properties.stroboscopyInterval);
-            const desired = Math.floor(lastIter / interval);
-            while (this._lastStrobeCount < desired && this.trajectory.values.length > this._lastStrobeCount * interval) {
-                const idx = this._lastStrobeCount * interval;
-                const pos = this.trajectory.values[idx] ?? this.getBoardPosition();
-                const stroboscopyCircle = this.board.createSvgElement("circle");
-                stroboscopyCircle.setAttribute("cx", pos.x);
-                stroboscopyCircle.setAttribute("cy", pos.y);
-                stroboscopyCircle.setAttribute("r", this.properties.radius);
-                stroboscopyCircle.setAttribute("fill", this.properties.stroboscopyColor);
-                stroboscopyCircle.setAttribute("opacity", this.properties.stroboscopyOpacity);
-                this.stroboscopy.appendChild(stroboscopyCircle);
-                this._lastStrobeCount++;
-            }
+    }
+
+    tickStroboscopy() {
+        const defaultStrobeColor = this.board.theme.getBackgroundColors()[0].color;
+        if (this.properties.stroboscopyColor === defaultStrobeColor) {
+            this._stroboscopyPositions = [];
+            return;
         }
-        this.board.markDirty(this);
+        const lastIteration = this.board.calculator.getLastIteration();
+        if (lastIteration === 0)
+            this._stroboscopyPositions = [];
+        const interval = Math.max(1, this.properties.stroboscopyInterval);
+        const desired = Math.floor(lastIteration / interval);
+        const positions = [];
+        for (let i = 0; i < desired; i++) {
+            const idx = i * interval;
+            const pos = this.trajectory.values[idx] ?? this.getBoardPosition();
+            positions.push(pos);
+        }
+        this._stroboscopyPositions = positions;
     }
 
     drawTrajectory() {
@@ -228,23 +228,28 @@ class BodyShape extends BaseShape {
     }
 
     drawStroboscopy() {
-        const calculator = this.board.calculator;
-        if (this.properties.stroboscopyColor != this.board.theme.getBackgroundColors()[0].color) {
-            if (calculator.getLastIteration() == 0)
-                while (this.stroboscopy.firstChild)
-                    this.stroboscopy.removeChild(this.stroboscopy.firstChild);
-            if (this.stroboscopy.children.length < calculator.getLastIteration() / this.properties.stroboscopyInterval) {
-                const position = this.getBoardPosition();
-                const stroboscopyCircle = this.board.createSvgElement("circle");
-                stroboscopyCircle.setAttribute("cx", position.x);
-                stroboscopyCircle.setAttribute("cy", position.y);
-                stroboscopyCircle.setAttribute("r", this.properties.radius);
-                stroboscopyCircle.setAttribute("fill", this.properties.stroboscopyColor);
-                stroboscopyCircle.setAttribute("opacity", this.properties.stroboscopyOpacity);
-                this.stroboscopy.appendChild(stroboscopyCircle);
+        const defaultStrobeColor = this.board.theme.getBackgroundColors()[0].color;
+        if (this.properties.stroboscopyColor === defaultStrobeColor) {
+            while (this.stroboscopy.firstChild)
+                this.stroboscopy.removeChild(this.stroboscopy.firstChild);
+            return;
+        }
+        const positions = this._stroboscopyPositions ?? [];
+        const desiredLength = positions.length;
+        while (this.stroboscopy.children.length > desiredLength)
+            this.stroboscopy.removeChild(this.stroboscopy.lastChild);
+        for (let i = 0; i < desiredLength; i++) {
+            const pos = positions[i];
+            let circle = this.stroboscopy.children[i];
+            if (!circle) {
+                circle = this.board.createSvgElement("circle");
+                this.stroboscopy.appendChild(circle);
             }
+            circle.setAttribute("cx", pos.x);
+            circle.setAttribute("cy", pos.y);
+            circle.setAttribute("r", this.properties.radius);
+            circle.setAttribute("fill", this.properties.stroboscopyColor);
+            circle.setAttribute("opacity", this.properties.stroboscopyOpacity);
         }
     }
-
-    // Inherits BaseShape.applyDragToTerms (x/y mapping)
 }
