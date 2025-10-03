@@ -1,3 +1,7 @@
+// @ts-check
+/// <reference path="../libraries/types/CalculationEngine.d.ts" />
+/* global Modellus */
+
 const STATUS = { PLAYING: 0, PAUSED: 1, REPLAYING: 2, STOPPED: 3 };
 
 class Calculator extends EventTarget {
@@ -55,7 +59,7 @@ class Calculator extends EventTarget {
     }
 
     calculate() {
-        this.system.calculate();
+        this.system.calculateFunctions();
         this.emit("iterate", { calculator: this });
     }
 
@@ -170,7 +174,6 @@ class Calculator extends EventTarget {
 
     setTermValue(name, value, iteration = this.system.iteration) {
         const system = this.system;
-        var value = Utils.roundToPrecision(value, this.properties.precision);
         var term = system.getTerm(name);
         system.set(term, value);
         if (iteration == 1)
@@ -178,7 +181,8 @@ class Calculator extends EventTarget {
     }
 
     getFinalIteration() {
-        return this.properties.independent.start + Math.floor((this.properties.independent.end - this.properties.independent.start) / this.properties.independent.step) + 1;
+        var independent = this.properties.independent;
+        return independent.start + Math.floor((independent.end - independent.start) / independent.step) + 1;
     }
 
     getEnd() {
