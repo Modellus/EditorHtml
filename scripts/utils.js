@@ -86,3 +86,6 @@ class Utils {
         return Math.round(value * factor) / factor;
     }
 }
+
+if (typeof module !== "undefined" && module.exports)
+    module.exports = Utils;

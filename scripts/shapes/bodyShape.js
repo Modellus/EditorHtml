@@ -11,8 +11,8 @@ class BodyShape extends BaseShape {
         var form = super.createForm();
         var instance = form.dxForm("instance");
         var items = instance.option("items");
-        this.addTerm("xTerm", "x", "Horizontal");
-        this.addTerm("yTerm", "y", "Vertical", true);
+        this.addTerm("xTerm", "x", "Horizontal", false, true, 1, "x");
+        this.addTerm("yTerm", "y", "Vertical", true, true, 1, "y");
         items.push(
             {
                 colSpan: 2,

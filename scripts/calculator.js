@@ -205,3 +205,6 @@ class Calculator extends EventTarget {
         return this.system.terms[name] !== undefined;
     }
 }
+
+if (typeof module !== "undefined" && module.exports)
+    module.exports = Calculator;

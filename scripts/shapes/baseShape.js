@@ -192,10 +192,12 @@ class BaseShape {
     delta(property, delta) {
         var termMapping = this.termsMapping.find(t => t.property === property);
         if (termMapping != null) {
+            const scale = this.getScale();
+            let axisScale = scale[termMapping.scaleProperty] ?? 1;
             var term = this.properties[termMapping.termProperty];
-            const calculator = this.board.calculator;   
-            var isTerm = calculator.isTerm(term); 
-            delta = delta * (termMapping.isInverted ? -1 : 1);
+            const calculator = this.board.calculator;
+            var isTerm = calculator.isTerm(term);
+            delta = delta * axisScale * (termMapping.isInverted ? -1 : 1);
             if (isTerm) {
                 var value = calculator.getByName(term);
                 calculator.setTermValue(term, value + delta);
@@ -276,8 +278,14 @@ class BaseShape {
         this.dispatchEvent("shapeDragEnd", {});
     }
 
-    addTerm(termProperty, property, title, isInverted = false, isEditable = true, colSpan = 1) {
-        this.termsMapping.push({ termProperty: termProperty, termValue: 0, property: property, isInverted: isInverted });
+    addTerm(termProperty, property, title, isInverted = false, isEditable = true, colSpan = 1, scaleProperty = null) {
+        this.termsMapping.push({
+            termProperty: termProperty,
+            termValue: 0,
+            property: property,
+            isInverted: isInverted,
+            scaleProperty: scaleProperty
+        });
         this.addTermToForm(termProperty, title, isEditable, colSpan);
     }
 
