@@ -4,10 +4,14 @@ class BaseTranslations {
         this.languages = { "pt-PT": {}, "en-US": {} };
         this.languages["pt-PT"] =
             {
-                "Open...": "Abrir...",
-                "Save...": "Guardar...",
-                "New": "Novo",
-                "Export...": "Exportar...",
+                "Clear": "Limpar",
+                "Save": "Guardar",
+                "Import": "Importar",
+                "From file": "Do ficheiro",
+                "Export": "Exportar",
+                "To file": "Para ficheiro",
+                "Data": "Dados",
+                "Exit": "Sair",
                 "Settings...": "Definições...",
                 "Settings Title": "Definições",
                 "Precision": "Precisão",
@@ -34,10 +38,14 @@ class BaseTranslations {
             };
         this.languages["en-US"] =
             {
-                "Open...": "Open...",
-                "Save...": "Save...",
-                "New": "New",
-                "Export...": "Export...",
+                "Clear": "Clear",
+                "Save": "Save",
+                "Import": "Import",
+                "From file": "From file",
+                "Export": "Export",
+                "To file": "To file",
+                "Data": "Data",
+                "Exit": "Exit",
                 "Settings...": "Settings...",
                 "Settings Title": "Settings",
                 "Precision": "Precision",

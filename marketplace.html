@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marketplace Models</title>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&display=swap" rel="stylesheet">
+    <script src="libraries/scripts/fontawesome.js"></script>
+    <script src="libraries/scripts/jquery.min.js"></script>
+    <link rel="stylesheet" href="libraries/css/dx.fluent.blue.light.compact.css"></script>
+    <script src="libraries/scripts/dx-quill.min.js"></script>
+    <script src="libraries/scripts/dx.all.js"></script>
+    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Nunito:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet"/>
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg">
+    <style>
+      :root {
+        --c-bg: #ffffff;
+        --c-card: #f7f9fb;
+        --c-border: #d1d5db;
+        --c-text: #111827;
+        --c-muted: #6b7280;
+        --c-link: #2563eb;
+      }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--c-bg);
+        color: var(--c-text);
+      }
+      .shell { width: 100%; max-width: none; margin: 0 auto; padding: 1rem 1rem 1.5rem; min-height: 100%; display: flex; flex-direction: column; }
+      .nav { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--c-border); justify-content: space-between; }
+      .logo { display: flex; align-items: center; gap: 0.5rem; font-family: "Nunito", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1.75rem; font-weight: 600; }
+      #nav-toolbar { flex: 1; min-width: 0; width: 100%; }
+      #nav-toolbar .dx-toolbar-items-container { justify-content: flex-end; }
+      #nav-toolbar .dx-toolbar-after { display: flex; align-items: center; gap: 0.5rem; }
+      .page { margin-top: 1rem; flex: 1; display: flex; flex-direction: column; }
+      .card-view-shell { background: var(--c-card); border: 1px solid var(--c-border); border-radius: 12px; padding: 1rem; flex: 1; display: flex; flex-direction: column; }
+      .card-view { margin-top: 0; flex: 1; min-height: 0; }
+      .drawer-shell { display: grid; grid-template-columns: 260px 1fr; gap: 1rem; flex: 1; min-height: 0; width: 100%; }
+      .drawer-shell.drawer-collapsed { grid-template-columns: 0 1fr; }
+      .drawer-panel { background: var(--c-card); border: 1px solid var(--c-border); border-radius: 12px; padding: 0.5rem; height: 100%; }
+      .drawer-collapsed .drawer-panel { display: none; }
+      .status { color: var(--c-muted); min-height: 1.25rem; margin: 0.25rem 0 0.5rem; }
+      .status.error { color: #b91c1c; }
+      .hidden { display: none !important; }
+      .hint { color: var(--c-muted); }
+      .card-tile { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; padding: 1rem; display: grid; gap: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+      .card-tile.selected { border-color: var(--c-link); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25); }
+      .card-title { font-size: 1rem; margin: 0; }
+      .card-desc { color: var(--c-muted); margin: 0; }
+      .card-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+      .card-badge { display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(37, 99, 235, 0.1); color: var(--c-text); padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.85rem; }
+      .favorite-button { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-border); background: #fff; border-radius: 999px; padding: 0.3rem; width: 34px; height: 34px; cursor: pointer; color: var(--c-text); }
+      .favorite-button .favorite-icon { color: #9ca3af; font-size: 16px; }
+      .favorite-button.is-favorite .favorite-icon { color: #f59e0b; }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <nav class="nav">
+        <div class="logo" aria-label="Modellus">
+          <img src="/scripts/themes/modellus.svg" alt="Modellus logo" style="width: 28px; height: 28px;">
+          <span>Modellus</span>
+        </div>
+        <div id="nav-toolbar"></div>
+      </nav>
+      <section id="page-models" class="page">
+        <span id="status" class="status"></span>
+        <div id="drawer-shell" class="drawer-shell">
+          <div id="drawer" class="drawer-panel"></div>
+          <div class="drawer-content">
+            <div class="card-view-shell">
+              <div id="models-card-view" class="card-view"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <script src="/modellus.js"></script>
+    <script type="module" src="/marketplace.js"></script>
+  </body>
+</html>

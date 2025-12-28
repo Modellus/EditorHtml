@@ -18,8 +18,8 @@ var modellus = {
         getProperties: name => shell.board.shapes.getByName(name)?.properties
     },
     file: {
-        open: () => shell.open(),
-        save: () => shell.save(),
+        open: () => shell.importFromFile(),
+        save: () => shell.exportToFile(),
         new: () => shell.clear(),
         openFromPath: filePath => shell.openFromPath(filePath),
         saveToPath: filePath => shell.saveToPath(filePath)
@@ -30,5 +30,25 @@ var modellus = {
         getValues: () => shell.getValues(),
         setProperties: properties => shell.commands.setProperties(properties),
         getProperties: () => shell.properties
+    },
+    auth: {
+        sessionKey: "mp.session",
+        userKey: "mp.user",
+        getSession: () => {
+            try {
+                const stored = localStorage.getItem("mp.session");
+                return stored ? JSON.parse(stored) : null;
+            } catch (error) {
+                return null;
+            }
+        },
+        getUser: () => {
+            try {
+                const stored = localStorage.getItem("mp.user");
+                return stored ? JSON.parse(stored) : null;
+            } catch (error) {
+                return null;
+            }
+        }
     }
 } 

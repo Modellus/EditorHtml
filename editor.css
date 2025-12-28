@@ -318,3 +318,12 @@ math-field {
 #playPauseButton.pulsing .dx-button-content {
     animation: mdl-pulse 1s ease-in-out infinite;
 }
+
+.referential-axis-line {
+    opacity: 0.6;
+}
+
+.referential-tick-label {
+    font-size: 8px;
+    opacity: 0.6;
+}

@@ -58,9 +58,11 @@ class ReferentialShape extends BaseShape {
         g.appendChild(this.container);
         this.horizontalAxis = this.board.createSvgElement("line");
         this.horizontalAxis.setAttribute("stroke-width", 1);
+        this.horizontalAxis.setAttribute("class", "referential-axis-line");
         g.appendChild(this.horizontalAxis);
         this.verticalAxis = this.board.createSvgElement("line");
         this.verticalAxis.setAttribute("stroke-width", 1);
+        this.verticalAxis.setAttribute("class", "referential-axis-line");
         g.appendChild(this.verticalAxis);
         this.ticksLayer = this.board.createSvgElement("g");
         g.appendChild(this.ticksLayer);
@@ -282,7 +284,7 @@ class ReferentialShape extends BaseShape {
             let text = group.children[index];
             if (!text) {
                 text = this.board.createSvgElement("text");
-                text.setAttribute("font-size", 12);
+                text.setAttribute("class", "referential-tick-label");
                 text.setAttribute("dominant-baseline", orientation === "horizontal" ? "hanging" : "middle");
                 group.appendChild(text);
             }

@@ -40,6 +40,13 @@ class TableShape extends BaseShape {
                 store: this.arrayStore,
                 reshapeOnPush: true,
             }),
+            editing: {
+                mode: "cell",
+                allowUpdating: true,
+                selectTextOnEditStart: true,
+                startEditAction: "click",
+                useIcons: true
+            },
             scrolling: {
                 mode: "virtual"
             },
@@ -48,6 +55,8 @@ class TableShape extends BaseShape {
                 mode: "single"
             },
             noDataText: "",
+            onEditorPreparing: e => this.onEditorPreparing(e),
+            onCellValueChanged: e => this.onCellValueChanged(e),
             columns: [
                 {
                     dataField: this.properties.column1Term,
@@ -55,25 +64,30 @@ class TableShape extends BaseShape {
                     headerCellTemplate: container => {
                         $("<math-field>")
                             .attr("read-only", true)
-                            .html(this.properties.column1Term)
+                            .html(this.properties.column1Term ?? "")
                             .css("height", "auto", "width", "auto")
                             .addClass("form-math-field")
                             .appendTo(container);
                     },
+                    allowEditing: this._canEditTerm(this.properties.column1Term),
+                    dataType: "number",
                     format: {
                         type: "fixedPoint",
                         precision: 2
                     }
                 },
                 {
+                    dataField: this.properties.column2Term,
                     headerCellTemplate: container => {
                         $("<math-field>")
                             .attr("read-only", true)
-                            .html(this.properties.column2Term)
+                            .html(this.properties.column2Term ?? "")
                             .css("height", "auto", "width", "auto")
                             .addClass("form-math-field")
                             .appendTo(container);
                     },
+                    allowEditing: this._canEditTerm(this.properties.column2Term),
+                    dataType: "number",
                     format: {
                         type: "fixedPoint",
                         precision: 2
@@ -117,9 +131,11 @@ class TableShape extends BaseShape {
             this.dataGrid.option("columns[0].dataField", column1);
             this.dataGrid.option("columns[0].caption", column1);
             this.dataGrid.option("columns[0].name", "Column1Term");
+            this.dataGrid.option("columns[0].allowEditing", this._canEditTerm(column1));
             this.dataGrid.option("columns[1].dataField", column2);
             this.dataGrid.option("columns[1].caption", column2);
             this.dataGrid.option("columns[1].name", "Column2Term");
+            this.dataGrid.option("columns[1].allowEditing", this._canEditTerm(column2));
             this.dataGrid.endUpdate();
             this._appliedColumns = { c1: column1, c2: column2 };
         }
@@ -143,5 +159,45 @@ class TableShape extends BaseShape {
             this._lastFocusTs = now;
         }
         super.tick();
+    }
+
+    onEditorPreparing(e) {
+        if (e.parentType !== "dataRow")
+            return;
+        const editable = this._canEditTerm(e.dataField);
+        e.editorOptions.readOnly = !editable;
+    }
+
+    onCellValueChanged(e) {
+        const term = e.column?.dataField;
+        if (!term || !this._canEditTerm(term))
+            return;
+        const iteration = e.data?.iteration ?? e.key;
+        if (iteration == null)
+            return;
+        const numericValue = Number(e.value);
+        if (!Number.isFinite(numericValue)) {
+            e.component.cellValue(e.rowIndex, term, e.oldValue);
+            return;
+        }
+        const precision = this.board.calculator.getPrecision();
+        const rounded = Utils.roundToPrecision(numericValue, precision);
+        e.component.cellValue(e.rowIndex, term, rounded);
+        const system = this.board.calculator.system;
+        const index = iteration - 1;
+        if (index < 0 || index >= system.values.length)
+            return;
+        const row = system.values[index];
+        row[term] = rounded;
+        if (iteration === 1 && this.board.calculator.isTerm(term))
+            system.setInitialByName(term, rounded);
+        this.board.calculator.emit("iterate", { calculator: this.board.calculator });
+    }
+
+    _canEditTerm(term) {
+        if (term == null || term === "")
+            return false;
+        const calculator = this.board.calculator;
+        return calculator.isTerm(term) && calculator.isEditable(term);
     }
 }

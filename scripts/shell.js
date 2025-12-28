@@ -691,33 +691,56 @@ class Shell  {
     createContextMenu() {
         var menuItems = [
             {
-                text: this.board.translations.get("New"),
+                text: this.board.translations.get("Clear"),
                 icon: "fa-light fa-file",
                 shortcut: "Ctrl+N",
-                name: "New",
-                action: _ => this.clear()
+                name: "Clear",
+                action: _ => this.clearKeepIdentity()
             },
             {
-                text: this.board.translations.get("Open..."),
-                icon: "fa-light fa-folder",
-                shortcut: "Ctrl+O",
-                name: "Open",
-                action: _ => this.open()
-            },
-            {
-                text: this.board.translations.get("Save..."),
-                icon: "fa-light fa-arrow-down-to-bracket",
+                text: this.board.translations.get("Save"),
+                icon: "fa-light fa-cloud-arrow-down",
                 shortcut: "Ctrl+S",
                 name: "Save",
-                action: _ => this.save()
+                action: _ => this.saveToApi()
             },
             {
-                text: this.board.translations.get("Export..."),
-                icon: "fa-light fa-file-excel",
+                text: this.board.translations.get("Import"),
+                icon: "fa-light fa-arrow-up-from-square",
                 shortcut: "",
                 beginGroup: true,
+                name: "Import",
+                items: [
+                    {
+                        text: this.board.translations.get("From file"),
+                        icon: "fa-light fa-file-import",
+                        shortcut: "Ctrl+O",
+                        name: "ImportFromFile",
+                        action: _ => this.importFromFile()
+                    }
+                ]
+            },
+            {
+                text: this.board.translations.get("Export"),
+                icon: "fa-light fa-arrow-down-to-square",
+                shortcut: "",
                 name: "Export",
-                action: _ => this.export()
+                items: [
+                    {
+                        text: this.board.translations.get("To file"),
+                        icon: "fa-light fa-file-export",
+                        shortcut: "",
+                        name: "ExportToFile",
+                        action: _ => this.exportToFile()
+                    },
+                    {
+                        text: this.board.translations.get("Data"),
+                        icon: "fa-light fa-file-excel",
+                        shortcut: "",
+                        name: "ExportData",
+                        action: _ => this.exportData()
+                    }
+                ]
             },
             {
                 text: this.board.translations.get("Settings..."),
@@ -726,18 +749,31 @@ class Shell  {
                 beginGroup: true,
                 name: "Settings",
                 action: _ => this.openSettings()
+            },
+            {
+                text: this.board.translations.get("Exit"),
+                icon: "fa-light fa-chevrons-left",
+                shortcut: "",
+                beginGroup: true,
+                name: "Exit",
+                action: _ => window.location.href = "/marketplace.html"
             }
         ];
         $("#context-menu").dxContextMenu({
             dataSource: menuItems,
             itemTemplate: itemData => {
+                const hasChildren = itemData && itemData.items && itemData.items.length;
                 return `<div style="display: flex; justify-content: space-between; align-items: center;width: 100%">
                             <span class="${itemData.icon}" style="width: 15px; margin-right: 10px; text-align: left; display: inline-block"></span>
                             <span style="text-align: left; padding-right: 5px; flex-grow: 1">${itemData.text}</span>
                             <span style="color: #999;">${itemData.shortcut}</span>
+                            <span style="width: 12px; text-align: right;">${hasChildren ? "<i class='fa-light fa-chevron-right'></i>" : ""}</span>
                         </div>`;
             },
-            onItemClick: e => e.itemData.action(),
+            onItemClick: e => {
+                if (e.itemData && e.itemData.action)
+                    e.itemData.action();
+            },
             target: "#toolbar",
             position: {
                 my: "top left",
@@ -859,6 +895,14 @@ class Shell  {
         this.aiLogic.resetSimulation();
         this.resetChat();
     }
+
+    clearKeepIdentity() {
+        const currentName = this.properties.name;
+        this.clear();
+        this.properties.name = currentName;
+        if (this.settingsForm)
+            this.settingsForm.updateData(this.properties);
+    }
     
     reset() {
         this.calculator.reset();
@@ -896,7 +940,7 @@ class Shell  {
         this.settingsPopup.show();
     }
     
-    async open() {
+    async importFromFile() {
         const [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();
         const model = await file.text();
@@ -916,7 +960,7 @@ class Shell  {
         this.board.refresh();
     }
     
-    async save() {
+    async exportToFile() {
         const fileHandle = await window.showSaveFilePicker({
             suggestedName: "model.json",
             types: [
@@ -955,6 +999,31 @@ class Shell  {
         await this.saveModel(fileHandle);
     }
 
+    async saveToApi() {
+        const modelId = new URLSearchParams(window.location.search).get("model_id");
+        if (!modelId) {
+            alert("No model id found.");
+            return;
+        }
+        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
+        const headers = { "Content-Type": "application/json" };
+        if (session && session.token) headers.Authorization = `Bearer ${session.token}`;
+        try {
+            const response = await fetch(`${apiBase}/models/${modelId}`, {
+                method: "PUT",
+                headers,
+                body: JSON.stringify({
+                    title: this.properties.name || "Untitled model",
+                    definition: JSON.stringify(this.serialize()),
+                    lastModified: new Date().toISOString()
+                })
+            });
+            if (!response.ok) throw new Error(`Save failed (${response.status})`);
+        } catch (error) {
+            alert("Failed to save model.");
+        }
+    }
+
     getModel() {
         return this.board.serialize();
     }
@@ -963,7 +1032,7 @@ class Shell  {
         return this.calculator.getValues();
     }
 
-    export() {
+    exportData() {
         var values = this.calculator.getValues();
         var csv = "data:text/csv;charset=utf-8,";
         const headers = Object.keys(values[0]).join(",");
@@ -1022,13 +1091,11 @@ class Shell  {
         if (e.code !== 'Space' && e.key !== ' ')
             return;
         if (e.repeat)
-            return; // ignore auto-repeat
-        // Pause only if simulation is currently playing (started and not finished)
+            return;
         if (this.calculator.status === STATUS.PLAYING) {
             e.preventDefault();
             this.calculator.pause();
             this._resumeOnSpaceUp = true;
-            // Pulse the play/pause button while space is held
             if (this.playPause && this.playPause.element)
                 this.playPause.element().addClass('pulsing');
         }
@@ -1039,7 +1106,6 @@ class Shell  {
             return;
         if (!this._resumeOnSpaceUp)
             return;
-        // Resume only if simulation hasn't finished
         const sys = this.calculator.system;
         const end = this.calculator.properties.independent.end;
         const step = this.calculator.properties.independent.step;
@@ -1054,7 +1120,6 @@ class Shell  {
             e.preventDefault();
             this.calculator.play();
         }
-        // Stop pulsing when space is released
         if (this.playPause && this.playPause.element)
             this.playPause.element().removeClass('pulsing');
         this._resumeOnSpaceUp = false;
