@@ -86,7 +86,7 @@ class BaseShape {
                         {
                             colSpan: 2,
                             dataField: "name",
-                            label: { text: "Name" },
+                            label: { text: this.board.translations.get("Name") },
                             editorType: "dxTextBox",
                             editorOptions: {
                                 stylingMode: "filled"

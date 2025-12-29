@@ -28,25 +28,35 @@
         font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         background: var(--c-bg);
         color: var(--c-text);
+        overflow: hidden;
       }
-      .shell { width: 100%; max-width: none; margin: 0 auto; padding: 1rem 1rem 1.5rem; min-height: 100%; display: flex; flex-direction: column; }
+      .shell { width: 100%; max-width: none; margin: 0 auto; padding: 1rem 1rem 1.5rem; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; }
       .nav { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 0; border-bottom: 1px solid var(--c-border); justify-content: space-between; }
       .logo { display: flex; align-items: center; gap: 0.5rem; font-family: "Nunito", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 1.75rem; font-weight: 600; }
       #nav-toolbar { flex: 1; min-width: 0; width: 100%; }
       #nav-toolbar .dx-toolbar-items-container { justify-content: flex-end; }
       #nav-toolbar .dx-toolbar-after { display: flex; align-items: center; gap: 0.5rem; }
-      .page { margin-top: 1rem; flex: 1; display: flex; flex-direction: column; }
-      .card-view-shell { background: var(--c-card); border: 1px solid var(--c-border); border-radius: 12px; padding: 1rem; flex: 1; display: flex; flex-direction: column; }
-      .card-view { margin-top: 0; flex: 1; min-height: 0; }
-      .drawer-shell { display: grid; grid-template-columns: 260px 1fr; gap: 1rem; flex: 1; min-height: 0; width: 100%; }
+      .page { margin-top: 1rem; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+      .card-view-shell { background: var(--c-card); border: 1px solid var(--c-border); border-radius: 12px; padding: 1rem; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+      .card-view { margin-top: 0; flex: 1; min-height: 0; height: 100%; }
+      .drawer-shell { display: grid; grid-template-columns: 260px 1fr; gap: 1rem; flex: 1; min-height: 0; width: 100%; height: 100%; }
       .drawer-shell.drawer-collapsed { grid-template-columns: 0 1fr; }
-      .drawer-panel { background: var(--c-card); border: 1px solid var(--c-border); border-radius: 12px; padding: 0.5rem; height: 100%; }
+      .drawer-panel { background: var(--c-card); border: 1px solid var(--c-border); border-radius: 12px; padding: 0.5rem; height: 100%; overflow: hidden; }
       .drawer-collapsed .drawer-panel { display: none; }
+      .drawer-content { min-height: 0; display: flex; flex-direction: column; height: 100%; }
+      .dx-cardview { height: 100%; }
       .status { color: var(--c-muted); min-height: 1.25rem; margin: 0.25rem 0 0.5rem; }
       .status.error { color: #b91c1c; }
       .hidden { display: none !important; }
       .hint { color: var(--c-muted); }
-      .card-tile { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; padding: 1rem; display: grid; gap: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+      .card-tile { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; padding: 1rem; display: grid; gap: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; }
+      .card-thumb { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; border: 1px solid var(--c-border); }
+      .card-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 0.35rem; }
+      .delete-button { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-border); background: #fff; border-radius: 999px; width: 34px; height: 34px; cursor: pointer; }
+      .delete-button .trash { font-weight: 300; color: red; transition: opacity 0.2s ease-in-out; }
+      .delete-button:hover .trash { display: none; }
+      .delete-button:hover .trash-hover { display: inline-block; font-weight: 900; color: red; }
+      .trash-hover { display: none; }
       .card-tile.selected { border-color: var(--c-link); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25); }
       .card-title { font-size: 1rem; margin: 0; }
       .card-desc { color: var(--c-muted); margin: 0; }

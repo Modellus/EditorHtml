@@ -31,6 +31,7 @@ class Shell  {
     setDefaults() {
         this.properties.language = "en-US";
         this.properties.name = "Model";
+        this.properties.description = "";
         this.properties.precision = 2;
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
         this.properties.iterationTerm = "n";
@@ -60,11 +61,11 @@ class Shell  {
     createSettingsPopup() {
         $("#settings-popup").dxPopup({
             width: 400,
-            height: 200,
+            height: 400,
             dragEnabled: false,
             shading: false,
             title: this.board.translations.get("Settings Title"),
-            showTitle: false,
+            showTitle: true,
             hideOnOutsideClick: true,
             contentTemplate: () => this.createSettingsForm(),
             position: {
@@ -83,9 +84,21 @@ class Shell  {
                 {
                     colSpan: 4,
                     dataField: "name",
-                    label: { text: "Name", visible: false },
+                    label: { text: this.board.translations.get("Name"), visible: true },
                     editorType: "dxTextBox",
                     editorOptions: {
+                        stylingMode: "filled"
+                    }
+                },
+                {
+                    colSpan: 4,
+                    dataField: "description",
+                    label: {
+                        text: this.board.translations.get("Description")
+                    },
+                    editorType: "dxHtmlEditor",
+                    editorOptions: {
+                        height: 120,
                         stylingMode: "filled"
                     }
                 },
@@ -627,6 +640,17 @@ class Shell  {
     createShapePopup() {
         let savedPosition = null;
         let savedSize = { width: 240, height: 400 };
+        try {
+            const stored = localStorage.getItem("modellus.shapePopupState");
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed && parsed.position)
+                    savedPosition = parsed.position;
+                if (parsed && parsed.size)
+                    savedSize = parsed.size;
+            }
+        } catch (error) {
+        }
         $("#shape-popup").dxPopup({
             width: savedSize.width,
             height: savedSize.height,
@@ -638,7 +662,7 @@ class Shell  {
             focusStateEnabled: false,
             showCloseButton: false,
             animation: null,
-            title: "",
+            title: this.board.translations.get("Properties Title"),
             target: "#svg",
             position: {
                 my: "left center",
@@ -649,37 +673,54 @@ class Shell  {
             onInitialized(e) {
                 this.shapePopup = e.component;
             },
-            onPositioned(e) {
-                const position = e.component.option("position");
+            onPositioned: e => {
                 const $content = e.component.content();
-                savedSize = {
-                    width: $content.outerWidth(),
-                    height: $content.outerHeight()
-                };
-                savedPosition = {
-                    my: position.my,
-                    at: position.at,
-                    of: position.of,
-                    offset: position.offset
-                };
+                const $overlay = $content.closest(".dx-overlay-content");
+                const rect = $overlay.length ? $overlay.get(0).getBoundingClientRect() : null;
+                if (rect) {
+                    savedPosition = { left: rect.left, top: rect.top };
+                    savedSize = { width: rect.width, height: rect.height };
+                }
+                try {
+                    localStorage.setItem("modellus.shapePopupState", JSON.stringify({
+                        position: savedPosition,
+                        size: savedSize
+                    }));
+                } catch (error) {
+                }
             },
-            onHiding(e) {
-                const position = e.component.option("position");
+            onHiding: e => {
                 const $content = e.component.content();
-                savedSize = {
-                    width: $content.outerWidth(),
-                    height: $content.outerHeight()
-                };
-                savedPosition = {
-                    my: position.my,
-                    at: position.at,
-                    of: position.of,
-                    offset: position.offset
-                };
+                const $overlay = $content.closest(".dx-overlay-content");
+                const rect = $overlay.length ? $overlay.get(0).getBoundingClientRect() : null;
+                if (rect) {
+                    savedPosition = { left: rect.left, top: rect.top };
+                    savedSize = { width: rect.width, height: rect.height };
+                }
+                try {
+                    localStorage.setItem("modellus.shapePopupState", JSON.stringify({
+                        position: savedPosition,
+                        size: savedSize
+                    }));
+                } catch (error) {
+                }
             },
-            onShowing1(e) {
+            onShowing: e => {
                 if (savedPosition) {
-                    e.component.option("position", savedPosition);
+                    e.component.option("position", {
+                        my: "top left",
+                        at: "top left",
+                        of: window,
+                        offset: `${savedPosition.left} ${savedPosition.top}`
+                    });
+                    if (savedSize && savedSize.width && savedSize.height) {
+                        e.component.option("width", savedSize.width);
+                        e.component.option("height", savedSize.height);
+                    }
+                }
+            },
+            onShown: e => {
+                if (savedSize && savedSize.width && savedSize.height) {
                     e.component.option("width", savedSize.width);
                     e.component.option("height", savedSize.height);
                 }
@@ -1009,18 +1050,60 @@ class Shell  {
         const headers = { "Content-Type": "application/json" };
         if (session && session.token) headers.Authorization = `Bearer ${session.token}`;
         try {
+            const thumbnail = await this.captureThumbnail();
+            const payload = {
+                title: this.properties.name || "Untitled model",
+                description: this.properties.description || "",
+                definition: JSON.stringify(this.serialize()),
+                lastModified: new Date().toISOString()
+            };
+            if (thumbnail)
+                payload.thumbnail = thumbnail;
             const response = await fetch(`${apiBase}/models/${modelId}`, {
                 method: "PUT",
                 headers,
-                body: JSON.stringify({
-                    title: this.properties.name || "Untitled model",
-                    definition: JSON.stringify(this.serialize()),
-                    lastModified: new Date().toISOString()
-                })
+                body: JSON.stringify(payload)
             });
             if (!response.ok) throw new Error(`Save failed (${response.status})`);
         } catch (error) {
             alert("Failed to save model.");
+        }
+    }
+
+    async captureThumbnail() {
+        const svg = document.getElementById("svg");
+        if (!svg)
+            return null;
+        const bounds = svg.getBoundingClientRect();
+        if (!bounds.width || !bounds.height)
+            return null;
+        const clone = svg.cloneNode(true);
+        clone.querySelectorAll("foreignObject").forEach(node => node.remove());
+        clone.setAttribute("width", bounds.width);
+        clone.setAttribute("height", bounds.height);
+        const serialized = new XMLSerializer().serializeToString(clone);
+        const svgBlob = new Blob([serialized], { type: "image/svg+xml;charset=utf-8" });
+        const url = URL.createObjectURL(svgBlob);
+        try {
+            const image = new Image();
+            const dataUrl = await new Promise(resolve => {
+                image.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = bounds.width;
+                    canvas.height = bounds.height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(image, 0, 0);
+                    resolve(canvas.toDataURL("image/png"));
+                };
+                image.onerror = () => resolve(null);
+                image.src = url;
+            });
+            if (!dataUrl)
+                return null;
+            const parts = dataUrl.split(",");
+            return parts.length > 1 ? parts[1] : null;
+        } finally {
+            URL.revokeObjectURL(url);
         }
     }
 

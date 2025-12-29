@@ -72,12 +72,6 @@ class MiniMap {
         const y1 = Math.min(boundingBox.y, viewBox.y);
         const x2 = Math.max(boundingBox.x + boundingBox.width, viewBox.x + viewBox.width, viewBox.width);
         const y2 = Math.max(boundingBox.y + boundingBox.height, viewBox.y + viewBox.height, viewBox.height);
-        const fullSpace = { 
-            x: Math.min(boundingBox.x, viewBox.x),
-            y: Math.min(boundingBox.y, viewBox.y), 
-            width: Math.max(boundingBox.width, viewBox.width) - Math.min(boundingBox.x, viewBox.x),
-            height: Math.max(boundingBox.height, viewBox.height) - Math.min(boundingBox.y, viewBox.y) 
-        };
         const xml = new XMLSerializer().serializeToString(this.board.svg);
         const document = new DOMParser().parseFromString(xml, "image/svg+xml");
         document.querySelectorAll(".handle, .bounding-box")

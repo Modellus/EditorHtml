@@ -37,9 +37,25 @@ class ModelsApp {
     this.cacheNavElements();
     this.bindNav();
     this.initDrawer();
+    this.initDeletePopup();
     this.refreshAuth();
     this.renderUser();
     this.loadModels();
+  }
+  initDeletePopup() {
+    if (this.deletePopupInstance || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxPopup) return;
+    const popupHost = document.createElement("div");
+    popupHost.id = "delete-popup";
+    document.body.appendChild(popupHost);
+    this.deletePopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: false,
+      showTitle: true,
+      title: "Delete model?",
+      width: 360,
+      height: "auto",
+      dragEnabled: false,
+      closeOnOutsideClick: true
+    });
   }
   refreshAuth() {
     this.state.session = this.readSession();
@@ -75,7 +91,6 @@ class ModelsApp {
             text: ""
           }
         },
-        { location: "after", widget: "dxButton", options: { text: "Models", elementAttr: { id: "nav-models", class: "primary" } } },
         {
           location: "after",
           widget: "dxButton",
@@ -98,7 +113,6 @@ class ModelsApp {
     });
   }
   cacheNavElements() {
-    this.elements.navModels = document.getElementById("nav-models");
     this.elements.navNewModel = document.getElementById("nav-new-model");
     this.elements.navLogout = document.getElementById("nav-logout");
     this.elements.userChip = document.getElementById("user-chip");
@@ -138,15 +152,15 @@ class ModelsApp {
     if (!this.state.session) this.elements.userChip.textContent = "Signed out";
     if (this.state.session) this.elements.userChip.textContent = `Signed in as ${name}`;
     this.elements.navLogout.classList.toggle("hidden", !this.state.session);
-    this.elements.navModels.classList.toggle("hidden", !this.state.session);
   }
   ensureCardView() {
     if (this.cardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
     const CardView = DevExpress.ui.dxCardView;
-    this.cardViewInstance = new CardView(this.elements.cardView, {
-      dataSource: [],
-      height: "100%",
-      showBorders: false,
+      this.cardViewInstance = new CardView(this.elements.cardView, {
+        dataSource: [],
+        height: "100%",
+        scrolling: { mode: "virtual" },
+        showBorders: false,
       focusStateEnabled: false,
       hoverStateEnabled: false,
       allowColumnReordering: false,
@@ -167,8 +181,19 @@ class ModelsApp {
         const data = cardData && cardData.card && cardData.card.data ? cardData.card.data : cardData || {};
         if (!host) return;
         const isFavorite = this.isFavoriteValue(data);
+        const thumbnailSrc = data.thumbnail
+          ? (data.thumbnail.startsWith("data:") ? data.thumbnail : `data:image/png;base64,${data.thumbnail}`)
+          : "";
+        const thumbnailMarkup = thumbnailSrc ? `<img class="card-thumb" src="${thumbnailSrc}" alt="${data.title || "Model thumbnail"}">` : "";
         const cardMarkup = `
           <div class="card-tile" data-model-id="${data.id || ""}">
+            ${thumbnailMarkup}
+            <div class="card-actions">
+              <button class="delete-button" aria-label="Delete model">
+                <i class="fa-light fa-trash-can trash" aria-hidden="true"></i>
+                <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
+              </button>
+            </div>
             <h3 class="card-title">${data.title || data.name || "Untitled model"}</h3>
             <p class="card-desc">${data.description || data.subtitle || "No description provided."}</p>
             <div class="card-badges">
@@ -185,14 +210,21 @@ class ModelsApp {
         host.innerHTML = cardMarkup;
         const cardTile = host.querySelector(".card-tile");
         const favoriteButton = host.querySelector(".favorite-button");
+        const deleteButton = host.querySelector(".delete-button");
         if (favoriteButton) favoriteButton.addEventListener("click", () => this.toggleFavorite(data, !isFavorite));
+        if (deleteButton) deleteButton.addEventListener("click", event => {
+          event.stopPropagation();
+          this.deleteModel(data);
+        });
         if (cardTile) {
           cardTile.addEventListener("click", event => {
             if (event && event.target && event.target.closest(".favorite-button")) return;
+            if (event && event.target && event.target.closest(".delete-button")) return;
             this.selectModelCard(cardTile);
           });
           cardTile.addEventListener("dblclick", event => {
             if (event && event.target && event.target.closest(".favorite-button")) return;
+            if (event && event.target && event.target.closest(".delete-button")) return;
             this.openModel(data);
           });
         }
@@ -321,7 +353,6 @@ class ModelsApp {
     this.elements.drawerShell.classList.toggle("drawer-collapsed", isOpen);
   }
   bindNav() {
-    if (this.elements.navModels) this.elements.navModels.addEventListener("click", () => window.location.href = "/models.html");
     if (this.elements.navNewModel) this.elements.navNewModel.addEventListener("click", () => this.createModel());
     if (this.elements.navLogout) this.elements.navLogout.addEventListener("click", () => {
       this.state.session = null;
@@ -368,6 +399,68 @@ class ModelsApp {
     } catch (error) {
       this.setStatus(error && error.message ? error.message : "Failed to create model.", true);
     }
+  }
+  async deleteModel(modelData) {
+    const modelId = modelData && (modelData.id || modelData.modelId);
+    if (!modelId)
+      return;
+    this.refreshAuth();
+    if (!this.state.session || !this.state.session.token) {
+      this.setStatus("Sign-in required to delete a model.", true);
+      return;
+    }
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    this.setStatus("Deleting model…");
+    try {
+      const response = await fetch(`${apiBase}/models/${modelId}`, {
+        method: "DELETE",
+        headers: this.buildAuthHeaders()
+      });
+      if (!response.ok) throw new Error(`Delete failed (${response.status})`);
+      this.setStatus("Model deleted.");
+      this.loadModels(this.state.filter);
+    } catch (error) {
+      this.setStatus(error && error.message ? error.message : "Failed to delete model.", true);
+    }
+  }
+  confirmDelete() {
+    if (!this.deletePopupInstance) return Promise.resolve(window.confirm("Delete this model?"));
+    return new Promise(resolve => {
+      this.deletePopupInstance.option("contentTemplate", () => {
+        const container = document.createElement("div");
+        const text = document.createElement("p");
+        text.textContent = "This action cannot be undone.";
+        text.style.margin = "0 0 1rem";
+        const buttons = document.createElement("div");
+        buttons.style.display = "flex";
+        buttons.style.justifyContent = "flex-end";
+        buttons.style.gap = "0.5rem";
+        const cancel = document.createElement("div");
+        const confirm = document.createElement("div");
+        buttons.appendChild(cancel);
+        buttons.appendChild(confirm);
+        container.appendChild(text);
+        container.appendChild(buttons);
+        $(cancel).dxButton({
+          text: "Cancel",
+          onClick: () => {
+            this.deletePopupInstance.hide();
+            resolve(false);
+          }
+        });
+        $(confirm).dxButton({
+          text: "Delete",
+          type: "danger",
+          onClick: () => {
+            this.deletePopupInstance.hide();
+            resolve(true);
+          }
+        });
+        return container;
+      });
+      this.deletePopupInstance.show();
+    });
   }
   openModel(model) {
     if (!model || !model.id) return;
