@@ -83,6 +83,48 @@ class Shell  {
             items: [
                 {
                     colSpan: 4,
+                    template: () => {
+                        const container = $("<div class='thumbnail-dropzone'></div>");
+                        const preview = $("<img class='thumbnail-preview' alt='Thumbnail preview' />");
+                        const hint = $("<div class='thumbnail-hint'></div>")
+                            .text(this.board.translations.get("Thumbnail Dropzone"));
+                        const uploaderHost = $("<div class='thumbnail-uploader'></div>");
+                        const updatePreview = base64 => {
+                            if (base64) {
+                                preview.attr("src", `data:image/png;base64,${base64}`);
+                                hint.hide();
+                            } else {
+                                preview.removeAttr("src");
+                                hint.show();
+                            }
+                        };
+                        updatePreview(this.properties.thumbnailBase64 || "");
+                        container.append(preview, hint, uploaderHost);
+                        uploaderHost.dxFileUploader({
+                            accept: "image/*",
+                            multiple: false,
+                            uploadMode: "useForm",
+                            dropZone: container,
+                            dialogTrigger: container,
+                            onValueChanged: e => {
+                                const file = e.value && e.value[0];
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onload = event => {
+                                    const result = event.target && event.target.result ? event.target.result : "";
+                                    const parts = typeof result === "string" ? result.split(",") : [];
+                                    const base64 = parts.length > 1 ? parts[1] : "";
+                                    this.setProperty("thumbnailBase64", base64);
+                                    updatePreview(base64);
+                                };
+                                reader.readAsDataURL(file);
+                            }
+                        });
+                        return container;
+                    }
+                },
+                {
+                    colSpan: 4,
                     dataField: "name",
                     label: { text: this.board.translations.get("Name"), visible: true },
                     editorType: "dxTextBox",
