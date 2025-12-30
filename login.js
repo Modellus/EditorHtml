@@ -3,90 +3,71 @@ DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImN
 const GOOGLE_CLIENT_ID = "616832441203-a45kghte7c05vdkj5ri5ejp8qu81vcae.apps.googleusercontent.com";
 const TOKEN_STORAGE_KEY = "modellus_id_token";
 const MARKETPLACE_SESSION_KEY = "mp.session";
-const USER_STORAGE_KEY = "mp.user";
 const APP_HOME = "/marketplace.html";
-
-if (localStorage.getItem(TOKEN_STORAGE_KEY)) {
-  location.href = APP_HOME;
-}
-
-async function getGoogleUser(accessToken) {
-  const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`
-    }
-  });
-
-  return await res.json();
-}
 
 function decodeJwtPayload(token) {
   try {
     const payloadPart = token.split(".")[1];
     const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
     const padded = normalized + "===".slice((normalized.length + 3) % 4);
-    const decoded = atob(padded);
-    return JSON.parse(decoded);
+    return JSON.parse(atob(padded));
   } catch {
     return null;
   }
 }
 
-window.handleCredentialResponse = ({ credential }) => {
-  if (!credential) {
-    alert("Google Sign-In failed. Please try again.");
-    return;
-  }
+function isTokenValid(idToken) {
+  const payload = decodeJwtPayload(idToken);
+  if (!payload?.exp) 
+    return false;
+  const now = Math.floor(Date.now() / 1000);
+  return payload.exp > now + 30;
+}
 
-  localStorage.setItem(TOKEN_STORAGE_KEY, credential);
+function tryAutoRedirect() {
+  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (token && isTokenValid(token))
+    location.href = APP_HOME;
+  else {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+    localStorage.removeItem(MARKETPLACE_SESSION_KEY);
+  }
+}
+
+window.handleCredentialResponse = ({ credential }) => {
+  if (!credential) 
+    return;
   const payload = decodeJwtPayload(credential) || {};
   const session = {
     token: credential,
     userId: payload.sub || "",
-    name: payload.name || payload.email || ""
+    name: payload.name || "",
+    email: payload.email || "",
+    avatar: payload.picture || "",
+    exp: payload.exp || 0
   };
-
+  localStorage.setItem(TOKEN_STORAGE_KEY, credential);
   localStorage.setItem(MARKETPLACE_SESSION_KEY, JSON.stringify(session));
   location.href = APP_HOME;
 };
 
+function waitForGoogle(cb, tries = 50) {
+  const ok = window.google?.accounts?.id;
+  if (ok) 
+    return cb();
+  if (tries <= 0) {
+    console.error("Google Identity Services not available. Check gsi/client load.");
+    return;
+  }
+  setTimeout(() => waitForGoogle(cb, tries - 1), 50);
+}
+
 window.onload = () => {
-  const tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope: "openid email profile",
-    callback: async (resp) => {
-      if (!resp || !resp.access_token) return;
-      try {
-        const user = await getGoogleUser(resp.access_token);
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user || {}));
-      } catch (error) {
-        console.warn("Failed to fetch Google user info:", error);
-      }
-    }
-  });
-
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: window.handleCredentialResponse,
-    ux_mode: "popup",
-    use_fedcm_for_prompt: false
-  });
-
-  $("#google-login-btn").dxButton({
-    width: "100%",
-    stylingMode: "contained",
-    text: "Sign in with Google",
-    template: function (data, $content) {
-      $("<img>", {
-        src: "https://developers.google.com/identity/images/g-logo.png",
-        alt: "Google logo"
-      }).appendTo($content);
-      $("<span>").text(data.text).appendTo($content);
-      $content.addClass("google-btn-content");
-    },
-    onClick: () => {
-      google.accounts.id.prompt();
-      tokenClient.requestAccessToken({ prompt: "" });
-    }
+  tryAutoRedirect();
+  waitForGoogle(() => {
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: window.handleCredentialResponse, ux_mode: "popup", use_fedcm_for_prompt: false });
+    const host = document.getElementById("google-login-btn");
+    host.innerHTML = "";
+    google.accounts.id.renderButton(host, { theme: "outline", size: "large", text: "signin_with", shape: "pill",width: 320 });
   });
 };

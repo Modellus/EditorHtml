@@ -1,5 +1,9 @@
 DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjUyCn0=.WlJvwd9AewkKcLiqaZc3LVfKt9FGlzfDD16Zi6iEW4KIN+1MFccO3f68vdJoStCEqtYXdaUrX48WcQJMNg/7K+geEzM2ZVRCeJKxjXIi8OFVU8lXf6cvC+4b3MRFaijuN3c4ug==' });
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
+const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
+if (!session || !session.token) {
+    window.location.href = "/login.html";
+}
 const urlParams = new URLSearchParams(window.location.search);
 const modelName = urlParams.get("model");
 const modelId = urlParams.get("model_id");
