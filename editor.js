@@ -27,8 +27,10 @@ if (modelId) {
         .then(r => r.json())
         .then(model => {
             const payload = extractModelPayload(model);
-            if (payload) shell = new Shell(payload);
-            else shell = new Shell();
+            if (payload) 
+                shell = new Shell(payload);
+            else 
+                shell = new Shell();
         })
         .catch(() => { shell = new Shell(); });
 } else if (modelName) {

@@ -35,7 +35,6 @@ class Shell  {
         this.properties.precision = 2;
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
         this.properties.iterationTerm = "n";
-        this.properties.AIApiKey = this.aiLogic.getApiKey();
     }
 
     createTooltip(e, html, width) {
@@ -885,7 +884,7 @@ class Shell  {
         if(name.includes("independent") || name.includes("iteration"))
             this.calculator.setProperty(name, value);    
         if (name == "AIApiKey") {
-            this.aiLogic.setApiKey(value);
+            this.aiLogic.apiKey = value;
             this.resetChat();
         }
         this.reset();
@@ -963,7 +962,6 @@ class Shell  {
 
     chatPressed() {
         if (!this.properties.AIApiKey) {
-            const link = "https://platform.openai.com/api-keys";
             if (!this.toast) {
                 this.toast = $("#toast").dxToast({
                     type: "error",
@@ -977,6 +975,7 @@ class Shell  {
             this.toast.show();
             return;
         }
+        this.aiLogic.apiKey = this.properties.AIApiKey;
         this.chatPopup.show();
     }
 
@@ -1025,6 +1024,7 @@ class Shell  {
                     text: "Hello! I'm here to help you craft your own model. Ask me to create a model."
                 }];
                 chat.option("items", initialMessages);
+                popup.hide();
             }
         }
     }
@@ -1056,6 +1056,7 @@ class Shell  {
         this.reset();
         this.calculator.stop();
         this.board.refresh();
+        this.resetChat();
     }
     
     async exportToFile() {

@@ -907,7 +907,6 @@ When creating financial models, follow all the same variable consistency rules a
 
 class AILogic {
   constructor(shell) {
-    this.apiKey = localStorage.getItem("AIApiKey");
     this.shell = shell;
     this.conversationHistory = [
       { role: "system", content: prompt }
@@ -915,7 +914,6 @@ class AILogic {
     this.initialUserPrompt = '';
     this.currentUserPrompt = '';
     this.lastModelState = null;
-
     this.commandHandlers = {
       'Define Expression': (value) => {
         console.log(`Defining expression: ${value.name}`);
@@ -1032,15 +1030,6 @@ class AILogic {
     };
   }
 
-  setApiKey(apiKey) {
-    this.apiKey = apiKey;
-    localStorage.setItem("AIApiKey", apiKey);
-  }
-
-  getApiKey() {
-    return this.apiKey;
-  }
-
   async sendToBackend(message, chat) {
     const typingIndicatorMessage = {
       timestamp: Date.now(),
@@ -1049,10 +1038,8 @@ class AILogic {
       isTyping: true 
     };
     chat.option("items", [...(chat.option("items") ?? []), typingIndicatorMessage]);
-
     try {
       const response = await this.handleUserInput(message.text);
-
       const responseMessage = {
         text: response,
         author: { id: "2", name: "Modellus", avatarUrl: "/scripts/themes/modellus bot.svg" },
@@ -1060,7 +1047,6 @@ class AILogic {
       };
       const updatedMessages = (chat.option("items") ?? []).filter(item => !item.isTyping);
       chat.option("items", [...updatedMessages, responseMessage]);
-
     } catch (error) {
       const errorMessage = {
         text: "Sorry, I encountered an error processing your request.",
@@ -1069,7 +1055,6 @@ class AILogic {
       };
       const updatedMessages = (chat.option("items") ?? []).filter(item => !item.isTyping);
       chat.option("items", [...updatedMessages, errorMessage]);
-
       console.error("Error:", error);
     }
   }
