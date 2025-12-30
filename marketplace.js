@@ -14,9 +14,7 @@ class ModelsApp {
     this.elements = {
       pageModels: document.getElementById("page-models"),
       navToolbar: document.getElementById("nav-toolbar"),
-      navModels: null,
-      navLogout: null,
-      userChip: null,
+      userMenu: null,
       status: document.getElementById("status"),
       drawerShell: document.getElementById("drawer-shell"),
       drawerHost: document.getElementById("drawer"),
@@ -86,36 +84,40 @@ class ModelsApp {
           location: "after",
           widget: "dxButton",
           options: {
+            elementAttr: { id: "nav-new-model", title: "Create model" },
             stylingMode: "text",
-            elementAttr: { id: "user-chip", class: "hint" },
-            text: ""
+            text: "Create",
+            icon: "fa-light fa-plus"
           }
         },
         {
           location: "after",
-          widget: "dxButton",
+          widget: "dxDropDownButton",
           options: {
-            elementAttr: { id: "nav-new-model", title: "New model" },
             stylingMode: "text",
+            elementAttr: { id: "user-menu", class: "user-menu" },
+            items: [{ id: "logout", text: "Logout", icon: "fa-light fa-arrow-left-to-bracket" }],
+            keyExpr: "id",
+            displayExpr: "text",
+            onItemClick: () => this.logout(),
+            dropDownOptions: { width: "auto", minWidth: 140 },
             template: (_, contentElement) => {
               const host = contentElement && contentElement.get ? contentElement.get(0) : contentElement;
               if (!host) return;
               host.innerHTML = "";
-              const iconElement = document.createElement("i");
-              iconElement.className = "fa-solid fa-circle-plus";
-              iconElement.style.fontSize = "16px";
-              host.appendChild(iconElement);
+              const avatar = document.createElement("img");
+              avatar.className = "user-menu-avatar";
+              avatar.alt = "User avatar";
+              host.appendChild(avatar);
             }
           }
-        },
-        { location: "after", widget: "dxButton", options: { text: "Logout", elementAttr: { id: "nav-logout" } } }
+        }
       ]
     });
   }
   cacheNavElements() {
     this.elements.navNewModel = document.getElementById("nav-new-model");
-    this.elements.navLogout = document.getElementById("nav-logout");
-    this.elements.userChip = document.getElementById("user-chip");
+    this.elements.userMenu = document.getElementById("user-menu");
   }
   readSession() {
     if (window.modellus?.auth?.getSession) return window.modellus.auth.getSession();
@@ -148,10 +150,13 @@ class ModelsApp {
     this.elements.status.classList.toggle("error", Boolean(isError));
   }
   renderUser() {
-    const name = this.state.session?.name || this.state.user?.name || this.state.user?.email || "User";
-    if (!this.state.session) this.elements.userChip.textContent = "Signed out";
-    if (this.state.session) this.elements.userChip.textContent = `Signed in as ${name}`;
-    this.elements.navLogout.classList.toggle("hidden", !this.state.session);
+    const avatarUrl = this.state.user?.picture || "";
+    if (this.elements.userMenu) {
+      const menuInstance = $(this.elements.userMenu).dxDropDownButton("instance");
+      if (menuInstance) menuInstance.option("disabled", !this.state.session);
+      const avatarEl = this.elements.userMenu.querySelector(".user-menu-avatar");
+      if (avatarEl) avatarEl.src = avatarUrl || "";
+    }
   }
   ensureCardView() {
     if (this.cardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
@@ -354,14 +359,14 @@ class ModelsApp {
   }
   bindNav() {
     if (this.elements.navNewModel) this.elements.navNewModel.addEventListener("click", () => this.createModel());
-    if (this.elements.navLogout) this.elements.navLogout.addEventListener("click", () => {
-      this.state.session = null;
-      this.state.user = null;
-      this.clearSession();
-      localStorage.removeItem("modellus_id_token");
-      localStorage.removeItem(userKey);
-      window.location.href = "/login.html";
-    });
+  }
+  logout() {
+    this.state.session = null;
+    this.state.user = null;
+    this.clearSession();
+    localStorage.removeItem("modellus_id_token");
+    localStorage.removeItem(userKey);
+    window.location.href = "/login.html";
   }
   async createModel() {
     this.refreshAuth();
