@@ -212,6 +212,13 @@ svg:active.pan-available {
     background-color: transparent;
 }
 
+.dx-chat .dx-toolbar-after,
+.dx-chat .dx-toolbar-before,
+.dx-chat .dx-toolbar-center {
+    box-shadow: none;
+    background-color: transparent;
+}
+
 .thumbnail-dropzone {
     display: grid;
     gap: 0.5rem;

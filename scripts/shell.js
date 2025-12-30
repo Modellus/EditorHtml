@@ -631,7 +631,7 @@ class Shell  {
     createChat() {
         $("#chat-popup").dxPopup({
             width: 300,
-            height: 400,
+            height: 500,
             shading: false,
             showTitle: false,
             dragEnabled: false,
@@ -962,6 +962,21 @@ class Shell  {
     }
 
     chatPressed() {
+        if (!this.properties.AIApiKey) {
+            const link = "https://platform.openai.com/api-keys";
+            if (!this.toast) {
+                this.toast = $("#toast").dxToast({
+                    type: "error",
+                    displayTime: 5000,
+                    closeOnClick: true,
+                    hideOnOutsideClick: true,
+                    position: { at: "center" },
+                    message: "ChatGPT API Key is required. Add it in Settings. Go to Open AI and request it.",
+                }).dxToast("instance");
+            }
+            this.toast.show();
+            return;
+        }
         this.chatPopup.show();
     }
 
