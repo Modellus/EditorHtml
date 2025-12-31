@@ -103,7 +103,8 @@ class ModelsApp {
             dropDownOptions: { width: "auto", minWidth: 140 },
             template: (_, contentElement) => {
               const host = contentElement && contentElement.get ? contentElement.get(0) : contentElement;
-              if (!host) return;
+              if (!host) 
+                return;
               host.innerHTML = "";
               const avatar = document.createElement("img");
               avatar.className = "user-menu-avatar";
@@ -130,27 +131,33 @@ class ModelsApp {
     }
   }
   readUser() {
-    if (window.modellus?.auth?.getUser) return window.modellus.auth.getUser();
+    if (window.modellus?.auth?.getUser) 
+        return window.modellus.auth.getUser();
     try {
       const stored = localStorage.getItem(userKey);
-      if (!stored) return null;
+      if (!stored) 
+        return null;
       return JSON.parse(stored);
     } catch (error) {
       return null;
     }
   }
+
   saveSession(session) {
     localStorage.setItem(sessionKey, JSON.stringify(session));
   }
+  
   clearSession() {
     localStorage.removeItem(sessionKey);
   }
+
   setStatus(message, isError = false) {
     this.elements.status.textContent = message || "";
     this.elements.status.classList.toggle("error", Boolean(isError));
   }
+
   renderUser() {
-    const avatarUrl = this.state.user?.picture || "";
+    const avatarUrl = this.state.session?.avatar || "";
     if (this.elements.userMenu) {
       const menuInstance = $(this.elements.userMenu).dxDropDownButton("instance");
       if (menuInstance) menuInstance.option("disabled", !this.state.session);
@@ -158,6 +165,7 @@ class ModelsApp {
       if (avatarEl) avatarEl.src = avatarUrl || "";
     }
   }
+
   ensureCardView() {
     if (this.cardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
     const CardView = DevExpress.ui.dxCardView;
@@ -236,11 +244,13 @@ class ModelsApp {
       }
     });
   }
+
   renderModels(items) {
     this.ensureCardView();
     if (this.cardViewInstance) this.cardViewInstance.option("dataSource", items);
     if (!items.length) this.setStatus("No models found.");
   }
+
   async loadModels(filter = this.state.filter) {
     this.setStatus("Loading models…");
     try {
@@ -255,6 +265,7 @@ class ModelsApp {
       this.renderModels([]);
     }
   }
+
   async fetchModels(filter) {
     this.refreshAuth();
     const headers = this.buildAuthHeaders();
@@ -267,6 +278,7 @@ class ModelsApp {
     const data = await response.json();
     return Array.isArray(data) ? data : [];
   }
+
   async fetchFavoriteModels() {
     this.refreshAuth();
     if (!this.state.session || !this.state.session.token) throw new Error("Sign-in required to load favorites.");
@@ -282,24 +294,29 @@ class ModelsApp {
     const data = await response.json();
     return Array.isArray(data) ? data : [];
   }
+
   buildAuthHeaders() {
     const headers = {};
     const token = this.state.session?.token;
     if (token) headers.Authorization = `Bearer ${token}`;
     return headers;
   }
+
   selectModelCard(cardTile) {
     if (!cardTile) return;
     const selected = this.elements.cardView.querySelector(".card-tile.selected");
     if (selected && selected !== cardTile) selected.classList.remove("selected");
     cardTile.classList.add("selected");
   }
+
   isFavoriteValue(modelData) {
     return Boolean(modelData && (modelData.user_interaction_is_favorite === 1 || modelData.user_interaction_is_favorite === true));
   }
+
   getUserId() {
     return this.state.session?.userId || this.state.user?.sub || this.state.user?.id || "";
   }
+
   async toggleFavorite(modelData, shouldFavorite) {
     if (!modelData || !modelData.id) return;
     if (!this.state.session || !this.state.session.token) return;
@@ -322,6 +339,7 @@ class ModelsApp {
       this.setStatus(error && error.message ? error.message : "Failed to mark favorite.", true);
     }
   }
+
   initDrawer() {
     if (this.drawerInstance || !this.elements.drawerHost || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxDrawer) return;
     const listHost = document.createElement("div");
