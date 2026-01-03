@@ -105,18 +105,13 @@ class Shell  {
                             uploadMode: "useForm",
                             dropZone: container,
                             dialogTrigger: container,
-                            onValueChanged: e => {
+                            onValueChanged: async e => {
                                 const file = e.value && e.value[0];
                                 if (!file) return;
-                                const reader = new FileReader();
-                                reader.onload = event => {
-                                    const result = event.target && event.target.result ? event.target.result : "";
-                                    const parts = typeof result === "string" ? result.split(",") : [];
-                                    const base64 = parts.length > 1 ? parts[1] : "";
-                                    this.setProperty("thumbnailBase64", base64);
-                                    updatePreview(base64);
-                                };
-                                reader.readAsDataURL(file);
+                                const base64 = await this.resizeThumbnail(file);
+                                if (!base64) return;
+                                this.setProperty("thumbnailBase64", base64);
+                                updatePreview(base64);
                             }
                         });
                         return container;
@@ -241,6 +236,48 @@ class Shell  {
         });
         this.settingsForm = $form.dxForm("instance");
         return $form;
+    }
+
+    resizeThumbnail(file) {
+        const maxWidth = 500;
+        const maxHeight = 200;
+        const maxBytes = 100 * 1024;
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = event => {
+                const result = event.target && event.target.result ? event.target.result : "";
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+                    const targetWidth = Math.max(1, Math.round(img.width * scale));
+                    const targetHeight = Math.max(1, Math.round(img.height * scale));
+                    const canvas = document.createElement("canvas");
+                    canvas.width = maxWidth;
+                    canvas.height = maxHeight;
+                    const ctx = canvas.getContext("2d");
+                    ctx.clearRect(0, 0, maxWidth, maxHeight);
+                    const offsetX = Math.round((maxWidth - targetWidth) / 2);
+                    const offsetY = Math.round((maxHeight - targetHeight) / 2);
+                    ctx.drawImage(img, offsetX, offsetY, targetWidth, targetHeight);
+                    let quality = 0.9;
+                    let dataUrl = canvas.toDataURL("image/jpeg", quality);
+                    let base64 = dataUrl.split(",")[1] || "";
+                    while (base64 && base64.length * 0.75 > maxBytes && quality > 0.1) {
+                        quality -= 0.1;
+                        dataUrl = canvas.toDataURL("image/jpeg", quality);
+                        base64 = dataUrl.split(",")[1] || "";
+                    }
+                    resolve(base64);
+                };
+                img.onerror = () => resolve("");
+                if (typeof result === "string")
+                    img.src = result;
+                else
+                    resolve("");
+            };
+            reader.onerror = () => resolve("");
+            reader.readAsDataURL(file);
+        });
     }
 
     createTopToolbar() {
@@ -1082,8 +1119,10 @@ class Shell  {
     }
 
     serialize() {
+        const properties = Object.assign({}, this.properties);
+        delete properties.thumbnailBase64;
         return {
-            properties: this.properties,
+            properties,
             board: this.board.serialize()
         };
     }
@@ -1108,7 +1147,7 @@ class Shell  {
         const headers = { "Content-Type": "application/json" };
         if (session && session.token) headers.Authorization = `Bearer ${session.token}`;
         try {
-            const thumbnail = await this.captureThumbnail();
+            const thumbnail = this.properties.thumbnailBase64 || await this.captureThumbnail();
             const payload = {
                 title: this.properties.name || "Untitled model",
                 description: this.properties.description || "",
