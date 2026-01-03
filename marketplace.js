@@ -194,6 +194,7 @@ class ModelsApp {
         const data = cardData && cardData.card && cardData.card.data ? cardData.card.data : cardData || {};
         if (!host) return;
         const isFavorite = this.isFavoriteValue(data);
+        const isPublic = data.is_public === true || data.is_public === 1;
         const thumbnailSrc = data.thumbnail
           ? (data.thumbnail.startsWith("data:") ? data.thumbnail : `data:image/png;base64,${data.thumbnail}`)
           : "";
@@ -218,26 +219,36 @@ class ModelsApp {
             <button class="favorite-button${isFavorite ? " is-favorite" : ""}" aria-label="${isFavorite ? "Unfavorite" : "Favorite"}">
               <i class="${isFavorite ? "fa-solid fa-star favorite-icon" : "fa-regular fa-star favorite-icon"}" aria-hidden="true"></i>
             </button>
+            <button class="visibility-button${isPublic ? " is-public" : ""}" aria-label="${isPublic ? "Set private" : "Set public"}" title="${isPublic ? "Public" : "Private"}">
+              <i class="${isPublic ? "fa-light fa-lock-open" : "fa-light fa-lock"} visibility-icon" aria-hidden="true"></i>
+            </button>
           </div>
         `;
         host.innerHTML = cardMarkup;
         const cardTile = host.querySelector(".card-tile");
         const favoriteButton = host.querySelector(".favorite-button");
         const deleteButton = host.querySelector(".delete-button");
+        const visibilityButton = host.querySelector(".visibility-button");
         if (favoriteButton) favoriteButton.addEventListener("click", () => this.toggleFavorite(data, !isFavorite));
         if (deleteButton) deleteButton.addEventListener("click", event => {
           event.stopPropagation();
           this.deleteModel(data);
         });
+        if (visibilityButton) visibilityButton.addEventListener("click", event => {
+          event.stopPropagation();
+          this.toggleVisibility(data);
+        });
         if (cardTile) {
           cardTile.addEventListener("click", event => {
             if (event && event.target && event.target.closest(".favorite-button")) return;
             if (event && event.target && event.target.closest(".delete-button")) return;
+            if (event && event.target && event.target.closest(".visibility-button")) return;
             this.selectModelCard(cardTile);
           });
           cardTile.addEventListener("dblclick", event => {
             if (event && event.target && event.target.closest(".favorite-button")) return;
             if (event && event.target && event.target.closest(".delete-button")) return;
+            if (event && event.target && event.target.closest(".visibility-button")) return;
             this.openModel(data);
           });
         }
@@ -337,6 +348,29 @@ class ModelsApp {
       this.loadModels(this.state.filter);
     } catch (error) {
       this.setStatus(error && error.message ? error.message : "Failed to mark favorite.", true);
+    }
+  }
+
+  async toggleVisibility(modelData) {
+    if (!modelData || !modelData.id) return;
+    this.refreshAuth();
+    if (!this.state.session || !this.state.session.token) {
+      this.setStatus("Sign-in required to update visibility.", true);
+      return;
+    }
+    const nextValue = !(modelData.is_public === true || modelData.is_public === 1);
+    this.setStatus(nextValue ? "Setting public…" : "Setting private…");
+    try {
+      const response = await fetch(`${apiBase}/models/${modelData.id}`, {
+        method: "PUT",
+        headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+        body: JSON.stringify({ is_public: nextValue })
+      });
+      if (!response.ok) throw new Error(`Visibility update failed (${response.status})`);
+      this.setStatus(nextValue ? "Model is public." : "Model is private.");
+      this.loadModels(this.state.filter);
+    } catch (error) {
+      this.setStatus(error && error.message ? error.message : "Failed to update visibility.", true);
     }
   }
 

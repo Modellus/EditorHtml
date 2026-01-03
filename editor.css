@@ -219,6 +219,12 @@ svg:active.pan-available {
     background-color: transparent;
 }
 
+body.read-only #toolbar-container,
+body.read-only #context-menu,
+body.read-only #shape-popup {
+    display: none;
+}
+
 .thumbnail-dropzone {
     display: grid;
     gap: 0.5rem;

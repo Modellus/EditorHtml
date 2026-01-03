@@ -4,6 +4,7 @@ const GOOGLE_CLIENT_ID = "616832441203-a45kghte7c05vdkj5ri5ejp8qu81vcae.apps.goo
 const TOKEN_STORAGE_KEY = "modellus_id_token";
 const MARKETPLACE_SESSION_KEY = "mp.session";
 const APP_HOME = "/marketplace.html";
+const apiBase = "https://modellus-api.interactivebook.workers.dev";
 
 function decodeJwtPayload(token) {
   try {
@@ -34,7 +35,7 @@ function tryAutoRedirect() {
   }
 }
 
-window.handleCredentialResponse = ({ credential }) => {
+window.handleCredentialResponse = async ({ credential }) => {
   if (!credential) 
     return;
   const payload = decodeJwtPayload(credential) || {};
@@ -48,8 +49,53 @@ window.handleCredentialResponse = ({ credential }) => {
   };
   localStorage.setItem(TOKEN_STORAGE_KEY, credential);
   localStorage.setItem(MARKETPLACE_SESSION_KEY, JSON.stringify(session));
+  await ensureUser(session);
   location.href = APP_HOME;
 };
+
+async function ensureUser(session) {
+  if (!session?.userId)
+    return;
+  const now = new Date().toISOString();
+  const avatar = session.avatar || `${location.origin}/scripts/themes/modellus.svg`;
+  const payload = {
+    id: session.userId,
+    email: session.email || "",
+    name: session.name || "User",
+    avatar,
+    createdAt: now,
+    lastLogin: now
+  };
+  const headers = { "Content-Type": "application/json" };
+  const userUrl = `${apiBase}/users/${encodeURIComponent(session.userId)}`;
+  try {
+    const existing = await fetch(userUrl);
+    if (existing.ok) {
+      await fetch(userUrl, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({
+          email: payload.email,
+          name: payload.name,
+          avatar: payload.avatar,
+          lastLogin: payload.lastLogin
+        })
+      });
+      return;
+    }
+  } catch (error) {
+    console.warn("User lookup failed.", error);
+  }
+  try {
+    await fetch(`${apiBase}/users`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    console.warn("User creation failed.", error);
+  }
+}
 
 function waitForGoogle(cb, tries = 50) {
   const ok = window.google?.accounts?.id;

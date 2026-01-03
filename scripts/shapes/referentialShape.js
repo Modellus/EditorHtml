@@ -14,6 +14,12 @@ class ReferentialShape extends BaseShape {
         var items = instance.option("items");
         items.push(
             {
+                colSpan: 2,
+                dataField: "autoScale",
+                label: { text: "Auto scale" },
+                editorType: "dxSwitch"
+            },
+            {
                 colSpan: 1,
                 dataField: "scaleX",
                 label: { text: "Horizontal Scale" },
@@ -49,6 +55,7 @@ class ReferentialShape extends BaseShape {
         this.properties.originY = this.properties.height / 2;
         this.properties.scaleX = 1;
         this.properties.scaleY = 1;
+        this.properties.autoScale = true;
     }
 
     createElement() {
@@ -148,6 +155,7 @@ class ReferentialShape extends BaseShape {
         const axisColor = this.properties.axisColor ?? this.properties.foregroundColor;
         const axisX = position.x + this.properties.originX;
         const axisY = position.y + this.properties.originY;
+        this.autoAdjustScales({ position, axisX, axisY });
         const scaleX = this.normalizeScale(this.properties.scaleX);
         const scaleY = this.normalizeScale(this.properties.scaleY);
         const horizontalPositions = this.drawAxisTicks({
@@ -194,6 +202,91 @@ class ReferentialShape extends BaseShape {
             });
         else
             this.clearLabels(this.tickLabels.vertical);
+    }
+
+    autoAdjustScales({ position, axisX, axisY }) {
+        if (this.properties.autoScale === false)
+            return;
+        const maxAxisPxX = Math.max(axisX - position.x, position.x + this.properties.width - axisX);
+        const maxAxisPxY = Math.max(axisY - position.y, position.y + this.properties.height - axisY);
+        if (!maxAxisPxX || !maxAxisPxY)
+            return;
+        const ranges = this.getChildOffsetRanges(axisX, axisY);
+        if (!ranges)
+            return;
+        const { minOffsetX, maxOffsetX, minOffsetY, maxOffsetY } = ranges;
+        const scaleX = this.normalizeScale(this.properties.scaleX);
+        const scaleY = this.normalizeScale(this.properties.scaleY);
+        const currentMaxValueX = maxAxisPxX * scaleX;
+        const currentMaxValueY = maxAxisPxY * scaleY;
+        const observedValueX = Math.max(Math.abs(minOffsetX), Math.abs(maxOffsetX)) * scaleX;
+        const observedValueY = Math.max(Math.abs(minOffsetY), Math.abs(maxOffsetY)) * scaleY;
+        if (observedValueX > currentMaxValueX) {
+            const targetValueX = observedValueX * 1.3;
+            this.properties.scaleX = targetValueX / maxAxisPxX;
+        }
+        if (observedValueY > currentMaxValueY) {
+            const targetValueY = observedValueY * 1.3;
+            this.properties.scaleY = targetValueY / maxAxisPxY;
+        }
+    }
+
+    getChildOffsetRanges(axisX, axisY) {
+        let minOffsetX = Infinity;
+        let maxOffsetX = -Infinity;
+        let minOffsetY = Infinity;
+        let maxOffsetY = -Infinity;
+        let hasValues = false;
+        const walk = shape => {
+            if (!shape || shape === this)
+                return;
+            const bounds = this.getShapeBounds(shape);
+            if (bounds) {
+                hasValues = true;
+                minOffsetX = Math.min(minOffsetX, bounds.minX - axisX);
+                maxOffsetX = Math.max(maxOffsetX, bounds.maxX - axisX);
+                minOffsetY = Math.min(minOffsetY, bounds.minY - axisY);
+                maxOffsetY = Math.max(maxOffsetY, bounds.maxY - axisY);
+            }
+            if (shape.children && shape.children.length)
+                shape.children.forEach(child => walk(child));
+        };
+        if (this.children && this.children.length)
+            this.children.forEach(child => walk(child));
+        if (!hasValues)
+            return null;
+        return { minOffsetX, maxOffsetX, minOffsetY, maxOffsetY };
+    }
+
+    getShapeBounds(shape) {
+        const trajectory = shape.trajectory;
+        const hasTrajectory = trajectory && Array.isArray(trajectory.values) && trajectory.values.length > 0;
+        const position = hasTrajectory
+            ? trajectory.values[trajectory.values.length - 1]
+            : shape.getBoardPosition?.();
+        if (!position)
+            return null;
+        const props = shape.properties || {};
+        const radius = Number.isFinite(props.radius) ? props.radius : null;
+        const width = Number.isFinite(props.width) ? props.width : null;
+        const height = Number.isFinite(props.height) ? props.height : null;
+        if (hasTrajectory || (width == null && height == null && radius == null)) {
+            return { minX: position.x, maxX: position.x, minY: position.y, maxY: position.y };
+        }
+        if (radius != null && (width == null || height == null)) {
+            return {
+                minX: position.x - radius,
+                maxX: position.x + radius,
+                minY: position.y - radius,
+                maxY: position.y + radius
+            };
+        }
+        return {
+            minX: position.x,
+            maxX: position.x + (width ?? 0),
+            minY: position.y,
+            maxY: position.y + (height ?? 0)
+        };
     }
 
     drawAxisTicks({ groups, start, end, origin, fixed, orientation, color }) {

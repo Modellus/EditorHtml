@@ -1188,6 +1188,8 @@ class Shell  {
     }
 
     selectShape(shape) {
+        if (window.modellusReadOnly)
+            return;
         this.updateToolbar();
         this.shapeForm = null;
         var form = shape.getForm();
