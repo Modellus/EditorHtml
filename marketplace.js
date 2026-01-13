@@ -173,6 +173,8 @@ class ModelsApp {
         dataSource: [],
         height: "100%",
         scrolling: { mode: "virtual" },
+        paging: { enabled: false },
+        pager: { visible: false },
         showBorders: false,
       focusStateEnabled: false,
       hoverStateEnabled: false,
