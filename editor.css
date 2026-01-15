@@ -225,6 +225,32 @@ body.read-only #shape-popup {
     display: none;
 }
 
+.shape-context-toolbar {
+    position: fixed;
+    z-index: 9999;
+    display: none;
+    padding: 4px 6px;
+    border-radius: 8px;
+    background: transparent;
+    width: max-content;
+}
+
+.shape-context-toolbar.visible {
+    display: block;
+}
+
+.shape-context-toolbar .dx-toolbar {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    width: auto;
+    display: inline-block;
+}
+
+.shape-context-toolbar .dx-toolbar-items-container {
+    gap: 4px;
+}
+
 .thumbnail-dropzone {
     display: grid;
     gap: 0.5rem;

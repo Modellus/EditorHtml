@@ -33,6 +33,7 @@ class BaseShape {
         this.element.setAttribute("id", this.id);
         this.element.setAttribute("clip-path", `url(#${this.getClipId()})`);
         this.draw();
+        this.initializeContextToolbar();
     }
 
     getForm() {
@@ -71,6 +72,87 @@ class BaseShape {
 
     createElement() {
         throw new Error("createElement should be implemented in subclasses.");
+    }
+
+    createContextMenu() {
+        return [];
+    }
+
+    initializeContextToolbar() {
+        const toolbarItems = this.createContextMenu();
+        if (!toolbarItems || !toolbarItems.length || !window.DevExpress?.ui?.dxToolbar)
+            return;
+        const toolbarHost = document.createElement("div");
+        toolbarHost.className = "shape-context-toolbar";
+        document.body.appendChild(toolbarHost);
+        $(toolbarHost).dxToolbar({ items: toolbarItems, width: "auto" });
+        this.contextToolbar = toolbarHost;
+        this.contextToolbarInstance = $(toolbarHost).dxToolbar("instance");
+    }
+
+    showContextToolbar() {
+        if (!this.contextToolbar)
+            return;
+        this.contextToolbar.classList.add("visible");
+        requestAnimationFrame(() => requestAnimationFrame(() => this.positionContextToolbar()));
+    }
+
+    hideContextToolbar() {
+        if (!this.contextToolbar)
+            return;
+        this.contextToolbar.classList.remove("visible");
+    }
+
+    positionContextToolbar() {
+        if (!this.contextToolbar || !this.element)
+            return;
+        const anchor = this.getScreenAnchorPoint();
+        if (!anchor)
+            return;
+        const toolbarRect = this.contextToolbar.getBoundingClientRect();
+        const toolbarWidth = toolbarRect.width || this.contextToolbar.offsetWidth || 0;
+        const toolbarHeight = toolbarRect.height || this.contextToolbar.offsetHeight || 0;
+        const padding = 8;
+        let left = anchor.centerX - toolbarWidth / 2;
+        let top = anchor.bottomY + padding;
+        const maxLeft = window.innerWidth - toolbarWidth - padding;
+        const maxTop = window.innerHeight - toolbarHeight - padding;
+        left = Math.max(padding, Math.min(left, maxLeft));
+        top = Math.max(padding, Math.min(top, maxTop));
+        this.contextToolbar.style.left = `${left}px`;
+        this.contextToolbar.style.top = `${top}px`;
+    }
+
+    getScreenAnchorPoint() {
+        if (this.container?.getBoundingClientRect) {
+            const rect = this.container.getBoundingClientRect();
+            return {
+                centerX: rect.left + rect.width / 2,
+                bottomY: rect.bottom
+            };
+        }
+        if (!this.board?.svg)
+            return null;
+        const position = this.getBoardPosition?.();
+        if (!position)
+            return null;
+        const props = this.properties ?? {};
+        const width = Number.isFinite(props.width) ? props.width : 0;
+        const height = Number.isFinite(props.height) ? props.height : 0;
+        const radius = Number.isFinite(props.radius) ? props.radius : null;
+        const svgRect = this.board.svg.getBoundingClientRect();
+        const ctm = this.board.svg.getScreenCTM();
+        if (!ctm)
+            return null;
+        const centerX = radius != null ? position.x : position.x + width / 2;
+        const centerY = radius != null ? position.y : position.y + height / 2;
+        const bottomY = radius != null ? position.y + radius : position.y + height;
+        const centerPoint = new DOMPoint(centerX, centerY).matrixTransform(ctm);
+        const bottomPoint = new DOMPoint(centerX, bottomY).matrixTransform(ctm);
+        return {
+            centerX: centerPoint.x,
+            bottomY: bottomPoint.y
+        };
     }
 
     createForm() {

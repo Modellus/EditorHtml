@@ -37,6 +37,7 @@ class BaseTransformer {
         this.board.svg.appendChild(handle);
         this.handles.push(handle);
         handle.addEventListener("pointerdown", e => this.onHandlePointerDown(e, handle));
+        handle.addEventListener("contextmenu", e => this.onHandleContextMenu(e));
         handle.update = update;
         handle.getTransform = getTransform;
     }
@@ -117,6 +118,21 @@ class BaseTransformer {
         }
         this._pendingPoint = null;
         this.shape.dragEnd();
+    }
+
+    onHandleContextMenu(event) {
+        if (!this.shape?.element)
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        const contextEvent = new MouseEvent("contextmenu", {
+            bubbles: true,
+            cancelable: true,
+            clientX: event.clientX,
+            clientY: event.clientY,
+            button: 2
+        });
+        this.shape.element.dispatchEvent(contextEvent);
     }
 
     transformShape(transform) {

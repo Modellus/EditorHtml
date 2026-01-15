@@ -8,6 +8,60 @@ class ReferentialShape extends BaseShape {
         return new ReferentialTransformer(this.board, this);
     }
 
+    createContextMenu() {
+        return [
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    elementAttr: {
+                        id: "body-button-context"
+                    },
+                    icon: "fa-light fa-circle",
+                    hint: this.board.translations.get("Body Name"),
+                    onClick: _ => window.shell?.commands?.addShape("BodyShape", "Body")
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-arrow-right-long fa-rotate-by",
+                    elementAttr: {
+                        id: "vector-button-context",
+                        style: "--fa-rotate-angle: -45deg;"
+                    },
+                    hint: this.board.translations.get("Vector Name"),
+                    onClick: _ => window.shell?.commands?.addShape("VectorShape", "Vector")
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    elementAttr: {
+                        id: "character-button-context"
+                    },
+                    icon: "fa-regular fa-child-reaching",
+                    hint: this.board.translations.get("Character Name"),
+                    onClick: _ => window.shell?.commands?.addShape("CharacterShape", "Character")
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    elementAttr: {
+                        id: "image-button-context"
+                    },
+                    icon: "fa-light fa-image",
+                    hint: this.board.translations.get("Image Name"),
+                    onClick: _ => window.shell?.commands?.addShape("ImageShape", "Image")
+                }
+            }
+        ];
+    }
+
     createForm() {
         var form = super.createForm();
         var instance = form.dxForm("instance");

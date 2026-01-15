@@ -366,62 +366,6 @@ class Shell  {
                     widget: "dxButton",
                     options: {
                         elementAttr: {
-                            id: "body-button"
-                        },
-                        icon: "fa-light fa-circle",
-                        disabled: true,
-                        onClick: _ => this.commands.addShape("BodyShape", "Body")
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-arrow-right-long fa-rotate-by",
-                        elementAttr: {
-                            id: "vector-button",
-                            style: "--fa-rotate-angle: -45deg;"
-                        },
-                        disabled: true,
-                        onClick: _ => this.commands.addShape("VectorShape", "Vector")
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        elementAttr: {
-                            id: "image-button"
-                        },
-                        icon: "fa-light fa-image",
-                        disabled: true,
-                        onClick: _ => this.commands.addShape("ImageShape", "Image")
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        elementAttr: {
-                            id: "character-button"
-                        },
-                        disabled: true,
-                        icon: "fa-regular fa-child-reaching",
-                        onClick: _ => this.commands.addShape("CharacterShape", "Character"),
-                        onInitialized: e => this.characterButton = e.component
-                    }
-                },
-                {
-                    location: "center",
-                    template() {
-                      return $("<div id='description-tools-separator' class='toolbar-separator'>|</div>");
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        elementAttr: {
                             id: "background-button"
                         },
                         template: `<div class='dx-icon'>
@@ -475,10 +419,6 @@ class Shell  {
         this.referentialButton = $("#referential-button").dxButton("instance");
         this.chartButton = $("#chart-button").dxButton("instance");
         this.tableButton = $("#table-button").dxButton("instance");
-        this.bodyButton = $("#body-button").dxButton("instance");
-        this.vectorButton = $("#vector-button").dxButton("instance");
-        this.imageButton = $("#image-button").dxButton("instance");
-        this.characterButton = $("#character-button").dxButton("instance");
         this.backgroundButton = $("#background-button").dxButton("instance");
         this.textButton = $("#text-button").dxButton("instance");
         this.rulerButton = $("#ruler-button").dxButton("instance");
@@ -937,10 +877,6 @@ class Shell  {
     
     updateToolbar() {
         var disabled = this.board.selection.selectedShape == null || !["BodyShape", "VectorShape", "ImageShape", "CharacterShape", "ReferentialShape"].includes(this.board.selection.selectedShape.constructor.name);
-        this.bodyButton.option("disabled", disabled);
-        this.vectorButton.option("disabled", disabled);
-        this.imageButton.option("disabled", disabled);
-        this.characterButton.option("disabled", disabled);
     }
     
     updatePlayer() {

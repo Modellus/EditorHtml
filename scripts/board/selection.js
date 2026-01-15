@@ -24,6 +24,8 @@ class Selection {
         this.selectedShape = shape;
         this.transformer = shape.createTransformer();
         this.transformer.show();
+        if (shape.showContextToolbar)
+            shape.showContextToolbar();
         this.dispatchEvent("selected", this.selectedShape);
     }
 
@@ -34,6 +36,8 @@ class Selection {
         this.transformer = null;
         if (transformer)
             transformer.hide();
+        if (selectedShape?.hideContextToolbar)
+            selectedShape.hideContextToolbar();
         if (selectedShape != null)
             this.dispatchEvent("deselected", selectedShape);
     }
