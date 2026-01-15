@@ -74,12 +74,12 @@ class BaseShape {
         throw new Error("createElement should be implemented in subclasses.");
     }
 
-    createContextMenu() {
+    createToolbar() {
         return [];
     }
 
     initializeContextToolbar() {
-        const toolbarItems = this.createContextMenu();
+        const toolbarItems = this.createToolbar();
         if (!toolbarItems || !toolbarItems.length || !window.DevExpress?.ui?.dxToolbar)
             return;
         const toolbarHost = document.createElement("div");

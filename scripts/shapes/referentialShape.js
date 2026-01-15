@@ -8,8 +8,9 @@ class ReferentialShape extends BaseShape {
         return new ReferentialTransformer(this.board, this);
     }
 
-    createContextMenu() {
-        return [
+    createToolbar() {
+        var items = super.createToolbar();
+        items.push(
             {
                 location: "center",
                 widget: "dxButton",
@@ -59,7 +60,8 @@ class ReferentialShape extends BaseShape {
                     onClick: _ => window.shell?.commands?.addShape("ImageShape", "Image")
                 }
             }
-        ];
+        );
+        return items;
     }
 
     createForm() {

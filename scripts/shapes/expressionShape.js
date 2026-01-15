@@ -21,6 +21,7 @@ class ExpressionShape extends BaseShape {
                             label: { text: "Shortcuts" },
                             editorType: "dxButtonGroup",
                             editorOptions: {
+                                elementAttr: { class: "mdl-shortcuts" },
                                 buttonTemplate: function(data, container) {
                                     $("<math-field>")
                                         .attr("read-only", true)
