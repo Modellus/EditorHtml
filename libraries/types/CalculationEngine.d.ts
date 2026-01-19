@@ -23,8 +23,13 @@ declare enum TermType {
 declare class Term {
     name: string;
     type: TermType;
-    initialValue: number;
+    private _initialValues;
     constructor(name: string, type?: TermType);
+    getInitialValue(iteration?: number): number;
+    setInitialValue(value: number, iteration?: number): void;
+    get initialValues(): number[];
+    set initialValues(values: number[]);
+    hasInitialValue(iteration: number): boolean;
 }
 
 declare class Expression {
@@ -43,6 +48,26 @@ declare class Expression {
     }) => boolean) | null);
 }
 
+type IterationValues = {
+    [name: string]: number;
+} & {
+    case: number;
+    iteration: number;
+};
+declare class Values {
+    private data;
+    get length(): number;
+    getCaseCount(): number;
+    clear(): void;
+    ensureCase(caseNumber: number): void;
+    resetCase(caseNumber: number): void;
+    setCaseIterations(caseNumber: number, iterations: IterationValues[]): void;
+    getCaseIterations(caseNumber: number): IterationValues[];
+    getLastIteration(caseNumber: number): IterationValues;
+    getIteration(caseNumber: number, iteration: number): IterationValues | undefined;
+    addIteration(caseNumber: number, values: IterationValues): void;
+}
+
 declare class System {
     private _independent;
     private _iterationTerm;
@@ -50,9 +75,7 @@ declare class System {
         [name: string]: Term;
     };
     expressions: Array<Expression>;
-    values: Array<{
-        [name: string]: number;
-    }>;
+    values: Values;
     iteration: number;
     step: number;
     private expressionsByName;
@@ -60,55 +83,78 @@ declare class System {
     private differentialNames;
     private functionExpressionsWithCondition;
     private functionExpressionsWithoutCondition;
+    private initialValuesByCase;
     constructor(independent?: string, iterationTerm?: string);
     get independent(): Term;
     set independent(name: string);
     get iterationTerm(): Term;
     set iterationTerm(name: string);
     get lastIteration(): number;
-    get(): {
-        [name: string]: number;
-    };
-    getIteration(iteration: number): {
-        [name: string]: number;
-    };
-    getByName(name: string): number | undefined;
-    getByNameOnIteration(iteration: number, name: string): number | undefined;
-    getIndependentOnIteration(iteration: number): number;
-    getByExpression(expression: Expression): number | undefined;
-    getByTerm(term: Term): number | undefined;
+    get(): IterationValues;
+    getIteration(iteration: number, caseNumber?: number): IterationValues;
+    getByName(name: string, caseNumber?: number): number | undefined;
+    getByNameOnIteration(iteration: number, name: string, caseNumber?: number): number | undefined;
+    getIndependentOnIteration(iteration: number, caseNumber?: number): number;
+    getIterationTermOnIteration(iteration: number, caseNumber?: number): number;
+    getByExpression(expression: Expression, caseNumber?: number): number | undefined;
+    getByTerm(term: Term, caseNumber?: number): number | undefined;
     addExpression(expression: Expression, termType?: TermType): void;
     addTerm(term: Term): void;
     addTermByName(term: string, type: TermType): void;
     reset(): void;
     clear(): void;
     calculateFunctions(): void;
+    private applyInitialValues;
     addValues(values: {
         [name: string]: number;
     }): void;
+    addValues(values: {
+        [name: string]: number;
+    }[], caseNumber?: number): void;
+    addValues(values: {
+        [name: string]: number;
+    }, caseNumber: number): void;
     calculate(values: {
         [name: string]: number;
     }): {
         [name: string]: number;
     };
-    getIndependent(): number;
+    calculate(values: {
+        [name: string]: number;
+    }[]): {
+        [name: string]: number;
+    }[];
+    calculateForCase(values: {
+        [name: string]: number;
+    }, caseNumber: number): {
+        [name: string]: number;
+    };
+    private calculateSingle;
+    getIndependent(caseNumber?: number): number;
     setInitialIndependent(value: number): void;
     isEditable(term: Term): boolean;
-    set(term: Term, value: number): void;
-    setByExpression(expression: Expression, value: number): void;
+    set(term: Term, value: number, caseNumber?: number): void;
+    setByExpression(expression: Expression, value: number, caseNumber?: number): void;
     getExpression(name: string): Expression | undefined;
     getTerm(name: string): Term | undefined;
     isTerm(name: string): boolean;
-    setInitialByTerm(term: Term, value: number): void;
-    setInitialByName(name: string, value: number): void;
+    setInitialByTerm(term: Term, value: number, iteration?: number): void;
+    setInitialByTerm(term: Term, value: number, iteration: number, caseNumber: number): void;
+    setInitialByName(name: string, value: number, iteration?: number): void;
+    setInitialByName(name: string, value: number, iteration: number, caseNumber: number): void;
     getValue(values: {
         [name: string]: number;
     }, term: string): number;
-    getValueAtIteration(iteration: number, term: string): number;
-    getValueAtIndependent(value: number, term: string): number;
-    getInitialByExpression(expression: Expression): number;
+    getValueAtIteration(iteration: number, term: string, caseNumber?: number): number;
+    getValueAtIndependent(value: number, term: string, caseNumber?: number): number;
+    getInitialByExpression(expression: Expression, iteration?: number): number;
     getTermsNames(): string[];
     getDifferentialTermsNames(): string[];
+    getCaseIterations(caseNumber: number): IterationValues[];
+    getCasesCount(): number;
+    private ensureCaseInitialValues;
+    private hasInitialValueForCase;
+    private getInitialValueForCase;
 }
 
 declare class Engine extends EventEmitter {
@@ -1041,4 +1087,5 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
 }
 
-export { Branch, Engine, Expression, Parser, System, Term, TermType, Visitor };
+export { Branch, Engine, Expression, Parser, System, Term, TermType, Values, Visitor };
+export type { IterationValues };

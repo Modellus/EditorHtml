@@ -110,8 +110,10 @@ class VectorShape extends BaseShape {
     tick() {
         super.tick();
         const calculator = this.board.calculator;
-        const newW = calculator.getByName(this.properties.xTerm);
-        const newH = calculator.getByName(this.properties.yTerm);
+        const xCase = this.properties.xTermCase ?? 1;
+        const yCase = this.properties.yTermCase ?? 1;
+        const newW = calculator.getByName(this.properties.xTerm, xCase);
+        const newH = calculator.getByName(this.properties.yTerm, yCase);
         if (newW != null) this.properties.width = newW;
         if (newH != null) this.properties.height = newH;
         this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());

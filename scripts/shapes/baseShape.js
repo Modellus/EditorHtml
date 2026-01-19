@@ -277,12 +277,13 @@ class BaseShape {
             const scale = this.getScale();
             let axisScale = scale[termMapping.scaleProperty] ?? 1;
             var term = this.properties[termMapping.termProperty];
+            const caseNumber = this.properties[termMapping.caseProperty] ?? 1;
             const calculator = this.board.calculator;
             var isTerm = calculator.isTerm(term);
             delta = delta * axisScale * (termMapping.isInverted ? -1 : 1);
             if (isTerm) {
-                var value = calculator.getByName(term);
-                calculator.setTermValue(term, value + delta);
+                var value = calculator.getByName(term, caseNumber);
+                calculator.setTermValue(term, value + delta, calculator.system.iteration, caseNumber);
                 calculator.calculate();
             } else
                 this.properties[termMapping.termProperty] = Utils.roundToPrecision(
@@ -361,12 +362,16 @@ class BaseShape {
     }
 
     addTerm(termProperty, property, title, isInverted = false, isEditable = true, colSpan = 1, scaleProperty = null) {
+        const caseProperty = `${termProperty}Case`;
+        if (this.properties[caseProperty] == null)
+            this.properties[caseProperty] = 1;
         this.termsMapping.push({
             termProperty: termProperty,
             termValue: 0,
             property: property,
             isInverted: isInverted,
-            scaleProperty: scaleProperty
+            scaleProperty: scaleProperty,
+            caseProperty: caseProperty
         });
         this.addTermToForm(termProperty, title, isEditable, colSpan);
     }
@@ -376,40 +381,110 @@ class BaseShape {
             return;
         var instance = this.form.dxForm("instance");
         var items = instance.option("items");
+        const caseProperty = `${term}Case`;
+        if (this.properties[caseProperty] == null)
+            this.properties[caseProperty] = 1;
+        const calculator = this.board.calculator;
+        const caseColors = this.board.theme.getBackgroundColors().map(c => c.color);
+        const getCaseIconClass = color => color == "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
+        const getCaseIconColor = color => color == "#00000000" ? "#cccccc" : color;
+        const getCasesCount = () => Math.max(1, parseInt(calculator.properties.casesCount ?? 1, 10) || 1);
+        const buildCaseItems = () => {
+            const count = getCasesCount();
+            const items = [];
+            for (let i = 1; i <= count; i++) {
+                const color = caseColors[(i - 1) % caseColors.length];
+                items.push({ value: i, color: color });
+            }
+            return items;
+        };
+        const groupPath = `items[${items.length}]`;
+        const updateCaseVisibility = value => {
+            const isTerm = calculator.isTerm(value);
+            const showCase = isTerm && getCasesCount() > 1;
+            instance.itemOption(`${groupPath}.items[1]`, "visible", showCase);
+            instance.itemOption(`${groupPath}.items[0]`, "colSpan", showCase ? 1 : 2);
+            if (showCase && !this.properties[caseProperty])
+                instance.updateData(caseProperty, 1);
+        };
+        const initialShowCase = calculator.isTerm(this.properties[term]) && getCasesCount() > 1;
         items.push(
             {
-                colSpan: colSpan,
-                dataField: term,
-                label: { text: title },
-                editorType: "dxSelectBox",
-                editorOptions: {
-                    items: Utils.getTerms(this.board.calculator.getTermsNames()),
-                    stylingMode: "filled",
-                    displayExpr: "text",
-                    valueExpr: "term",
-                    placeholder: "",
-                    acceptCustomValue: isEditable,
-                    inputAttr: { class: "mdl-variable-selector" },
-                    elementAttr: { class: "mdl-variable-selector" },
-                    itemTemplate: function (data, index, element) {
-                        const item = $("<div>").text(data.text);
-                        item.addClass("mdl-variable-selector");
-                        element.append(item);
+                colSpan: 2,
+                itemType: "group",
+                colCount: 2,
+                items: [
+                    {
+                        colSpan: initialShowCase ? 1 : 2,
+                        dataField: term,
+                        label: { text: title },
+                        editorType: "dxSelectBox",
+                        editorOptions: {
+                            items: Utils.getTerms(this.board.calculator.getTermsNames()),
+                            stylingMode: "filled",
+                            displayExpr: "text",
+                            valueExpr: "term",
+                            placeholder: "",
+                            acceptCustomValue: isEditable,
+                            inputAttr: { class: "mdl-variable-selector" },
+                            elementAttr: { class: "mdl-variable-selector" },
+                            itemTemplate: function (data, index, element) {
+                                const item = $("<div>").text(data.text);
+                                item.addClass("mdl-variable-selector");
+                                element.append(item);
+                            },
+                            onValueChanged: e => updateCaseVisibility(e.value),
+                            onCustomItemCreating: function(e) {
+                                instance.updateData(term, e.text);
+                                e.component.option("value", e.text);
+                                e.customItem = { text: e.text, term: e.text };
+                                updateCaseVisibility(e.text);
+                            }
+                        }
                     },
-                    onCustomItemCreating: function(e) {
-                        instance.updateData(term, e.text);
-                        e.component.option("value", e.text);
-                        e.customItem = { text: e.text, term: e.text };
+                    {
+                        colSpan: 1,
+                        dataField: caseProperty,
+                        label: { text: this.board.translations.get("Case") },
+                        editorType: "dxSelectBox",
+                        visible: initialShowCase,
+                        editorOptions: {
+                            items: buildCaseItems(),
+                            valueExpr: "value",
+                            displayExpr: "value",
+                            fieldAddons: {
+                                before: data => {
+                                    const color = data?.color ?? caseColors[0];
+                                    const icon = $(`<i class="${getCaseIconClass(color)} case-select__icon"></i>`);
+                                    icon.css("color", getCaseIconColor(color));
+                                    if (color == "#ffffff")
+                                        icon[0].style.setProperty("--fa-primary-color", "#000000");
+                                    return icon;
+                                }
+                            },
+                            itemTemplate: (itemData, _, element) => {
+                                const content = $("<div>").addClass("case-select");
+                                const icon = $(`<i class="${getCaseIconClass(itemData.color)} case-select__icon"></i>`);
+                                icon.css("color", getCaseIconColor(itemData.color));
+                                if (itemData.color == "#ffffff")
+                                    icon[0].style.setProperty("--fa-primary-color", "#000000");
+                                const label = $("<span>").addClass("case-select__label").text(itemData.value);
+                                content.append(icon, label);
+                                element.append(content);
+                            },
+                            stylingMode: "filled"
+                        }
                     }
-                }
+                ]
             }
         );
+        updateCaseVisibility(this.properties[term]);
     }
 
-    resolveTermNumeric(term) {
+    resolveTermNumeric(term, caseNumber = 1) {
         const calculator = this.board.calculator;
         if (calculator.isTerm(term))
-            return calculator.getByName(term);
+            return calculator.getByName(term, caseNumber);
         return parseFloat(term);
     }
 }

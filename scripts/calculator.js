@@ -1,6 +1,5 @@
 // @ts-check
 /// <reference path="../libraries/types/CalculationEngine.d.ts" />
-/* global Modellus */
 
 const STATUS = { PLAYING: 0, PAUSED: 1, REPLAYING: 2, STOPPED: 3 };
 
@@ -19,6 +18,7 @@ class Calculator extends EventTarget {
         this.properties.precision = 2;
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
         this.properties.iterationTerm = "n";
+        this.properties.casesCount = 1;
     }
 
     setProperties(properties) {
@@ -116,6 +116,9 @@ class Calculator extends EventTarget {
         this.system.setInitialIndependent(this.properties.independent.start);
         this.system.step = this.properties.independent.step;
         this.system.iterationTerm = this.properties.iterationTerm;
+        const casesCount = Math.max(1, parseInt(this.properties.casesCount ?? 1, 10) || 1);
+        for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
+            this.system.values.ensureCase(caseNumber);
         this.engine.reset();
         this.system.reset();
         this.status = STATUS.STOPPED;
@@ -133,9 +136,9 @@ class Calculator extends EventTarget {
         this.system.reset();
     }
 
-    getByName(name) {
+    getByName(name, caseNumber = 1) {
         const iteration = this.getIteration();
-        return this.system.getByNameOnIteration(iteration, name);
+        return this.system.getByNameOnIteration(iteration, name, caseNumber);
     }
 
     setIteration(iteration) {
@@ -172,12 +175,12 @@ class Calculator extends EventTarget {
         return !term || this.system.isEditable(term);
     }
 
-    setTermValue(name, value, iteration = this.system.iteration) {
+    setTermValue(name, value, iteration = this.system.iteration, caseNumber = 1) {
         const system = this.system;
         var term = system.getTerm(name);
-        system.set(term, value);
+        system.set(term, value, caseNumber);
         if (iteration == 1)
-            system.setInitialByName(name, value);
+            system.setInitialByName(name, value, iteration, caseNumber);
     }
 
     getFinalIteration() {

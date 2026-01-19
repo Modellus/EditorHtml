@@ -403,6 +403,31 @@ math-field {
     font-style: italic;
 }
 
+.case-select {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.case-select__label {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.case-select__icon {
+    font-size: 14px;
+    margin-right: 6px;
+}
+
+.case-select__input {
+    padding-left: 30px !important;
+}
+
+.dx-texteditor-input-container .case-select__icon {
+    margin-right: 0;
+    margin-left: 8px;
+}
+
 /* Pulse animation for play/pause button when holding space */
 @keyframes mdl-pulse {
     0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(64,57,215,0.30); }

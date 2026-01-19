@@ -140,10 +140,12 @@ class CharacterShape extends BaseShape {
         const calculator = this.board.calculator;
         const scale = this.getScale();
         const xTerm = this.properties.xTerm;
-        const x = calculator.getByName(xTerm) ?? parseFloat(xTerm);
+        const xCase = this.properties.xTermCase ?? 1;
+        const x = calculator.getByName(xTerm, xCase) ?? parseFloat(xTerm);
         this.properties.x = Number.isNaN(x) ? this.properties.x : (scale.x != 0 ? x / scale.x : 0);
         const yTerm = this.properties.yTerm;
-        const y = calculator.getByName(yTerm) ?? parseFloat(yTerm);
+        const yCase = this.properties.yTermCase ?? 1;
+        const y = calculator.getByName(yTerm, yCase) ?? parseFloat(yTerm);
         this.properties.y = Number.isNaN(y) ? this.properties.y : (scale.y != 0 ? -y / scale.y : 0);
         this.board.markDirty(this);
     }

@@ -35,6 +35,7 @@ class Shell  {
         this.properties.precision = 2;
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
         this.properties.iterationTerm = "n";
+        this.properties.casesCount = 1;
     }
 
     createTooltip(e, html, width) {
@@ -77,11 +78,11 @@ class Shell  {
 
     createSettingsForm() {
         const $form = $("<div id='settings-form'></div>").dxForm({
-            colCount: 4,
+            colCount: 2,
             formData: this.properties,
             items: [
                 {
-                    colSpan: 4,
+                    colSpan: 2,
                     template: () => {
                         const container = $("<div class='thumbnail-dropzone'></div>");
                         const preview = $("<img class='thumbnail-preview' alt='Thumbnail preview' />");
@@ -118,7 +119,7 @@ class Shell  {
                     }
                 },
                 {
-                    colSpan: 4,
+                    colSpan: 2,
                     dataField: "name",
                     label: { text: this.board.translations.get("Name"), visible: true },
                     editorType: "dxTextBox",
@@ -127,7 +128,7 @@ class Shell  {
                     }
                 },
                 {
-                    colSpan: 4,
+                    colSpan: 2,
                     dataField: "description",
                     label: {
                         text: this.board.translations.get("Description")
@@ -136,6 +137,15 @@ class Shell  {
                     editorOptions: {
                         height: 120,
                         stylingMode: "filled"
+                    }
+                },
+                {
+                    colSpan: 2,
+                    dataField: "language",
+                    editorType: "dxSelectBox",
+                    editorOptions: {
+                        items: ["en-US", "pt-BR"],
+                        value: this.properties.language
                     }
                 },
                 {
@@ -154,12 +164,17 @@ class Shell  {
                     }
                 },
                 {
-                    colSpan: 4,
-                    dataField: "language",
-                    editorType: "dxSelectBox",
+                    colSpan: 1,
+                    dataField: "casesCount",
+                    label: {
+                        text: this.board.translations.get("CasesCount")
+                    },
+                    editorType: "dxNumberBox",
                     editorOptions: {
-                        items: ["en-US", "pt-BR"],
-                        value: this.properties.language
+                        min: 1,
+                        step: 1,
+                        showSpinButtons: true,
+                        stylingMode: "filled"
                     }
                 },
                 {
@@ -169,6 +184,17 @@ class Shell  {
                         text: this.board.translations.get("Independent.Name") 
                     },
                     editorType: "dxTextBox",
+                    editorOptions: {
+                        stylingMode: "filled"
+                    }
+                },
+                {
+                    colSpan: 1,
+                    dataField: "independent.step",
+                    label: { 
+                        text: this.board.translations.get("Independent.Step") 
+                    },
+                    editorType: "dxNumberBox",
                     editorOptions: {
                         stylingMode: "filled"
                     }
@@ -197,17 +223,6 @@ class Shell  {
                 },
                 {
                     colSpan: 1,
-                    dataField: "independent.step",
-                    label: { 
-                        text: this.board.translations.get("Independent.Step") 
-                    },
-                    editorType: "dxNumberBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                },
-                {
-                    colSpan: 1,
                     dataField: "iterationTerm",
                     label: { 
                         text: this.board.translations.get("IterationTerm") 
@@ -218,10 +233,10 @@ class Shell  {
                     }
                 },
                 {
-                    colSpan: 3
+                    colSpan: 2
                 },
                 {
-                    colSpan: 4,
+                    colSpan: 2,
                     dataField: "AIApiKey",
                     label: { 
                         text: this.board.translations.get("AIApiKey") 
@@ -849,7 +864,7 @@ class Shell  {
             properties = this.properties;
         else
             Utils.mergeProperties(properties, this.properties);
-        this.calculator.setProperties(properties.precision, properties.independent, properties.iterationTerm);
+        this.calculator.setProperties(this.properties);
     }
     
     setProperty(name, value) {
@@ -858,7 +873,7 @@ class Shell  {
         for (let i = 0; i < keys.length - 1; i++)
             current = current[keys[i]];
         current[keys[keys.length - 1]] = value;
-        if(name.includes("independent") || name.includes("iteration"))
+        if (name.includes("independent") || name.includes("iteration") || name === "casesCount")
             this.calculator.setProperty(name, value);    
         if (name == "AIApiKey") {
             this.aiLogic.apiKey = value;

@@ -178,9 +178,11 @@ class BodyShape extends BaseShape {
 
     tickShape() {
         const scale = this.getScale();
-        const x = this.resolveTermNumeric(this.properties.xTerm);
+        const xCase = this.properties.xTermCase ?? 1;
+        const yCase = this.properties.yTermCase ?? 1;
+        const x = this.resolveTermNumeric(this.properties.xTerm, xCase);
         this.properties.x = scale.x !== 0 ? x / scale.x : 0;
-        const y = -this.resolveTermNumeric(this.properties.yTerm);
+        const y = -this.resolveTermNumeric(this.properties.yTerm, yCase);
         this.properties.y = scale.y !== 0 ? y / scale.y : 0;
     }
 
