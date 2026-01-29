@@ -116,9 +116,7 @@ class Calculator extends EventTarget {
         this.system.setInitialIndependent(this.properties.independent.start);
         this.system.step = this.properties.independent.step;
         this.system.iterationTerm = this.properties.iterationTerm;
-        const casesCount = Math.max(1, parseInt(this.properties.casesCount ?? 1, 10) || 1);
-        for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
-            this.system.values.ensureCase(caseNumber);
+        this.system.casesCount = this.properties.casesCount;
         this.engine.reset();
         this.system.reset();
         this.status = STATUS.STOPPED;

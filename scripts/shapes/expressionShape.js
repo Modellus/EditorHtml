@@ -3,7 +3,7 @@ class ExpressionShape extends BaseShape {
         super(board, null, id);
     }
 
-    createTransformer() { 
+    createTransformer() {
         return new RectangleTransformer(this.board, this);
     }
 
@@ -13,35 +13,35 @@ class ExpressionShape extends BaseShape {
         var items = instance.option("items");
         items.push({
             itemType: "group",
-                    colCount: "auto",
-                    minColWidth: 200,
-                    items: [
-                        {
-                            colSpan: 2,
-                            label: { text: "Shortcuts" },
-                            editorType: "dxButtonGroup",
-                            editorOptions: {
-                                elementAttr: { class: "mdl-shortcuts" },
-                                buttonTemplate: function(data, container) {
-                                    $("<math-field>")
-                                        .attr("read-only", true)
-                                        .html(data.text)
-                                        .css("height", "auto", "width", "auto")
-                                        .addClass("form-math-field")
-                                        .appendTo(container);
-                                },
-                                items: [
-                                    { name: "Differential", text: "\\frac{dx}{dt}" },
-                                    { name: "Power", text: "x^2" },
-                                    { name: "Squareroot", text: "\\sqrt{x}" },
-                                    { name: "Index", text: "x_{t-1}" }
-                                ],
-                                keyExpr: "name",
-                                selectionMode: "none",
-                                onItemClick: e => this.insert(e.itemData.text)
-                            }
-                        }
-                    ]
+            colCount: "auto",
+            minColWidth: 200,
+            items: [
+                {
+                    colSpan: 2,
+                    label: { text: "Shortcuts" },
+                    editorType: "dxButtonGroup",
+                    editorOptions: {
+                        elementAttr: { class: "mdl-shortcuts" },
+                        buttonTemplate: function (data, container) {
+                            $("<math-field>")
+                                .attr("read-only", true)
+                                .html(data.text)
+                                .css("height", "auto", "width", "auto")
+                                .addClass("form-math-field")
+                                .appendTo(container);
+                        },
+                        items: [
+                            { name: "Differential", text: "\\frac{dx}{dt}" },
+                            { name: "Power", text: "x^2" },
+                            { name: "Squareroot", text: "\\sqrt{x}" },
+                            { name: "Index", text: "x_{t-1}" }
+                        ],
+                        keyExpr: "name",
+                        selectionMode: "none",
+                        onItemClick: e => this.insert(e.itemData.text)
+                    }
+                }
+            ]
         });
         instance.option("items", items);
         return form;
@@ -62,34 +62,68 @@ class ExpressionShape extends BaseShape {
     createElement() {
         const foreignObject = this.board.createSvgElement("foreignObject");
         const div = this.board.createElement("div");
-        $(div).css({ "width": "100%", "height": "100%", "background-color": "transparent" });
+
+        $(div).css({ width: "100%", height: "100%", "background-color": "transparent" });
         foreignObject.appendChild(div);
+
         this.mathfield = new MathfieldElement();
         this.mathfield.popoverPolicy = "off";
         this.mathfield.virtualKeyboardMode = "off";
         this.mathfield.mathVirtualKeyboardPolicy = "manual";
         this.mathfield.placeholder = "Enter a formula";
         this.mathfield.smartMode = false;
+        this.mathfield.multiline = true;
+
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());
-        div.appendChild(this.mathfield);
-        $(div).dxScrollView({
-            showScrollbar: "always",
-            bounceEnabled: true,
-            scrollByContent: true, 
-            scrollByThumb: true
-        });
-        this.mathfield.value = this.properties.expression ?? "\\placeholder{}";
-        this.mathfield.addEventListener('mount', e => {
-            var inlineShortcuts = this.mathfield.inlineShortcuts;
-            ["dx", "dy", "dt"].forEach(v => {
-                inlineShortcuts[v] = null;
-                delete inlineShortcuts[v];
-            })
+
+        // IMPORTANT: mount handler before appendChild
+        this.mathfield.addEventListener("mount", () => {
+            // Remove some inline shortcuts
+            const inlineShortcuts = { ...(this.mathfield.inlineShortcuts ?? {}) };
+            ["dx", "dy", "dt"].forEach(v => delete inlineShortcuts[v]);
             this.mathfield.inlineShortcuts = inlineShortcuts;
+
+            this.mathfield.returnKeyAction = "none";
+
+            // Intercept Enter and insert a LaTeX line break (\\)
+            this.mathfield.addEventListener(
+                "keydown",
+                (ev) => {
+                    if (ev.key === "Enter" && !ev.shiftKey) {
+                        ev.preventDefault();
+                        ev.stopImmediatePropagation();
+
+                        // Insert a TeX newline
+                        this.mathfield.executeCommand(["insert", "\\\\"]);
+                    } else if (ev.key === "Enter" && ev.shiftKey) {
+                        // optional: Shift+Enter commits
+                        ev.preventDefault();
+                        ev.stopImmediatePropagation();
+                        this.mathfield.executeCommand("commit");
+                    }
+                },
+                true // capture so we beat MathLive's handler
+            );
+
             this.mathfield.executeCommand("selectAll");
             this.mathfield.focus();
         });
+
+        div.appendChild(this.mathfield);
+
+        $(div).dxScrollView({
+            showScrollbar: "always",
+            bounceEnabled: true,
+            scrollByContent: true,
+            scrollByThumb: true
+        });
+
+        // IMPORTANT: make sure you're in a multiline environment so \\ is valid
+        this.mathfield.value =
+            this.properties.expression ??
+            "\\begin{aligned} \\placeholder{} \\end{aligned}";
+
         return foreignObject;
     }
 

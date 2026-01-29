@@ -48,26 +48,6 @@ declare class Expression {
     }) => boolean) | null);
 }
 
-type IterationValues = {
-    [name: string]: number;
-} & {
-    case: number;
-    iteration: number;
-};
-declare class Values {
-    private data;
-    get length(): number;
-    getCaseCount(): number;
-    clear(): void;
-    ensureCase(caseNumber: number): void;
-    resetCase(caseNumber: number): void;
-    setCaseIterations(caseNumber: number, iterations: IterationValues[]): void;
-    getCaseIterations(caseNumber: number): IterationValues[];
-    getLastIteration(caseNumber: number): IterationValues;
-    getIteration(caseNumber: number, iteration: number): IterationValues | undefined;
-    addIteration(caseNumber: number, values: IterationValues): void;
-}
-
 declare class System {
     private _independent;
     private _iterationTerm;
@@ -75,23 +55,30 @@ declare class System {
         [name: string]: Term;
     };
     expressions: Array<Expression>;
-    values: Values;
+    values: Array<{
+        [name: string]: number;
+    }>;
     iteration: number;
     step: number;
+    casesCount: number;
     private expressionsByName;
     private termNames;
     private differentialNames;
     private functionExpressionsWithCondition;
     private functionExpressionsWithoutCondition;
-    private initialValuesByCase;
     constructor(independent?: string, iterationTerm?: string);
     get independent(): Term;
     set independent(name: string);
     get iterationTerm(): Term;
     set iterationTerm(name: string);
+    setCaseCount(count: number): void;
     get lastIteration(): number;
-    get(): IterationValues;
-    getIteration(iteration: number, caseNumber?: number): IterationValues;
+    get(caseNumber?: number): {
+        [name: string]: number;
+    };
+    getIteration(iteration: number, caseNumber?: number): {
+        [name: string]: number;
+    };
     getByName(name: string, caseNumber?: number): number | undefined;
     getByNameOnIteration(iteration: number, name: string, caseNumber?: number): number | undefined;
     getIndependentOnIteration(iteration: number, caseNumber?: number): number;
@@ -108,28 +95,11 @@ declare class System {
     addValues(values: {
         [name: string]: number;
     }): void;
-    addValues(values: {
-        [name: string]: number;
-    }[], caseNumber?: number): void;
-    addValues(values: {
-        [name: string]: number;
-    }, caseNumber: number): void;
     calculate(values: {
         [name: string]: number;
     }): {
         [name: string]: number;
     };
-    calculate(values: {
-        [name: string]: number;
-    }[]): {
-        [name: string]: number;
-    }[];
-    calculateForCase(values: {
-        [name: string]: number;
-    }, caseNumber: number): {
-        [name: string]: number;
-    };
-    private calculateSingle;
     getIndependent(caseNumber?: number): number;
     setInitialIndependent(value: number): void;
     isEditable(term: Term): boolean;
@@ -139,9 +109,7 @@ declare class System {
     getTerm(name: string): Term | undefined;
     isTerm(name: string): boolean;
     setInitialByTerm(term: Term, value: number, iteration?: number): void;
-    setInitialByTerm(term: Term, value: number, iteration: number, caseNumber: number): void;
     setInitialByName(name: string, value: number, iteration?: number): void;
-    setInitialByName(name: string, value: number, iteration: number, caseNumber: number): void;
     getValue(values: {
         [name: string]: number;
     }, term: string): number;
@@ -150,11 +118,8 @@ declare class System {
     getInitialByExpression(expression: Expression, iteration?: number): number;
     getTermsNames(): string[];
     getDifferentialTermsNames(): string[];
-    getCaseIterations(caseNumber: number): IterationValues[];
-    getCasesCount(): number;
-    private ensureCaseInitialValues;
-    private hasInitialValueForCase;
-    private getInitialValueForCase;
+    private getIterationValue;
+    private assertValidCase;
 }
 
 declare class Engine extends EventEmitter {
@@ -1087,5 +1052,4 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
 }
 
-export { Branch, Engine, Expression, Parser, System, Term, TermType, Values, Visitor };
-export type { IterationValues };
+export { Branch, Engine, Expression, Parser, System, Term, TermType, Visitor };
