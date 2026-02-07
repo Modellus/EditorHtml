@@ -927,8 +927,10 @@ class Shell  {
     playPausePressed() {
         if(this.calculator.status === STATUS.PLAYING)
             this.calculator.pause();
-        else
+        else {
+            this.deselectShape();
             this.calculator.play();
+        }
         this.updatePlayer();
         this.updateToolbar();
     }
@@ -951,6 +953,7 @@ class Shell  {
     }
     
     replayPressed() {
+        this.deselectShape();
         this.calculator.replay();
         this.updatePlayer();
     }
@@ -1202,7 +1205,9 @@ class Shell  {
         this.shapePopup.show();
     }
 
-    deselectShape() {
+    deselectShape({ skipBoard = false } = {}) {
+        if (!skipBoard && this.board?.selection?.selectedShape)
+            this.board.selection.deselect();
         this.updateToolbar();
         this.shapePopup.hide();
     }
@@ -1212,7 +1217,7 @@ class Shell  {
     }
     
     onDeselected(e) {
-        this.deselectShape();
+        this.deselectShape({ skipBoard: true });
     }
     
     onShapeChanged(e) {
@@ -1262,6 +1267,7 @@ class Shell  {
         const finished = Math.abs(current - end) < step / 10.0;
         if (!finished) {
             e.preventDefault();
+            this.deselectShape();
             this.calculator.play();
         }
         if (this.playPause && this.playPause.element)

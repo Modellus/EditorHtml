@@ -398,14 +398,29 @@ class BaseShape {
             }
             return items;
         };
-        const groupPath = `items[${items.length}]`;
+        const normalizeTermValue = value => {
+            if (value && typeof value === "object")
+                return value.term ?? value.text ?? value.value;
+            return value;
+        };
         const updateCaseVisibility = value => {
-            const isTerm = calculator.isTerm(value);
+            const termValue = normalizeTermValue(value);
+            const isTerm = calculator.isTerm(termValue);
             const showCase = isTerm && getCasesCount() > 1;
-            instance.itemOption(`${groupPath}.items[1]`, "visible", showCase);
-            instance.itemOption(`${groupPath}.items[0]`, "colSpan", showCase ? 1 : 2);
+            const currentItems = instance.option("items");
+            const groupIndex = currentItems.findIndex(item => item?.itemType === "group" && item?.items?.[0]?.dataField === term);
+            if (groupIndex === -1)
+                return;
+            const group = currentItems[groupIndex];
+            if (!group.items || group.items.length < 2)
+                return;
+            group.items[1].visible = showCase;
+            group.items[0].colSpan = showCase ? 1 : 2;
+            if (showCase)
+                group.items[1].editorOptions.items = buildCaseItems();
             if (showCase && !this.properties[caseProperty])
                 instance.updateData(caseProperty, 1);
+            instance.option("items", currentItems);
         };
         const initialShowCase = calculator.isTerm(this.properties[term]) && getCasesCount() > 1;
         items.push(
