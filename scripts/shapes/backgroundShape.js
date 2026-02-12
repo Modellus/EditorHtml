@@ -9,6 +9,10 @@ class BackgroundShape extends BaseShape {
         return new RectangleTransformer(this.board, this);
     }
 
+    enterEditMode() {
+        return false;
+    }
+
     createForm() {
         var form = super.createForm();
         var instance = form.dxForm("instance");

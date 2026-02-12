@@ -8,6 +8,7 @@ class Board {
         this.selection = new Selection(this);
         this._refreshId = null;
         this._dirtyShapes = new Set();
+        this.suppressNextFocusSelect = false;
     }
 
     createSvgElement(name) {
@@ -87,6 +88,10 @@ class Board {
     }
 
     onShapeFocused(e) {
+        if (this.suppressNextFocusSelect) {
+            this.suppressNextFocusSelect = false;
+            return;
+        }
         this.selectShape(e.detail.shape);
     }
 
@@ -95,11 +100,13 @@ class Board {
         this.selection.update();
     }
 
-    onShapeDragStart() {
+    onShapeDragStart(e) {
+        this.selection.setDragging(true, e.detail.shape);
         this.deselect();
     }
 
     onShapeDragEnd(e) {
+        this.selection.setDragging(false);
         this.selectShape(e.detail.shape);
     }
 

@@ -200,4 +200,12 @@ class TableShape extends BaseShape {
         const calculator = this.board.calculator;
         return calculator.isTerm(term) && calculator.isEditable(term);
     }
+
+    enterEditMode() {
+        if (this.dataGrid && typeof this.dataGrid.focus === "function") {
+            this.dataGrid.focus();
+            return true;
+        }
+        return super.enterEditMode();
+    }
 }

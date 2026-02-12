@@ -36,6 +36,10 @@ class CharacterShape extends BaseShape {
         return new RectangleTransformer(this.board, this);
     }
 
+    enterEditMode() {
+        return false;
+    }
+
     createForm() {
         const form = super.createForm();
         const instance = form.dxForm("instance");

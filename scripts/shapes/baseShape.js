@@ -78,6 +78,10 @@ class BaseShape {
         return [];
     }
 
+    enterEditMode() {
+        return false;
+    }
+
     initializeContextToolbar() {
         const toolbarItems = this.createToolbar();
         if (!toolbarItems || !toolbarItems.length || !window.DevExpress?.ui?.dxToolbar)
@@ -273,16 +277,23 @@ class BaseShape {
 
     delta(property, delta) {
         var termMapping = this.termsMapping.find(t => t.property === property);
+        let updatedValue = this.properties[property];
+        let value;
         if (termMapping != null) {
             const scale = this.getScale();
             let axisScale = scale[termMapping.scaleProperty] ?? 1;
             var term = this.properties[termMapping.termProperty];
-            const caseNumber = this.properties[termMapping.caseProperty] ?? 1;
+            const rawCaseNumber = this.properties[termMapping.caseProperty] ?? 1;
+            const caseNumber = Number.isFinite(rawCaseNumber) ? rawCaseNumber : (parseInt(rawCaseNumber, 10) || 1);
             const calculator = this.board.calculator;
             var isTerm = calculator.isTerm(term);
             delta = delta * axisScale * (termMapping.isInverted ? -1 : 1);
             if (isTerm) {
-                var value = calculator.getByName(term, caseNumber);
+                value = calculator.getByName(term, caseNumber);
+                if (!Number.isFinite(value)) {
+                    const fallback = Number.isFinite(this.properties[property]) ? this.properties[property] : 0;
+                    value = (termMapping.isInverted ? -fallback : fallback) * axisScale;
+                }
                 calculator.setTermValue(term, value + delta, calculator.system.iteration, caseNumber);
                 calculator.calculate();
             } else
@@ -292,7 +303,9 @@ class BaseShape {
             this.properties[property] = parseFloat(this.properties[property]) + delta;
         this.tick();
         this.board.markDirty(this);
-        this.dispatchEvent("shapeChanged", { property: property, value: value });
+        updatedValue = this.properties[property];
+        this.dispatchEvent("shapeChanged", { property: property, value: updatedValue });
+        return updatedValue;
     }
 
     setProperty(name, value) {
@@ -355,6 +368,17 @@ class BaseShape {
 
     dragStart() {
         this.dispatchEvent("shapeDragStart", {});
+        const calculator = this.board?.calculator;
+        if (!calculator)
+            return;
+        const casesCount = Math.max(1, parseInt(calculator.properties.casesCount ?? 1, 10) || 1);
+        const terms = typeof calculator.getTermsNames === "function" ? calculator.getTermsNames() : [];
+        const iteration = typeof calculator.getIteration === "function" ? calculator.getIteration() : undefined;
+        terms.forEach(term => {
+            const values = [];
+            for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
+                values.push({ case: caseNumber, value: calculator.getByName(term, caseNumber) });
+        });
     }
 
     dragEnd() {

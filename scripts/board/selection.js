@@ -3,11 +3,25 @@ class Selection {
         this.board = board;
         this.selectedShape = null;
         this.transformer = null;
+        this.hoveredShape = null;
+        this.hoverTransformer = null;
+        this.isDragging = false;
+        this.hoverOutline = this.board.createSvgElement("rect");
+        this.hoverOutline.setAttribute("class", "hover-outline");
+        this.hoverOutline.setAttribute("visibility", "hidden");
+        this.board.svg.appendChild(this.hoverOutline);
+        this.selectedOutline = this.board.createSvgElement("rect");
+        this.selectedOutline.setAttribute("class", "selected-outline");
+        this.selectedOutline.setAttribute("visibility", "hidden");
+        this.board.svg.appendChild(this.selectedOutline);
         this.enabled = true;
         this.pointerDown = null;
         this.dragThreshold = 4;
         this.board.svg.addEventListener("mousedown", (e) => this.onPointerDown(e));
         this.board.svg.addEventListener("mouseup", (e) => this.onPointerUp(e));
+        this.board.svg.addEventListener("mousemove", (e) => this.onPointerMove(e));
+        this.board.svg.addEventListener("dblclick", (e) => this.onDoubleClick(e));
+        this.board.svg.addEventListener("mouseleave", () => this.clearHover());
     }
 
     dispatchEvent(name, shape) {
@@ -21,9 +35,11 @@ class Selection {
 
     select(shape) {
         this.deselect();
+        this.clearHover();
         this.selectedShape = shape;
         this.transformer = shape.createTransformer();
         this.transformer.show();
+        this.updateOutline(this.selectedOutline, shape);
         if (shape.showContextToolbar)
             shape.showContextToolbar();
         this.dispatchEvent("selected", this.selectedShape);
@@ -36,6 +52,7 @@ class Selection {
         this.transformer = null;
         if (transformer)
             transformer.hide();
+        this.selectedOutline.setAttribute("visibility", "hidden");
         if (selectedShape?.hideContextToolbar)
             selectedShape.hideContextToolbar();
         if (selectedShape != null)
@@ -66,6 +83,53 @@ class Selection {
         this.onSelectShape(event);
     }
 
+    onPointerMove(event) {
+        if (!this.enabled || this.isDragging)
+            return;
+        const targetShape = this.resolveSelectionTarget(event);
+        const shape = this.findShape(targetShape);
+        if (!shape) {
+            this.clearHover();
+            return;
+        }
+        const point = this.board.getMouseToSvgPoint(event);
+        const childShape = this.findChildShapeAtPoint(shape, point);
+        const hoveredShape = childShape ?? shape;
+        if (hoveredShape === this.selectedShape) {
+            this.clearHover();
+            return;
+        }
+        if (hoveredShape !== this.hoveredShape)
+            this.setHover(hoveredShape);
+        else {
+            this.updateHoverHandles();
+            this.updateHoverOutline(hoveredShape);
+        }
+    }
+
+    onDoubleClick(event) {
+        if (!this.enabled)
+            return;
+        const targetShape = this.resolveSelectionTarget(event);
+        const shape = this.findShape(targetShape);
+        if (!shape)
+            return;
+        this.board.suppressNextFocusSelect = true;
+        const entered = shape.enterEditMode?.();
+        if (!entered) {
+            this.board.suppressNextFocusSelect = false;
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        this.deselect();
+        this.clearHover();
+        setTimeout(() => {
+            if (this.board.suppressNextFocusSelect)
+                this.board.suppressNextFocusSelect = false;
+        }, 150);
+    }
+
     onSelectShape(event) {
         if (!this.enabled)
             return;
@@ -84,13 +148,109 @@ class Selection {
         const target = event.target;
         if (!(target instanceof Element))
             return target;
-        if (!target.classList.contains("handle") || !target.classList.contains("move"))
+        if (!target.classList.contains("handle") && !target.classList.contains("bounding-box"))
             return target;
         const previousPointerEvents = target.style.pointerEvents;
         target.style.pointerEvents = "none";
         const underlying = document.elementFromPoint(event.clientX, event.clientY);
         target.style.pointerEvents = previousPointerEvents;
         return underlying ?? target;
+    }
+
+    setHover(shape) {
+        this.clearHover();
+        if (!shape)
+            return;
+        this.hoveredShape = shape;
+        this.hoverTransformer = shape.createTransformer();
+        this.hoverTransformer.show();
+        this.updateHoverHandles();
+        this.updateHoverOutline(shape);
+    }
+
+    updateHoverOutline(shape) {
+        this.updateOutline(this.hoverOutline, shape);
+    }
+
+    updateHoverHandles() {
+        if (!this.hoverTransformer)
+            return;
+        this.hoverTransformer.updateHandles();
+        if (this.hoverTransformer.handles) {
+            this.hoverTransformer.handles.forEach(handle => {
+                if (handle.parentNode !== this.board.svg || this.board.svg.lastChild !== handle)
+                    this.board.svg.appendChild(handle);
+            });
+        }
+    }
+
+    clearHover() {
+        if (this.hoverTransformer?.handles)
+            this.hoverTransformer.handles.forEach(handle => handle.remove());
+        this.hoverTransformer = null;
+        this.hoveredShape = null;
+        this.hoverOutline.setAttribute("visibility", "hidden");
+    }
+
+    setDragging(isDragging, shape = null) {
+        this.isDragging = isDragging;
+        if (isDragging) {
+            if (shape && shape !== this.hoveredShape)
+                this.clearHover();
+            this.hoverOutline.setAttribute("visibility", "hidden");
+            this.selectedOutline.setAttribute("visibility", "hidden");
+        }
+    }
+
+    updateOutline(outline, shape) {
+        if (this.isDragging) {
+            outline.setAttribute("visibility", "hidden");
+            return;
+        }
+        const bounds = this.getOutlineBounds(shape);
+        if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height)) {
+            outline.setAttribute("visibility", "hidden");
+            return;
+        }
+        if (outline.parentNode !== this.board.svg || this.board.svg.lastChild !== outline)
+            this.board.svg.appendChild(outline);
+        outline.setAttribute("x", bounds.x);
+        outline.setAttribute("y", bounds.y);
+        outline.setAttribute("width", bounds.width);
+        outline.setAttribute("height", bounds.height);
+        outline.setAttribute("visibility", "visible");
+    }
+
+    getOutlineBounds(shape) {
+        if (!shape?.getBoardPosition)
+            return shape?.getBounds?.() ?? null;
+        const position = shape.getBoardPosition();
+        const props = shape.properties ?? {};
+        const radius = Number.isFinite(props.radius) ? props.radius : null;
+        if (radius != null) {
+            return {
+                x: position.x - radius,
+                y: position.y - radius,
+                width: radius * 2,
+                height: radius * 2
+            };
+        }
+        const width = Number.isFinite(props.width) ? props.width : null;
+        const height = Number.isFinite(props.height) ? props.height : null;
+        if (width == null || height == null)
+            return shape?.getBounds?.() ?? null;
+        const endX = position.x + width;
+        const endY = position.y + height;
+        const minX = Math.min(position.x, endX);
+        const maxX = Math.max(position.x, endX);
+        const minY = Math.min(position.y, endY);
+        const maxY = Math.max(position.y, endY);
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
     }
 
     findChildShapeAtPoint(shape, point) {
@@ -135,6 +295,8 @@ class Selection {
     }
 
     findShape(element) {
+        if (element?._shape)
+            return element._shape;
         var current = element;
         while(current != null) {
             var shape = this.board.getShape(current.id);
@@ -148,5 +310,7 @@ class Selection {
     update() {
         if (this.transformer)
             this.transformer.updateHandles();
+        if (this.selectedShape)
+            this.updateOutline(this.selectedOutline, this.selectedShape);
     }
 }

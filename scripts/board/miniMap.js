@@ -74,7 +74,7 @@ class MiniMap {
         const y2 = Math.max(boundingBox.y + boundingBox.height, viewBox.y + viewBox.height, viewBox.height);
         const xml = new XMLSerializer().serializeToString(this.board.svg);
         const document = new DOMParser().parseFromString(xml, "image/svg+xml");
-        document.querySelectorAll(".handle, .bounding-box")
+        document.querySelectorAll(".handle, .bounding-box, .hover-outline, .selected-outline")
            .forEach(el => el.remove());
         const svg = document.documentElement;
         svg.setAttribute("viewBox", `${x1} ${y1} ${x2 - x1} ${y2 - y1}`);

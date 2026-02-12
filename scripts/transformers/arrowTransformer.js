@@ -4,8 +4,24 @@ class ArrowTransformer extends BaseTransformer {
     }
 
     getHandles() {
-        const size = 8;
+        const size = 12;
         return [
+            {
+                className: "handle move",
+                getAttributes: _ => {
+                    const position = this.shape.getBoardPosition();
+                    return {
+                        x: position.x,
+                        y: position.y,
+                        width: this.shape.properties.width,
+                        height: this.shape.properties.height
+                    };
+                },
+                getTransform: e => ({
+                    x: this.shape.delta("x", e.dx),
+                    y: this.shape.delta("y", e.dy)
+                })
+            },
             {
                 className: "handle tip",
                 getAttributes: _ => {

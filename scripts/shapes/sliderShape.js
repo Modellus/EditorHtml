@@ -103,4 +103,12 @@ class SliderShape extends BaseShape {
         this.updateValues();
         super.tick();
     }
+
+    enterEditMode() {
+        if (this.slider && typeof this.slider.focus === "function") {
+            this.slider.focus();
+            return true;
+        }
+        return super.enterEditMode();
+    }
 }

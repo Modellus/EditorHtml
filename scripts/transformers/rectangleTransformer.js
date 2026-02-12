@@ -4,7 +4,7 @@ class RectangleTransformer extends CircleTransformer {
     }
 
     getHandles() {
-        const size = 8;
+        const size = 12;
         return [
             {
                 className: "handle move",

@@ -4,8 +4,25 @@ class CircleTransformer extends BaseTransformer {
     }
 
     getHandles() {
-        const size = 8;
+        const size = 12;
         return [
+            {
+                className: "handle move",
+                getAttributes: _ => {
+                    const position = this.shape.getBoardPosition();
+                    const radius = this.shape.properties.radius ?? 0;
+                    return {
+                        x: position.x - radius,
+                        y: position.y - radius,
+                        width: radius * 2,
+                        height: radius * 2
+                    }
+                },
+                getTransform: e => ({
+                    x: this.shape.delta("x", e.dx),
+                    y: this.shape.delta("y", e.dy)
+                })
+            },
             {
                 className: "handle origin",
                 getAttributes: _ => {

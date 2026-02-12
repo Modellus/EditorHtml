@@ -4,7 +4,7 @@ class ReferentialTransformer extends RectangleTransformer {
     }
 
     getHandles() {
-        const size = 8;
+        const size = 12;
         var handles = super.getHandles();
         handles.push({
             className: "handle origin",

@@ -34,6 +34,7 @@ class BaseTransformer {
     addHandle(className, update, getTransform) {
         const handle = this.board.createSvgElement("rect");
         handle.setAttribute("class", className);
+        handle._shape = this.shape;
         this.board.svg.appendChild(handle);
         this.handles.push(handle);
         handle.addEventListener("pointerdown", e => this.onHandlePointerDown(e, handle));
@@ -55,7 +56,6 @@ class BaseTransformer {
         handle.addEventListener("pointermove", this.onHandleDrag);
         handle.addEventListener("pointerup", this.onHandleDragEnd);
         handle.addEventListener("pointercancel", this.onHandleDragEnd);
-        handle.addEventListener("pointerout", this.onHandleDragEnd);
     }
 
     onHandleDrag = event => {
@@ -100,7 +100,6 @@ class BaseTransformer {
             handle.removeEventListener("pointermove", this.onHandleDrag);
             handle.removeEventListener("pointerup", this.onHandleDragEnd);
             handle.removeEventListener("pointercancel", this.onHandleDragEnd);
-            handle.removeEventListener("pointerout", this.onHandleDragEnd);
         }
         if (!this.draggedHandle) {
             this._pendingHandle = null;

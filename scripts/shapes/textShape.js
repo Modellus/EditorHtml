@@ -52,6 +52,14 @@ class TextShape extends BaseShape {
         this.htmlEditor.option("value", properties.text);
     }
 
+    enterEditMode() {
+        if (this.htmlEditor && typeof this.htmlEditor.focus === "function") {
+            this.htmlEditor.focus();
+            return true;
+        }
+        return super.enterEditMode();
+    }
+
     draw() {
         this.element.setAttribute("x", this.properties.x);
         this.element.setAttribute("y", this.properties.y);

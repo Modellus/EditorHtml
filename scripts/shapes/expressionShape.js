@@ -152,6 +152,14 @@ class ExpressionShape extends BaseShape {
         this.dispatchEvent("focused", {});
     }
 
+    enterEditMode() {
+        if (this.mathfield) {
+            this.mathfield.focus();
+            return true;
+        }
+        return super.enterEditMode();
+    }
+
     update() {
         this.element.style.backgroundColor = this.properties.backgroundColor;
         this.mathfield.style.color = this.properties.foregroundColor;

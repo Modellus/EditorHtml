@@ -7,6 +7,19 @@ class ChartShape extends BaseShape {
         return new RectangleTransformer(this.board, this);
     }
 
+    enterEditMode() {
+        if (this.chart && typeof this.chart.focus === "function") {
+            this.chart.focus();
+            return true;
+        }
+        const element = this.chart?.element?.();
+        if (element && typeof element.focus === "function") {
+            element.focus();
+            return true;
+        }
+        return false;
+    }
+
     updateGridData(e) {
         const data = [...this.properties.yTerms];
         const filledData = data.filter(row => row.term || row.color);

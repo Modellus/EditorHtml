@@ -8,6 +8,10 @@ class ReferentialShape extends BaseShape {
         return new ReferentialTransformer(this.board, this);
     }
 
+    enterEditMode() {
+        return false;
+    }
+
     createToolbar() {
         var items = super.createToolbar();
         items.push(
