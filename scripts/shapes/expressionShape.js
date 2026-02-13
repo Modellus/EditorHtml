@@ -62,7 +62,6 @@ class ExpressionShape extends BaseShape {
     createElement() {
         const foreignObject = this.board.createSvgElement("foreignObject");
         const div = this.board.createElement("div");
-
         $(div).css({ width: "100%", height: "100%", "background-color": "transparent" });
         foreignObject.appendChild(div);
 
@@ -73,42 +72,11 @@ class ExpressionShape extends BaseShape {
         this.mathfield.placeholder = "Enter a formula";
         this.mathfield.smartMode = false;
         this.mathfield.multiline = true;
+        this.mathfield.returnKeyAction = "none";
 
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());
-
-        // IMPORTANT: mount handler before appendChild
-        this.mathfield.addEventListener("mount", () => {
-            // Remove some inline shortcuts
-            const inlineShortcuts = { ...(this.mathfield.inlineShortcuts ?? {}) };
-            ["dx", "dy", "dt"].forEach(v => delete inlineShortcuts[v]);
-            this.mathfield.inlineShortcuts = inlineShortcuts;
-
-            this.mathfield.returnKeyAction = "none";
-
-            // Intercept Enter and insert a LaTeX line break (\\)
-            this.mathfield.addEventListener(
-                "keydown",
-                (ev) => {
-                    if (ev.key === "Enter" && !ev.shiftKey) {
-                        ev.preventDefault();
-                        ev.stopImmediatePropagation();
-
-                        // Insert a TeX newline
-                        this.mathfield.executeCommand(["insert", "\\\\"]);
-                    } else if (ev.key === "Enter" && ev.shiftKey) {
-                        // optional: Shift+Enter commits
-                        ev.preventDefault();
-                        ev.stopImmediatePropagation();
-                        this.mathfield.executeCommand("commit");
-                    }
-                },
-                true // capture so we beat MathLive's handler
-            );
-
-            this.mathfield.executeCommand("selectAll");
-            this.mathfield.focus();
-        });
+        this.mathfield.addEventListener("mount", _ => this.handleMathfieldMount());
 
         div.appendChild(this.mathfield);
 
@@ -119,12 +87,121 @@ class ExpressionShape extends BaseShape {
             scrollByThumb: true
         });
 
-        // IMPORTANT: make sure you're in a multiline environment so \\ is valid
         this.mathfield.value =
             this.properties.expression ??
-            "\\begin{aligned} \\placeholder{} \\end{aligned}";
+            "\\displaylines{\\placeholder{}}";
 
         return foreignObject;
+    }
+
+    handleMathfieldMount() {
+        this.removeExpressionInlineShortcuts();
+        this.mathfield.addEventListener("keydown", keydownEvent => this.handleMathfieldKeydown(keydownEvent), true);
+        this.mathfield.executeCommand("selectAll");
+        this.mathfield.focus();
+    }
+
+    removeExpressionInlineShortcuts() {
+        const inlineShortcutMap = { ...(this.mathfield.inlineShortcuts ?? {}) };
+        ["dx", "dy", "dt"].forEach(shortcutName => delete inlineShortcutMap[shortcutName]);
+        this.mathfield.inlineShortcuts = inlineShortcutMap;
+    }
+
+    handleMathfieldKeydown(keydownEvent) {
+        if (this.handleMathfieldEnterKeydown(keydownEvent))
+            return;
+        if (this.handleMathfieldShiftEnterKeydown(keydownEvent))
+            return;
+        this.handleMathfieldBackspaceKeydown(keydownEvent);
+    }
+
+    handleMathfieldEnterKeydown(keydownEvent) {
+        if (keydownEvent.key !== "Enter" || keydownEvent.shiftKey)
+            return false;
+        keydownEvent.preventDefault();
+        keydownEvent.stopImmediatePropagation();
+        this.mathfield.executeCommand("addRowAfter");
+        return true;
+    }
+
+    handleMathfieldShiftEnterKeydown(keydownEvent) {
+        if (keydownEvent.key !== "Enter" || !keydownEvent.shiftKey)
+            return false;
+        keydownEvent.preventDefault();
+        keydownEvent.stopImmediatePropagation();
+        this.mathfield.executeCommand("commit");
+        return true;
+    }
+
+    handleMathfieldBackspaceKeydown(keydownEvent) {
+        if (keydownEvent.key !== "Backspace")
+            return false;
+        keydownEvent.preventDefault();
+        keydownEvent.stopImmediatePropagation();
+        if (this.mergeRowIntoPreviousAtRowStart()) {
+            return true;
+        }
+        const lineBreakSpanBeforeCaret = this.findLineBreakSpanBeforeCaret();
+        if (lineBreakSpanBeforeCaret) {
+            this.mathfield.selection = { ranges: [[lineBreakSpanBeforeCaret.start, lineBreakSpanBeforeCaret.end]] };
+            this.mathfield.executeCommand("deleteBackward");
+            return true;
+        }
+        const deleteBackwardResult = this.mathfield.executeCommand("deleteBackward");
+        if (deleteBackwardResult !== false)
+            return true;
+        return this.mergeRowIntoPreviousAtRowStart();
+    }
+
+    findLineBreakSpanBeforeCaret() {
+        const caretPosition = this.mathfield.position;
+        const maximumProbeLength = 32;
+        for (let relativeOffset = 1; relativeOffset <= maximumProbeLength && caretPosition - relativeOffset >= 0; relativeOffset++) {
+            const latexSegment = this.mathfield.getValue([caretPosition - relativeOffset, caretPosition], "latex").trim();
+            if (latexSegment === "\\\\" || latexSegment === "\\cr")
+                return { start: caretPosition - relativeOffset, end: caretPosition };
+        }
+        return null;
+    }
+
+    mergeRowIntoPreviousAtRowStart() {
+        const mathfieldModel = this.getMathfieldModel();
+        if (!mathfieldModel?.selectionIsCollapsed)
+            return false;
+        const atomAtCaret = mathfieldModel.at(mathfieldModel.position);
+        const probeAtomList = [atomAtCaret, atomAtCaret?.rightSibling].filter(Boolean);
+        for (const probeAtom of probeAtomList) {
+            const parentBranch = probeAtom.parentBranch;
+            const parentGrid = probeAtom.parent;
+            if (!Array.isArray(parentBranch) || typeof parentGrid?.getCell !== "function" || typeof parentGrid?.colCount !== "number" || parentGrid.colCount !== 1)
+                continue;
+            const [rowIndex, columnIndex] = parentBranch;
+            if (!Number.isInteger(rowIndex) || !Number.isInteger(columnIndex) || rowIndex <= 0)
+                continue;
+            const currentCell = parentGrid.getCell(rowIndex, columnIndex);
+            if (!Array.isArray(currentCell) || currentCell.length === 0)
+                continue;
+            const rowFirstAtom = currentCell[0];
+            const firstVisibleAtom = currentCell.find(atom => atom?.type !== "first") ?? rowFirstAtom;
+            const rowFirstOffset = mathfieldModel.offsetOf(rowFirstAtom);
+            const rowFirstVisibleOffset = mathfieldModel.offsetOf(firstVisibleAtom);
+            const isAtRowStart = mathfieldModel.position === rowFirstOffset || atomAtCaret === rowFirstAtom || atomAtCaret?.rightSibling === rowFirstAtom;
+            if (!isAtRowStart)
+                continue;
+            const cellEndOffset = mathfieldModel.offsetOf(currentCell[currentCell.length - 1]);
+            const currentCellLatex = rowFirstVisibleOffset <= cellEndOffset ? this.mathfield.getValue([rowFirstVisibleOffset, cellEndOffset + 1], "latex") : "";
+            const normalizedCellContent = currentCellLatex.trim();
+            const hasContent = normalizedCellContent.length > 0 && normalizedCellContent !== "\\placeholder{}";
+            this.mathfield.executeCommand("removeRow");
+            if (hasContent)
+                this.mathfield.executeCommand("insert", currentCellLatex);
+            return true;
+        }
+        return false;
+    }
+
+    getMathfieldModel() {
+        return this.mathfield.model ?? this.mathfield._mathfield?.model;
     }
 
     static deserialize(board, data) {
