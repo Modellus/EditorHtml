@@ -31,36 +31,32 @@ async function loadModel(modelId, headers) {
 }
 
 (async () => {
-    try {
-        if (modelId) {
-            if (session && session.token) {
-                const model = await loadModel(modelId, getAuthHeaders());
-                const payload = extractModelPayload(model);
-                shell = payload ? new Shell(payload) : new Shell();
-                return;
-            }
-            const model = await loadModel(modelId, {});
-            if (model && (model.is_public === true || model.is_public === 1)) {
-                enableReadOnlyMode();
-                const payload = extractModelPayload(model);
-                shell = payload ? new Shell(payload) : new Shell();
-                return;
-            }
-            window.location.href = "/login.html";
+    if (modelId) {
+        if (session && session.token) {
+            const model = await loadModel(modelId, getAuthHeaders());
+            const payload = extractModelPayload(model);
+            shell = payload ? new Shell(payload) : new Shell();
             return;
         }
-        if (!session || !session.token) {
-            window.location.href = "/login.html";
+        const model = await loadModel(modelId, {});
+        if (model && (model.is_public === true || model.is_public === 1)) {
+            enableReadOnlyMode();
+            const payload = extractModelPayload(model);
+            shell = payload ? new Shell(payload) : new Shell();
             return;
         }
-        if (modelName) {
-            const response = await fetch(`resources/models/${modelName}.json`);
-            const payload = await response.text();
-            shell = new Shell(payload);
-            return;
-        }
-        shell = new Shell();
-    } catch {
-        shell = new Shell();
+        window.location.href = "/login.html";
+        return;
     }
+    if (!session || !session.token) {
+        window.location.href = "/login.html";
+        return;
+    }
+    if (modelName) {
+        const response = await fetch(`resources/models/${modelName}.json`);
+        const payload = await response.text();
+        shell = new Shell(payload);
+        return;
+    }
+    shell = new Shell();
 })();

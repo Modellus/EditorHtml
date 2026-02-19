@@ -1159,7 +1159,7 @@ createModelSummary(modelObjects) {
 
   async sendRequestToOpenAI() {
     const requestBody = {
-      model: "gpt-4o-mini",
+      model: "gpt-5-nano",
       messages: this.conversationHistory,
       max_tokens: 2000,
       response_format: { type: "json_object" }

@@ -1,6 +1,8 @@
 class ExpressionShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, null, id);
+        this.mathfieldCaretClamping = false;
+        this.mathfieldCaretLocked = false;
     }
 
     createTransformer() {
@@ -56,7 +58,7 @@ class ExpressionShape extends BaseShape {
         this.properties.width = 300;
         this.properties.height = 50;
         this.properties.rotation = 0;
-        this.properties.expression = "\\placeholder{}";
+        this.properties.expression = "\\displaylines{\\placeholder{}}";
     }
 
     createElement() {
@@ -64,7 +66,6 @@ class ExpressionShape extends BaseShape {
         const div = this.board.createElement("div");
         $(div).css({ width: "100%", height: "100%", "background-color": "transparent" });
         foreignObject.appendChild(div);
-
         this.mathfield = new MathfieldElement();
         this.mathfield.popoverPolicy = "off";
         this.mathfield.virtualKeyboardMode = "off";
@@ -73,31 +74,24 @@ class ExpressionShape extends BaseShape {
         this.mathfield.smartMode = false;
         this.mathfield.multiline = true;
         this.mathfield.returnKeyAction = "none";
-
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());
-        this.mathfield.addEventListener("mount", _ => this.handleMathfieldMount());
-
+        this.mathfield.addEventListener("mount", _ => this.onMount());
         div.appendChild(this.mathfield);
-
         $(div).dxScrollView({
             showScrollbar: "always",
             bounceEnabled: true,
             scrollByContent: true,
             scrollByThumb: true
         });
-
-        this.mathfield.value =
-            this.properties.expression ??
-            "\\displaylines{\\placeholder{}}";
-
+        this.mathfield.value = this.properties.expression ?? "\\displaylines{\\placeholder{}}";
         return foreignObject;
     }
 
-    handleMathfieldMount() {
+    onMount() {
         this.removeExpressionInlineShortcuts();
-        this.mathfield.addEventListener("keydown", keydownEvent => this.handleMathfieldKeydown(keydownEvent), true);
-        this.mathfield.executeCommand("selectAll");
+        this.lockCaretInsideDisplayLines(this.mathfield);
+        this.mathfield.addEventListener("keydown", keydownEvent => this.onKeyDown(keydownEvent), true);
         this.mathfield.focus();
     }
 
@@ -107,15 +101,13 @@ class ExpressionShape extends BaseShape {
         this.mathfield.inlineShortcuts = inlineShortcutMap;
     }
 
-    handleMathfieldKeydown(keydownEvent) {
-        if (this.handleMathfieldEnterKeydown(keydownEvent))
+    onKeyDown(keydownEvent) {
+        if (this.handleEnterKeydown(keydownEvent))
             return;
-        if (this.handleMathfieldShiftEnterKeydown(keydownEvent))
-            return;
-        this.handleMathfieldBackspaceKeydown(keydownEvent);
+        this.handleBackspaceKeydown(keydownEvent);
     }
 
-    handleMathfieldEnterKeydown(keydownEvent) {
+    handleEnterKeydown(keydownEvent) {
         if (keydownEvent.key !== "Enter" || keydownEvent.shiftKey)
             return false;
         keydownEvent.preventDefault();
@@ -124,90 +116,120 @@ class ExpressionShape extends BaseShape {
         return true;
     }
 
-    handleMathfieldShiftEnterKeydown(keydownEvent) {
-        if (keydownEvent.key !== "Enter" || !keydownEvent.shiftKey)
+    handleBackspaceKeydown(keydownEvent) {
+        if (keydownEvent.key !== "Backspace")
+            return false;
+        if (keydownEvent.metaKey || keydownEvent.ctrlKey || keydownEvent.altKey)
             return false;
         keydownEvent.preventDefault();
         keydownEvent.stopImmediatePropagation();
-        this.mathfield.executeCommand("commit");
+        if (this.isCaretAtCurrentGroupStart() && this.hasPreviousExpressionLine())
+            this.mergeCurrentLineWithPreviousLine();
+        else
+            this.mathfield.executeCommand("deleteBackward");
         return true;
     }
 
-    handleMathfieldBackspaceKeydown(keydownEvent) {
-        if (keydownEvent.key !== "Backspace")
+    isCaretAtCurrentGroupStart() {
+        const range = this.mathfield.selection?.ranges?.[0];
+        if (!range || range[0] !== range[1])
             return false;
-        keydownEvent.preventDefault();
-        keydownEvent.stopImmediatePropagation();
-        if (this.mergeRowIntoPreviousAtRowStart()) {
-            return true;
-        }
-        const lineBreakSpanBeforeCaret = this.findLineBreakSpanBeforeCaret();
-        if (lineBreakSpanBeforeCaret) {
-            this.mathfield.selection = { ranges: [[lineBreakSpanBeforeCaret.start, lineBreakSpanBeforeCaret.end]] };
-            this.mathfield.executeCommand("deleteBackward");
-            return true;
-        }
-        const deleteBackwardResult = this.mathfield.executeCommand("deleteBackward");
-        if (deleteBackwardResult !== false)
-            return true;
-        return this.mergeRowIntoPreviousAtRowStart();
+        const position = range[1];
+        const groupStart = this.getCurrentGroupStartPosition();
+        return position <= groupStart;
     }
 
-    findLineBreakSpanBeforeCaret() {
-        const caretPosition = this.mathfield.position;
-        const maximumProbeLength = 32;
-        for (let relativeOffset = 1; relativeOffset <= maximumProbeLength && caretPosition - relativeOffset >= 0; relativeOffset++) {
-            const latexSegment = this.mathfield.getValue([caretPosition - relativeOffset, caretPosition], "latex").trim();
-            if (latexSegment === "\\\\" || latexSegment === "\\cr")
-                return { start: caretPosition - relativeOffset, end: caretPosition };
+    getCurrentGroupStartPosition() {
+        const savedSelection = this.mathfield.selection;
+        this.mathfield.executeCommand("moveToGroupStart");
+        const groupStart = this.mathfield.position;
+        this.mathfield.selection = savedSelection;
+        return groupStart;
+    }
+
+    hasPreviousExpressionLine() {
+        const savedSelection = this.mathfield.selection;
+        const savedPosition = this.mathfield.position;
+        this.mathfield.executeCommand("moveUp");
+        const movedToPreviousLine = this.mathfield.position !== savedPosition;
+        this.mathfield.selection = savedSelection;
+        return movedToPreviousLine;
+    }
+
+    mergeCurrentLineWithPreviousLine() {
+        const currentLineLatex = this.getCurrentLineLatex();
+        this.mathfield.executeCommand("removeRow");
+        if (currentLineLatex)
+            this.mathfield.executeCommand("insert", currentLineLatex);
+    }
+
+    getCurrentLineLatex() {
+        const savedSelection = this.mathfield.selection;
+        const selectionRange = savedSelection?.ranges?.[0];
+        if (!selectionRange || selectionRange[0] !== selectionRange[1])
+            return "";
+        const lineStart = selectionRange[1];
+        this.mathfield.executeCommand("moveToGroupEnd");
+        const lineEnd = this.mathfield.position;
+        this.mathfield.selection = savedSelection;
+        if (lineEnd <= lineStart)
+            return "";
+        return this.mathfield.getValue(lineStart, lineEnd);
+    }
+
+    lockCaretInsideDisplayLines(mathfield) {
+        mathfield.addEventListener("selection-change", _ => this.clampDisplayLinesSelection(mathfield));
+        mathfield.addEventListener("keydown", keydownEvent => this.handleDisplayLinesCaretKeydown(mathfield, keydownEvent), true);
+    }
+
+    computeDisplayLinesCaretBounds(mathfield) {
+        const savedSelection = mathfield.selection;
+        mathfield.position = 0;
+        mathfield.executeCommand("moveToNextChar");
+        const min = mathfield.position;
+        const max = Math.max(min, mathfield.lastOffset - 1);
+        mathfield.selection = savedSelection;
+        return { min, max };
+    }
+
+    clampDisplayLinesSelection(mathfield) {
+        if (this.mathfieldCaretClamping)
+            return;
+        const caretBounds = this.computeDisplayLinesCaretBounds(mathfield);
+        const range = mathfield.selection?.ranges?.[0];
+        if (!range || !caretBounds)
+            return;
+        const position = range[1];
+        if (position < caretBounds.min || position > caretBounds.max) {
+            this.mathfieldCaretClamping = true;
+            mathfield.position = position < caretBounds.min ? caretBounds.min : caretBounds.max;
+            this.mathfieldCaretClamping = false;
         }
-        return null;
     }
 
-    mergeRowIntoPreviousAtRowStart() {
-        const mathfieldModel = this.getMathfieldModel();
-        if (!mathfieldModel?.selectionIsCollapsed)
-            return false;
-        const atomAtCaret = mathfieldModel.at(mathfieldModel.position);
-        const probeAtomList = [atomAtCaret, atomAtCaret?.rightSibling].filter(Boolean);
-        for (const probeAtom of probeAtomList) {
-            const parentBranch = probeAtom.parentBranch;
-            const parentGrid = probeAtom.parent;
-            if (!Array.isArray(parentBranch) || typeof parentGrid?.getCell !== "function" || typeof parentGrid?.colCount !== "number" || parentGrid.colCount !== 1)
-                continue;
-            const [rowIndex, columnIndex] = parentBranch;
-            if (!Number.isInteger(rowIndex) || !Number.isInteger(columnIndex) || rowIndex <= 0)
-                continue;
-            const currentCell = parentGrid.getCell(rowIndex, columnIndex);
-            if (!Array.isArray(currentCell) || currentCell.length === 0)
-                continue;
-            const rowFirstAtom = currentCell[0];
-            const firstVisibleAtom = currentCell.find(atom => atom?.type !== "first") ?? rowFirstAtom;
-            const rowFirstOffset = mathfieldModel.offsetOf(rowFirstAtom);
-            const rowFirstVisibleOffset = mathfieldModel.offsetOf(firstVisibleAtom);
-            const isAtRowStart = mathfieldModel.position === rowFirstOffset || atomAtCaret === rowFirstAtom || atomAtCaret?.rightSibling === rowFirstAtom;
-            if (!isAtRowStart)
-                continue;
-            const cellEndOffset = mathfieldModel.offsetOf(currentCell[currentCell.length - 1]);
-            const currentCellLatex = rowFirstVisibleOffset <= cellEndOffset ? this.mathfield.getValue([rowFirstVisibleOffset, cellEndOffset + 1], "latex") : "";
-            const normalizedCellContent = currentCellLatex.trim();
-            const hasContent = normalizedCellContent.length > 0 && normalizedCellContent !== "\\placeholder{}";
-            this.mathfield.executeCommand("removeRow");
-            if (hasContent)
-                this.mathfield.executeCommand("insert", currentCellLatex);
-            return true;
+    handleDisplayLinesCaretKeydown(mathfield, keydownEvent) {
+        const caretBounds = this.computeDisplayLinesCaretBounds(mathfield);
+        if (!caretBounds)
+            return;
+        if (keydownEvent.key === "ArrowLeft" && mathfield.position <= caretBounds.min) {
+            keydownEvent.preventDefault();
+            mathfield.position = caretBounds.min;
+            return;
         }
-        return false;
-    }
-
-    getMathfieldModel() {
-        return this.mathfield.model ?? this.mathfield._mathfield?.model;
-    }
-
-    static deserialize(board, data) {
-        var shape = super.deserialize(board, data);
-        shape.mathfield.value = data.properties.expression;
-        return shape;
+        if (keydownEvent.key === "ArrowRight" && mathfield.position >= caretBounds.max) {
+            keydownEvent.preventDefault();
+            mathfield.position = caretBounds.max;
+            return;
+        }
+        if (keydownEvent.key === "Home") {
+            keydownEvent.preventDefault();
+            mathfield.position = caretBounds.min;
+            return;
+        }
+        if (keydownEvent.key === "End") {
+            keydownEvent.preventDefault();
+            mathfield.position = caretBounds.max;
+        }
     }
 
     setProperties(properties) {
