@@ -53,12 +53,18 @@ class BaseTransformer {
         this._pendingStart = { x: point.x, y: point.y };
         this._usingPointer = true;
         this._activePointerId = event.pointerId;
+        try { handle.setPointerCapture(this._activePointerId); } catch (_) {}
         handle.addEventListener("pointermove", this.onHandleDrag);
         handle.addEventListener("pointerup", this.onHandleDragEnd);
         handle.addEventListener("pointercancel", this.onHandleDragEnd);
+        window.addEventListener("pointermove", this.onHandleDrag);
+        window.addEventListener("pointerup", this.onHandleDragEnd);
+        window.addEventListener("pointercancel", this.onHandleDragEnd);
     }
 
     onHandleDrag = event => {
+        if (this._activePointerId != null && event.pointerId !== this._activePointerId)
+            return;
         const p = this.board.getMouseToSvgPoint(event);
         if (!this.draggedHandle) {
             if (!this._pendingStart || !this._pendingHandle)
@@ -72,7 +78,6 @@ class BaseTransformer {
             this.draggedHandle = this._pendingHandle;
             this.startX = this._pendingStart.x;
             this.startY = this._pendingStart.y;
-            try { this.draggedHandle.setPointerCapture(this._activePointerId); } catch (_) {}
         }
         p.dx = p.x - this.startX;
         p.dy = p.y - this.startY;
@@ -94,6 +99,8 @@ class BaseTransformer {
     }
 
     onHandleDragEnd = _ => {
+        if (this._activePointerId != null && _.pointerId != null && _.pointerId !== this._activePointerId)
+            return;
         const handle = this.draggedHandle ?? this._pendingHandle;
         if (handle) {
             try { handle.releasePointerCapture(this._activePointerId); } catch (_) {}
@@ -101,6 +108,9 @@ class BaseTransformer {
             handle.removeEventListener("pointerup", this.onHandleDragEnd);
             handle.removeEventListener("pointercancel", this.onHandleDragEnd);
         }
+        window.removeEventListener("pointermove", this.onHandleDrag);
+        window.removeEventListener("pointerup", this.onHandleDragEnd);
+        window.removeEventListener("pointercancel", this.onHandleDragEnd);
         if (!this.draggedHandle) {
             this._pendingHandle = null;
             this._pendingStart = null;
