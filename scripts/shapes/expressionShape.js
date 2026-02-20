@@ -90,9 +90,10 @@ class ExpressionShape extends BaseShape {
 
     onMount() {
         this.removeExpressionInlineShortcuts();
-        this.lockCaretInsideDisplayLines(this.mathfield);
+        this.lockCaret(this.mathfield);
         this.mathfield.addEventListener("keydown", keydownEvent => this.onKeyDown(keydownEvent), true);
         this.mathfield.focus();
+        this.ensureCaretIsClamped();
     }
 
     removeExpressionInlineShortcuts() {
@@ -112,8 +113,23 @@ class ExpressionShape extends BaseShape {
             return false;
         keydownEvent.preventDefault();
         keydownEvent.stopImmediatePropagation();
-        this.mathfield.executeCommand("addRowAfter");
+        this.splitCurrentLineAtCaret();
         return true;
+    }
+
+    splitCurrentLineAtCaret() {
+        if (this.hasSelection())
+            this.mathfield.executeCommand("deleteBackward");
+        const caretPosition = this.getCaretPosition();
+        const lineEnd = this.getCurrentGroupEndPosition();
+        const currentLineTailLatex = this.getTextRange(caretPosition, lineEnd);
+        if (lineEnd > caretPosition)
+            this.deleteTextRange(caretPosition, lineEnd);
+        this.mathfield.executeCommand("addRowAfter");
+        const newLineStartPosition = this.getCurrentGroupStartPosition();
+        if (currentLineTailLatex)
+            this.mathfield.executeCommand("insert", currentLineTailLatex);
+        this.mathfield.position = newLineStartPosition;
     }
 
     handleBackspaceKeydown(keydownEvent) {
@@ -147,6 +163,43 @@ class ExpressionShape extends BaseShape {
         return groupStart;
     }
 
+    getCurrentGroupEndPosition() {
+        const savedSelection = this.mathfield.selection;
+        this.mathfield.executeCommand("moveToGroupEnd");
+        const groupEnd = this.mathfield.position;
+        this.mathfield.selection = savedSelection;
+        return groupEnd;
+    }
+
+    hasSelection() {
+        const range = this.mathfield.selection?.ranges?.[0];
+        if (!range)
+            return false;
+        return range[0] !== range[1];
+    }
+
+    getCaretPosition() {
+        const range = this.mathfield.selection?.ranges?.[0];
+        if (!range)
+            return this.mathfield.position;
+        return range[1];
+    }
+
+    getTextRange(start, end) {
+        if (end <= start)
+            return "";
+        return this.mathfield.getValue(start, end);
+    }
+
+    deleteTextRange(start, end) {
+        if (end <= start)
+            return;
+        this.mathfield.selection = { ranges: [[start, end]], direction: "forward" };
+        this.mathfield.executeCommand("deleteBackward");
+        if (this.mathfield.position !== start)
+            this.mathfield.position = start;
+    }
+
     hasPreviousExpressionLine() {
         const savedSelection = this.mathfield.selection;
         const savedPosition = this.mathfield.position;
@@ -159,8 +212,10 @@ class ExpressionShape extends BaseShape {
     mergeCurrentLineWithPreviousLine() {
         const currentLineLatex = this.getCurrentLineLatex();
         this.mathfield.executeCommand("removeRow");
+        const mergeStartPosition = this.mathfield.position;
         if (currentLineLatex)
             this.mathfield.executeCommand("insert", currentLineLatex);
+        this.mathfield.position = mergeStartPosition;
     }
 
     getCurrentLineLatex() {
@@ -169,20 +224,19 @@ class ExpressionShape extends BaseShape {
         if (!selectionRange || selectionRange[0] !== selectionRange[1])
             return "";
         const lineStart = selectionRange[1];
-        this.mathfield.executeCommand("moveToGroupEnd");
-        const lineEnd = this.mathfield.position;
+        const lineEnd = this.getCurrentGroupEndPosition();
         this.mathfield.selection = savedSelection;
         if (lineEnd <= lineStart)
             return "";
         return this.mathfield.getValue(lineStart, lineEnd);
     }
 
-    lockCaretInsideDisplayLines(mathfield) {
-        mathfield.addEventListener("selection-change", _ => this.clampDisplayLinesSelection(mathfield));
-        mathfield.addEventListener("keydown", keydownEvent => this.handleDisplayLinesCaretKeydown(mathfield, keydownEvent), true);
+    lockCaret(mathfield) {
+        mathfield.addEventListener("selection-change", _ => this.clampCaretSelection(mathfield));
+        mathfield.addEventListener("keydown", keydownEvent => this.handleCaretKeydown(mathfield, keydownEvent), true);
     }
 
-    computeDisplayLinesCaretBounds(mathfield) {
+    computeCaretBounds(mathfield) {
         const savedSelection = mathfield.selection;
         mathfield.position = 0;
         mathfield.executeCommand("moveToNextChar");
@@ -192,10 +246,10 @@ class ExpressionShape extends BaseShape {
         return { min, max };
     }
 
-    clampDisplayLinesSelection(mathfield) {
+    clampCaretSelection(mathfield) {
         if (this.mathfieldCaretClamping)
             return;
-        const caretBounds = this.computeDisplayLinesCaretBounds(mathfield);
+        const caretBounds = this.computeCaretBounds(mathfield);
         const range = mathfield.selection?.ranges?.[0];
         if (!range || !caretBounds)
             return;
@@ -207,8 +261,8 @@ class ExpressionShape extends BaseShape {
         }
     }
 
-    handleDisplayLinesCaretKeydown(mathfield, keydownEvent) {
-        const caretBounds = this.computeDisplayLinesCaretBounds(mathfield);
+    handleCaretKeydown(mathfield, keydownEvent) {
+        const caretBounds = this.computeCaretBounds(mathfield);
         if (!caretBounds)
             return;
         if (keydownEvent.key === "ArrowLeft" && mathfield.position <= caretBounds.min) {
@@ -232,10 +286,17 @@ class ExpressionShape extends BaseShape {
         }
     }
 
+    ensureCaretIsClamped() {
+        this.clampCaretSelection(this.mathfield);
+        requestAnimationFrame(() => this.clampCaretSelection(this.mathfield));
+    }
+
     setProperties(properties) {
         super.setProperties(properties);
-        if (properties.expression != undefined)
+        if (properties.expression != undefined) {
             this.mathfield.value = properties.expression;
+            this.ensureCaretIsClamped();
+        }
         this.onChange();
     }
 
