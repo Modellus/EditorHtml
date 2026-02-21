@@ -93,24 +93,130 @@ class BodyShape extends BaseShape {
             },
             {
                 colSpan: 2,
-                dataField: "file",
                 label: { text: "File" },
-                editorType: "dxFileUploader",
-                editorOptions: {
-                    accept: "image/*",
-                    onFilesUploaded: e => {
-                        const file = e.component.option("value")[0];
-                        const reader = new FileReader();
-                        reader.onload = e => {
-                            this.setProperties({ imageBase64: e.target.result.split(',')[1] });
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                }
+                template: _ => this.createImageDropZoneEditor()
             }
         );
         instance.option("items", items);
         return form;
+    }
+
+    createImageDropZoneEditor() {
+        const container = $("<div class='shape-image-dropzone'></div>");
+        const preview = $("<img class='shape-image-dropzone__preview' alt='Body image preview' />");
+        const hint = $("<div class='shape-image-dropzone__hint'></div>").text("Drop an image or click to select");
+        const uploaderHost = $("<div class='shape-image-dropzone__uploader'></div>");
+        const dropZoneElement = container.get(0);
+        const previewElement = preview.get(0);
+        const hintElement = hint.get(0);
+        this.updateImageDropZonePreview(previewElement, hintElement, this.properties.imageBase64);
+        container.append(preview, hint, uploaderHost);
+        container.on("dragover", e => this.onImageDropZoneDragOver(e));
+        container.on("drop", e => this.onImageDropZoneDrop(e, previewElement, hintElement));
+        uploaderHost.dxFileUploader({
+            accept: "image/*",
+            multiple: false,
+            uploadMode: "useForm",
+            dropZone: dropZoneElement,
+            dialogTrigger: dropZoneElement,
+            onValueChanged: e => this.onImageUploaderValueChanged(e, previewElement, hintElement),
+            onDropZoneEnter: e => this.onImageDropZoneEnter(e),
+            onDropZoneLeave: e => this.onImageDropZoneLeave(e)
+        });
+        return container;
+    }
+
+    onImageUploaderValueChanged(event, previewElement, hintElement) {
+        const file = event.value && event.value[0];
+        if (!file)
+            return;
+        this.setImageFromFile(file, previewElement, hintElement);
+    }
+
+    setImageFromFile(file, previewElement, hintElement) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const result = e.target?.result;
+            if (typeof result !== "string")
+                return;
+            const imageData = result.split(",")[1];
+            if (!imageData)
+                return;
+            this.setProperty("imageBase64", imageData);
+            this.updateImageDropZonePreview(previewElement, hintElement, imageData);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    updateImageDropZonePreview(previewElement, hintElement, imageBase64) {
+        if (!previewElement || !hintElement)
+            return;
+        if (imageBase64) {
+            previewElement.setAttribute("src", `data:image/png;base64,${imageBase64}`);
+            hintElement.style.display = "none";
+            return;
+        }
+        previewElement.removeAttribute("src");
+        hintElement.style.display = "";
+    }
+
+    onImageDropZoneEnter(event) {
+        const dropZoneElement = this.toDomElement(event.dropZoneElement);
+        if (!dropZoneElement)
+            return;
+        dropZoneElement.classList.add("drag-over");
+    }
+
+    onImageDropZoneLeave(event) {
+        const dropZoneElement = this.toDomElement(event.dropZoneElement);
+        if (!dropZoneElement)
+            return;
+        dropZoneElement.classList.remove("drag-over");
+    }
+
+    onImageDropZoneDragOver(event) {
+        const dragEvent = this.toNativeDragEvent(event);
+        if (!dragEvent)
+            return;
+        dragEvent.preventDefault();
+        dragEvent.stopPropagation();
+        if (dragEvent.dataTransfer)
+            dragEvent.dataTransfer.dropEffect = "copy";
+    }
+
+    onImageDropZoneDrop(event, previewElement, hintElement) {
+        const dragEvent = this.toNativeDragEvent(event);
+        if (!dragEvent)
+            return;
+        dragEvent.preventDefault();
+        dragEvent.stopPropagation();
+        const dropZoneElement = this.toDomElement(dragEvent.currentTarget);
+        if (dropZoneElement)
+            dropZoneElement.classList.remove("drag-over");
+        const file = dragEvent.dataTransfer?.files?.[0];
+        if (!file)
+            return;
+        this.setImageFromFile(file, previewElement, hintElement);
+    }
+
+    toNativeDragEvent(event) {
+        if (!event)
+            return null;
+        if (event.originalEvent)
+            return event.originalEvent;
+        return event;
+    }
+
+    toDomElement(element) {
+        if (!element)
+            return null;
+        if (element instanceof HTMLElement)
+            return element;
+        if (element.get && element.get(0) instanceof HTMLElement)
+            return element.get(0);
+        if (element[0] instanceof HTMLElement)
+            return element[0];
+        return null;
     }
 
     createElement() {
@@ -165,11 +271,18 @@ class BodyShape extends BaseShape {
 
     drawShape() {
         const position = this.getBoardPosition();
+        const radius = this.properties.radius ?? 0;
+        const diameter = radius * 2;
         this.circle.setAttribute("cx", position.x);
         this.circle.setAttribute("cy", position.y);
-        this.circle.setAttribute("r", this.properties.radius);
+        this.circle.setAttribute("r", radius);
         this.circle.setAttribute("fill", this.properties.backgroundColor);
         this.circle.setAttribute("stroke", this.properties.foregroundColor);
+        this.image.setAttribute("x", position.x - radius);
+        this.image.setAttribute("y", position.y - radius);
+        this.image.setAttribute("width", diameter);
+        this.image.setAttribute("height", diameter);
+        this.image.setAttribute("preserveAspectRatio", "xMidYMid meet");
     }
 
     tick() {

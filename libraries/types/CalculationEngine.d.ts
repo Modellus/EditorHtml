@@ -61,6 +61,7 @@ declare class System {
     iteration: number;
     step: number;
     casesCount: number;
+    private caseInitialValues;
     private expressionsByName;
     private termNames;
     private differentialNames;
@@ -108,8 +109,8 @@ declare class System {
     getExpression(name: string): Expression | undefined;
     getTerm(name: string): Term | undefined;
     isTerm(name: string): boolean;
-    setInitialByTerm(term: Term, value: number, iteration?: number): void;
-    setInitialByName(name: string, value: number, iteration?: number): void;
+    setInitialByTerm(term: Term, value: number, iteration?: number, caseNumber?: number): void;
+    setInitialByName(name: string, value: number, iteration?: number, caseNumber?: number): void;
     getValue(values: {
         [name: string]: number;
     }, term: string): number;
@@ -118,6 +119,8 @@ declare class System {
     getInitialByExpression(expression: Expression, iteration?: number): number;
     getTermsNames(): string[];
     getDifferentialTermsNames(): string[];
+    private hasInitialValueForCase;
+    private getInitialValueForCase;
     private getIterationValue;
     private assertValidCase;
 }

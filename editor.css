@@ -299,6 +299,47 @@ body.read-only #shape-popup {
     display: none;
 }
 
+.shape-image-dropzone {
+    display: grid;
+    place-items: center;
+    min-height: 120px;
+    padding: 12px;
+    border: 1px dashed #d1d5db;
+    border-radius: 12px;
+    background: #f7f9fb;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.shape-image-dropzone.drag-over {
+    border-color: #4039d7;
+    background: #eef0ff;
+}
+
+.shape-image-dropzone__hint {
+    font-size: 0.9rem;
+    color: #6b7280;
+    text-align: center;
+}
+
+.shape-image-dropzone__preview {
+    width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+}
+
+.shape-image-dropzone__preview:not([src]),
+.shape-image-dropzone__preview[src=""] {
+    display: none;
+}
+
+.shape-image-dropzone__uploader {
+    display: none;
+}
+
 .dx-datagrid .dx-header-row .dx-datagrid-text-content {
     font-family: "Times New Roman";
     font-size: 18.4px;
