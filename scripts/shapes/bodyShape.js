@@ -224,11 +224,14 @@ class BodyShape extends BaseShape {
         this.circle = this.board.createSvgElement("circle");
         element.appendChild(this.circle);
         this.image = this.board.createSvgElement("image");
+        this.image.setAttribute("pointer-events", "none");
         element.appendChild(this.image);
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
         this.trajectory.element.setAttribute("fill", "none");
+        this.trajectory.element.setAttribute("pointer-events", "none");
         element.appendChild(this.trajectory.element);
         this.stroboscopy = this.board.createSvgElement("g");
+        this.stroboscopy.setAttribute("pointer-events", "none");
         element.appendChild(this.stroboscopy);
         this._stroboscopyPositions = [];
         return element;
