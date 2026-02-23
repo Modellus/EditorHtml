@@ -4,6 +4,7 @@ class Shell  {
         this.calculator = new Calculator();
         this.board = new Board(document.getElementById("svg"), this.calculator);
         this.commands = new Commands(this);
+        this.pendingInitialValuesByCase = null;
         this.properties = {};
         this.setDefaults();
         this.panAndZoom = new PanAndZoom(this.board);
@@ -36,6 +37,7 @@ class Shell  {
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
         this.properties.iterationTerm = "n";
         this.properties.casesCount = 1;
+        this.properties.initialValuesByCase = {};
     }
 
     createTooltip(e, html, width) {
@@ -1004,11 +1006,15 @@ class Shell  {
     }
     
     reset() {
+        const initialValuesByCase = this.pendingInitialValuesByCase ?? this.calculator.getInitialValuesByCase();
+        this.pendingInitialValuesByCase = null;
         this.calculator.reset();
         this.board.shapes.shapes.forEach(shape => {
             if (shape.constructor.name == "ExpressionShape" && shape.properties.expression != undefined)
                 this.calculator.parse(shape.properties.expression);
         });
+        this.calculator.applyInitialValuesByCase(initialValuesByCase);
+        this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
         this.updatePlayer();
         this.updateToolbar();
     }
@@ -1084,6 +1090,7 @@ class Shell  {
     }
 
     serialize() {
+        this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
         const properties = Object.assign({}, this.properties);
         delete properties.thumbnailBase64;
         return {
@@ -1093,6 +1100,7 @@ class Shell  {
     }
 
     deserialise(model) {
+        this.pendingInitialValuesByCase = model?.properties?.initialValuesByCase ?? model?.properties?.initialValues ?? null;
         this.setProperties(model.properties);
         this.board.deserialize(model.board);
     }

@@ -1,5 +1,5 @@
 // @ts-check
-/// <reference path="../libraries/types/CalculationEngine.d.ts" />
+/// <reference path="../libraries/types/global.d.ts" />
 
 const STATUS = { PLAYING: 0, PAUSED: 1, REPLAYING: 2, STOPPED: 3 };
 
@@ -10,37 +10,38 @@ class Calculator extends EventTarget {
         this.parser = new Modellus.Parser(this.system);
         this.engine = new Modellus.Engine(this.system);
         this.status = STATUS.STOPPED;
-        this.properties = {};
+        this.properties = this.createDefaultProperties();
         this.setDefaults();
     }
 
-    setDefaults() {
-        this.properties.precision = 2;
-        this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
-        this.properties.iterationTerm = "n";
-        this.properties.casesCount = 1;
+    createDefaultProperties() {
+        return { precision: 2, independent: { name: "t", start: 0, end: 10, step: 0.1 }, iterationTerm: "n", casesCount: 1, initialValuesByCase: {} };
     }
 
-    setProperties(properties) {
+    setDefaults() {
+        this.properties = this.createDefaultProperties();
+    }
+
+    setProperties(properties = this.createDefaultProperties()) {
         Utils.mergeProperties(properties, this.properties);
         this.reset();
     }
 
-    setProperty(name, value) {
+    setProperty(name = "", value = 0) {
         Utils.setProperty(name, value, this.properties);
         this.reset();
     }
 
-    emit(eventName, detail = {}) {
+    emit(eventName = "", detail = {}) {
         const event = new CustomEvent(eventName, { detail });
         this.dispatchEvent(event);
     }
 
-    on(eventName, callback) {
+    on(eventName = "", callback = () => {}) {
         this.addEventListener(eventName, callback);
     }
 
-    off(eventName, callback) {
+    off(eventName = "", callback = () => {}) {
         this.removeEventListener(eventName, callback);
     }
 
@@ -122,7 +123,7 @@ class Calculator extends EventTarget {
         this.status = STATUS.STOPPED;
     }
 
-    parse(text) {
+    parse(text = "") {
         var start = "\\displaylines{";
         var end = "}";
         if (text.startsWith(start) && text.endsWith(end))
@@ -134,12 +135,12 @@ class Calculator extends EventTarget {
         this.system.reset();
     }
 
-    getByName(name, caseNumber = 1) {
+    getByName(name = "", caseNumber = 1) {
         const iteration = this.getIteration();
         return this.system.getByNameOnIteration(iteration, name, caseNumber);
     }
 
-    setIteration(iteration) {
+    setIteration(iteration = 1) {
         this.system.iteration = iteration;
         this.emit("iterate", { calculator: this });
     }
@@ -152,7 +153,7 @@ class Calculator extends EventTarget {
         return this.system.lastIteration;
     }
 
-    getIndependentValue(iteration) {
+    getIndependentValue(iteration = this.system.iteration) {
         return this.system.getIndependentOnIteration(iteration);
     }
 
@@ -168,14 +169,69 @@ class Calculator extends EventTarget {
         return this.system.getTermsNames();
     }
 
-    isEditable(name) {
+    getInitialValuesByCase() {
+        const casesCount = Math.max(1, Number(this.properties.casesCount) || 1);
+        const terms = this.getTermsNames();
+        const initialValuesByCaseEntries = [];
+        for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
+            const values = this.system.getIteration(1, caseNumber);
+            const caseValuesEntries = [];
+            for (let i = 0; i < terms.length; i++) {
+                const term = terms[i];
+                if (term === this.properties.independent.name)
+                    continue;
+                if (term === this.properties.iterationTerm)
+                    continue;
+                const value = values[term];
+                if (!Number.isFinite(value))
+                    continue;
+                caseValuesEntries.push([term, value]);
+            }
+            if (caseValuesEntries.length > 0)
+                initialValuesByCaseEntries.push([caseNumber, Object.fromEntries(caseValuesEntries)]);
+        }
+        return Object.fromEntries(initialValuesByCaseEntries);
+    }
+
+    applyInitialValuesByCase(initialValuesByCase = {}) {
+        if (!initialValuesByCase || typeof initialValuesByCase !== "object")
+            return;
+        const casesCount = Math.max(1, Number(this.properties.casesCount) || 1);
+        const caseValuesEntries = Object.entries(initialValuesByCase);
+        for (let i = 0; i < caseValuesEntries.length; i++) {
+            const caseNumber = parseInt(caseValuesEntries[i][0], 10);
+            if (!Number.isFinite(caseNumber))
+                continue;
+            if (caseNumber < 1 || caseNumber > casesCount)
+                continue;
+            const caseValues = caseValuesEntries[i][1];
+            if (!caseValues || typeof caseValues !== "object")
+                continue;
+            const termValuesEntries = Object.entries(caseValues);
+            for (let j = 0; j < termValuesEntries.length; j++) {
+                const term = termValuesEntries[j][0];
+                if (!this.system.isTerm(term))
+                    continue;
+                const rawValue = termValuesEntries[j][1];
+                const value = Number(rawValue);
+                if (!Number.isFinite(value))
+                    continue;
+                this.system.setInitialByName(term, value, 1, caseNumber);
+            }
+        }
+        this.engine.reset();
+    }
+
+    isEditable(name = "") {
         var term = this.system.getTerm(name);
         return !term || this.system.isEditable(term);
     }
 
-    setTermValue(name, value, iteration = this.system.iteration, caseNumber = 1) {
+    setTermValue(name = "", value = 0, iteration = this.system.iteration, caseNumber = 1) {
         const system = this.system;
         var term = system.getTerm(name);
+        if (!term)
+            return;
         system.set(term, value, caseNumber);
         if (iteration == 1)
             system.setInitialByName(name, value, iteration, caseNumber);
@@ -202,7 +258,7 @@ class Calculator extends EventTarget {
         return this.properties.precision;
     }
 
-    isTerm(name) {
+    isTerm(name = "") {
         return this.system.terms[name] !== undefined;
     }
 }
