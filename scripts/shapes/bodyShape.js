@@ -105,53 +105,76 @@ class BodyShape extends BaseShape {
         const container = $("<div class='shape-image-dropzone'></div>");
         const preview = $("<img class='shape-image-dropzone__preview' alt='Body image preview' />");
         const hint = $("<div class='shape-image-dropzone__hint'></div>").text("Drop an image or click to select");
+        const removeButton = $("<button type='button' class='shape-image-dropzone__remove' aria-label='Remove image'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></button>");
         const uploaderHost = $("<div class='shape-image-dropzone__uploader'></div>");
         const dropZoneElement = container.get(0);
         const previewElement = preview.get(0);
         const hintElement = hint.get(0);
-        this.updateImageDropZonePreview(previewElement, hintElement, this.getImageSource());
-        container.append(preview, hint, uploaderHost);
+        const removeButtonElement = removeButton.get(0);
+        this.updateImageDropZonePreview(previewElement, hintElement, removeButtonElement, this.getImageSource());
+        container.append(preview, hint, removeButton, uploaderHost);
+        removeButton.on("mousedown", event => this.onImageRemoveButtonMouseDown(event));
+        removeButton.on("click", event => this.onImageRemoveButtonClick(event, previewElement, hintElement, removeButtonElement));
         container.on("dragover", e => this.onImageDropZoneDragOver(e));
-        container.on("drop", e => this.onImageDropZoneDrop(e, previewElement, hintElement));
+        container.on("drop", e => this.onImageDropZoneDrop(e, previewElement, hintElement, removeButtonElement));
         uploaderHost.dxFileUploader({
             accept: "image/*",
             multiple: false,
             uploadMode: "useForm",
             dropZone: dropZoneElement,
             dialogTrigger: dropZoneElement,
-            onValueChanged: e => this.onImageUploaderValueChanged(e, previewElement, hintElement),
+            onValueChanged: e => this.onImageUploaderValueChanged(e, previewElement, hintElement, removeButtonElement),
             onDropZoneEnter: e => this.onImageDropZoneEnter(e),
             onDropZoneLeave: e => this.onImageDropZoneLeave(e)
         });
         return container;
     }
 
-    async onImageUploaderValueChanged(event, previewElement, hintElement) {
+    async onImageUploaderValueChanged(event, previewElement, hintElement, removeButtonElement) {
         const file = event.value && event.value[0];
         if (!file)
             return;
-        await this.setImageFromFile(file, previewElement, hintElement);
+        await this.setImageFromFile(file, previewElement, hintElement, removeButtonElement);
     }
 
-    async setImageFromFile(file, previewElement, hintElement) {
+    async setImageFromFile(file, previewElement, hintElement, removeButtonElement) {
         const imageUrl = await this.uploadAsset(file);
         if (!imageUrl)
             return;
         this.properties.imageBase64 = "";
         this.setProperty("imageUrl", imageUrl);
-        this.updateImageDropZonePreview(previewElement, hintElement, imageUrl);
+        this.updateImageDropZonePreview(previewElement, hintElement, removeButtonElement, imageUrl);
     }
 
-    updateImageDropZonePreview(previewElement, hintElement, imageSource) {
-        if (!previewElement || !hintElement)
+    updateImageDropZonePreview(previewElement, hintElement, removeButtonElement, imageSource) {
+        if (!previewElement || !hintElement || !removeButtonElement)
             return;
         if (imageSource) {
             previewElement.setAttribute("src", imageSource);
             hintElement.style.display = "none";
+            removeButtonElement.style.display = "flex";
             return;
         }
         previewElement.removeAttribute("src");
         hintElement.style.display = "";
+        removeButtonElement.style.display = "none";
+    }
+
+    onImageRemoveButtonMouseDown(event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    onImageRemoveButtonClick(event, previewElement, hintElement, removeButtonElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.clearImage(previewElement, hintElement, removeButtonElement);
+    }
+
+    clearImage(previewElement, hintElement, removeButtonElement) {
+        this.properties.imageBase64 = "";
+        this.setProperty("imageUrl", "");
+        this.updateImageDropZonePreview(previewElement, hintElement, removeButtonElement, "");
     }
 
     onImageDropZoneEnter(event) {
@@ -178,7 +201,7 @@ class BodyShape extends BaseShape {
             dragEvent.dataTransfer.dropEffect = "copy";
     }
 
-    async onImageDropZoneDrop(event, previewElement, hintElement) {
+    async onImageDropZoneDrop(event, previewElement, hintElement, removeButtonElement) {
         const dragEvent = this.toNativeDragEvent(event);
         if (!dragEvent)
             return;
@@ -190,7 +213,7 @@ class BodyShape extends BaseShape {
         const file = dragEvent.dataTransfer?.files?.[0];
         if (!file)
             return;
-        await this.setImageFromFile(file, previewElement, hintElement);
+        await this.setImageFromFile(file, previewElement, hintElement, removeButtonElement);
     }
 
     getImageSource() {

@@ -166,6 +166,13 @@ class ModelsApp {
     }
   }
 
+  getModelThumbnailSource(thumbnail) {
+    if (!thumbnail || typeof thumbnail !== "string") return "";
+    if (thumbnail.startsWith("data:")) return thumbnail;
+    if (thumbnail.startsWith("http://") || thumbnail.startsWith("https://") || thumbnail.startsWith("/") || thumbnail.startsWith("blob:")) return thumbnail;
+    return `data:image/png;base64,${thumbnail}`;
+  }
+
   ensureCardView() {
     if (this.cardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
     const CardView = DevExpress.ui.dxCardView;
@@ -197,9 +204,7 @@ class ModelsApp {
         if (!host) return;
         const isFavorite = this.isFavoriteValue(data);
         const isPublic = data.is_public === true || data.is_public === 1;
-        const thumbnailSrc = data.thumbnail
-          ? (data.thumbnail.startsWith("data:") ? data.thumbnail : `data:image/png;base64,${data.thumbnail}`)
-          : "";
+        const thumbnailSrc = this.getModelThumbnailSource(data.thumbnail);
         const thumbnailMarkup = thumbnailSrc ? `<img class="card-thumb" src="${thumbnailSrc}" alt="${data.title || "Model thumbnail"}">` : "";
         const cardMarkup = `
           <div class="card-tile" data-model-id="${data.id || ""}">

@@ -38,6 +38,8 @@ class Shell  {
         this.properties.iterationTerm = "n";
         this.properties.casesCount = 1;
         this.properties.initialValuesByCase = {};
+        this.properties.thumbnailUrl = "";
+        this.properties.thumbnailBase64 = "";
     }
 
     createTooltip(e, html, width) {
@@ -90,18 +92,15 @@ class Shell  {
                         const preview = $("<img class='thumbnail-preview' alt='Thumbnail preview' />");
                         const hint = $("<div class='thumbnail-hint'></div>")
                             .text(this.board.translations.get("Thumbnail Dropzone"));
+                        const removeButton = $("<button type='button' class='thumbnail-remove-button' aria-label='Remove model cover'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></button>");
                         const uploaderHost = $("<div class='thumbnail-uploader'></div>");
-                        const updatePreview = base64 => {
-                            if (base64) {
-                                preview.attr("src", `data:image/png;base64,${base64}`);
-                                hint.hide();
-                            } else {
-                                preview.removeAttr("src");
-                                hint.show();
-                            }
-                        };
-                        updatePreview(this.properties.thumbnailBase64 || "");
-                        container.append(preview, hint, uploaderHost);
+                        const previewElement = preview.get(0);
+                        const hintElement = hint.get(0);
+                        const removeButtonElement = removeButton.get(0);
+                        this.updateThumbnailPreview(previewElement, hintElement, removeButtonElement, this.getThumbnailSource());
+                        container.append(preview, hint, removeButton, uploaderHost);
+                        removeButton.on("mousedown", event => this.onThumbnailRemoveButtonMouseDown(event));
+                        removeButton.on("click", event => this.onThumbnailRemoveButtonClick(event, previewElement, hintElement, removeButtonElement));
                         uploaderHost.dxFileUploader({
                             accept: "image/*",
                             multiple: false,
@@ -110,11 +109,9 @@ class Shell  {
                             dialogTrigger: container,
                             onValueChanged: async e => {
                                 const file = e.value && e.value[0];
-                                if (!file) return;
-                                const base64 = await this.resizeThumbnail(file);
-                                if (!base64) return;
-                                this.setProperty("thumbnailBase64", base64);
-                                updatePreview(base64);
+                                if (!file)
+                                    return;
+                                await this.setThumbnailFromFile(file, previewElement, hintElement, removeButtonElement);
                             }
                         });
                         return container;
@@ -255,46 +252,193 @@ class Shell  {
         return $form;
     }
 
-    resizeThumbnail(file) {
-        const maxWidth = 500;
-        const maxHeight = 200;
-        const maxBytes = 100 * 1024;
-        return new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onload = event => {
-                const result = event.target && event.target.result ? event.target.result : "";
-                const img = new Image();
-                img.onload = () => {
-                    const scale = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
-                    const targetWidth = Math.max(1, Math.round(img.width * scale));
-                    const targetHeight = Math.max(1, Math.round(img.height * scale));
-                    const canvas = document.createElement("canvas");
-                    canvas.width = maxWidth;
-                    canvas.height = maxHeight;
-                    const ctx = canvas.getContext("2d");
-                    ctx.clearRect(0, 0, maxWidth, maxHeight);
-                    const offsetX = Math.round((maxWidth - targetWidth) / 2);
-                    const offsetY = Math.round((maxHeight - targetHeight) / 2);
-                    ctx.drawImage(img, offsetX, offsetY, targetWidth, targetHeight);
-                    let quality = 0.9;
-                    let dataUrl = canvas.toDataURL("image/jpeg", quality);
-                    let base64 = dataUrl.split(",")[1] || "";
-                    while (base64 && base64.length * 0.75 > maxBytes && quality > 0.1) {
-                        quality -= 0.1;
-                        dataUrl = canvas.toDataURL("image/jpeg", quality);
-                        base64 = dataUrl.split(",")[1] || "";
-                    }
-                    resolve(base64);
-                };
-                img.onerror = () => resolve("");
-                if (typeof result === "string")
-                    img.src = result;
-                else
-                    resolve("");
-            };
-            reader.onerror = () => resolve("");
-            reader.readAsDataURL(file);
-        });
+    getCurrentModelId() {
+        return new URLSearchParams(window.location.search).get("model_id");
+    }
+
+    getAssetUploadUrl(modelId = this.getCurrentModelId()) {
+        if (!modelId)
+            return null;
+        return `${apiBase}/models/${encodeURIComponent(modelId)}/assets`;
+    }
+
+    getApiHeaders() {
+        if (typeof getAuthHeaders === "function")
+            return getAuthHeaders();
+        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
+        if (session && session.token)
+            return { Authorization: `Bearer ${session.token}` };
+        return {};
+    }
+
+    isUrl(value) {
+        if (typeof value !== "string")
+            return false;
+        return value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/") || value.startsWith("blob:");
+    }
+
+    getThumbnailSource() {
+        const thumbnailUrl = this.properties.thumbnailUrl;
+        if (typeof thumbnailUrl === "string" && thumbnailUrl.trim() !== "") {
+            if (this.isUrl(thumbnailUrl) || thumbnailUrl.startsWith("data:"))
+                return thumbnailUrl;
+            return `data:image/png;base64,${thumbnailUrl}`;
+        }
+        const thumbnailBase64 = this.properties.thumbnailBase64;
+        if (typeof thumbnailBase64 === "string" && thumbnailBase64.trim() !== "")
+            return `data:image/png;base64,${thumbnailBase64}`;
+        return "";
+    }
+
+    updateThumbnailPreview(previewElement, hintElement, removeButtonElement, imageSource) {
+        if (!previewElement || !hintElement || !removeButtonElement)
+            return;
+        if (imageSource) {
+            previewElement.setAttribute("src", imageSource);
+            hintElement.style.display = "none";
+            removeButtonElement.style.display = "flex";
+            return;
+        }
+        previewElement.removeAttribute("src");
+        hintElement.style.display = "";
+        removeButtonElement.style.display = "none";
+    }
+
+    onThumbnailRemoveButtonMouseDown(event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    onThumbnailRemoveButtonClick(event, previewElement, hintElement, removeButtonElement) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.clearThumbnail(previewElement, hintElement, removeButtonElement);
+    }
+
+    clearThumbnail(previewElement, hintElement, removeButtonElement) {
+        this.properties.thumbnailBase64 = "";
+        this.properties.thumbnailUrl = "";
+        this.updateThumbnailPreview(previewElement, hintElement, removeButtonElement, "");
+    }
+
+    async setThumbnailFromFile(file, previewElement, hintElement, removeButtonElement) {
+        const thumbnailUrl = await this.uploadModelAsset(file, "thumbnail");
+        if (!thumbnailUrl)
+            return;
+        this.properties.thumbnailUrl = thumbnailUrl;
+        this.properties.thumbnailBase64 = "";
+        this.updateThumbnailPreview(previewElement, hintElement, removeButtonElement, thumbnailUrl);
+    }
+
+    async uploadModelAsset(file, assetId, fileName = "asset.png", modelId = this.getCurrentModelId()) {
+        const uploadUrl = this.getAssetUploadUrl(modelId);
+        if (!uploadUrl) {
+            this.showAssetUploadError("Open a saved model before uploading assets.");
+            return null;
+        }
+        const formData = new FormData();
+        formData.append("id", assetId);
+        if (file instanceof File)
+            formData.append("file", file);
+        else
+            formData.append("file", file, fileName);
+        try {
+            const response = await fetch(uploadUrl, {
+                method: "POST",
+                headers: this.getApiHeaders(),
+                body: formData
+            });
+            if (!response.ok)
+                throw new Error(await this.getAssetUploadError(response));
+            const payload = await response.json();
+            const assetUrl = payload?.url;
+            if (!assetUrl)
+                throw new Error("The API did not return an asset URL.");
+            return assetUrl;
+        } catch (error) {
+            this.showAssetUploadError(error?.message || "Failed to upload asset.");
+            return null;
+        }
+    }
+
+    async getAssetUploadError(response) {
+        try {
+            const payload = await response.json();
+            if (payload?.error)
+                return payload.error;
+        } catch (_) {}
+        return `Upload failed (${response.status})`;
+    }
+
+    showAssetUploadError(message) {
+        if (window.DevExpress?.ui?.notify)
+            window.DevExpress.ui.notify(message, "error", 3000);
+        else
+            alert(message);
+    }
+
+    dataUrlToBlob(dataUrl) {
+        if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:"))
+            return null;
+        const parts = dataUrl.split(",");
+        if (parts.length !== 2)
+            return null;
+        const mimeMatch = parts[0].match(/^data:([^;]+)/);
+        const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
+        return this.base64ToBlob(parts[1], mimeType);
+    }
+
+    base64ToBlob(base64, mimeType = "image/png") {
+        if (typeof base64 !== "string" || base64.trim() === "")
+            return null;
+        try {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++)
+                bytes[i] = binary.charCodeAt(i);
+            return new Blob([bytes], { type: mimeType });
+        } catch (_) {
+            return null;
+        }
+    }
+
+    async resolveThumbnailUrlForSave(modelId) {
+        const thumbnailUrl = this.properties.thumbnailUrl;
+        if (typeof thumbnailUrl === "string" && thumbnailUrl.trim() !== "") {
+            if (this.isUrl(thumbnailUrl))
+                return thumbnailUrl;
+            const thumbnailBlobFromDataUrl = this.dataUrlToBlob(thumbnailUrl);
+            if (thumbnailBlobFromDataUrl) {
+                const uploadedDataUrlThumbnail = await this.uploadModelAsset(thumbnailBlobFromDataUrl, "thumbnail", "thumbnail.png", modelId);
+                if (!uploadedDataUrlThumbnail)
+                    return null;
+                this.properties.thumbnailUrl = uploadedDataUrlThumbnail;
+                this.properties.thumbnailBase64 = "";
+                return uploadedDataUrlThumbnail;
+            }
+            this.properties.thumbnailBase64 = thumbnailUrl;
+            this.properties.thumbnailUrl = "";
+        }
+        const thumbnailBase64 = this.properties.thumbnailBase64;
+        if (typeof thumbnailBase64 === "string" && thumbnailBase64.trim() !== "") {
+            const thumbnailBlob = this.base64ToBlob(thumbnailBase64);
+            if (!thumbnailBlob)
+                return null;
+            const uploadedBase64Thumbnail = await this.uploadModelAsset(thumbnailBlob, "thumbnail", "thumbnail.png", modelId);
+            if (!uploadedBase64Thumbnail)
+                return null;
+            this.properties.thumbnailUrl = uploadedBase64Thumbnail;
+            this.properties.thumbnailBase64 = "";
+            return uploadedBase64Thumbnail;
+        }
+        const capturedThumbnailBlob = await this.captureThumbnailBlob();
+        if (!capturedThumbnailBlob)
+            return null;
+        const uploadedCapturedThumbnail = await this.uploadModelAsset(capturedThumbnailBlob, "thumbnail", "thumbnail.png", modelId);
+        if (!uploadedCapturedThumbnail)
+            return null;
+        this.properties.thumbnailUrl = uploadedCapturedThumbnail;
+        return uploadedCapturedThumbnail;
     }
 
     createTopToolbar() {
@@ -1111,7 +1255,7 @@ class Shell  {
     }
 
     async saveToApi() {
-        const modelId = new URLSearchParams(window.location.search).get("model_id");
+        const modelId = this.getCurrentModelId();
         if (!modelId) {
             alert("No model id found.");
             return;
@@ -1120,7 +1264,7 @@ class Shell  {
         const headers = { "Content-Type": "application/json" };
         if (session && session.token) headers.Authorization = `Bearer ${session.token}`;
         try {
-            const thumbnail = this.properties.thumbnailBase64 || await this.captureThumbnail();
+            const thumbnail = await this.resolveThumbnailUrlForSave(modelId);
             const payload = {
                 title: this.properties.name || "Untitled model",
                 description: this.properties.description || "",
@@ -1140,7 +1284,7 @@ class Shell  {
         }
     }
 
-    async captureThumbnail() {
+    async captureThumbnailBlob() {
         const svg = document.getElementById("svg");
         if (!svg)
             return null;
@@ -1156,22 +1300,23 @@ class Shell  {
         const url = URL.createObjectURL(svgBlob);
         try {
             const image = new Image();
-            const dataUrl = await new Promise(resolve => {
+            const thumbnailBlob = await new Promise(resolve => {
                 image.onload = () => {
                     const canvas = document.createElement("canvas");
                     canvas.width = bounds.width;
                     canvas.height = bounds.height;
                     const ctx = canvas.getContext("2d");
+                    if (!ctx) {
+                        resolve(null);
+                        return;
+                    }
                     ctx.drawImage(image, 0, 0);
-                    resolve(canvas.toDataURL("image/png"));
+                    canvas.toBlob(blob => resolve(blob), "image/png");
                 };
                 image.onerror = () => resolve(null);
                 image.src = url;
             });
-            if (!dataUrl)
-                return null;
-            const parts = dataUrl.split(",");
-            return parts.length > 1 ? parts[1] : null;
+            return thumbnailBlob;
         } finally {
             URL.revokeObjectURL(url);
         }

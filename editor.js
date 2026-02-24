@@ -19,6 +19,16 @@ function extractModelPayload(model) {
     return null;
 }
 
+function applyModelMetadata(shell, model) {
+    if (!shell || !model || typeof model.thumbnail !== "string" || !model.thumbnail.trim()) return;
+    const thumbnail = model.thumbnail.trim();
+    if (thumbnail.startsWith("http://") || thumbnail.startsWith("https://") || thumbnail.startsWith("/") || thumbnail.startsWith("blob:") || thumbnail.startsWith("data:")) {
+        shell.properties.thumbnailUrl = thumbnail;
+        return;
+    }
+    shell.properties.thumbnailBase64 = thumbnail;
+}
+
 function enableReadOnlyMode() {
     window.modellusReadOnly = true;
     document.body.classList.add("read-only");
@@ -36,6 +46,7 @@ async function loadModel(modelId, headers) {
             const model = await loadModel(modelId, getAuthHeaders());
             const payload = extractModelPayload(model);
             shell = payload ? new Shell(payload) : new Shell();
+            applyModelMetadata(shell, model);
             return;
         }
         const model = await loadModel(modelId, {});
@@ -43,6 +54,7 @@ async function loadModel(modelId, headers) {
             enableReadOnlyMode();
             const payload = extractModelPayload(model);
             shell = payload ? new Shell(payload) : new Shell();
+            applyModelMetadata(shell, model);
             return;
         }
         window.location.href = "/login.html";
