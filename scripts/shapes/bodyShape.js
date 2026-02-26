@@ -14,82 +14,46 @@ class BodyShape extends BaseShape {
     createForm() {
         var form = super.createForm();
         var instance = form.dxForm("instance");
-        var items = instance.option("items");
         this.addTerm("xTerm", "x", "Horizontal", false, true, 1, "x");
         this.addTerm("yTerm", "y", "Vertical", true, true, 1, "y");
+        var items = instance.option("items");
         items.push(
             {
                 colSpan: 2,
-                dataField: "trajectoryColor",
-                label: { text: "Trajectory color" },
-                editorType: "dxButtonGroup",
-                editorOptions: {
-                    onContentReady: function(e) {
-                        e.component.option("items").forEach((item, index) => {
-                            const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                            buttonElement.find(".dx-icon").css("color", item.color == "#00000000" ? "#cccccc" : item.color);
-                        });
-                    },
-                    items: this.board.theme.getBackgroundColors().map(c => ({
-                        icon: "fa-solid " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
-                        color: c.color
-                    })),
-                    keyExpr: "color",
-                    stylingMode: "text",
-                    selectedItemKeys: [this.properties.trajectoryColor],
-                    onItemClick: e => {
-                        let formInstance = $("#shape-form").dxForm("instance");
-                        formInstance.updateData("trajectoryColor", e.itemData.color);
-                        this.setProperty("trajectoryColor", e.itemData.color);
-                    }
-              }
+                itemType: "group",
+                colCount: 2,
+                items: [
+                    this.createColorPickerFormItem("trajectoryColor", "Trajectory color", 1),
+                    this.createColorPickerFormItem("stroboscopyColor", "Stroboscopy color", 1)
+                ]
             },
             {
                 colSpan: 2,
-                dataField: "stroboscopyColor",
-                label: { text: "Stroboscopy color" },
-                editorType: "dxButtonGroup",
-                editorOptions: {
-                    onContentReady: function(e) {
-                        e.component.option("items").forEach((item, index) => {
-                            const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                            buttonElement.find(".dx-icon").css("color", item.color == "#00000000" ? "#cccccc" : item.color);
-                        });
+                itemType: "group",
+                colCount: 2,
+                items: [
+                    {
+                        colSpan: 1,
+                        dataField: "stroboscopyInterval",
+                        label: { text: "Interval" },
+                        editorType: "dxNumberBox",
+                        editorOptions: {
+                            showSpinButtons: true,
+                            stylingMode: "filled"
+                        }
                     },
-                    items: this.board.theme.getBackgroundColors().map(c => ({
-                        icon: "fa-solid " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
-                        color: c.color
-                    })),
-                    keyExpr: "color",
-                    stylingMode: "text",
-                    selectedItemKeys: [this.properties.stroboscopyColor],
-                    onItemClick: e => {
-                        let formInstance = $("#shape-form").dxForm("instance");
-                        formInstance.updateData("stroboscopyColor", e.itemData.color);
-                        this.setProperty("stroboscopyColor", e.itemData.color);
+                    {
+                        colSpan: 1,
+                        dataField: "stroboscopyOpacity",
+                        label: { text: "Opacity" },
+                        editorType: "dxNumberBox",
+                        editorOptions: {
+                            showSpinButtons: true,
+                            step: 0.1,
+                            stylingMode: "filled"
+                        }
                     }
-                }
-            },
-            {
-                colSpan: 1,
-                dataField: "stroboscopyInterval",
-                label: { text: "Interval" },
-                editorType: "dxNumberBox",
-                editorOptions: {
-                    showSpinButtons: true,
-                    stylingMode: "filled"
-                }
-            },
-            {
-                colSpan: 1,
-                dataField: "stroboscopyOpacity",
-                label: { text: "Opacity" },
-                editorType: "dxNumberBox",
-                editorOptions: {
-                    showSpinButtons: true,
-                    step: 0.1,
-                    stylingMode: "filled"
-                }
+                ]
             },
             {
                 colSpan: 2,

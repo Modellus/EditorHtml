@@ -105,6 +105,12 @@ svg {
     cursor: move;
 }
 
+.handle.splitter {
+    rx: 4px;
+    ry: 4px;
+    cursor: ns-resize;
+}
+
 .handle.radius {
     transform: translate(-4px, -4px);
     rx: 4px;
@@ -204,6 +210,20 @@ svg:active.pan-available {
     src: url("libraries/css/font/KaTeX_Main-Italic.woff2") format("woff2");
     font-weight: normal;
     font-style: normal;
+}
+
+@font-face {
+    font-family: "Katex_Math";
+    src: url("libraries/css/fonts/KaTeX_Math-Italic.woff2") format("woff2");
+    font-weight: 400;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: "Katex_Math";
+    src: url("libraries/css/fonts/KaTeX_Math-BoldItalic.woff2") format("woff2");
+    font-weight: 700;
+    font-style: italic;
 }
 
 
@@ -407,18 +427,6 @@ body.read-only #shape-popup {
     color: #242424 !important;
 }
 
-.dx-slider-tooltip-position-top {
-    padding-top: 0 !important;
-}
-
-/* Slider edge labels (min/max) */
-.edge-label {
-    line-height: 1;
-    white-space: nowrap;
-    font: inherit;
-    color: inherit;
-}
-
 .dx-htmleditor {
     border: none !important;
     box-shadow: none !important;
@@ -531,9 +539,235 @@ math-field {
     padding-left: 30px !important;
 }
 
+.term-packed-control {
+    display: flex;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.term-packed-control__button {
+    width: 34px;
+    min-width: 34px;
+    max-width: 34px;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 34px;
+}
+
+.term-packed-control__select {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.term-packed-checkbox {
+    margin: 0;
+    padding: 0;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    background-color: #f5f5f5;
+}
+
+.term-packed-checkbox .dx-checkbox-container {
+    width: 34px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.term-packed-checkbox .dx-checkbox-icon {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.term-packed-checkbox.dx-state-focused .dx-checkbox-icon,
+.term-packed-checkbox.dx-state-hover .dx-checkbox-icon,
+.term-packed-checkbox.dx-checkbox-checked .dx-checkbox-icon,
+.term-packed-checkbox.dx-checkbox-checked.dx-state-focused .dx-checkbox-icon,
+.term-packed-checkbox.dx-checkbox-checked.dx-state-hover .dx-checkbox-icon,
+.term-packed-checkbox.dx-checkbox-checked.dx-state-active .dx-checkbox-icon {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.term-packed-checkbox .dx-checkbox-icon::before,
+.term-packed-checkbox .dx-checkbox-icon::after {
+    display: none;
+}
+
+.term-packed-checkbox .term-packed-checkbox-icon {
+    font-size: 14px !important;
+    line-height: 1;
+    color: #4d4d4d !important;
+}
+
+.term-packed-control__select .dx-texteditor {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin: 0;
+}
+
+.term-packed-control__select .dx-field-item-content {
+    padding: 0;
+    margin: 0;
+}
+
+.name-packed-control {
+    display: flex;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.name-packed-control__button {
+    width: 34px;
+    min-width: 34px;
+    max-width: 34px;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 34px;
+}
+
+.name-packed-control__color {
+    width: 34px;
+    min-width: 34px;
+    max-width: 34px;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 34px;
+}
+
+.name-packed-control__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.name-packed-control__color .mdl-color-picker {
+    width: 100%;
+}
+
+.name-packed-control__color .dx-button {
+    min-height: 34px;
+    border-radius: 0;
+}
+
+.name-packed-control__input .dx-texteditor {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin: 0;
+}
+
+.name-packed-control__input .dx-field-item-content {
+    padding: 0;
+    margin: 0;
+}
+
+.shape-name-label {
+    font-family: "Segoe UI", sans-serif;
+    font-size: 10px;
+    dominant-baseline: hanging;
+    pointer-events: none;
+}
+
+.shape-term-label {
+    font-family: "Katex_Math";
+    font-size: 10px;
+    dominant-baseline: hanging;
+    pointer-events: none;
+}
+
 .dx-texteditor-input-container .case-select__icon {
     margin-right: 0;
     margin-left: 8px;
+}
+
+.mdl-color-picker .dx-button {
+    width: 100%;
+    min-height: 32px;
+    padding: 0;
+    background: #f5f5f5;
+}
+
+.mdl-color-picker .dx-button-content {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mdl-color-picker-button-template {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mdl-color-picker-button-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.mdl-color-picker-menu .dx-popup-content {
+    padding: 6px;
+}
+
+.mdl-color-picker-tileview {
+    width: auto;
+    height: auto;
+}
+
+.mdl-color-picker-menu .dx-tile,
+.mdl-color-picker-menu .dx-tile-content {
+    padding: 0;
+}
+
+.mdl-color-picker-menu .dx-tileview-wrapper,
+.mdl-color-picker-menu .dx-scrollable-content {
+    margin: 0;
+    padding: 0;
+}
+
+.mdl-color-picker-menu .dx-tile {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.mdl-color-picker-item {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.mdl-color-picker-item-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.mdl-color-picker-menu .dx-tile.dx-state-hover .mdl-color-picker-item,
+.mdl-color-picker-menu .dx-tile.dx-state-active .mdl-color-picker-item {
+    background: #e8e8e8;
 }
 
 /* Pulse animation for play/pause button when holding space */

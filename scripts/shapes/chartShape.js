@@ -199,7 +199,9 @@ class ChartShape extends BaseShape {
                 ]
             }
         );
+        instance.option("items", items);
         this.addTermToForm("xTerm", "Horizontal", false, 2);
+        items = instance.option("items");
         items.push(
             {
                 colSpan: 2,

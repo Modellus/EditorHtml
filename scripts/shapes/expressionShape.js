@@ -3,6 +3,7 @@ class ExpressionShape extends BaseShape {
         super(board, null, id);
         this.mathfieldCaretClamping = false;
         this.mathfieldCaretLocked = false;
+        this.focusDispatchFrame = null;
     }
 
     createTransformer() {
@@ -309,7 +310,12 @@ class ExpressionShape extends BaseShape {
     }
 
     onFocus() {
-        this.dispatchEvent("focused", {});
+        if (this.focusDispatchFrame != null)
+            cancelAnimationFrame(this.focusDispatchFrame);
+        this.focusDispatchFrame = requestAnimationFrame(() => {
+            this.focusDispatchFrame = null;
+            this.dispatchEvent("focused", {});
+        });
     }
 
     enterEditMode() {

@@ -14,36 +14,11 @@ class VectorShape extends BaseShape {
     createForm() {
         var form = super.createForm();
         var instance = form.dxForm("instance");
-        var items = instance.option("items");
         this.addTermToForm("xTerm", "Horizontal");
         this.addTermToForm("yTerm", "Vertical");
+        var items = instance.option("items");
         items.push(
-            {
-                colSpan: 2,
-                dataField: "trajectoryColor",
-                label: { text: "Trajectory color" },
-                editorType: "dxButtonGroup",
-                editorOptions: {
-                    onContentReady: function(e) {
-                        e.component.option("items").forEach((item, index) => {
-                            const buttonElement = e.element.find(`.dx-button:eq(${index})`);
-                            buttonElement.find(".dx-icon").css("color", item.color == "#00000000" ? "#cccccc" : item.color);
-                        });
-                    },
-                    items: this.board.theme.getBackgroundColors().map(c => ({
-                        icon: "fa-solid " + (c.color == "#00000000" ? "fa-square-dashed" : "fa-square"),
-                        color: c.color
-                    })),
-                    keyExpr: "color",
-                    stylingMode: "text",
-                    selectedItemKeys: [this.properties.trajectoryColor],
-                    onItemClick: e => {
-                        let formInstance = $("#shape-form").dxForm("instance");
-                        formInstance.updateData("trajectoryColor", e.itemData.color);
-                        this.setProperty("trajectoryColor", e.itemData.color);
-                    }
-              }
-            }
+            this.createColorPickerFormItem("trajectoryColor", "Trajectory color")
         );
         instance.option("items", items);
         return form;

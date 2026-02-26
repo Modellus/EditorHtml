@@ -9,11 +9,8 @@ class TableShape extends BaseShape {
 
     createForm() {
         var form = super.createForm();
-        var instance = form.dxForm("instance");
-        var items = instance.option("items");
         this.addTermToForm("column1Term", "Column 1", false);
         this.addTermToForm("column2Term", "Column 2", false);
-        instance.option("items", items);
         return form;
     }
 

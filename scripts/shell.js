@@ -4,6 +4,8 @@ class Shell  {
         this.calculator = new Calculator();
         this.board = new Board(document.getElementById("svg"), this.calculator);
         this.commands = new Commands(this);
+        this.selectedShapeFrame = null;
+        this.pendingSelectedShape = null;
         this.pendingInitialValuesByCase = null;
         this.properties = {};
         this.setDefaults();
@@ -1032,6 +1034,8 @@ class Shell  {
         current[keys[keys.length - 1]] = value;
         if (name.includes("independent") || name.includes("iteration") || name === "casesCount")
             this.calculator.setProperty(name, value);    
+        if (name === "casesCount" && this.board?.selection?.selectedShape)
+            this.scheduleShapeSelection(this.board.selection.selectedShape);
         if (name == "AIApiKey") {
             this.aiLogic.apiKey = value;
             this.resetChat();
@@ -1358,7 +1362,26 @@ class Shell  {
         this.shapePopup.show();
     }
 
+    scheduleShapeSelection(shape) {
+        this.pendingSelectedShape = shape;
+        if (this.selectedShapeFrame != null)
+            cancelAnimationFrame(this.selectedShapeFrame);
+        this.selectedShapeFrame = requestAnimationFrame(() => {
+            this.selectedShapeFrame = null;
+            const pendingShape = this.pendingSelectedShape;
+            this.pendingSelectedShape = null;
+            if (!pendingShape)
+                return;
+            this.selectShape(pendingShape);
+        });
+    }
+
     deselectShape({ skipBoard = false } = {}) {
+        this.pendingSelectedShape = null;
+        if (this.selectedShapeFrame != null) {
+            cancelAnimationFrame(this.selectedShapeFrame);
+            this.selectedShapeFrame = null;
+        }
         if (!skipBoard && this.board?.selection?.selectedShape)
             this.board.selection.deselect();
         this.updateToolbar();
@@ -1366,7 +1389,7 @@ class Shell  {
     }
     
     onSelected(e) {
-        this.selectShape(e.detail.shape);
+        this.scheduleShapeSelection(e.detail.shape);
     }
     
     onDeselected(e) {

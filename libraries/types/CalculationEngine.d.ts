@@ -67,6 +67,8 @@ declare class System {
     private differentialNames;
     private functionExpressionsWithCondition;
     private functionExpressionsWithoutCondition;
+    private readonly iterationValuesByKey;
+    private _lastIteration;
     constructor(independent?: string, iterationTerm?: string);
     get independent(): Term;
     set independent(name: string);
@@ -98,7 +100,7 @@ declare class System {
     }): void;
     calculate(values: {
         [name: string]: number;
-    }): {
+    }, applyInitialValuesToCurrentIteration?: boolean): {
         [name: string]: number;
     };
     getIndependent(caseNumber?: number): number;
@@ -121,6 +123,8 @@ declare class System {
     getDifferentialTermsNames(): string[];
     private hasInitialValueForCase;
     private getInitialValueForCase;
+    private getIterationKey;
+    private indexIterationValue;
     private getIterationValue;
     private assertValidCase;
 }

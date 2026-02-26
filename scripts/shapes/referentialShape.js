@@ -80,22 +80,23 @@ class ReferentialShape extends BaseShape {
                 editorType: "dxSwitch"
             },
             {
-                colSpan: 1,
-                dataField: "scaleX",
-                label: { text: "Horizontal Scale" },
-                editorType: "dxTextBox",
-                editorOptions: {
-                    stylingMode: "filled"
-                }
-            },
-            {
-                colSpan: 1,
-                dataField: "scaleY",
-                label: { text: "Vertical Scale" },
-                editorType: "dxTextBox",
-                editorOptions: {
-                    stylingMode: "filled"
-                }
+                colSpan: 2,
+                itemType: "group",
+                colCount: 2,
+                items: [
+                    {
+                        dataField: "scaleX",
+                        label: { text: "Horizontal Scale" },
+                        editorType: "dxNumberBox",
+                        editorOptions: this.getPrecisionNumberEditorOptions({ showSpinButtons: false })
+                    },
+                    {
+                        dataField: "scaleY",
+                        label: { text: "Vertical Scale" },
+                        editorType: "dxNumberBox",
+                        editorOptions: this.getPrecisionNumberEditorOptions({ showSpinButtons: false })
+                    }
+                ]
             }
         );
         instance.option("items", items);

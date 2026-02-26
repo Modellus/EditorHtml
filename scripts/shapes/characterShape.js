@@ -43,9 +43,9 @@ class CharacterShape extends BaseShape {
     createForm() {
         const form = super.createForm();
         const instance = form.dxForm("instance");
-        const items = instance.option("items");
         this.addTermToForm("xTerm", "Horizontal");
         this.addTermToForm("yTerm", "Vertical");
+        const items = instance.option("items");
         var characters = CharacterShape.getCharacters();
         const buttonItems = characters.map(c => ({
             icon: `resources/characters/${c.folder}/${c.image}`,

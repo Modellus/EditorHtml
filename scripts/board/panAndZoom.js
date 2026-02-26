@@ -13,7 +13,7 @@ class PanAndZoom {
       this.svg.addEventListener("mousemove", this.onMouseMove.bind(this));
       this.svg.addEventListener("mouseup", this.onMouseUp.bind(this));
       this.svg.addEventListener("mouseleave", this.onMouseLeave.bind(this));
-      this.svg.addEventListener("wheel", this.onWheel.bind(this));
+      this.svg.addEventListener("wheel", this.onWheel.bind(this), { passive: true });
       this.svg.addEventListener("mouseover", this.onMouseOver.bind(this));
       this.svg.addEventListener("mouseout", this.onMouseOut.bind(this));
   }
@@ -67,7 +67,6 @@ class PanAndZoom {
   onWheel(event) {
       if (event.target !== this.svg)
           return;
-      event.preventDefault();
       const zoomScale = 1.01;
       const direction = event.deltaY < 0 ? 1 : -1;
       const zoomFactor = direction > 0 ? 1 / zoomScale : zoomScale;
