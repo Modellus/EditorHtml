@@ -347,7 +347,7 @@ class BodyShape extends BaseShape {
         this.image.setAttribute("y", position.y - radius);
         this.image.setAttribute("width", diameter);
         this.image.setAttribute("height", diameter);
-        this.image.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        this.image.setAttribute("preserveAspectRatio", "xMidYMid slice");
     }
 
     tick() {

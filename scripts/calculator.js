@@ -22,12 +22,27 @@ class Calculator extends EventTarget {
         this.properties = this.createDefaultProperties();
     }
 
+    normalizeCasesCount(value = 1) {
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue))
+            return 1;
+        const normalizedValue = Math.floor(numericValue);
+        if (normalizedValue < 1)
+            return 1;
+        if (normalizedValue > 9)
+            return 9;
+        return normalizedValue;
+    }
+
     setProperties(properties = this.createDefaultProperties()) {
         Utils.mergeProperties(properties, this.properties);
+        this.properties.casesCount = this.normalizeCasesCount(this.properties.casesCount);
         this.reset();
     }
 
     setProperty(name = "", value = 0) {
+        if (name === "casesCount")
+            value = this.normalizeCasesCount(value);
         Utils.setProperty(name, value, this.properties);
         this.reset();
     }
@@ -117,6 +132,7 @@ class Calculator extends EventTarget {
         this.system.setInitialIndependent(this.properties.independent.start);
         this.system.step = this.properties.independent.step;
         this.system.iterationTerm = this.properties.iterationTerm;
+        this.properties.casesCount = this.normalizeCasesCount(this.properties.casesCount);
         this.system.casesCount = this.properties.casesCount;
         this.engine.reset();
         this.system.reset();
@@ -170,7 +186,7 @@ class Calculator extends EventTarget {
     }
 
     getInitialValuesByCase() {
-        const casesCount = Math.max(1, Number(this.properties.casesCount) || 1);
+        const casesCount = this.normalizeCasesCount(this.properties.casesCount);
         const terms = this.getTermsNames();
         const initialValuesByCaseEntries = [];
         for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
@@ -196,7 +212,7 @@ class Calculator extends EventTarget {
     applyInitialValuesByCase(initialValuesByCase = {}) {
         if (!initialValuesByCase || typeof initialValuesByCase !== "object")
             return;
-        const casesCount = Math.max(1, Number(this.properties.casesCount) || 1);
+        const casesCount = this.normalizeCasesCount(this.properties.casesCount);
         const caseValuesEntries = Object.entries(initialValuesByCase);
         for (let i = 0; i < caseValuesEntries.length; i++) {
             const caseNumber = parseInt(caseValuesEntries[i][0], 10);
@@ -239,7 +255,7 @@ class Calculator extends EventTarget {
 
     getFinalIteration() {
         var independent = this.properties.independent;
-        return independent.start + Math.floor((independent.end - independent.start) / independent.step) + 1;
+        return Math.floor((independent.end - independent.start) / independent.step) + 1;
     }
 
     getEnd() {

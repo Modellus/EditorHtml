@@ -44,8 +44,7 @@ class SliderShape extends BaseShape {
             ]
         });
         items.push(
-            this.createColorPickerFormItem("topColor", "Top color"),
-            this.createColorPickerFormItem("bottomColor", "Bottom color")
+            this.createColorPickerFormItem("fillColor", "Fill color")
         );
         instance.option("items", items);
         return form;
@@ -65,8 +64,7 @@ class SliderShape extends BaseShape {
         this.properties.autoScale = true;
         this.properties.minimum = 0;
         this.properties.maximum = 1;
-        this.properties.topColor = this.board.theme.getBackgroundColors()[0].color;
-        this.properties.bottomColor = this.board.theme.getBackgroundColors()[3].color;
+        this.properties.fillColor = this.board.theme.getBackgroundColors()[3].color;
     }
 
     createElement() {
@@ -119,7 +117,9 @@ class SliderShape extends BaseShape {
     }
 
     getBoundTermRange(term, caseNumber, currentValue) {
-        const values = this.board.calculator.system.values;
+        const values = this.board.calculator?.system?.values;
+        if (!Array.isArray(values))
+            return null;
         let minimum = Number.POSITIVE_INFINITY;
         let maximum = Number.NEGATIVE_INFINITY;
         for (let i = 0; i < values.length; i++) {
@@ -179,6 +179,10 @@ class SliderShape extends BaseShape {
         const term = this.properties.term;
         const caseNumber = this.getCaseNumber();
         const isBoundTerm = !!term && this.board.calculator.isTerm(term);
+        const defaultFillColor = this.board.theme.getBackgroundColors()[3].color;
+        const fillColor = this.properties.fillColor ?? this.properties.bottomColor ?? defaultFillColor;
+        if (!this.properties.fillColor)
+            this.properties.fillColor = fillColor;
         let value = isBoundTerm ? this.getBoundTermValue(term, caseNumber) : Number(this.properties.value);
         if (!Number.isFinite(value))
             value = Number(this.properties.value);
@@ -194,8 +198,7 @@ class SliderShape extends BaseShape {
             maximum: range.maximum,
             value: normalizedValue,
             splitterOffset: this.getSplitterOffsetFromValue(normalizedValue, range.minimum, range.maximum),
-            topColor: this.properties.topColor,
-            bottomColor: this.properties.bottomColor,
+            fillColor: fillColor,
             backgroundColor: this.properties.backgroundColor,
             foregroundColor: this.properties.foregroundColor
         };
@@ -208,10 +211,14 @@ class SliderShape extends BaseShape {
             this.container.setAttribute("fill", "none");
             this.container.setAttribute("stroke", config.foregroundColor);
         }
-        if (this.topPart)
-            this.topPart.setAttribute("fill", config.topColor);
-        if (this.bottomPart)
-            this.bottomPart.setAttribute("fill", config.bottomColor);
+        if (this.topPart) {
+            this.topPart.setAttribute("fill", config.backgroundColor);
+            this.topPart.setAttribute("stroke", "none");
+        }
+        if (this.bottomPart) {
+            this.bottomPart.setAttribute("fill", config.fillColor);
+            this.bottomPart.setAttribute("stroke", "none");
+        }
         if (this.splitter)
             this.splitter.setAttribute("stroke", config.foregroundColor);
     }
@@ -236,7 +243,10 @@ class SliderShape extends BaseShape {
 
     getSplitterOffset() {
         const config = this._sliderConfig ?? this.buildSliderConfig();
-        return config.splitterOffset;
+        if (Number.isFinite(config?.splitterOffset))
+            return config.splitterOffset;
+        const height = Math.max(1, Number(this.properties.height) || 1);
+        return height / 2;
     }
 
     getSplitterBoardY() {
@@ -280,37 +290,45 @@ class SliderShape extends BaseShape {
     }
 
     draw() {
-        super.draw();
+        this.updateSliderState();
         this.drawShape();
+        super.draw();
     }
 
     drawShape() {
         const position = this.getBoardPosition();
-        const centerX = position.x + this.properties.width / 2;
-        const centerY = position.y + this.properties.height / 2;
+        const sliderWidth = Number(this.properties.width) || 0;
+        const sliderHeight = Number(this.properties.height) || 0;
+        const inset = 1;
+        const trackX = position.x + inset;
+        const trackY = position.y + inset;
+        const trackWidth = Math.max(0, sliderWidth - inset * 2);
+        const trackHeight = Math.max(0, sliderHeight - inset * 2);
+        const centerX = position.x + sliderWidth / 2;
+        const centerY = position.y + sliderHeight / 2;
         const splitterY = this.getSplitterBoardY();
-        const topHeight = this.clamp(splitterY - position.y, 0, this.properties.height);
-        const bottomY = position.y + topHeight;
-        const bottomHeight = this.properties.height - topHeight;
+        const topHeight = this.clamp(splitterY - trackY, 0, trackHeight);
+        const bottomY = trackY + topHeight;
+        const bottomHeight = trackHeight - topHeight;
         const rotation = `rotate(${this.properties.rotation}, ${centerX}, ${centerY})`;
-        this.bottomPart.setAttribute("x", position.x);
+        this.bottomPart.setAttribute("x", trackX);
         this.bottomPart.setAttribute("y", bottomY);
-        this.bottomPart.setAttribute("width", this.properties.width);
+        this.bottomPart.setAttribute("width", trackWidth);
         this.bottomPart.setAttribute("height", bottomHeight);
         this.bottomPart.setAttribute("transform", rotation);
-        this.topPart.setAttribute("x", position.x);
-        this.topPart.setAttribute("y", position.y);
-        this.topPart.setAttribute("width", this.properties.width);
+        this.topPart.setAttribute("x", trackX);
+        this.topPart.setAttribute("y", trackY);
+        this.topPart.setAttribute("width", trackWidth);
         this.topPart.setAttribute("height", topHeight);
         this.topPart.setAttribute("transform", rotation);
         this.container.setAttribute("x", position.x);
         this.container.setAttribute("y", position.y);
-        this.container.setAttribute("width", this.properties.width);
-        this.container.setAttribute("height", this.properties.height);
+        this.container.setAttribute("width", sliderWidth);
+        this.container.setAttribute("height", sliderHeight);
         this.container.setAttribute("transform", rotation);
-        this.splitter.setAttribute("x1", position.x);
+        this.splitter.setAttribute("x1", trackX);
         this.splitter.setAttribute("y1", splitterY);
-        this.splitter.setAttribute("x2", position.x + this.properties.width);
+        this.splitter.setAttribute("x2", trackX + trackWidth);
         this.splitter.setAttribute("y2", splitterY);
         this.splitter.setAttribute("transform", rotation);
     }

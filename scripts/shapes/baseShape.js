@@ -604,19 +604,19 @@ class BaseShape {
             return null;
         const radius = Number(this.properties.radius);
         if (Number.isFinite(radius))
-            return { x: position.x, y: position.y - radius - 4 };
+            return { x: position.x, y: position.y - radius - 2 };
         const width = Number(this.properties.width);
         const height = Number(this.properties.height);
         const hasCenteredImageBounds = !!this.image && !this.container && !this.path && Number.isFinite(width) && Number.isFinite(height);
         if (hasCenteredImageBounds)
-            return { x: position.x, y: position.y - height / 2 - 4 };
+            return { x: position.x, y: position.y - height / 2 - 2 };
         if (Number.isFinite(width) && Number.isFinite(height)) {
             const left = Math.min(position.x, position.x + width);
             const right = Math.max(position.x, position.x + width);
             const top = Math.min(position.y, position.y + height);
-            return { x: (left + right) / 2, y: top - 4 };
+            return { x: (left + right) / 2, y: top - 2 };
         }
-        return { x: position.x, y: position.y - 4 };
+        return { x: position.x, y: position.y - 2 };
     }
 
     drawShapeNameLabel() {
@@ -635,6 +635,8 @@ class BaseShape {
             this.shapeNameText.setAttribute("class", "shape-name-label");
             this.shapeNameLayer.appendChild(this.shapeNameText);
         }
+        if (this.shapeNameLayer.parentNode == this.element && this.shapeNameLayer.nextSibling != null)
+            this.element.appendChild(this.shapeNameLayer);
         this.shapeNameText.setAttribute("x", anchor.x);
         this.shapeNameText.setAttribute("y", anchor.y);
         this.shapeNameText.setAttribute("text-anchor", "middle");
@@ -685,6 +687,110 @@ class BaseShape {
         const value = calculator.isTerm(termName) ? calculator.getByName(termName, caseNumber) : Number(termName);
         const valueText = Number.isFinite(value) ? this.formatModelValue(value) : termName;
         return `${termName} = ${valueText}`;
+    }
+
+    isTermCaseIndicatorVisible(entry) {
+        const caseColorProperty = this.getTermCaseColorProperty(entry.term);
+        return this.properties[caseColorProperty] !== false;
+    }
+
+    getTermCaseIndicatorNumber(entry) {
+        if (!this.isTermCaseIndicatorVisible(entry))
+            return null;
+        const caseNumber = this.getTermCaseNumber(entry.caseProperty);
+        return this.getClampedCaseNumber(caseNumber);
+    }
+
+    createTermLabelDefinition(entry, text, x, y, anchor) {
+        return {
+            text: text,
+            x: x,
+            y: y,
+            anchor: anchor,
+            caseNumber: this.getTermCaseIndicatorNumber(entry)
+        };
+    }
+
+    ensureTermLabelElements(index) {
+        let labelGroup = this.termDisplayLabelsLayer.children[index];
+        if (!labelGroup || labelGroup.tagName?.toLowerCase() != "g") {
+            if (labelGroup)
+                this.termDisplayLabelsLayer.removeChild(labelGroup);
+            labelGroup = this.board.createSvgElement("g");
+            const sibling = this.termDisplayLabelsLayer.children[index] ?? null;
+            this.termDisplayLabelsLayer.insertBefore(labelGroup, sibling);
+        }
+        let caseIconHost = labelGroup.children[0];
+        if (!caseIconHost || caseIconHost.tagName?.toLowerCase() != "foreignobject") {
+            if (caseIconHost)
+                labelGroup.removeChild(caseIconHost);
+            caseIconHost = this.board.createSvgElement("foreignObject");
+            caseIconHost.setAttribute("class", "shape-term-case-icon-host");
+            if (labelGroup.firstChild)
+                labelGroup.insertBefore(caseIconHost, labelGroup.firstChild);
+            else
+                labelGroup.appendChild(caseIconHost);
+        }
+        if (!caseIconHost.firstChild || caseIconHost.firstChild.tagName?.toLowerCase() != "div") {
+            const iconContainer = this.board.createElement("div");
+            iconContainer.setAttribute("class", "shape-term-case-icon-container");
+            caseIconHost.replaceChildren(iconContainer);
+        }
+        const iconContainer = caseIconHost.firstChild;
+        if (!iconContainer.firstChild || iconContainer.firstChild.tagName?.toLowerCase() != "i") {
+            const icon = this.board.createElement("i");
+            icon.setAttribute("class", "shape-term-case-icon");
+            iconContainer.replaceChildren(icon);
+        }
+        let labelText = labelGroup.children[1];
+        if (!labelText || labelText.tagName?.toLowerCase() != "text") {
+            if (labelText)
+                labelGroup.removeChild(labelText);
+            labelText = this.board.createSvgElement("text");
+            labelText.setAttribute("class", "shape-term-label");
+            labelGroup.appendChild(labelText);
+        }
+        return { group: labelGroup, caseIconHost: caseIconHost, caseIconElement: caseIconHost.firstChild.firstChild, labelText: labelText };
+    }
+
+    getTermCaseIconLayout(label, labelText) {
+        const iconSize = 9;
+        const gap = 3;
+        const y = label.y + 1;
+        if (!label.caseNumber)
+            return { visible: false, iconSize: iconSize, iconX: 0, iconY: y, textX: label.x };
+        if (label.anchor == "start")
+            return { visible: true, iconSize: iconSize, iconX: label.x, iconY: y, textX: label.x + iconSize + gap };
+        if (label.anchor == "end")
+            return { visible: true, iconSize: iconSize, iconX: label.x - iconSize, iconY: y, textX: label.x - iconSize - gap };
+        let labelWidth = 0;
+        if (labelText?.getBBox)
+            try {
+                labelWidth = labelText.getBBox().width;
+            } catch (_) {}
+        const textX = label.x + (iconSize + gap) / 2;
+        const iconX = textX - labelWidth / 2 - gap - iconSize;
+        return { visible: true, iconSize: iconSize, iconX: iconX, iconY: y, textX: textX };
+    }
+
+    applyTermCaseIcon(caseIconHost, caseIconElement, caseNumber, layout) {
+        if (!caseIconHost || !caseIconElement)
+            return;
+        if (!layout.visible) {
+            caseIconHost.setAttribute("display", "none");
+            return;
+        }
+        caseIconHost.removeAttribute("display");
+        caseIconHost.setAttribute("x", `${layout.iconX}`);
+        caseIconHost.setAttribute("y", `${layout.iconY}`);
+        caseIconHost.setAttribute("width", `${layout.iconSize}`);
+        caseIconHost.setAttribute("height", `${layout.iconSize + 1}`);
+        const iconClass = `${this.getCaseNumberIconClass(caseNumber)} shape-term-case-icon`;
+        if (caseIconElement.getAttribute("class") != iconClass)
+            caseIconElement.setAttribute("class", iconClass);
+        const iconColor = this.getCaseIconColor();
+        if (caseIconElement.style.color != iconColor)
+            caseIconElement.style.color = iconColor;
     }
 
     getTermLabelAnchor() {
@@ -805,7 +911,7 @@ class BaseShape {
                 if (axis == "x" || axis == "y") {
                     const axisLabelIndex = axis == "x" ? xAxisLabelIndex : yAxisLabelIndex;
                     const labelPosition = this.getAxisTermLabelPosition(axis, shapeCenterPosition, axesPosition, axisLabelIndex);
-                    labels.push({ text: text, x: labelPosition.x, y: labelPosition.y, anchor: labelPosition.anchor });
+                    labels.push(this.createTermLabelDefinition(entry, text, labelPosition.x, labelPosition.y, labelPosition.anchor));
                     if (axis == "x") {
                         xAxisLabelIndex++;
                         if (!hasXGuide) {
@@ -824,7 +930,7 @@ class BaseShape {
             }
             if (!fallbackAnchor)
                 continue;
-            labels.push({ text: text, x: fallbackAnchor.x, y: fallbackAnchor.y + fallbackLabelIndex * 12, anchor: "middle" });
+            labels.push(this.createTermLabelDefinition(entry, text, fallbackAnchor.x, fallbackAnchor.y + fallbackLabelIndex * 12, "middle"));
             fallbackLabelIndex++;
         }
         while (this.termDisplayLabelsLayer.children.length > labels.length)
@@ -832,17 +938,17 @@ class BaseShape {
         if (labels.length == 0)
             return;
         for (let i = 0; i < labels.length; i++) {
-            let text = this.termDisplayLabelsLayer.children[i];
-            if (!text) {
-                text = this.board.createSvgElement("text");
-                text.setAttribute("class", "shape-term-label");
-                this.termDisplayLabelsLayer.appendChild(text);
-            }
-            text.setAttribute("x", labels[i].x);
-            text.setAttribute("y", labels[i].y);
-            text.setAttribute("text-anchor", labels[i].anchor);
-            text.setAttribute("fill", color);
-            text.textContent = labels[i].text;
+            const labelElements = this.ensureTermLabelElements(i);
+            const label = labels[i];
+            const labelText = labelElements.labelText;
+            labelText.setAttribute("x", label.x);
+            labelText.setAttribute("y", label.y);
+            labelText.setAttribute("text-anchor", label.anchor);
+            labelText.setAttribute("fill", color);
+            labelText.textContent = label.text;
+            const iconLayout = this.getTermCaseIconLayout(label, labelText);
+            labelText.setAttribute("x", iconLayout.textX);
+            this.applyTermCaseIcon(labelElements.caseIconHost, labelElements.caseIconElement, label.caseNumber, iconLayout);
         }
     }
 
@@ -862,28 +968,35 @@ class BaseShape {
     }
 
     getCasesCount() {
-        return Math.max(1, parseInt(this.board.calculator.properties.casesCount ?? 1, 10) || 1);
+        const rawCount = parseInt(this.board.calculator.properties.casesCount ?? 1, 10) || 1;
+        return this.getClampedCaseNumber(rawCount);
     }
 
-    getCaseIconClass(color) {
-        if (color == "#00000000")
-            return "fa-solid fa-square-dashed";
-        return "fa-duotone fa-thin fa-square";
+    getClampedCaseNumber(caseNumber) {
+        const normalizedCaseNumber = parseInt(caseNumber, 10);
+        if (!Number.isFinite(normalizedCaseNumber))
+            return 1;
+        if (normalizedCaseNumber < 1)
+            return 1;
+        if (normalizedCaseNumber > 9)
+            return 9;
+        return normalizedCaseNumber;
     }
 
-    getCaseIconColor(color) {
-        if (color == "#00000000")
-            return "#cccccc";
-        return color;
+    getCaseNumberIconClass(caseNumber) {
+        const normalizedCaseNumber = this.getClampedCaseNumber(caseNumber);
+        return `fa-solid fa-square-${normalizedCaseNumber}`;
+    }
+
+    getCaseIconColor() {
+        return this.getShapeNameColor();
     }
 
     buildCaseItems(caseColors) {
         const count = this.getCasesCount();
         const items = [];
-        for (let i = 1; i <= count; i++) {
-            const color = caseColors[(i - 1) % caseColors.length];
-            items.push({ value: i, color: color });
-        }
+        for (let i = 1; i <= count; i++)
+            items.push({ value: i });
         return items;
     }
 
@@ -920,11 +1033,9 @@ class BaseShape {
         if (this.properties[this.getTermCaseColorProperty(term)] === false)
             return null;
         return data => {
-            const color = data?.color ?? caseColors[0];
-            const icon = $(`<i class="${this.getCaseIconClass(color)} case-select__icon"></i>`);
-            icon.css("color", this.getCaseIconColor(color));
-            if (color == "#ffffff")
-                icon[0].style.setProperty("--fa-primary-color", "#000000");
+            const iconClass = this.getCaseNumberIconClass(data?.value ?? 1);
+            const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
+            icon.css("color", this.getCaseIconColor());
             return icon;
         };
     }
@@ -934,10 +1045,9 @@ class BaseShape {
         return (itemData, _, element) => {
             const content = $("<div>").addClass("case-select");
             if (showCaseColor) {
-                const icon = $(`<i class="${this.getCaseIconClass(itemData.color)} case-select__icon"></i>`);
-                icon.css("color", this.getCaseIconColor(itemData.color));
-                if (itemData.color == "#ffffff")
-                    icon[0].style.setProperty("--fa-primary-color", "#000000");
+                const iconClass = this.getCaseNumberIconClass(itemData.value);
+                const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
+                icon.css("color", this.getCaseIconColor());
                 content.append(icon);
             }
             const label = $("<span>").addClass("case-select__label").text(itemData.value);

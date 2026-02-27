@@ -173,6 +173,7 @@ class Shell  {
                     editorType: "dxNumberBox",
                     editorOptions: {
                         min: 1,
+                        max: 9,
                         step: 1,
                         showSpinButtons: true,
                         stylingMode: "filled"
@@ -1023,10 +1024,13 @@ class Shell  {
             properties = this.properties;
         else
             Utils.mergeProperties(properties, this.properties);
+        this.properties.casesCount = this.calculator.normalizeCasesCount(this.properties.casesCount);
         this.calculator.setProperties(this.properties);
     }
     
     setProperty(name, value) {
+        if (name === "casesCount")
+            value = this.calculator.normalizeCasesCount(value);
         const keys = name.split('.');
         let current = this.properties;
         for (let i = 0; i < keys.length - 1; i++)
@@ -1056,7 +1060,8 @@ class Shell  {
     }
     
     updatePlayer() {
-        var lastIteration = this.calculator.getFinalIteration();
+        var lastIteration = this.calculator.getLastIteration();
+        var finalIteration = this.calculator.getFinalIteration();
         var iteration = this.calculator.getIteration();
         var icon = this.playPause.option("icon");
         var isRunning = this.calculator.status == STATUS.PLAYING || this.calculator.status == STATUS.REPLAYING;
@@ -1067,8 +1072,8 @@ class Shell  {
         this.stop.option("disabled", isRunning);
         this.replay.option("disabled", isRunning);
         this.stepBackward.option("disabled", isRunning || iteration == 1);
-        this.stepForward.option("disabled", isRunning || iteration == lastIteration);
-        this.playHead.option("max", lastIteration);
+        this.stepForward.option("disabled", isRunning || iteration >= lastIteration);
+        this.playHead.option("max", finalIteration);
         this.playHead.option("value", iteration);
         this.$playHeadMin.text(this.calculator.getStart().toFixed(Utils.getPrecision(this.calculator.properties.independent.step)));
         this.$playHeadMax.text(this.calculator.getEnd().toFixed(Utils.getPrecision(this.calculator.properties.independent.step)));

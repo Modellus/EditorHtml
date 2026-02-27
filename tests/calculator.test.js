@@ -165,7 +165,7 @@ describe('Calculator', () => {
         const calculator = createCalculator();
         calculator.setProperties({ independent: { start: 2, end: 5, step: 1 } });
 
-        expect(calculator.getFinalIteration()).toBe(6);
+        expect(calculator.getFinalIteration()).toBe(4);
     });
 
     test('clear restores defaults and resets system state', () => {

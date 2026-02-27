@@ -456,6 +456,10 @@ body.read-only #shape-popup {
     display: none !important;
 }
 
+.dx-slider-tooltip-position-top {
+    padding-top: 0 !important;
+}
+
 .tooltip {
     text-wrap-mode: wrap; 
 }
@@ -683,8 +687,21 @@ math-field {
 .shape-name-label {
     font-family: "Segoe UI", sans-serif;
     font-size: 10px;
-    dominant-baseline: hanging;
+    dominant-baseline: auto;
     pointer-events: none;
+}
+
+.shape-term-case-icon-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shape-term-case-icon {
+    font-size: 9px;
+    line-height: 1;
 }
 
 .shape-term-label {
