@@ -20,6 +20,7 @@ class Board {
     }
 
     clear() {
+        this.deselect();
         while (this.svg.firstChild)
             this.svg.removeChild(this.svg.firstChild);
         this.shapes.clear();
@@ -29,7 +30,7 @@ class Board {
         this.clear();
         model.map(data => {
             var shape = this.shapes.deserialize(this, data);
-            this.addShape(shape);
+            this.addShape(shape, false);
         });
     }
 
@@ -51,14 +52,15 @@ class Board {
         return this.shapes.createShape(type, parent, id);
     }
 
-    addShape(shape) {
+    addShape(shape, select = true) {
         this.svg.appendChild(shape.element);
         this.shapes.add(shape);
         shape.element.addEventListener("focused", e => this.onShapeFocused(e));
         shape.element.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         shape.element.addEventListener("shapeDragStart", e => this.onShapeDragStart(e));
         shape.element.addEventListener("shapeDragEnd", e => this.onShapeDragEnd(e));
-        this.selectShape(shape);
+        if (select)
+            this.selectShape(shape);
         this.dispatchShapeEvent("shapeAdded", shape);
     }
 
