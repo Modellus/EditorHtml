@@ -38,6 +38,7 @@ class BaseTransformer {
         this.board.svg.appendChild(handle);
         this.handles.push(handle);
         handle.addEventListener("pointerdown", e => this.onHandlePointerDown(e, handle));
+        handle.addEventListener("wheel", e => this.onHandleWheel(e));
         handle.addEventListener("contextmenu", e => this.onHandleContextMenu(e));
         handle.update = update;
         handle.getTransform = getTransform;
@@ -127,6 +128,105 @@ class BaseTransformer {
         }
         this._pendingPoint = null;
         this.shape.dragEnd();
+    }
+
+    onHandleWheel(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const target = this.resolveWheelTarget(event);
+        if (!target)
+            return;
+        const isHandled = this.dispatchWheelEvent(target, event);
+        if (target !== this.board.svg && !isHandled)
+            this.scrollWheelTarget(target, event);
+    }
+
+    resolveWheelTarget(event) {
+        const disabledHandles = [];
+        const currentTarget = event.currentTarget;
+        if (currentTarget instanceof Element && currentTarget.classList.contains("handle"))
+            this.disableWheelHandle(currentTarget, disabledHandles);
+        let target = document.elementFromPoint(event.clientX, event.clientY);
+        while (target instanceof Element && target.classList.contains("handle")) {
+            this.disableWheelHandle(target, disabledHandles);
+            target = document.elementFromPoint(event.clientX, event.clientY);
+        }
+        this.restoreWheelHandles(disabledHandles);
+        if (target instanceof Element)
+            return target;
+        return this.board.svg;
+    }
+
+    disableWheelHandle(handle, disabledHandles) {
+        disabledHandles.push({
+            handle: handle,
+            pointerEvents: handle.style.pointerEvents
+        });
+        handle.style.pointerEvents = "none";
+    }
+
+    restoreWheelHandles(disabledHandles) {
+        for (let index = disabledHandles.length - 1; index >= 0; index--) {
+            const item = disabledHandles[index];
+            item.handle.style.pointerEvents = item.pointerEvents;
+        }
+    }
+
+    dispatchWheelEvent(target, event) {
+        const wheelEvent = this.createWheelEvent(event);
+        const dispatchResult = target.dispatchEvent(wheelEvent);
+        return wheelEvent.defaultPrevented || dispatchResult === false;
+    }
+
+    createWheelEvent(event) {
+        return new WheelEvent("wheel", {
+            bubbles: true,
+            cancelable: true,
+            clientX: event.clientX,
+            clientY: event.clientY,
+            screenX: event.screenX,
+            screenY: event.screenY,
+            deltaX: event.deltaX,
+            deltaY: event.deltaY,
+            deltaZ: event.deltaZ,
+            deltaMode: event.deltaMode,
+            ctrlKey: event.ctrlKey,
+            shiftKey: event.shiftKey,
+            altKey: event.altKey,
+            metaKey: event.metaKey
+        });
+    }
+
+    scrollWheelTarget(target, event) {
+        const scrollTarget = this.getWheelScrollTarget(target);
+        if (!scrollTarget)
+            return;
+        scrollTarget.scrollBy({
+            left: event.deltaX,
+            top: event.deltaY,
+            behavior: "auto"
+        });
+    }
+
+    getWheelScrollTarget(target) {
+        let element = target;
+        while (element instanceof HTMLElement) {
+            if (this.canWheelScrollElement(element))
+                return element;
+            element = element.parentElement;
+        }
+        return null;
+    }
+
+    canWheelScrollElement(element) {
+        const style = window.getComputedStyle(element);
+        const canScrollY = this.isOverflowScrollable(style.overflowY) && element.scrollHeight > element.clientHeight;
+        const canScrollX = this.isOverflowScrollable(style.overflowX) && element.scrollWidth > element.clientWidth;
+        return canScrollX || canScrollY;
+    }
+
+    isOverflowScrollable(overflowValue) {
+        return overflowValue === "auto" || overflowValue === "scroll" || overflowValue === "overlay";
     }
 
     onHandleContextMenu(event) {

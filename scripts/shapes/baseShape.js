@@ -1029,6 +1029,19 @@ class BaseShape {
         return items;
     }
 
+    isTermSelectionVariable(termProperty, formData = null) {
+        const calculator = this.board.calculator;
+        const data = formData ?? this.properties;
+        const selectedValue = this.normalizeTermValue(data[termProperty]);
+        if (selectedValue == null || selectedValue === "")
+            return false;
+        if (!calculator.isTerm(selectedValue))
+            return false;
+        if (selectedValue === calculator.properties?.independent?.name)
+            return false;
+        return true;
+    }
+
     createCaseFieldAddonRenderer(term, caseColors) {
         if (this.properties[this.getTermCaseColorProperty(term)] === false)
             return null;
@@ -1200,7 +1213,8 @@ class BaseShape {
 
     updateTermGroupLayout(instance, term, caseProperty) {
         const formData = instance.option("formData") ?? this.properties;
-        const showCase = this.getCasesCount() > 1;
+        const hasMultipleCases = this.getCasesCount() > 1;
+        const showCase = hasMultipleCases && this.isTermSelectionVariable(term, formData);
         const groupName = `${term}Group`;
         const termItemName = `${term}Item`;
         const caseItemName = `${caseProperty}Item`;
@@ -1246,7 +1260,7 @@ class BaseShape {
         if (!this.termDisplayEntries.some(entry => entry.term === term))
             this.termDisplayEntries.push({ term: term, caseProperty: caseProperty, title: title });
         const caseColors = this.board.theme.getBackgroundColors().map(c => c.color);
-        const initialShowCase = this.getCasesCount() > 1;
+        const initialShowCase = this.getCasesCount() > 1 && this.isTermSelectionVariable(term);
         this.termFormControls[term] = {};
         items.push(
             {

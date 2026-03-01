@@ -448,6 +448,31 @@ body.read-only #shape-popup {
     color: red;
 }
 
+.table-columns-list .table-column-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: #666;
+}
+
+.table-columns-list .table-column-drag-handle:active {
+    cursor: grabbing;
+}
+
+.table-columns-list .table-column-drag-handle .dx-icon {
+    font-size: 16px;
+}
+
+.table-columns-list .dx-list-reorder-handle-container,
+.table-columns-list .dx-list-reorder-handle {
+    display: none !important;
+}
+
+.table-columns-list .dx-list-item-content {
+    padding-left: 0;
+}
+
 .dx-numberbox .dx-texteditor-input {
     text-align: right;
 }

@@ -58,16 +58,6 @@ class ChartShape extends BaseShape {
                             item.addClass("mdl-variable-selector");
                             element.append(item);
                             return item;
-                        },
-                        fieldTemplate(data, element) {
-                            const item = $("<div>").dxTextBox({
-                                value: data?.text,
-                                readOnly: true,
-                                inputAttr: { class: "mdl-variable-selector" }
-                            });
-                            item.addClass("mdl-variable-selector");
-                            element.append(item);
-                            return item;
                         }
                     },
                     cssClass: "mdl-variable-selector"
@@ -107,6 +97,7 @@ class ChartShape extends BaseShape {
                     editorOptions: {
                         stylingMode: "filled",
                         placeholder: "",
+                        displayExpr: _ => "",
                         itemTemplate: (data, index, element) => {
                             const iconClass = data.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
                             const color = data.color == "#00000000" ? "#cccccc" : data.color;
@@ -131,30 +122,24 @@ class ChartShape extends BaseShape {
                             element.append(item);
                             return item;
                         },
-                        fieldTemplate(data, element) {
-                            const textBox = $("<div>").dxTextBox({
-                                readOnly: true,
-                                value: ""
-                            });
-                            element.append(textBox);
-                            if (!data?.color)
-                                return textBox;
-                            const iconClass = data.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
-                            const color = data.color == "#00000000" ? "#cccccc" : data.color;
-                            textBox.find("input")
-                                .before(
-                                    $("<i>")
-                                        .addClass(iconClass)
-                                            .css({
-                                                color: color,
-                                                fontSize: "16px",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "flex-start",
-                                                width: "100%"
-                                            })
-                                );
-                            return textBox;
+                        fieldAddons: {
+                            before: data => {
+                                if (!data?.color)
+                                    return null;
+                                const iconClass = data.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
+                                const color = data.color == "#00000000" ? "#cccccc" : data.color;
+                                const icon = $("<i>").addClass(iconClass).css({
+                                    color: color,
+                                    fontSize: "16px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "flex-start",
+                                    width: "100%"
+                                });
+                                if (data.color === "#ffffff")
+                                    icon.css("--fa-primary-color", "#000000");
+                                return icon;
+                            }
                         }
                     }
                 }
