@@ -206,6 +206,13 @@ svg:active.pan-available {
 }
 
 @font-face {
+    font-family: "Katex_Main";
+    src: url("libraries/css/font/KaTeX_Main-Regular.woff2") format("woff2");
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
     font-family: "KatexMainItalic";
     src: url("libraries/css/font/KaTeX_Main-Italic.woff2") format("woff2");
     font-weight: normal;
@@ -904,6 +911,7 @@ math-field {
 }
 
 .referential-tick-label {
+    font-family: "Katex_Main";
     font-size: 8px;
     opacity: 0.6;
     user-select: none;

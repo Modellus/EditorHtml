@@ -38,7 +38,7 @@ class BaseTransformer {
         this.board.svg.appendChild(handle);
         this.handles.push(handle);
         handle.addEventListener("pointerdown", e => this.onHandlePointerDown(e, handle));
-        handle.addEventListener("wheel", e => this.onHandleWheel(e), { passive: true });
+        handle.addEventListener("wheel", e => this.onHandleWheel(e), { passive: false });
         handle.addEventListener("contextmenu", e => this.onHandleContextMenu(e));
         handle.update = update;
         handle.getTransform = getTransform;
@@ -134,18 +134,30 @@ class BaseTransformer {
         const target = this.resolveWheelTarget(event);
         if (!target)
             return;
-        if (target !== this.board.svg && this.scrollWheelTarget(target, event))
+        event.preventDefault();
+        event.stopPropagation();
+        if (target instanceof Element && target.classList.contains("handle"))
             return;
-        if (target !== this.board.svg)
+        if (target instanceof HTMLElement && this.scrollWheelTarget(target, event))
             return;
-        this.dispatchWheelToSvg(event);
+        if (target === this.board.svg) {
+            this.dispatchWheelToSvg(event);
+            return;
+        }
+        this.dispatchWheelToTarget(target, event);
     }
 
     dispatchWheelToSvg(event) {
         if (!this.board?.svg)
             return;
+        this.dispatchWheelToTarget(this.board.svg, event);
+    }
+
+    dispatchWheelToTarget(target, event) {
+        if (!(target instanceof EventTarget))
+            return;
         const wheelEvent = this.createWheelEvent(event);
-        this.board.svg.dispatchEvent(wheelEvent);
+        target.dispatchEvent(wheelEvent);
     }
 
     createWheelEvent(event) {

@@ -704,19 +704,23 @@ class BaseShape {
         return normalized.toString();
     }
 
-    buildTermDisplayText(entry) {
+    buildTermDisplayLabel(entry) {
         const modeProperty = this.getTermDisplayModeProperty(entry.term);
         if (!this.isTermDisplayVisible(this.properties[modeProperty] ?? "none"))
-            return "";
+            return null;
         const rawTerm = this.normalizeTermValue(this.properties[entry.term]);
         if (rawTerm == null || rawTerm === "")
-            return "";
+            return null;
         const termName = String(rawTerm);
         const calculator = this.board.calculator;
         const caseNumber = this.getTermCaseNumber(entry.caseProperty);
         const value = calculator.isTerm(termName) ? calculator.getByName(termName, caseNumber) : Number(termName);
         const valueText = Number.isFinite(value) ? this.formatModelValue(value) : termName;
-        return `${termName} = ${valueText}`;
+        return {
+            termText: termName,
+            valueText: valueText,
+            text: `${termName} = ${valueText}`
+        };
     }
 
     isTermCaseIndicatorVisible(entry) {
@@ -734,9 +738,11 @@ class BaseShape {
         return this.getClampedCaseNumber(caseNumber);
     }
 
-    createTermLabelDefinition(entry, text, x, y, anchor) {
+    createTermLabelDefinition(entry, labelData, x, y, anchor) {
         return {
-            text: text,
+            text: labelData?.text ?? "",
+            termText: labelData?.termText ?? "",
+            valueText: labelData?.valueText ?? "",
             x: x,
             y: y,
             anchor: anchor,
@@ -824,6 +830,33 @@ class BaseShape {
         const iconColor = ShapeTermsSelectorControl.getCaseIconColor(caseNumber);
         if (caseIconElement.style.color != iconColor)
             caseIconElement.style.color = iconColor;
+    }
+
+    setTermLabelText(labelText, label) {
+        while (labelText.firstChild)
+            labelText.removeChild(labelText.firstChild);
+        if (!label) {
+            labelText.textContent = "";
+            return;
+        }
+        const termText = label.termText ?? "";
+        const valueText = label.valueText ?? "";
+        if (termText === "" && valueText === "") {
+            labelText.textContent = label.text ?? "";
+            return;
+        }
+        const termSpan = this.board.createSvgElement("tspan");
+        termSpan.setAttribute("font-family", "Katex_Math");
+        termSpan.textContent = termText;
+        labelText.appendChild(termSpan);
+        const separatorSpan = this.board.createSvgElement("tspan");
+        separatorSpan.setAttribute("font-family", "Katex_Main");
+        separatorSpan.textContent = " = ";
+        labelText.appendChild(separatorSpan);
+        const valueSpan = this.board.createSvgElement("tspan");
+        valueSpan.setAttribute("font-family", "Katex_Main");
+        valueSpan.textContent = valueText;
+        labelText.appendChild(valueSpan);
     }
 
     getTermLabelAnchor() {
@@ -936,15 +969,15 @@ class BaseShape {
         this.clearLayerChildren(this.termDisplayGuidesLayer);
         for (let i = 0; i < this.termDisplayEntries.length; i++) {
             const entry = this.termDisplayEntries[i];
-            const text = this.buildTermDisplayText(entry);
-            if (!text)
+            const labelData = this.buildTermDisplayLabel(entry);
+            if (!labelData)
                 continue;
             if (axesPosition && shapeCenterPosition) {
                 const axis = this.getTermAxis(entry.term);
                 if (axis == "x" || axis == "y") {
                     const axisLabelIndex = axis == "x" ? xAxisLabelIndex : yAxisLabelIndex;
                     const labelPosition = this.getAxisTermLabelPosition(axis, shapeCenterPosition, axesPosition, axisLabelIndex);
-                    labels.push(this.createTermLabelDefinition(entry, text, labelPosition.x, labelPosition.y, labelPosition.anchor));
+                    labels.push(this.createTermLabelDefinition(entry, labelData, labelPosition.x, labelPosition.y, labelPosition.anchor));
                     if (axis == "x") {
                         xAxisLabelIndex++;
                         if (!hasXGuide) {
@@ -963,7 +996,7 @@ class BaseShape {
             }
             if (!fallbackAnchor)
                 continue;
-            labels.push(this.createTermLabelDefinition(entry, text, fallbackAnchor.x, fallbackAnchor.y + fallbackLabelIndex * 12, "middle"));
+            labels.push(this.createTermLabelDefinition(entry, labelData, fallbackAnchor.x, fallbackAnchor.y + fallbackLabelIndex * 12, "middle"));
             fallbackLabelIndex++;
         }
         while (this.termDisplayLabelsLayer.children.length > labels.length)
@@ -978,7 +1011,7 @@ class BaseShape {
             labelText.setAttribute("y", label.y);
             labelText.setAttribute("text-anchor", label.anchor);
             labelText.setAttribute("fill", color);
-            labelText.textContent = label.text;
+            this.setTermLabelText(labelText, label);
             const iconLayout = this.getTermCaseIconLayout(label, labelText);
             labelText.setAttribute("x", iconLayout.textX);
             this.applyTermCaseIcon(labelElements.caseIconHost, labelElements.caseIconElement, label.caseNumber, iconLayout);

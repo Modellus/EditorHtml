@@ -21,7 +21,7 @@ class Shell  {
         this.board.svg.addEventListener("selected", e => this.onSelected(e));
         this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
-        [BodyShape, ExpressionShape, ChartShape, TableShape, SliderShape, BackgroundShape, VectorShape, ImageShape, ReferentialShape, TextShape, CharacterShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyShape, ExpressionShape, ChartShape, TableShape, Table2Shape, SliderShape, BackgroundShape, VectorShape, ImageShape, ReferentialShape, TextShape, CharacterShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.calculator.on("iterate", e => this.onIterate(e));
         if (model != undefined)
             this.openModel(model);
@@ -516,7 +516,7 @@ class Shell  {
                             id: "table-button"
                         },
                         icon: "fa-light fa-table",
-                        onClick: _ => this.commands.addShape("TableShape", "Table")
+                        onClick: _ => this.commands.addShape("Table2Shape", "Table")
                     }
                 },
                 {

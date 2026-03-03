@@ -26,12 +26,13 @@ class ShapeSvgChartControl {
             foregroundColor: "#666666",
             gridColor: "#d3d3d3",
             axisColor: "#7a7a7a",
-            fontFamily: "Assistant, sans-serif",
+            fontFamily: "Katex_Main",
             termFontFamily: "Katex_Math",
             termFontStyle: "italic",
             termFontWeight: 400,
             iconFontFamily: "Font Awesome 7 Pro",
             fontSize: 13,
+            titleFontSize: 16,
             fontWeight: 900
         };
     }
@@ -146,7 +147,7 @@ class ShapeSvgChartControl {
 
     getLayout(width, height, xTicks, yTicks) {
         const tickFontSize = 10;
-        const axisTitleSize = this.options.fontSize + 2;
+        const axisTitleSize = Number(this.options.titleFontSize) || 16;
         let maxXTickWidth = 0;
         let maxYTickWidth = 0;
         for (let index = 0; index < xTicks.length; index++) {
@@ -747,7 +748,7 @@ class ShapeSvgChartControl {
     }
 
     renderTitles(layout, width) {
-        const titleFontSize = this.options.fontSize + 2;
+        const titleFontSize = Number(this.options.titleFontSize) || 16;
         this.renderTitleWithCaseIcons(this.axisLayer, this.options.argumentTitle ?? "", layout.plotLeft + layout.plotWidth / 2, layout.axisTitleX, titleFontSize, this.options.foregroundColor);
         this.renderTitleWithCaseIcons(this.axisLayer, this.options.valueTitle ?? "", layout.axisTitleLeft, layout.axisTitleY, titleFontSize, this.options.foregroundColor, {
             angle: -90,
