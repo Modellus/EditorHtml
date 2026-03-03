@@ -22,7 +22,7 @@ class ChartShape extends BaseShape {
 
     createYTermsControl() {
         this.normalizeYTerms();
-        this._yTermsControl = ShapeTermsSelectorControl.createShapeTermsCollectionControl(this, "yTerms", {
+        this._yTermsControl = TermControl.createShapeTermsCollectionControl(this, "yTerms", {
             hostClassName: "shape-terms-control chart-yterms-control",
             listClassName: "shape-terms-list chart-yterms-list",
             rowClassName: "shape-term-row chart-yterm-row",
@@ -41,7 +41,7 @@ class ChartShape extends BaseShape {
     }
 
     normalizeYTerms() {
-        ShapeTermsSelectorControl.normalizeShapeTermsCollection(this, "yTerms", {
+        TermControl.normalizeShapeTermsCollection(this, "yTerms", {
             includeColor: true,
             normalizeTermValue: value => this.normalizeYTermValue(value),
             normalizeColorValue: value => this.normalizeYTermColor(value)
@@ -49,7 +49,7 @@ class ChartShape extends BaseShape {
     }
 
     getSelectedYTerms() {
-        return ShapeTermsSelectorControl.getSelectedShapeTermsCollection(this, "yTerms", {
+        return TermControl.getSelectedShapeTermsCollection(this, "yTerms", {
             includeColor: true,
             normalizeTermValue: value => this.normalizeYTermValue(value),
             normalizeColorValue: value => this.normalizeYTermColor(value)
@@ -57,7 +57,7 @@ class ChartShape extends BaseShape {
     }
 
     shouldShowCaseLabelForTerm(term) {
-        return ShapeTermsSelectorControl.shouldShowCaseSelectionForShapeTerm(this, term, value => this.normalizeYTermValue(value));
+        return TermControl.shouldShowCaseSelectionForShapeTerm(this, term, value => this.normalizeYTermValue(value));
     }
 
     getTermLabelWithCase(term, caseNumber = 1) {
@@ -66,8 +66,8 @@ class ChartShape extends BaseShape {
             return normalizedTerm;
         if (!this.shouldShowCaseLabelForTerm(normalizedTerm))
             return normalizedTerm;
-        const normalizedCaseNumber = ShapeTermsSelectorControl.getShapeCaseNumber(this, normalizedTerm, caseNumber, value => this.normalizeYTermValue(value));
-        return `${normalizedTerm} ${ShapeTermsSelectorControl.getCaseIconText(normalizedCaseNumber)}`;
+        const normalizedCaseNumber = TermControl.getShapeCaseNumber(this, normalizedTerm, caseNumber, value => this.normalizeYTermValue(value));
+        return `${normalizedTerm} ${TermControl.getCaseIconText(normalizedCaseNumber)}`;
     }
 
     getSeriesValueFieldName(index) {
@@ -83,15 +83,15 @@ class ChartShape extends BaseShape {
     }
 
     getXTermCaseNumber() {
-        return ShapeTermsSelectorControl.getShapeCaseNumber(this, this.getXTermName(), this.properties.xTermCase ?? 1, value => this.normalizeYTermValue(value));
+        return TermControl.getShapeCaseNumber(this, this.getXTermName(), this.properties.xTermCase ?? 1, value => this.normalizeYTermValue(value));
     }
 
     normalizeYTermValue(value) {
-        return ShapeTermsSelectorControl.normalizeTermValue(value);
+        return TermControl.normalizeTermValue(value);
     }
 
     normalizeYTermColor(value) {
-        return ShapeTermsSelectorControl.normalizeColorValue(value);
+        return TermControl.normalizeColorValue(value);
     }
 
     createForm() {
@@ -175,7 +175,7 @@ class ChartShape extends BaseShape {
         this.chartRows = [];
         this.lastSyncedIteration = 0;
         this.chartDataConfig = null;
-        this.chart = new ShapeSvgChartControl(element, this.getChartControlOptions());
+        this.chart = new ChartControl(element, this.getChartControlOptions());
         this._appliedConfig = {};
         return element;
     }
@@ -267,7 +267,7 @@ class ChartShape extends BaseShape {
         const argumentField = "argument";
         const ySeries = selectedYTerms.map((yTerm, index) => ({
             term: yTerm.term,
-            case: ShapeTermsSelectorControl.getShapeCaseNumber(this, yTerm.term, yTerm.case ?? 1, value => this.normalizeYTermValue(value)),
+            case: TermControl.getShapeCaseNumber(this, yTerm.term, yTerm.case ?? 1, value => this.normalizeYTermValue(value)),
             color: this.normalizeYTermColor(yTerm.color),
             valueField: this.getSeriesValueFieldName(index),
             name: this.getSeriesName(yTerm)

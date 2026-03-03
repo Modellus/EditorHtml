@@ -1,4 +1,4 @@
-class ShapeTermsSelectorControl {
+class TermControl {
     static normalizeTermValue(value) {
         if (value == null)
             return "";
@@ -12,7 +12,7 @@ class ShapeTermsSelectorControl {
     }
 
     static shouldShowCaseSelectionForTerm(termValue, options = {}) {
-        const normalizeTermValue = options.normalizeTermValue ?? (value => ShapeTermsSelectorControl.normalizeTermValue(value));
+        const normalizeTermValue = options.normalizeTermValue ?? (value => TermControl.normalizeTermValue(value));
         const normalizedTerm = normalizeTermValue(termValue);
         const getCasesCount = options.getCasesCount;
         const casesCountRaw = typeof getCasesCount === "function" ? getCasesCount() : 1;
@@ -76,7 +76,7 @@ class ShapeTermsSelectorControl {
         if (iconContainer.length == 0)
             return;
         iconContainer.empty();
-        const iconClass = ShapeTermsSelectorControl.getVisibilityIconClass(checkboxInstance.option("value") === true);
+        const iconClass = TermControl.getVisibilityIconClass(checkboxInstance.option("value") === true);
         $("<i>").addClass(`${iconClass} ${iconClassName}`).appendTo(iconContainer);
     }
 
@@ -86,20 +86,20 @@ class ShapeTermsSelectorControl {
         return buttonHost.dxCheckBox({
             value: initialValue === true,
             elementAttr: { class: checkboxClassName },
-            onContentReady: e => ShapeTermsSelectorControl.updateVisibilityCheckboxIcon(e.component, iconClassName),
+            onContentReady: e => TermControl.updateVisibilityCheckboxIcon(e.component, iconClassName),
             onValueChanged: e => {
-                ShapeTermsSelectorControl.updateVisibilityCheckboxIcon(e.component, iconClassName);
+                TermControl.updateVisibilityCheckboxIcon(e.component, iconClassName);
                 onValueChanged(e.value === true);
             }
         }).dxCheckBox("instance");
     }
 
     static normalizeBaseShapeTermValue(value) {
-        return ShapeTermsSelectorControl.normalizeTermValue(value);
+        return TermControl.normalizeTermValue(value);
     }
 
     static normalizeBaseShapeCustomTermValue(baseShape, value) {
-        const normalizedValue = ShapeTermsSelectorControl.normalizeBaseShapeTermValue(value);
+        const normalizedValue = TermControl.normalizeBaseShapeTermValue(value);
         if (normalizedValue === "")
             return normalizedValue;
         const numeric = Number(normalizedValue);
@@ -112,7 +112,7 @@ class ShapeTermsSelectorControl {
         const calculator = baseShape.board.calculator;
         return {
             getTermValue: item => item?.term,
-            normalizeTermValue: value => ShapeTermsSelectorControl.normalizeBaseShapeTermValue(value),
+            normalizeTermValue: value => TermControl.normalizeBaseShapeTermValue(value),
             getCasesCount: () => baseShape.getCasesCount(),
             isTerm: value => calculator.isTerm(value),
             getIndependentTermName: () => calculator.properties?.independent?.name,
@@ -121,7 +121,7 @@ class ShapeTermsSelectorControl {
     }
 
     static getBaseShapeCaseNumber(baseShape, termValue, caseNumber = 1) {
-        if (!ShapeTermsSelectorControl.shouldShowCaseSelectionForTerm(termValue, ShapeTermsSelectorControl.getBaseShapeCaseVisibilityConfig(baseShape)))
+        if (!TermControl.shouldShowCaseSelectionForTerm(termValue, TermControl.getBaseShapeCaseVisibilityConfig(baseShape)))
             return 1;
         return baseShape.getClampedCaseNumber(caseNumber);
     }
@@ -137,9 +137,9 @@ class ShapeTermsSelectorControl {
     static createBaseShapeCaseFieldAddonRenderer(baseShape) {
         return data => {
             const caseNumber = data?.value ?? 1;
-            const iconClass = ShapeTermsSelectorControl.getCaseNumberIconClass(caseNumber);
+            const iconClass = TermControl.getCaseNumberIconClass(caseNumber);
             const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", ShapeTermsSelectorControl.getCaseIconColor(caseNumber));
+            icon.css("color", TermControl.getCaseIconColor(caseNumber));
             return icon;
         };
     }
@@ -148,9 +148,9 @@ class ShapeTermsSelectorControl {
         return (itemData, _, element) => {
             const content = $("<div>").addClass("case-select");
             const caseNumber = itemData.value;
-            const iconClass = ShapeTermsSelectorControl.getCaseNumberIconClass(caseNumber);
+            const iconClass = TermControl.getCaseNumberIconClass(caseNumber);
             const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", ShapeTermsSelectorControl.getCaseIconColor(caseNumber));
+            icon.css("color", TermControl.getCaseIconColor(caseNumber));
             content.append(icon);
             const label = $("<span>").addClass("case-select__label").text(itemData.value);
             content.append(label);
@@ -161,25 +161,25 @@ class ShapeTermsSelectorControl {
     static getBaseShapeTermSelectItems(baseShape, term) {
         const calculator = baseShape.board.calculator;
         const items = Utils.getTerms(calculator.getTermsNames());
-        const selectedValue = ShapeTermsSelectorControl.normalizeBaseShapeTermValue(baseShape.properties[term]);
+        const selectedValue = TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]);
         if (selectedValue === "")
             return items;
         if (calculator.isTerm(selectedValue))
             return items;
-        const formattedValue = ShapeTermsSelectorControl.normalizeBaseShapeCustomTermValue(baseShape, selectedValue);
+        const formattedValue = TermControl.normalizeBaseShapeCustomTermValue(baseShape, selectedValue);
         items.unshift({ text: formattedValue, term: selectedValue });
         return items;
     }
 
     static getBaseShapeTermControlStateKey(baseShape, term, caseProperty) {
-        const selectedTerm = ShapeTermsSelectorControl.normalizeBaseShapeTermValue(baseShape.properties[term]);
-        const selectedCase = ShapeTermsSelectorControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1);
+        const selectedTerm = TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]);
+        const selectedCase = TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1);
         const terms = baseShape.board.calculator.getTermsNames();
         return `${selectedTerm}|${selectedCase}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}`;
     }
 
     static syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl = null) {
-        const caseValue = ShapeTermsSelectorControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1);
+        const caseValue = TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1);
         if (baseShape.properties[caseProperty] !== caseValue)
             formInstance.updateData(caseProperty, caseValue);
         const control = termControl ?? baseShape.termFormControls?.[term]?.termControl;
@@ -195,7 +195,7 @@ class ShapeTermsSelectorControl {
         if (showVisibilityToggle) {
             const buttonHost = $("<div>").addClass("term-packed-control__button");
             control.append(buttonHost);
-            ShapeTermsSelectorControl.createVisibilityCheckbox(buttonHost, isVisible, value => {
+            TermControl.createVisibilityCheckbox(buttonHost, isVisible, value => {
                 baseShape.setProperty(displayModeProperty, value ? "nameValue" : "none");
                 baseShape.board.markDirty(baseShape);
             });
@@ -203,10 +203,10 @@ class ShapeTermsSelectorControl {
             control.addClass("term-packed-control--no-visibility");
         control.append(selectHost);
         let termControl = null;
-        const caseVisibility = ShapeTermsSelectorControl.getBaseShapeCaseVisibilityConfig(baseShape);
-        const caseFieldAddonRenderer = ShapeTermsSelectorControl.createBaseShapeCaseFieldAddonRenderer(baseShape);
-        const caseItemTemplate = ShapeTermsSelectorControl.createBaseShapeCaseItemTemplate(baseShape);
-        termControl = new ShapeTermsSelectorControl({
+        const caseVisibility = TermControl.getBaseShapeCaseVisibilityConfig(baseShape);
+        const caseFieldAddonRenderer = TermControl.createBaseShapeCaseFieldAddonRenderer(baseShape);
+        const caseItemTemplate = TermControl.createBaseShapeCaseItemTemplate(baseShape);
+        termControl = new TermControl({
             hostClassName: "shape-terms-control term-packed-terms-control",
             listClassName: "shape-terms-list term-packed-terms-list",
             rowClassName: "shape-term-row term-packed-term-row",
@@ -216,28 +216,28 @@ class ShapeTermsSelectorControl {
             showDragHandle: false,
             rowGap: "0",
             rowMarginBottom: "0",
-            getItems: () => [{ term: ShapeTermsSelectorControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: ShapeTermsSelectorControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1) }],
-            getStateKey: () => ShapeTermsSelectorControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty),
-            getTermItems: () => ShapeTermsSelectorControl.getBaseShapeTermSelectItems(baseShape, term),
-            normalizeTermValue: value => ShapeTermsSelectorControl.normalizeBaseShapeTermValue(value),
+            getItems: () => [{ term: TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1) }],
+            getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty),
+            getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term),
+            normalizeTermValue: value => TermControl.normalizeBaseShapeTermValue(value),
             onTermChanged: (_, value) => {
                 formInstance.updateData(term, value);
-                const caseNumber = ShapeTermsSelectorControl.getBaseShapeCaseNumber(baseShape, value, baseShape.properties[caseProperty] ?? 1);
+                const caseNumber = TermControl.getBaseShapeCaseNumber(baseShape, value, baseShape.properties[caseProperty] ?? 1);
                 formInstance.updateData(caseProperty, caseNumber);
-                ShapeTermsSelectorControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl);
+                TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl);
                 baseShape.board.markDirty(baseShape);
             },
             termEditor: {
                 acceptCustomValue: isEditable,
-                onOpened: _ => ShapeTermsSelectorControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl),
+                onOpened: _ => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl),
                 onCustomItemCreating: event => {
-                    const customValue = ShapeTermsSelectorControl.normalizeBaseShapeCustomTermValue(baseShape, event.text);
+                    const customValue = TermControl.normalizeBaseShapeCustomTermValue(baseShape, event.text);
                     formInstance.updateData(term, customValue);
                     event.component.option("value", customValue);
                     event.customItem = { text: customValue, term: customValue };
-                    const caseNumber = ShapeTermsSelectorControl.getBaseShapeCaseNumber(baseShape, customValue, baseShape.properties[caseProperty] ?? 1);
+                    const caseNumber = TermControl.getBaseShapeCaseNumber(baseShape, customValue, baseShape.properties[caseProperty] ?? 1);
                     formInstance.updateData(caseProperty, caseNumber);
-                    ShapeTermsSelectorControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl);
+                    TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl);
                     baseShape.board.markDirty(baseShape);
                 }
             },
@@ -245,16 +245,16 @@ class ShapeTermsSelectorControl {
                 width: "42px",
                 editorType: "dxDropDownButton",
                 caseVisibility: caseVisibility,
-                getValue: item => ShapeTermsSelectorControl.getBaseShapeCaseNumber(baseShape, item?.term, item?.case ?? baseShape.properties[caseProperty] ?? 1),
-                getItems: () => ShapeTermsSelectorControl.buildBaseShapeCaseItems(baseShape),
+                getValue: item => TermControl.getBaseShapeCaseNumber(baseShape, item?.term, item?.case ?? baseShape.properties[caseProperty] ?? 1),
+                getItems: () => TermControl.buildBaseShapeCaseItems(baseShape),
                 valueExpr: "value",
                 displayExpr: "value",
                 fieldAddonsBefore: data => caseFieldAddonRenderer(data),
                 itemTemplate: caseItemTemplate,
                 onValueChanged: (_, value) => {
-                    const caseNumber = ShapeTermsSelectorControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], value);
+                    const caseNumber = TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], value);
                     formInstance.updateData(caseProperty, caseNumber);
-                    ShapeTermsSelectorControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl);
+                    TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl);
                     baseShape.board.markDirty(baseShape);
                 }
             }
@@ -264,7 +264,7 @@ class ShapeTermsSelectorControl {
         return { control: control, termControl: termControl };
     }
 
-    static getShapeCaseVisibilityConfig(shape, normalizeTermValue = value => ShapeTermsSelectorControl.normalizeTermValue(value)) {
+    static getShapeCaseVisibilityConfig(shape, normalizeTermValue = value => TermControl.normalizeTermValue(value)) {
         const calculator = shape.board.calculator;
         return {
             getTermValue: item => item?.term,
@@ -276,12 +276,12 @@ class ShapeTermsSelectorControl {
         };
     }
 
-    static shouldShowCaseSelectionForShapeTerm(shape, termValue, normalizeTermValue = value => ShapeTermsSelectorControl.normalizeTermValue(value)) {
-        return ShapeTermsSelectorControl.shouldShowCaseSelectionForTerm(termValue, ShapeTermsSelectorControl.getShapeCaseVisibilityConfig(shape, normalizeTermValue));
+    static shouldShowCaseSelectionForShapeTerm(shape, termValue, normalizeTermValue = value => TermControl.normalizeTermValue(value)) {
+        return TermControl.shouldShowCaseSelectionForTerm(termValue, TermControl.getShapeCaseVisibilityConfig(shape, normalizeTermValue));
     }
 
-    static getShapeCaseNumber(shape, termValue, caseNumber = 1, normalizeTermValue = value => ShapeTermsSelectorControl.normalizeTermValue(value)) {
-        if (!ShapeTermsSelectorControl.shouldShowCaseSelectionForShapeTerm(shape, termValue, normalizeTermValue))
+    static getShapeCaseNumber(shape, termValue, caseNumber = 1, normalizeTermValue = value => TermControl.normalizeTermValue(value)) {
+        if (!TermControl.shouldShowCaseSelectionForShapeTerm(shape, termValue, normalizeTermValue))
             return 1;
         const normalizedCaseNumber = shape.getClampedCaseNumber(caseNumber);
         const casesCount = shape.getCasesCount();
@@ -298,9 +298,9 @@ class ShapeTermsSelectorControl {
     static createCaseFieldAddonRenderer() {
         return data => {
             const caseNumber = data?.value ?? 1;
-            const iconClass = ShapeTermsSelectorControl.getCaseNumberIconClass(caseNumber);
+            const iconClass = TermControl.getCaseNumberIconClass(caseNumber);
             const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", ShapeTermsSelectorControl.getCaseIconColor(caseNumber));
+            icon.css("color", TermControl.getCaseIconColor(caseNumber));
             return icon;
         };
     }
@@ -333,10 +333,10 @@ class ShapeTermsSelectorControl {
     }
 
     static normalizeShapeTermsCollection(shape, propertyName, options = {}) {
-        const normalizeTermValue = options.normalizeTermValue ?? (value => ShapeTermsSelectorControl.normalizeTermValue(value));
-        const normalizeColorValue = options.normalizeColorValue ?? (value => ShapeTermsSelectorControl.normalizeColorValue(value));
+        const normalizeTermValue = options.normalizeTermValue ?? (value => TermControl.normalizeTermValue(value));
+        const normalizeColorValue = options.normalizeColorValue ?? (value => TermControl.normalizeColorValue(value));
         const includeColor = options.includeColor === true;
-        const source = ShapeTermsSelectorControl.getShapeTermsCollectionSource(shape, propertyName, options.getFallbackItems);
+        const source = TermControl.getShapeTermsCollectionSource(shape, propertyName, options.getFallbackItems);
         const selectedItems = [];
         for (let index = 0; index < source.length; index++) {
             const sourceItem = source[index];
@@ -345,30 +345,30 @@ class ShapeTermsSelectorControl {
                 continue;
             const normalizedItem = {
                 term: termValue,
-                case: ShapeTermsSelectorControl.getShapeCaseNumber(shape, termValue, sourceItem?.case ?? 1, normalizeTermValue)
+                case: TermControl.getShapeCaseNumber(shape, termValue, sourceItem?.case ?? 1, normalizeTermValue)
             };
             if (includeColor)
                 normalizedItem.color = normalizeColorValue(sourceItem?.color);
             selectedItems.push(normalizedItem);
         }
         if (selectedItems.length === 0) {
-            shape.properties[propertyName] = [ShapeTermsSelectorControl.createEmptyShapeTermsCollectionItem(includeColor)];
+            shape.properties[propertyName] = [TermControl.createEmptyShapeTermsCollectionItem(includeColor)];
             return shape.properties[propertyName];
         }
-        shape.properties[propertyName] = [...selectedItems, ShapeTermsSelectorControl.createEmptyShapeTermsCollectionItem(includeColor)];
+        shape.properties[propertyName] = [...selectedItems, TermControl.createEmptyShapeTermsCollectionItem(includeColor)];
         return shape.properties[propertyName];
     }
 
     static getShapeTermsCollectionControlItems(shape, propertyName, options = {}) {
-        const normalizeTermValue = options.normalizeTermValue ?? (value => ShapeTermsSelectorControl.normalizeTermValue(value));
-        const normalizeColorValue = options.normalizeColorValue ?? (value => ShapeTermsSelectorControl.normalizeColorValue(value));
+        const normalizeTermValue = options.normalizeTermValue ?? (value => TermControl.normalizeTermValue(value));
+        const normalizeColorValue = options.normalizeColorValue ?? (value => TermControl.normalizeColorValue(value));
         const includeColor = options.includeColor === true;
-        const source = ShapeTermsSelectorControl.getShapeTermsCollectionSource(shape, propertyName, options.getFallbackItems);
+        const source = TermControl.getShapeTermsCollectionSource(shape, propertyName, options.getFallbackItems);
         return source.map(sourceItem => {
             const termValue = normalizeTermValue(sourceItem?.term);
             const item = {
                 term: termValue,
-                case: ShapeTermsSelectorControl.getShapeCaseNumber(shape, termValue, sourceItem?.case ?? 1, normalizeTermValue)
+                case: TermControl.getShapeCaseNumber(shape, termValue, sourceItem?.case ?? 1, normalizeTermValue)
             };
             if (includeColor)
                 item.color = normalizeColorValue(sourceItem?.color);
@@ -377,10 +377,10 @@ class ShapeTermsSelectorControl {
     }
 
     static getSelectedShapeTermsCollection(shape, propertyName, options = {}) {
-        const normalizeTermValue = options.normalizeTermValue ?? (value => ShapeTermsSelectorControl.normalizeTermValue(value));
-        const normalizeColorValue = options.normalizeColorValue ?? (value => ShapeTermsSelectorControl.normalizeColorValue(value));
+        const normalizeTermValue = options.normalizeTermValue ?? (value => TermControl.normalizeTermValue(value));
+        const normalizeColorValue = options.normalizeColorValue ?? (value => TermControl.normalizeColorValue(value));
         const includeColor = options.includeColor === true;
-        const source = ShapeTermsSelectorControl.getShapeTermsCollectionSource(shape, propertyName, options.getFallbackItems);
+        const source = TermControl.getShapeTermsCollectionSource(shape, propertyName, options.getFallbackItems);
         const selectedItems = [];
         for (let index = 0; index < source.length; index++) {
             const sourceItem = source[index];
@@ -389,7 +389,7 @@ class ShapeTermsSelectorControl {
                 continue;
             const selectedItem = {
                 term: termValue,
-                case: ShapeTermsSelectorControl.getShapeCaseNumber(shape, termValue, sourceItem?.case ?? 1, normalizeTermValue)
+                case: TermControl.getShapeCaseNumber(shape, termValue, sourceItem?.case ?? 1, normalizeTermValue)
             };
             if (includeColor)
                 selectedItem.color = normalizeColorValue(sourceItem?.color);
@@ -403,7 +403,7 @@ class ShapeTermsSelectorControl {
         return `${shape.getCasesCount()}|${JSON.stringify(shape.properties[propertyName] ?? [])}|${terms.join(",")}`;
     }
 
-    static buildShapeTermsCollectionTermItems(shape, selectedTerm, normalizeTermValue = value => ShapeTermsSelectorControl.normalizeTermValue(value)) {
+    static buildShapeTermsCollectionTermItems(shape, selectedTerm, normalizeTermValue = value => TermControl.normalizeTermValue(value)) {
         const calculator = shape.board.calculator;
         const items = Utils.getTerms(calculator.getTermsNames());
         const normalizedSelectedTerm = normalizeTermValue(selectedTerm);
@@ -416,21 +416,21 @@ class ShapeTermsSelectorControl {
     }
 
     static applyShapeTermsCollectionMutation(shape, propertyName, options, mutateItems) {
-        const items = ShapeTermsSelectorControl.getShapeTermsCollectionControlItems(shape, propertyName, options);
+        const items = TermControl.getShapeTermsCollectionControlItems(shape, propertyName, options);
         mutateItems(items);
         shape.properties[propertyName] = items;
-        ShapeTermsSelectorControl.normalizeShapeTermsCollection(shape, propertyName, options);
+        TermControl.normalizeShapeTermsCollection(shape, propertyName, options);
         shape.setProperty(propertyName, shape.properties[propertyName]);
         if (typeof options.onChanged === "function")
             options.onChanged(shape.properties[propertyName]);
     }
 
     static createShapeTermsCollectionControl(shape, propertyName, options = {}) {
-        const normalizeTermValue = options.normalizeTermValue ?? (value => ShapeTermsSelectorControl.normalizeTermValue(value));
-        const normalizeColorValue = options.normalizeColorValue ?? (value => ShapeTermsSelectorControl.normalizeColorValue(value));
+        const normalizeTermValue = options.normalizeTermValue ?? (value => TermControl.normalizeTermValue(value));
+        const normalizeColorValue = options.normalizeColorValue ?? (value => TermControl.normalizeColorValue(value));
         const includeColor = options.includeColor === true;
-        const caseVisibility = ShapeTermsSelectorControl.getShapeCaseVisibilityConfig(shape, normalizeTermValue);
-        const caseFieldAddonRenderer = ShapeTermsSelectorControl.createCaseFieldAddonRenderer();
+        const caseVisibility = TermControl.getShapeCaseVisibilityConfig(shape, normalizeTermValue);
+        const caseFieldAddonRenderer = TermControl.createCaseFieldAddonRenderer();
         const mutationOptions = {
             normalizeTermValue: normalizeTermValue,
             normalizeColorValue: normalizeColorValue,
@@ -438,31 +438,31 @@ class ShapeTermsSelectorControl {
             getFallbackItems: options.getFallbackItems,
             onChanged: options.onChanged
         };
-        return new ShapeTermsSelectorControl({
+        return new TermControl({
             hostClassName: options.hostClassName,
             listClassName: options.listClassName,
             rowClassName: options.rowClassName,
             dragHandleClassName: options.dragHandleClassName,
-            getItems: () => ShapeTermsSelectorControl.getShapeTermsCollectionControlItems(shape, propertyName, mutationOptions),
-            getStateKey: () => ShapeTermsSelectorControl.getShapeTermsCollectionStateKey(shape, propertyName),
-            getTermItems: item => ShapeTermsSelectorControl.buildShapeTermsCollectionTermItems(shape, item?.term, normalizeTermValue),
+            getItems: () => TermControl.getShapeTermsCollectionControlItems(shape, propertyName, mutationOptions),
+            getStateKey: () => TermControl.getShapeTermsCollectionStateKey(shape, propertyName),
+            getTermItems: item => TermControl.buildShapeTermsCollectionTermItems(shape, item?.term, normalizeTermValue),
             normalizeTermValue: value => normalizeTermValue(value),
-            onItemDeleting: index => ShapeTermsSelectorControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
+            onItemDeleting: index => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                 if (index < 0 || index >= items.length)
                     return;
                 items.splice(index, 1);
             }),
-            onReorder: (fromIndex, toIndex) => ShapeTermsSelectorControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
+            onReorder: (fromIndex, toIndex) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                 if (fromIndex < 0 || toIndex < 0 || fromIndex >= items.length || toIndex >= items.length || fromIndex === toIndex)
                     return;
                 const movedItem = items.splice(fromIndex, 1)[0];
                 items.splice(toIndex, 0, movedItem);
             }),
-            onTermChanged: (index, value) => ShapeTermsSelectorControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
+            onTermChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                 if (!items[index])
-                    items[index] = ShapeTermsSelectorControl.createEmptyShapeTermsCollectionItem(includeColor);
+                    items[index] = TermControl.createEmptyShapeTermsCollectionItem(includeColor);
                 items[index].term = normalizeTermValue(value);
-                items[index].case = ShapeTermsSelectorControl.getShapeCaseNumber(shape, items[index].term, items[index].case ?? 1, normalizeTermValue);
+                items[index].case = TermControl.getShapeCaseNumber(shape, items[index].term, items[index].case ?? 1, normalizeTermValue);
                 if (includeColor)
                     items[index].color = normalizeColorValue(items[index].color);
             }),
@@ -470,22 +470,22 @@ class ShapeTermsSelectorControl {
                 width: "42px",
                 editorType: "dxDropDownButton",
                 caseVisibility: caseVisibility,
-                getValue: item => ShapeTermsSelectorControl.getShapeCaseNumber(shape, item?.term, item?.case ?? 1, normalizeTermValue),
-                getItems: () => ShapeTermsSelectorControl.buildShapeCaseItems(shape),
+                getValue: item => TermControl.getShapeCaseNumber(shape, item?.term, item?.case ?? 1, normalizeTermValue),
+                getItems: () => TermControl.buildShapeCaseItems(shape),
                 valueExpr: "value",
                 displayExpr: "value",
                 fieldAddonsBefore: data => caseFieldAddonRenderer(data),
-                onValueChanged: (index, value) => ShapeTermsSelectorControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
+                onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                     if (!items[index])
                         return;
-                    items[index].case = ShapeTermsSelectorControl.getShapeCaseNumber(shape, items[index].term, value, normalizeTermValue);
+                    items[index].case = TermControl.getShapeCaseNumber(shape, items[index].term, value, normalizeTermValue);
                 })
             },
             colorSelection: includeColor ? {
                 width: "42px",
                 show: item => normalizeTermValue(item?.term) !== "",
                 getValue: item => normalizeColorValue(item?.color),
-                onValueChanged: (index, value) => ShapeTermsSelectorControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
+                onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                     if (!items[index])
                         return;
                     items[index].color = normalizeColorValue(value);
@@ -654,7 +654,7 @@ class ShapeTermsSelectorControl {
         if (!caseVisibility)
             return null;
         const termValue = typeof caseVisibility.getTermValue === "function" ? caseVisibility.getTermValue(item, index) : item?.term;
-        return ShapeTermsSelectorControl.shouldShowCaseSelectionForTerm(termValue, {
+        return TermControl.shouldShowCaseSelectionForTerm(termValue, {
             normalizeTermValue: caseVisibility.normalizeTermValue ?? (value => this.normalizeTermValue(value)),
             getCasesCount: caseVisibility.getCasesCount,
             isTerm: caseVisibility.isTerm,
@@ -911,11 +911,11 @@ class ShapeTermsSelectorControl {
         const colorSelection = this.getColorSelectionOptions();
         if (!colorSelection)
             return;
-        if (colorSelection.control instanceof ShapeColorSelectorControl) {
+        if (colorSelection.control instanceof ColorControl) {
             this.secondaryColorSelector = colorSelection.control;
             return;
         }
-        this.secondaryColorSelector = new ShapeColorSelectorControl(colorSelection.controlOptions);
+        this.secondaryColorSelector = new ColorControl(colorSelection.controlOptions);
     }
 
     hasColorSelection() {

@@ -175,149 +175,29 @@ class BaseShape {
         };
     }
 
-    getColorPickerPalette() {
-        return [
-            "#FFEBEE", "#FFCDD2", "#EF9A9A", "#E57373", "#EF5350", "#C62828",
-            "#FFF3E0", "#FFE0B2", "#FFCC80", "#FFB74D", "#FFA726", "#EF6C00",
-            "#FAFAFA", "#F5F5F5", "#EEEEEE", "#E0E0E0", "#BDBDBD", "#616161",
-            "#E8F5E9", "#C8E6C9", "#A5D6A7", "#81C784", "#66BB6A", "#2E7D32",
-            "#E3F2FD", "#BBDEFB", "#90CAF9", "#64B5F6", "#42A5F5", "#1565C0",
-            "#F3E5F5", "#E1BEE7", "#CE93D8", "#BA68C8", "#AB47BC", "#6A1B9A"
-        ];
+    getColorControl() {
+        if (!this.colorControl)
+            this.colorControl = new ColorControl();
+        return this.colorControl;
     }
 
-    getColorPickerItems() {
-        return this.getColorPickerPalette().map(color => ({ color: this.normalizeColorPickerValue(color) }));
-    }
-
-    normalizeColorPickerValue(color) {
-        if (color == "transparent")
-            return "#00000000";
-        return color;
-    }
-
-    getColorPickerRowsCount() {
-        return 6;
-    }
-
-    getColorPickerTileMetrics(itemsCount) {
-        const rows = this.getColorPickerRowsCount();
-        const columns = Math.max(1, Math.ceil(itemsCount / rows));
-        const baseItemSize = 26;
-        const itemMargin = 2;
-        const popupPadding = 6;
-        const step = baseItemSize + itemMargin * 2;
-        const tileViewWidth = columns * step;
-        const tileViewHeight = rows * step;
-        return {
-            rows: rows,
-            columns: columns,
-            baseItemSize: baseItemSize,
-            itemMargin: itemMargin,
-            tileViewWidth: tileViewWidth,
-            tileViewHeight: tileViewHeight,
-            popupPadding: popupPadding,
-            popupWidth: tileViewWidth + popupPadding * 2,
-            popupHeight: tileViewHeight + popupPadding * 2
+    createColorPickerEditor(dataField, options = {}) {
+        const onValueChanged = value => {
+            const formInstance = this.getShapeFormInstance();
+            if (formInstance)
+                formInstance.updateData(dataField, value);
+            else
+                this.setProperty(dataField, value);
         };
+        return this.getColorControl().createEditor(this.properties[dataField], onValueChanged, options);
     }
 
-    getColorPickerIconColor(color) {
-        if (color == "#00000000")
-            return "#cccccc";
-        return color;
-    }
-
-    getColorPickerIconClass(color) {
-        if (color == "#00000000")
-            return "fa-solid fa-square-dashed";
-        return "fa-solid fa-square";
-    }
-
-    createColorPickerIcon(color, className) {
-        const icon = $("<i>").addClass(`${this.getColorPickerIconClass(color)} ${className}`);
-        icon.css("color", this.getColorPickerIconColor(color));
-        return icon;
-    }
-
-    renderColorPickerButtonTemplate(selectedColor, element) {
-        const content = $("<div>").addClass("mdl-color-picker-button-template");
-        const icon = this.createColorPickerIcon(selectedColor, "mdl-color-picker-button-icon");
-        content.append(icon);
-        $(element).empty().append(content);
-    }
-
-    renderColorPickerItemTemplate(itemData, element) {
-        const content = $("<div>").addClass("mdl-color-picker-item");
-        const icon = this.createColorPickerIcon(itemData.color, "mdl-color-picker-item-icon");
-        content.append(icon);
-        $(element).append(content);
-    }
-
-    createColorPickerTileView(contentElement, picker, dataField, items, selectedColorState, metrics) {
-        $(contentElement).empty();
-        const tileViewContainer = $("<div>").addClass("mdl-color-picker-tileview");
-        $(contentElement).append(tileViewContainer);
-        tileViewContainer.dxTileView({
-            items: items,
-            baseItemHeight: metrics.baseItemSize,
-            baseItemWidth: metrics.baseItemSize,
-            itemMargin: metrics.itemMargin,
-            direction: "vertical",
-            height: metrics.tileViewHeight,
-            width: metrics.tileViewWidth,
-            itemTemplate: (itemData, index, element) => this.renderColorPickerItemTemplate(itemData, element),
-            onItemClick: event => this.onColorPickerTileClick(event, picker, dataField, selectedColorState)
-        });
-    }
-
-    onColorPickerTileClick(event, picker, dataField, selectedColorState) {
-        selectedColorState.value = event.itemData.color;
-        const formInstance = $("#shape-form").dxForm("instance");
-        if (formInstance)
-            formInstance.updateData(dataField, selectedColorState.value);
-        else
-            this.setProperty(dataField, selectedColorState.value);
-        const dropDownButtonInstance = picker.dxDropDownButton("instance");
-        if (dropDownButtonInstance)
-            dropDownButtonInstance.close();
-        this.refreshColorPickerButtonTemplate(picker, selectedColorState.value);
-    }
-
-    refreshColorPickerButtonTemplate(picker, selectedColor) {
-        const buttonContentElement = picker.find(".dx-button-content")[0];
-        if (buttonContentElement)
-            this.renderColorPickerButtonTemplate(selectedColor, buttonContentElement);
-    }
-
-    createColorPickerEditor(dataField) {
-        const picker = $("<div>").addClass("mdl-color-picker");
-        const items = this.getColorPickerItems();
-        const metrics = this.getColorPickerTileMetrics(items.length);
-        const selectedColorState = { value: this.properties[dataField] ?? items[0].color };
-        picker.dxDropDownButton({
-            showArrowIcon: false,
-            stylingMode: "text",
-            useSelectMode: false,
-            template: (data, element) => this.renderColorPickerButtonTemplate(selectedColorState.value, element),
-            dropDownOptions: {
-                width: metrics.popupWidth,
-                height: metrics.popupHeight,
-                wrapperAttr: { class: "mdl-color-picker-menu" },
-                contentTemplate: contentElement => {
-                    this.createColorPickerTileView(contentElement, picker, dataField, items, selectedColorState, metrics);
-                }
-            }
-        });
-        return picker;
-    }
-
-    createColorPickerFormItem(dataField, label, colSpan = 2) {
+    createColorPickerFormItem(dataField, label, colSpan = 2, options = {}) {
         return {
             colSpan: colSpan,
             dataField: dataField,
             label: { text: label },
-            template: _ => this.createColorPickerEditor(dataField)
+            template: _ => this.createColorPickerEditor(dataField, options)
         };
     }
 
@@ -335,7 +215,7 @@ class BaseShape {
         const inputHost = $("<div>").addClass("name-packed-control__input");
         const isVisible = this.properties.showName === true;
         control.append(visibilityHost, colorHost, inputHost);
-        ShapeTermsSelectorControl.createVisibilityCheckbox(visibilityHost, isVisible, value => {
+        TermControl.createVisibilityCheckbox(visibilityHost, isVisible, value => {
             const formInstance = this.getShapeFormInstance();
             if (formInstance)
                 formInstance.updateData("showName", value);
@@ -728,7 +608,7 @@ class BaseShape {
         if (!this.isTermDisplayVisible(this.properties[modeProperty] ?? "none"))
             return false;
         const termValue = this.normalizeTermValue(this.properties[entry.term]);
-        return ShapeTermsSelectorControl.shouldShowCaseSelectionForTerm(termValue, ShapeTermsSelectorControl.getBaseShapeCaseVisibilityConfig(this));
+        return TermControl.shouldShowCaseSelectionForTerm(termValue, TermControl.getBaseShapeCaseVisibilityConfig(this));
     }
 
     getTermCaseIndicatorNumber(entry) {
@@ -824,10 +704,10 @@ class BaseShape {
         caseIconHost.setAttribute("y", `${layout.iconY}`);
         caseIconHost.setAttribute("width", `${layout.iconSize}`);
         caseIconHost.setAttribute("height", `${layout.iconSize + 1}`);
-        const iconClass = `${ShapeTermsSelectorControl.getCaseNumberIconClass(caseNumber)} shape-term-case-icon`;
+        const iconClass = `${TermControl.getCaseNumberIconClass(caseNumber)} shape-term-case-icon`;
         if (caseIconElement.getAttribute("class") != iconClass)
             caseIconElement.setAttribute("class", iconClass);
-        const iconColor = ShapeTermsSelectorControl.getCaseIconColor(caseNumber);
+        const iconColor = TermControl.getCaseIconColor(caseNumber);
         if (caseIconElement.style.color != iconColor)
             caseIconElement.style.color = iconColor;
     }
@@ -1064,7 +944,7 @@ class BaseShape {
     }
 
     createTermSelectorControl(instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true) {
-        const descriptor = ShapeTermsSelectorControl.createBaseShapeTermFormControl(this, instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle);
+        const descriptor = TermControl.createBaseShapeTermFormControl(this, instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle);
         this.termFormControls[term] = { termControl: descriptor.termControl };
         return descriptor.control;
     }
@@ -1076,7 +956,7 @@ class BaseShape {
             const entry = this.termDisplayEntries[index];
             const controls = this.termFormControls[entry.term];
             const termControl = controls?.termControl ?? null;
-            ShapeTermsSelectorControl.syncBaseShapeTermControl(this, instance, entry.term, entry.caseProperty, termControl);
+            TermControl.syncBaseShapeTermControl(this, instance, entry.term, entry.caseProperty, termControl);
         }
     }
 
@@ -1103,7 +983,7 @@ class BaseShape {
             }
         );
         instance.option("items", items);
-        ShapeTermsSelectorControl.syncBaseShapeTermControl(this, instance, term, caseProperty);
+        TermControl.syncBaseShapeTermControl(this, instance, term, caseProperty);
     }
 
     resolveTermNumeric(term, caseNumber = 1) {

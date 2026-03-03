@@ -30,14 +30,14 @@ class TableShape extends BaseShape {
 
     createColumnsControl() {
         this.normalizeColumns();
-        this._columnsControl = ShapeTermsSelectorControl.createShapeTermsCollectionControl(this, "columns", {
+        this._columnsControl = TermControl.createShapeTermsCollectionControl(this, "columns", {
             hostClassName: "shape-terms-control table-columns-control",
             listClassName: "shape-terms-list table-columns-list",
             rowClassName: "shape-term-row table-column-row",
             dragHandleClassName: "shape-term-drag-handle table-column-drag-handle",
             normalizeTermValue: value => this.normalizeColumnValue(value),
             getFallbackItems: () => this.getLegacyColumns(),
-            onChanged: () => this.refreshGridColumns()
+            onChanged: () => this.refreshTableColumns()
         });
         return this._columnsControl.createHost();
     }
@@ -58,66 +58,97 @@ class TableShape extends BaseShape {
         this.normalizeColumns();
         this._activeColumns = this.getSelectedColumns();
         this._appliedColumnsKey = this.getColumnsStateKey(this._activeColumns);
-        const foreignObject = this.board.createSvgElement("foreignObject");
-        const $div = $("<div>").appendTo(foreignObject);
-        this.container = $div.get(0);
-        $div.css({ "width": "100%", "height": "100%" });
-        this.dataGrid = $div.dxDataGrid({
-            dataSource: [],
-            keyExpr: "iteration",
-            editing: {
-                mode: "cell",
-                allowUpdating: true,
-                selectTextOnEditStart: true,
-                startEditAction: "click",
-                useIcons: true
-            },
-            scrolling: {
-                mode: "virtual"
-            },
-            showBorders: true,
-            selection: {
-                mode: "single"
-            },
-            noDataText: "",
-            onEditorPreparing: e => this.onEditorPreparing(e),
-            onCellValueChanged: e => this.onCellValueChanged(e),
-            columns: this.buildGridColumns(this._activeColumns)
-        }).dxDataGrid("instance");
-        return foreignObject;
+        this._appliedStyleKey = "";
+        const element = this.board.createSvgElement("g");
+        this.table = new TableControl(element, this.getTableControlOptions(this._activeColumns));
+        return element;
+    }
+
+    getTableControlOptions(columns = this._activeColumns) {
+        return {
+            columns: this.buildControlColumns(columns),
+            foregroundColor: this.properties.foregroundColor,
+            backgroundColor: this.properties.backgroundColor,
+            borderColor: this.getBorderColor(),
+            precision: this.board.calculator.getPrecision(),
+            onCellValueChanged: payload => this.onTableCellValueChanged(payload)
+        };
+    }
+
+    getTableStyleKey() {
+        const precision = this.board.calculator.getPrecision();
+        return `${this.properties.foregroundColor}|${this.properties.backgroundColor}|${this.getBorderColor()}|${precision}`;
+    }
+
+    buildControlColumns(columns = this._activeColumns) {
+        const precision = this.board.calculator.getPrecision();
+        return columns.map(column => ({
+            key: column.key,
+            title: column.term,
+            term: column.term,
+            caseNumber: column.case,
+            showCase: TermControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value)),
+            editable: this._canEditTerm(column.term),
+            precision: precision,
+            sourceColumn: column
+        }));
+    }
+
+    onTableCellValueChanged(payload) {
+        const sourceColumn = payload?.column?.sourceColumn;
+        if (!sourceColumn)
+            return false;
+        if (!this._canEditTerm(sourceColumn.term))
+            return false;
+        const iteration = payload?.rowKey ?? payload?.row?.key;
+        if (iteration == null)
+            return false;
+        const numericValue = Number(payload?.value);
+        if (!Number.isFinite(numericValue))
+            return false;
+        const precision = this.board.calculator.getPrecision();
+        const roundedValue = Utils.roundToPrecision(numericValue, precision);
+        const system = this.board.calculator.system;
+        const row = system.getIteration(iteration, sourceColumn.case);
+        if (!row)
+            return false;
+        row[sourceColumn.term] = roundedValue;
+        if (iteration === 1 && this.board.calculator.isTerm(sourceColumn.term))
+            system.setInitialByName(sourceColumn.term, roundedValue, 1, sourceColumn.case);
+        this.board.calculator.emit("iterate", { calculator: this.board.calculator });
+        return true;
     }
 
     updateFocus() {
-        if (!this._activeColumns || this._activeColumns.length === 0)
+        if (!this.table)
             return;
+        if (!this._activeColumns || this._activeColumns.length === 0) {
+            this.table.setFocusedRowKey(null);
+            return;
+        }
         var system = this.board.calculator.system;
-        if (this.dataGrid.option("focusedRowKey") == system.iteration)
-            return;
-        this.dataGrid.navigateToRow(system.iteration);
-        this.dataGrid.selectRows([system.iteration]);
+        this.table.setFocusedRowKey(system.iteration);
     }
 
     update() {
         this.normalizeColumns();
-        this.refreshGridColumns();
+        this.refreshTableColumns();
         this.refreshColumnsControl();
     }
 
     draw() {
         super.draw();
-        this.element.setAttribute("x", this.properties.x);
-        this.element.setAttribute("y", this.properties.y);
-        this.element.setAttribute("width", this.properties.width);
-        this.element.setAttribute("height", this.properties.height);
-        this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
-            ${this.properties.y + this.properties.height / 2})`);
-        this.applyBorderStyle(this.container, 1);
-        if (this.dataGrid)
-            $(this.dataGrid.element()).css("border-color", this.getBorderColor());
+        const x = this.properties.x;
+        const y = this.properties.y;
+        const width = this.properties.width;
+        const height = this.properties.height;
+        if (this.table)
+            this.table.setSize(width, height);
+        this.element.setAttribute("transform", `translate(${x} ${y}) rotate(${this.properties.rotation} ${width / 2} ${height / 2})`);
     }
 
     tick() {
-        this.refreshGridData();
+        this.refreshTableRows();
         const now = performance.now();
         if (!this._lastFocusTs || now - this._lastFocusTs > 33) {
             this.updateFocus();
@@ -126,130 +157,45 @@ class TableShape extends BaseShape {
         super.tick();
     }
 
-    onEditorPreparing(e) {
-        if (e.parentType !== "dataRow")
-            return;
-        const column = this.getActiveColumnByField(e.dataField);
-        if (!column) {
-            e.editorOptions.readOnly = true;
-            return;
-        }
-        e.editorOptions.readOnly = !this._canEditTerm(column.term);
-    }
-
-    onCellValueChanged(e) {
-        const column = this.getActiveColumnByField(e.column?.dataField);
-        if (!column || !this._canEditTerm(column.term))
-            return;
-        const iteration = e.data?.iteration ?? e.key;
-        if (iteration == null)
-            return;
-        const numericValue = Number(e.value);
-        if (!Number.isFinite(numericValue)) {
-            e.component.cellValue(e.rowIndex, column.key, e.oldValue);
-            return;
-        }
-        const precision = this.board.calculator.getPrecision();
-        const rounded = Utils.roundToPrecision(numericValue, precision);
-        e.component.cellValue(e.rowIndex, column.key, rounded);
-        const system = this.board.calculator.system;
-        const row = system.getIteration(iteration, column.case);
-        if (!row)
-            return;
-        row[column.term] = rounded;
-        if (iteration === 1 && this.board.calculator.isTerm(column.term))
-            system.setInitialByName(column.term, rounded, 1, column.case);
-        this.board.calculator.emit("iterate", { calculator: this.board.calculator });
-    }
-
-    refreshGridColumns() {
-        if (!this.dataGrid)
+    refreshTableColumns() {
+        if (!this.table)
             return;
         const columns = this.getSelectedColumns();
         const nextKey = this.getColumnsStateKey(columns);
-        if (this._appliedColumnsKey === nextKey)
+        const nextStyleKey = this.getTableStyleKey();
+        if (this._appliedColumnsKey === nextKey && this._appliedStyleKey === nextStyleKey)
             return;
         this._activeColumns = columns;
-        this.dataGrid.option("columns", this.buildGridColumns(columns));
+        this.table.setOptions(this.getTableControlOptions(columns));
         this._appliedColumnsKey = nextKey;
-        this.refreshGridData();
+        this._appliedStyleKey = nextStyleKey;
+        this.refreshTableRows();
     }
 
-    refreshGridData() {
-        if (!this.dataGrid)
+    refreshTableRows() {
+        if (!this.table)
             return;
         const columns = this._activeColumns ?? this.getSelectedColumns();
         if (columns.length === 0) {
-            this.dataGrid.option("dataSource", []);
+            this.table.setRows([]);
             return;
         }
         const system = this.board.calculator.system;
         const lastIteration = this.board.calculator.getLastIteration();
         const rows = [];
         for (let iteration = 1; iteration <= lastIteration; iteration++) {
-            const row = { iteration: iteration };
+            const row = { key: iteration };
             for (let index = 0; index < columns.length; index++) {
                 const column = columns[index];
                 row[column.key] = system.getByNameOnIteration(iteration, column.term, column.case);
             }
             rows.push(row);
         }
-        this.dataGrid.option("dataSource", rows);
-    }
-
-    buildGridColumns(columns = this._activeColumns) {
-        const precision = this.board.calculator.getPrecision();
-        return columns.map(column => ({
-            dataField: column.key,
-            caption: column.term,
-            headerCellTemplate: container => this.renderGridHeader(container, column),
-            allowEditing: this._canEditTerm(column.term),
-            dataType: "number",
-            format: {
-                type: "fixedPoint",
-                precision: precision
-            }
-        }));
-    }
-
-    renderGridHeader(container, column) {
-        const header = $("<div>").css({
-            display: "flex",
-            alignItems: "center",
-            gap: "6px"
-        });
-        $("<math-field>")
-            .attr("read-only", true)
-            .html(column.term ?? "")
-            .css("height", "auto", "width", "auto")
-            .addClass("form-math-field")
-            .appendTo(header);
-        if (ShapeTermsSelectorControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value))) {
-            const caseIndicator = $("<span>").addClass("case-select");
-            const caseNumber = column.case;
-            const iconClass = ShapeTermsSelectorControl.getCaseNumberIconClass(caseNumber);
-            const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", ShapeTermsSelectorControl.getCaseIconColor(caseNumber));
-            icon.css("margin-right", "0");
-            caseIndicator.append(icon);
-            header.append(caseIndicator);
-        }
-        header.appendTo(container);
-    }
-
-    getActiveColumnByField(dataField) {
-        if (!this._activeColumns)
-            return null;
-        for (let index = 0; index < this._activeColumns.length; index++) {
-            const column = this._activeColumns[index];
-            if (column.key === dataField)
-                return column;
-        }
-        return null;
+        this.table.setRows(rows);
     }
 
     getSelectedColumns() {
-        const selectedColumns = ShapeTermsSelectorControl.getSelectedShapeTermsCollection(this, "columns", {
+        const selectedColumns = TermControl.getSelectedShapeTermsCollection(this, "columns", {
             normalizeTermValue: value => this.normalizeColumnValue(value),
             getFallbackItems: () => this.getLegacyColumns()
         });
@@ -271,7 +217,7 @@ class TableShape extends BaseShape {
     }
 
     normalizeColumns() {
-        ShapeTermsSelectorControl.normalizeShapeTermsCollection(this, "columns", {
+        TermControl.normalizeShapeTermsCollection(this, "columns", {
             normalizeTermValue: value => this.normalizeColumnValue(value),
             getFallbackItems: () => this.getLegacyColumns()
         });
@@ -291,7 +237,7 @@ class TableShape extends BaseShape {
     }
 
     normalizeColumnValue(value) {
-        return ShapeTermsSelectorControl.normalizeTermValue(value);
+        return TermControl.normalizeTermValue(value);
     }
 
     _canEditTerm(term) {
@@ -302,8 +248,8 @@ class TableShape extends BaseShape {
     }
 
     enterEditMode() {
-        if (this.dataGrid && typeof this.dataGrid.focus === "function") {
-            this.dataGrid.focus();
+        if (this.table && typeof this.table.focus === "function") {
+            this.table.focus();
             return true;
         }
         return super.enterEditMode();

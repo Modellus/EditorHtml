@@ -1,4 +1,4 @@
-class ShapeSvgTableControl {
+class TableControl {
     constructor(hostElement, options) {
         this.hostElement = hostElement;
         this.options = this.createDefaultOptions();
@@ -177,7 +177,7 @@ class ShapeSvgTableControl {
     renderHeaderCaseIcon(caseNumber, xPosition, yPosition) {
         const size = this.getHeaderCaseIconSize(caseNumber);
         const iconData = this.caseIconData[caseNumber];
-        const caseIconColor = ShapeTermsSelectorControl.getCaseIconColor(caseNumber);
+        const caseIconColor = TermControl.getCaseIconColor(caseNumber);
         if (!iconData?.pathData) {
             const fallbackText = this.createSvgElement("text");
             fallbackText.setAttribute("x", `${xPosition}`);

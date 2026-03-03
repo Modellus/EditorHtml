@@ -66,118 +66,23 @@ class BodyShape extends BaseShape {
     }
 
     createImageDropZoneEditor() {
-        const container = $("<div class='shape-image-dropzone'></div>");
-        const preview = $("<img class='shape-image-dropzone__preview' alt='Body image preview' />");
-        const hint = $("<div class='shape-image-dropzone__hint'></div>").text("Drop an image or click to select");
-        const removeButton = $("<button type='button' class='shape-image-dropzone__remove' aria-label='Remove image'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></button>");
-        const uploaderHost = $("<div class='shape-image-dropzone__uploader'></div>");
-        const dropZoneElement = container.get(0);
-        const previewElement = preview.get(0);
-        const hintElement = hint.get(0);
-        const removeButtonElement = removeButton.get(0);
-        this.updateImageDropZonePreview(previewElement, hintElement, removeButtonElement, this.getImageSource());
-        container.append(preview, hint, removeButton, uploaderHost);
-        removeButton.on("mousedown", event => this.onImageRemoveButtonMouseDown(event));
-        removeButton.on("click", event => this.onImageRemoveButtonClick(event, previewElement, hintElement, removeButtonElement));
-        container.on("dragover", e => this.onImageDropZoneDragOver(e));
-        container.on("drop", e => this.onImageDropZoneDrop(e, previewElement, hintElement, removeButtonElement));
-        uploaderHost.dxFileUploader({
-            accept: "image/*",
-            multiple: false,
-            uploadMode: "useForm",
-            dropZone: dropZoneElement,
-            dialogTrigger: dropZoneElement,
-            onValueChanged: e => this.onImageUploaderValueChanged(e, previewElement, hintElement, removeButtonElement),
-            onDropZoneEnter: e => this.onImageDropZoneEnter(e),
-            onDropZoneLeave: e => this.onImageDropZoneLeave(e)
+        this.imageDropZoneControl = new ImageControl({
+            imageSource: this.getImageSource(),
+            onUploadFile: file => this.uploadAsset(file),
+            onImageChanged: imageSource => this.onImageControlChanged(imageSource),
+            onImageCleared: () => this.onImageControlCleared()
         });
-        return container;
+        return this.imageDropZoneControl.createHost();
     }
 
-    async onImageUploaderValueChanged(event, previewElement, hintElement, removeButtonElement) {
-        const file = event.value && event.value[0];
-        if (!file)
-            return;
-        await this.setImageFromFile(file, previewElement, hintElement, removeButtonElement);
-    }
-
-    async setImageFromFile(file, previewElement, hintElement, removeButtonElement) {
-        const imageUrl = await this.uploadAsset(file);
-        if (!imageUrl)
-            return;
+    onImageControlChanged(imageSource) {
         this.properties.imageBase64 = "";
-        this.setProperty("imageUrl", imageUrl);
-        this.updateImageDropZonePreview(previewElement, hintElement, removeButtonElement, imageUrl);
+        this.setProperty("imageUrl", imageSource);
     }
 
-    updateImageDropZonePreview(previewElement, hintElement, removeButtonElement, imageSource) {
-        if (!previewElement || !hintElement || !removeButtonElement)
-            return;
-        if (imageSource) {
-            previewElement.setAttribute("src", imageSource);
-            hintElement.style.display = "none";
-            removeButtonElement.style.display = "flex";
-            return;
-        }
-        previewElement.removeAttribute("src");
-        hintElement.style.display = "";
-        removeButtonElement.style.display = "none";
-    }
-
-    onImageRemoveButtonMouseDown(event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-
-    onImageRemoveButtonClick(event, previewElement, hintElement, removeButtonElement) {
-        event.preventDefault();
-        event.stopPropagation();
-        this.clearImage(previewElement, hintElement, removeButtonElement);
-    }
-
-    clearImage(previewElement, hintElement, removeButtonElement) {
+    onImageControlCleared() {
         this.properties.imageBase64 = "";
         this.setProperty("imageUrl", "");
-        this.updateImageDropZonePreview(previewElement, hintElement, removeButtonElement, "");
-    }
-
-    onImageDropZoneEnter(event) {
-        const dropZoneElement = this.toDomElement(event.dropZoneElement);
-        if (!dropZoneElement)
-            return;
-        dropZoneElement.classList.add("drag-over");
-    }
-
-    onImageDropZoneLeave(event) {
-        const dropZoneElement = this.toDomElement(event.dropZoneElement);
-        if (!dropZoneElement)
-            return;
-        dropZoneElement.classList.remove("drag-over");
-    }
-
-    onImageDropZoneDragOver(event) {
-        const dragEvent = this.toNativeDragEvent(event);
-        if (!dragEvent)
-            return;
-        dragEvent.preventDefault();
-        dragEvent.stopPropagation();
-        if (dragEvent.dataTransfer)
-            dragEvent.dataTransfer.dropEffect = "copy";
-    }
-
-    async onImageDropZoneDrop(event, previewElement, hintElement, removeButtonElement) {
-        const dragEvent = this.toNativeDragEvent(event);
-        if (!dragEvent)
-            return;
-        dragEvent.preventDefault();
-        dragEvent.stopPropagation();
-        const dropZoneElement = this.toDomElement(dragEvent.currentTarget);
-        if (dropZoneElement)
-            dropZoneElement.classList.remove("drag-over");
-        const file = dragEvent.dataTransfer?.files?.[0];
-        if (!file)
-            return;
-        await this.setImageFromFile(file, previewElement, hintElement, removeButtonElement);
     }
 
     getImageSource() {
@@ -259,26 +164,6 @@ class BodyShape extends BaseShape {
             window.DevExpress.ui.notify(message, "error", 3000);
     }
 
-    toNativeDragEvent(event) {
-        if (!event)
-            return null;
-        if (event.originalEvent)
-            return event.originalEvent;
-        return event;
-    }
-
-    toDomElement(element) {
-        if (!element)
-            return null;
-        if (element instanceof HTMLElement)
-            return element;
-        if (element.get && element.get(0) instanceof HTMLElement)
-            return element.get(0);
-        if (element[0] instanceof HTMLElement)
-            return element[0];
-        return null;
-    }
-
     createElement() {
         const element = this.board.createSvgElement("g");
         this.circle = this.board.createSvgElement("circle");
@@ -326,6 +211,8 @@ class BodyShape extends BaseShape {
             this.image.setAttribute("href", imageSource);
         else
             this.image.removeAttribute("href");
+        if (this.imageDropZoneControl)
+            this.imageDropZoneControl.setImageSource(imageSource);
     }
 
     draw() {

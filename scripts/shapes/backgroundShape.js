@@ -20,25 +20,70 @@ class BackgroundShape extends BaseShape {
         items.push(
             {
                 colSpan: 2,
-                dataField: "file",
                 label: { text: "File" },
-                editorType: "dxFileUploader",
-                editorOptions: {
-                    accept: "image/*",
-                    onFilesUploaded: e => {
-                        const file = e.component.option("value")[0];
-                        const reader = new FileReader();
-                        reader.onload = e => {
-                            this.properties.imageBase64 = e.target.result.split(',')[1];
-                            this.image.setAttribute("href", "data:image/png;base64," + this.properties.imageBase64);
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                }
+                template: _ => this.createImageDropZoneEditor()
             }
         );
         instance.option("items", items);
         return form;
+    }
+
+    createImageDropZoneEditor() {
+        this.imageDropZoneControl = new ImageControl({
+            imageSource: this.getImageSource(),
+            onUploadFile: file => this.readImageFileAsDataUrl(file),
+            onImageChanged: imageSource => this.onImageControlChanged(imageSource),
+            onImageCleared: () => this.onImageControlCleared()
+        });
+        return this.imageDropZoneControl.createHost();
+    }
+
+    getImageSource() {
+        const imageBase64 = this.properties.imageBase64;
+        if (typeof imageBase64 === "string" && imageBase64.trim() !== "")
+            return `data:image/png;base64,${imageBase64}`;
+        return `data:image/png;base64,${DEFAULTIMAGE}`;
+    }
+
+    async readImageFileAsDataUrl(file) {
+        try {
+            return await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = event => resolve(event?.target?.result ?? null);
+                reader.onerror = () => reject(new Error("Failed to read image file."));
+                reader.readAsDataURL(file);
+            });
+        } catch (error) {
+            this.showUploadError(error?.message || "Failed to read image file.");
+            return null;
+        }
+    }
+
+    extractBase64FromDataUrl(imageSource) {
+        if (typeof imageSource !== "string" || imageSource.trim() === "")
+            return "";
+        const parts = imageSource.split(",");
+        if (parts.length < 2)
+            return "";
+        return parts[1];
+    }
+
+    onImageControlChanged(imageSource) {
+        this.properties.imageBase64 = this.extractBase64FromDataUrl(imageSource);
+        if (this.image)
+            this.image.setAttribute("href", imageSource);
+    }
+
+    onImageControlCleared() {
+        this.properties.imageBase64 = "";
+        const defaultImageSource = `data:image/png;base64,${DEFAULTIMAGE}`;
+        if (this.image)
+            this.image.setAttribute("href", defaultImageSource);
+    }
+
+    showUploadError(message) {
+        if (window.DevExpress?.ui?.notify)
+            window.DevExpress.ui.notify(message, "error", 3000);
     }
 
     setDefaults() {
@@ -65,6 +110,8 @@ class BackgroundShape extends BaseShape {
 
     update() {
         super.update();
+        if (this.imageDropZoneControl)
+            this.imageDropZoneControl.setImageSource(this.getImageSource());
     }
 
     draw() {

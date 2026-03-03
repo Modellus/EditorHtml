@@ -1,4 +1,4 @@
-class ShapeColorSelectorControl {
+class ColorControl {
     constructor(options) {
         this.options = options ?? {};
     }
@@ -7,9 +7,9 @@ class ShapeColorSelectorControl {
         if (Array.isArray(this.options.palette) && this.options.palette.length > 0)
             return this.options.palette;
         return [
+            "#00000000", "#FFFFFF", "#F5F5F5", "#E0E0E0", "#9E9E9E", "#000000",
             "#FFEBEE", "#FFCDD2", "#EF9A9A", "#E57373", "#EF5350", "#C62828",
             "#FFF3E0", "#FFE0B2", "#FFCC80", "#FFB74D", "#FFA726", "#EF6C00",
-            "#FAFAFA", "#F5F5F5", "#EEEEEE", "#E0E0E0", "#BDBDBD", "#616161",
             "#E8F5E9", "#C8E6C9", "#A5D6A7", "#81C784", "#66BB6A", "#2E7D32",
             "#E3F2FD", "#BBDEFB", "#90CAF9", "#64B5F6", "#42A5F5", "#1565C0",
             "#F3E5F5", "#E1BEE7", "#CE93D8", "#BA68C8", "#AB47BC", "#6A1B9A"
@@ -17,7 +17,22 @@ class ShapeColorSelectorControl {
     }
 
     getColorPickerItems() {
-        return this.getColorPickerPalette().map(color => ({ color: this.normalizeColorPickerValue(color) }));
+        const rowsCount = this.getColorPickerRowsCount();
+        const items = this.getColorPickerPalette().map(color => ({ color: this.normalizeColorPickerValue(color) }));
+        if (items.length == 0 || rowsCount <= 0)
+            return items;
+        const remainder = items.length % rowsCount;
+        if (remainder == 0)
+            return items;
+        const missingItemsCount = rowsCount - remainder;
+        const fillColors = this.getColorPickerGridFillColors();
+        for (let index = 0; index < missingItemsCount; index++)
+            items.push({ color: fillColors[index % fillColors.length] });
+        return items;
+    }
+
+    getColorPickerGridFillColors() {
+        return ["#00000000", "#FFFFFF", "#000000"];
     }
 
     normalizeColorPickerValue(color) {
