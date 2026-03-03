@@ -36,9 +36,8 @@ class RulerShape extends BaseShape {
         this.properties.y = center.y - 24;
         this.properties.width = 260;
         this.properties.height = 48;
-        this.properties.rotation = 0;
         this.properties.scale = 1;
-        this.properties.backgroundColor = "#F7F1CF";
+        this.properties.backgroundColor = "#FFFFFF";
         this.properties.foregroundColor = "#1E1E1E";
         this.properties.borderColor = this.properties.foregroundColor;
     }

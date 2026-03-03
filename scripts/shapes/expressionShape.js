@@ -58,7 +58,6 @@ class ExpressionShape extends BaseShape {
         this.properties.y = center.y - 25;
         this.properties.width = 300;
         this.properties.height = 50;
-        this.properties.rotation = 0;
         this.properties.expression = "\\displaylines{\\placeholder{}}";
     }
 

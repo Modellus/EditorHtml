@@ -93,10 +93,13 @@ svg {
 }
 
 .handle.rotation {
-    transform: translateY(-10px);
+    opacity: 1;
+    fill: #ffffff;
+    stroke: #4039d7;
+    stroke-width: 1.5px;
     rx: 4px;
     ry: 4px;
-    cursor: url("scripts/themes/cursors/rotate-reverse-regular.png"), auto;
+    cursor: url("scripts/themes/cursors/rotate-reverse-regular.png") 8 8, crosshair;
 }
 
 .handle.origin {

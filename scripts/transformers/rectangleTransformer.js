@@ -3,8 +3,42 @@ class RectangleTransformer extends CircleTransformer {
         super(board, shape);
     }
 
+    getShapeCenter() {
+        const position = this.shape.getBoardPosition();
+        return {
+            x: position.x + this.shape.properties.width / 2,
+            y: position.y + this.shape.properties.height / 2
+        };
+    }
+
+    getRotationHandleDistance(size) {
+        return this.shape.properties.height / 2 + size * 1.5;
+    }
+
+    getRotationHandlePosition(size) {
+        const center = this.getShapeCenter();
+        const distance = this.getRotationHandleDistance(size);
+        return {
+            x: center.x - size / 2,
+            y: center.y - distance - size / 2,
+            width: size,
+            height: size
+        };
+    }
+
+    getRotationDegreesFromPointer(point) {
+        const center = this.getShapeCenter();
+        const deltaX = point.x - center.x;
+        const deltaY = point.y - center.y;
+        const distance = Math.hypot(deltaX, deltaY);
+        if (distance < 1)
+            return Number(this.shape.properties.rotation) || 0;
+        return Math.atan2(deltaX, -deltaY) * 180 / Math.PI;
+    }
+
     getHandles() {
         const size = 12;
+        const rotationSize = 16;
         return [
             {
                 className: "handle move",
@@ -95,19 +129,14 @@ class RectangleTransformer extends CircleTransformer {
                     width: this.shape.properties.width + e.dx > 10 ? this.shape.properties.width + e.dx : this.shape.properties.width,
                     height: this.shape.properties.height + e.dy > 10 ? this.shape.properties.height + e.dy : this.shape.properties.height
                 })
-            }/*,
+            },
             {
                 className: "handle rotation",
-                getAttributes: _ => ({
-                    x: this.shape.properties.x + this.shape.properties.width / 2 - size / 2,
-                    y: this.shape.properties.y - size / 2,
-                    width: size,
-                    height: size
-                }),
+                getAttributes: _ => this.getRotationHandlePosition(rotationSize),
                 getTransform: e => ({
-                    rotation: Math.atan2(e.y + this.shape.properties.height / 2 - e.y, e.x + this.shape.properties.width / 2 - e.x) * 180 / Math.PI
+                    rotation: this.getRotationDegreesFromPointer(e)
                 })
-            }*/
+            }
         ];
     }
 }

@@ -205,11 +205,13 @@ class Selection {
     updateOutline(outline, shape) {
         if (this.isDragging) {
             outline.setAttribute("visibility", "hidden");
+            outline.removeAttribute("transform");
             return;
         }
         const bounds = this.getOutlineBounds(shape);
         if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height)) {
             outline.setAttribute("visibility", "hidden");
+            outline.removeAttribute("transform");
             return;
         }
         if (outline.parentNode !== this.board.svg || this.board.svg.lastChild !== outline)
@@ -218,7 +220,30 @@ class Selection {
         outline.setAttribute("y", bounds.y);
         outline.setAttribute("width", bounds.width);
         outline.setAttribute("height", bounds.height);
+        this.applyOutlineRotation(outline, shape, bounds);
         outline.setAttribute("visibility", "visible");
+    }
+
+    getOutlineRotationDegrees(shape) {
+        const bounds = shape?.getBounds?.();
+        const boundsRotation = Number(bounds?.rotation);
+        if (Number.isFinite(boundsRotation))
+            return boundsRotation;
+        const shapeRotation = Number(shape?.properties?.rotation);
+        if (Number.isFinite(shapeRotation))
+            return shapeRotation;
+        return 0;
+    }
+
+    applyOutlineRotation(outline, shape, bounds) {
+        const rotation = this.getOutlineRotationDegrees(shape);
+        if (!Number.isFinite(rotation) || Math.abs(rotation) < 0.00001) {
+            outline.removeAttribute("transform");
+            return;
+        }
+        const centerX = bounds.x + bounds.width / 2;
+        const centerY = bounds.y + bounds.height / 2;
+        outline.setAttribute("transform", `rotate(${rotation} ${centerX} ${centerY})`);
     }
 
     getOutlineBounds(shape) {

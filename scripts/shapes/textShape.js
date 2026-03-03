@@ -15,7 +15,6 @@ class TextShape extends BaseShape {
         this.properties.y = center.y - 100;
         this.properties.width = 400;
         this.properties.height = 200;
-        this.properties.rotation = 0;
         this.properties.text = "Unleash your inner scientist—type, format, and let the math magic happen!";
     }
 

@@ -151,7 +151,6 @@ class ChartShape extends BaseShape {
         this.properties.y = center.y - 100;
         this.properties.width = 200;
         this.properties.height = 200;
-        this.properties.rotation = 0;
         this.properties.chartType = "line";
         this.properties.xTerm = null;
         this.properties.yTerms = [{ term: "", case: 1, color: "" }];

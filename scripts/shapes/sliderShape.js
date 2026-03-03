@@ -58,7 +58,6 @@ class SliderShape extends BaseShape {
         this.properties.y = center.y - 125;
         this.properties.width = 70;
         this.properties.height = 250;
-        this.properties.rotation = 0;
         this.properties.term = null;
         this.properties.value = 0;
         this.properties.autoScale = true;
@@ -300,37 +299,31 @@ class SliderShape extends BaseShape {
         const sliderWidth = Number(this.properties.width) || 0;
         const sliderHeight = Number(this.properties.height) || 0;
         const inset = 1;
-        const trackX = position.x + inset;
-        const trackY = position.y + inset;
+        const trackX = inset;
+        const trackY = inset;
         const trackWidth = Math.max(0, sliderWidth - inset * 2);
         const trackHeight = Math.max(0, sliderHeight - inset * 2);
-        const centerX = position.x + sliderWidth / 2;
-        const centerY = position.y + sliderHeight / 2;
-        const splitterY = this.getSplitterBoardY();
+        const splitterY = this.getSplitterOffset();
         const topHeight = this.clamp(splitterY - trackY, 0, trackHeight);
         const bottomY = trackY + topHeight;
         const bottomHeight = trackHeight - topHeight;
-        const rotation = `rotate(${this.properties.rotation}, ${centerX}, ${centerY})`;
         this.bottomPart.setAttribute("x", trackX);
         this.bottomPart.setAttribute("y", bottomY);
         this.bottomPart.setAttribute("width", trackWidth);
         this.bottomPart.setAttribute("height", bottomHeight);
-        this.bottomPart.setAttribute("transform", rotation);
         this.topPart.setAttribute("x", trackX);
         this.topPart.setAttribute("y", trackY);
         this.topPart.setAttribute("width", trackWidth);
         this.topPart.setAttribute("height", topHeight);
-        this.topPart.setAttribute("transform", rotation);
-        this.container.setAttribute("x", position.x);
-        this.container.setAttribute("y", position.y);
+        this.container.setAttribute("x", 0);
+        this.container.setAttribute("y", 0);
         this.container.setAttribute("width", sliderWidth);
         this.container.setAttribute("height", sliderHeight);
-        this.container.setAttribute("transform", rotation);
         this.splitter.setAttribute("x1", trackX);
         this.splitter.setAttribute("y1", splitterY);
         this.splitter.setAttribute("x2", trackX + trackWidth);
         this.splitter.setAttribute("y2", splitterY);
-        this.splitter.setAttribute("transform", rotation);
+        this.element.setAttribute("transform", `translate(${position.x} ${position.y}) rotate(${this.properties.rotation} ${sliderWidth / 2} ${sliderHeight / 2})`);
     }
 
     tick() {

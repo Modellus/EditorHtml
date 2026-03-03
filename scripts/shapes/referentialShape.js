@@ -111,7 +111,6 @@ class ReferentialShape extends BaseShape {
         this.properties.y = center.y - 100;
         this.properties.width = 400;
         this.properties.height = 200;
-        this.properties.rotation = 0;
         this.properties.originX = this.properties.width / 2;
         this.properties.originY = this.properties.height / 2;
         this.properties.scaleX = 1;

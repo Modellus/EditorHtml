@@ -45,7 +45,43 @@ class BaseTransformer {
     }
 
     updateHandles() {
-        this.handles.forEach(h => h.update(h));
+        this.handles.forEach(handle => {
+            handle.update(handle);
+            this.applyHandleRotation(handle);
+        });
+    }
+
+    getShapeRotationCenter() {
+        if (!this.shape?.getBoardPosition)
+            return null;
+        const position = this.shape.getBoardPosition();
+        const radius = Number(this.shape?.properties?.radius);
+        if (Number.isFinite(radius))
+            return { x: position.x, y: position.y };
+        const width = Number(this.shape?.properties?.width);
+        const height = Number(this.shape?.properties?.height);
+        if (Number.isFinite(width) && Number.isFinite(height))
+            return { x: position.x + width / 2, y: position.y + height / 2 };
+        return null;
+    }
+
+    getShapeRotationDegrees() {
+        const rotation = Number(this.shape?.properties?.rotation);
+        if (!Number.isFinite(rotation))
+            return 0;
+        return rotation;
+    }
+
+    applyHandleRotation(handle) {
+        if (!handle)
+            return;
+        const center = this.getShapeRotationCenter();
+        const rotation = this.getShapeRotationDegrees();
+        if (!center || Math.abs(rotation) < 0.00001) {
+            handle.removeAttribute("transform");
+            return;
+        }
+        handle.setAttribute("transform", `rotate(${rotation} ${center.x} ${center.y})`);
     }
 
     onHandlePointerDown = (event, handle) => {

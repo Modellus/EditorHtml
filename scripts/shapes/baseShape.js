@@ -31,6 +31,7 @@ class BaseShape {
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[2].color;
         this.properties.borderColor = this.properties.foregroundColor;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[2].color;
+        this.properties.rotation = 0;
         this.properties.showName = false;
         this.properties.nameColor = null;
         var name = this.constructor.name.split(/(?=[A-Z])/)[0];
