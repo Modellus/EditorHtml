@@ -38,7 +38,7 @@ class BaseTransformer {
         this.board.svg.appendChild(handle);
         this.handles.push(handle);
         handle.addEventListener("pointerdown", e => this.onHandlePointerDown(e, handle));
-        handle.addEventListener("wheel", e => this.onHandleWheel(e));
+        handle.addEventListener("wheel", e => this.onHandleWheel(e), { passive: true });
         handle.addEventListener("contextmenu", e => this.onHandleContextMenu(e));
         handle.update = update;
         handle.getTransform = getTransform;
@@ -131,14 +131,40 @@ class BaseTransformer {
     }
 
     onHandleWheel(event) {
-        event.preventDefault();
-        event.stopPropagation();
         const target = this.resolveWheelTarget(event);
         if (!target)
             return;
-        const isHandled = this.dispatchWheelEvent(target, event);
-        if (target !== this.board.svg && !isHandled)
-            this.scrollWheelTarget(target, event);
+        if (target !== this.board.svg && this.scrollWheelTarget(target, event))
+            return;
+        if (target !== this.board.svg)
+            return;
+        this.dispatchWheelToSvg(event);
+    }
+
+    dispatchWheelToSvg(event) {
+        if (!this.board?.svg)
+            return;
+        const wheelEvent = this.createWheelEvent(event);
+        this.board.svg.dispatchEvent(wheelEvent);
+    }
+
+    createWheelEvent(event) {
+        return new WheelEvent("wheel", {
+            bubbles: true,
+            cancelable: true,
+            clientX: event.clientX,
+            clientY: event.clientY,
+            screenX: event.screenX,
+            screenY: event.screenY,
+            deltaX: event.deltaX,
+            deltaY: event.deltaY,
+            deltaZ: event.deltaZ,
+            deltaMode: event.deltaMode,
+            ctrlKey: event.ctrlKey,
+            shiftKey: event.shiftKey,
+            altKey: event.altKey,
+            metaKey: event.metaKey
+        });
     }
 
     resolveWheelTarget(event) {
@@ -172,35 +198,17 @@ class BaseTransformer {
         }
     }
 
-    dispatchWheelEvent(target, event) {
-        const wheelEvent = this.createWheelEvent(event);
-        const dispatchResult = target.dispatchEvent(wheelEvent);
-        return wheelEvent.defaultPrevented || dispatchResult === false;
-    }
-
-    createWheelEvent(event) {
-        return new WheelEvent("wheel", {
-            bubbles: true,
-            cancelable: true,
-            clientX: event.clientX,
-            clientY: event.clientY,
-            screenX: event.screenX,
-            screenY: event.screenY,
-            deltaX: event.deltaX,
-            deltaY: event.deltaY,
-            deltaZ: event.deltaZ,
-            deltaMode: event.deltaMode,
-            ctrlKey: event.ctrlKey,
-            shiftKey: event.shiftKey,
-            altKey: event.altKey,
-            metaKey: event.metaKey
-        });
-    }
-
     scrollWheelTarget(target, event) {
         const scrollTarget = this.getWheelScrollTarget(target);
         if (!scrollTarget)
-            return;
+            return false;
+        const previousScrollTop = scrollTarget.scrollTop;
+        const previousScrollLeft = scrollTarget.scrollLeft;
+        this.scrollWheelElement(scrollTarget, event);
+        return scrollTarget.scrollTop !== previousScrollTop || scrollTarget.scrollLeft !== previousScrollLeft;
+    }
+
+    scrollWheelElement(scrollTarget, event) {
         scrollTarget.scrollBy({
             left: event.deltaX,
             top: event.deltaY,

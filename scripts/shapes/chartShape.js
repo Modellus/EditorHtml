@@ -20,140 +20,85 @@ class ChartShape extends BaseShape {
         return false;
     }
 
-    updateGridData(e) {
-        const data = [...this.properties.yTerms];
-        const filledData = data.filter(row => row.term || row.color);
-        if (e && filledData.length == 0 && (e.data.color || e.data.term))
-            filledData.push(e.data);
-        filledData.push({ term: "", color: "" });
-        this.properties.yTerms = filledData;
-        $("#dataGrid").dxDataGrid("option", "dataSource", this.properties.yTerms);
+    createYTermsControl() {
+        this.normalizeYTerms();
+        this._yTermsControl = ShapeTermsSelectorControl.createShapeTermsCollectionControl(this, "yTerms", {
+            hostClassName: "shape-terms-control chart-yterms-control",
+            listClassName: "shape-terms-list chart-yterms-list",
+            rowClassName: "shape-term-row chart-yterm-row",
+            dragHandleClassName: "shape-term-drag-handle chart-yterm-drag-handle",
+            includeColor: true,
+            normalizeTermValue: value => this.normalizeYTermValue(value),
+            normalizeColorValue: value => this.normalizeYTermColor(value)
+        });
+        return this._yTermsControl.createHost();
     }
 
-    createYTermsGrid(itemElement) {
-        var grid = $("<div>").attr("id", "dataGrid").dxDataGrid({
-            dataSource: this.properties.yTerms,
-            editing: {
-                mode: "cell",
-                allowUpdating: true,
-                allowAdding: false,
-                allowDeleting: false
-            },
-            showColumnHeaders: false,
-            columns: [
-                {
-                    dataField: "term",
-                    lookup: {
-                        displayExpr: "text",
-                        valueExpr: "term",
-                        dataSource: Utils.getTerms(this.board.calculator.getTermsNames())
-                    },
-                    editorOptions: {
-                        stylingMode: "filled",
-                        placeholder: "",
-                        inputAttr: { class: "mdl-variable-selector" },
-                        elementAttr: { class: "mdl-variable-selector" },
-                        itemTemplate: (data, index, element) => {
-                            const item = $("<div>").text(data.text);
-                            item.addClass("mdl-variable-selector");
-                            element.append(item);
-                            return item;
-                        }
-                    },
-                    cssClass: "mdl-variable-selector"
-                },
-                {
-                    dataField: "color",
-                    caption: "Color",
-                    width: 100,
-                    lookup: {
-                        dataSource: this.board.theme.getStrokeColors().map(c => ({
-                            icon: c.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square",
-                            color: c.color
-                        })),
-                        displayExpr: "color",
-                        valueExpr: "color"
-                    },
-                    cellTemplate: function(container, options) {
-                        if (!options.value)
-                            return;
-                        const iconClass = options.value === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
-                        const color = options.value == "#00000000" ? "#cccccc" : options.value;
-                        const icon = $("<i>")
-                            .addClass(iconClass)
-                            .css({
-                                color: color,
-                                fontSize: "16px",
-                                marginRight: "6px"
-                            });
-                        if (options.value === "#ffffff")
-                            icon.css("--fa-primary-color", "#000000");
-                        const wrapper = $("<div>").css({
-                            display: "flex",
-                            alignItems: "center"
-                        }).append(icon);
-                        container.append(wrapper);
-                    },
-                    editorOptions: {
-                        stylingMode: "filled",
-                        placeholder: "",
-                        displayExpr: _ => "",
-                        itemTemplate: (data, index, element) => {
-                            const iconClass = data.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
-                            const color = data.color == "#00000000" ? "#cccccc" : data.color;
-                            const icon = $("<i>")
-                                .addClass(iconClass)
-                                .css({
-                                    color: color,
-                                    fontSize: "16px",
-                                    display: "flex",
-                                    alignItems: "center"
-                                });
-                            if (data.color === "#ffffff")
-                                icon.css("--fa-primary-color", "#000000");
-                            const item = $("<div>")
-                                .css({
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "flex-start",
-                                    width: "100%"
-                                })
-                                .append(icon);
-                            element.append(item);
-                            return item;
-                        },
-                        fieldAddons: {
-                            before: data => {
-                                if (!data?.color)
-                                    return null;
-                                const iconClass = data.color === "#00000000" ? "fa-solid fa-square-dashed" : "fa-duotone fa-thin fa-square";
-                                const color = data.color == "#00000000" ? "#cccccc" : data.color;
-                                const icon = $("<i>").addClass(iconClass).css({
-                                    color: color,
-                                    fontSize: "16px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "flex-start",
-                                    width: "100%"
-                                });
-                                if (data.color === "#ffffff")
-                                    icon.css("--fa-primary-color", "#000000");
-                                return icon;
-                            }
-                        }
-                    }
-                }
-            ],
-            onRowUpdated: this.updateGridData.bind(this)
+    refreshYTermsControl() {
+        if (!this._yTermsControl)
+            return;
+        this._yTermsControl.refresh();
+    }
+
+    normalizeYTerms() {
+        ShapeTermsSelectorControl.normalizeShapeTermsCollection(this, "yTerms", {
+            includeColor: true,
+            normalizeTermValue: value => this.normalizeYTermValue(value),
+            normalizeColorValue: value => this.normalizeYTermColor(value)
         });
-        this.updateGridData();
-        return grid;
+    }
+
+    getSelectedYTerms() {
+        return ShapeTermsSelectorControl.getSelectedShapeTermsCollection(this, "yTerms", {
+            includeColor: true,
+            normalizeTermValue: value => this.normalizeYTermValue(value),
+            normalizeColorValue: value => this.normalizeYTermColor(value)
+        });
+    }
+
+    shouldShowCaseLabelForTerm(term) {
+        return ShapeTermsSelectorControl.shouldShowCaseSelectionForShapeTerm(this, term, value => this.normalizeYTermValue(value));
+    }
+
+    getTermLabelWithCase(term, caseNumber = 1) {
+        const normalizedTerm = this.normalizeYTermValue(term);
+        if (normalizedTerm === "")
+            return normalizedTerm;
+        if (!this.shouldShowCaseLabelForTerm(normalizedTerm))
+            return normalizedTerm;
+        const normalizedCaseNumber = ShapeTermsSelectorControl.getShapeCaseNumber(this, normalizedTerm, caseNumber, value => this.normalizeYTermValue(value));
+        return `${normalizedTerm} ${ShapeTermsSelectorControl.getCaseIconText(normalizedCaseNumber)}`;
+    }
+
+    getSeriesValueFieldName(index) {
+        return `series${index}`;
+    }
+
+    getSeriesName(yTerm) {
+        return this.getTermLabelWithCase(yTerm.term, yTerm.case);
+    }
+
+    getXTermName() {
+        return this.normalizeYTermValue(this.properties.xTerm);
+    }
+
+    getXTermCaseNumber() {
+        return ShapeTermsSelectorControl.getShapeCaseNumber(this, this.getXTermName(), this.properties.xTermCase ?? 1, value => this.normalizeYTermValue(value));
+    }
+
+    normalizeYTermValue(value) {
+        return ShapeTermsSelectorControl.normalizeTermValue(value);
+    }
+
+    normalizeYTermColor(value) {
+        return ShapeTermsSelectorControl.normalizeColorValue(value);
     }
 
     createForm() {
         var form = super.createForm();
         var instance = form.dxForm("instance");
         var items = instance.option("items");
+        this.normalizeYTerms();
         items.push(
             {
                 itemType: "group",
@@ -185,14 +130,14 @@ class ChartShape extends BaseShape {
             }
         );
         instance.option("items", items);
-        this.addTermToForm("xTerm", "Horizontal", false, 2);
+        this.addTermToForm("xTerm", "Horizontal", false, 2, { showVisibilityToggle: false });
         items = instance.option("items");
         items.push(
             {
                 colSpan: 2,
                 dataField: "yTerms",
                 label: { text: "Vertical" },
-                template: (data, itemElement) => this.createYTermsGrid(itemElement)
+                template: _ => this.createYTermsControl()
             });
         instance.option("items", items);
         return form;
@@ -209,169 +154,175 @@ class ChartShape extends BaseShape {
         this.properties.rotation = 0;
         this.properties.chartType = "line";
         this.properties.xTerm = null;
-        this.properties.yTerms = [];
+        this.properties.yTerms = [{ term: "", case: 1, color: "" }];
+    }
+
+    getChartControlOptions() {
+        return {
+            chartType: this.properties.chartType,
+            argumentField: "argument",
+            series: [],
+            argumentTitle: "",
+            valueTitle: "",
+            foregroundColor: this.properties.foregroundColor,
+            backgroundColor: this.properties.backgroundColor
+        };
     }
 
     createElement() {
-        const foreignObject = this.board.createSvgElement("foreignObject");
-        const $div = $("<div>").appendTo(foreignObject);
-        $div.css({ "width": "100%", "height": "100%" });
-        this.arrayStore = new DevExpress.data.ArrayStore();
-        this.lastSyncedIndex = 0;
-        this.chart = $div.dxChart({
-            dataSource: this.arrayStore,
-            zoomAndPan: {
-                valueAxis: "both",
-                argumentAxis: "both",
-                dragToZoom: true,
-                allowMouseWheel: true,
-                panKey: "shift"
-            },
-            commonSeriesSettings: {
-                label: {
-                    visible: false
-                },
-                point: {
-                    visible: false
-                }
-            },
-            commonPaneSettings: {
-                border: {
-                    visible: true
-                }
-            },
-            commonAxisSettings: {
-                title: {
-                    font: {
-                        family: "Katex_Math",
-                        size: "1em",
-                        weight: 400
-                    }
-                },
-                color: "#d3d3d3",
-                grid: {
-                    visible: true
-                },
-                minorGrid: {
-                    visible: true
-                },
-                tick: {
-                    visible: true
-                },
-                minorTick: {
-                    visible: true
-                }
-            },
-            legend: {
-                visible: true,
-                verticalAlignment: "top",
-                horizontalAlignment: "center",
-                orientation: "horizontal",
-                itemTextPosition: "right"
-            },
-            crosshair: {
-                enabled: true,
-                color: "#949494",
-                width: 2,
-                dashStyle: "dot",
-                label: {
-                    visible: true,
-                    backgroundColor: "#949494",
-                    format: {
-                        type: "fixedPoint",
-                        precision: 2
-                    }
-                }
-            },
-            tooltip: {
-                enabled: true,
-                format: {
-                    type: "fixedPoint",
-                    precision: 2
-                }
-            },
-            onIncidentOccurred: e => {
-                if (e.target.type === "error")
-                    console.log(e.target.errorText);
-            }
-        }).dxChart("instance");
+        const element = this.board.createSvgElement("g");
+        this.chartRows = [];
+        this.lastSyncedIteration = 0;
+        this.chartDataConfig = null;
+        this.chart = new ShapeSvgChartControl(element, this.getChartControlOptions());
         this._appliedConfig = {};
-        return foreignObject;
+        return element;
     }
 
     updateValues() {
+        const chartDataConfig = this.chartDataConfig;
+        if (!chartDataConfig)
+            return;
         var system = this.board.calculator.system;
-        const values = system.values;
-        if (this.lastSyncedIndex > values.length) {
-            this.lastSyncedIndex = 0;
-            this.arrayStore.clear();
-            this.chart.getDataSource().load();
+        const lastIteration = system.lastIteration;
+        if (this.lastSyncedIteration > lastIteration)
+            this.resetChartValues();
+        let hasChanges = false;
+        for (let iteration = this.lastSyncedIteration + 1; iteration <= lastIteration; iteration++)
+            this.chartRows.push(this.createChartDataItem(iteration, chartDataConfig));
+        if (lastIteration > this.lastSyncedIteration)
+            hasChanges = true;
+        this.lastSyncedIteration = lastIteration;
+        if (!hasChanges)
+            return;
+        this.chart.setData(this.chartRows);
+    }
+
+    createChartDataItem(iteration, chartDataConfig) {
+        const item = { iteration: iteration };
+        const xValue = this.getChartTermValueOnIteration(iteration, chartDataConfig.xTerm, chartDataConfig.xCase);
+        item[chartDataConfig.argumentField] = xValue;
+        for (let index = 0; index < chartDataConfig.ySeries.length; index++) {
+            const ySeries = chartDataConfig.ySeries[index];
+            item[ySeries.valueField] = this.getChartTermValueOnIteration(iteration, ySeries.term, ySeries.case);
         }
-        const newItems = values.slice(this.lastSyncedIndex);
-        newItems.forEach(i => this.arrayStore.push([{ type: "insert", data: i }]));
-        this.lastSyncedIndex = values.length;
+        return item;
+    }
+
+    getChartTermValueOnIteration(iteration, term, caseNumber) {
+        const normalizedTerm = this.normalizeYTermValue(term);
+        if (normalizedTerm === "")
+            return NaN;
+        const calculator = this.board.calculator;
+        if (calculator.isTerm(normalizedTerm))
+            return calculator.system.getByNameOnIteration(iteration, normalizedTerm, this.getClampedCaseNumber(caseNumber));
+        const numericValue = Number(normalizedTerm);
+        if (Number.isFinite(numericValue))
+            return numericValue;
+        return NaN;
+    }
+
+    resetChartValues() {
+        this.lastSyncedIteration = 0;
+        this.chartRows = [];
+        if (this.chart)
+            this.chart.setData(this.chartRows);
     }
 
     updateFocus() {
-        var system = this.board.calculator.system;
-        var series = this.chart.getAllSeries();
-        if (this.properties.xTerm == null || this.properties.yTerms == null)
+        const chartDataConfig = this.chartDataConfig;
+        if (!chartDataConfig) {
+            if (this.chart)
+                this.chart.setFocusArgumentValue(null);
             return;
-        series.forEach(s => {
-            var value = system.getValueAtIteration(system.iteration, s.getArgumentField());
-            var points = s.getPointsByArg(value);
-            points.forEach(p => p.showTooltip())
-        });
+        }
+        var system = this.board.calculator.system;
+        if (chartDataConfig.xTerm === "" || chartDataConfig.ySeries.length === 0) {
+            if (this.chart)
+                this.chart.setFocusArgumentValue(null);
+            return;
+        }
+        const value = this.getChartTermValueOnIteration(system.iteration, chartDataConfig.xTerm, chartDataConfig.xCase);
+        if (value == null) {
+            if (this.chart)
+                this.chart.setFocusArgumentValue(null);
+            return;
+        }
+        if (typeof value === "number" && !Number.isFinite(value)) {
+            if (this.chart)
+                this.chart.setFocusArgumentValue(null);
+            return;
+        }
+        if (this.chart)
+            this.chart.setFocusArgumentValue(value);
     }
 
     update() {
+        this.normalizeYTerms();
+        this.refreshYTermsControl();
+        const selectedYTerms = this.getSelectedYTerms();
+        const xTerm = this.getXTermName();
+        const xCase = this.getXTermCaseNumber();
+        const argumentField = "argument";
+        const ySeries = selectedYTerms.map((yTerm, index) => ({
+            term: yTerm.term,
+            case: ShapeTermsSelectorControl.getShapeCaseNumber(this, yTerm.term, yTerm.case ?? 1, value => this.normalizeYTermValue(value)),
+            color: this.normalizeYTermColor(yTerm.color),
+            valueField: this.getSeriesValueFieldName(index),
+            name: this.getSeriesName(yTerm)
+        }));
+        const chartDataConfig = {
+            xTerm: xTerm,
+            xCase: xCase,
+            argumentField: argumentField,
+            ySeries: ySeries
+        };
+        this.chartDataConfig = chartDataConfig;
         const config = {
             chartType: this.properties.chartType,
-            argField: this.properties.xTerm,
-            series: this.properties.yTerms.filter(y => y.color || y.term).map(term => ({
-                valueField: term.term,
-                name: term.term,
-                color: term.color
+            argField: argumentField,
+            series: ySeries.map(series => ({
+                valueField: series.valueField,
+                name: series.name,
+                color: series.color === "" ? undefined : series.color
             })),
             color: this.properties.foregroundColor,
             bg: this.properties.backgroundColor,
-            argTitle: this.properties.xTerm,
-            valTitle: this.properties.yTerm
+            argTitle: this.getTermLabelWithCase(xTerm, xCase),
+            valTitle: ySeries.map(series => series.name).join(", ")
         };
         const changed = JSON.stringify(config) !== JSON.stringify(this._appliedConfig);
         if (changed) {
-            this.chart.beginUpdate();
-            this.chart.option("commonSeriesSettings.type", config.chartType);
-            this.chart.option("commonSeriesSettings.argumentField", config.argField);
-            this.chart.option("series", config.series);
-            this.chart.option("commonSeriesSettings.color", config.color);
-            this.chart.option("containerBackgroundColor", config.bg);
-            this.chart.option("argumentAxis.title.text", config.argTitle);
-            this.chart.option("valueAxis.title.text", config.valTitle);
-            this.element.style.backgroundColor = config.bg;
-            this.chart.endUpdate();
+            this.chart.setOptions({
+                chartType: config.chartType,
+                argumentField: config.argField,
+                series: config.series,
+                foregroundColor: config.color,
+                backgroundColor: config.bg,
+                argumentTitle: config.argTitle,
+                valueTitle: config.valTitle
+            });
+            this.resetChartValues();
             this._appliedConfig = config;
         }
     }
 
     draw() {
-        this.element.setAttribute("x", this.properties.x);
-        this.element.setAttribute("y", this.properties.y);
-        this.element.setAttribute("width", this.properties.width);
-        this.element.setAttribute("height", this.properties.height);
-        this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
-            ${this.properties.y + this.properties.height / 2})`);
+        const x = this.properties.x;
+        const y = this.properties.y;
+        const width = this.properties.width;
+        const height = this.properties.height;
+        this.chart.setSize(width, height);
+        this.element.setAttribute("transform", `translate(${x} ${y}) rotate(${this.properties.rotation} ${width / 2} ${height / 2})`);
     }
 
     tick() {
-        // Sync new calculator values and focus without reconfiguring the chart
         this.updateValues();
         const now = performance.now();
-        if (!this._lastFocusTs || now - this._lastFocusTs > 33) { // ~30 FPS focus updates
+        if (!this._lastFocusTs || now - this._lastFocusTs > 33) {
             this.updateFocus();
             this._lastFocusTs = now;
         }
-        // No board.markDirty: DevExtreme handles UI updates on data push
         super.tick();
     }
 }

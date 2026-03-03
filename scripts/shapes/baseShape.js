@@ -170,10 +170,12 @@ class BaseShape {
 
     getColorPickerPalette() {
         return [
-            "transparent", "#F28B82", "#FBCB7E", "#A8D5A2", "#AECBFA", "#D7AEFB",
-            "#FFFFFF", "#E53935", "#FB8C00", "#43A047", "#1E88E5", "#8E24AA",
-            "#BDBDBD", "#B71C1C", "#EF6C00", "#2E7D32", "#1565C0", "#6A1B9A",
-            "#424242", "#7F0000", "#E65100", "#1B5E20", "#0D47A1", "#4A148C"
+            "#FFEBEE", "#FFCDD2", "#EF9A9A", "#E57373", "#EF5350", "#C62828",
+            "#FFF3E0", "#FFE0B2", "#FFCC80", "#FFB74D", "#FFA726", "#EF6C00",
+            "#FAFAFA", "#F5F5F5", "#EEEEEE", "#E0E0E0", "#BDBDBD", "#616161",
+            "#E8F5E9", "#C8E6C9", "#A5D6A7", "#81C784", "#66BB6A", "#2E7D32",
+            "#E3F2FD", "#BBDEFB", "#90CAF9", "#64B5F6", "#42A5F5", "#1565C0",
+            "#F3E5F5", "#E1BEE7", "#CE93D8", "#BA68C8", "#AB47BC", "#6A1B9A"
         ];
     }
 
@@ -188,7 +190,7 @@ class BaseShape {
     }
 
     getColorPickerRowsCount() {
-        return 4;
+        return 6;
     }
 
     getColorPickerTileMetrics(itemsCount) {
@@ -326,7 +328,7 @@ class BaseShape {
         const inputHost = $("<div>").addClass("name-packed-control__input");
         const isVisible = this.properties.showName === true;
         control.append(visibilityHost, colorHost, inputHost);
-        this.createPackedVisibilityCheckbox(visibilityHost, isVisible, value => {
+        ShapeTermsSelectorControl.createVisibilityCheckbox(visibilityHost, isVisible, value => {
             const formInstance = this.getShapeFormInstance();
             if (formInstance)
                 formInstance.updateData("showName", value);
@@ -644,10 +646,6 @@ class BaseShape {
         this.shapeNameText.textContent = this.properties.name;
     }
 
-    getTermCaseColorProperty(term) {
-        return `${term}ShowCaseColor`;
-    }
-
     normalizeTermValue(value) {
         if (value && typeof value === "object")
             return value.term ?? value.text ?? value.value;
@@ -690,8 +688,11 @@ class BaseShape {
     }
 
     isTermCaseIndicatorVisible(entry) {
-        const caseColorProperty = this.getTermCaseColorProperty(entry.term);
-        return this.properties[caseColorProperty] !== false;
+        const modeProperty = this.getTermDisplayModeProperty(entry.term);
+        if (!this.isTermDisplayVisible(this.properties[modeProperty] ?? "none"))
+            return false;
+        const termValue = this.normalizeTermValue(this.properties[entry.term]);
+        return ShapeTermsSelectorControl.shouldShowCaseSelectionForTerm(termValue, ShapeTermsSelectorControl.getBaseShapeCaseVisibilityConfig(this));
     }
 
     getTermCaseIndicatorNumber(entry) {
@@ -785,10 +786,10 @@ class BaseShape {
         caseIconHost.setAttribute("y", `${layout.iconY}`);
         caseIconHost.setAttribute("width", `${layout.iconSize}`);
         caseIconHost.setAttribute("height", `${layout.iconSize + 1}`);
-        const iconClass = `${this.getCaseNumberIconClass(caseNumber)} shape-term-case-icon`;
+        const iconClass = `${ShapeTermsSelectorControl.getCaseNumberIconClass(caseNumber)} shape-term-case-icon`;
         if (caseIconElement.getAttribute("class") != iconClass)
             caseIconElement.setAttribute("class", iconClass);
-        const iconColor = this.getCaseIconColor();
+        const iconColor = ShapeTermsSelectorControl.getCaseIconColor(caseNumber);
         if (caseIconElement.style.color != iconColor)
             caseIconElement.style.color = iconColor;
     }
@@ -983,15 +984,6 @@ class BaseShape {
         return normalizedCaseNumber;
     }
 
-    getCaseNumberIconClass(caseNumber) {
-        const normalizedCaseNumber = this.getClampedCaseNumber(caseNumber);
-        return `fa-solid fa-square-${normalizedCaseNumber}`;
-    }
-
-    getCaseIconColor() {
-        return this.getShapeNameColor();
-    }
-
     buildCaseItems(caseColors) {
         const count = this.getCasesCount();
         const items = [];
@@ -1000,238 +992,16 @@ class BaseShape {
         return items;
     }
 
-    normalizeCustomTermValue(value) {
-        const normalizedValue = this.normalizeTermValue(value);
-        if (normalizedValue == null)
-            return normalizedValue;
-        const text = String(normalizedValue).trim();
-        if (text === "")
-            return normalizedValue;
-        const numeric = Number(text);
-        if (!Number.isFinite(numeric))
-            return normalizedValue;
-        return this.formatModelValue(numeric);
-    }
-
-    getTermSelectItems(term, caseProperty) {
-        const calculator = this.board.calculator;
-        const items = Utils.getTerms(calculator.getTermsNames());
-        const selectedValue = this.normalizeTermValue(this.properties[term]);
-        if (selectedValue == null || selectedValue === "")
-            return items;
-        if (calculator.isTerm(selectedValue))
-            return items;
-        const formattedValue = this.normalizeCustomTermValue(selectedValue);
-        items.unshift({
-            text: formattedValue,
-            term: selectedValue
-        });
-        return items;
-    }
-
-    isTermSelectionVariable(termProperty, formData = null) {
-        const calculator = this.board.calculator;
-        const data = formData ?? this.properties;
-        const selectedValue = this.normalizeTermValue(data[termProperty]);
-        if (selectedValue == null || selectedValue === "")
-            return false;
-        if (!calculator.isTerm(selectedValue))
-            return false;
-        if (selectedValue === calculator.properties?.independent?.name)
-            return false;
-        return true;
-    }
-
-    createCaseFieldAddonRenderer(term, caseColors) {
-        if (this.properties[this.getTermCaseColorProperty(term)] === false)
-            return null;
-        return data => {
-            const iconClass = this.getCaseNumberIconClass(data?.value ?? 1);
-            const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", this.getCaseIconColor());
-            return icon;
-        };
-    }
-
-    createCaseItemTemplate(term) {
-        const showCaseColor = this.properties[this.getTermCaseColorProperty(term)] !== false;
-        return (itemData, _, element) => {
-            const content = $("<div>").addClass("case-select");
-            if (showCaseColor) {
-                const iconClass = this.getCaseNumberIconClass(itemData.value);
-                const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-                icon.css("color", this.getCaseIconColor());
-                content.append(icon);
-            }
-            const label = $("<span>").addClass("case-select__label").text(itemData.value);
-            content.append(label);
-            element.append(content);
-        };
-    }
-
     isTermDisplayVisible(mode) {
         if (mode === false || mode === "none")
             return false;
         return true;
     }
 
-    getVisibilityIconClass(value) {
-        if (value)
-            return "fa-light fa-eye";
-        return "fa-light fa-eye-closed";
-    }
-
-    updatePackedVisibilityCheckboxIcon(checkboxInstance) {
-        if (!checkboxInstance)
-            return;
-        const iconContainer = checkboxInstance.element().find(".dx-checkbox-icon");
-        if (iconContainer.length == 0)
-            return;
-        iconContainer.empty();
-        const iconClass = this.getVisibilityIconClass(checkboxInstance.option("value") === true);
-        $("<i>").addClass(`${iconClass} term-packed-checkbox-icon`).appendTo(iconContainer);
-    }
-
-    createPackedVisibilityCheckbox(buttonHost, initialValue, onValueChanged) {
-        return buttonHost.dxCheckBox({
-            value: initialValue === true,
-            elementAttr: { class: "term-packed-checkbox" },
-            onContentReady: e => this.updatePackedVisibilityCheckboxIcon(e.component),
-            onValueChanged: e => {
-                this.updatePackedVisibilityCheckboxIcon(e.component);
-                onValueChanged(e.value === true);
-            }
-        }).dxCheckBox("instance");
-    }
-
-    createPackedTermControl(instance, term, caseProperty, isEditable, caseColors, displayModeProperty) {
-        const control = $("<div>").addClass("term-packed-control");
-        const buttonHost = $("<div>").addClass("term-packed-control__button");
-        const selectHost = $("<div>").addClass("term-packed-control__select");
-        const displayModeValue = this.properties[displayModeProperty] ?? "none";
-        const isVisible = this.isTermDisplayVisible(displayModeValue);
-        control.append(buttonHost, selectHost);
-        const termButton = this.createPackedVisibilityCheckbox(buttonHost, isVisible, value => {
-            this.setProperty(displayModeProperty, value ? "nameValue" : "none");
-            this.board.markDirty(this);
-        });
-        const termSelect = selectHost.dxSelectBox({
-            value: this.properties[term],
-            items: this.getTermSelectItems(term, caseProperty),
-            stylingMode: "filled",
-            displayExpr: "text",
-            valueExpr: "term",
-            placeholder: "",
-            acceptCustomValue: isEditable,
-            inputAttr: { class: "mdl-variable-selector" },
-            elementAttr: { class: "mdl-variable-selector" },
-            itemTemplate: (data, index, element) => {
-                const item = $("<div>").text(data.text);
-                item.addClass("mdl-variable-selector");
-                element.append(item);
-            },
-            onOpened: _ => this.refreshTermSelectEditor(term, caseProperty),
-            onValueChanged: e => {
-                instance.updateData(term, e.value);
-                this.updateTermGroupLayout(instance, term, caseProperty);
-                this.board.markDirty(this);
-            },
-            onCustomItemCreating: e => {
-                const customValue = this.normalizeCustomTermValue(e.text);
-                instance.updateData(term, customValue);
-                e.component.option("value", customValue);
-                e.customItem = { text: customValue, term: customValue };
-                this.updateTermGroupLayout(instance, term, caseProperty);
-                this.board.markDirty(this);
-            }
-        }).dxSelectBox("instance");
-        this.termFormControls[term] = this.termFormControls[term] ?? {};
-        this.termFormControls[term].termButton = termButton;
-        this.termFormControls[term].termSelect = termSelect;
-        return control;
-    }
-
-    createPackedCaseControl(instance, term, caseProperty, caseColors, caseColorProperty) {
-        const control = $("<div>").addClass("term-packed-control");
-        const buttonHost = $("<div>").addClass("term-packed-control__button");
-        const selectHost = $("<div>").addClass("term-packed-control__select");
-        const caseColorVisible = this.properties[caseColorProperty] !== false;
-        control.append(buttonHost, selectHost);
-        const caseButton = this.createPackedVisibilityCheckbox(buttonHost, caseColorVisible, value => {
-            this.setProperty(caseColorProperty, value);
-            this.refreshCaseSelectEditor(term, caseProperty, caseColors);
-        });
-        const caseSelect = selectHost.dxSelectBox({
-            value: this.properties[caseProperty],
-            items: this.buildCaseItems(caseColors),
-            valueExpr: "value",
-            displayExpr: "value",
-            fieldAddons: this.createCaseFieldAddonRenderer(term, caseColors) ? { before: this.createCaseFieldAddonRenderer(term, caseColors) } : {},
-            itemTemplate: this.createCaseItemTemplate(term),
-            stylingMode: "filled",
-            onValueChanged: e => {
-                instance.updateData(caseProperty, e.value);
-                this.refreshTermSelectEditor(term, caseProperty);
-                this.board.markDirty(this);
-            }
-        }).dxSelectBox("instance");
-        this.termFormControls[term] = this.termFormControls[term] ?? {};
-        this.termFormControls[term].caseButton = caseButton;
-        this.termFormControls[term].caseSelect = caseSelect;
-        return control;
-    }
-
-    refreshTermSelectEditor(term, caseProperty) {
-        const controls = this.termFormControls[term];
-        const termSelect = controls?.termSelect;
-        if (!termSelect)
-            return;
-        termSelect.option("items", this.getTermSelectItems(term, caseProperty));
-    }
-
-    refreshCaseSelectEditor(term, caseProperty, caseColors) {
-        const controls = this.termFormControls[term];
-        const caseSelect = controls?.caseSelect;
-        if (!caseSelect)
-            return;
-        const beforeRenderer = this.createCaseFieldAddonRenderer(term, caseColors);
-        caseSelect.option("fieldAddons", beforeRenderer ? { before: beforeRenderer } : {});
-        caseSelect.option("itemTemplate", this.createCaseItemTemplate(term));
-    }
-
-    getFormItemByName(items, itemName) {
-        const queue = Array.isArray(items) ? [...items] : [];
-        while (queue.length > 0) {
-            const item = queue.shift();
-            if (item?.name === itemName)
-                return item;
-            if (Array.isArray(item?.items))
-                queue.push(...item.items);
-        }
-        return null;
-    }
-
-    updateTermGroupLayout(instance, term, caseProperty) {
-        const formData = instance.option("formData") ?? this.properties;
-        const hasMultipleCases = this.getCasesCount() > 1;
-        const showCase = hasMultipleCases && this.isTermSelectionVariable(term, formData);
-        const groupName = `${term}Group`;
-        const termItemName = `${term}Item`;
-        const caseItemName = `${caseProperty}Item`;
-        const currentItems = instance.option("items");
-        const groupItem = this.getFormItemByName(currentItems, groupName);
-        if (!groupItem?.items)
-            return;
-        const termItem = groupItem.items.find(item => item?.name === termItemName);
-        const caseItem = groupItem.items.find(item => item?.name === caseItemName);
-        if (!termItem || !caseItem)
-            return;
-        termItem.colSpan = showCase ? 1 : 2;
-        caseItem.visible = showCase;
-        const caseValue = formData[caseProperty] ?? this.properties[caseProperty];
-        if (showCase && (caseValue == null || caseValue === ""))
-            instance.updateData(caseProperty, 1);
-        instance.option("items", currentItems);
+    createTermSelectorControl(instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true) {
+        const descriptor = ShapeTermsSelectorControl.createBaseShapeTermFormControl(this, instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle);
+        this.termFormControls[term] = { termControl: descriptor.termControl };
+        return descriptor.control;
     }
 
     refreshTermFormLayouts(instance) {
@@ -1239,55 +1009,36 @@ class BaseShape {
             return;
         for (let index = 0; index < this.termDisplayEntries.length; index++) {
             const entry = this.termDisplayEntries[index];
-            this.updateTermGroupLayout(instance, entry.term, entry.caseProperty);
+            const controls = this.termFormControls[entry.term];
+            const termControl = controls?.termControl ?? null;
+            ShapeTermsSelectorControl.syncBaseShapeTermControl(this, instance, entry.term, entry.caseProperty, termControl);
         }
     }
 
-    addTermToForm(term, title, isEditable = true, colSpan = 1) {
+    addTermToForm(term, title, isEditable = true, colSpan = 1, options = {}) {
         if (this.form == null)
             return;
         var instance = this.form.dxForm("instance");
         var items = instance.option("items");
         const caseProperty = `${term}Case`;
         const displayModeProperty = this.getTermDisplayModeProperty(term);
-        const caseColorProperty = this.getTermCaseColorProperty(term);
         if (this.properties[caseProperty] == null)
             this.properties[caseProperty] = 1;
         if (this.properties[displayModeProperty] == null)
             this.properties[displayModeProperty] = "none";
-        if (this.properties[caseColorProperty] == null)
-            this.properties[caseColorProperty] = true;
         if (!this.termDisplayEntries.some(entry => entry.term === term))
             this.termDisplayEntries.push({ term: term, caseProperty: caseProperty, title: title });
-        const caseColors = this.board.theme.getBackgroundColors().map(c => c.color);
-        const initialShowCase = this.getCasesCount() > 1 && this.isTermSelectionVariable(term);
-        this.termFormControls[term] = {};
+        const showVisibilityToggle = options.showVisibilityToggle !== false;
         items.push(
             {
                 colSpan: 2,
-                itemType: "group",
-                name: `${term}Group`,
-                cssClass: "term-packed-group",
-                colCount: 2,
-                items: [
-                    {
-                        colSpan: initialShowCase ? 1 : 2,
-                        name: `${term}Item`,
-                        label: { text: title },
-                        template: _ => this.createPackedTermControl(instance, term, caseProperty, isEditable, caseColors, displayModeProperty)
-                    },
-                    {
-                        colSpan: 1,
-                        name: `${caseProperty}Item`,
-                        visible: initialShowCase,
-                        label: { text: this.board.translations.get("Case") },
-                        template: _ => this.createPackedCaseControl(instance, term, caseProperty, caseColors, caseColorProperty)
-                    }
-                ]
+                name: `${term}Item`,
+                label: { text: title },
+                template: _ => this.createTermSelectorControl(instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle)
             }
         );
         instance.option("items", items);
-        this.updateTermGroupLayout(instance, term, caseProperty);
+        ShapeTermsSelectorControl.syncBaseShapeTermControl(this, instance, term, caseProperty);
     }
 
     resolveTermNumeric(term, caseNumber = 1) {

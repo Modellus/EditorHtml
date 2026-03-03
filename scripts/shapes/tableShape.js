@@ -29,167 +29,17 @@ class TableShape extends BaseShape {
     }
 
     createColumnsControl() {
-        const control = $("<div>").addClass("table-columns-control");
-        this._columnsControlHost = control;
-        this.renderColumnsControl(control);
-        return control;
-    }
-
-    renderColumnsControl(controlHost) {
-        if (!controlHost)
-            return;
         this.normalizeColumns();
-        controlHost.empty();
-        const listHost = $("<div>").addClass("table-columns-list");
-        controlHost.append(listHost);
-        const columns = Array.isArray(this.properties.columns) ? this.properties.columns.map(column => ({ term: column.term, case: this.getClampedCaseNumber(column.case ?? 1) })) : [];
-        listHost.dxList({
-            dataSource: columns,
-            selectionMode: "none",
-            activeStateEnabled: false,
-            focusStateEnabled: false,
-            hoverStateEnabled: false,
-            allowItemDeleting: true,
-            itemDeleteMode: "static",
-            noDataText: "",
-            itemTemplate: (column, index, element) => this.renderColumnListItem(column, index, element, controlHost),
-            onItemDeleting: e => {
-                e.cancel = true;
-                this.onColumnRemoved(e.itemIndex, controlHost);
-            },
-            onContentReady: e => this.refreshColumnsListVisuals(e.component),
-            onItemRendered: e => this.refreshColumnsListVisuals(e.component),
-            itemDragging: {
-                allowReordering: true,
-                showDragIcons: false,
-                handle: ".table-column-drag-handle",
-                onReorder: e => this.onColumnsReordered(e.fromIndex, e.toIndex, controlHost)
-            }
+        this._columnsControl = ShapeTermsSelectorControl.createShapeTermsCollectionControl(this, "columns", {
+            hostClassName: "shape-terms-control table-columns-control",
+            listClassName: "shape-terms-list table-columns-list",
+            rowClassName: "shape-term-row table-column-row",
+            dragHandleClassName: "shape-term-drag-handle table-column-drag-handle",
+            normalizeTermValue: value => this.normalizeColumnValue(value),
+            getFallbackItems: () => this.getLegacyColumns(),
+            onChanged: () => this.refreshGridColumns()
         });
-        this._columnsControlStateKey = this.getColumnsControlStateKey();
-    }
-
-    refreshColumnsListVisuals(listInstance) {
-        if (!listInstance)
-            return;
-        this.updateColumnsListDeleteIcons(listInstance);
-    }
-
-    updateColumnsListDeleteIcons(listInstance) {
-        const listElement = $(listInstance.element());
-        const deleteButtons = listElement.find(".dx-list-static-delete-button, .dx-list-item-delete-button, .dx-list-delete-button");
-        for (let index = 0; index < deleteButtons.length; index++) {
-            const buttonElement = $(deleteButtons[index]);
-            const iconElement = buttonElement.find(".dx-icon").first();
-            if (iconElement.length == 0)
-                continue;
-            if (iconElement.attr("data-trash-icon") === "1")
-                continue;
-            iconElement.attr("data-trash-icon", "1");
-            iconElement.removeClass("dx-icon-close dx-icon-remove dx-icon-trash");
-            iconElement.empty();
-            $("<i>").addClass("fa-light fa-trash-can trash").appendTo(iconElement);
-            $("<i>").addClass("fa-solid fa-trash-can trash-hover").appendTo(iconElement);
-        }
-    }
-
-    renderColumnListItem(column, index, element, controlHost) {
-        const showCase = this.shouldShowCaseSelector(column.term);
-        const row = $("<div>").addClass("table-column-row").css({
-            display: "grid",
-            gridTemplateColumns: showCase ? "24px 1fr 120px" : "24px 1fr",
-            gap: "8px",
-            marginBottom: "8px"
-        });
-        const handleHost = $("<div>").addClass("table-column-drag-handle");
-        $("<i>").addClass("dx-icon dx-icon-dragvertical").appendTo(handleHost);
-        row.append(handleHost);
-        const termHost = $("<div>");
-        row.append(termHost);
-        termHost.dxSelectBox({
-            value: column.term === "" ? null : column.term,
-            items: this.buildColumnTermItems(column.term),
-            stylingMode: "filled",
-            displayExpr: "text",
-            valueExpr: "term",
-            placeholder: "",
-            acceptCustomValue: false,
-            inputAttr: { class: "mdl-variable-selector" },
-            elementAttr: { class: "mdl-variable-selector" },
-            itemTemplate: (data, rowIndex, itemElement) => {
-                const item = $("<div>").text(data.text);
-                item.addClass("mdl-variable-selector");
-                itemElement.append(item);
-                return item;
-            },
-            onValueChanged: e => this.onColumnTermChanged(index, e.value, controlHost)
-        });
-        if (showCase) {
-            const caseHost = $("<div>");
-            row.append(caseHost);
-            const caseFieldAddonRenderer = this.createColumnCaseFieldAddonRenderer();
-            caseHost.dxSelectBox({
-                value: column.case,
-                items: this.buildCaseItems(),
-                valueExpr: "value",
-                displayExpr: "value",
-                stylingMode: "filled",
-                fieldAddons: caseFieldAddonRenderer ? { before: caseFieldAddonRenderer } : {},
-                itemTemplate: this.createColumnCaseItemTemplate(),
-                onValueChanged: e => this.onColumnCaseChanged(index, e.value, controlHost)
-            });
-        }
-        element.append(row);
-    }
-
-    onColumnsReordered(fromIndex, toIndex, controlHost) {
-        const columns = Array.isArray(this.properties.columns) ? this.properties.columns.map(column => ({ term: column.term, case: column.case })) : [];
-        if (fromIndex < 0 || toIndex < 0 || fromIndex >= columns.length || toIndex >= columns.length || fromIndex === toIndex)
-            return;
-        const moved = columns.splice(fromIndex, 1)[0];
-        columns.splice(toIndex, 0, moved);
-        this.properties.columns = columns;
-        this.normalizeColumns();
-        this.setProperty("columns", this.properties.columns);
-        this.refreshGridColumns();
-        this.renderColumnsControl(controlHost);
-    }
-
-    onColumnRemoved(index, controlHost) {
-        const columns = Array.isArray(this.properties.columns) ? this.properties.columns.map(column => ({ term: column.term, case: column.case })) : [];
-        if (index < 0 || index >= columns.length)
-            return;
-        columns.splice(index, 1);
-        this.properties.columns = columns;
-        this.normalizeColumns();
-        this.setProperty("columns", this.properties.columns);
-        this.refreshGridColumns();
-        this.renderColumnsControl(controlHost);
-    }
-
-    onColumnTermChanged(index, value, controlHost) {
-        const columns = Array.isArray(this.properties.columns) ? this.properties.columns.map(column => ({ term: column.term, case: column.case })) : [];
-        if (!columns[index])
-            columns[index] = { term: "", case: 1 };
-        columns[index].term = this.normalizeColumnValue(value);
-        columns[index].case = this.getClampedCaseNumber(columns[index].case ?? 1);
-        this.properties.columns = columns;
-        this.normalizeColumns();
-        this.setProperty("columns", this.properties.columns);
-        this.refreshGridColumns();
-        this.renderColumnsControl(controlHost);
-    }
-
-    onColumnCaseChanged(index, value, controlHost) {
-        const columns = Array.isArray(this.properties.columns) ? this.properties.columns.map(column => ({ term: column.term, case: column.case })) : [];
-        if (!columns[index])
-            return;
-        columns[index].case = this.getClampedCaseNumber(value);
-        this.properties.columns = columns;
-        this.normalizeColumns();
-        this.setProperty("columns", this.properties.columns);
-        this.refreshGridColumns();
-        this.renderColumnsControl(controlHost);
+        return this._columnsControl.createHost();
     }
 
     setDefaults() {
@@ -369,11 +219,12 @@ class TableShape extends BaseShape {
             .css("height", "auto", "width", "auto")
             .addClass("form-math-field")
             .appendTo(header);
-        if (this.shouldShowCaseSelector(column.term)) {
+        if (ShapeTermsSelectorControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value))) {
             const caseIndicator = $("<span>").addClass("case-select");
-            const iconClass = this.getCaseNumberIconClass(column.case);
+            const caseNumber = column.case;
+            const iconClass = ShapeTermsSelectorControl.getCaseNumberIconClass(caseNumber);
             const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", this.getCaseIconColor());
+            icon.css("color", ShapeTermsSelectorControl.getCaseIconColor(caseNumber));
             icon.css("margin-right", "0");
             caseIndicator.append(icon);
             header.append(caseIndicator);
@@ -393,21 +244,15 @@ class TableShape extends BaseShape {
     }
 
     getSelectedColumns() {
-        const selectedColumns = [];
-        if (!Array.isArray(this.properties.columns))
-            return selectedColumns;
-        for (let index = 0; index < this.properties.columns.length; index++) {
-            const column = this.properties.columns[index];
-            const term = this.normalizeColumnValue(column?.term);
-            if (term === "")
-                continue;
-            selectedColumns.push({
-                key: `column${selectedColumns.length}`,
-                term: term,
-                case: this.getClampedCaseNumber(column?.case ?? 1)
-            });
-        }
-        return selectedColumns;
+        const selectedColumns = ShapeTermsSelectorControl.getSelectedShapeTermsCollection(this, "columns", {
+            normalizeTermValue: value => this.normalizeColumnValue(value),
+            getFallbackItems: () => this.getLegacyColumns()
+        });
+        return selectedColumns.map((column, index) => ({
+            key: `column${index}`,
+            term: column.term,
+            case: column.case
+        }));
     }
 
     getColumnsStateKey(columns = this.getSelectedColumns()) {
@@ -415,97 +260,16 @@ class TableShape extends BaseShape {
     }
 
     refreshColumnsControl() {
-        if (!this._columnsControlHost)
+        if (!this._columnsControl)
             return;
-        const nextKey = this.getColumnsControlStateKey();
-        if (this._columnsControlStateKey === nextKey)
-            return;
-        this.renderColumnsControl(this._columnsControlHost);
-    }
-
-    getColumnsControlStateKey() {
-        const terms = this.board.calculator.getTermsNames();
-        return `${this.getCasesCount()}|${JSON.stringify(this.properties.columns ?? [])}|${terms.join(",")}`;
-    }
-
-    buildColumnTermItems(selectedTerm) {
-        const calculator = this.board.calculator;
-        const items = Utils.getTerms(calculator.getTermsNames());
-        const normalizedSelectedTerm = this.normalizeColumnValue(selectedTerm);
-        if (normalizedSelectedTerm === "")
-            return items;
-        if (calculator.isTerm(normalizedSelectedTerm))
-            return items;
-        items.unshift({
-            text: normalizedSelectedTerm,
-            term: normalizedSelectedTerm
-        });
-        return items;
-    }
-
-    buildCaseItems() {
-        const items = [];
-        const count = this.getCasesCount();
-        for (let value = 1; value <= count; value++)
-            items.push({ value: value });
-        return items;
-    }
-
-    createColumnCaseFieldAddonRenderer() {
-        return data => {
-            const iconClass = this.getCaseNumberIconClass(data?.value ?? 1);
-            const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", this.getCaseIconColor());
-            return icon;
-        };
-    }
-
-    createColumnCaseItemTemplate() {
-        return (itemData, _, element) => {
-            const content = $("<div>").addClass("case-select");
-            const iconClass = this.getCaseNumberIconClass(itemData.value);
-            const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", this.getCaseIconColor());
-            const label = $("<span>").addClass("case-select__label").text(itemData.value);
-            content.append(icon, label);
-            element.append(content);
-        };
-    }
-
-    shouldShowCaseSelector(term) {
-        if (this.getCasesCount() <= 1)
-            return false;
-        const normalizedTerm = this.normalizeColumnValue(term);
-        if (normalizedTerm === "")
-            return false;
-        const calculator = this.board.calculator;
-        if (!calculator.isTerm(normalizedTerm))
-            return false;
-        if (normalizedTerm === calculator.properties?.independent?.name)
-            return false;
-        return true;
+        this._columnsControl.refresh();
     }
 
     normalizeColumns() {
-        let columns = Array.isArray(this.properties.columns) ? this.properties.columns : this.getLegacyColumns();
-        if (!Array.isArray(columns) || columns.length === 0)
-            columns = [{ term: "", case: 1 }];
-        const selectedColumns = [];
-        for (let index = 0; index < columns.length; index++) {
-            const column = columns[index];
-            const term = this.normalizeColumnValue(column?.term);
-            if (term === "")
-                continue;
-            selectedColumns.push({
-                term: term,
-                case: this.getClampedCaseNumber(column?.case ?? 1)
-            });
-        }
-        if (selectedColumns.length === 0) {
-            this.properties.columns = [{ term: "", case: 1 }];
-            return;
-        }
-        this.properties.columns = [...selectedColumns, { term: "", case: 1 }];
+        ShapeTermsSelectorControl.normalizeShapeTermsCollection(this, "columns", {
+            normalizeTermValue: value => this.normalizeColumnValue(value),
+            getFallbackItems: () => this.getLegacyColumns()
+        });
     }
 
     getLegacyColumns() {
@@ -522,9 +286,7 @@ class TableShape extends BaseShape {
     }
 
     normalizeColumnValue(value) {
-        if (value == null)
-            return "";
-        return String(value).trim();
+        return ShapeTermsSelectorControl.normalizeTermValue(value);
     }
 
     _canEditTerm(term) {
