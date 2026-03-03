@@ -65,6 +65,7 @@ class ExpressionShape extends BaseShape {
     createElement() {
         const foreignObject = this.board.createSvgElement("foreignObject");
         const div = this.board.createElement("div");
+        this.container = div;
         $(div).css({ width: "100%", height: "100%", "background-color": "transparent" });
         foreignObject.appendChild(div);
         this.mathfield = new MathfieldElement();
@@ -328,6 +329,7 @@ class ExpressionShape extends BaseShape {
 
     update() {
         this.element.style.backgroundColor = this.properties.backgroundColor;
+        this.applyBorderStyle(this.container, 1);
         this.mathfield.style.color = this.properties.foregroundColor;
     }
 
@@ -338,7 +340,6 @@ class ExpressionShape extends BaseShape {
         this.element.setAttribute("height", this.properties.height);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
             ${this.properties.y + this.properties.height / 2})`);
-        this.element.setAttribute("border-color", this.properties.foregroundColor);
     }
 
     insert(text) {

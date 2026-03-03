@@ -310,6 +310,7 @@ class BodyShape extends BaseShape {
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[3].color;
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[3].color;
+        this.properties.borderColor = this.properties.foregroundColor;
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.stroboscopyColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.stroboscopyInterval = 10;
@@ -342,7 +343,7 @@ class BodyShape extends BaseShape {
         this.circle.setAttribute("cy", position.y);
         this.circle.setAttribute("r", radius);
         this.circle.setAttribute("fill", this.properties.backgroundColor);
-        this.circle.setAttribute("stroke", this.properties.foregroundColor);
+        this.applyBorderStroke(this.circle, 1);
         this.image.setAttribute("x", position.x - radius);
         this.image.setAttribute("y", position.y - radius);
         this.image.setAttribute("width", diameter);

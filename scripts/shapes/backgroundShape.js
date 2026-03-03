@@ -30,7 +30,7 @@ class BackgroundShape extends BaseShape {
                         const reader = new FileReader();
                         reader.onload = e => {
                             this.properties.imageBase64 = e.target.result.split(',')[1];
-                            this.element.setAttribute("href", "data:image/png;base64," + this.properties.imageBase64);
+                            this.image.setAttribute("href", "data:image/png;base64," + this.properties.imageBase64);
                         };
                         reader.readAsDataURL(file);
                     }
@@ -52,10 +52,15 @@ class BackgroundShape extends BaseShape {
     }
 
     createElement() {
-        const image = this.board.createSvgElement("image");
-        image.setAttribute("href", "data:image/png;base64," + (this.properties.imageBase64 ?? DEFAULTIMAGE));
-        image.setAttribute("preserveAspectRatio", "xMidYMid slice");
-        return image;
+        const element = this.board.createSvgElement("g");
+        this.image = this.board.createSvgElement("image");
+        this.image.setAttribute("href", "data:image/png;base64," + (this.properties.imageBase64 ?? DEFAULTIMAGE));
+        this.image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+        element.appendChild(this.image);
+        this.border = this.board.createSvgElement("rect");
+        this.border.setAttribute("fill", "none");
+        element.appendChild(this.border);
+        return element;
     }    
 
     update() {
@@ -65,10 +70,15 @@ class BackgroundShape extends BaseShape {
     draw() {
         super.draw();
         const position = this.getBoardPosition();
-        this.element.setAttribute("x", position.x);
-        this.element.setAttribute("y", position.y);
-        this.element.setAttribute("width", this.properties.width);
-        this.element.setAttribute("height", this.properties.height);
+        this.image.setAttribute("x", position.x);
+        this.image.setAttribute("y", position.y);
+        this.image.setAttribute("width", this.properties.width);
+        this.image.setAttribute("height", this.properties.height);
+        this.border.setAttribute("x", position.x);
+        this.border.setAttribute("y", position.y);
+        this.border.setAttribute("width", this.properties.width);
+        this.border.setAttribute("height", this.properties.height);
+        this.applyBorderStroke(this.border, 1);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
             ${this.properties.y + this.properties.height / 2})`);
     }

@@ -22,6 +22,7 @@ class ShapeSvgChartControl {
             argumentTitle: "",
             valueTitle: "",
             backgroundColor: "#ffffff",
+            borderColor: "#666666",
             foregroundColor: "#666666",
             gridColor: "#d3d3d3",
             axisColor: "#7a7a7a",
@@ -503,6 +504,8 @@ class ShapeSvgChartControl {
         rectangle.setAttribute("width", `${width}`);
         rectangle.setAttribute("height", `${height}`);
         rectangle.setAttribute("fill", this.options.backgroundColor);
+        rectangle.setAttribute("stroke", this.options.borderColor);
+        rectangle.setAttribute("stroke-width", "1");
         this.backgroundLayer.appendChild(rectangle);
     }
 

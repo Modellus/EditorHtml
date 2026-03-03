@@ -94,6 +94,9 @@ class CharacterShape extends BaseShape {
 
     createElement() {
         const element = this.board.createSvgElement("g");
+        this.border = this.board.createSvgElement("rect");
+        this.border.setAttribute("fill", "none");
+        element.appendChild(this.border);
         this.image = this.board.createSvgElement("image");
         element.appendChild(this.image);
         return element;
@@ -118,6 +121,11 @@ class CharacterShape extends BaseShape {
     draw() {
         super.draw();
         const position = this.getBoardPosition();
+        this.border.setAttribute("x", position.x - this.properties.width / 2);
+        this.border.setAttribute("y", position.y - this.properties.height / 2);
+        this.border.setAttribute("width", this.properties.width);
+        this.border.setAttribute("height", this.properties.height);
+        this.applyBorderStroke(this.border, 1);
         this.image.setAttribute("x", position.x - this.properties.width / 2);
         this.image.setAttribute("y", position.y - this.properties.height / 2);
         this.image.setAttribute("width", this.properties.width);

@@ -32,6 +32,7 @@ class VectorShape extends BaseShape {
         this.properties.width = 30;
         this.properties.height = 30;
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[1].color;
+        this.properties.borderColor = this.properties.foregroundColor;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[1].color;
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
     }
@@ -72,8 +73,7 @@ class VectorShape extends BaseShape {
         `;
         this.path.setAttribute("d", arrowPath);
         this.path.setAttribute("fill", this.properties.backgroundColor);
-        this.path.setAttribute("stroke", this.properties.foregroundColor);
-        this.path.setAttribute("stroke-width", 1);
+        this.applyBorderStroke(this.path, 1);
         this.drawTrajectory();
     }
 

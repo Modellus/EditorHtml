@@ -195,7 +195,7 @@ class ReferentialShape extends BaseShape {
         this.containerClip.setAttribute("transform", `rotate(${this.properties.rotation}, ${position.x + this.properties.width / 2}, 
             ${position.y + this.properties.height / 2})`);
         this.container.setAttribute("fill", this.properties.backgroundColor);
-        this.container.setAttribute("stroke", this.properties.foregroundColor);
+        this.applyBorderStroke(this.container, 1);
         const axisColor = this.properties.axisColor ?? this.properties.foregroundColor;
         this.horizontalAxis.setAttribute("x1", position.x);
         this.horizontalAxis.setAttribute("y1", position.y + this.properties.originY);

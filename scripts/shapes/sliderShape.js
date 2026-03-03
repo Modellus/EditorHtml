@@ -200,7 +200,7 @@ class SliderShape extends BaseShape {
             splitterOffset: this.getSplitterOffsetFromValue(normalizedValue, range.minimum, range.maximum),
             fillColor: fillColor,
             backgroundColor: this.properties.backgroundColor,
-            foregroundColor: this.properties.foregroundColor
+            borderColor: this.getBorderColor()
         };
     }
 
@@ -209,7 +209,7 @@ class SliderShape extends BaseShape {
         this.properties.value = config.value;
         if (this.container) {
             this.container.setAttribute("fill", "none");
-            this.container.setAttribute("stroke", config.foregroundColor);
+            this.container.setAttribute("stroke", config.borderColor);
         }
         if (this.topPart) {
             this.topPart.setAttribute("fill", config.backgroundColor);
@@ -220,7 +220,7 @@ class SliderShape extends BaseShape {
             this.bottomPart.setAttribute("stroke", "none");
         }
         if (this.splitter)
-            this.splitter.setAttribute("stroke", config.foregroundColor);
+            this.splitter.setAttribute("stroke", config.borderColor);
     }
 
     updateSliderState() {

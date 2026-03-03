@@ -165,7 +165,8 @@ class ChartShape extends BaseShape {
             argumentTitle: "",
             valueTitle: "",
             foregroundColor: this.properties.foregroundColor,
-            backgroundColor: this.properties.backgroundColor
+            backgroundColor: this.properties.backgroundColor,
+            borderColor: this.getBorderColor()
         };
     }
 
@@ -288,6 +289,7 @@ class ChartShape extends BaseShape {
             })),
             color: this.properties.foregroundColor,
             bg: this.properties.backgroundColor,
+            border: this.getBorderColor(),
             argTitle: this.getTermLabelWithCase(xTerm, xCase),
             valTitle: ySeries.map(series => series.name).join(", ")
         };
@@ -299,6 +301,7 @@ class ChartShape extends BaseShape {
                 series: config.series,
                 foregroundColor: config.color,
                 backgroundColor: config.bg,
+                borderColor: config.border,
                 argumentTitle: config.argTitle,
                 valueTitle: config.valTitle
             });

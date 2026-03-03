@@ -60,6 +60,7 @@ class TableShape extends BaseShape {
         this._appliedColumnsKey = this.getColumnsStateKey(this._activeColumns);
         const foreignObject = this.board.createSvgElement("foreignObject");
         const $div = $("<div>").appendTo(foreignObject);
+        this.container = $div.get(0);
         $div.css({ "width": "100%", "height": "100%" });
         this.dataGrid = $div.dxDataGrid({
             dataSource: [],
@@ -103,12 +104,16 @@ class TableShape extends BaseShape {
     }
 
     draw() {
+        super.draw();
         this.element.setAttribute("x", this.properties.x);
         this.element.setAttribute("y", this.properties.y);
         this.element.setAttribute("width", this.properties.width);
         this.element.setAttribute("height", this.properties.height);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
             ${this.properties.y + this.properties.height / 2})`);
+        this.applyBorderStyle(this.container, 1);
+        if (this.dataGrid)
+            $(this.dataGrid.element()).css("border-color", this.getBorderColor());
     }
 
     tick() {

@@ -20,11 +20,16 @@ class BaseShape {
     }
 
     setProperties(properties) {
+        const hasBorderColor = properties != null && Object.prototype.hasOwnProperty.call(properties, "borderColor");
+        const hasForegroundColor = properties != null && Object.prototype.hasOwnProperty.call(properties, "foregroundColor");
         Object.assign(this.properties, properties);
+        if (!hasBorderColor && hasForegroundColor)
+            this.properties.borderColor = this.properties.foregroundColor;
     }
 
     setDefaults() {
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[2].color;
+        this.properties.borderColor = this.properties.foregroundColor;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[2].color;
         this.properties.showName = false;
         this.properties.nameColor = null;
@@ -38,6 +43,8 @@ class BaseShape {
         this.element.setAttribute("clip-path", `url(#${this.getClipId()})`);
         if (this.properties.nameColor == null)
             this.properties.nameColor = this.properties.foregroundColor;
+        if (this.properties.borderColor == null)
+            this.properties.borderColor = this.properties.foregroundColor;
         this.initializeTermDisplayLayer();
         this.initializeShapeNameLayer();
         this.draw();
@@ -398,19 +405,25 @@ class BaseShape {
                 },
                 {
                     itemType: "group",
-                    colCount: 2,
+                    colCount: 3,
                     items: [
-                        {
-                            colSpan: 1,
-                            dataField: "backgroundColor",
-                            label: { text: "Background color" },
-                            template: _ => this.createColorPickerEditor("backgroundColor")
-                        },
                         {
                             colSpan: 1,
                             dataField: "foregroundColor",
                             label: { text: "Color" },
                             template: _ => this.createColorPickerEditor("foregroundColor")
+                        },
+                        {
+                            colSpan: 1,
+                            dataField: "borderColor",
+                            label: { text: "Border" },
+                            template: _ => this.createColorPickerEditor("borderColor")
+                        },
+                        {
+                            colSpan: 1,
+                            dataField: "backgroundColor",
+                            label: { text: "Background" },
+                            template: _ => this.createColorPickerEditor("backgroundColor")
                         }
                     ]
                 }
@@ -592,6 +605,25 @@ class BaseShape {
 
     getShapeNameColor() {
         return this.properties.nameColor ?? this.properties.foregroundColor ?? "#000000";
+    }
+
+    getBorderColor() {
+        return this.properties.borderColor ?? this.properties.foregroundColor ?? "#000000";
+    }
+
+    applyBorderStroke(element, strokeWidth = null) {
+        if (!element)
+            return;
+        element.setAttribute("stroke", this.getBorderColor());
+        if (strokeWidth != null)
+            element.setAttribute("stroke-width", `${strokeWidth}`);
+    }
+
+    applyBorderStyle(element, borderWidth = 1) {
+        if (!element)
+            return;
+        element.style.border = `${borderWidth}px solid ${this.getBorderColor()}`;
+        element.style.boxSizing = "border-box";
     }
 
     isShapeNameVisible() {
