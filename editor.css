@@ -920,3 +920,9 @@ math-field {
     user-select: none;
     -webkit-user-select: none;
 }
+
+.shape-tick-label {
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+}

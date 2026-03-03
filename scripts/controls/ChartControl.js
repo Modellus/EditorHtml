@@ -581,6 +581,7 @@ class ChartControl {
             anchor = "end";
             labelX = xPosition - 2;
         }
+        label.setAttribute("class", "shape-tick-label");
         label.setAttribute("x", `${labelX}`);
         label.setAttribute("y", `${layout.plotBottom + 18}`);
         label.setAttribute("text-anchor", anchor);
@@ -602,6 +603,7 @@ class ChartControl {
         tick.setAttribute("stroke-width", "1");
         this.axisLayer.appendChild(tick);
         const label = this.createSvgElement("text");
+        label.setAttribute("class", "shape-tick-label");
         label.setAttribute("x", `${layout.plotLeft - 7}`);
         label.setAttribute("y", `${yPosition + 3}`);
         label.setAttribute("text-anchor", "end");

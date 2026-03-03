@@ -108,6 +108,7 @@ class RulerShape extends BaseShape {
 
     addTickLabel(x, y, textValue) {
         const label = this.board.createSvgElement("text");
+        label.setAttribute("class", "shape-tick-label");
         label.setAttribute("x", x);
         label.setAttribute("y", y);
         label.setAttribute("text-anchor", "middle");
