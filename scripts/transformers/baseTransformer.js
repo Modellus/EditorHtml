@@ -51,6 +51,49 @@ class BaseTransformer {
         });
     }
 
+    getRotationSnapIncrementDegrees() {
+        return 90;
+    }
+
+    getRotationSnapThresholdDegrees() {
+        return 4;
+    }
+
+    isRotationHandle(handle) {
+        if (!(handle instanceof Element))
+            return false;
+        return handle.classList.contains("rotation");
+    }
+
+    getSnappedRotationDegrees(angleDegrees) {
+        if (!Number.isFinite(angleDegrees))
+            return angleDegrees;
+        const snapIncrement = Number(this.getRotationSnapIncrementDegrees());
+        if (!(snapIncrement > 0))
+            return angleDegrees;
+        const nearestSnap = Math.round(angleDegrees / snapIncrement) * snapIncrement;
+        const snapThreshold = Number(this.getRotationSnapThresholdDegrees());
+        if (!(snapThreshold >= 0))
+            return angleDegrees;
+        if (Math.abs(angleDegrees - nearestSnap) <= snapThreshold)
+            return nearestSnap;
+        return angleDegrees;
+    }
+
+    applyTransformSnapping(transform) {
+        if (!transform || typeof transform !== "object")
+            return transform;
+        if (!this.isRotationHandle(this.draggedHandle))
+            return transform;
+        const rotation = Number(transform.rotation);
+        if (!Number.isFinite(rotation))
+            return transform;
+        const snappedRotation = this.getSnappedRotationDegrees(rotation);
+        if (snappedRotation === rotation)
+            return transform;
+        return Object.assign({}, transform, { rotation: snappedRotation });
+    }
+
     getShapeRotationCenter() {
         if (!this.shape?.getBoardPosition)
             return null;
@@ -66,7 +109,9 @@ class BaseTransformer {
     }
 
     getShapeRotationDegrees() {
-        const rotation = Number(this.shape?.properties?.rotation);
+        const rotation = typeof this.shape?.getAbsoluteRotation == "function"
+            ? Number(this.shape.getAbsoluteRotation())
+            : Number(this.shape?.properties?.rotation);
         if (!Number.isFinite(rotation))
             return 0;
         return rotation;
@@ -126,7 +171,7 @@ class BaseTransformer {
                     return;
                 const point = this._pendingPoint;
                 this._pendingPoint = null;
-                const transform = this.draggedHandle.getTransform(point);
+                const transform = this.applyTransformSnapping(this.draggedHandle.getTransform(point));
                 this.transformShape(transform);
                 this.updateHandles();
                 this.startX = point.x;

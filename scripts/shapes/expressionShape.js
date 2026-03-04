@@ -339,6 +339,7 @@ class ExpressionShape extends BaseShape {
         this.element.setAttribute("height", this.properties.height);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
             ${this.properties.y + this.properties.height / 2})`);
+        super.draw();
     }
 
     insert(text) {

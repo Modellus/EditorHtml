@@ -21,7 +21,7 @@ class Shell  {
         this.board.svg.addEventListener("selected", e => this.onSelected(e));
         this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
-        [BodyShape, ExpressionShape, ChartShape, TableShape, SliderShape, BackgroundShape, VectorShape, ImageShape, ReferentialShape, TextShape, CharacterShape, RulerShape, ProtractorShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyShape, ExpressionShape, ValueShape, ChartShape, TableShape, SliderShape, BackgroundShape, VectorShape, ImageShape, ReferentialShape, TextShape, CharacterShape, RulerShape, ProtractorShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.calculator.on("iterate", e => this.onIterate(e));
         if (model != undefined)
             this.openModel(model);
@@ -472,12 +472,6 @@ class Shell  {
                 },
                 {
                     location: "center",
-                    template() {
-                      return $("<div id='representation-tools-separator' class='toolbar-separator'>|</div>");
-                    }
-                },
-                {
-                    location: "center",
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-shapes",
@@ -495,6 +489,12 @@ class Shell  {
                                 </span>
                             </div>`,
                             onInitialized: e => this.createTooltip(e, this.board.translations.get("Referential Tooltip"))
+                    }
+                },
+                {
+                    location: "center",
+                    template() {
+                      return $("<div id='representation-tools-separator' class='toolbar-separator'>|</div>");
                     }
                 },
                 {
@@ -528,6 +528,17 @@ class Shell  {
                         },
                         icon: "fa-light fa-slider",
                         onClick: _ => this.commands.addShape("SliderShape", "Slider")
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
+                    options: {
+                        icon: "fa-light fa-input-numeric",
+                        elementAttr: {
+                            id: "value-button"
+                        },
+                        onClick: _ => this.commands.addShape("ValueShape", "Value")
                     }
                 },
                 {
@@ -593,6 +604,7 @@ class Shell  {
         });
         this.topToolbar = $("#toolbar").dxToolbar("instance");
         this.expressionButton = $("#expression-button").dxButton("instance");
+        this.valueButton = $("#value-button").dxButton("instance");
         this.referentialButton = $("#referential-button").dxButton("instance");
         this.chartButton = $("#chart-button").dxButton("instance");
         this.tableButton = $("#table-button").dxButton("instance");

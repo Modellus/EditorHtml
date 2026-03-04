@@ -8,6 +8,18 @@ class ReferentialShape extends BaseShape {
         return new ReferentialTransformer(this.board, this);
     }
 
+    initializeElement() {
+        super.initializeElement();
+        if (this.element)
+            this.element.removeAttribute("clip-path");
+    }
+
+    setProperty(name, value) {
+        if (name == "x" || name == "y" || name == "rotation")
+            this._skipNextAutoScale = true;
+        super.setProperty(name, value);
+    }
+
     enterEditMode() {
         return false;
     }
@@ -181,18 +193,18 @@ class ReferentialShape extends BaseShape {
 
     drawAxis() {
         const position = this.getBoardPosition();
+        const rotation = this.getAbsoluteRotation();
+        const rotationTransform = `rotate(${rotation}, ${position.x + this.properties.width / 2}, ${position.y + this.properties.height / 2})`;
         this.container.setAttribute("x", position.x);
         this.container.setAttribute("y", position.y);
         this.container.setAttribute("width", this.properties.width);
         this.container.setAttribute("height", this.properties.height);
-        this.container.setAttribute("transform", `rotate(${this.properties.rotation}, ${position.x + this.properties.width / 2}, 
-            ${position.y + this.properties.height / 2})`);
+        this.container.setAttribute("transform", rotationTransform);
         this.containerClip.setAttribute("x", position.x);
         this.containerClip.setAttribute("y", position.y);
         this.containerClip.setAttribute("width", this.properties.width);
         this.containerClip.setAttribute("height", this.properties.height);
-        this.containerClip.setAttribute("transform", `rotate(${this.properties.rotation}, ${position.x + this.properties.width / 2}, 
-            ${position.y + this.properties.height / 2})`);
+        this.containerClip.setAttribute("transform", rotationTransform);
         this.container.setAttribute("fill", this.properties.backgroundColor);
         this.applyBorderStroke(this.container, 1);
         const axisColor = this.properties.axisColor ?? this.properties.foregroundColor;
@@ -201,11 +213,15 @@ class ReferentialShape extends BaseShape {
         this.horizontalAxis.setAttribute("x2", position.x + this.properties.width);
         this.horizontalAxis.setAttribute("y2", position.y + this.properties.originY);
         this.horizontalAxis.setAttribute("stroke", axisColor);
+        this.horizontalAxis.setAttribute("transform", rotationTransform);
         this.verticalAxis.setAttribute("x1", position.x + this.properties.originX);
         this.verticalAxis.setAttribute("y1", position.y);
         this.verticalAxis.setAttribute("x2", position.x + this.properties.originX);
         this.verticalAxis.setAttribute("y2", position.y + this.properties.height);
         this.verticalAxis.setAttribute("stroke", axisColor);
+        this.verticalAxis.setAttribute("transform", rotationTransform);
+        if (this.ticksLayer)
+            this.ticksLayer.setAttribute("transform", rotationTransform);
     }
 
     drawTicks() {
@@ -267,6 +283,10 @@ class ReferentialShape extends BaseShape {
     autoAdjustScales({ position, axisX, axisY }) {
         if (this.properties.autoScale === false)
             return;
+        if (this._skipNextAutoScale === true) {
+            this._skipNextAutoScale = false;
+            return;
+        }
         const maxAxisPxX = Math.max(axisX - position.x, position.x + this.properties.width - axisX);
         const maxAxisPxY = Math.max(axisY - position.y, position.y + this.properties.height - axisY);
         if (!maxAxisPxX || !maxAxisPxY)

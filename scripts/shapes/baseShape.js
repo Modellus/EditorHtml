@@ -380,12 +380,61 @@ class BaseShape {
         };
     }
 
+    getAbsoluteRotation() {
+        const localRotation = Number(this.properties?.rotation);
+        const normalizedLocalRotation = Number.isFinite(localRotation) ? localRotation : 0;
+        if (!this.parent)
+            return normalizedLocalRotation;
+        if (typeof this.parent.getAbsoluteRotation == "function")
+            return normalizedLocalRotation + this.parent.getAbsoluteRotation();
+        const parentRotation = Number(this.parent?.properties?.rotation);
+        if (!Number.isFinite(parentRotation))
+            return normalizedLocalRotation;
+        return normalizedLocalRotation + parentRotation;
+    }
+
+    rotatePointAroundCenter(pointX, pointY, centerX, centerY, angleDegrees) {
+        const radians = angleDegrees * Math.PI / 180;
+        const dx = pointX - centerX;
+        const dy = pointY - centerY;
+        const rotatedX = centerX + dx * Math.cos(radians) - dy * Math.sin(radians);
+        const rotatedY = centerY + dx * Math.sin(radians) + dy * Math.cos(radians);
+        return { x: rotatedX, y: rotatedY };
+    }
+
+    getRotationCenterForShape(shape, shapePosition = null) {
+        if (!shape)
+            return null;
+        const position = shapePosition ?? shape.getBoardPosition?.();
+        if (!position)
+            return null;
+        const radius = Number(shape?.properties?.radius);
+        if (Number.isFinite(radius))
+            return { x: position.x, y: position.y };
+        const width = Number(shape?.properties?.width);
+        const height = Number(shape?.properties?.height);
+        if (!Number.isFinite(width) || !Number.isFinite(height))
+            return null;
+        return { x: position.x + width / 2, y: position.y + height / 2 };
+    }
+
     getBoardPosition() {
-        const parentPosition = this.parent?.getBoardPosition() ?? { x: 0, y: 0 };
-        return {
-            x: this.properties.x + parentPosition.x + (this.parent?.properties.originX ?? 0),
-            y: this.properties.y + parentPosition.y + (this.parent?.properties.originY ?? 0)
-        };
+        const parent = this.parent;
+        if (!parent)
+            return {
+                x: this.properties.x,
+                y: this.properties.y
+            };
+        const parentPosition = parent.getBoardPosition?.() ?? { x: 0, y: 0 };
+        let x = this.properties.x + parentPosition.x + (parent?.properties?.originX ?? 0);
+        let y = this.properties.y + parentPosition.y + (parent?.properties?.originY ?? 0);
+        const parentRotation = typeof parent.getAbsoluteRotation == "function" ? parent.getAbsoluteRotation() : Number(parent?.properties?.rotation ?? 0);
+        if (!Number.isFinite(parentRotation) || Math.abs(parentRotation) < 0.00001)
+            return { x: x, y: y };
+        const rotationCenter = this.getRotationCenterForShape(parent, parentPosition);
+        if (!rotationCenter)
+            return { x: x, y: y };
+        return this.rotatePointAroundCenter(x, y, rotationCenter.x, rotationCenter.y, parentRotation);
     }
 
     getClipId() {
@@ -473,11 +522,12 @@ class BaseShape {
         this.shapeNameText = null;
         if (!this.element)
             return;
-        if (this.element.tagName?.toLowerCase() != "g")
-            return;
         this.shapeNameLayer = this.board.createSvgElement("g");
         this.shapeNameLayer.setAttribute("pointer-events", "none");
-        this.element.appendChild(this.shapeNameLayer);
+        if (this.element.tagName?.toLowerCase() == "g")
+            this.element.appendChild(this.shapeNameLayer);
+        else if (this.board?.svg)
+            this.board.svg.appendChild(this.shapeNameLayer);
     }
 
     getTermDisplayModeProperty(term) {
@@ -552,6 +602,8 @@ class BaseShape {
         }
         if (this.shapeNameLayer.parentNode == this.element && this.shapeNameLayer.nextSibling != null)
             this.element.appendChild(this.shapeNameLayer);
+        if (this.board?.svg && this.shapeNameLayer.parentNode == this.board.svg && this.board.svg.lastChild != this.shapeNameLayer)
+            this.board.svg.appendChild(this.shapeNameLayer);
         this.shapeNameText.setAttribute("x", anchor.x);
         this.shapeNameText.setAttribute("y", anchor.y);
         this.shapeNameText.setAttribute("text-anchor", "middle");

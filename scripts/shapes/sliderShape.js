@@ -1,6 +1,6 @@
 class SliderShape extends BaseShape {
     constructor(board, parent, id) {
-        super(board, parent, id);
+        super(board, null, id);
     }
 
     createTransformer() {
@@ -324,6 +324,21 @@ class SliderShape extends BaseShape {
         this.splitter.setAttribute("x2", trackX + trackWidth);
         this.splitter.setAttribute("y2", splitterY);
         this.element.setAttribute("transform", `translate(${position.x} ${position.y}) rotate(${this.properties.rotation} ${sliderWidth / 2} ${sliderHeight / 2})`);
+    }
+
+    getTermLabelAnchor() {
+        const width = Number(this.properties.width);
+        const height = Number(this.properties.height);
+        if (Number.isFinite(width) && Number.isFinite(height))
+            return { x: width / 2, y: height + 4 };
+        return super.getTermLabelAnchor();
+    }
+
+    getShapeNameLabelAnchor() {
+        const width = Number(this.properties.width);
+        if (Number.isFinite(width))
+            return { x: width / 2, y: -2 };
+        return super.getShapeNameLabelAnchor();
     }
 
     tick() {

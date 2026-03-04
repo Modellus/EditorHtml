@@ -39,6 +39,7 @@ class BaseTranslations {
                 "Character Name": "Personagem",
                 "Background Name": "Cenário",
                 "Text Name": "Texto",
+                "Value Name": "Valor",
                 "Ruler Name": "Régua",
                 "Protractor Name": "Transferidor"
             };
@@ -79,6 +80,7 @@ class BaseTranslations {
                 "Character Name": "Character",
                 "Background Name": "Background",
                 "Text Name": "Text",
+                "Value Name": "Value",
                 "Ruler Name": "Ruler",
                 "Protractor Name": "Protractor"
             };
