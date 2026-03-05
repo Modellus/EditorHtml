@@ -111,7 +111,9 @@ class Selection {
         if (!this.enabled)
             return;
         const targetShape = this.resolveSelectionTarget(event);
-        const shape = this.findShape(targetShape);
+        let shape = this.findShape(targetShape);
+        if (!shape && this.isTransformerOverlayElement(event.target))
+            shape = this.selectedShape ?? this.hoveredShape;
         if (!shape)
             return;
         this.board.suppressNextFocusSelect = true;
@@ -148,13 +150,38 @@ class Selection {
         const target = event.target;
         if (!(target instanceof Element))
             return target;
-        if (!target.classList.contains("handle") && !target.classList.contains("bounding-box"))
+        if (!this.isTransformerOverlayElement(target))
             return target;
-        const previousPointerEvents = target.style.pointerEvents;
-        target.style.pointerEvents = "none";
+        const overlayElements = this.getTransformerOverlayElements();
+        if (!overlayElements.includes(target))
+            overlayElements.push(target);
+        const previousPointerEvents = overlayElements.map(element => ({ element: element, pointerEvents: element.style.pointerEvents }));
+        overlayElements.forEach(entry => entry.style.pointerEvents = "none");
         const underlying = document.elementFromPoint(event.clientX, event.clientY);
-        target.style.pointerEvents = previousPointerEvents;
+        previousPointerEvents.forEach(entry => entry.element.style.pointerEvents = entry.pointerEvents);
         return underlying ?? target;
+    }
+
+    isTransformerOverlayElement(element) {
+        if (!(element instanceof Element))
+            return false;
+        if (element.classList.contains("handle"))
+            return true;
+        if (element.classList.contains("bounding-box"))
+            return true;
+        if (element.classList.contains("hover-outline"))
+            return true;
+        if (element.classList.contains("selected-outline"))
+            return true;
+        if (element.classList.contains("resize-handle"))
+            return true;
+        if (element.classList.contains("rotation-handle"))
+            return true;
+        return !!element._shape;
+    }
+
+    getTransformerOverlayElements() {
+        return Array.from(this.board.svg.querySelectorAll(".handle, .bounding-box, .hover-outline, .selected-outline, .resize-handle, .rotation-handle"));
     }
 
     setHover(shape) {
@@ -164,6 +191,7 @@ class Selection {
         this.hoveredShape = shape;
         this.hoverTransformer = shape.createTransformer();
         this.hoverTransformer.show();
+        this.hideHoverRotationHandles();
         this.updateHoverHandles();
         this.updateHoverOutline(shape);
     }
@@ -176,12 +204,23 @@ class Selection {
         if (!this.hoverTransformer)
             return;
         this.hoverTransformer.updateHandles();
+        this.hideHoverRotationHandles();
         if (this.hoverTransformer.handles) {
             this.hoverTransformer.handles.forEach(handle => {
                 if (handle.parentNode !== this.board.svg || this.board.svg.lastChild !== handle)
                     this.board.svg.appendChild(handle);
             });
         }
+    }
+
+    hideHoverRotationHandles() {
+        if (!this.hoverTransformer?.handles)
+            return;
+        this.hoverTransformer.handles.forEach(handle => {
+            if (!handle.classList.contains("rotation"))
+                return;
+            handle.setAttribute("visibility", "hidden");
+        });
     }
 
     clearHover() {

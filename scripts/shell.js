@@ -64,6 +64,10 @@ class Shell  {
             });
     }
 
+    createTranslatedTooltip(e, key, width) {
+        this.createTooltip(e, this.board.translations.get(key), width);
+    }
+
     createSettingsPopup() {
         $("#settings-popup").dxPopup({
             width: 400,
@@ -455,7 +459,8 @@ class Shell  {
                         elementAttr: {
                             id: "menu-button"
                         },
-                        onClick: _ => this.contextMenu.show()
+                        onClick: _ => this.contextMenu.show(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Menu Tooltip", 280)
                     }
                 },
                 {
@@ -467,7 +472,8 @@ class Shell  {
                             style: "font-family: cursive; font-size: 16px"
                         },
                         text: "X",
-                        onClick: _ => this.commands.addShape("ExpressionShape", "Expression")
+                        onClick: _ => this.commands.addShape("ExpressionShape", "Expression"),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Expression Tooltip", 280)
                     }
                 },
                 {
@@ -488,7 +494,7 @@ class Shell  {
                                     <i class="fa-thin fa-rectangle-wide"></i>
                                 </span>
                             </div>`,
-                            onInitialized: e => this.createTooltip(e, this.board.translations.get("Referential Tooltip"))
+                            onInitialized: e => this.createTranslatedTooltip(e, "Referential Tooltip", 280)
                     }
                 },
                 {
@@ -505,7 +511,8 @@ class Shell  {
                             id: "chart-button"
                         },
                         icon: "fa-light fa-chart-line",
-                        onClick: _ => this.commands.addShape("ChartShape", "Chart")
+                        onClick: _ => this.commands.addShape("ChartShape", "Chart"),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Chart Tooltip", 280)
                     }
                 },
                 {
@@ -516,7 +523,8 @@ class Shell  {
                             id: "table-button"
                         },
                         icon: "fa-light fa-table",
-                        onClick: _ => this.commands.addShape("TableShape", "Table")
+                        onClick: _ => this.commands.addShape("TableShape", "Table"),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Table Tooltip", 280)
                     }
                 },
                 {
@@ -527,7 +535,8 @@ class Shell  {
                             id: "range-selector-button"
                         },
                         icon: "fa-light fa-slider",
-                        onClick: _ => this.commands.addShape("SliderShape", "Slider")
+                        onClick: _ => this.commands.addShape("SliderShape", "Slider"),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Slider Tooltip", 280)
                     }
                 },
                 {
@@ -538,7 +547,8 @@ class Shell  {
                         elementAttr: {
                             id: "value-button"
                         },
-                        onClick: _ => this.commands.addShape("ValueShape", "Value")
+                        onClick: _ => this.commands.addShape("ValueShape", "Value"),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Value Tooltip", 280)
                     }
                 },
                 {
@@ -557,7 +567,8 @@ class Shell  {
                         template: `<div class='dx-icon'>
                                 <i class='fa-light fa-panorama fa-lg'></i>
                             </div>`,
-                        onClick: _ => this.commands.addShape("BackgroundShape", "Background")
+                        onClick: _ => this.commands.addShape("BackgroundShape", "Background"),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Background Tooltip", 280)
                     }
                 },
                 {
@@ -569,7 +580,8 @@ class Shell  {
                             id: "text-button",
                             "data-fa-transform": "shrink-8 up-6"
                         },
-                        onClick: _ => this.commands.addShape("TextShape", "Text")
+                        onClick: _ => this.commands.addShape("TextShape", "Text"),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Text Tooltip", 280)
                     }
                 },
                 {
@@ -586,7 +598,8 @@ class Shell  {
                         elementAttr: {
                             id: "ruler-button"
                         },
-                        onClick: _ => this.commands.addShape("RulerShape", "Ruler")
+                        onClick: _ => this.commands.addShape("RulerShape", "Ruler"),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Ruler Tooltip", 280)
                     }
                 },
                 {
@@ -597,7 +610,8 @@ class Shell  {
                         elementAttr: {
                             id: "protractor-button"
                         },
-                        onClick: _ => this.commands.addShape("ProtractorShape", "Protractor")
+                        onClick: _ => this.commands.addShape("ProtractorShape", "Protractor"),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Protractor Tooltip", 280)
                     }
                 }
             ]
@@ -620,7 +634,8 @@ class Shell  {
                 {
                     widget: "dxButton",
                     options: {
-                        icon: "fa-light fa-circle-minus"
+                        icon: "fa-light fa-circle-minus",
+                        onInitialized: e => this.createTranslatedTooltip(e, "Zoom Out Tooltip", 280)
                     },
                     location: "before",
                     onClick: e => this.panAndZoom.setZoom(this.panAndZoom.getZoom() - 0.1)
@@ -633,14 +648,16 @@ class Shell  {
                         },
                         stylingMode: "text",
                         text: "100 %",
-                        onClick: e => this.panAndZoom.setZoom(1)
+                        onClick: e => this.panAndZoom.setZoom(1),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Zoom Reset Tooltip", 280)
                     },
                     location: "before"
                 },
                 {
                     widget: "dxButton",
                     options: {
-                        icon: "fa-light fa-circle-plus"
+                        icon: "fa-light fa-circle-plus",
+                        onInitialized: e => this.createTranslatedTooltip(e, "Zoom In Tooltip", 280)
                     },
                     location: "before",
                     onClick: e => this.panAndZoom.setZoom(this.panAndZoom.getZoom() + 0.1)
@@ -655,7 +672,8 @@ class Shell  {
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-rotate-left",
-                        onClick: _ => this.undoPressed()
+                        onClick: _ => this.undoPressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Undo Tooltip", 280)
                     },
                     location: "before"
                 },
@@ -663,7 +681,8 @@ class Shell  {
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-rotate-right",
-                        onClick: _ => this.redoPressed()
+                        onClick: _ => this.redoPressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Redo Tooltip", 280)
                     },
                     location: "before"
                 },
@@ -674,7 +693,8 @@ class Shell  {
                         elementAttr: {
                             id: "playPauseButton"
                         },
-                        onClick: _ => this.playPausePressed()
+                        onClick: _ => this.playPausePressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Play Pause Tooltip", 280)
                     },
                     location: "center"
                 },
@@ -685,7 +705,8 @@ class Shell  {
                         elementAttr: {
                             id: "stopButton"
                         },
-                        onClick: _ => this.stopPressed()
+                        onClick: _ => this.stopPressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Stop Tooltip", 280)
                     },
                     location: "center"
                 },
@@ -728,7 +749,8 @@ class Shell  {
                         elementAttr: {
                             id: "stepBackwardButton"
                         },
-                        onClick: _ => this.stepBackwardPressed()
+                        onClick: _ => this.stepBackwardPressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Step Backward Tooltip", 280)
                     },
                     location: "center"
                 },
@@ -739,7 +761,8 @@ class Shell  {
                         elementAttr: {
                             id: "stepForwardButton"
                         },
-                        onClick: _ => this.stepForwardPressed()
+                        onClick: _ => this.stepForwardPressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Step Forward Tooltip", 280)
                     },
                     location: "center"
                 },
@@ -756,7 +779,8 @@ class Shell  {
                         elementAttr: {
                             id: "replayButton"
                         },
-                        onClick: _ => this.replayPressed()
+                        onClick: _ => this.replayPressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Replay Tooltip", 280)
                     },
                     location: "center"
                 },
@@ -764,7 +788,11 @@ class Shell  {
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-map",
-                        onClick: () => this.miniMapPressed()
+                        elementAttr: {
+                            id: "minimap-button"
+                        },
+                        onClick: () => this.miniMapPressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Mini Map Tooltip", 280)
                     },
                     location: "after"
                 },
@@ -776,7 +804,8 @@ class Shell  {
                         elementAttr: {
                             id: "chat-button"
                         },
-                        onClick: _ => this.chatPressed()
+                        onClick: _ => this.chatPressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Chat Tooltip", 280)
                     }
                 }
             ]

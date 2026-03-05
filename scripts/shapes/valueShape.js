@@ -1,6 +1,14 @@
 class ValueShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, null, id);
+        this.isEditingValue = this.isEditingValue ?? false;
+        this.editingTerm = this.editingTerm ?? "";
+        this.editingCaseNumber = this.editingCaseNumber ?? 1;
+        this.valueEditor = this.valueEditor ?? null;
+        this.valueEditorHost = this.valueEditorHost ?? null;
+        this.valueEditorContainer = this.valueEditorContainer ?? null;
+        this.pendingEditorValue = this.pendingEditorValue ?? null;
+        this.pendingEditorFocus = this.pendingEditorFocus ?? false;
     }
 
     createTransformer() {
@@ -8,7 +16,15 @@ class ValueShape extends BaseShape {
     }
 
     enterEditMode() {
-        return false;
+        const term = this.getSelectedTerm();
+        if (!this.canEditTermValue(term))
+            return false;
+        const caseNumber = this.getSelectedCaseNumber(term);
+        const currentValue = this.board.calculator.getByName(term, caseNumber);
+        if (!Number.isFinite(currentValue))
+            return false;
+        this.beginValueEdit(term, caseNumber, currentValue);
+        return true;
     }
 
     createForm() {
@@ -48,10 +64,117 @@ class ValueShape extends BaseShape {
         iconContainer.appendChild(icon);
         this.caseIconHost.appendChild(iconContainer);
         this.caseIconElement = icon;
+        this.valueEditorHost = this.board.createSvgElement("foreignObject");
+        this.valueEditorHost.setAttribute("display", "none");
+        this.valueEditorHost.setAttribute("class", "value-shape-editor-host");
+        this.valueEditorContainer = this.board.createElement("div");
+        this.valueEditorContainer.setAttribute("class", "value-shape-editor");
+        this.valueEditorHost.appendChild(this.valueEditorContainer);
         element.appendChild(this.container);
         element.appendChild(this.valueText);
         element.appendChild(this.caseIconHost);
+        element.appendChild(this.valueEditorHost);
         return element;
+    }
+
+    canEditTermValue(term) {
+        if (term == null || term === "")
+            return false;
+        const calculator = this.board.calculator;
+        if (!calculator.isTerm(term))
+            return false;
+        return calculator.isEditable(term);
+    }
+
+    createValueEditor() {
+        if (!this.valueEditorContainer || this.valueEditor)
+            return;
+        const editorOptions = this.getPrecisionNumberEditorOptions({
+            showSpinButtons: false,
+            stylingMode: "filled",
+            onEnterKey: _ => this.commitAndExitValueEdit(),
+            onFocusOut: _ => this.commitAndExitValueEdit(),
+            onKeyDown: event => this.onValueEditorKeyDown(event)
+        });
+        this.valueEditor = $(this.valueEditorContainer).dxNumberBox(editorOptions).dxNumberBox("instance");
+    }
+
+    onValueEditorKeyDown(event) {
+        const keydownEvent = event?.event;
+        if (!keydownEvent)
+            return;
+        if (keydownEvent.key !== "Escape")
+            return;
+        keydownEvent.preventDefault();
+        keydownEvent.stopPropagation();
+        this.cancelAndExitValueEdit();
+    }
+
+    beginValueEdit(term, caseNumber, value) {
+        this.board.enableSelection(false);
+        this.isEditingValue = true;
+        this.editingTerm = term;
+        this.editingCaseNumber = caseNumber;
+        this.pendingEditorValue = value;
+        this.pendingEditorFocus = true;
+        this.showValueEditor();
+        this.board.markDirty(this);
+    }
+
+    focusValueEditor() {
+        if (!this.valueEditor)
+            return;
+        this.valueEditor.focus();
+        const input = this.valueEditorContainer?.querySelector("input");
+        if (input && typeof input.select === "function")
+            input.select();
+    }
+
+    commitAndExitValueEdit() {
+        if (!this.isEditingValue)
+            return;
+        this.commitEditedValue();
+        this.endValueEdit();
+    }
+
+    cancelAndExitValueEdit() {
+        if (!this.isEditingValue)
+            return;
+        this.endValueEdit();
+    }
+
+    commitEditedValue() {
+        if (!this.valueEditor || !this.canEditTermValue(this.editingTerm))
+            return;
+        const numericValue = Number(this.valueEditor.option("value"));
+        if (!Number.isFinite(numericValue))
+            return;
+        const calculator = this.board.calculator;
+        calculator.setTermValue(this.editingTerm, numericValue, calculator.getIteration(), this.editingCaseNumber);
+        calculator.calculate();
+    }
+
+    endValueEdit() {
+        this.isEditingValue = false;
+        this.editingTerm = "";
+        this.editingCaseNumber = 1;
+        this.pendingEditorValue = null;
+        this.pendingEditorFocus = false;
+        this.hideValueEditor();
+        this.board.enableSelection(true);
+        this.board.markDirty(this);
+    }
+
+    showValueEditor() {
+        if (!this.valueEditorHost)
+            return;
+        this.valueEditorHost.removeAttribute("display");
+    }
+
+    hideValueEditor() {
+        if (!this.valueEditorHost)
+            return;
+        this.valueEditorHost.setAttribute("display", "none");
     }
 
     getSelectedTerm() {
@@ -135,6 +258,59 @@ class ValueShape extends BaseShape {
         this.caseIconHost.setAttribute("height", `${iconSize + 1}`);
     }
 
+    placeValueEditor(position, width, height) {
+        if (!this.isEditingValue || !this.valueEditorHost)
+            return;
+        let editorBox = this.getValueTextBounds();
+        if (!editorBox) {
+            const fallbackWidth = Math.max(24, width * 0.3);
+            const fallbackHeight = Math.max(12, height * 0.5);
+            const fallbackX = position.x + width / 2 - fallbackWidth / 2;
+            const fallbackY = position.y + height / 2 - fallbackHeight / 2;
+            this.setValueEditorHostBounds(fallbackX, fallbackY, fallbackWidth, fallbackHeight);
+            return;
+        }
+        this.setValueEditorHostBounds(editorBox.x, editorBox.y, editorBox.width, editorBox.height);
+    }
+
+    getValueEditorHorizontalPadding() {
+        return 3;
+    }
+
+    getValueEditorVerticalOffset() {
+        return -1;
+    }
+
+    getEditingTextVerticalOffset() {
+        return this.getValueEditorVerticalOffset();
+    }
+
+    setValueEditorHostBounds(x, y, width, height) {
+        const horizontalPadding = this.getValueEditorHorizontalPadding();
+        const verticalOffset = this.getValueEditorVerticalOffset();
+        const adjustedX = x - horizontalPadding;
+        const adjustedY = y + verticalOffset;
+        const adjustedWidth = Math.max(1, width + horizontalPadding * 2);
+        const adjustedHeight = Math.max(1, height + 2);
+        this.valueEditorHost.setAttribute("x", `${adjustedX}`);
+        this.valueEditorHost.setAttribute("y", `${adjustedY}`);
+        this.valueEditorHost.setAttribute("width", `${adjustedWidth}`);
+        this.valueEditorHost.setAttribute("height", `${adjustedHeight}`);
+    }
+
+    getValueTextBounds() {
+        if (!this.valueText?.lastChild)
+            return null;
+        try {
+            const valueBounds = this.valueText.lastChild.getBBox();
+            if (!Number.isFinite(valueBounds.x) || !Number.isFinite(valueBounds.y) || !Number.isFinite(valueBounds.width) || !Number.isFinite(valueBounds.height))
+                return null;
+            return valueBounds;
+        } catch (_) {
+            return null;
+        }
+    }
+
     draw() {
         super.draw();
         const position = this.getBoardPosition();
@@ -150,12 +326,36 @@ class ValueShape extends BaseShape {
         const termText = this.getSelectedTerm();
         const caseNumber = this.getSelectedCaseNumber(termText);
         const valueText = this.resolveDisplayedValue(termText, caseNumber);
+        const isEditingCurrentTerm = this.isEditingValue && this.editingTerm === termText && termText !== "";
+        const textVerticalOffset = isEditingCurrentTerm ? this.getEditingTextVerticalOffset() : 0;
         this.valueText.setAttribute("x", `${position.x + width / 2}`);
-        this.valueText.setAttribute("y", `${position.y + height / 2}`);
+        this.valueText.setAttribute("y", `${position.y + height / 2 + textVerticalOffset}`);
         this.valueText.setAttribute("fill", this.properties.foregroundColor);
         this.setValueTextContent(termText, valueText);
+        const valueTextBounds = isEditingCurrentTerm ? this.getValueTextBounds() : null;
+        if (isEditingCurrentTerm && this.valueText.lastChild)
+            this.valueText.lastChild.setAttribute("fill-opacity", "0");
         this.updateCaseIcon(caseNumber, termText, this.shouldShowCaseIcon(termText));
         this.placeCaseIcon(position, width, height);
+        if (isEditingCurrentTerm) {
+            this.showValueEditor();
+            if (valueTextBounds) {
+                this.setValueEditorHostBounds(valueTextBounds.x, valueTextBounds.y, valueTextBounds.width, valueTextBounds.height);
+            } else
+                this.placeValueEditor(position, width, height);
+            this.createValueEditor();
+            if (this.valueEditor && this.pendingEditorValue != null) {
+                this.valueEditor.option("value", this.pendingEditorValue);
+                this.pendingEditorValue = null;
+            }
+            if (this.valueEditor)
+                this.valueEditor.repaint();
+            if (this.valueEditor && this.pendingEditorFocus) {
+                this.pendingEditorFocus = false;
+                requestAnimationFrame(() => this.focusValueEditor());
+            }
+        } else
+            this.hideValueEditor();
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${position.x + width / 2}, ${position.y + height / 2})`);
     }
 
