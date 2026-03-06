@@ -456,11 +456,12 @@ class Shell  {
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-bars",
+                        hint: "",
                         elementAttr: {
-                            id: "menu-button"
+                            id: "menu-button",
+                            title: ""
                         },
-                        onClick: _ => this.contextMenu.show(),
-                        onInitialized: e => this.createTranslatedTooltip(e, "Menu Tooltip", 280)
+                        onClick: _ => this.contextMenu.show()
                     }
                 },
                 {

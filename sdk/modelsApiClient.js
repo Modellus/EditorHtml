@@ -29,13 +29,14 @@ export class ModelsApiClient {
         continue;
       const lookupId = item.id;
       const lookupName = item.name;
+      const lookupIcon = item.icon;
       if (lookupId === "" || lookupName === "")
         continue;
       if (lookupId === undefined || lookupId === null)
         continue;
       if (lookupName === undefined || lookupName === null)
         continue;
-      optionsById.set(lookupId, { id: lookupId, name: lookupName });
+      optionsById.set(lookupId, { id: lookupId, name: lookupName, icon: lookupIcon });
     }
     return Array.from(optionsById.values()).sort((leftOption, rightOption) => leftOption.name.localeCompare(rightOption.name));
   }
@@ -95,6 +96,38 @@ export class ModelsApiClient {
     const items = this.resolveLookupItems(data);
     return this.extractLookupOptions(items);
   }
+  async fetchEducationLevelLookupById(lookupId) {
+    const headers = this.buildAuthHeaders();
+    const response = await fetch(`${this.apiBaseUrl}/education-levels/${encodeURIComponent(lookupId)}`, { headers });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Lookup error ${response.status}`);
+    return await response.json();
+  }
+  async createEducationLevelLookup(payload) {
+    const response = await fetch(`${this.apiBaseUrl}/education-levels`, {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Lookup create failed (${response.status})`);
+    return await response.json();
+  }
+  async updateEducationLevelLookup(lookupId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/education-levels/${encodeURIComponent(lookupId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Lookup update failed (${response.status})`);
+    return await response.json();
+  }
+  async deleteEducationLevelLookup(lookupId) {
+    const response = await fetch(`${this.apiBaseUrl}/education-levels/${encodeURIComponent(lookupId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Lookup delete failed (${response.status})`);
+  }
 
   async fetchScienceLookups() {
     const headers = this.buildAuthHeaders();
@@ -104,15 +137,53 @@ export class ModelsApiClient {
     const items = this.resolveLookupItems(data);
     return this.extractLookupOptions(items);
   }
+  async fetchScienceLookupById(lookupId) {
+    const headers = this.buildAuthHeaders();
+    const response = await fetch(`${this.apiBaseUrl}/sciences/${encodeURIComponent(lookupId)}`, { headers });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Lookup error ${response.status}`);
+    return await response.json();
+  }
+  async createScienceLookup(payload) {
+    const response = await fetch(`${this.apiBaseUrl}/sciences`, {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Lookup create failed (${response.status})`);
+    return await response.json();
+  }
+  async updateScienceLookup(lookupId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/sciences/${encodeURIComponent(lookupId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Lookup update failed (${response.status})`);
+    return await response.json();
+  }
+  async deleteScienceLookup(lookupId) {
+    const response = await fetch(`${this.apiBaseUrl}/sciences/${encodeURIComponent(lookupId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Lookup delete failed (${response.status})`);
+  }
 
-  async patchModelTaxonomy(modelId, educationLookupId, scienceLookupId) {
+  async patchModelEducationLevel(modelId, educationLookupId) {
     const response = await fetch(`${this.apiBaseUrl}/models/${modelId}`, {
       method: "PATCH",
       headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
-      body: JSON.stringify({
-        education_level_id: educationLookupId === "" ? null : educationLookupId,
-        science_id: scienceLookupId === "" ? null : scienceLookupId
-      })
+      body: JSON.stringify({ education_level_id: educationLookupId })
+    });
+    if (!response.ok) throw new Error(`Metadata update failed (${response.status})`);
+  }
+
+  async patchModelScience(modelId, scienceLookupId) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${modelId}`, {
+      method: "PATCH",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify({ science_id: scienceLookupId })
     });
     if (!response.ok) throw new Error(`Metadata update failed (${response.status})`);
   }

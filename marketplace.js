@@ -11,8 +11,34 @@ const treeNodeIds = {
   myLibrary: "my-library",
   marketplace: "marketplace",
   marketplaceEducation: "market-education",
-  marketplaceSciences: "market-sciences"
+  marketplaceSciences: "market-sciences",
+  maintenance: "maintenance",
+  maintenanceEducation: "maintenance-education",
+  maintenanceSciences: "maintenance-sciences"
 };
+const fontAwesomeIcons = [
+  { value: "", label: "No icon" },
+  { value: "fa-light fa-graduation-cap", label: "Graduation Cap" },
+  { value: "fa-light fa-flask", label: "Flask" },
+  { value: "fa-light fa-book", label: "Book" },
+  { value: "fa-light fa-book-open", label: "Book Open" },
+  { value: "fa-light fa-atom", label: "Atom" },
+  { value: "fa-light fa-microscope", label: "Microscope" },
+  { value: "fa-light fa-vial", label: "Vial" },
+  { value: "fa-light fa-globe", label: "Globe" },
+  { value: "fa-light fa-earth-europe", label: "Earth Europe" },
+  { value: "fa-light fa-calculator", label: "Calculator" },
+  { value: "fa-light fa-square-root-variable", label: "Square Root" },
+  { value: "fa-light fa-code", label: "Code" },
+  { value: "fa-light fa-gear", label: "Gear" },
+  { value: "fa-light fa-brain", label: "Brain" },
+  { value: "fa-light fa-seedling", label: "Seedling" },
+  { value: "fa-light fa-dna", label: "DNA" },
+  { value: "fa-light fa-bolt", label: "Bolt" },
+  { value: "fa-light fa-wave-pulse", label: "Wave Pulse" },
+  { value: "fa-light fa-ruler", label: "Ruler" },
+  { value: "fa-light fa-compass-drafting", label: "Compass Drafting" }
+];
 DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjUyCn0=.WlJvwd9AewkKcLiqaZc3LVfKt9FGlzfDD16Zi6iEW4KIN+1MFccO3f68vdJoStCEqtYXdaUrX48WcQJMNg/7K+geEzM2ZVRCeJKxjXIi8OFVU8lXf6cvC+4b3MRFaijuN3c4ug==' });
 
 class ModelsApp {
@@ -40,6 +66,7 @@ class ModelsApp {
     this.drawerInstance = null;
     this.treeViewInstance = null;
     this.toolbarInstance = null;
+    this.maintenanceGridInstance = null;
     this.personalModels = [];
     this.favoriteModels = [];
     this.libraryModels = [];
@@ -56,9 +83,12 @@ class ModelsApp {
   }
   initDeletePopup() {
     if (this.deletePopupInstance || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxPopup) return;
-    const popupHost = document.createElement("div");
-    popupHost.id = "delete-popup";
-    document.body.appendChild(popupHost);
+    let popupHost = document.getElementById("delete-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="delete-popup"></div>`);
+      popupHost = document.getElementById("delete-popup");
+    }
+    if (!popupHost) return;
     this.deletePopupInstance = new DevExpress.ui.dxPopup(popupHost, {
       visible: false,
       showTitle: true,
@@ -72,21 +102,19 @@ class ModelsApp {
   initNavToolbar() {
     if (!this.elements.navToolbar || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxToolbar) return;
     this.navToolbarInstance = new DevExpress.ui.dxToolbar(this.elements.navToolbar, {
+      onContentReady: event => $(event.element).find('[title="Menu"]').removeAttr("title"),
       items: [
         {
           location: "before",
           widget: "dxButton",
           options: {
             onClick: () => this.toggleDrawer(),
-            elementAttr: { "aria-label": "Toggle Filters" },
+            hint: "",
+            elementAttr: { title: "" },
+            onContentReady: event => $(event.element).removeAttr("title"),
             template: (_, contentElement) => {
-              const host = contentElement && contentElement.get ? contentElement.get(0) : contentElement;
-              if (!host) return;
-              host.innerHTML = "";
-              const iconElement = document.createElement("i");
-              iconElement.className = "fa-solid fa-sidebar";
-              iconElement.style.fontSize = "16px";
-              host.appendChild(iconElement);
+              const host = contentElement.get(0);
+              host.innerHTML = `<i class="fa-solid fa-sidebar" style="font-size:16px"></i>`;
             }
           }
         },
@@ -112,14 +140,8 @@ class ModelsApp {
             onItemClick: () => this.userSdk.logout(),
             dropDownOptions: { width: "auto", minWidth: 140 },
             template: (_, contentElement) => {
-              const host = contentElement && contentElement.get ? contentElement.get(0) : contentElement;
-              if (!host) 
-                return;
-              host.innerHTML = "";
-              const avatar = document.createElement("img");
-              avatar.className = "user-menu-avatar";
-              avatar.alt = "User avatar";
-              host.appendChild(avatar);
+              const host = contentElement.get(0);
+              host.innerHTML = `<img class="user-menu-avatar" alt="User avatar">`;
             }
           }
         }
@@ -153,6 +175,21 @@ class ModelsApp {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
   }
+  createNodeFromMarkup(markup) {
+    const fragment = document.createRange().createContextualFragment(markup);
+    return fragment.firstElementChild;
+  }
+
+  renderLookupDropdownOption(itemData, itemElement) {
+    const host = itemElement.get(0);
+    const iconMarkup = itemData.icon ? `<i class="${itemData.icon}" aria-hidden="true"></i>` : "";
+    host.innerHTML = `
+      <span style="display:flex;align-items:center;gap:0.45rem">
+        ${iconMarkup}
+        <span>${itemData.name}</span>
+      </span>
+    `;
+  }
 
   ensureCardView() {
     if (this.cardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
@@ -180,9 +217,8 @@ class ModelsApp {
         { dataField: "description", caption: "Description" }
       ],
       cardTemplate: (cardData, cardElement) => {
-        const host = cardElement && cardElement.get ? cardElement.get(0) : cardElement;
-        const data = cardData && cardData.card && cardData.card.data ? cardData.card.data : cardData || {};
-        if (!host) return;
+        const host = cardElement.get(0);
+        const data = cardData.card.data;
         const isFavorite = this.isFavoriteValue(data);
         const isPicked = this.isPickedValue(data);
         const isPublic = data.is_public === true || data.is_public === 1;
@@ -249,22 +285,22 @@ class ModelsApp {
           $(educationDropdownHost).dxDropDownButton({
             dataSource: new DevExpress.data.CustomStore({
               key: "id",
-              load: () => this.apiClient.fetchEducationLevelLookups()
+              load: () => this.apiClient.fetchEducationLevelLookups(),
+              byKey: lookupId => this.apiClient.fetchEducationLevelLookupById(lookupId)
             }),
             keyExpr: "id",
             displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
             stylingMode: "contained",
             useSelectMode: true,
             selectedItemKey: educationLookupId === undefined || educationLookupId === null || educationLookupId === "" ? null : educationLookupId,
             text: educationLabel,
             dropDownOptions: { minWidth: 170, maxWidth: 240 },
             onItemClick: async event => {
-              if (!event || !event.itemData || !event.itemData.id) return;
-              if (!data || !data.id) return;
               const nextEducationLookupId = event.itemData.id;
               if (nextEducationLookupId === data.education_level_id) return;
               try {
-                await this.apiClient.patchModelTaxonomy(data.id, nextEducationLookupId, data.science_id || "");
+                await this.apiClient.patchModelEducationLevel(data.id, nextEducationLookupId);
                 data.education_level_id = nextEducationLookupId;
                 data.education_level = event.itemData.name || data.education_level;
                 this.loadModels(this.state.selectedTreeNodeId);
@@ -281,22 +317,22 @@ class ModelsApp {
           $(scienceDropdownHost).dxDropDownButton({
             dataSource: new DevExpress.data.CustomStore({
               key: "id",
-              load: () => this.apiClient.fetchScienceLookups()
+              load: () => this.apiClient.fetchScienceLookups(),
+              byKey: lookupId => this.apiClient.fetchScienceLookupById(lookupId)
             }),
             keyExpr: "id",
             displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
             stylingMode: "contained",
             useSelectMode: true,
             selectedItemKey: scienceLookupId === undefined || scienceLookupId === null || scienceLookupId === "" ? null : scienceLookupId,
             text: scienceLabel,
             dropDownOptions: { minWidth: 170, maxWidth: 240 },
             onItemClick: async event => {
-              if (!event || !event.itemData || !event.itemData.id) return;
-              if (!data || !data.id) return;
               const nextScienceLookupId = event.itemData.id;
               if (nextScienceLookupId === data.science_id) return;
               try {
-                await this.apiClient.patchModelTaxonomy(data.id, data.education_level_id || "", nextScienceLookupId);
+                await this.apiClient.patchModelScience(data.id, nextScienceLookupId);
                 data.science_id = nextScienceLookupId;
                 data.science = event.itemData.name || data.science;
                 this.loadModels(this.state.selectedTreeNodeId);
@@ -308,19 +344,19 @@ class ModelsApp {
         }
         if (cardTile) {
           cardTile.addEventListener("click", event => {
-            if (event && event.target && event.target.closest(".favorite-button")) return;
-            if (event && event.target && event.target.closest(".pick-button")) return;
-            if (event && event.target && event.target.closest(".delete-button")) return;
-            if (event && event.target && event.target.closest(".visibility-button")) return;
-            if (event && event.target && event.target.closest(".card-thumb-dropdowns")) return;
+            if (event?.target?.closest(".favorite-button")) return;
+            if (event?.target?.closest(".pick-button")) return;
+            if (event?.target?.closest(".delete-button")) return;
+            if (event?.target?.closest(".visibility-button")) return;
+            if (event?.target?.closest(".card-thumb-dropdowns")) return;
             this.selectModelCard(cardTile);
           });
           cardTile.addEventListener("dblclick", event => {
-            if (event && event.target && event.target.closest(".favorite-button")) return;
-            if (event && event.target && event.target.closest(".pick-button")) return;
-            if (event && event.target && event.target.closest(".delete-button")) return;
-            if (event && event.target && event.target.closest(".visibility-button")) return;
-            if (event && event.target && event.target.closest(".card-thumb-dropdowns")) return;
+            if (event?.target?.closest(".favorite-button")) return;
+            if (event?.target?.closest(".pick-button")) return;
+            if (event?.target?.closest(".delete-button")) return;
+            if (event?.target?.closest(".visibility-button")) return;
+            if (event?.target?.closest(".card-thumb-dropdowns")) return;
             this.openModel(data);
           });
         }
@@ -328,10 +364,193 @@ class ModelsApp {
     });
   }
 
-  renderModels(items) {
+  disposeCardView() {
+    if (!this.cardViewInstance) return;
+    this.cardViewInstance.dispose();
+    this.cardViewInstance = null;
+  }
+
+  disposeMaintenanceGrid() {
+    if (!this.maintenanceGridInstance) return;
+    this.maintenanceGridInstance.dispose();
+    this.maintenanceGridInstance = null;
+  }
+
+  buildMaintenanceStore(maintenanceType) {
+    if (maintenanceType === "education") {
+      return new DevExpress.data.CustomStore({
+        key: "id",
+        load: () => this.apiClient.fetchEducationLevelLookups(),
+        byKey: lookupId => this.apiClient.fetchEducationLevelLookupById(lookupId),
+        insert: values => this.apiClient.createEducationLevelLookup(values),
+        update: (lookupId, values) => this.apiClient.updateEducationLevelLookup(lookupId, values),
+        remove: lookupId => this.apiClient.deleteEducationLevelLookup(lookupId)
+      });
+    }
+    return new DevExpress.data.CustomStore({
+      key: "id",
+      load: () => this.apiClient.fetchScienceLookups(),
+      byKey: lookupId => this.apiClient.fetchScienceLookupById(lookupId),
+      insert: values => this.apiClient.createScienceLookup(values),
+      update: (lookupId, values) => this.apiClient.updateScienceLookup(lookupId, values),
+      remove: lookupId => this.apiClient.deleteScienceLookup(lookupId)
+    });
+  }
+
+  getFontAwesomeIconLabel(iconClass) {
+    for (let iconIndex = 0; iconIndex < fontAwesomeIcons.length; iconIndex++) {
+      const iconOption = fontAwesomeIcons[iconIndex];
+      if (iconOption.value === iconClass)
+        return iconOption.label;
+    }
+    return "";
+  }
+
+  renderFontAwesomeIconCell(cellElement, iconClass) {
+    const host = cellElement.get(0);
+    const iconLabel = this.getFontAwesomeIconLabel(iconClass);
+    const iconMarkup = iconClass ? `<i class="${iconClass}" aria-hidden="true"></i>` : "";
+    host.innerHTML = `
+      <span style="display:inline-flex;align-items:center;gap:0.5rem">
+        ${iconMarkup}
+        <span>${iconLabel}</span>
+      </span>
+    `;
+  }
+
+  renderFontAwesomeIconOption(itemData, itemElement) {
+    const host = itemElement.get(0);
+    const iconMarkup = itemData.value ? `<i class="${itemData.value}" aria-hidden="true"></i>` : "";
+    host.innerHTML = `
+      <span style="display:flex;align-items:center;gap:0.5rem;padding:0.1rem 0">
+        ${iconMarkup}
+        <span>${itemData.label}</span>
+      </span>
+    `;
+  }
+
+  renderFontAwesomeIconEditor(cellElement, cellInfo) {
+    const host = cellElement.get(0);
+    host.innerHTML = `<div class="icon-editor-host"></div>`;
+    const editorHost = host.querySelector(".icon-editor-host");
+    $(editorHost).dxSelectBox({
+      dataSource: fontAwesomeIcons,
+      valueExpr: "value",
+      displayExpr: "label",
+      value: cellInfo.value,
+      searchEnabled: true,
+      searchExpr: ["label", "value"],
+      showClearButton: false,
+      itemTemplate: (itemData, itemIndex, itemElement) => this.renderFontAwesomeIconOption(itemData, itemElement),
+      onValueChanged: event => cellInfo.setValue(event.value),
+      dropDownOptions: { minWidth: 280, maxWidth: 360 }
+    });
+  }
+
+  async deleteSelectedMaintenanceRows() {
+    if (!this.maintenanceGridInstance) return;
+    const selectedRowKeys = this.maintenanceGridInstance.getSelectedRowKeys();
+    if (!selectedRowKeys.length) return;
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    const dataSource = this.maintenanceGridInstance.getDataSource();
+    const store = dataSource.store();
+    this.setStatus("Deleting selected items…");
+    try {
+      for (let selectedRowIndex = 0; selectedRowIndex < selectedRowKeys.length; selectedRowIndex++) {
+        await store.remove(selectedRowKeys[selectedRowIndex]);
+      }
+      await dataSource.reload();
+      this.maintenanceGridInstance.clearSelection();
+      this.setStatus("Selected items deleted.");
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to delete selected items.", true);
+    }
+  }
+
+  showMaintenanceGrid(maintenanceType) {
+    if (!this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxDataGrid) return;
+    this.disposeCardView();
+    const maintenanceStore = this.buildMaintenanceStore(maintenanceType);
+    if (!this.maintenanceGridInstance) {
+      this.elements.cardView.innerHTML = "";
+      this.maintenanceGridInstance = new DevExpress.ui.dxDataGrid(this.elements.cardView, {
+        dataSource: maintenanceStore,
+        keyExpr: "id",
+        height: "100%",
+        showBorders: false,
+        columnAutoWidth: true,
+        selection: { mode: "multiple", showCheckBoxesMode: "always" },
+        paging: { enabled: true, pageSize: 12 },
+        pager: { showPageSizeSelector: true, allowedPageSizes: [12, 24, 48], showInfo: true },
+        searchPanel: { visible: true, width: 280, placeholder: "Search..." },
+        editing: {
+          mode: "cell",
+          allowAdding: true,
+          allowUpdating: true,
+          allowDeleting: false
+        },
+        toolbar: {
+          items: [
+            "addRowButton",
+            "searchPanel",
+            {
+              location: "after",
+              locateInMenu: "always",
+              widget: "dxButton",
+              options: {
+                text: "Delete selected",
+                type: "danger",
+                stylingMode: "contained",
+                icon: "fa-light fa-trash-can",
+                onClick: () => this.deleteSelectedMaintenanceRows()
+              }
+            }
+          ]
+        },
+        columns: [
+          { dataField: "id", caption: "ID", allowEditing: false, width: 110 },
+          { dataField: "name", caption: "Name", validationRules: [{ type: "required" }] },
+          {
+            dataField: "icon",
+            caption: "Icon",
+            cellTemplate: (cellElement, cellInfo) => this.renderFontAwesomeIconCell(cellElement, cellInfo.value),
+            editCellTemplate: (cellElement, cellInfo) => this.renderFontAwesomeIconEditor(cellElement, cellInfo)
+          }
+        ]
+      });
+      return;
+    }
+    this.maintenanceGridInstance.option("dataSource", maintenanceStore);
+    this.maintenanceGridInstance.refresh();
+  }
+
+  showModelsCardView() {
+    this.disposeMaintenanceGrid();
     this.ensureCardView();
+  }
+
+  getMaintenanceTypeByTreeNodeId(nodeId) {
+    if (nodeId === treeNodeIds.maintenanceEducation) return "education";
+    if (nodeId === treeNodeIds.maintenanceSciences) return "sciences";
+    return "";
+  }
+
+  renderCurrentTreeNode() {
+    const maintenanceType = this.getMaintenanceTypeByTreeNodeId(this.state.selectedTreeNodeId);
+    if (maintenanceType) {
+      this.showMaintenanceGrid(maintenanceType);
+      this.setStatus("");
+      return;
+    }
+    const models = this.getModelsByTreeNodeId(this.state.selectedTreeNodeId);
+    this.renderModels(models);
+    this.setStatus(models.length ? "" : "No models found.");
+  }
+
+  renderModels(items) {
+    this.showModelsCardView();
     if (this.cardViewInstance) this.cardViewInstance.option("dataSource", items);
-    if (!items.length) this.setStatus("No models found.");
   }
 
   async loadModels(selectedTreeNodeId = this.state.selectedTreeNodeId) {
@@ -341,12 +560,11 @@ class ModelsApp {
       await this.loadDataSources();
       this.renderTree();
       this.ensureValidSelectedTreeNodeId();
-      const items = this.getModelsByTreeNodeId(this.state.selectedTreeNodeId);
-      this.setStatus(items.length ? "" : "No models found.");
-      this.renderModels(items);
+      this.renderCurrentTreeNode();
       this.refreshTreeSelection();
     } catch (error) {
       this.setStatus(error && error.message ? error.message : "Failed to load models.", true);
+      this.showModelsCardView();
       this.renderModels([]);
     }
   }
@@ -484,6 +702,30 @@ class ModelsApp {
             expanded: true,
             selectable: false,
             items: scienceItems
+          }
+        ]
+      },
+      {
+        id: treeNodeIds.maintenance,
+        text: "Maintenance",
+        iconClass: "fa-light fa-screwdriver-wrench",
+        iconColor: "#475569",
+        expanded: true,
+        selectable: false,
+        items: [
+          {
+            id: treeNodeIds.maintenanceEducation,
+            text: "Education Levels",
+            nodeType: "maintenance-education",
+            iconClass: "fa-light fa-graduation-cap",
+            iconColor: "#8b5cf6"
+          },
+          {
+            id: treeNodeIds.maintenanceSciences,
+            text: "Sciences",
+            nodeType: "maintenance-sciences",
+            iconClass: "fa-light fa-flask",
+            iconColor: "#0ea5e9"
           }
         ]
       }
@@ -633,7 +875,8 @@ class ModelsApp {
 
   initDrawer() {
     if (this.drawerInstance || !this.elements.drawerHost || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxDrawer) return;
-    const treeHost = document.createElement("div");
+    const treeHost = this.createNodeFromMarkup(`<div class="drawer-tree-host"></div>`);
+    if (!treeHost) return;
     this.drawerInstance = new DevExpress.ui.dxDrawer(this.elements.drawerHost, {
       opened: true,
       minSize: 220,
@@ -653,24 +896,18 @@ class ModelsApp {
       focusStateEnabled: false,
       itemTemplate: (itemData, itemIndex, itemElement) => this.renderTreeItem(itemData, itemElement),
       onItemClick: event => {
-        if (!event || !event.itemData || !event.itemData.id)
-          return;
         if (event.itemData.selectable === false) {
           this.refreshTreeSelection();
           return;
         }
         this.state.selectedTreeNodeId = event.itemData.id;
-        const models = this.getModelsByTreeNodeId(this.state.selectedTreeNodeId);
-        this.renderModels(models);
-        this.setStatus(models.length ? "" : "No models found.");
+        this.renderCurrentTreeNode();
       }
     });
   }
 
   renderTreeItem(itemData, itemElement) {
-    const host = itemElement && itemElement.get ? itemElement.get(0) : itemElement;
-    if (!host)
-      return;
+    const host = itemElement.get(0);
     const iconClass = itemData?.iconClass || "fa-light fa-folder";
     const iconColor = itemData?.iconColor || "#6b7280";
     host.innerHTML = `
@@ -755,29 +992,28 @@ class ModelsApp {
   confirmDelete() {
     if (!this.deletePopupInstance) return Promise.resolve(window.confirm("Delete this model?"));
     return new Promise(resolve => {
-      this.deletePopupInstance.option("contentTemplate", () => {
-        const container = document.createElement("div");
-        const text = document.createElement("p");
-        text.textContent = "This action cannot be undone.";
-        text.style.margin = "0 0 1rem";
-        const buttons = document.createElement("div");
-        buttons.style.display = "flex";
-        buttons.style.justifyContent = "center";
-        buttons.style.gap = "0.5rem";
-        const cancel = document.createElement("div");
-        const confirm = document.createElement("div");
-        buttons.appendChild(cancel);
-        buttons.appendChild(confirm);
-        container.appendChild(text);
-        container.appendChild(buttons);
-        $(cancel).dxButton({
+      this.deletePopupInstance.option("contentTemplate", contentElement => {
+        const host = contentElement.get(0);
+        host.innerHTML = `
+          <div class="delete-popup-content">
+            <p style="margin:0 0 1rem">This action cannot be undone.</p>
+            <div class="delete-popup-buttons" style="display:flex;justify-content:center;gap:0.5rem">
+              <div class="delete-popup-cancel"></div>
+              <div class="delete-popup-confirm"></div>
+            </div>
+          </div>
+        `;
+        const cancelButtonHost = host.querySelector(".delete-popup-cancel");
+        const confirmButtonHost = host.querySelector(".delete-popup-confirm");
+        if (!cancelButtonHost || !confirmButtonHost) return;
+        $(cancelButtonHost).dxButton({
           text: "Cancel",
           onClick: () => {
             this.deletePopupInstance.hide();
             resolve(false);
           }
         });
-        $(confirm).dxButton({
+        $(confirmButtonHost).dxButton({
           text: "Delete",
           type: "danger",
           onClick: () => {
@@ -785,7 +1021,6 @@ class ModelsApp {
             resolve(true);
           }
         });
-        return container;
       });
       this.deletePopupInstance.show();
     });
