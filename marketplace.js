@@ -1,3 +1,6 @@
+import { ModelsApiClient } from "./sdk/modelsApiClient.js";
+import { UserSdk } from "./sdk/userSdk.js";
+
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
 const sessionKey = window.modellus?.auth?.sessionKey || "mp.session";
 const userKey = window.modellus?.auth?.userKey || "mp.user";
@@ -14,6 +17,7 @@ DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImN
 
 class ModelsApp {
   constructor() {
+    this.userSdk = new UserSdk(sessionKey, userKey, "/login.html");
     this.elements = {
       pageModels: document.getElementById("page-models"),
       navToolbar: document.getElementById("nav-toolbar"),
@@ -25,11 +29,13 @@ class ModelsApp {
       toolbar: null
     };
     this.state = {
-      session: this.readSession(),
-      user: this.readUser(),
+      session: this.userSdk.readSession(),
+      user: this.userSdk.readUser(),
       selectedTreeNodeId: treeNodeIds.myPersonal
     };
-    if (!this.state.session) window.location.href = "/login.html";
+    this.apiClient = new ModelsApiClient(apiBase, () => this.state.session, () => this.userSdk.getUserId(this.state.session));
+    if (!this.state.session)
+      this.userSdk.redirectToLogin();
     this.cardViewInstance = null;
     this.drawerInstance = null;
     this.treeViewInstance = null;
@@ -45,8 +51,7 @@ class ModelsApp {
     this.bindNav();
     this.initDrawer();
     this.initDeletePopup();
-    this.refreshAuth();
-    this.renderUser();
+    this.userSdk.refreshState(this.state);
     this.loadModels();
   }
   initDeletePopup() {
@@ -63,10 +68,6 @@ class ModelsApp {
       dragEnabled: false,
       closeOnOutsideClick: true
     });
-  }
-  refreshAuth() {
-    this.state.session = this.readSession();
-    this.state.user = this.readUser();
   }
   initNavToolbar() {
     if (!this.elements.navToolbar || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxToolbar) return;
@@ -108,7 +109,7 @@ class ModelsApp {
             items: [{ id: "logout", text: "Logout", icon: "fa-light fa-arrow-left-to-bracket" }],
             keyExpr: "id",
             displayExpr: "text",
-            onItemClick: () => this.logout(),
+            onItemClick: () => this.userSdk.logout(),
             dropDownOptions: { width: "auto", minWidth: 140 },
             template: (_, contentElement) => {
               const host = contentElement && contentElement.get ? contentElement.get(0) : contentElement;
@@ -128,51 +129,12 @@ class ModelsApp {
   cacheNavElements() {
     this.elements.navNewModel = document.getElementById("nav-new-model");
     this.elements.userMenu = document.getElementById("user-menu");
-  }
-  readSession() {
-    if (window.modellus?.auth?.getSession) return window.modellus.auth.getSession();
-    try {
-      const stored = localStorage.getItem(sessionKey);
-      if (!stored) return null;
-      return JSON.parse(stored);
-    } catch (error) {
-      return null;
-    }
-  }
-  readUser() {
-    if (window.modellus?.auth?.getUser) 
-        return window.modellus.auth.getUser();
-    try {
-      const stored = localStorage.getItem(userKey);
-      if (!stored) 
-        return null;
-      return JSON.parse(stored);
-    } catch (error) {
-      return null;
-    }
-  }
-
-  saveSession(session) {
-    localStorage.setItem(sessionKey, JSON.stringify(session));
-  }
-  
-  clearSession() {
-    localStorage.removeItem(sessionKey);
+    this.userSdk.applyUserMenu(this.elements.userMenu, this.state.session);
   }
 
   setStatus(message, isError = false) {
     this.elements.status.textContent = message || "";
     this.elements.status.classList.toggle("error", Boolean(isError));
-  }
-
-  renderUser() {
-    const avatarUrl = this.state.session?.avatar || "";
-    if (this.elements.userMenu) {
-      const menuInstance = $(this.elements.userMenu).dxDropDownButton("instance");
-      if (menuInstance) menuInstance.option("disabled", !this.state.session);
-      const avatarEl = this.elements.userMenu.querySelector(".user-menu-avatar");
-      if (avatarEl) avatarEl.src = avatarUrl || "";
-    }
   }
 
   getModelThumbnailSource(thumbnail) {
@@ -225,14 +187,19 @@ class ModelsApp {
         const isPicked = this.isPickedValue(data);
         const isPublic = data.is_public === true || data.is_public === 1;
         const thumbnailSrc = this.getModelThumbnailSource(data.thumbnail);
-        const educationLabel = this.getEducationLabel(data);
-        const scienceLabel = this.getScienceLabel(data);
-        const showEducationTag = educationLabel !== "Uncategorized";
-        const showScienceTag = scienceLabel !== "Uncategorized";
-        const educationTagMarkup = showEducationTag ? `<span class="card-thumb-tag education">${this.escapeHtml(educationLabel)}</span>` : "";
-        const scienceTagMarkup = showScienceTag ? `<span class="card-thumb-tag science">${this.escapeHtml(scienceLabel)}</span>` : "";
-        const tagsMarkup = educationTagMarkup || scienceTagMarkup ? `<div class="card-thumb-tags">${educationTagMarkup}${scienceTagMarkup}</div>` : "";
-        const thumbnailMarkup = thumbnailSrc ? `<div class="card-thumb-wrap"><img class="card-thumb" src="${thumbnailSrc}" alt="${data.title || "Model thumbnail"}">${tagsMarkup}</div>` : "";
+        const educationLookupId = data.education_level_id;
+        const scienceLookupId = data.science_id;
+        const educationLabel = data.education_level || "Uncategorized";
+        const scienceLabel = data.science || "Uncategorized";
+        const escapedEducationLabel = this.escapeHtml(educationLabel);
+        const escapedScienceLabel = this.escapeHtml(scienceLabel);
+        const taxonomyDropDownMarkup = `
+          <div class="card-thumb-dropdowns">
+            <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
+            <div class="card-thumb-dropdown science-dropdown-host" data-lookup-id="${scienceLookupId}">${escapedScienceLabel}</div>
+          </div>
+        `;
+        const thumbnailMarkup = thumbnailSrc ? `<div class="card-thumb-wrap"><img class="card-thumb" src="${thumbnailSrc}" alt="${data.title || "Model thumbnail"}">${taxonomyDropDownMarkup}</div>` : "";
         const cardMarkup = `
           <div class="card-tile" data-model-id="${data.id || ""}">
             ${thumbnailMarkup}
@@ -242,8 +209,8 @@ class ModelsApp {
                 <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
               </button>
             </div>
-            <h3 class="card-title">${data.title || data.name || "Untitled model"}</h3>
-            <p class="card-desc">${data.description || data.subtitle || "No description provided."}</p>
+            <h3 class="card-title">${data.title || "Untitled model"}</h3>
+            <p class="card-desc">${data.description || "No description provided."}</p>
             <div class="card-meta-actions">
               <button class="favorite-button${isFavorite ? " is-favorite" : ""}" aria-label="${isFavorite ? "Unfavorite" : "Favorite"}">
                 <i class="${isFavorite ? "fa-solid fa-star favorite-icon" : "fa-regular fa-star favorite-icon"}" aria-hidden="true"></i>
@@ -263,6 +230,8 @@ class ModelsApp {
         const pickButton = host.querySelector(".pick-button");
         const deleteButton = host.querySelector(".delete-button");
         const visibilityButton = host.querySelector(".visibility-button");
+        const educationDropdownHost = host.querySelector(".education-dropdown-host");
+        const scienceDropdownHost = host.querySelector(".science-dropdown-host");
         if (favoriteButton) favoriteButton.addEventListener("click", () => this.toggleFavorite(data, !isFavorite));
         if (pickButton) pickButton.addEventListener("click", () => this.togglePick(data, !isPicked));
         if (deleteButton) deleteButton.addEventListener("click", event => {
@@ -273,12 +242,77 @@ class ModelsApp {
           event.stopPropagation();
           this.toggleVisibility(data);
         });
+        if (educationDropdownHost) {
+          educationDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("click", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(educationDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchEducationLevelLookups()
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: educationLookupId === undefined || educationLookupId === null || educationLookupId === "" ? null : educationLookupId,
+            text: educationLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              if (!event || !event.itemData || !event.itemData.id) return;
+              if (!data || !data.id) return;
+              const nextEducationLookupId = event.itemData.id;
+              if (nextEducationLookupId === data.education_level_id) return;
+              try {
+                await this.apiClient.patchModelTaxonomy(data.id, nextEducationLookupId, data.science_id || "");
+                data.education_level_id = nextEducationLookupId;
+                data.education_level = event.itemData.name || data.education_level;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error && error.message ? error.message : "Failed to update model metadata.", true);
+              }
+            }
+          });
+        }
+        if (scienceDropdownHost) {
+          scienceDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("click", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(scienceDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchScienceLookups()
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: scienceLookupId === undefined || scienceLookupId === null || scienceLookupId === "" ? null : scienceLookupId,
+            text: scienceLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              if (!event || !event.itemData || !event.itemData.id) return;
+              if (!data || !data.id) return;
+              const nextScienceLookupId = event.itemData.id;
+              if (nextScienceLookupId === data.science_id) return;
+              try {
+                await this.apiClient.patchModelTaxonomy(data.id, data.education_level_id || "", nextScienceLookupId);
+                data.science_id = nextScienceLookupId;
+                data.science = event.itemData.name || data.science;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error && error.message ? error.message : "Failed to update model metadata.", true);
+              }
+            }
+          });
+        }
         if (cardTile) {
           cardTile.addEventListener("click", event => {
             if (event && event.target && event.target.closest(".favorite-button")) return;
             if (event && event.target && event.target.closest(".pick-button")) return;
             if (event && event.target && event.target.closest(".delete-button")) return;
             if (event && event.target && event.target.closest(".visibility-button")) return;
+            if (event && event.target && event.target.closest(".card-thumb-dropdowns")) return;
             this.selectModelCard(cardTile);
           });
           cardTile.addEventListener("dblclick", event => {
@@ -286,6 +320,7 @@ class ModelsApp {
             if (event && event.target && event.target.closest(".pick-button")) return;
             if (event && event.target && event.target.closest(".delete-button")) return;
             if (event && event.target && event.target.closest(".visibility-button")) return;
+            if (event && event.target && event.target.closest(".card-thumb-dropdowns")) return;
             this.openModel(data);
           });
         }
@@ -318,70 +353,20 @@ class ModelsApp {
 
   async loadDataSources() {
     const requests = [
-      this.fetchPersonalModels(),
-      this.fetchFavoriteModels(),
-      this.fetchPublicModels()
+      this.apiClient.fetchPersonalModels(),
+      this.apiClient.fetchFavoriteModels(),
+      this.apiClient.fetchPublicModels()
     ];
     const [personalModels, favoriteModels, publicModels] = await Promise.all(requests);
     this.personalModels = personalModels;
     this.favoriteModels = favoriteModels;
     this.publicModels = publicModels;
     try {
-      this.libraryModels = await this.fetchLibraryModels();
+      this.libraryModels = await this.apiClient.fetchLibraryModels();
     } catch (_) {
       this.libraryModels = this.personalModels.filter(model => this.hasPickedFlag(model));
     }
     this.rebuildInteractionModelIdSets();
-  }
-
-  async fetchPersonalModels() {
-    this.refreshAuth();
-    const headers = this.buildAuthHeaders();
-    const url = new URL(`${apiBase}/models`);
-    const userId = this.getUserId();
-    if (userId) url.searchParams.set("user_id", userId);
-    const response = await fetch(url.toString(), { headers });
-    if (!response.ok) throw new Error(`API error ${response.status}`);
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
-  }
-
-  async fetchFavoriteModels() {
-    this.refreshAuth();
-    if (!this.state.session || !this.state.session.token) return [];
-    const userId = this.getUserId();
-    if (!userId) return [];
-    const headers = this.buildAuthHeaders();
-    const url = new URL(`${apiBase}/models`);
-    url.searchParams.set("user_id", userId);
-    url.searchParams.set("is_favorite", "1");
-    url.searchParams.set("filter", "favorite");
-    const response = await fetch(url.toString(), { headers });
-    if (!response.ok) throw new Error(`API error ${response.status}`);
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
-  }
-
-  async fetchPublicModels() {
-    this.refreshAuth();
-    const headers = this.buildAuthHeaders();
-    const response = await fetch(`${apiBase}/models/public`, { headers });
-    if (!response.ok) throw new Error(`API error ${response.status}`);
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
-  }
-
-  async fetchLibraryModels() {
-    this.refreshAuth();
-    const headers = this.buildAuthHeaders();
-    const url = new URL(`${apiBase}/models`);
-    const userId = this.getUserId();
-    if (userId) url.searchParams.set("user_id", userId);
-    url.searchParams.set("is_picked", "1");
-    const response = await fetch(url.toString(), { headers });
-    if (!response.ok) throw new Error(`API error ${response.status}`);
-    const data = await response.json();
-    return Array.isArray(data) ? data : [];
   }
 
   getModelsByTreeNodeId(nodeId) {
@@ -403,35 +388,14 @@ class ModelsApp {
   }
 
   getEducationLabel(model) {
-    const labels = [
-      model?.education_level,
-      model?.educationLevel,
-      model?.education,
-      model?.school_level,
-      model?.schoolLevel,
-      model?.complexity
-    ];
-    for (let index = 0; index < labels.length; index++) {
-      const label = labels[index];
-      if (typeof label === "string" && label.trim() !== "")
-        return label.trim();
-    }
+    if (model && model.education_level)
+      return model.education_level;
     return "Uncategorized";
   }
 
   getScienceLabel(model) {
-    const labels = [
-      model?.science,
-      model?.subject,
-      model?.discipline,
-      model?.area,
-      model?.category
-    ];
-    for (let index = 0; index < labels.length; index++) {
-      const label = labels[index];
-      if (typeof label === "string" && label.trim() !== "")
-        return label.trim();
-    }
+    if (model && model.science)
+      return model.science;
     return "Uncategorized";
   }
 
@@ -548,13 +512,6 @@ class ModelsApp {
       this.state.selectedTreeNodeId = treeNodeIds.myPersonal;
   }
 
-  buildAuthHeaders() {
-    const headers = {};
-    const token = this.state.session?.token;
-    if (token) headers.Authorization = `Bearer ${token}`;
-    return headers;
-  }
-
   selectModelCard(cardTile) {
     if (!cardTile) return;
     const selected = this.elements.cardView.querySelector(".card-tile.selected");
@@ -564,7 +521,7 @@ class ModelsApp {
 
   normalizeModelId(modelData) {
     if (!modelData) return "";
-    const modelId = modelData.id ?? modelData.model_id ?? modelData.modelId;
+    const modelId = modelData.id;
     if (modelId === undefined || modelId === null) return "";
     return String(modelId);
   }
@@ -575,20 +532,12 @@ class ModelsApp {
 
   hasFavoriteFlag(modelData) {
     if (!modelData) return false;
-    return this.isTruthyInteractionFlag(modelData.user_interaction_is_favorite) ||
-      this.isTruthyInteractionFlag(modelData.is_favorite) ||
-      this.isTruthyInteractionFlag(modelData.favorite) ||
-      this.isTruthyInteractionFlag(modelData.userInteractionIsFavorite) ||
-      this.isTruthyInteractionFlag(modelData.user_interaction?.is_favorite);
+    return this.isTruthyInteractionFlag(modelData.is_favorite);
   }
 
   hasPickedFlag(modelData) {
     if (!modelData) return false;
-    return this.isTruthyInteractionFlag(modelData.user_interaction_is_picked) ||
-      this.isTruthyInteractionFlag(modelData.is_picked) ||
-      this.isTruthyInteractionFlag(modelData.picked) ||
-      this.isTruthyInteractionFlag(modelData.userInteractionIsPicked) ||
-      this.isTruthyInteractionFlag(modelData.user_interaction?.is_picked);
+    return this.isTruthyInteractionFlag(modelData.is_picked);
   }
 
   rebuildInteractionModelIdSets() {
@@ -632,10 +581,6 @@ class ModelsApp {
     return this.pickedModelIdSet.has(modelId);
   }
 
-  getUserId() {
-    return this.state.session?.userId || this.state.user?.sub || this.state.user?.id || "";
-  }
-
   async toggleFavorite(modelData, shouldFavorite) {
     if (!modelData || !modelData.id) return;
     if (!this.state.session || !this.state.session.token) return;
@@ -643,16 +588,9 @@ class ModelsApp {
     const currentFavoriteState = this.isFavoriteValue(modelData);
     const desiredFavoriteState = typeof shouldFavorite === "boolean" ? shouldFavorite : !currentFavoriteState;
     try {
-      const response = await fetch(`${apiBase}/user-model-interactions`, {
-        method: "PATCH",
-        headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
-        body: JSON.stringify({
-          model_id: modelData.id,
-          user_id: this.state.session.userId,
-          is_favorite: desiredFavoriteState
-        })
+      await this.apiClient.patchUserModelInteraction(modelData.id, this.state.session.userId, {
+        is_favorite: desiredFavoriteState
       });
-      if (!response.ok) throw new Error(`Favorite failed (${response.status})`);
       this.loadModels();
     } catch (error) {
       this.setStatus(error && error.message ? error.message : "Failed to mark favorite.", true);
@@ -666,16 +604,9 @@ class ModelsApp {
     const currentPickedState = this.isPickedValue(modelData);
     const desiredPickedState = typeof shouldPick === "boolean" ? shouldPick : !currentPickedState;
     try {
-      const response = await fetch(`${apiBase}/user-model-interactions`, {
-        method: "PATCH",
-        headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
-        body: JSON.stringify({
-          model_id: modelData.id,
-          user_id: this.state.session.userId,
-          is_picked: desiredPickedState
-        })
+      await this.apiClient.patchUserModelInteraction(modelData.id, this.state.session.userId, {
+        is_picked: desiredPickedState
       });
-      if (!response.ok) throw new Error(`Pick failed (${response.status})`);
       this.loadModels();
     } catch (error) {
       this.setStatus(error && error.message ? error.message : "Failed to update library.", true);
@@ -684,7 +615,7 @@ class ModelsApp {
 
   async toggleVisibility(modelData) {
     if (!modelData || !modelData.id) return;
-    this.refreshAuth();
+    this.userSdk.refreshState(this.state);
     if (!this.state.session || !this.state.session.token) {
       this.setStatus("Sign-in required to update visibility.", true);
       return;
@@ -692,12 +623,7 @@ class ModelsApp {
     const nextValue = !(modelData.is_public === true || modelData.is_public === 1);
     this.setStatus(nextValue ? "Setting public…" : "Setting private…");
     try {
-      const response = await fetch(`${apiBase}/models/${modelData.id}`, {
-        method: "PUT",
-        headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
-        body: JSON.stringify({ is_public: nextValue })
-      });
-      if (!response.ok) throw new Error(`Visibility update failed (${response.status})`);
+      await this.apiClient.updateModelVisibility(modelData.id, nextValue);
       this.setStatus(nextValue ? "Model is public." : "Model is private.");
       this.loadModels();
     } catch (error) {
@@ -775,42 +701,28 @@ class ModelsApp {
   bindNav() {
     if (this.elements.navNewModel) this.elements.navNewModel.addEventListener("click", () => this.createModel());
   }
-  logout() {
-    this.state.session = null;
-    this.state.user = null;
-    this.clearSession();
-    localStorage.removeItem("modellus_id_token");
-    localStorage.removeItem(userKey);
-    window.location.href = "/login.html";
-  }
   async createModel() {
-    this.refreshAuth();
+    this.userSdk.refreshState(this.state);
     if (!this.state.session || !this.state.session.token) {
       this.setStatus("Sign-in required to create a model.", true);
       return;
     }
-    const userId = this.getUserId();
+    const userId = this.userSdk.getUserId(this.state.session);
     if (!userId) {
       this.setStatus("Missing user id for model creation.", true);
       return;
     }
     this.setStatus("Creating model…");
     try {
-      const response = await fetch(`${apiBase}/models`, {
-        method: "POST",
-        headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
-        body: JSON.stringify({
-          title: "Untitled model",
-          description: "",
-          type: "model",
-          status: "draft",
-          userId: userId,
-          createdAt: new Date().toISOString(),
-          lastModified: new Date().toISOString()
-        })
+      const created = await this.apiClient.createModel({
+        title: "Untitled model",
+        description: "",
+        type: "model",
+        status: "draft",
+        userId: userId,
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString()
       });
-      if (!response.ok) throw new Error(`Create failed (${response.status})`);
-      const created = await response.json();
       this.setStatus("Model created.");
       this.loadModels();
       if (created && created.id) {
@@ -821,10 +733,10 @@ class ModelsApp {
     }
   }
   async deleteModel(modelData) {
-    const modelId = modelData && (modelData.id || modelData.modelId);
+    const modelId = modelData && modelData.id;
     if (!modelId)
       return;
-    this.refreshAuth();
+    this.userSdk.refreshState(this.state);
     if (!this.state.session || !this.state.session.token) {
       this.setStatus("Sign-in required to delete a model.", true);
       return;
@@ -833,11 +745,7 @@ class ModelsApp {
     if (!confirmed) return;
     this.setStatus("Deleting model…");
     try {
-      const response = await fetch(`${apiBase}/models/${modelId}`, {
-        method: "DELETE",
-        headers: this.buildAuthHeaders()
-      });
-      if (!response.ok) throw new Error(`Delete failed (${response.status})`);
+      await this.apiClient.deleteModel(modelId);
       this.setStatus("Model deleted.");
       this.loadModels();
     } catch (error) {

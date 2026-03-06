@@ -20,5 +20,9 @@ These rules apply to all code changes in this repository.
 - Variable names must be meaningful and complete.
 - Avoid abbreviations unless they are universally standard and unambiguous.
 
+## API Fields
+- Use only canonical API field names.
+- Do not implement fallback mapping for alternative field names.
+
 ## Comments
 - Do not add comments.
