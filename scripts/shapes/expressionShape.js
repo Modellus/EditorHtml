@@ -75,6 +75,7 @@ class ExpressionShape extends BaseShape {
         this.mathfield.smartMode = false;
         this.mathfield.multiline = true;
         this.mathfield.returnKeyAction = "none";
+        this.mathfield.addEventListener("input", _ => this.onInput());
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());
         this.mathfield.addEventListener("mount", _ => this.onMount());
@@ -98,15 +99,76 @@ class ExpressionShape extends BaseShape {
     }
 
     removeExpressionInlineShortcuts() {
-        const inlineShortcutMap = { ...(this.mathfield.inlineShortcuts ?? {}) };
-        ["dx", "dy", "dt"].forEach(shortcutName => delete inlineShortcutMap[shortcutName]);
+        const inlineShortcutMap = { ...this.mathfield.inlineShortcuts };
+        delete inlineShortcutMap.dx;
+        delete inlineShortcutMap.dy;
+        delete inlineShortcutMap.dt;
+        const functionShortcuts = this.getExpressionFunctionShortcuts();
+        for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
+            const functionShortcut = functionShortcuts[functionShortcutIndex];
+            inlineShortcutMap[functionShortcut.shortcutText] = functionShortcut.functionLatex;
+        }
         this.mathfield.inlineShortcuts = inlineShortcutMap;
+        this.mathfield.inlineShortcutTimeout = 0;
     }
 
     onKeyDown(keydownEvent) {
         if (this.handleEnterKeydown(keydownEvent))
             return;
         this.handleBackspaceKeydown(keydownEvent);
+    }
+
+    onInput() {
+        this.applyExpressionFunctionShortcuts();
+    }
+
+    applyExpressionFunctionShortcuts() {
+        const functionShortcuts = this.getExpressionFunctionShortcuts();
+        for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
+            const functionShortcut = functionShortcuts[functionShortcutIndex];
+            if (this.applyFunctionShortcut(functionShortcut.shortcutText, functionShortcut.functionLatex))
+                return;
+        }
+    }
+
+    applyFunctionShortcut(shortcutText, functionLatex) {
+        if (this.hasSelection())
+            return false;
+        const caretPosition = this.getCaretPosition();
+        const groupStart = this.getCurrentGroupStartPosition();
+        const shortcutStart = caretPosition - shortcutText.length;
+        if (shortcutStart < groupStart)
+            return false;
+        const typedShortcut = this.getTextRange(shortcutStart, caretPosition);
+        if (typedShortcut !== shortcutText)
+            return false;
+        const previousCharacter = shortcutStart > groupStart ? this.getTextRange(shortcutStart - 1, shortcutStart) : "";
+        if (previousCharacter === "\\" || this.isAsciiLetter(previousCharacter))
+            return false;
+        this.mathfield.selection = { ranges: [[shortcutStart, caretPosition]], direction: "forward" };
+        this.mathfield.executeCommand("insert", functionLatex);
+        return true;
+    }
+
+    getExpressionFunctionShortcuts() {
+        return [
+            { shortcutText: "cosec", functionLatex: "\\cosec" },
+            { shortcutText: "sqrt", functionLatex: "\\sqrt" },
+            { shortcutText: "frac", functionLatex: "\\frac" },
+            { shortcutText: "cdot", functionLatex: "\\cdot" },
+            { shortcutText: "sin", functionLatex: "\\sin" },
+            { shortcutText: "cos", functionLatex: "\\cos" },
+            { shortcutText: "tan", functionLatex: "\\tan" },
+            { shortcutText: "sec", functionLatex: "\\sec" },
+            { shortcutText: "cot", functionLatex: "\\cot" },
+            { shortcutText: "log", functionLatex: "\\log" },
+            { shortcutText: "PI", functionLatex: "\\PI" },
+            { shortcutText: "pi", functionLatex: "\\pi" }
+        ];
+    }
+
+    isAsciiLetter(text) {
+        return /^[A-Za-z]$/.test(text);
     }
 
     handleEnterKeydown(keydownEvent) {

@@ -5,6 +5,7 @@ export class UserSdk {
     this.loginPath = loginPath;
     this.tokenStorageKey = tokenStorageKey;
     this.appHome = appHome;
+    this.featureFlags = [];
   }
 
   readSession() {
@@ -70,6 +71,46 @@ export class UserSdk {
     return session?.userId || "";
   }
 
+  buildAuthHeaders(session = this.readSession()) {
+    const headers = {};
+    const token = session?.token;
+    if (token)
+      headers.Authorization = `Bearer ${token}`;
+    return headers;
+  }
+
+  async loadFeatureFlags(apiBaseUrl, session = this.readSession()) {
+    const userId = this.getUserId(session);
+    if (!userId) {
+      this.featureFlags = [];
+      return this.featureFlags;
+    }
+    const response = await fetch(`${apiBaseUrl}/users/${encodeURIComponent(userId)}/feature-flags`, {
+      headers: this.buildAuthHeaders(session)
+    });
+    if (!response.ok) {
+      this.featureFlags = [];
+      return this.featureFlags;
+    }
+    const featureFlags = await response.json();
+    this.featureFlags = Array.isArray(featureFlags) ? featureFlags : [];
+    return this.featureFlags;
+  }
+
+  readFeatureFlags() {
+    return this.featureFlags;
+  }
+
+  hasFeatureFlag(featureFlagKey) {
+    for (let featureFlagIndex = 0; featureFlagIndex < this.featureFlags.length; featureFlagIndex++) {
+      const featureFlag = this.featureFlags[featureFlagIndex];
+      if (featureFlag.key !== featureFlagKey)
+        continue;
+      return featureFlag.is_enabled === 1 || featureFlag.is_enabled === true;
+    }
+    return false;
+  }
+
   applyUserMenu(userMenuElement, session) {
     if (!userMenuElement)
       return;
@@ -93,6 +134,7 @@ export class UserSdk {
     this.clearSession();
     this.clearToken();
     this.clearUser();
+    this.featureFlags = [];
     this.redirectToLogin();
   }
 
@@ -169,9 +211,7 @@ export class UserSdk {
         });
         return;
       }
-    } catch (error) {
-      console.warn("User lookup failed.", error);
-    }
+    } catch (_) {}
     try {
       await fetch(`${apiBaseUrl}/users`, {
         method: "POST",
@@ -185,9 +225,7 @@ export class UserSdk {
           lastLogin: now
         })
       });
-    } catch (error) {
-      console.warn("User creation failed.", error);
-    }
+    } catch (_) {}
   }
 
   async handleCredentialResponse(credential, apiBaseUrl) {
@@ -208,7 +246,6 @@ export class UserSdk {
       return;
     }
     if (tries <= 0) {
-      console.error("Google Identity Services not available. Check gsi/client load.");
       return;
     }
     setTimeout(() => this.waitForGoogleIdentity(callback, tries - 1), 50);

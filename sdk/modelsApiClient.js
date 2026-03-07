@@ -30,13 +30,14 @@ export class ModelsApiClient {
       const lookupId = item.id;
       const lookupName = item.name;
       const lookupIcon = item.icon;
+      const lookupColor = item.color;
       if (lookupId === "" || lookupName === "")
         continue;
       if (lookupId === undefined || lookupId === null)
         continue;
       if (lookupName === undefined || lookupName === null)
         continue;
-      optionsById.set(lookupId, { id: lookupId, name: lookupName, icon: lookupIcon });
+      optionsById.set(lookupId, { id: lookupId, name: lookupName, icon: lookupIcon, color: lookupColor });
     }
     return Array.from(optionsById.values()).sort((leftOption, rightOption) => leftOption.name.localeCompare(rightOption.name));
   }
@@ -197,11 +198,13 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Interaction update failed (${response.status})`);
   }
 
-  async updateModelVisibility(modelId, isPublic) {
-    const response = await fetch(`${this.apiBaseUrl}/models/${modelId}`, {
-      method: "PUT",
+  async updateModelVisibility(modelId, isPublic, userId) {
+    const url = new URL(`${this.apiBaseUrl}/models/${modelId}`);
+    url.searchParams.set("user_id", userId);
+    const response = await fetch(url.toString(), {
+      method: "PATCH",
       headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
-      body: JSON.stringify({ is_public: isPublic })
+      body: JSON.stringify({ is_public: isPublic, user_id: userId })
     });
     if (!response.ok) throw new Error(`Visibility update failed (${response.status})`);
   }

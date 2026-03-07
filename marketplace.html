@@ -51,9 +51,9 @@
       .status.error { color: #b91c1c; }
       .hidden { display: none !important; }
       .hint { color: var(--c-muted); }
-      .card-tile { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; padding: 1rem; display: grid; gap: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; }
+      .card-tile { background: #fff; border: 1px solid var(--c-border); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); position: relative; aspect-ratio: 1 / 1; height: auto; overflow: hidden; }
       .card-thumb-wrap { position: relative; }
-      .card-thumb { width: 100%; aspect-ratio: 1 / 1; height: auto; object-fit: cover; border-radius: 10px; border: 1px solid var(--c-border); display: block; }
+      .card-thumb { width: 100%; aspect-ratio: 16 / 9; height: auto; object-fit: cover; border-radius: 10px; border: 1px solid var(--c-border); display: block; }
       .card-thumb-dropdowns { position: absolute; left: 8px; bottom: 8px; display: flex; gap: 0.35rem; max-width: calc(100% - 16px); flex-wrap: wrap; }
       .card-thumb-dropdown { flex: 0 0 auto; width: auto; max-width: 100%; }
       .card-thumb-dropdown .dx-dropdownbutton { border-radius: 9999px; overflow: hidden; }
@@ -63,9 +63,9 @@
       .card-thumb-dropdown .dx-dropdownbutton-toggle { border-radius: 0 9999px 9999px 0; padding-inline: 8px; }
       .card-thumb-dropdown .dx-button-content { padding: 3px 8px; }
       .card-thumb-dropdown .dx-button-text { font-size: 0.62rem; font-weight: 600; color: #fff; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .card-thumb-dropdown .dx-icon { color: #fff; }
-      .education-dropdown-host .dx-button { background: rgba(139, 92, 246, 0.92); color: #fff; }
-      .science-dropdown-host .dx-button { background: rgba(14, 165, 233, 0.92); color: #fff; }
+      .card-thumb-dropdown .dx-icon { color: #fff; font-size: 12px; line-height: 12px; }
+      .education-dropdown-host .dx-button { background: var(--pill-color, rgba(139, 92, 246, 0.92)); color: #fff; }
+      .science-dropdown-host .dx-button { background: var(--pill-color, rgba(14, 165, 233, 0.92)); color: #fff; }
       .card-actions { position: absolute; top: 12px; right: 12px; display: flex; gap: 0.35rem; }
       .delete-button { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-border); background: #fff; border-radius: 999px; width: 34px; height: 34px; cursor: pointer; }
       .delete-button .trash { font-weight: 300; color: red; transition: opacity 0.2s ease-in-out; }
@@ -73,19 +73,24 @@
       .delete-button:hover .trash-hover { display: inline-block; font-weight: 900; color: red; }
       .trash-hover { display: none; }
       .card-tile.selected { border-color: var(--c-link); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25); }
+      .card-body { display: flex; flex-direction: column; gap: 0.5rem; flex: 1 1 auto; min-height: 0; }
       .card-title { font-size: 1rem; margin: 0; }
-      .card-desc { color: var(--c-muted); margin: 0; }
-      .card-meta-actions { display: flex; gap: 0.35rem; align-items: center; }
+      .card-desc { color: var(--c-muted); margin: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; line-height: 1.25; max-height: calc(2 * 1.25em); }
+      .card-meta-actions { display: flex; gap: 0.35rem; align-items: center; margin-top: auto; }
       .card-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
       .card-badge { display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(37, 99, 235, 0.1); color: var(--c-text); padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.85rem; }
       .favorite-button { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-border); background: #fff; border-radius: 999px; padding: 0.3rem; width: 34px; height: 34px; cursor: pointer; color: var(--c-text); }
-      .favorite-button .favorite-icon { color: #9ca3af; font-size: 16px; }
+      .favorite-button .favorite-icon { color: #9ca3af; font-size: 12px; }
       .favorite-button.is-favorite .favorite-icon { color: #f59e0b; }
       .pick-button { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-border); background: #fff; border-radius: 999px; padding: 0.3rem; width: 34px; height: 34px; cursor: pointer; color: var(--c-text); }
-      .pick-button .pick-icon { color: #9ca3af; font-size: 16px; }
+      .pick-button .pick-icon { color: #9ca3af; font-size: 12px; }
       .pick-button.is-picked .pick-icon { color: #dc2626; }
       .visibility-button { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-border); background: #fff; border-radius: 999px; width: 34px; height: 34px; cursor: pointer; position: absolute; right: 12px; bottom: 12px; }
-      .visibility-button .visibility-icon { color: #6b7280; font-size: 16px; }
+      .visibility-button .visibility-icon { color: #6b7280; font-size: 12px; }
+      .card-thumb-dropdown .dx-icon,
+      .card-tile .trash,
+      .card-tile .trash-hover,
+      .card-badge i { font-size: 12px; }
       .visibility-button.is-public .visibility-icon { color: #16a34a; }
       .user-menu .dx-button-content { display: inline-flex; align-items: center; }
       .user-menu-avatar { width: 24px; height: 24px; border-radius: 999px; object-fit: cover; border: 1px solid var(--c-border); }

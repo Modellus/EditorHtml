@@ -4,6 +4,7 @@ import { UserSdk } from "./sdk/userSdk.js";
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
 const sessionKey = window.modellus?.auth?.sessionKey || "mp.session";
 const userKey = window.modellus?.auth?.userKey || "mp.user";
+const maintenanceAccessFeatureFlagKey = "can_access_maintenance";
 const treeNodeIds = {
   myModels: "my-models",
   myPersonal: "my-personal",
@@ -71,6 +72,14 @@ class ModelsApp {
     this.favoriteModels = [];
     this.libraryModels = [];
     this.publicModels = [];
+    this.educationLookupOptions = [];
+    this.scienceLookupOptions = [];
+    this.educationLookupNameById = new Map();
+    this.scienceLookupNameById = new Map();
+    this.educationLookupColorById = new Map();
+    this.scienceLookupColorById = new Map();
+    this.educationLookupIconById = new Map();
+    this.scienceLookupIconById = new Map();
     this.favoriteModelIdSet = new Set();
     this.pickedModelIdSet = new Set();
     this.initNavToolbar();
@@ -175,6 +184,14 @@ class ModelsApp {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
   }
+  getModelDescriptionText(description) {
+    return String(description || "")
+      .replace(/<br\s*\/?>/gi, " ")
+      .replace(/<\/p>/gi, " ")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
   createNodeFromMarkup(markup) {
     const fragment = document.createRange().createContextualFragment(markup);
     return fragment.firstElementChild;
@@ -210,8 +227,8 @@ class ModelsApp {
       groupPanel: { visible: false },
       grouping: { autoExpandAll: false, contextMenuEnabled: false },
       sorting: { mode: "none" },
-      colCount: 3,
-      colCountByScreen: { lg: 3, md: 2, sm: 1, xs: 1 },
+      cardsPerRow: 4,
+      cardMinWidth: 125,
       columns: [
         { dataField: "title", caption: "Title" },
         { dataField: "description", caption: "Description" }
@@ -227,8 +244,12 @@ class ModelsApp {
         const scienceLookupId = data.science_id;
         const educationLabel = data.education_level || "Uncategorized";
         const scienceLabel = data.science || "Uncategorized";
+        const educationColor = data.education_level_color || "#8b5cf6";
+        const scienceColor = data.science_color || "#0ea5e9";
+        const descriptionLabel = this.getModelDescriptionText(data.description) || "No description provided.";
         const escapedEducationLabel = this.escapeHtml(educationLabel);
         const escapedScienceLabel = this.escapeHtml(scienceLabel);
+        const escapedDescriptionLabel = this.escapeHtml(descriptionLabel);
         const taxonomyDropDownMarkup = `
           <div class="card-thumb-dropdowns">
             <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
@@ -245,15 +266,17 @@ class ModelsApp {
                 <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
               </button>
             </div>
-            <h3 class="card-title">${data.title || "Untitled model"}</h3>
-            <p class="card-desc">${data.description || "No description provided."}</p>
-            <div class="card-meta-actions">
-              <button class="favorite-button${isFavorite ? " is-favorite" : ""}" aria-label="${isFavorite ? "Unfavorite" : "Favorite"}">
-                <i class="${isFavorite ? "fa-solid fa-star favorite-icon" : "fa-regular fa-star favorite-icon"}" aria-hidden="true"></i>
-              </button>
-              <button class="pick-button${isPicked ? " is-picked" : ""}" aria-label="${isPicked ? "Remove from library" : "Add to library"}" title="${isPicked ? "In library" : "Add to library"}">
-                <i class="${isPicked ? "fa-solid fa-bookmark pick-icon" : "fa-regular fa-bookmark pick-icon"}" aria-hidden="true"></i>
-              </button>
+            <div class="card-body">
+              <h3 class="card-title">${data.title || "Untitled model"}</h3>
+              <p class="card-desc">${escapedDescriptionLabel}</p>
+              <div class="card-meta-actions">
+                <button class="favorite-button${isFavorite ? " is-favorite" : ""}" aria-label="${isFavorite ? "Unfavorite" : "Favorite"}">
+                  <i class="${isFavorite ? "fa-solid fa-star favorite-icon" : "fa-regular fa-star favorite-icon"}" aria-hidden="true"></i>
+                </button>
+                <button class="pick-button${isPicked ? " is-picked" : ""}" aria-label="${isPicked ? "Remove from library" : "Add to library"}" title="${isPicked ? "In library" : "Add to library"}">
+                  <i class="${isPicked ? "fa-solid fa-bookmark pick-icon" : "fa-regular fa-bookmark pick-icon"}" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <button class="visibility-button${isPublic ? " is-public" : ""}" aria-label="${isPublic ? "Set private" : "Set public"}" title="${isPublic ? "Public" : "Private"}">
               <i class="${isPublic ? "fa-light fa-lock-open" : "fa-light fa-lock"} visibility-icon" aria-hidden="true"></i>
@@ -268,6 +291,8 @@ class ModelsApp {
         const visibilityButton = host.querySelector(".visibility-button");
         const educationDropdownHost = host.querySelector(".education-dropdown-host");
         const scienceDropdownHost = host.querySelector(".science-dropdown-host");
+        if (educationDropdownHost) educationDropdownHost.style.setProperty("--pill-color", educationColor);
+        if (scienceDropdownHost) scienceDropdownHost.style.setProperty("--pill-color", scienceColor);
         if (favoriteButton) favoriteButton.addEventListener("click", () => this.toggleFavorite(data, !isFavorite));
         if (pickButton) pickButton.addEventListener("click", () => this.togglePick(data, !isPicked));
         if (deleteButton) deleteButton.addEventListener("click", event => {
@@ -303,6 +328,7 @@ class ModelsApp {
                 await this.apiClient.patchModelEducationLevel(data.id, nextEducationLookupId);
                 data.education_level_id = nextEducationLookupId;
                 data.education_level = event.itemData.name || data.education_level;
+                data.education_level_color = event.itemData.color || data.education_level_color;
                 this.loadModels(this.state.selectedTreeNodeId);
               } catch (error) {
                 this.setStatus(error && error.message ? error.message : "Failed to update model metadata.", true);
@@ -335,6 +361,7 @@ class ModelsApp {
                 await this.apiClient.patchModelScience(data.id, nextScienceLookupId);
                 data.science_id = nextScienceLookupId;
                 data.science = event.itemData.name || data.science;
+                data.science_color = event.itemData.color || data.science_color;
                 this.loadModels(this.state.selectedTreeNodeId);
               } catch (error) {
                 this.setStatus(error && error.message ? error.message : "Failed to update model metadata.", true);
@@ -516,7 +543,8 @@ class ModelsApp {
             caption: "Icon",
             cellTemplate: (cellElement, cellInfo) => this.renderFontAwesomeIconCell(cellElement, cellInfo.value),
             editCellTemplate: (cellElement, cellInfo) => this.renderFontAwesomeIconEditor(cellElement, cellInfo)
-          }
+          },
+          { dataField: "color", caption: "Color" }
         ]
       });
       return;
@@ -556,7 +584,9 @@ class ModelsApp {
   async loadModels(selectedTreeNodeId = this.state.selectedTreeNodeId) {
     this.setStatus("Loading models…");
     try {
+      this.userSdk.refreshState(this.state);
       this.state.selectedTreeNodeId = selectedTreeNodeId || treeNodeIds.myPersonal;
+      await this.userSdk.loadFeatureFlags(apiBase, this.state.session);
       await this.loadDataSources();
       this.renderTree();
       this.ensureValidSelectedTreeNodeId();
@@ -573,18 +603,73 @@ class ModelsApp {
     const requests = [
       this.apiClient.fetchPersonalModels(),
       this.apiClient.fetchFavoriteModels(),
-      this.apiClient.fetchPublicModels()
+      this.apiClient.fetchPublicModels(),
+      this.apiClient.fetchEducationLevelLookups(),
+      this.apiClient.fetchScienceLookups()
     ];
-    const [personalModels, favoriteModels, publicModels] = await Promise.all(requests);
-    this.personalModels = personalModels;
-    this.favoriteModels = favoriteModels;
-    this.publicModels = publicModels;
+    const [personalModels, favoriteModels, publicModels, educationLookupOptions, scienceLookupOptions] = await Promise.all(requests);
+    this.educationLookupOptions = educationLookupOptions;
+    this.scienceLookupOptions = scienceLookupOptions;
+    this.educationLookupNameById = this.createLookupNameByIdMap(educationLookupOptions);
+    this.scienceLookupNameById = this.createLookupNameByIdMap(scienceLookupOptions);
+    this.educationLookupColorById = this.createLookupColorByIdMap(educationLookupOptions);
+    this.scienceLookupColorById = this.createLookupColorByIdMap(scienceLookupOptions);
+    this.educationLookupIconById = this.createLookupIconByIdMap(educationLookupOptions);
+    this.scienceLookupIconById = this.createLookupIconByIdMap(scienceLookupOptions);
+    this.personalModels = this.applyModelLookupLabels(personalModels);
+    this.favoriteModels = this.applyModelLookupLabels(favoriteModels);
+    this.publicModels = this.applyModelLookupLabels(publicModels);
     try {
-      this.libraryModels = await this.apiClient.fetchLibraryModels();
+      const libraryModels = await this.apiClient.fetchLibraryModels();
+      this.libraryModels = this.applyModelLookupLabels(libraryModels);
     } catch (_) {
       this.libraryModels = this.personalModels.filter(model => this.hasPickedFlag(model));
     }
     this.rebuildInteractionModelIdSets();
+  }
+
+  createLookupNameByIdMap(lookupOptions) {
+    const lookupNameById = new Map();
+    for (let optionIndex = 0; optionIndex < lookupOptions.length; optionIndex++) {
+      const lookupOption = lookupOptions[optionIndex];
+      lookupNameById.set(lookupOption.id, lookupOption.name);
+    }
+    return lookupNameById;
+  }
+  createLookupColorByIdMap(lookupOptions) {
+    const lookupColorById = new Map();
+    for (let optionIndex = 0; optionIndex < lookupOptions.length; optionIndex++) {
+      const lookupOption = lookupOptions[optionIndex];
+      lookupColorById.set(lookupOption.id, lookupOption.color);
+    }
+    return lookupColorById;
+  }
+  createLookupIconByIdMap(lookupOptions) {
+    const lookupIconById = new Map();
+    for (let optionIndex = 0; optionIndex < lookupOptions.length; optionIndex++) {
+      const lookupOption = lookupOptions[optionIndex];
+      lookupIconById.set(lookupOption.id, lookupOption.icon);
+    }
+    return lookupIconById;
+  }
+
+  applyModelLookupLabels(models) {
+    for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+      const model = models[modelIndex];
+      const educationLabel = this.educationLookupNameById.get(model.education_level_id);
+      const scienceLabel = this.scienceLookupNameById.get(model.science_id);
+      const educationColor = this.educationLookupColorById.get(model.education_level_id);
+      const scienceColor = this.scienceLookupColorById.get(model.science_id);
+      if (educationLabel)
+        model.education_level = educationLabel;
+      if (scienceLabel)
+        model.science = scienceLabel;
+      if (educationColor)
+        model.education_level_color = educationColor;
+      if (scienceColor)
+        model.science_color = scienceColor;
+    }
+    return models;
   }
 
   getModelsByTreeNodeId(nodeId) {
@@ -595,49 +680,90 @@ class ModelsApp {
     if (nodeId === treeNodeIds.myLibrary)
       return this.libraryModels;
     if (typeof nodeId === "string" && nodeId.startsWith("market-education-item:")) {
-      const educationLabel = decodeURIComponent(nodeId.substring("market-education-item:".length));
+      const educationKey = nodeId.substring("market-education-item:".length);
+      if (educationKey.startsWith("id:")) {
+        const educationLookupId = decodeURIComponent(educationKey.substring("id:".length));
+        return this.publicModels.filter(model => model.education_level_id === educationLookupId);
+      }
+      if (educationKey.startsWith("label:")) {
+        const educationLabel = decodeURIComponent(educationKey.substring("label:".length));
+        return this.publicModels.filter(model => this.getEducationLabel(model) === educationLabel);
+      }
+      const educationLabel = decodeURIComponent(educationKey);
       return this.publicModels.filter(model => this.getEducationLabel(model) === educationLabel);
     }
     if (typeof nodeId === "string" && nodeId.startsWith("market-science-item:")) {
-      const scienceLabel = decodeURIComponent(nodeId.substring("market-science-item:".length));
+      const scienceKey = nodeId.substring("market-science-item:".length);
+      if (scienceKey.startsWith("id:")) {
+        const scienceLookupId = decodeURIComponent(scienceKey.substring("id:".length));
+        return this.publicModels.filter(model => model.science_id === scienceLookupId);
+      }
+      if (scienceKey.startsWith("label:")) {
+        const scienceLabel = decodeURIComponent(scienceKey.substring("label:".length));
+        return this.publicModels.filter(model => this.getScienceLabel(model) === scienceLabel);
+      }
+      const scienceLabel = decodeURIComponent(scienceKey);
       return this.publicModels.filter(model => this.getScienceLabel(model) === scienceLabel);
     }
     return [];
   }
 
   getEducationLabel(model) {
-    if (model && model.education_level)
+    const educationLabel = this.educationLookupNameById.get(model.education_level_id);
+    if (educationLabel)
+      return educationLabel;
+    if (model.education_level)
       return model.education_level;
     return "Uncategorized";
   }
 
   getScienceLabel(model) {
-    if (model && model.science)
+    const scienceLabel = this.scienceLookupNameById.get(model.science_id);
+    if (scienceLabel)
+      return scienceLabel;
+    if (model.science)
       return model.science;
     return "Uncategorized";
+  }
+
+  canAccessMaintenance() {
+    return this.userSdk.hasFeatureFlag(maintenanceAccessFeatureFlagKey);
   }
 
   buildGroupedPublicItems(type) {
     const grouped = new Map();
     for (let index = 0; index < this.publicModels.length; index++) {
       const model = this.publicModels[index];
+      const lookupId = type === "education" ? model.education_level_id : model.science_id;
       const label = type === "education" ? this.getEducationLabel(model) : this.getScienceLabel(model);
-      grouped.set(label, (grouped.get(label) ?? 0) + 1);
+      const groupKey = lookupId ? `id:${lookupId}` : `label:${label}`;
+      const existingGroup = grouped.get(groupKey);
+      if (existingGroup) {
+        existingGroup.count += 1;
+        continue;
+      }
+      grouped.set(groupKey, { lookupId: lookupId, label: label, count: 1 });
     }
-    return Array.from(grouped.entries())
-      .sort((left, right) => left[0].localeCompare(right[0]))
+    return Array.from(grouped.values())
+      .sort((left, right) => left.label.localeCompare(right.label))
       .map(entry => {
-        const label = entry[0];
-        const count = entry[1];
-        const baseId = type === "education" ? "market-education-item:" : "market-science-item:";
-        const nodeType = type === "education" ? "market-education-item" : "market-science-item";
+        const isEducation = type === "education";
+        const defaultIconClass = isEducation ? "fa-light fa-graduation-cap" : "fa-light fa-flask";
+        const defaultIconColor = isEducation ? "#8b5cf6" : "#0ea5e9";
+        const lookupIconById = isEducation ? this.educationLookupIconById : this.scienceLookupIconById;
+        const lookupColorById = isEducation ? this.educationLookupColorById : this.scienceLookupColorById;
+        const iconClass = entry.lookupId ? lookupIconById.get(entry.lookupId) || defaultIconClass : defaultIconClass;
+        const iconColor = entry.lookupId ? lookupColorById.get(entry.lookupId) || defaultIconColor : defaultIconColor;
+        const nodePrefix = isEducation ? "market-education-item:" : "market-science-item:";
+        const nodeType = isEducation ? "market-education-item" : "market-science-item";
+        const nodeSuffix = entry.lookupId ? `id:${encodeURIComponent(entry.lookupId)}` : `label:${encodeURIComponent(entry.label)}`;
         return {
-          id: `${baseId}${encodeURIComponent(label)}`,
-          text: `${label} (${count})`,
+          id: `${nodePrefix}${nodeSuffix}`,
+          text: `${entry.label} (${entry.count})`,
           nodeType: nodeType,
-          count: count,
-          iconClass: type === "education" ? "fa-light fa-graduation-cap" : "fa-light fa-flask",
-          iconColor: type === "education" ? "#8b5cf6" : "#0ea5e9"
+          count: entry.count,
+          iconClass: iconClass,
+          iconColor: iconColor
         };
       });
   }
@@ -645,7 +771,7 @@ class ModelsApp {
   getTreeData() {
     const educationItems = this.buildGroupedPublicItems("education");
     const scienceItems = this.buildGroupedPublicItems("science");
-    return [
+    const treeData = [
       {
         id: treeNodeIds.myModels,
         text: "My Models",
@@ -704,8 +830,10 @@ class ModelsApp {
             items: scienceItems
           }
         ]
-      },
-      {
+      }
+    ];
+    if (this.canAccessMaintenance())
+      treeData.push({
         id: treeNodeIds.maintenance,
         text: "Maintenance",
         iconClass: "fa-light fa-screwdriver-wrench",
@@ -728,8 +856,8 @@ class ModelsApp {
             iconColor: "#0ea5e9"
           }
         ]
-      }
-    ];
+      });
+    return treeData;
   }
 
   collectTreeNodeIds(items, target) {
@@ -862,10 +990,14 @@ class ModelsApp {
       this.setStatus("Sign-in required to update visibility.", true);
       return;
     }
+    if (!this.state.session.userId) {
+      this.setStatus("Missing user id for visibility update.", true);
+      return;
+    }
     const nextValue = !(modelData.is_public === true || modelData.is_public === 1);
     this.setStatus(nextValue ? "Setting public…" : "Setting private…");
     try {
-      await this.apiClient.updateModelVisibility(modelData.id, nextValue);
+      await this.apiClient.updateModelVisibility(modelData.id, nextValue, this.state.session.userId);
       this.setStatus(nextValue ? "Model is public." : "Model is private.");
       this.loadModels();
     } catch (error) {
