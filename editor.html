@@ -3,9 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="importmap">
+    {
+        "imports": {
+            "agents/client": "https://esm.sh/agents@0.7.5/client?bundle"
+        }
+    }
+    </script>
 
     <script src="libraries/scripts/CalculationEngine.js"></script>
-    <script src="libraries/scripts/AILogic.js"></script>
+    <script src="libraries/scripts/agentChatAdapter.js"></script>
+    <script src="libraries/scripts/agentToolBridge.js"></script>
 
     <script src="scripts/utils.js"></script>
     <script src="scripts/controls/TermControl.js"></script>

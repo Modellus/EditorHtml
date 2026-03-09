@@ -1,5 +1,5 @@
 var modellus = {
-    version: "2025.0.1",
+    version: "2026.0.9",
     undo: _ => shell.commands.undo(),
     redo: _ => shell.commands.redo(),
     shape: {

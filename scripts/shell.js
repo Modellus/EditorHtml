@@ -1,12 +1,26 @@
 class Shell  {
     constructor(model) {
-        this.aiLogic = new AILogic(this);
         this.calculator = new Calculator();
         this.board = new Board(document.getElementById("svg"), this.calculator);
         this.commands = new Commands(this);
         this.selectedShapeFrame = null;
         this.pendingSelectedShape = null;
         this.pendingInitialValuesByCase = null;
+        this.chatAdapter = null;
+        this.agentToolBridge = null;
+        this.chatInstance = null;
+        this.chatThreadId = null;
+        this.chatBeforeUnloadHandler = () => this.disposeChatAdapter();
+        if (typeof AgentToolBridge === "function")
+            this.agentToolBridge = new AgentToolBridge({
+                sendToolResult: result => this.chatAdapter?.sendToolResult(
+                    result.toolCallId,
+                    result.toolName,
+                    result.output,
+                    result.state,
+                    result.errorText
+                )
+            });
         this.properties = {};
         this.setDefaults();
         this.panAndZoom = new PanAndZoom(this.board);
@@ -28,6 +42,7 @@ class Shell  {
         this._resumeOnSpaceUp = false;
         window.addEventListener("keydown", e => this.onKeyDown(e));
         window.addEventListener("keyup", e => this.onKeyUp(e));
+        window.addEventListener("beforeunload", this.chatBeforeUnloadHandler);
         this.reset();
     }
 
@@ -240,17 +255,6 @@ class Shell  {
                 },
                 {
                     colSpan: 2
-                },
-                {
-                    colSpan: 2,
-                    dataField: "AIApiKey",
-                    label: { 
-                        text: this.board.translations.get("AIApiKey") 
-                    },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
                 }
             ],
             onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
@@ -261,6 +265,89 @@ class Shell  {
 
     getCurrentModelId() {
         return new URLSearchParams(window.location.search).get("model_id");
+    }
+
+    createChatId(prefix) {
+        if (window.crypto?.randomUUID)
+            return `${prefix}-${window.crypto.randomUUID()}`;
+        const randomValue = Math.floor(Math.random() * 1000000000);
+        return `${prefix}-${Date.now()}-${randomValue}`;
+    }
+
+    getCurrentUserId() {
+        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
+        if (session?.userId)
+            return String(session.userId);
+        const user = window.modellus?.auth?.getUser ? window.modellus.auth.getUser() : null;
+        if (user?.id)
+            return String(user.id);
+        return "anonymous-user";
+    }
+
+    getChatThreadId() {
+        if (this.chatThreadId)
+            return this.chatThreadId;
+        const urlParams = new URLSearchParams(window.location.search);
+        const modelId = urlParams.get("model_id");
+        if (modelId) {
+            this.chatThreadId = `model-${modelId}`;
+            return this.chatThreadId;
+        }
+        const modelName = urlParams.get("model");
+        if (modelName) {
+            this.chatThreadId = `template-${modelName}`;
+            return this.chatThreadId;
+        }
+        const storageKey = "modellus.chat.threadId";
+        const storedThreadId = sessionStorage.getItem(storageKey);
+        if (storedThreadId) {
+            this.chatThreadId = storedThreadId;
+            return this.chatThreadId;
+        }
+        const generatedThreadId = this.createChatId("draft");
+        sessionStorage.setItem(storageKey, generatedThreadId);
+        this.chatThreadId = generatedThreadId;
+        return this.chatThreadId;
+    }
+
+    getChatConversationName() {
+        const userId = this.getCurrentUserId();
+        const threadId = this.getChatThreadId();
+        return `${userId}:${threadId}`;
+    }
+
+    getInitialChatMessages() {
+        const secondUser = { id: "2", name: "Modellus", avatarUrl: "/scripts/themes/modellus bot.svg" };
+        return [{
+            timestamp: Date.now(),
+            author: secondUser,
+            text: "Hello! I'm here to help you craft your own model. Ask me to create a model."
+        }];
+    }
+
+    createChatAdapter(chat, firstUser, secondUser, initialMessages) {
+        this.disposeChatAdapter();
+        const chatConversationName = this.getChatConversationName();
+        this.chatAdapter = new AgentChatAdapter({
+            host: "agent-modellus.interactivebook.workers.dev",
+            agent: "ChatAgent",
+            name: chatConversationName,
+            chat,
+            user: firstUser,
+            assistant: secondUser,
+            initialItems: initialMessages,
+            debugEnabled: true,
+            onClientToolCall: toolCall => this.agentToolBridge?.handleToolCall(toolCall),
+            onError: error => console.error("Chat adapter error", error)
+        });
+        this.chatAdapter.connect();
+    }
+
+    disposeChatAdapter() {
+        if (!this.chatAdapter)
+            return;
+        this.chatAdapter.destroy();
+        this.chatAdapter = null;
     }
 
     getAssetUploadUrl(modelId = this.getCurrentModelId()) {
@@ -832,35 +919,24 @@ class Shell  {
             dragEnabled: false,
             hideOnOutsideClick: true,
             animation: null,
+            onDisposing: () => this.disposeChatAdapter(),
             contentTemplate: () => {
                 const firstUser = { id: "1", name: "User" };
                 const secondUser = { id: "2", name: "Modellus", avatarUrl: "/scripts/themes/modellus bot.svg" };
-                const initialMessages = [{
-                    timestamp: Date.now(),
-                    author: secondUser,
-                    text: "Hello! I'm here to help you craft your own model. Ask me to create a model."
-                }];
+                const initialMessages = this.getInitialChatMessages();
                 const $chat = $("<div>").appendTo("#chat-popup");
                 const chat = $chat.dxChat({
                     width: "100%",
                     height: "100%", 
                     user: firstUser,
-                    onMessageEntered: (e) => {
-                        var instance = chat.dxChat("instance");
-                        instance.renderMessage({
-                            text: e.message.text, 
-                            author: firstUser,
-                            timestamp: Date.now() 
-                        });
-                        instance.renderMessage({
-                            text: e.message.text + "? OK.", 
-                            author: secondUser,
-                            timestamp: Date.now() 
-                        });
-                        this.aiLogic.sendToBackend(e.message, instance);
+                    onMessageEntered: e => {
+                        console.debug("[ShellChat] onMessageEntered", e.message.text);
+                        this.chatAdapter?.sendMessage(e.message.text);
                     },
                     items: initialMessages
                 });
+                this.chatInstance = chat.dxChat("instance");
+                this.createChatAdapter(this.chatInstance, firstUser, secondUser, initialMessages);
                 return $chat;
             },
             target: "#toolbar",
@@ -1068,6 +1144,7 @@ class Shell  {
             properties = this.properties;
         else
             Utils.mergeProperties(properties, this.properties);
+        delete this.properties.AIApiKey;
         this.properties.casesCount = this.calculator.normalizeCasesCount(this.properties.casesCount);
         this.calculator.setProperties(this.properties);
     }
@@ -1084,10 +1161,6 @@ class Shell  {
             this.calculator.setProperty(name, value);    
         if (name === "casesCount" && this.board?.selection?.selectedShape)
             this.scheduleShapeSelection(this.board.selection.selectedShape);
-        if (name == "AIApiKey") {
-            this.aiLogic.apiKey = value;
-            this.resetChat();
-        }
         this.reset();
     }
     
@@ -1162,21 +1235,7 @@ class Shell  {
     }
 
     chatPressed() {
-        if (!this.properties.AIApiKey) {
-            if (!this.toast) {
-                this.toast = $("#toast").dxToast({
-                    type: "error",
-                    displayTime: 5000,
-                    closeOnClick: true,
-                    hideOnOutsideClick: true,
-                    position: { at: "center" },
-                    message: "ChatGPT API Key is required. Add it in Settings. Go to Open AI and request it.",
-                }).dxToast("instance");
-            }
-            this.toast.show();
-            return;
-        }
-        this.aiLogic.apiKey = this.properties.AIApiKey;
+        this.chatAdapter?.connect();
         this.chatPopup.show();
     }
 
@@ -1190,7 +1249,6 @@ class Shell  {
         this.board.clear();   
         this.updatePlayer();
         this.updateToolbar();
-        this.aiLogic.resetSimulation();
         this.resetChat();
     }
 
@@ -1222,13 +1280,9 @@ class Shell  {
             const chatElement = popup.$content().find(".dx-chat");
             if (chatElement.length > 0) {
                 const chat = chatElement.dxChat("instance");
-                const secondUser = { id: "2", name: "Modellus", avatarUrl: "/scripts/themes/modellus bot.svg" };
-                const initialMessages = [{
-                    timestamp: Date.now(),
-                    author: secondUser,
-                    text: "Hello! I'm here to help you craft your own model. Ask me to create a model."
-                }];
+                const initialMessages = this.getInitialChatMessages();
                 chat.option("items", initialMessages);
+                this.chatAdapter?.resetLocalMessages(initialMessages);
                 popup.hide();
             }
         }
@@ -1289,6 +1343,7 @@ class Shell  {
     serialize() {
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
         const properties = Object.assign({}, this.properties);
+        delete properties.AIApiKey;
         delete properties.thumbnailBase64;
         return {
             properties,

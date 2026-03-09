@@ -5,6 +5,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "agents": "^0.7.5",
     "devextreme": "25.2.3",
     "jquery": "^3.7.1",
     "mathlive": "^0.103.0"
