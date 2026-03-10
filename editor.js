@@ -21,12 +21,7 @@ function extractModelPayload(model) {
 
 function applyModelMetadata(shell, model) {
     if (!shell || !model || typeof model.thumbnail !== "string" || !model.thumbnail.trim()) return;
-    const thumbnail = model.thumbnail.trim();
-    if (thumbnail.startsWith("http://") || thumbnail.startsWith("https://") || thumbnail.startsWith("/") || thumbnail.startsWith("blob:") || thumbnail.startsWith("data:")) {
-        shell.properties.thumbnailUrl = thumbnail;
-        return;
-    }
-    shell.properties.thumbnailBase64 = thumbnail;
+    shell.properties.thumbnailUrl = model.thumbnail.trim();
 }
 
 function enableReadOnlyMode() {
@@ -41,11 +36,20 @@ async function loadModel(modelId, headers) {
 }
 
 (async () => {
+    const { ModelsApiClient } = await import("./sdk/modelsApiClient.js");
+    const modelsApiClient = new ModelsApiClient(
+        apiBase,
+        () => window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null,
+        () => {
+            const currentSession = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
+            return currentSession?.userId || "";
+        }
+    );
     if (modelId) {
         if (session && session.token) {
             const model = await loadModel(modelId, getAuthHeaders());
             const payload = extractModelPayload(model);
-            shell = payload ? new Shell(payload) : new Shell();
+            shell = payload ? new Shell(payload, modelsApiClient) : new Shell(null, modelsApiClient);
             applyModelMetadata(shell, model);
             return;
         }
@@ -53,7 +57,7 @@ async function loadModel(modelId, headers) {
         if (model && (model.is_public === true || model.is_public === 1)) {
             enableReadOnlyMode();
             const payload = extractModelPayload(model);
-            shell = payload ? new Shell(payload) : new Shell();
+            shell = payload ? new Shell(payload, modelsApiClient) : new Shell(null, modelsApiClient);
             applyModelMetadata(shell, model);
             return;
         }
@@ -67,8 +71,8 @@ async function loadModel(modelId, headers) {
     if (modelName) {
         const response = await fetch(`resources/models/${modelName}.json`);
         const payload = await response.text();
-        shell = new Shell(payload);
+        shell = new Shell(payload, modelsApiClient);
         return;
     }
-    shell = new Shell();
+    shell = new Shell(null, modelsApiClient);
 })();

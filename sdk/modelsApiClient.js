@@ -219,6 +219,24 @@ export class ModelsApiClient {
     return await response.json();
   }
 
+  async uploadModelAsset(modelId, assetId, file, fileName = "asset.png") {
+    const formData = new FormData();
+    formData.append("id", assetId);
+    if (file instanceof File)
+      formData.append("file", file);
+    else
+      formData.append("file", file, fileName);
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}/assets`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Asset upload failed (${response.status})`);
+    const payload = await response.json();
+    if (!payload?.url) throw new Error("The API did not return an asset URL.");
+    return payload.url;
+  }
+
   async deleteModel(modelId) {
     const response = await fetch(`${this.apiBaseUrl}/models/${modelId}`, {
       method: "DELETE",

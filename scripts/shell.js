@@ -1,8 +1,9 @@
 class Shell  {
-    constructor(model) {
+    constructor(model, modelsApiClient = null) {
         this.calculator = new Calculator();
         this.board = new Board(document.getElementById("svg"), this.calculator);
         this.commands = new Commands(this);
+        this.modelsApiClient = modelsApiClient;
         this.selectedShapeFrame = null;
         this.pendingSelectedShape = null;
         this.pendingInitialValuesByCase = null;
@@ -35,6 +36,7 @@ class Shell  {
         this.board.svg.addEventListener("selected", e => this.onSelected(e));
         this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
+        this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
         [BodyShape, ExpressionShape, ValueShape, ChartShape, TableShape, SliderShape, BackgroundShape, VectorShape, ImageShape, ReferentialShape, TextShape, CharacterShape, RulerShape, ProtractorShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.calculator.on("iterate", e => this.onIterate(e));
         if (model != undefined)
@@ -56,11 +58,10 @@ class Shell  {
         this.properties.casesCount = 1;
         this.properties.initialValuesByCase = {};
         this.properties.thumbnailUrl = "";
-        this.properties.thumbnailBase64 = "";
     }
 
-    createTooltip(e, html, width) {
-        $("<div>")
+    createTooltip(e, html, width, canShow) {
+        return $("<div>")
             .appendTo("body")
             .dxTooltip({
                 target: e.component.element(),
@@ -69,6 +70,10 @@ class Shell  {
                         $("<div class='tooltip'/>").html(html)
                     )
                 },
+                onShowing: tooltipEvent => {
+                    if (typeof canShow === "function" && !canShow())
+                        tooltipEvent.cancel = true;
+                },
                 showEvent: {
                     delay: 1000,
                     name: "mouseenter" 
@@ -76,11 +81,12 @@ class Shell  {
                 hideEvent: "mouseleave",
                 position: "top",
                 width: width ?? 200
-            });
+            })
+            .dxTooltip("instance");
     }
 
-    createTranslatedTooltip(e, key, width) {
-        this.createTooltip(e, this.board.translations.get(key), width);
+    createTranslatedTooltip(e, key, width, canShow) {
+        return this.createTooltip(e, this.board.translations.get(key), width, canShow);
     }
 
     createSettingsPopup() {
@@ -126,8 +132,8 @@ class Shell  {
                             accept: "image/*",
                             multiple: false,
                             uploadMode: "useForm",
-                            dropZone: container,
-                            dialogTrigger: container,
+                            dropZone: container.get(0),
+                            dialogTrigger: container.get(0),
                             onValueChanged: async e => {
                                 const file = e.value && e.value[0];
                                 if (!file)
@@ -274,6 +280,13 @@ class Shell  {
         return `${prefix}-${Date.now()}-${randomValue}`;
     }
 
+    createAssetId(prefix) {
+        if (window.crypto?.randomUUID)
+            return `${prefix}-${window.crypto.randomUUID()}`;
+        const randomValue = Math.floor(Math.random() * 1000000000);
+        return `${prefix}-${Date.now()}-${randomValue}`;
+    }
+
     getCurrentUserId() {
         const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
         if (session?.userId)
@@ -350,19 +363,8 @@ class Shell  {
         this.chatAdapter = null;
     }
 
-    getAssetUploadUrl(modelId = this.getCurrentModelId()) {
-        if (!modelId)
-            return null;
-        return `${apiBase}/models/${encodeURIComponent(modelId)}/assets`;
-    }
-
-    getApiHeaders() {
-        if (typeof getAuthHeaders === "function")
-            return getAuthHeaders();
-        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
-        if (session && session.token)
-            return { Authorization: `Bearer ${session.token}` };
-        return {};
+    isChatOpen() {
+        return this.chatPopup?.option("visible") === true;
     }
 
     isUrl(value) {
@@ -373,15 +375,7 @@ class Shell  {
 
     getThumbnailSource() {
         const thumbnailUrl = this.properties.thumbnailUrl;
-        if (typeof thumbnailUrl === "string" && thumbnailUrl.trim() !== "") {
-            if (this.isUrl(thumbnailUrl) || thumbnailUrl.startsWith("data:"))
-                return thumbnailUrl;
-            return `data:image/png;base64,${thumbnailUrl}`;
-        }
-        const thumbnailBase64 = this.properties.thumbnailBase64;
-        if (typeof thumbnailBase64 === "string" && thumbnailBase64.trim() !== "")
-            return `data:image/png;base64,${thumbnailBase64}`;
-        return "";
+        return typeof thumbnailUrl === "string" ? thumbnailUrl.trim() : "";
     }
 
     updateThumbnailPreview(previewElement, hintElement, removeButtonElement, imageSource) {
@@ -410,58 +404,33 @@ class Shell  {
     }
 
     clearThumbnail(previewElement, hintElement, removeButtonElement) {
-        this.properties.thumbnailBase64 = "";
         this.properties.thumbnailUrl = "";
         this.updateThumbnailPreview(previewElement, hintElement, removeButtonElement, "");
     }
 
     async setThumbnailFromFile(file, previewElement, hintElement, removeButtonElement) {
-        const thumbnailUrl = await this.uploadModelAsset(file, "thumbnail");
+        const thumbnailUrl = await this.uploadModelAsset(file, this.createAssetId("thumbnail"));
         if (!thumbnailUrl)
             return;
         this.properties.thumbnailUrl = thumbnailUrl;
-        this.properties.thumbnailBase64 = "";
         this.updateThumbnailPreview(previewElement, hintElement, removeButtonElement, thumbnailUrl);
     }
 
     async uploadModelAsset(file, assetId, fileName = "asset.png", modelId = this.getCurrentModelId()) {
-        const uploadUrl = this.getAssetUploadUrl(modelId);
-        if (!uploadUrl) {
+        if (!modelId) {
             this.showAssetUploadError("Open a saved model before uploading assets.");
             return null;
         }
-        const formData = new FormData();
-        formData.append("id", assetId);
-        if (file instanceof File)
-            formData.append("file", file);
-        else
-            formData.append("file", file, fileName);
+        if (!this.modelsApiClient) {
+            this.showAssetUploadError("Models API client is not available.");
+            return null;
+        }
         try {
-            const response = await fetch(uploadUrl, {
-                method: "POST",
-                headers: this.getApiHeaders(),
-                body: formData
-            });
-            if (!response.ok)
-                throw new Error(await this.getAssetUploadError(response));
-            const payload = await response.json();
-            const assetUrl = payload?.url;
-            if (!assetUrl)
-                throw new Error("The API did not return an asset URL.");
-            return assetUrl;
+            return await this.modelsApiClient.uploadModelAsset(modelId, assetId, file, fileName);
         } catch (error) {
             this.showAssetUploadError(error?.message || "Failed to upload asset.");
             return null;
         }
-    }
-
-    async getAssetUploadError(response) {
-        try {
-            const payload = await response.json();
-            if (payload?.error)
-                return payload.error;
-        } catch (_) {}
-        return `Upload failed (${response.status})`;
     }
 
     showAssetUploadError(message) {
@@ -469,70 +438,6 @@ class Shell  {
             window.DevExpress.ui.notify(message, "error", 3000);
         else
             alert(message);
-    }
-
-    dataUrlToBlob(dataUrl) {
-        if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:"))
-            return null;
-        const parts = dataUrl.split(",");
-        if (parts.length !== 2)
-            return null;
-        const mimeMatch = parts[0].match(/^data:([^;]+)/);
-        const mimeType = mimeMatch ? mimeMatch[1] : "image/png";
-        return this.base64ToBlob(parts[1], mimeType);
-    }
-
-    base64ToBlob(base64, mimeType = "image/png") {
-        if (typeof base64 !== "string" || base64.trim() === "")
-            return null;
-        try {
-            const binary = atob(base64);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++)
-                bytes[i] = binary.charCodeAt(i);
-            return new Blob([bytes], { type: mimeType });
-        } catch (_) {
-            return null;
-        }
-    }
-
-    async resolveThumbnailUrlForSave(modelId) {
-        const thumbnailUrl = this.properties.thumbnailUrl;
-        if (typeof thumbnailUrl === "string" && thumbnailUrl.trim() !== "") {
-            if (this.isUrl(thumbnailUrl))
-                return thumbnailUrl;
-            const thumbnailBlobFromDataUrl = this.dataUrlToBlob(thumbnailUrl);
-            if (thumbnailBlobFromDataUrl) {
-                const uploadedDataUrlThumbnail = await this.uploadModelAsset(thumbnailBlobFromDataUrl, "thumbnail", "thumbnail.png", modelId);
-                if (!uploadedDataUrlThumbnail)
-                    return null;
-                this.properties.thumbnailUrl = uploadedDataUrlThumbnail;
-                this.properties.thumbnailBase64 = "";
-                return uploadedDataUrlThumbnail;
-            }
-            this.properties.thumbnailBase64 = thumbnailUrl;
-            this.properties.thumbnailUrl = "";
-        }
-        const thumbnailBase64 = this.properties.thumbnailBase64;
-        if (typeof thumbnailBase64 === "string" && thumbnailBase64.trim() !== "") {
-            const thumbnailBlob = this.base64ToBlob(thumbnailBase64);
-            if (!thumbnailBlob)
-                return null;
-            const uploadedBase64Thumbnail = await this.uploadModelAsset(thumbnailBlob, "thumbnail", "thumbnail.png", modelId);
-            if (!uploadedBase64Thumbnail)
-                return null;
-            this.properties.thumbnailUrl = uploadedBase64Thumbnail;
-            this.properties.thumbnailBase64 = "";
-            return uploadedBase64Thumbnail;
-        }
-        const capturedThumbnailBlob = await this.captureThumbnailBlob();
-        if (!capturedThumbnailBlob)
-            return null;
-        const uploadedCapturedThumbnail = await this.uploadModelAsset(capturedThumbnailBlob, "thumbnail", "thumbnail.png", modelId);
-        if (!uploadedCapturedThumbnail)
-            return null;
-        this.properties.thumbnailUrl = uploadedCapturedThumbnail;
-        return uploadedCapturedThumbnail;
     }
 
     createTopToolbar() {
@@ -893,7 +798,7 @@ class Shell  {
                             id: "chat-button"
                         },
                         onClick: _ => this.chatPressed(),
-                        onInitialized: e => this.createTranslatedTooltip(e, "Chat Tooltip", 280)
+                        onInitialized: e => this.chatTooltip = this.createTranslatedTooltip(e, "Chat Tooltip", 280, () => !this.isChatOpen())
                     }
                 }
             ]
@@ -1144,7 +1049,6 @@ class Shell  {
             properties = this.properties;
         else
             Utils.mergeProperties(properties, this.properties);
-        delete this.properties.AIApiKey;
         this.properties.casesCount = this.calculator.normalizeCasesCount(this.properties.casesCount);
         this.calculator.setProperties(this.properties);
     }
@@ -1218,10 +1122,8 @@ class Shell  {
     }
     
     stopPressed() {
-        this.calculator.stop();
-        this.board.refresh();
-        this.updatePlayer();
-        this.updateToolbar();
+        this.reset();
+        this.calculator.calculate();
     }
     
     replayPressed() {
@@ -1235,6 +1137,7 @@ class Shell  {
     }
 
     chatPressed() {
+        this.chatTooltip?.hide();
         this.chatAdapter?.connect();
         this.chatPopup.show();
     }
@@ -1344,7 +1247,6 @@ class Shell  {
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
         const properties = Object.assign({}, this.properties);
         delete properties.AIApiKey;
-        delete properties.thumbnailBase64;
         return {
             properties,
             board: this.board.serialize()
@@ -1372,15 +1274,14 @@ class Shell  {
         const headers = { "Content-Type": "application/json" };
         if (session && session.token) headers.Authorization = `Bearer ${session.token}`;
         try {
-            const thumbnail = await this.resolveThumbnailUrlForSave(modelId);
             const payload = {
                 title: this.properties.name || "Untitled model",
                 description: this.properties.description || "",
                 definition: JSON.stringify(this.serialize()),
                 lastModified: new Date().toISOString()
             };
-            if (thumbnail)
-                payload.thumbnail = thumbnail;
+            if (this.properties.thumbnailUrl)
+                payload.thumbnail = this.properties.thumbnailUrl;
             const response = await fetch(`${apiBase}/models/${modelId}`, {
                 method: "PUT",
                 headers,
@@ -1389,44 +1290,6 @@ class Shell  {
             if (!response.ok) throw new Error(`Save failed (${response.status})`);
         } catch (error) {
             alert("Failed to save model.");
-        }
-    }
-
-    async captureThumbnailBlob() {
-        const svg = document.getElementById("svg");
-        if (!svg)
-            return null;
-        const bounds = svg.getBoundingClientRect();
-        if (!bounds.width || !bounds.height)
-            return null;
-        const clone = svg.cloneNode(true);
-        clone.querySelectorAll("foreignObject").forEach(node => node.remove());
-        clone.setAttribute("width", bounds.width);
-        clone.setAttribute("height", bounds.height);
-        const serialized = new XMLSerializer().serializeToString(clone);
-        const svgBlob = new Blob([serialized], { type: "image/svg+xml;charset=utf-8" });
-        const url = URL.createObjectURL(svgBlob);
-        try {
-            const image = new Image();
-            const thumbnailBlob = await new Promise(resolve => {
-                image.onload = () => {
-                    const canvas = document.createElement("canvas");
-                    canvas.width = bounds.width;
-                    canvas.height = bounds.height;
-                    const ctx = canvas.getContext("2d");
-                    if (!ctx) {
-                        resolve(null);
-                        return;
-                    }
-                    ctx.drawImage(image, 0, 0);
-                    canvas.toBlob(blob => resolve(blob), "image/png");
-                };
-                image.onerror = () => resolve(null);
-                image.src = url;
-            });
-            return thumbnailBlob;
-        } finally {
-            URL.revokeObjectURL(url);
         }
     }
 
@@ -1501,9 +1364,11 @@ class Shell  {
     }
     
     onShapeChanged(e) {
-        var shape = e.detail.shape;
-        if (shape.constructor.name == "ExpressionShape")
-            this.reset();
+    }
+
+    onExpressionChanged(e) {
+        this.reset();
+        this.calculator.calculate();
     }
 
     onIterate(e) {

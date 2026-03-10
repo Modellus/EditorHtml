@@ -56,6 +56,7 @@ class Board {
         this.svg.appendChild(shape.element);
         this.shapes.add(shape);
         shape.element.addEventListener("focused", e => this.onShapeFocused(e));
+        shape.element.addEventListener("changed", e => this.onExpressionChanged(e));
         shape.element.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         shape.element.addEventListener("shapeDragStart", e => this.onShapeDragStart(e));
         shape.element.addEventListener("shapeDragEnd", e => this.onShapeDragEnd(e));
@@ -100,6 +101,10 @@ class Board {
     onShapeChanged(e) {
         this.dispatchShapeEvent("shapeChanged", e.detail.shape);
         this.selection.update();
+    }
+
+    onExpressionChanged(e) {
+        this.dispatchShapeEvent("expressionChanged", e.detail.shape);
     }
 
     onShapeDragStart(e) {

@@ -364,7 +364,10 @@ class ExpressionShape extends BaseShape {
     }
 
     onChange() {
-        this.properties.expression = this.mathfield.getValue();
+        const expression = this.mathfield.getValue();
+        if (expression === this.properties.expression)
+            return;
+        this.properties.expression = expression;
         clearTimeout(this._changeTimer);
         this._changeTimer = setTimeout(() => {
             this.dispatchEvent("changed", { expression: this.properties.expression });

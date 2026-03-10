@@ -469,7 +469,7 @@ class TableControl {
         if (this.focusedRowKey != null && row.key === this.focusedRowKey)
             rowRect.setAttribute("fill", this.options.selectionColor);
         else
-            rowRect.setAttribute("fill", rowIndex % 2 === 0 ? this.options.backgroundColor : "#fcfcfc");
+            rowRect.setAttribute("fill", this.options.backgroundColor);
         this.rowsLayer.appendChild(rowRect);
         for (let columnIndex = 0; columnIndex < columns.length; columnIndex++) {
             const cell = geometry[columnIndex];
