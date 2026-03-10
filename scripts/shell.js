@@ -1061,7 +1061,7 @@ class Shell  {
         for (let i = 0; i < keys.length - 1; i++)
             current = current[keys[i]];
         current[keys[keys.length - 1]] = value;
-        if (name.includes("independent") || name.includes("iteration") || name === "casesCount")
+        if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision")
             this.calculator.setProperty(name, value);    
         if (name === "casesCount" && this.board?.selection?.selectedShape)
             this.scheduleShapeSelection(this.board.selection.selectedShape);
@@ -1173,6 +1173,7 @@ class Shell  {
         });
         this.calculator.applyInitialValuesByCase(initialValuesByCase);
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
+        this.board.refresh();
         this.updatePlayer();
         this.updateToolbar();
     }
