@@ -58,7 +58,7 @@ class ExpressionShape extends BaseShape {
         this.properties.y = center.y - 25;
         this.properties.width = 300;
         this.properties.height = 50;
-        this.properties.expression = "\\displaylines{\\placeholder{}}";
+        this.properties.expression = "\\displaylines{}";
     }
 
     createElement() {
@@ -71,7 +71,6 @@ class ExpressionShape extends BaseShape {
         this.mathfield.popoverPolicy = "off";
         this.mathfield.virtualKeyboardMode = "off";
         this.mathfield.mathVirtualKeyboardPolicy = "manual";
-        this.mathfield.placeholder = "Enter a formula";
         this.mathfield.smartMode = false;
         this.mathfield.multiline = true;
         this.mathfield.returnKeyAction = "none";
@@ -86,7 +85,7 @@ class ExpressionShape extends BaseShape {
             scrollByContent: true,
             scrollByThumb: true
         });
-        this.mathfield.value = this.properties.expression ?? "\\displaylines{\\placeholder{}}";
+        this.mathfield.value = this.properties.expression ?? "\\displaylines{}";
         return foreignObject;
     }
 
@@ -202,8 +201,10 @@ class ExpressionShape extends BaseShape {
             return false;
         keydownEvent.preventDefault();
         keydownEvent.stopImmediatePropagation();
-        if (this.isCaretAtCurrentGroupStart() && this.hasPreviousExpressionLine())
-            this.mergeCurrentLineWithPreviousLine();
+        if (this.isCaretAtCurrentGroupStart()) {
+            if (this.hasPreviousExpressionLine())
+                this.mergeCurrentLineWithPreviousLine();
+        }
         else
             this.mathfield.executeCommand("deleteBackward");
         return true;
@@ -300,13 +301,7 @@ class ExpressionShape extends BaseShape {
     }
 
     computeCaretBounds(mathfield) {
-        const savedSelection = mathfield.selection;
-        mathfield.position = 0;
-        mathfield.executeCommand("moveToNextChar");
-        const min = mathfield.position;
-        const max = Math.max(min, mathfield.lastOffset - 1);
-        mathfield.selection = savedSelection;
-        return { min, max };
+        return { min: 1, max: mathfield.lastOffset };
     }
 
     clampCaretSelection(mathfield) {
