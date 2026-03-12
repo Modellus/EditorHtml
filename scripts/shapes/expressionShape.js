@@ -118,7 +118,34 @@ class ExpressionShape extends BaseShape {
     }
 
     onInput() {
+        this.fixContentOutsideDisplaylines();
         this.applyExpressionFunctionShortcuts();
+    }
+
+    fixContentOutsideDisplaylines() {
+        const value = this.mathfield.getValue();
+        const prefix = '\\displaylines{';
+        if (!value.startsWith(prefix))
+            return;
+        let depth = 1;
+        let closingIndex = -1;
+        for (let i = prefix.length; i < value.length; i++) {
+            if (value[i] === '{')
+                depth++;
+            else if (value[i] === '}') {
+                depth--;
+                if (depth === 0) {
+                    closingIndex = i;
+                    break;
+                }
+            }
+        }
+        if (closingIndex < 0 || closingIndex === value.length - 1)
+            return;
+        const inside = value.substring(prefix.length, closingIndex);
+        const leaked = value.substring(closingIndex + 1);
+        this.mathfield.value = `${prefix}${inside}${leaked}}`;
+        this.mathfield.position = this.mathfield.lastOffset;
     }
 
     applyExpressionFunctionShortcuts() {
@@ -199,22 +226,19 @@ class ExpressionShape extends BaseShape {
             return false;
         if (keydownEvent.metaKey || keydownEvent.ctrlKey || keydownEvent.altKey)
             return false;
-        keydownEvent.preventDefault();
-        keydownEvent.stopImmediatePropagation();
-        if (this.isCaretAtCurrentGroupStart()) {
-            if (this.hasPreviousExpressionLine())
-                this.mergeCurrentLineWithPreviousLine();
+        if (this.isCaretAtDisplaylineStart() && this.hasPreviousExpressionLine()) {
+            keydownEvent.preventDefault();
+            keydownEvent.stopImmediatePropagation();
+            this.mergeCurrentLineWithPreviousLine();
+            return true;
         }
-        else
-            this.mathfield.executeCommand("deleteBackward");
-        return true;
+        return false;
     }
 
-    isCaretAtCurrentGroupStart() {
-        const range = this.mathfield.selection?.ranges?.[0];
-        if (!range || range[0] !== range[1])
+    isCaretAtDisplaylineStart() {
+        if (this.hasSelection())
             return false;
-        const position = range[1];
+        const position = this.getCaretPosition();
         const groupStart = this.getCurrentGroupStartPosition();
         return position <= groupStart;
     }
@@ -296,7 +320,6 @@ class ExpressionShape extends BaseShape {
     }
 
     lockCaret(mathfield) {
-        mathfield.addEventListener("selection-change", _ => this.clampCaretSelection(mathfield));
         mathfield.addEventListener("keydown", keydownEvent => this.handleCaretKeydown(mathfield, keydownEvent), true);
     }
 
@@ -304,19 +327,16 @@ class ExpressionShape extends BaseShape {
         return { min: 1, max: mathfield.lastOffset };
     }
 
-    clampCaretSelection(mathfield) {
+    clampCaretPosition(mathfield) {
         if (this.mathfieldCaretClamping)
             return;
-        const caretBounds = this.computeCaretBounds(mathfield);
-        const range = mathfield.selection?.ranges?.[0];
-        if (!range || !caretBounds)
+        const bounds = this.computeCaretBounds(mathfield);
+        if (mathfield.position >= bounds.min && mathfield.position <= bounds.max)
             return;
-        const position = range[1];
-        if (position < caretBounds.min || position > caretBounds.max) {
-            this.mathfieldCaretClamping = true;
-            mathfield.position = position < caretBounds.min ? caretBounds.min : caretBounds.max;
-            this.mathfieldCaretClamping = false;
-        }
+        this.mathfieldCaretClamping = true;
+        mathfield.position = 0;
+        mathfield.executeCommand("moveToNextChar");
+        this.mathfieldCaretClamping = false;
     }
 
     handleCaretKeydown(mathfield, keydownEvent) {
@@ -335,18 +355,26 @@ class ExpressionShape extends BaseShape {
         }
         if (keydownEvent.key === "Home") {
             keydownEvent.preventDefault();
-            mathfield.position = caretBounds.min;
+            mathfield.executeCommand("moveToGroupStart");
             return;
         }
         if (keydownEvent.key === "End") {
             keydownEvent.preventDefault();
-            mathfield.position = caretBounds.max;
+            mathfield.executeCommand("moveToGroupEnd");
         }
     }
 
     ensureCaretIsClamped() {
-        this.clampCaretSelection(this.mathfield);
-        requestAnimationFrame(() => this.clampCaretSelection(this.mathfield));
+        this.mathfieldCaretClamping = true;
+        this.mathfield.position = 0;
+        this.mathfield.executeCommand("moveToNextChar");
+        this.mathfieldCaretClamping = false;
+        requestAnimationFrame(() => {
+            this.mathfieldCaretClamping = true;
+            this.mathfield.position = 0;
+            this.mathfield.executeCommand("moveToNextChar");
+            this.mathfieldCaretClamping = false;
+        });
     }
 
     setProperties(properties) {
@@ -407,3 +435,6 @@ class ExpressionShape extends BaseShape {
         this.mathfield.focus();
     }
 }
+
+if (typeof module !== "undefined" && module.exports)
+    module.exports = ExpressionShape;

@@ -3,8 +3,7 @@ class CharacterShape extends BaseShape {
     static characters;
 
     static setup() {
-        this.loadCharacters()
-            .catch(error => console.error("Error loading characters:", error));
+        this.loadCharacters();
     }
 
     static loadCharacters() {

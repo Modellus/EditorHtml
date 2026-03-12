@@ -53,6 +53,7 @@ class Shell  {
         this.properties.name = "Model";
         this.properties.description = "";
         this.properties.precision = 2;
+        this.properties.angleUnit = "radians";
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
         this.properties.iterationTerm = "n";
         this.properties.casesCount = 1;
@@ -206,6 +207,29 @@ class Shell  {
                 },
                 {
                     colSpan: 1,
+                    dataField: "angleUnit",
+                    label: {
+                        text: this.board.translations.get("AngleUnit")
+                    },
+                    template: (data, itemElement) => {
+                        $('<div>').appendTo(itemElement).dxButtonGroup({
+                            items: [
+                                { key: "radians", icon: "fa-solid fa-pi", hint: this.board.translations.get("Radians") },
+                                { key: "degrees", icon: "fa-solid fa-angle", hint: this.board.translations.get("Degrees") }
+                            ],
+                            keyExpr: "key",
+                            selectedItemKeys: [this.properties.angleUnit],
+                            onSelectionChanged: e => {
+                                if (e.addedItems.length > 0)
+                                    this.setProperty("angleUnit", e.addedItems[0].key);
+                            },
+                            stylingMode: "outlined",
+                            elementAttr: { class: "mdl-angle-unit" }
+                        });
+                    }
+                },
+                {
+                    colSpan: 1,
                     dataField: "independent.name",
                     label: { 
                         text: this.board.translations.get("Independent.Name") 
@@ -349,9 +373,8 @@ class Shell  {
             user: firstUser,
             assistant: secondUser,
             initialItems: initialMessages,
-            debugEnabled: true,
-            onClientToolCall: toolCall => this.agentToolBridge?.handleToolCall(toolCall),
-            onError: error => console.error("Chat adapter error", error)
+            debugEnabled: false,
+            onClientToolCall: toolCall => this.agentToolBridge?.handleToolCall(toolCall)
         });
         this.chatAdapter.connect();
     }
@@ -820,10 +843,21 @@ class Shell  {
             width: 300,
             height: 500,
             shading: false,
-            showTitle: false,
+            showTitle: true,
+            title: this.board.translations.get("Chat Title"),
             dragEnabled: false,
             hideOnOutsideClick: true,
             animation: null,
+            toolbarItems: [{
+                toolbar: "top",
+                location: "after",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-regular fa-trash-can",
+                    stylingMode: "text",
+                    onClick: () => this.clearChat()
+                }
+            }],
             onDisposing: () => this.disposeChatAdapter(),
             contentTemplate: () => {
                 const firstUser = { id: "1", name: "User" };
@@ -834,10 +868,7 @@ class Shell  {
                     width: "100%",
                     height: "100%", 
                     user: firstUser,
-                    onMessageEntered: e => {
-                        console.debug("[ShellChat] onMessageEntered", e.message.text);
-                        this.chatAdapter?.sendMessage(e.message.text);
-                    },
+                    onMessageEntered: e => this.chatAdapter?.sendMessage(e.message.text),
                     items: initialMessages
                 });
                 this.chatInstance = chat.dxChat("instance");
@@ -878,7 +909,6 @@ class Shell  {
             resizeEnabled: true,
             hideOnOutsideClick: false,
             focusStateEnabled: false,
-            showCloseButton: false,
             animation: null,
             title: this.board.translations.get("Properties Title"),
             target: "#svg",
@@ -1061,7 +1091,7 @@ class Shell  {
         for (let i = 0; i < keys.length - 1; i++)
             current = current[keys[i]];
         current[keys[keys.length - 1]] = value;
-        if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision")
+        if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit")
             this.calculator.setProperty(name, value);    
         if (name === "casesCount" && this.board?.selection?.selectedShape)
             this.scheduleShapeSelection(this.board.selection.selectedShape);
@@ -1178,18 +1208,27 @@ class Shell  {
         this.updateToolbar();
     }
 
-    resetChat() {
+    clearChat() {
+        this.chatThreadId = this.createChatId("chat");
         const popup = $("#chat-popup").dxPopup("instance");
-        if (popup) {
-            const chatElement = popup.$content().find(".dx-chat");
-            if (chatElement.length > 0) {
-                const chat = chatElement.dxChat("instance");
-                const initialMessages = this.getInitialChatMessages();
-                chat.option("items", initialMessages);
-                this.chatAdapter?.resetLocalMessages(initialMessages);
-                popup.hide();
-            }
-        }
+        if (!popup)
+            return;
+        const chatElement = popup.$content().find(".dx-chat");
+        if (chatElement.length === 0)
+            return;
+        const firstUser = { id: "1", name: "User" };
+        const secondUser = { id: "2", name: "Modellus", avatarUrl: "/scripts/themes/modellus bot.svg" };
+        const initialMessages = this.getInitialChatMessages();
+        const chat = chatElement.dxChat("instance");
+        chat.option("items", initialMessages);
+        this.createChatAdapter(chat, firstUser, secondUser, initialMessages);
+    }
+
+    resetChat() {
+        this.clearChat();
+        const popup = $("#chat-popup").dxPopup("instance");
+        if (popup)
+            popup.hide();
     }
 
     openSettings() {

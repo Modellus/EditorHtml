@@ -26,3 +26,6 @@ class BaseTheme {
         ];
     }
 }
+
+if (typeof module !== "undefined" && module.exports)
+    module.exports = BaseTheme;

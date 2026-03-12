@@ -164,6 +164,7 @@
                 requestId,
                 agentMessageCount: this.agentMessages.length
             });
+            this.setTypingIndicator(true);
             this.sendRaw({
                 type: "cf_agent_use_chat_request",
                 id: requestId,
@@ -213,12 +214,14 @@
             });
             this.resolvePendingConnection();
             this.sendRaw({ type: "cf_agent_stream_resume_request" });
+            this.loadInitialMessages();
         }
 
         handleClose() {
             this.debug("socket:close", {
                 connectionState: this.getConnectionState()
             });
+            this.setTypingIndicator(false);
             this.activeStreams.clear();
             if (this.connection)
                 this.removeConnectionListeners(this.connection);
@@ -311,8 +314,10 @@
                 this.activeStreams.set(message.id, streamState);
             }
             this.applyStreamChunk(message, streamState);
-            if (message.done || message.error)
+            if (message.done || message.error) {
+                this.setTypingIndicator(false);
                 this.activeStreams.delete(message.id);
+            }
         }
 
         async loadInitialMessages() {
@@ -401,6 +406,7 @@
             const currentItem = this.chatItems[streamState.itemIndex];
             if (!currentItem)
                 return;
+            this.setTypingIndicator(false);
             currentItem.text = `${this.normalizeText(currentItem.text, true)}${chunkText}`;
             this.syncChatItems(this.chatItems);
         }
@@ -542,6 +548,12 @@
                     return index;
             }
             return -1;
+        }
+
+        setTypingIndicator(active) {
+            if (!this.chat)
+                return;
+            this.chat.option("typingUsers", active ? [this.assistant] : []);
         }
 
         syncChatItems(items) {

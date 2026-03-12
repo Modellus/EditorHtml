@@ -15,7 +15,11 @@ class BaseTranslations {
                 "Properties Title": "Propriedades",
                 "Settings...": "Definições...",
                 "Settings Title": "Definições",
+                "Chat Title": "Chat IA",
                 "Precision": "Precisão",
+                "AngleUnit": "Unidade de ângulo",
+                "Radians": "Radianos",
+                "Degrees": "Graus",
                 "CasesCount": "Número de casos",
                 "Case": "Caso",
                 "Independent.Name": "Independente",
@@ -77,7 +81,11 @@ class BaseTranslations {
                 "Properties Title": "Properties",
                 "Settings...": "Settings...",
                 "Settings Title": "Settings",
+                "Chat Title": "AI Chat",
                 "Precision": "Precision",
+                "AngleUnit": "Angle Unit",
+                "Radians": "Radians",
+                "Degrees": "Degrees",
                 "CasesCount": "Cases",
                 "Case": "Case",
                 "Independent.Name": "Independent",
@@ -132,3 +140,6 @@ class BaseTranslations {
         return this.languages[this.language][text];
     }
 }
+
+if (typeof module !== "undefined" && module.exports)
+    module.exports = BaseTranslations;

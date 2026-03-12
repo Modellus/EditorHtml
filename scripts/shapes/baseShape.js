@@ -1046,3 +1046,6 @@ class BaseShape {
         return parseFloat(term);
     }
 }
+
+if (typeof module !== "undefined" && module.exports)
+    module.exports = BaseShape;

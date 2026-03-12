@@ -112,3 +112,6 @@ class Shapes {
         }
     }
 }
+
+if (typeof module !== "undefined" && module.exports)
+    module.exports = Shapes;
