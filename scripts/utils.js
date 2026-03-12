@@ -28,34 +28,29 @@ class Utils {
         return valueString.includes('.') ? valueString.split('.')[1].length : 0;
     }
      
+    static greekLetters = {
+        "\\alpha": "α", "\\beta": "β", "\\gamma": "γ", "\\delta": "δ",
+        "\\epsilon": "ε", "\\zeta": "ζ", "\\eta": "η", "\\theta": "θ",
+        "\\iota": "ι", "\\kappa": "κ", "\\lambda": "λ", "\\mu": "μ",
+        "\\nu": "ν", "\\xi": "ξ", "\\omicron": "ο", "\\pi": "π",
+        "\\rho": "ρ", "\\sigma": "σ", "\\tau": "τ", "\\upsilon": "υ",
+        "\\phi": "φ", "\\chi": "χ", "\\psi": "ψ", "\\omega": "ω"
+    };
+    static greekLettersPattern = new RegExp(
+        Object.keys(Utils.greekLetters)
+            .sort((a, b) => b.length - a.length)
+            .map(k => k.replace(/\\/g, "\\\\"))
+            .join("|"), "g"
+    );
+
+    static convertGreekLetters(text) {
+        if (typeof text !== "string")
+            return text;
+        return text.replace(Utils.greekLettersPattern, match => Utils.greekLetters[match]);
+    }
+
     static getTerms(terms) {
-        const greekLetters = {
-            "\\alpha": "α",
-            "\\beta": "β",
-            "\\gamma": "γ",
-            "\\delta": "δ",
-            "\\epsilon": "ε",
-            "\\zeta": "ζ",
-            "\\eta": "η",
-            "\\theta": "θ",
-            "\\iota": "ι",
-            "\\kappa": "κ",
-            "\\lambda": "λ",
-            "\\mu": "μ",
-            "\\nu": "ν",
-            "\\xi": "ξ",
-            "\\omicron": "ο",
-            "\\pi": "π",
-            "\\rho": "ρ",
-            "\\sigma": "σ",
-            "\\tau": "τ",
-            "\\upsilon": "υ",
-            "\\phi": "φ",
-            "\\chi": "χ",
-            "\\psi": "ψ",
-            "\\omega": "ω"
-        };
-        return terms.map(t => ({ text: greekLetters[t] || t, term: t }));
+        return terms.map(t => ({ text: Utils.convertGreekLetters(t), term: t }));
     }
 
     static throttle(func, delay) {

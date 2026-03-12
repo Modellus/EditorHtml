@@ -420,7 +420,7 @@ class TableControl {
         text.setAttribute("font-family", this.options.termFontFamily);
         text.setAttribute("font-size", `${this.options.headerFontSize}`);
         text.setAttribute("fill", this.options.foregroundColor);
-        text.textContent = titleText;
+        text.textContent = Utils.convertGreekLetters(titleText);
         this.headerLayer.appendChild(text);
         if (column.showCase === true) {
             let titleWidth = 0;

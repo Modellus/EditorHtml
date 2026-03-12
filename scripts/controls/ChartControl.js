@@ -399,7 +399,7 @@ class ChartControl {
         textElement.setAttribute("font-style", `${this.options.termFontStyle}`);
         textElement.setAttribute("font-weight", `${this.options.termFontWeight}`);
         textElement.setAttribute("font-size", `${fontSize}`);
-        textElement.textContent = textValue;
+        textElement.textContent = Utils.convertGreekLetters(textValue);
         layer.appendChild(textElement);
     }
 

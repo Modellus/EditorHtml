@@ -94,7 +94,7 @@ class VectorShape extends BaseShape {
         const newW = calculator.getByName(this.properties.xTerm, xCase);
         const newH = calculator.getByName(this.properties.yTerm, yCase);
         if (newW != null) this.properties.width = newW;
-        if (newH != null) this.properties.height = newH;
+        if (newH != null) this.properties.height = -newH;
         this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
         if (this.trajectory.values.length <= calculator.getLastIteration()) {
             const position = this.getBoardPosition();
