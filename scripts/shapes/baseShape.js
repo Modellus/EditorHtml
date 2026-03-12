@@ -112,16 +112,20 @@ class BaseShape {
     }
 
     showContextToolbar() {
-        if (!this.contextToolbar)
-            return;
-        this.contextToolbar.classList.add("visible");
+        if (this.contextToolbar)
+            this.contextToolbar.classList.add("visible");
         requestAnimationFrame(() => requestAnimationFrame(() => this.positionContextToolbar()));
+        const referential = this.getReferentialParent();
+        if (referential && referential !== this)
+            referential.showContextToolbar();
     }
 
     hideContextToolbar() {
-        if (!this.contextToolbar)
-            return;
-        this.contextToolbar.classList.remove("visible");
+        if (this.contextToolbar)
+            this.contextToolbar.classList.remove("visible");
+        const referential = this.getReferentialParent();
+        if (referential && referential !== this)
+            referential.hideContextToolbar();
     }
 
     positionContextToolbar() {

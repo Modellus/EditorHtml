@@ -40,8 +40,8 @@ class Commands {
         return position;
     }
 
-    addShape(type, name, parentName) {
-        var parentShape = parentName ? this.shapes.getByName(parentName) : this.shell.board.selection.selectedShape;
+    addShape(type, name, parent) {
+        var parentShape = typeof parent === "string" ? this.shapes.getByName(parent) : parent ?? this.shell.board.selection.selectedShape;
         var shape = this.shapes.createShape(type, parentShape);
         var position = this.getFreePosition(shape);
         shape.setProperties({ name: name, x: position.x, y: position.y });
