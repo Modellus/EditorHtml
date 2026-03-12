@@ -14,9 +14,29 @@ class VectorShape extends BaseShape {
     createForm() {
         var form = super.createForm();
         var instance = form.dxForm("instance");
+        var items = instance.option("items");
+        const colorGroup = items.find(item => item.itemType === "group" && item.colCount === 3);
+        if (colorGroup) {
+            colorGroup.colCount = 3;
+            colorGroup.items = colorGroup.items.filter(item => item.dataField !== "backgroundColor");
+            colorGroup.items.push({
+                colSpan: 1,
+                dataField: "lineWidth",
+                label: { text: "Width" },
+                editorType: "dxNumberBox",
+                editorOptions: {
+                    showSpinButtons: true,
+                    min: 1,
+                    max: 50,
+                    step: 1,
+                    stylingMode: "filled"
+                }
+            });
+        }
+        instance.option("items", items);
         this.addTermToForm("xTerm", "Horizontal");
         this.addTermToForm("yTerm", "Vertical");
-        var items = instance.option("items");
+        items = instance.option("items");
         items.push(
             this.createColorPickerFormItem("trajectoryColor", "Trajectory color")
         );
@@ -33,8 +53,8 @@ class VectorShape extends BaseShape {
         this.properties.height = 30;
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[1].color;
         this.properties.borderColor = this.properties.foregroundColor;
-        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[1].color;
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
+        this.properties.lineWidth = 1;
     }
 
     createElement() {
@@ -49,30 +69,38 @@ class VectorShape extends BaseShape {
 
     update() {
         super.update();
-        // Property-driven updates only
     }
 
     draw() {
         super.draw();
-        const arrowHeadSize = 5;
+        const lineWidth = this.properties.lineWidth ?? 1;
+        const arrowHeadSize = Math.max(5, lineWidth + 4);
+        const halfWidth = lineWidth / 2;
         const position = this.getBoardPosition();
         const startX = position.x;
         const startY = position.y;
         const tipX = this.properties.width + startX;
         const tipY = this.properties.height + startY;
         const angle = Math.atan2(tipY - startY, tipX - startX);
-        const baseX = tipX - Math.cos(angle) * arrowHeadSize;
-        const baseY = tipY - Math.sin(angle) * arrowHeadSize;
-        const leftX = baseX - Math.sin(angle) * (arrowHeadSize / 2);
-        const leftY = baseY + Math.cos(angle) * (arrowHeadSize / 2);
-        const rightX = baseX + Math.sin(angle) * (arrowHeadSize / 2);
-        const rightY = baseY - Math.cos(angle) * (arrowHeadSize / 2);
-        const arrowPath = `
-            M ${startX} ${startY} L ${tipX} ${tipY}
-            L ${leftX} ${leftY} L ${rightX} ${rightY} L ${tipX} ${tipY} Z
-        `;
+        const sinA = Math.sin(angle);
+        const cosA = Math.cos(angle);
+        const baseX = tipX - cosA * arrowHeadSize;
+        const baseY = tipY - sinA * arrowHeadSize;
+        const shaftStartLeftX = startX - sinA * halfWidth;
+        const shaftStartLeftY = startY + cosA * halfWidth;
+        const shaftStartRightX = startX + sinA * halfWidth;
+        const shaftStartRightY = startY - cosA * halfWidth;
+        const shaftEndLeftX = baseX - sinA * halfWidth;
+        const shaftEndLeftY = baseY + cosA * halfWidth;
+        const shaftEndRightX = baseX + sinA * halfWidth;
+        const shaftEndRightY = baseY - cosA * halfWidth;
+        const wingLeftX = baseX - sinA * (arrowHeadSize / 2);
+        const wingLeftY = baseY + cosA * (arrowHeadSize / 2);
+        const wingRightX = baseX + sinA * (arrowHeadSize / 2);
+        const wingRightY = baseY - cosA * (arrowHeadSize / 2);
+        const arrowPath = `M ${shaftStartLeftX} ${shaftStartLeftY} L ${shaftEndLeftX} ${shaftEndLeftY} L ${wingLeftX} ${wingLeftY} L ${tipX} ${tipY} L ${wingRightX} ${wingRightY} L ${shaftEndRightX} ${shaftEndRightY} L ${shaftStartRightX} ${shaftStartRightY} Z`;
         this.path.setAttribute("d", arrowPath);
-        this.path.setAttribute("fill", this.properties.backgroundColor);
+        this.path.setAttribute("fill", this.properties.foregroundColor);
         this.applyBorderStroke(this.path, 1);
         this.drawTrajectory();
     }

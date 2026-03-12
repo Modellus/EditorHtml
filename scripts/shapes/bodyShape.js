@@ -14,9 +14,16 @@ class BodyShape extends BaseShape {
     createForm() {
         var form = super.createForm();
         var instance = form.dxForm("instance");
+        var items = instance.option("items");
+        const colorGroup = items.find(item => item.itemType === "group" && item.colCount === 3);
+        if (colorGroup) {
+            colorGroup.colCount = 2;
+            colorGroup.items = colorGroup.items.filter(item => item.dataField !== "backgroundColor");
+        }
+        instance.option("items", items);
         this.addTerm("xTerm", "x", "Horizontal", false, true, 1, "x");
         this.addTerm("yTerm", "y", "Vertical", true, true, 1, "y");
-        var items = instance.option("items");
+        items = instance.option("items");
         items.push(
             {
                 colSpan: 2,
@@ -193,7 +200,6 @@ class BodyShape extends BaseShape {
         this.properties.width = 10;
         this.properties.height = 10;
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
-        this.properties.backgroundColor = this.board.theme.getBackgroundColors()[3].color;
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[3].color;
         this.properties.borderColor = this.properties.foregroundColor;
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
@@ -229,7 +235,7 @@ class BodyShape extends BaseShape {
         this.circle.setAttribute("cx", position.x);
         this.circle.setAttribute("cy", position.y);
         this.circle.setAttribute("r", radius);
-        this.circle.setAttribute("fill", this.properties.backgroundColor);
+        this.circle.setAttribute("fill", this.properties.foregroundColor);
         this.applyBorderStroke(this.circle, 1);
         this.image.setAttribute("x", position.x - radius);
         this.image.setAttribute("y", position.y - radius);
