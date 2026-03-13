@@ -220,7 +220,13 @@
             mf.position = mf.lastOffset;
         }
 
-        mf.addEventListener('mount', () => {
+        window.modellus = {
+            shape: {
+                getProperties: () => ({ expression: mf.getValue() })
+            }
+        };
+
+        function init() {
             removeExpressionInlineShortcuts();
             lockCaret();
             mf.addEventListener('keydown', handleKeyDown, true);
@@ -228,6 +234,12 @@
             mf.value = '\\displaylines{}';
             ensureCaretIsClamped();
             window.__mathfieldReady = true;
+        }
+
+        mf.addEventListener('mount', () => init());
+        customElements.whenDefined('math-field').then(() => {
+            if (!window.__mathfieldReady)
+                setTimeout(() => { if (!window.__mathfieldReady) init(); }, 500);
         });
     </script>
 </body>

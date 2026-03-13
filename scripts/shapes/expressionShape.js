@@ -74,7 +74,7 @@ class ExpressionShape extends BaseShape {
         this.mathfield.smartMode = false;
         this.mathfield.multiline = true;
         this.mathfield.returnKeyAction = "none";
-        this.mathfield.addEventListener("input", _ => this.onInput());
+        this.mathfield.addEventListener("input", inputEvent => this.onInput(inputEvent));
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());
         this.mathfield.addEventListener("mount", _ => this.onMount());
@@ -93,6 +93,7 @@ class ExpressionShape extends BaseShape {
         this.removeExpressionInlineShortcuts();
         this.lockCaret(this.mathfield);
         this.mathfield.addEventListener("keydown", keydownEvent => this.onKeyDown(keydownEvent), true);
+        this.interceptDeadKeySuperscript();
         this.mathfield.focus();
         this.ensureCaretIsClamped();
     }
@@ -117,9 +118,40 @@ class ExpressionShape extends BaseShape {
         this.handleBackspaceKeydown(keydownEvent);
     }
 
+    interceptDeadKeySuperscript() {
+        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+        sink.addEventListener('compositionstart', () => {
+            this._preCompositionValue = this.mathfield.getValue();
+            this._preCompositionPosition = this.mathfield.position;
+        }, true);
+        sink.addEventListener('compositionupdate', (compositionEvent) => {
+            if (compositionEvent.data !== '^')
+                return;
+            this._deadKeyComposition = true;
+        }, true);
+    }
+
+    fixDeadKeySuperscript() {
+        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '^', bubbles: true }));
+        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
+        this.mathfield.position = this._preCompositionPosition;
+        this.mathfield.executeCommand("moveToSuperscript");
+    }
+
     onInput() {
-        this.fixContentOutsideDisplaylines();
+        if (this._deadKeyComposition) {
+            this._deadKeyComposition = false;
+            this.fixDeadKeySuperscript();
+        }
+        this.deferFixContentOutsideDisplaylines();
         this.applyExpressionFunctionShortcuts();
+        this.syncExpression();
+    }
+
+    deferFixContentOutsideDisplaylines() {
+        cancelAnimationFrame(this._fixContentFrame);
+        this._fixContentFrame = requestAnimationFrame(() => this.fixContentOutsideDisplaylines());
     }
 
     fixContentOutsideDisplaylines() {
@@ -144,24 +176,30 @@ class ExpressionShape extends BaseShape {
             return;
         const inside = value.substring(prefix.length, closingIndex);
         const leaked = value.substring(closingIndex + 1);
+        const savedPosition = this.mathfield.position;
         this.mathfield.value = `${prefix}${inside}${leaked}}`;
-        this.mathfield.position = this.mathfield.lastOffset;
+        this.mathfield.position = Math.min(savedPosition, this.mathfield.lastOffset);
     }
 
     applyExpressionFunctionShortcuts() {
+        if (this.hasSelection())
+            return;
+        const caretPosition = this.getCaretPosition();
+        const groupStart = this.getCurrentGroupStartPosition();
+        const typedLength = caretPosition - groupStart;
+        if (typedLength < 2)
+            return;
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];
-            if (this.applyFunctionShortcut(functionShortcut.shortcutText, functionShortcut.functionLatex))
+            if (functionShortcut.shortcutText.length > typedLength)
+                continue;
+            if (this.applyFunctionShortcut(functionShortcut.shortcutText, functionShortcut.functionLatex, caretPosition, groupStart))
                 return;
         }
     }
 
-    applyFunctionShortcut(shortcutText, functionLatex) {
-        if (this.hasSelection())
-            return false;
-        const caretPosition = this.getCaretPosition();
-        const groupStart = this.getCurrentGroupStartPosition();
+    applyFunctionShortcut(shortcutText, functionLatex, caretPosition, groupStart) {
         const shortcutStart = caretPosition - shortcutText.length;
         if (shortcutStart < groupStart)
             return false;
@@ -404,6 +442,11 @@ class ExpressionShape extends BaseShape {
             this.ensureCaretIsClamped();
         }
         this.onChange();
+    }
+
+    syncExpression() {
+        cancelAnimationFrame(this._syncFrame);
+        this._syncFrame = requestAnimationFrame(() => this.onChange());
     }
 
     onChange() {
