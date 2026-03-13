@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/libraries/css/mathlive-static.css">
+    <script src="/libraries/scripts/mathlive.min.js"></script>
+    <style>
+        math-field { display: block; width: 400px; min-height: 50px; font-size: 20px; border: 1px solid #ccc; }
+        math-field:focus-within { border-color: #0078d4; }
+    </style>
+</head>
+<body>
+    <math-field id="mf"></math-field>
+    <script>
+        const mf = document.getElementById('mf');
+        mf.popoverPolicy = 'off';
+        mf.virtualKeyboardMode = 'off';
+        mf.mathVirtualKeyboardPolicy = 'manual';
+        mf.smartMode = false;
+        mf.multiline = true;
+        mf.returnKeyAction = 'none';
+
+        function removeExpressionInlineShortcuts() {
+            const inlineShortcutMap = { ...mf.inlineShortcuts };
+            delete inlineShortcutMap.dx;
+            delete inlineShortcutMap.dy;
+            delete inlineShortcutMap.dt;
+            const shortcuts = getExpressionFunctionShortcuts();
+            for (const s of shortcuts)
+                inlineShortcutMap[s.shortcutText] = s.functionLatex;
+            mf.inlineShortcuts = inlineShortcutMap;
+            mf.inlineShortcutTimeout = 0;
+        }
+
+        function getExpressionFunctionShortcuts() {
+            return [
+                { shortcutText: "cosec", functionLatex: "\\cosec" },
+                { shortcutText: "sqrt", functionLatex: "\\sqrt" },
+                { shortcutText: "frac", functionLatex: "\\frac" },
+                { shortcutText: "cdot", functionLatex: "\\cdot" },
+                { shortcutText: "sin", functionLatex: "\\sin" },
+                { shortcutText: "cos", functionLatex: "\\cos" },
+                { shortcutText: "tan", functionLatex: "\\tan" },
+                { shortcutText: "sec", functionLatex: "\\sec" },
+                { shortcutText: "cot", functionLatex: "\\cot" },
+                { shortcutText: "log", functionLatex: "\\log" },
+                { shortcutText: "epsilon", functionLatex: "\\epsilon" },
+                { shortcutText: "lambda", functionLatex: "\\lambda" },
+                { shortcutText: "Lambda", functionLatex: "\\Lambda" },
+                { shortcutText: "omega", functionLatex: "\\omega" },
+                { shortcutText: "Omega", functionLatex: "\\Omega" },
+                { shortcutText: "theta", functionLatex: "\\theta" },
+                { shortcutText: "Theta", functionLatex: "\\Theta" },
+                { shortcutText: "alpha", functionLatex: "\\alpha" },
+                { shortcutText: "sigma", functionLatex: "\\sigma" },
+                { shortcutText: "Sigma", functionLatex: "\\Sigma" },
+                { shortcutText: "gamma", functionLatex: "\\gamma" },
+                { shortcutText: "Gamma", functionLatex: "\\Gamma" },
+                { shortcutText: "delta", functionLatex: "\\delta" },
+                { shortcutText: "Delta", functionLatex: "\\Delta" },
+                { shortcutText: "beta", functionLatex: "\\beta" },
+                { shortcutText: "phi", functionLatex: "\\phi" },
+                { shortcutText: "Phi", functionLatex: "\\Phi" },
+                { shortcutText: "tau", functionLatex: "\\tau" },
+                { shortcutText: "rho", functionLatex: "\\rho" },
+                { shortcutText: "mu", functionLatex: "\\mu" },
+                { shortcutText: "PI", functionLatex: "\\PI" },
+                { shortcutText: "pi", functionLatex: "\\pi" }
+            ];
+        }
+
+        function lockCaret() {
+            mf.addEventListener('keydown', e => {
+                const bounds = { min: 1, max: mf.lastOffset };
+                if (e.key === 'ArrowLeft' && mf.position <= bounds.min) {
+                    e.preventDefault();
+                    mf.position = bounds.min;
+                    return;
+                }
+                if (e.key === 'ArrowRight' && mf.position >= bounds.max) {
+                    e.preventDefault();
+                    mf.position = bounds.max;
+                    return;
+                }
+                if (e.key === 'Home') {
+                    e.preventDefault();
+                    mf.executeCommand('moveToGroupStart');
+                    return;
+                }
+                if (e.key === 'End') {
+                    e.preventDefault();
+                    mf.executeCommand('moveToGroupEnd');
+                }
+            }, true);
+        }
+
+        function ensureCaretIsClamped() {
+            mf.position = 0;
+            mf.executeCommand('moveToNextChar');
+            requestAnimationFrame(() => {
+                mf.position = 0;
+                mf.executeCommand('moveToNextChar');
+            });
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                splitCurrentLineAtCaret();
+                return;
+            }
+            if (e.key === 'Backspace' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+                if (isCaretAtDisplaylineStart() && hasPreviousExpressionLine()) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    mergeCurrentLineWithPreviousLine();
+                }
+            }
+        }
+
+        function hasSelection() {
+            const range = mf.selection?.ranges?.[0];
+            if (!range) return false;
+            return range[0] !== range[1];
+        }
+
+        function getCaretPosition() {
+            const range = mf.selection?.ranges?.[0];
+            if (!range) return mf.position;
+            return range[1];
+        }
+
+        function getCurrentGroupStartPosition() {
+            const saved = mf.selection;
+            mf.executeCommand('moveToGroupStart');
+            const pos = mf.position;
+            mf.selection = saved;
+            return pos;
+        }
+
+        function getCurrentGroupEndPosition() {
+            const saved = mf.selection;
+            mf.executeCommand('moveToGroupEnd');
+            const pos = mf.position;
+            mf.selection = saved;
+            return pos;
+        }
+
+        function getTextRange(start, end) {
+            if (end <= start) return '';
+            return mf.getValue(start, end);
+        }
+
+        function deleteTextRange(start, end) {
+            if (end <= start) return;
+            mf.selection = { ranges: [[start, end]], direction: 'forward' };
+            mf.executeCommand('deleteBackward');
+            if (mf.position !== start) mf.position = start;
+        }
+
+        function splitCurrentLineAtCaret() {
+            if (hasSelection()) mf.executeCommand('deleteBackward');
+            const caretPos = getCaretPosition();
+            const lineEnd = getCurrentGroupEndPosition();
+            const tail = getTextRange(caretPos, lineEnd);
+            if (lineEnd > caretPos) deleteTextRange(caretPos, lineEnd);
+            mf.executeCommand('addRowAfter');
+            const newStart = getCurrentGroupStartPosition();
+            if (tail) mf.executeCommand('insert', tail);
+            mf.position = newStart;
+        }
+
+        function isCaretAtDisplaylineStart() {
+            if (hasSelection()) return false;
+            return getCaretPosition() <= getCurrentGroupStartPosition();
+        }
+
+        function hasPreviousExpressionLine() {
+            const saved = mf.selection;
+            const savedPos = mf.position;
+            mf.executeCommand('moveUp');
+            const moved = mf.position !== savedPos;
+            mf.selection = saved;
+            return moved;
+        }
+
+        function mergeCurrentLineWithPreviousLine() {
+            const lineLatex = getCurrentLineLatex();
+            mf.executeCommand('removeRow');
+            const mergePos = mf.position;
+            if (lineLatex) mf.executeCommand('insert', lineLatex);
+            mf.position = mergePos;
+        }
+
+        function getCurrentLineLatex() {
+            const saved = mf.selection;
+            const range = saved?.ranges?.[0];
+            if (!range || range[0] !== range[1]) return '';
+            const lineStart = range[1];
+            const lineEnd = getCurrentGroupEndPosition();
+            mf.selection = saved;
+            if (lineEnd <= lineStart) return '';
+            return mf.getValue(lineStart, lineEnd);
+        }
+
+        function fixContentOutsideDisplaylines() {
+            const value = mf.getValue();
+            const prefix = '\\displaylines{';
+            if (!value.startsWith(prefix)) return;
+            let depth = 1, closingIndex = -1;
+            for (let i = prefix.length; i < value.length; i++) {
+                if (value[i] === '{') depth++;
+                else if (value[i] === '}') { depth--; if (depth === 0) { closingIndex = i; break; } }
+            }
+            if (closingIndex < 0 || closingIndex === value.length - 1) return;
+            const inside = value.substring(prefix.length, closingIndex);
+            const leaked = value.substring(closingIndex + 1);
+            mf.value = prefix + inside + leaked + '}';
+            mf.position = mf.lastOffset;
+        }
+
+        mf.addEventListener('mount', () => {
+            removeExpressionInlineShortcuts();
+            lockCaret();
+            mf.addEventListener('keydown', handleKeyDown, true);
+            mf.addEventListener('input', () => fixContentOutsideDisplaylines());
+            mf.value = '\\displaylines{}';
+            ensureCaretIsClamped();
+            window.__mathfieldReady = true;
+        });
+    </script>
+</body>
+</html>

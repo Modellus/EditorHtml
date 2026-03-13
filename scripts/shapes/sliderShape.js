@@ -43,9 +43,6 @@ class SliderShape extends BaseShape {
                 }
             ]
         });
-        items.push(
-            this.createColorPickerFormItem("fillColor", "Fill color")
-        );
         instance.option("items", items);
         return form;
     }
@@ -178,10 +175,7 @@ class SliderShape extends BaseShape {
         const term = this.properties.term;
         const caseNumber = this.getCaseNumber();
         const isBoundTerm = !!term && this.board.calculator.isTerm(term);
-        const defaultFillColor = this.board.theme.getBackgroundColors()[3].color;
-        const fillColor = this.properties.fillColor ?? this.properties.bottomColor ?? defaultFillColor;
-        if (!this.properties.fillColor)
-            this.properties.fillColor = fillColor;
+        const fillColor = this.properties.foregroundColor;
         let value = isBoundTerm ? this.getBoundTermValue(term, caseNumber) : Number(this.properties.value);
         if (!Number.isFinite(value))
             value = Number(this.properties.value);

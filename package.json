@@ -2,7 +2,7 @@
   "name": "modellus-editor",
   "private": true,
   "scripts": {
-    "test": "jest"
+    "test": "npx playwright test"
   },
   "dependencies": {
     "agents": "^0.7.5",
@@ -11,6 +11,7 @@
     "mathlive": "^0.103.0"
   },
   "devDependencies": {
-    "jest": "^29.7.0"
+    "@playwright/test": "^1.50.0",
+    "http-server": "^14.1.1"
   }
 }
