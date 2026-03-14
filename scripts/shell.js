@@ -54,7 +54,7 @@ class Shell  {
         this.properties.description = "";
         this.properties.precision = 2;
         this.properties.angleUnit = "radians";
-        this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1 };
+        this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1, noLimit: false };
         this.properties.iterationTerm = "n";
         this.properties.casesCount = 1;
         this.properties.initialValuesByCase = {};
@@ -176,57 +176,71 @@ class Shell  {
                     }
                 },
                 {
-                    colSpan: 1,
-                    dataField: "precision",
-                    label: { 
-                        text: this.board.translations.get("Precision") 
-                    },
-                    editorType: "dxNumberBox",
-                    editorOptions: {
-                        min: 0,
-                        max: 10,
-                        step: 1,
-                        showSpinButtons: true,
-                        stylingMode: "filled"
-                    }
-                },
-                {
-                    colSpan: 1,
-                    dataField: "casesCount",
-                    label: {
-                        text: this.board.translations.get("CasesCount")
-                    },
-                    editorType: "dxNumberBox",
-                    editorOptions: {
-                        min: 1,
-                        max: 9,
-                        step: 1,
-                        showSpinButtons: true,
-                        stylingMode: "filled"
-                    }
-                },
-                {
-                    colSpan: 1,
-                    dataField: "angleUnit",
-                    label: {
-                        text: this.board.translations.get("AngleUnit")
-                    },
-                    template: (data, itemElement) => {
-                        $('<div>').appendTo(itemElement).dxButtonGroup({
-                            items: [
-                                { key: "radians", icon: "fa-solid fa-pi", hint: this.board.translations.get("Radians") },
-                                { key: "degrees", icon: "fa-solid fa-angle", hint: this.board.translations.get("Degrees") }
-                            ],
-                            keyExpr: "key",
-                            selectedItemKeys: [this.properties.angleUnit],
-                            onSelectionChanged: e => {
-                                if (e.addedItems.length > 0)
-                                    this.setProperty("angleUnit", e.addedItems[0].key);
+                    itemType: "group",
+                    colSpan: 2,
+                    colCount: 4,
+                    items: [
+                        {
+                            dataField: "iterationTerm",
+                            label: { 
+                                text: this.board.translations.get("IterationTerm") 
                             },
-                            stylingMode: "outlined",
-                            elementAttr: { class: "mdl-angle-unit" }
-                        });
-                    }
+                            editorType: "dxTextBox",
+                            editorOptions: {
+                                stylingMode: "filled"
+                            }
+                        },
+                        {
+                            dataField: "precision",
+                            label: { 
+                                text: this.board.translations.get("Precision") 
+                            },
+                            editorType: "dxNumberBox",
+                            editorOptions: {
+                                min: 0,
+                                max: 10,
+                                step: 1,
+                                showSpinButtons: true,
+                                stylingMode: "filled"
+                            }
+                        },
+                        {
+                            dataField: "casesCount",
+                            label: {
+                                text: this.board.translations.get("CasesCount")
+                            },
+                            editorType: "dxNumberBox",
+                            editorOptions: {
+                                min: 1,
+                                max: 9,
+                                step: 1,
+                                showSpinButtons: true,
+                                stylingMode: "filled"
+                            }
+                        },
+                        {
+                            dataField: "angleUnit",
+                            label: {
+                                text: this.board.translations.get("AngleUnit")
+                            },
+                            template: (data, itemElement) => {
+                                $('<div>').appendTo(itemElement).dxButtonGroup({
+                                    items: [
+                                        { key: "radians", icon: "fa-solid fa-pi", hint: this.board.translations.get("Radians") },
+                                        { key: "degrees", icon: "fa-solid fa-angle", hint: this.board.translations.get("Degrees") }
+                                    ],
+                                    keyExpr: "key",
+                                    selectedItemKeys: [this.properties.angleUnit],
+                                    onSelectionChanged: e => {
+                                        if (e.addedItems.length > 0)
+                                            this.setProperty("angleUnit", e.addedItems[0].key);
+                                    },
+                                    stylingMode: "outlined",
+                                    elementAttr: { class: "mdl-angle-unit" }
+                                });
+                            }
+                        }
+                    ]
                 },
                 {
                     colSpan: 1,
@@ -267,20 +281,28 @@ class Shell  {
                     label: { 
                         text: this.board.translations.get("Independent.End") 
                     },
-                    editorType: "dxNumberBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                },
-                {
-                    colSpan: 1,
-                    dataField: "iterationTerm",
-                    label: { 
-                        text: this.board.translations.get("IterationTerm") 
-                    },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
+                    template: (data, itemElement) => {
+                        const $container = $(`<div style="display:flex; align-items:center; gap:4px"></div>`).appendTo(itemElement);
+                        const $numberBox = $('<div style="flex:1">').appendTo($container).dxNumberBox({
+                            value: this.properties.independent.end,
+                            stylingMode: "filled",
+                            disabled: this.properties.independent.noLimit,
+                            onValueChanged: e => this.setProperty("independent.end", e.value)
+                        });
+                        $('<div>').appendTo($container).dxButtonGroup({
+                            items: [
+                                { key: "noLimit", icon: "fa-solid fa-infinity", hint: "No Limit" }
+                            ],
+                            keyExpr: "key",
+                            selectedItemKeys: this.properties.independent.noLimit ? ["noLimit"] : [],
+                            onSelectionChanged: e => {
+                                const noLimit = e.addedItems.length > 0;
+                                this.setProperty("independent.noLimit", noLimit);
+                                $numberBox.dxNumberBox("instance").option("disabled", noLimit);
+                            },
+                            stylingMode: "outlined",
+                            elementAttr: { class: "mdl-no-limit" }
+                        });
                     }
                 },
                 {
@@ -1127,7 +1149,10 @@ class Shell  {
         this.playHead.option("max", finalIteration);
         this.playHead.option("value", iteration);
         this.$playHeadMin.text(this.calculator.getStart().toFixed(Utils.getPrecision(this.calculator.properties.independent.step)));
-        this.$playHeadMax.text(this.calculator.getEnd().toFixed(Utils.getPrecision(this.calculator.properties.independent.step)));
+        if (this.calculator.properties.independent.noLimit)
+            this.$playHeadMax.html('<i class="fa-light fa-infinity" style="font-size:14px; font-weight:400; padding-top:3px"></i>');
+        else
+            this.$playHeadMax.text(this.calculator.getEnd().toFixed(Utils.getPrecision(this.calculator.properties.independent.step)));
     }
     
     playPausePressed() {

@@ -538,6 +538,10 @@ math-field {
     font-size: 10px !important;
 }
 
+.mdl-no-limit .dx-button .dx-icon {
+    font-size: 10px !important;
+}
+
 .mdl-shortcuts .dx-button {
     height: auto;
 }

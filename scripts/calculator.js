@@ -15,7 +15,7 @@ class Calculator extends EventTarget {
     }
 
     createDefaultProperties() {
-        return { precision: 2, angleUnit: "radians", independent: { name: "t", start: 0, end: 10, step: 0.1 }, iterationTerm: "n", casesCount: 1, initialValuesByCase: {} };
+        return { precision: 2, angleUnit: "radians", independent: { name: "t", start: 0, end: 10, step: 0.1, noLimit: false }, iterationTerm: "n", casesCount: 1, initialValuesByCase: {} };
     }
 
     setDefaults() {
@@ -65,7 +65,7 @@ class Calculator extends EventTarget {
             cancelAnimationFrame(this.frameId);
         if (this.status != STATUS.PLAYING)
             return;
-        if (Math.abs(this.system.getIndependent() - this.properties.independent.end) < this.properties.independent.step / 10.0)
+        if (!this.properties.independent.noLimit && Math.abs(this.system.getIndependent() - this.properties.independent.end) < this.properties.independent.step / 10.0)
             this.pause();
         else
             this.engine.iterate();
@@ -255,6 +255,8 @@ class Calculator extends EventTarget {
     }
 
     getFinalIteration() {
+        if (this.properties.independent.noLimit)
+            return Math.max(1, this.system.lastIteration);
         var independent = this.properties.independent;
         return Math.floor((independent.end - independent.start) / independent.step) + 1;
     }
