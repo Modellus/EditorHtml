@@ -20,6 +20,8 @@ class Calculator extends EventTarget {
 
     setDefaults() {
         this.properties = this.createDefaultProperties();
+        this.preloadedTermNames = null;
+        this.preloadedTermValues = null;
     }
 
     normalizeCasesCount(value = 1) {
@@ -138,6 +140,33 @@ class Calculator extends EventTarget {
         this.engine.reset();
         this.system.reset();
         this.status = STATUS.STOPPED;
+    }
+
+    /** @param {string[]} names @param {number[][]} values */
+    loadTerms(names, values) {
+        this.preloadedTermNames = names;
+        this.preloadedTermValues = values;
+        this.system.loadTerms(names, values);
+    }
+
+    applyPreloadedData() {
+        if (this.preloadedTermNames && this.preloadedTermValues)
+            this.system.loadTerms(this.preloadedTermNames, this.preloadedTermValues);
+    }
+
+    hasPreloadedData() {
+        return this.preloadedTermNames != null && this.preloadedTermValues != null;
+    }
+
+    getPreloadedData() {
+        if (!this.preloadedTermNames || !this.preloadedTermValues)
+            return null;
+        return { names: this.preloadedTermNames, values: this.preloadedTermValues };
+    }
+
+    clearPreloadedData() {
+        this.preloadedTermNames = null;
+        this.preloadedTermValues = null;
     }
 
     parse(text = "") {

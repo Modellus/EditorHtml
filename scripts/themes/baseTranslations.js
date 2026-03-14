@@ -66,7 +66,13 @@ class BaseTranslations {
                 "Text Name": "Texto",
                 "Value Name": "Valor",
                 "Ruler Name": "Régua",
-                "Protractor Name": "Transferidor"
+                "Protractor Name": "Transferidor",
+                "Data from file": "Dados de ficheiro",
+                "Data from URL": "Dados de URL",
+                "Enter CSV URL": "Introduza o URL do CSV",
+                "Preloaded Data": "Dados pré-carregados",
+                "Apply": "Aplicar",
+                "Clear Data": "Limpar dados"
             };
         this.languages["en-US"] =
             {
@@ -132,7 +138,13 @@ class BaseTranslations {
                 "Text Name": "Text",
                 "Value Name": "Value",
                 "Ruler Name": "Ruler",
-                "Protractor Name": "Protractor"
+                "Protractor Name": "Protractor",
+                "Data from file": "Data from file",
+                "Data from URL": "Data from URL",
+                "Enter CSV URL": "Enter CSV URL",
+                "Preloaded Data": "Preloaded Data",
+                "Apply": "Apply",
+                "Clear Data": "Clear Data"
             };
     }
 

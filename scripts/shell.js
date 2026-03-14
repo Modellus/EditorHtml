@@ -304,9 +304,6 @@ class Shell  {
                             elementAttr: { class: "mdl-no-limit" }
                         });
                     }
-                },
-                {
-                    colSpan: 2
                 }
             ],
             onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
@@ -1032,6 +1029,42 @@ class Shell  {
                 ]
             },
             {
+                text: this.board.translations.get("Data"),
+                icon: "fa-light fa-table",
+                shortcut: "",
+                name: "Data",
+                items: [
+                    {
+                        text: this.board.translations.get("Data from file"),
+                        icon: "fa-light fa-file-csv",
+                        shortcut: "",
+                        name: "ImportDataFromFile",
+                        action: _ => this.importDataFromFile()
+                    },
+                    {
+                        text: this.board.translations.get("Data from URL"),
+                        icon: "fa-light fa-link",
+                        shortcut: "",
+                        name: "ImportDataFromUrl",
+                        action: _ => this.importDataFromUrl()
+                    },
+                    {
+                        text: this.board.translations.get("Preloaded Data"),
+                        icon: "fa-light fa-eye",
+                        shortcut: "",
+                        name: "ShowPreloadedData",
+                        action: _ => this.showDataPopup()
+                    },
+                    {
+                        text: this.board.translations.get("Clear Data"),
+                        icon: "fa-light fa-trash-can",
+                        shortcut: "",
+                        name: "ClearPreloadedData",
+                        action: _ => this.clearPreloadedData()
+                    }
+                ]
+            },
+            {
                 text: this.board.translations.get("Export"),
                 icon: "fa-light fa-arrow-down-to-square",
                 shortcut: "",
@@ -1226,6 +1259,7 @@ class Shell  {
             if (shape.constructor.name == "ExpressionShape" && shape.properties.expression != undefined)
                 this.calculator.parse(shape.properties.expression);
         });
+        this.calculator.applyPreloadedData();
         this.calculator.applyInitialValuesByCase(initialValuesByCase);
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
         this.board.refresh();
@@ -1312,16 +1346,24 @@ class Shell  {
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
         const properties = Object.assign({}, this.properties);
         delete properties.AIApiKey;
-        return {
+        const result = {
             properties,
             board: this.board.serialize()
         };
+        const preloaded = this.calculator.getPreloadedData();
+        if (preloaded)
+            result.preloadedData = preloaded;
+        return result;
     }
 
     deserialise(model) {
         this.pendingInitialValuesByCase = model?.properties?.initialValuesByCase ?? model?.properties?.initialValues ?? null;
         this.setProperties(model.properties);
         this.board.deserialize(model.board);
+        if (model.preloadedData)
+            this.calculator.loadTerms(model.preloadedData.names, model.preloadedData.values);
+        else
+            this.calculator.clearPreloadedData();
     }
 
     async saveToPath(filePath) {
@@ -1458,6 +1500,93 @@ class Shell  {
             if (this.playPause && this.playPause.element)
                 this.playPause.element().addClass('pulsing');
         }
+    }
+
+    parseCsv(text) {
+        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+        const names = lines[0].split(",").map(name => name.trim());
+        const values = [];
+        for (let i = 1; i < lines.length; i++) {
+            const row = lines[i].split(",").map(cell => parseFloat(cell.trim()));
+            values.push(row);
+        }
+        return { names, values };
+    }
+
+    loadPreloadedData(names, values) {
+        this.calculator.loadTerms(names, values);
+        this.reset();
+    }
+
+    clearPreloadedData() {
+        this.calculator.clearPreloadedData();
+        this.reset();
+    }
+
+    async importDataFromFile() {
+        const [fileHandle] = await window.showOpenFilePicker({
+            types: [{ description: "CSV Files", accept: { "text/csv": [".csv"] } }]
+        });
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        const { names, values } = this.parseCsv(text);
+        this.loadPreloadedData(names, values);
+        this.showDataPopup();
+    }
+
+    async importDataFromUrl() {
+        const url = prompt(this.board.translations.get("Enter CSV URL"));
+        if (!url)
+            return;
+        const response = await fetch(url);
+        const text = await response.text();
+        const { names, values } = this.parseCsv(text);
+        this.loadPreloadedData(names, values);
+        this.showDataPopup();
+    }
+
+    showDataPopup() {
+        const preloaded = this.calculator.getPreloadedData();
+        if (!preloaded)
+            return;
+        const dataSource = preloaded.values.map(row => {
+            const obj = {};
+            for (let i = 0; i < preloaded.names.length; i++)
+                obj[preloaded.names[i]] = row[i];
+            return obj;
+        });
+        const columns = preloaded.names.map(name => ({
+            dataField: name,
+            caption: name,
+            dataType: "number"
+        }));
+        const $popup = $("#data-popup");
+        if ($popup.data("dxPopup"))
+            $popup.dxPopup("instance").dispose();
+        $popup.dxPopup({
+            width: 600,
+            height: 500,
+            title: this.board.translations.get("Preloaded Data"),
+            showTitle: true,
+            dragEnabled: true,
+            resizeEnabled: true,
+            hideOnOutsideClick: true,
+            shading: false,
+            contentTemplate: (contentElement) => {
+                $('<div>').appendTo(contentElement).dxDataGrid({
+                    dataSource,
+                    columns,
+                    editing: {
+                        mode: "cell",
+                        allowUpdating: true
+                    },
+                    paging: { enabled: false },
+                    height: "100%",
+                    elementAttr: { class: "mdl-preloaded-data-grid" }
+                });
+            }
+        });
+        $popup.dxPopup("instance").show();
     }
 
     onKeyUp(e) {

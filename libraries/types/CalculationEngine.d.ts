@@ -48,6 +48,24 @@ declare class Expression {
     }) => boolean) | null);
 }
 
+declare class PreloadedData {
+    private termNames;
+    private values;
+    private iterationCol;
+    private independentCol;
+    private cursor;
+    get names(): string[];
+    get isEmpty(): boolean;
+    load(names: string[], values: number[][], iterationTermName: string, independentTermName: string): void;
+    reset(): void;
+    clear(): void;
+    getDataTermNames(iterationTermName: string, independentTermName: string): string[];
+    apply(iteration: number, target: {
+        [name: string]: number;
+    }, independentTermName: string): void;
+    private applyRow;
+}
+
 declare class System {
     private _independent;
     private _iterationTerm;
@@ -70,6 +88,7 @@ declare class System {
     private readonly iterationValuesByKey;
     private _lastIteration;
     useRadians: boolean;
+    readonly preloadedData: PreloadedData;
     constructor(independent?: string, iterationTerm?: string);
     get independent(): Term;
     set independent(name: string);
@@ -92,6 +111,7 @@ declare class System {
     addExpression(expression: Expression, termType?: TermType): void;
     addTerm(term: Term): void;
     addTermByName(term: string, type: TermType): void;
+    loadTerms(names: string[], values: number[][]): void;
     reset(): void;
     clear(): void;
     calculateFunctions(): void;
@@ -1090,4 +1110,4 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
 }
 
-export { Branch, Engine, Expression, Parser, System, Term, TermType, Visitor };
+export { Branch, Engine, Expression, Parser, PreloadedData, System, Term, TermType, Visitor };

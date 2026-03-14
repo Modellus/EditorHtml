@@ -491,6 +491,18 @@ body.read-only #shape-popup {
     display: none !important;
 }
 
+.mdl-preloaded-data-grid .dx-header-row .dx-datagrid-text-content {
+    font-family: "KaTeX_Math";
+    font-size: 16px;
+    font-style: italic;
+    font-weight: normal;
+}
+
+.mdl-preloaded-data-grid .dx-data-row td {
+    font-family: "KaTeX_Main";
+    font-size: 12px;
+}
+
 .dx-slider-tooltip-position-top {
     padding-top: 0 !important;
 }
