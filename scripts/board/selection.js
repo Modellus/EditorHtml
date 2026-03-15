@@ -68,6 +68,8 @@ class Selection {
     }
 
     onPointerUp(event) {
+        if (this.board.pointerLocked)
+            return;
         if (!this.pointerDown)
             return;
         const dx = event.clientX - this.pointerDown.x;
@@ -80,7 +82,7 @@ class Selection {
     }
 
     onPointerMove(event) {
-        if (!this.enabled || this.isDragging)
+        if (!this.enabled || this.isDragging || this.board.pointerLocked)
             return;
         const targetShape = this.resolveSelectionTarget(event);
         const shape = this.findShape(targetShape);
@@ -235,7 +237,7 @@ class Selection {
     }
 
     updateOutline(outline, shape) {
-        if (this.isDragging) {
+        if (this.isDragging || shape?.hideSelectionOutline) {
             outline.setAttribute("visibility", "hidden");
             outline.removeAttribute("transform");
             return;

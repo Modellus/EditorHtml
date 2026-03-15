@@ -346,6 +346,8 @@ class BaseShape {
                 return;
             }
         }
+        event.stopPropagation();
+        this.board.pointerLocked = true;
         const point = this.board.getMouseToSvgPoint(event);
         this._handlePending = handle;
         this._handlePendingStart = { x: point.x, y: point.y };
@@ -424,6 +426,7 @@ class BaseShape {
             this._handlePending = null;
             this._handlePendingStart = null;
             this._handleActivePointerId = null;
+            this.board.pointerLocked = false;
             return;
         }
         this.draggedHandle = null;
@@ -435,6 +438,7 @@ class BaseShape {
             this._handleDragRaf = null;
         }
         this._handlePendingPoint = null;
+        this.board.pointerLocked = false;
         this.dragEnd();
     }
 
@@ -1102,8 +1106,15 @@ class BaseShape {
         const termName = String(rawTerm);
         const calculator = this.board.calculator;
         const caseNumber = this.getTermCaseNumber(entry.caseProperty);
-        const value = calculator.isTerm(termName) ? calculator.getByName(termName, caseNumber) : Number(termName);
+        const isTerm = calculator.isTerm(termName);
+        const value = isTerm ? calculator.getByName(termName, caseNumber) : Number(termName);
         const valueText = Number.isFinite(value) ? this.formatModelValue(value) : termName;
+        if (!isTerm)
+            return {
+                termText: "",
+                valueText: valueText,
+                text: valueText
+            };
         return {
             termText: termName,
             valueText: valueText,
@@ -1231,6 +1242,13 @@ class BaseShape {
         const valueText = label.valueText ?? "";
         if (termText === "" && valueText === "") {
             labelText.textContent = label.text ?? "";
+            return;
+        }
+        if (termText === "") {
+            const valueSpan = this.board.createSvgElement("tspan");
+            valueSpan.setAttribute("font-family", "Katex_Main");
+            valueSpan.textContent = valueText;
+            labelText.appendChild(valueSpan);
             return;
         }
         const termSpan = this.board.createSvgElement("tspan");

@@ -9,6 +9,7 @@ class Board {
         this._refreshId = null;
         this._dirtyShapes = new Set();
         this.suppressNextFocusSelect = false;
+        this.pointerLocked = false;
     }
 
     createSvgElement(name) {
@@ -109,7 +110,6 @@ class Board {
 
     onShapeDragStart(e) {
         this.selection.setDragging(true, e.detail.shape);
-        this.deselect();
     }
 
     onShapeDragEnd(e) {

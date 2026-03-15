@@ -4,13 +4,14 @@ class VectorShape extends BaseShape {
     }
 
     getHandles() {
-        const handleSize = 12;
+        const tipRadius = 5;
         return [
             {
+                tag: "line",
                 className: "handle move",
                 getAttributes: () => {
                     const position = this.getBoardPosition();
-                    return { x: position.x, y: position.y, width: this.properties.width, height: this.properties.height };
+                    return { x1: position.x, y1: position.y, x2: position.x + this.properties.width, y2: position.y + this.properties.height };
                 },
                 getTransform: e => ({
                     x: this.delta("x", e.dx),
@@ -18,27 +19,53 @@ class VectorShape extends BaseShape {
                 })
             },
             {
+                tag: "circle",
                 className: "handle tip",
                 getAttributes: () => {
                     const position = this.getBoardPosition();
                     return {
-                        x: position.x + this.properties.width - handleSize / 2,
-                        y: position.y + this.properties.height - handleSize / 2,
-                        width: handleSize,
-                        height: handleSize
+                        cx: position.x + this.properties.width,
+                        cy: position.y + this.properties.height,
+                        r: tipRadius
                     };
                 },
-                getTransform: e => {
-                    const position = this.getBoardPosition();
-                    return {
-                        x: 0,
-                        y: 0,
-                        width: e.x - position.x,
-                        height: e.y - position.y
-                    };
-                }
+                getTransform: e => ({
+                    width: this.delta("width", e.dx),
+                    height: this.delta("height", e.dy)
+                })
             }
         ];
+    }
+
+    hideSelectionOutline = true;
+
+    createHandles() {
+        this.handleElements = [];
+        this.draggedHandle = null;
+        this.handleDragThreshold = 4;
+        this._handlePending = null;
+        this._handlePendingStart = null;
+        this._handleDragRaf = null;
+        this._handlePendingPoint = null;
+        this._handleActivePointerId = null;
+        const handles = this.getHandles();
+        handles.forEach(({ tag, className, getAttributes, getTransform }) => {
+            const handle = this.board.createSvgElement(tag ?? "rect");
+            handle.setAttribute("class", className);
+            handle._shape = this;
+            this.board.svg.appendChild(handle);
+            this.handleElements.push(handle);
+            handle.addEventListener("pointerdown", e => this.onHandlePointerDown(e, handle));
+            handle.addEventListener("pointermove", e => this.onHandlePointerMove(e, handle));
+            handle.addEventListener("wheel", e => this.onHandleWheel(e), { passive: false });
+            handle.addEventListener("contextmenu", e => this.onHandleContextMenu(e));
+            handle.update = h => {
+                for (const [attr, val] of Object.entries(getAttributes()))
+                    h.setAttribute(attr, val);
+            };
+            handle.getTransform = getTransform;
+        });
+        this.updateHandles();
     }
 
     enterEditMode() {
@@ -93,8 +120,8 @@ class VectorShape extends BaseShape {
             ]
         });
         instance.option("items", items);
-        this.addTermToForm("xTerm", "Horizontal");
-        this.addTermToForm("yTerm", "Vertical");
+        this.addTerm("xTerm", "width", "Horizontal", false, true, 1, "x");
+        this.addTerm("yTerm", "height", "Vertical", true, true, 1, "y");
         items = instance.option("items");
         items.push(
             this.createColorPickerFormItem("trajectoryColor", "Trajectory color")
@@ -109,7 +136,9 @@ class VectorShape extends BaseShape {
         this.properties.x = 0;
         this.properties.y = 0;
         this.properties.width = 30;
-        this.properties.height = 30;
+        this.properties.height = -30;
+        this.properties.xTerm = "30";
+        this.properties.yTerm = "30";
         this.properties.foregroundColor = "#000000";
         this.properties.borderColor = "transparent";
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
@@ -204,15 +233,24 @@ class VectorShape extends BaseShape {
             this.trajectory.element.removeAttribute("points");
     }
 
+    getShapeCenterPosition() {
+        const position = this.getBoardPosition();
+        return { x: position.x + this.properties.width, y: position.y + this.properties.height };
+    }
+
+    getDefaultComponent() {
+        return (this.parent?.properties?.width ?? 150) * 0.2;
+    }
+
     tick() {
         super.tick();
-        const calculator = this.board.calculator;
         const xCase = this.properties.xTermCase ?? 1;
         const yCase = this.properties.yTermCase ?? 1;
-        const newW = calculator.getByName(this.properties.xTerm, xCase);
-        const newH = calculator.getByName(this.properties.yTerm, yCase);
-        if (newW != null) this.properties.width = newW;
-        if (newH != null) this.properties.height = -newH;
+        const newW = this.resolveTermNumeric(this.properties.xTerm, xCase);
+        const newH = this.resolveTermNumeric(this.properties.yTerm, yCase);
+        this.properties.width = Number.isFinite(newW) ? newW : this.getDefaultComponent();
+        this.properties.height = Number.isFinite(newH) ? -newH : -this.getDefaultComponent();
+        const calculator = this.board.calculator;
         this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
         if (this.trajectory.values.length <= calculator.getLastIteration()) {
             const position = this.getBoardPosition();
@@ -228,9 +266,5 @@ class VectorShape extends BaseShape {
             this.trajectory.lastCount = this.trajectory.values.length;
         }
         this.board.markDirty(this);
-    }
-
-    getDragTermMapping() {
-        return { xPropertyName: 'width', yPropertyName: 'height', useScale: false, invertYAxis: false };
     }
 }

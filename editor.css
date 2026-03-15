@@ -92,6 +92,19 @@ svg {
     cursor: move;
 }
 
+line.handle.move {
+    stroke: transparent;
+    stroke-width: 12px;
+    fill: none;
+}
+
+.handle.tip {
+    fill: white;
+    stroke: #4039d7;
+    stroke-width: 1.5px;
+    cursor: crosshair;
+}
+
 .handle.rotation {
     opacity: 1;
     fill: #ffffff;
