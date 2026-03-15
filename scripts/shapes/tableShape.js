@@ -3,10 +3,6 @@ class TableShape extends BaseShape {
         super(board, null, id);
     }
 
-    createTransformer() {
-        return new RectangleTransformer(this.board, this);
-    }
-
     createForm() {
         var form = super.createForm();
         var instance = form.dxForm("instance");

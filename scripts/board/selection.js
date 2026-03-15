@@ -2,9 +2,7 @@ class Selection {
     constructor(board) {
         this.board = board;
         this.selectedShape = null;
-        this.transformer = null;
         this.hoveredShape = null;
-        this.hoverTransformer = null;
         this.isDragging = false;
         this.hoverOutline = this.board.createSvgElement("rect");
         this.hoverOutline.setAttribute("class", "hover-outline");
@@ -37,8 +35,8 @@ class Selection {
         this.deselect();
         this.clearHover();
         this.selectedShape = shape;
-        this.transformer = shape.createTransformer();
-        this.transformer.show();
+        shape.createHandles();
+        shape.showHandles();
         this.updateOutline(this.selectedOutline, shape);
         if (shape.showContextToolbar)
             shape.showContextToolbar();
@@ -47,11 +45,9 @@ class Selection {
 
     deselect() {
         var selectedShape = this.selectedShape;
-        var transformer = this.transformer;
         this.selectedShape = null;
-        this.transformer = null;
-        if (transformer)
-            transformer.hide();
+        if (selectedShape)
+            selectedShape.removeHandles();
         this.selectedOutline.setAttribute("visibility", "hidden");
         if (selectedShape?.hideContextToolbar)
             selectedShape.hideContextToolbar();
@@ -112,7 +108,7 @@ class Selection {
             return;
         const targetShape = this.resolveSelectionTarget(event);
         let shape = this.findShape(targetShape);
-        if (!shape && this.isTransformerOverlayElement(event.target))
+        if (!shape && this.isOverlayElement(event.target))
             shape = this.selectedShape ?? this.hoveredShape;
         if (!shape)
             return;
@@ -150,9 +146,9 @@ class Selection {
         const target = event.target;
         if (!(target instanceof Element))
             return target;
-        if (!this.isTransformerOverlayElement(target))
+        if (!this.isOverlayElement(target))
             return target;
-        const overlayElements = this.getTransformerOverlayElements();
+        const overlayElements = this.getOverlayElements();
         if (!overlayElements.includes(target))
             overlayElements.push(target);
         const previousPointerEvents = overlayElements.map(element => ({ element: element, pointerEvents: element.style.pointerEvents }));
@@ -162,7 +158,7 @@ class Selection {
         return underlying ?? target;
     }
 
-    isTransformerOverlayElement(element) {
+    isOverlayElement(element) {
         if (!(element instanceof Element))
             return false;
         if (element.classList.contains("handle"))
@@ -180,7 +176,7 @@ class Selection {
         return !!element._shape;
     }
 
-    getTransformerOverlayElements() {
+    getOverlayElements() {
         return Array.from(this.board.svg.querySelectorAll(".handle, .bounding-box, .hover-outline, .selected-outline, .resize-handle, .rotation-handle"));
     }
 
@@ -189,8 +185,8 @@ class Selection {
         if (!shape)
             return;
         this.hoveredShape = shape;
-        this.hoverTransformer = shape.createTransformer();
-        this.hoverTransformer.show();
+        shape.createHandles();
+        shape.showHandles();
         this.hideHoverRotationHandles();
         this.updateHoverHandles();
         this.updateHoverOutline(shape);
@@ -201,22 +197,20 @@ class Selection {
     }
 
     updateHoverHandles() {
-        if (!this.hoverTransformer)
+        if (!this.hoveredShape?.handleElements)
             return;
-        this.hoverTransformer.updateHandles();
+        this.hoveredShape.updateHandles();
         this.hideHoverRotationHandles();
-        if (this.hoverTransformer.handles) {
-            this.hoverTransformer.handles.forEach(handle => {
-                if (handle.parentNode !== this.board.svg || this.board.svg.lastChild !== handle)
-                    this.board.svg.appendChild(handle);
-            });
-        }
+        this.hoveredShape.handleElements.forEach(handle => {
+            if (handle.parentNode !== this.board.svg || this.board.svg.lastChild !== handle)
+                this.board.svg.appendChild(handle);
+        });
     }
 
     hideHoverRotationHandles() {
-        if (!this.hoverTransformer?.handles)
+        if (!this.hoveredShape?.handleElements)
             return;
-        this.hoverTransformer.handles.forEach(handle => {
+        this.hoveredShape.handleElements.forEach(handle => {
             if (!handle.classList.contains("rotation"))
                 return;
             handle.setAttribute("visibility", "hidden");
@@ -224,9 +218,8 @@ class Selection {
     }
 
     clearHover() {
-        if (this.hoverTransformer?.handles)
-            this.hoverTransformer.handles.forEach(handle => handle.remove());
-        this.hoverTransformer = null;
+        if (this.hoveredShape)
+            this.hoveredShape.removeHandles();
         this.hoveredShape = null;
         this.hoverOutline.setAttribute("visibility", "hidden");
     }
@@ -372,8 +365,8 @@ class Selection {
     }
 
     update() {
-        if (this.transformer)
-            this.transformer.updateHandles();
+        if (this.selectedShape)
+            this.selectedShape.updateHandles();
         if (this.selectedShape)
             this.updateOutline(this.selectedOutline, this.selectedShape);
     }

@@ -11,10 +11,6 @@ class ValueShape extends BaseShape {
         this.pendingEditorFocus = this.pendingEditorFocus ?? false;
     }
 
-    createTransformer() {
-        return new RectangleTransformer(this.board, this);
-    }
-
     enterEditMode() {
         const term = this.getSelectedTerm();
         if (!this.canEditTermValue(term))

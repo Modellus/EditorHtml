@@ -3,10 +3,6 @@ class ChartShape extends BaseShape {
         super(board, null, id);
     }
 
-    createTransformer() { 
-        return new RectangleTransformer(this.board, this);
-    }
-
     enterEditMode() {
         if (this.chart && typeof this.chart.focus === "function") {
             this.chart.focus();
@@ -165,8 +161,13 @@ class ChartShape extends BaseShape {
             valueTitle: "",
             foregroundColor: this.properties.foregroundColor,
             backgroundColor: this.properties.backgroundColor,
-            borderColor: this.getBorderColor()
+            borderColor: this.getBorderColor(),
+            onDomainChanged: domain => this.onDomainChanged(domain)
         };
+    }
+
+    onDomainChanged(domain) {
+        this.properties.domainOverride = domain;
     }
 
     createElement() {
@@ -175,6 +176,8 @@ class ChartShape extends BaseShape {
         this.lastSyncedIteration = 0;
         this.chartDataConfig = null;
         this.chart = new ChartControl(element, this.getChartControlOptions());
+        if (this.properties.domainOverride)
+            this.chart.setDomainOverride(this.properties.domainOverride);
         this._appliedConfig = {};
         return element;
     }

@@ -6,10 +6,6 @@ class ExpressionShape extends BaseShape {
         this.focusDispatchFrame = null;
     }
 
-    createTransformer() {
-        return new RectangleTransformer(this.board, this);
-    }
-
     createForm() {
         var form = super.createForm();
         var instance = form.dxForm("instance");

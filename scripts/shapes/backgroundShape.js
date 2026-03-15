@@ -5,10 +5,6 @@ class BackgroundShape extends BaseShape {
         super(board, null, id);
     }
 
-    createTransformer() { 
-        return new RectangleTransformer(this.board, this);
-    }
-
     enterEditMode() {
         return false;
     }

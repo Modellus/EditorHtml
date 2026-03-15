@@ -4,8 +4,37 @@ class ReferentialShape extends BaseShape {
         this.isReferential = true;
     }
 
-    createTransformer() { 
-        return new ReferentialTransformer(this.board, this);
+    getHandles() {
+        const handleSize = 12;
+        var handles = super.getHandles();
+        handles.push({
+            className: "handle origin",
+            getAttributes: () => {
+                const position = this.getBoardPosition();
+                return {
+                    x: position.x + (this.properties.originX ?? this.properties.width / 2) - handleSize / 2,
+                    y: position.y + (this.properties.originY ?? this.properties.height / 2) - handleSize / 2,
+                    width: handleSize,
+                    height: handleSize
+                };
+            },
+            getTransform: e => {
+                const position = this.getBoardPosition();
+                return {
+                    originX: e.x - position.x,
+                    originY: e.y - position.y
+                };
+            }
+        });
+        return handles;
+    }
+
+    transformShape(transform) {
+        super.transformShape(transform);
+        if (transform.originX && transform.originY) {
+            this.properties.originX = transform.originX;
+            this.properties.originY = transform.originY;
+        }
     }
 
     initializeElement() {

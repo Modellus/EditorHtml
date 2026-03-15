@@ -3,10 +3,6 @@ class TextShape extends BaseShape {
         super(board, null, id);
     }
 
-    createTransformer() { 
-        return new RectangleTransformer(this.board, this);
-    }
-
     setDefaults() {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Text Name");

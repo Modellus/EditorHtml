@@ -3,8 +3,57 @@ class BodyShape extends BaseShape {
         super(board, parent, id);
     }
 
-    createTransformer() { 
-        return new CircleTransformer(this.board, this);
+    getHandles() {
+        const handleSize = 12;
+        return [
+            {
+                className: "handle move",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    const radius = this.properties.radius ?? 0;
+                    return { x: position.x - radius, y: position.y - radius, width: radius * 2, height: radius * 2 };
+                },
+                getTransform: e => ({
+                    x: this.delta("x", e.dx),
+                    y: this.delta("y", e.dy)
+                })
+            },
+            {
+                className: "handle origin",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    return { x: position.x - handleSize / 2, y: position.y - handleSize / 2, width: handleSize, height: handleSize };
+                },
+                getTransform: e => ({
+                    x: this.delta("x", e.dx),
+                    y: this.delta("y", e.dy)
+                })
+            },
+            {
+                className: "handle radius",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    return {
+                        x: position.x + Math.cos(this.properties.angle) * this.properties.radius,
+                        y: position.y + Math.sin(this.properties.angle) * this.properties.radius,
+                        width: handleSize,
+                        height: handleSize
+                    };
+                },
+                getTransform: e => {
+                    const position = this.getBoardPosition();
+                    return {
+                        radius: Math.sqrt((e.x - position.x) ** 2 + (e.y - position.y) ** 2),
+                        angle: Math.atan2(e.y - position.y, e.x - position.x)
+                    };
+                }
+            }
+        ];
+    }
+
+    getHandleRotationCenter() {
+        const position = this.getBoardPosition();
+        return { x: position.x, y: position.y };
     }
 
     enterEditMode() {

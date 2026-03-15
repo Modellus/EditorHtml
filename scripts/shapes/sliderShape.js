@@ -3,8 +3,33 @@ class SliderShape extends BaseShape {
         super(board, null, id);
     }
 
-    createTransformer() {
-        return new SliderTransformer(this.board, this);
+    getHandles() {
+        const handleSize = 12;
+        var handles = super.getHandles();
+        handles.push({
+            className: "handle splitter",
+            getAttributes: () => {
+                const position = this.getBoardPosition();
+                return {
+                    x: position.x,
+                    y: this.getSplitterBoardY() - handleSize / 2,
+                    width: this.properties.width,
+                    height: handleSize
+                };
+            },
+            getTransform: e => ({
+                splitterValue: this.getValueFromBoardY(e.y)
+            })
+        });
+        return handles;
+    }
+
+    transformShape(transform) {
+        if (transform.splitterValue != null) {
+            this.setSplitterValue(transform.splitterValue);
+            return;
+        }
+        super.transformShape(transform);
     }
 
     enterEditMode() {

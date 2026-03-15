@@ -84,7 +84,458 @@ class BaseShape {
         this.element.dispatchEvent(event);
     }
 
-    createTransformer() {
+    getHandles() {
+        const handleSize = 12;
+        const rotationSize = 8;
+        return [
+            {
+                className: "handle move",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    return { x: position.x, y: position.y, width: this.properties.width, height: this.properties.height };
+                },
+                getTransform: e => ({
+                    x: this.properties.x + e.dx,
+                    y: this.properties.y + e.dy,
+                    width: this.properties.width,
+                    height: this.properties.height
+                })
+            },
+            {
+                className: "handle top-left",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    return { x: position.x - handleSize / 2, y: position.y - handleSize / 2, width: handleSize, height: handleSize };
+                },
+                getTransform: e => ({
+                    x: this.properties.width - e.dx > 10 ? this.properties.x + e.dx : this.properties.x,
+                    y: this.properties.height - e.dy > 10 ? this.properties.y + e.dy : this.properties.y,
+                    width: this.properties.width - e.dx > 10 ? this.properties.width - e.dx : this.properties.width,
+                    height: this.properties.height - e.dy > 10 ? this.properties.height - e.dy : this.properties.height
+                })
+            },
+            {
+                className: "handle top-right",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    return { x: position.x + this.properties.width - handleSize / 2, y: position.y - handleSize / 2, width: handleSize, height: handleSize };
+                },
+                getTransform: e => ({
+                    x: this.properties.x,
+                    y: this.properties.height - e.dy > 10 ? this.properties.y + e.dy : this.properties.y,
+                    width: this.properties.width + e.dx > 10 ? this.properties.width + e.dx : this.properties.width,
+                    height: this.properties.height - e.dy > 10 ? this.properties.height - e.dy : this.properties.height
+                })
+            },
+            {
+                className: "handle bottom-left",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    return { x: position.x - handleSize / 2, y: position.y + this.properties.height - handleSize / 2, width: handleSize, height: handleSize };
+                },
+                getTransform: e => ({
+                    x: this.properties.width - e.dx > 10 ? this.properties.x + e.dx : this.properties.x,
+                    y: this.properties.y,
+                    width: this.properties.width - e.dx > 10 ? this.properties.width - e.dx : this.properties.width,
+                    height: this.properties.height + e.dy > 10 ? this.properties.height + e.dy : this.properties.height
+                })
+            },
+            {
+                className: "handle bottom-right",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    return { x: position.x + this.properties.width - handleSize / 2, y: position.y + this.properties.height - handleSize / 2, width: handleSize, height: handleSize };
+                },
+                getTransform: e => ({
+                    x: this.properties.x,
+                    y: this.properties.y,
+                    width: this.properties.width + e.dx > 10 ? this.properties.width + e.dx : this.properties.width,
+                    height: this.properties.height + e.dy > 10 ? this.properties.height + e.dy : this.properties.height
+                })
+            },
+            {
+                className: "handle rotation",
+                getAttributes: () => this.getRotationHandlePosition(rotationSize),
+                getTransform: e => ({ rotation: this.getRotationDegreesFromPointer(e) })
+            }
+        ];
+    }
+
+    createHandles() {
+        this.handleElements = [];
+        this.draggedHandle = null;
+        this.handleDragThreshold = 4;
+        this._handlePending = null;
+        this._handlePendingStart = null;
+        this._handleDragRaf = null;
+        this._handlePendingPoint = null;
+        this._handleActivePointerId = null;
+        const handles = this.getHandles();
+        handles.forEach(({ className, getAttributes, getTransform }) => {
+            const handle = this.board.createSvgElement("rect");
+            handle.setAttribute("class", className);
+            handle._shape = this;
+            this.board.svg.appendChild(handle);
+            this.handleElements.push(handle);
+            handle.addEventListener("pointerdown", e => this.onHandlePointerDown(e, handle));
+            handle.addEventListener("pointermove", e => this.onHandlePointerMove(e, handle));
+            handle.addEventListener("wheel", e => this.onHandleWheel(e), { passive: false });
+            handle.addEventListener("contextmenu", e => this.onHandleContextMenu(e));
+            handle.update = h => {
+                for (const [attr, val] of Object.entries(getAttributes()))
+                    h.setAttribute(attr, val);
+            };
+            handle.getTransform = getTransform;
+        });
+        this.updateHandles();
+    }
+
+    updateHandles() {
+        if (!this.handleElements)
+            return;
+        this.handleElements.forEach(handle => {
+            handle.update(handle);
+            this.applyHandleRotation(handle);
+        });
+    }
+
+    showHandles() {
+        if (!this.handleElements)
+            return;
+        this.handleElements.forEach(handle => handle.setAttribute("visibility", "visible"));
+    }
+
+    hideHandles() {
+        if (!this.handleElements)
+            return;
+        this.handleElements.forEach(handle => handle.setAttribute("visibility", "hidden"));
+    }
+
+    removeHandles() {
+        if (!this.handleElements)
+            return;
+        this.handleElements.forEach(handle => handle.remove());
+        this.handleElements = null;
+    }
+
+    getShapeCenter() {
+        const position = this.getBoardPosition();
+        return {
+            x: position.x + this.properties.width / 2,
+            y: position.y + this.properties.height / 2
+        };
+    }
+
+    getRotationHandleDistance(size) {
+        return this.properties.height / 2 + size * 1.5;
+    }
+
+    getRotationHandlePosition(size) {
+        const center = this.getShapeCenter();
+        const distance = this.getRotationHandleDistance(size);
+        return { x: center.x - size / 2, y: center.y - distance - size / 2, width: size, height: size };
+    }
+
+    getRotationDegreesFromPointer(point) {
+        const center = this.getShapeCenter();
+        const deltaX = point.x - center.x;
+        const deltaY = point.y - center.y;
+        const distance = Math.hypot(deltaX, deltaY);
+        if (distance < 1)
+            return Number(this.properties.rotation) || 0;
+        return Math.atan2(deltaX, -deltaY) * 180 / Math.PI;
+    }
+
+    getRotationSnapIncrementDegrees() {
+        return 90;
+    }
+
+    getRotationSnapThresholdDegrees() {
+        return 4;
+    }
+
+    getSnappedRotationDegrees(angleDegrees) {
+        if (!Number.isFinite(angleDegrees))
+            return angleDegrees;
+        const snapIncrement = Number(this.getRotationSnapIncrementDegrees());
+        if (!(snapIncrement > 0))
+            return angleDegrees;
+        const nearestSnap = Math.round(angleDegrees / snapIncrement) * snapIncrement;
+        const snapThreshold = Number(this.getRotationSnapThresholdDegrees());
+        if (!(snapThreshold >= 0))
+            return angleDegrees;
+        if (Math.abs(angleDegrees - nearestSnap) <= snapThreshold)
+            return nearestSnap;
+        return angleDegrees;
+    }
+
+    isRotationHandle(handle) {
+        if (!(handle instanceof Element))
+            return false;
+        return handle.classList.contains("rotation");
+    }
+
+    applyTransformSnapping(transform) {
+        if (!transform || typeof transform !== "object")
+            return transform;
+        if (!this.isRotationHandle(this.draggedHandle))
+            return transform;
+        const rotation = Number(transform.rotation);
+        if (!Number.isFinite(rotation))
+            return transform;
+        const snappedRotation = this.getSnappedRotationDegrees(rotation);
+        if (snappedRotation === rotation)
+            return transform;
+        return Object.assign({}, transform, { rotation: snappedRotation });
+    }
+
+    getHandleRotationCenter() {
+        const position = this.getBoardPosition();
+        const radius = Number(this.properties?.radius);
+        if (Number.isFinite(radius))
+            return { x: position.x, y: position.y };
+        const width = Number(this.properties?.width);
+        const height = Number(this.properties?.height);
+        if (Number.isFinite(width) && Number.isFinite(height))
+            return { x: position.x + width / 2, y: position.y + height / 2 };
+        return null;
+    }
+
+    getHandleRotationDegrees() {
+        const rotation = typeof this.getAbsoluteRotation == "function"
+            ? Number(this.getAbsoluteRotation())
+            : Number(this.properties?.rotation);
+        if (!Number.isFinite(rotation))
+            return 0;
+        return rotation;
+    }
+
+    applyHandleRotation(handle) {
+        if (!handle)
+            return;
+        const center = this.getHandleRotationCenter();
+        const rotation = this.getHandleRotationDegrees();
+        if (!center || Math.abs(rotation) < 0.00001) {
+            handle.removeAttribute("transform");
+            return;
+        }
+        handle.setAttribute("transform", `rotate(${rotation} ${center.x} ${center.y})`);
+    }
+
+    getElementUnderHandle(handle, event) {
+        const saved = handle.style.pointerEvents;
+        handle.style.pointerEvents = "none";
+        const element = document.elementFromPoint(event.clientX, event.clientY);
+        handle.style.pointerEvents = saved;
+        return element;
+    }
+
+    onHandlePointerDown = (event, handle) => {
+        if (handle.classList.contains("move")) {
+            const underlying = this.getElementUnderHandle(handle, event);
+            if (underlying?.classList?.contains("chart-tick-handle")) {
+                handle.style.pointerEvents = "none";
+                const restoreHandle = () => {
+                    handle.style.pointerEvents = "";
+                    window.removeEventListener("pointerup", restoreHandle);
+                    window.removeEventListener("pointercancel", restoreHandle);
+                };
+                window.addEventListener("pointerup", restoreHandle);
+                window.addEventListener("pointercancel", restoreHandle);
+                underlying.dispatchEvent(new PointerEvent("pointerdown", event));
+                return;
+            }
+        }
+        const point = this.board.getMouseToSvgPoint(event);
+        this._handlePending = handle;
+        this._handlePendingStart = { x: point.x, y: point.y };
+        this._handleActivePointerId = event.pointerId;
+        try { handle.setPointerCapture(this._handleActivePointerId); } catch (_) {}
+        handle.addEventListener("pointermove", this.onHandleDrag);
+        handle.addEventListener("pointerup", this.onHandleDragEnd);
+        handle.addEventListener("pointercancel", this.onHandleDragEnd);
+        window.addEventListener("pointermove", this.onHandleDrag);
+        window.addEventListener("pointerup", this.onHandleDragEnd);
+        window.addEventListener("pointercancel", this.onHandleDragEnd);
+    }
+
+    onHandlePointerMove = (event, handle) => {
+        if (this.draggedHandle)
+            return;
+        if (!handle.classList.contains("move"))
+            return;
+        const underlying = this.getElementUnderHandle(handle, event);
+        if (underlying?.classList?.contains("chart-tick-handle"))
+            handle.style.cursor = underlying.classList.contains("chart-tick-handle-x") ? "ew-resize" : "ns-resize";
+        else
+            handle.style.cursor = "";
+    }
+
+    onHandleDrag = event => {
+        if (this._handleActivePointerId != null && event.pointerId !== this._handleActivePointerId)
+            return;
+        const p = this.board.getMouseToSvgPoint(event);
+        if (!this.draggedHandle) {
+            if (!this._handlePendingStart || !this._handlePending)
+                return;
+            const dx = p.x - this._handlePendingStart.x;
+            const dy = p.y - this._handlePendingStart.y;
+            if (Math.hypot(dx, dy) <= this.handleDragThreshold)
+                return;
+            this.dragStart();
+            event.preventDefault();
+            this.draggedHandle = this._handlePending;
+            this.handleStartX = this._handlePendingStart.x;
+            this.handleStartY = this._handlePendingStart.y;
+        }
+        p.dx = p.x - this.handleStartX;
+        p.dy = p.y - this.handleStartY;
+        this._handlePendingPoint = p;
+        if (this._handleDragRaf == null) {
+            this._handleDragRaf = requestAnimationFrame(() => {
+                this._handleDragRaf = null;
+                if (!this._handlePendingPoint || !this.draggedHandle)
+                    return;
+                const point = this._handlePendingPoint;
+                this._handlePendingPoint = null;
+                const transform = this.applyTransformSnapping(this.draggedHandle.getTransform(point));
+                this.transformShape(transform);
+                this.updateHandles();
+                this.handleStartX = point.x;
+                this.handleStartY = point.y;
+            });
+        }
+    }
+
+    onHandleDragEnd = event => {
+        if (this._handleActivePointerId != null && event.pointerId != null && event.pointerId !== this._handleActivePointerId)
+            return;
+        const handle = this.draggedHandle ?? this._handlePending;
+        if (handle) {
+            try { handle.releasePointerCapture(this._handleActivePointerId); } catch (_) {}
+            handle.removeEventListener("pointermove", this.onHandleDrag);
+            handle.removeEventListener("pointerup", this.onHandleDragEnd);
+            handle.removeEventListener("pointercancel", this.onHandleDragEnd);
+        }
+        window.removeEventListener("pointermove", this.onHandleDrag);
+        window.removeEventListener("pointerup", this.onHandleDragEnd);
+        window.removeEventListener("pointercancel", this.onHandleDragEnd);
+        if (!this.draggedHandle) {
+            this._handlePending = null;
+            this._handlePendingStart = null;
+            this._handleActivePointerId = null;
+            return;
+        }
+        this.draggedHandle = null;
+        this._handlePending = null;
+        this._handlePendingStart = null;
+        this._handleActivePointerId = null;
+        if (this._handleDragRaf != null) {
+            cancelAnimationFrame(this._handleDragRaf);
+            this._handleDragRaf = null;
+        }
+        this._handlePendingPoint = null;
+        this.dragEnd();
+    }
+
+    transformShape(transform) {
+        for (const [attribute, value] of Object.entries(transform))
+            this.setProperty(attribute, value);
+    }
+
+    onHandleWheel(event) {
+        const target = this.resolveWheelTarget(event);
+        if (!target)
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (target instanceof Element && target.classList.contains("handle"))
+            return;
+        if (target instanceof HTMLElement && this.scrollWheelTarget(target, event))
+            return;
+        if (target === this.board.svg) {
+            this.dispatchWheelToSvg(event);
+            return;
+        }
+        this.dispatchWheelToTarget(target, event);
+    }
+
+    dispatchWheelToSvg(event) {
+        if (!this.board?.svg)
+            return;
+        this.dispatchWheelToTarget(this.board.svg, event);
+    }
+
+    dispatchWheelToTarget(target, event) {
+        if (!(target instanceof EventTarget))
+            return;
+        target.dispatchEvent(new WheelEvent("wheel", {
+            bubbles: true, cancelable: true,
+            clientX: event.clientX, clientY: event.clientY,
+            screenX: event.screenX, screenY: event.screenY,
+            deltaX: event.deltaX, deltaY: event.deltaY, deltaZ: event.deltaZ, deltaMode: event.deltaMode,
+            ctrlKey: event.ctrlKey, shiftKey: event.shiftKey, altKey: event.altKey, metaKey: event.metaKey
+        }));
+    }
+
+    resolveWheelTarget(event) {
+        const disabledHandles = [];
+        const currentTarget = event.currentTarget;
+        if (currentTarget instanceof Element && currentTarget.classList.contains("handle"))
+            this.disableWheelHandle(currentTarget, disabledHandles);
+        let target = document.elementFromPoint(event.clientX, event.clientY);
+        while (target instanceof Element && target.classList.contains("handle")) {
+            this.disableWheelHandle(target, disabledHandles);
+            target = document.elementFromPoint(event.clientX, event.clientY);
+        }
+        this.restoreWheelHandles(disabledHandles);
+        if (target instanceof Element)
+            return target;
+        return this.board.svg;
+    }
+
+    disableWheelHandle(handle, disabledHandles) {
+        disabledHandles.push({ handle: handle, pointerEvents: handle.style.pointerEvents });
+        handle.style.pointerEvents = "none";
+    }
+
+    restoreWheelHandles(disabledHandles) {
+        for (let index = disabledHandles.length - 1; index >= 0; index--)
+            disabledHandles[index].handle.style.pointerEvents = disabledHandles[index].pointerEvents;
+    }
+
+    scrollWheelTarget(target, event) {
+        const scrollTarget = this.getWheelScrollTarget(target);
+        if (!scrollTarget)
+            return false;
+        const previousScrollTop = scrollTarget.scrollTop;
+        const previousScrollLeft = scrollTarget.scrollLeft;
+        scrollTarget.scrollBy({ left: event.deltaX, top: event.deltaY, behavior: "auto" });
+        return scrollTarget.scrollTop !== previousScrollTop || scrollTarget.scrollLeft !== previousScrollLeft;
+    }
+
+    getWheelScrollTarget(target) {
+        let element = target;
+        while (element instanceof HTMLElement) {
+            const style = window.getComputedStyle(element);
+            const canScrollY = (style.overflowY === "auto" || style.overflowY === "scroll" || style.overflowY === "overlay") && element.scrollHeight > element.clientHeight;
+            const canScrollX = (style.overflowX === "auto" || style.overflowX === "scroll" || style.overflowX === "overlay") && element.scrollWidth > element.clientWidth;
+            if (canScrollX || canScrollY)
+                return element;
+            element = element.parentElement;
+        }
+        return null;
+    }
+
+    onHandleContextMenu(event) {
+        if (!this.element)
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        this.element.dispatchEvent(new MouseEvent("contextmenu", {
+            bubbles: true, cancelable: true,
+            clientX: event.clientX, clientY: event.clientY, button: 2
+        }));
     }
 
     createElement() {

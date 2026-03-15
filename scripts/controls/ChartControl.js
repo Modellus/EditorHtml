@@ -5,10 +5,14 @@ class ChartControl {
         this.dataRows = [];
         this.renderState = null;
         this.focusArgumentValue = null;
+        this.domainOverride = { xMin: null, xMax: null, yMin: null, yMax: null };
         this.width = 0;
         this.height = 0;
         this.caseIconData = {};
         this.caseIconsLoadingPromise = null;
+        this._tickDragState = null;
+        this._onPointerMove = e => this.onTickPointerMove(e);
+        this._onPointerUp = e => this.onTickPointerUp(e);
         this.initializeRoot();
         this.ensureCaseIconsLoaded();
         this.setOptions(options);
@@ -40,16 +44,27 @@ class ChartControl {
     initializeRoot() {
         this.rootElement = this.createSvgElement("g");
         this.rootElement.setAttribute("tabindex", "0");
+        this.plotClipId = `chart-clip-${crypto.randomUUID()}`;
+        const clipPath = this.createSvgElement("clipPath");
+        clipPath.setAttribute("id", this.plotClipId);
+        this.plotClipRect = this.createSvgElement("rect");
+        clipPath.appendChild(this.plotClipRect);
+        this.rootElement.appendChild(clipPath);
         this.backgroundLayer = this.createSvgElement("g");
         this.gridLayer = this.createSvgElement("g");
+        this.gridLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
         this.seriesLayer = this.createSvgElement("g");
+        this.seriesLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
         this.axisLayer = this.createSvgElement("g");
         this.focusLayer = this.createSvgElement("g");
+        this.focusLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
+        this.tickInteractionLayer = this.createSvgElement("g");
         this.rootElement.appendChild(this.backgroundLayer);
         this.rootElement.appendChild(this.gridLayer);
         this.rootElement.appendChild(this.seriesLayer);
         this.rootElement.appendChild(this.axisLayer);
         this.rootElement.appendChild(this.focusLayer);
+        this.rootElement.appendChild(this.tickInteractionLayer);
         if (this.hostElement)
             this.hostElement.appendChild(this.rootElement);
     }
@@ -201,6 +216,16 @@ class ChartControl {
         return numericValue;
     }
 
+    setDomainOverride(override) {
+        this.domainOverride = {
+            xMin: override?.xMin ?? null,
+            xMax: override?.xMax ?? null,
+            yMin: override?.yMin ?? null,
+            yMax: override?.yMax ?? null
+        };
+        this.render();
+    }
+
     getDomain(argumentField, series, chartType) {
         const xValues = [];
         const yValues = [];
@@ -237,25 +262,48 @@ class ChartControl {
         }
         const xPadding = (xMax - xMin) * 0.04;
         const yPadding = (yMax - yMin) * 0.08;
-        return {
+        const domain = {
             xMin: xMin - xPadding,
             xMax: xMax + xPadding,
             yMin: yMin - yPadding,
             yMax: yMax + yPadding
         };
+        if (this.domainOverride.xMin != null)
+            domain.xMin = this.domainOverride.xMin;
+        if (this.domainOverride.xMax != null)
+            domain.xMax = this.domainOverride.xMax;
+        if (this.domainOverride.yMin != null)
+            domain.yMin = this.domainOverride.yMin;
+        if (this.domainOverride.yMax != null)
+            domain.yMax = this.domainOverride.yMax;
+        if (domain.xMin >= domain.xMax)
+            domain.xMax = domain.xMin + 1;
+        if (domain.yMin >= domain.yMax)
+            domain.yMax = domain.yMin + 1;
+        return domain;
     }
 
-    buildTicks(minValue, maxValue, count = 5) {
+    buildTicks(minValue, maxValue, targetCount = 5) {
         const ticks = [];
-        if (!Number.isFinite(minValue) || !Number.isFinite(maxValue))
+        if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || minValue >= maxValue)
             return ticks;
-        if (count < 2) {
-            ticks.push(minValue);
-            return ticks;
-        }
-        const step = (maxValue - minValue) / (count - 1);
-        for (let index = 0; index < count; index++)
-            ticks.push(minValue + step * index);
+        const range = maxValue - minValue;
+        const rawStep = range / Math.max(1, targetCount - 1);
+        const exponent = Math.floor(Math.log10(rawStep));
+        const magnitude = Math.pow(10, exponent);
+        const normalized = rawStep / magnitude;
+        let step;
+        if (normalized < 1.5)
+            step = magnitude;
+        else if (normalized < 3)
+            step = 2 * magnitude;
+        else if (normalized < 7)
+            step = 5 * magnitude;
+        else
+            step = 10 * magnitude;
+        const firstTick = Math.ceil(minValue / step) * step;
+        for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
+            ticks.push(Math.round(value * 1e10) / 1e10);
         return ticks;
     }
 
@@ -475,6 +523,7 @@ class ChartControl {
         this.clearLayer(this.seriesLayer);
         this.clearLayer(this.axisLayer);
         this.clearLayer(this.focusLayer);
+        this.clearLayer(this.tickInteractionLayer);
         this.renderState = null;
         if (width <= 2 || height <= 2)
             return;
@@ -483,6 +532,10 @@ class ChartControl {
         const xTicks = this.buildTicks(domain.xMin, domain.xMax, 5);
         const yTicks = this.buildTicks(domain.yMin, domain.yMax, 5);
         const layout = this.getLayout(width, height, xTicks, yTicks);
+        this.plotClipRect.setAttribute("x", `${layout.plotLeft}`);
+        this.plotClipRect.setAttribute("y", `${layout.plotTop}`);
+        this.plotClipRect.setAttribute("width", `${layout.plotWidth}`);
+        this.plotClipRect.setAttribute("height", `${layout.plotHeight}`);
         const scales = this.getScales(layout, domain);
         this.renderGrid(layout, scales.xScale, scales.yScale, xTicks, yTicks);
         this.renderAxes(layout, scales.xScale, scales.yScale, xTicks, yTicks);
@@ -490,11 +543,15 @@ class ChartControl {
         this.renderTitles(layout, width);
         this.renderState = {
             layout: layout,
+            domain: domain,
             xScale: scales.xScale,
             yScale: scales.yScale,
+            xTicks: xTicks,
+            yTicks: yTicks,
             series: this.options.series,
             argumentField: this.options.argumentField
         };
+        this.renderTickHitAreas(layout, scales.xScale, scales.yScale, xTicks, yTicks);
         this.renderFocus();
     }
 
@@ -829,5 +886,133 @@ class ChartControl {
             nearestPoint = { xValue: xValue, yValue: yValue };
         }
         return nearestPoint;
+    }
+
+    renderTickHitAreas(layout, xScale, yScale, xTicks, yTicks) {
+        for (let index = 0; index < xTicks.length; index++) {
+            const xValue = xTicks[index];
+            const xPosition = xScale(xValue);
+            const hitArea = this.createSvgElement("rect");
+            hitArea.setAttribute("x", `${xPosition - 12}`);
+            hitArea.setAttribute("y", `${layout.plotBottom}`);
+            hitArea.setAttribute("width", "24");
+            hitArea.setAttribute("height", "24");
+            hitArea.setAttribute("fill", "transparent");
+            hitArea.setAttribute("class", "chart-tick-handle chart-tick-handle-x");
+            hitArea.dataset.axis = "x";
+            hitArea.dataset.index = index;
+            hitArea.dataset.value = xValue;
+            hitArea.addEventListener("pointerdown", e => this.onTickPointerDown(e, hitArea));
+            this.tickInteractionLayer.appendChild(hitArea);
+        }
+        for (let index = 0; index < yTicks.length; index++) {
+            const yValue = yTicks[index];
+            const yPosition = yScale(yValue);
+            const hitArea = this.createSvgElement("rect");
+            hitArea.setAttribute("x", `${layout.plotLeft - 40}`);
+            hitArea.setAttribute("y", `${yPosition - 10}`);
+            hitArea.setAttribute("width", "40");
+            hitArea.setAttribute("height", "20");
+            hitArea.setAttribute("fill", "transparent");
+            hitArea.setAttribute("class", "chart-tick-handle chart-tick-handle-y");
+            hitArea.dataset.axis = "y";
+            hitArea.dataset.index = index;
+            hitArea.dataset.value = yValue;
+            hitArea.addEventListener("pointerdown", e => this.onTickPointerDown(e, hitArea));
+            this.tickInteractionLayer.appendChild(hitArea);
+        }
+    }
+
+    onTickPointerDown(event, hitArea) {
+        event.stopPropagation();
+        event.preventDefault();
+        const axis = hitArea.dataset.axis;
+        const tickIndex = Number(hitArea.dataset.index);
+        const tickValue = Number(hitArea.dataset.value);
+        const state = this.renderState;
+        if (!state)
+            return;
+        const ticks = axis === "x" ? state.xTicks : state.yTicks;
+        const totalTicks = ticks.length;
+        const scale = axis === "x" ? state.xScale : state.yScale;
+        const startPixel = scale(tickValue);
+        this._tickDragState = {
+            axis,
+            tickIndex,
+            tickValue,
+            totalTicks,
+            startPixel,
+            domain: { ...state.domain },
+            layout: state.layout,
+            startX: event.clientX,
+            startY: event.clientY,
+            pointerId: event.pointerId
+        };
+        window.addEventListener("pointermove", this._onPointerMove);
+        window.addEventListener("pointerup", this._onPointerUp);
+        window.addEventListener("pointercancel", this._onPointerUp);
+    }
+
+    onTickPointerMove(event) {
+        const drag = this._tickDragState;
+        if (!drag)
+            return;
+        if (event.pointerId !== drag.pointerId)
+            return;
+        event.preventDefault();
+        const layout = drag.layout;
+        const domain = drag.domain;
+        if (drag.axis === "x") {
+            const pixelX = drag.startPixel + (event.clientX - drag.startX);
+            const ratio = (pixelX - layout.plotLeft) / layout.plotWidth;
+            const newDomain = this.computeStretchedDomain(domain.xMin, domain.xMax, drag.tickIndex, drag.totalTicks, drag.tickValue, ratio);
+            this.domainOverride.xMin = newDomain.min;
+            this.domainOverride.xMax = newDomain.max;
+        }
+        if (drag.axis === "y") {
+            const pixelY = drag.startPixel + (event.clientY - drag.startY);
+            const ratio = (layout.plotBottom - pixelY) / layout.plotHeight;
+            const newDomain = this.computeStretchedDomain(domain.yMin, domain.yMax, drag.tickIndex, drag.totalTicks, drag.tickValue, ratio);
+            this.domainOverride.yMin = newDomain.min;
+            this.domainOverride.yMax = newDomain.max;
+        }
+        this.render();
+    }
+
+    onTickPointerUp(event) {
+        const drag = this._tickDragState;
+        if (!drag)
+            return;
+        if (event.pointerId !== drag.pointerId)
+            return;
+        window.removeEventListener("pointermove", this._onPointerMove);
+        window.removeEventListener("pointerup", this._onPointerUp);
+        window.removeEventListener("pointercancel", this._onPointerUp);
+        this._tickDragState = null;
+        if (typeof this.options.onDomainChanged === "function")
+            this.options.onDomainChanged({ ...this.domainOverride });
+    }
+
+    computeStretchedDomain(domainMin, domainMax, tickIndex, totalTicks, tickValue, ratio) {
+        if (totalTicks < 2)
+            return { min: domainMin, max: domainMax };
+        const clampedRatio = Math.max(0.01, Math.min(0.99, ratio));
+        if (tickIndex <= 0) {
+            const newMin = tickValue - clampedRatio * (domainMax - tickValue) / (1 - clampedRatio);
+            if (newMin >= domainMax)
+                return { min: domainMax - 1, max: domainMax };
+            return { min: newMin, max: domainMax };
+        }
+        const newMax = domainMin + (tickValue - domainMin) / clampedRatio;
+        if (newMax <= domainMin)
+            return { min: domainMin, max: domainMin + 1 };
+        return { min: domainMin, max: newMax };
+    }
+
+    resetDomainOverride() {
+        this.domainOverride = { xMin: null, xMax: null, yMin: null, yMax: null };
+        this.render();
+        if (typeof this.options.onDomainChanged === "function")
+            this.options.onDomainChanged({ ...this.domainOverride });
     }
 }

@@ -3,8 +3,42 @@ class VectorShape extends BaseShape {
         super(board, parent, id);
     }
 
-    createTransformer() { 
-        return new ArrowTransformer(this.board, this);
+    getHandles() {
+        const handleSize = 12;
+        return [
+            {
+                className: "handle move",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    return { x: position.x, y: position.y, width: this.properties.width, height: this.properties.height };
+                },
+                getTransform: e => ({
+                    x: this.delta("x", e.dx),
+                    y: this.delta("y", e.dy)
+                })
+            },
+            {
+                className: "handle tip",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    return {
+                        x: position.x + this.properties.width - handleSize / 2,
+                        y: position.y + this.properties.height - handleSize / 2,
+                        width: handleSize,
+                        height: handleSize
+                    };
+                },
+                getTransform: e => {
+                    const position = this.getBoardPosition();
+                    return {
+                        x: 0,
+                        y: 0,
+                        width: e.x - position.x,
+                        height: e.y - position.y
+                    };
+                }
+            }
+        ];
     }
 
     enterEditMode() {
@@ -76,8 +110,8 @@ class VectorShape extends BaseShape {
         this.properties.y = 0;
         this.properties.width = 30;
         this.properties.height = 30;
-        this.properties.foregroundColor = this.board.theme.getStrokeColors()[1].color;
-        this.properties.borderColor = this.properties.foregroundColor;
+        this.properties.foregroundColor = "#000000";
+        this.properties.borderColor = "transparent";
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.lineWidth = 1;
         this.properties.tipType = "arrow";

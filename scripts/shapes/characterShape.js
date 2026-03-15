@@ -31,10 +31,6 @@ class CharacterShape extends BaseShape {
         super(board, parent, id);
     }
 
-    createTransformer() { 
-        return new RectangleTransformer(this.board, this);
-    }
-
     enterEditMode() {
         return false;
     }

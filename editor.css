@@ -984,3 +984,11 @@ math-field {
     -webkit-user-select: none;
     pointer-events: none;
 }
+
+.chart-tick-handle-x {
+    cursor: ew-resize;
+}
+
+.chart-tick-handle-y {
+    cursor: ns-resize;
+}
