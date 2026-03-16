@@ -27,7 +27,7 @@ class BackgroundShape extends BaseShape {
     createImageDropZoneEditor() {
         this.imageDropZoneControl = new ImageControl({
             imageSource: this.getImageSource(),
-            onUploadFile: file => this.readImageFileAsDataUrl(file),
+            onUploadFile: file => this.board.assetManager.uploadAsset(this.id, file),
             onImageChanged: imageSource => this.onImageControlChanged(imageSource),
             onImageCleared: () => this.onImageControlCleared()
         });
@@ -35,51 +35,23 @@ class BackgroundShape extends BaseShape {
     }
 
     getImageSource() {
+        const imageUrl = this.properties.imageUrl;
+        if (typeof imageUrl === "string" && imageUrl.trim() !== "")
+            return imageUrl;
         const imageBase64 = this.properties.imageBase64;
         if (typeof imageBase64 === "string" && imageBase64.trim() !== "")
             return `data:image/png;base64,${imageBase64}`;
         return `data:image/png;base64,${DEFAULTIMAGE}`;
     }
 
-    async readImageFileAsDataUrl(file) {
-        try {
-            return await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = event => resolve(event?.target?.result ?? null);
-                reader.onerror = () => reject(new Error("Failed to read image file."));
-                reader.readAsDataURL(file);
-            });
-        } catch (error) {
-            this.showUploadError(error?.message || "Failed to read image file.");
-            return null;
-        }
-    }
-
-    extractBase64FromDataUrl(imageSource) {
-        if (typeof imageSource !== "string" || imageSource.trim() === "")
-            return "";
-        const parts = imageSource.split(",");
-        if (parts.length < 2)
-            return "";
-        return parts[1];
-    }
-
     onImageControlChanged(imageSource) {
-        this.properties.imageBase64 = this.extractBase64FromDataUrl(imageSource);
-        if (this.image)
-            this.image.setAttribute("href", imageSource);
+        this.properties.imageBase64 = "";
+        this.setProperty("imageUrl", imageSource);
     }
 
     onImageControlCleared() {
         this.properties.imageBase64 = "";
-        const defaultImageSource = `data:image/png;base64,${DEFAULTIMAGE}`;
-        if (this.image)
-            this.image.setAttribute("href", defaultImageSource);
-    }
-
-    showUploadError(message) {
-        if (window.DevExpress?.ui?.notify)
-            window.DevExpress.ui.notify(message, "error", 3000);
+        this.setProperty("imageUrl", "");
     }
 
     setDefaults() {
@@ -89,12 +61,14 @@ class BackgroundShape extends BaseShape {
         this.properties.y = center.y - 50;
         this.properties.width = 100;
         this.properties.height = 100;
+        this.properties.imageUrl = "";
+        this.properties.imageBase64 = "";
     }
 
     createElement() {
         const element = this.board.createSvgElement("g");
         this.image = this.board.createSvgElement("image");
-        this.image.setAttribute("href", "data:image/png;base64," + (this.properties.imageBase64 ?? DEFAULTIMAGE));
+        this.image.setAttribute("href", this.getImageSource());
         this.image.setAttribute("preserveAspectRatio", "xMidYMid slice");
         element.appendChild(this.image);
         this.border = this.board.createSvgElement("rect");
@@ -105,8 +79,10 @@ class BackgroundShape extends BaseShape {
 
     update() {
         super.update();
+        const imageSource = this.getImageSource();
+        this.image.setAttribute("href", imageSource);
         if (this.imageDropZoneControl)
-            this.imageDropZoneControl.setImageSource(this.getImageSource());
+            this.imageDropZoneControl.setImageSource(imageSource);
     }
 
     draw() {

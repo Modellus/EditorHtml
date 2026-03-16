@@ -124,7 +124,7 @@ class BodyShape extends BaseShape {
     createImageDropZoneEditor() {
         this.imageDropZoneControl = new ImageControl({
             imageSource: this.getImageSource(),
-            onUploadFile: file => this.uploadAsset(file),
+            onUploadFile: file => this.board.assetManager.uploadAsset(this.id, file),
             onImageChanged: imageSource => this.onImageControlChanged(imageSource),
             onImageCleared: () => this.onImageControlCleared()
         });
@@ -149,75 +149,6 @@ class BodyShape extends BaseShape {
         if (typeof imageBase64 === "string" && imageBase64.trim() !== "")
             return `data:image/png;base64,${imageBase64}`;
         return "";
-    }
-
-    getCurrentModelId() {
-        return new URLSearchParams(window.location.search).get("model_id");
-    }
-
-    getApiBaseUrl() {
-        if (typeof apiBase === "string" && apiBase)
-            return apiBase;
-        return "https://modellus-api.interactivebook.workers.dev";
-    }
-
-    getAssetUploadUrl() {
-        const modelId = this.getCurrentModelId();
-        if (!modelId)
-            return null;
-        return `${this.getApiBaseUrl()}/models/${encodeURIComponent(modelId)}/assets`;
-    }
-
-    getApiHeaders() {
-        if (typeof getAuthHeaders === "function")
-            return getAuthHeaders();
-        const headers = {};
-        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
-        if (session && session.token)
-            headers.Authorization = `Bearer ${session.token}`;
-        return headers;
-    }
-
-    async uploadAsset(file) {
-        const uploadUrl = this.getAssetUploadUrl();
-        if (!uploadUrl) {
-            this.showUploadError("Open a saved model before uploading assets.");
-            return null;
-        }
-        const formData = new FormData();
-        formData.append("id", this.id);
-        formData.append("file", file);
-        try {
-            const response = await fetch(uploadUrl, {
-                method: "POST",
-                headers: this.getApiHeaders(),
-                body: formData
-            });
-            if (!response.ok)
-                throw new Error(await this.getUploadError(response));
-            const payload = await response.json();
-            const imageUrl = payload?.url;
-            if (!imageUrl)
-                throw new Error("The API did not return an asset URL.");
-            return imageUrl;
-        } catch (error) {
-            this.showUploadError(error?.message || "Failed to upload asset.");
-            return null;
-        }
-    }
-
-    async getUploadError(response) {
-        try {
-            const payload = await response.json();
-            if (payload?.error)
-                return payload.error;
-        } catch (_) {}
-        return `Upload failed (${response.status})`;
-    }
-
-    showUploadError(message) {
-        if (window.DevExpress?.ui?.notify)
-            window.DevExpress.ui.notify(message, "error", 3000);
     }
 
     createElement() {

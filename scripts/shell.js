@@ -4,6 +4,7 @@ class Shell  {
         this.board = new Board(document.getElementById("svg"), this.calculator);
         this.commands = new Commands(this);
         this.modelsApiClient = modelsApiClient;
+        this.board.assetManager = new AssetManager(modelsApiClient);
         this.selectedShapeFrame = null;
         this.pendingSelectedShape = null;
         this.pendingInitialValuesByCase = null;
@@ -458,28 +459,8 @@ class Shell  {
         this.updateThumbnailPreview(previewElement, hintElement, removeButtonElement, thumbnailUrl);
     }
 
-    async uploadModelAsset(file, assetId, fileName = "asset.png", modelId = this.getCurrentModelId()) {
-        if (!modelId) {
-            this.showAssetUploadError("Open a saved model before uploading assets.");
-            return null;
-        }
-        if (!this.modelsApiClient) {
-            this.showAssetUploadError("Models API client is not available.");
-            return null;
-        }
-        try {
-            return await this.modelsApiClient.uploadModelAsset(modelId, assetId, file, fileName);
-        } catch (error) {
-            this.showAssetUploadError(error?.message || "Failed to upload asset.");
-            return null;
-        }
-    }
-
-    showAssetUploadError(message) {
-        if (window.DevExpress?.ui?.notify)
-            window.DevExpress.ui.notify(message, "error", 3000);
-        else
-            alert(message);
+    async uploadModelAsset(file, assetId) {
+        return this.board.assetManager.uploadAsset(assetId, file);
     }
 
     createTopToolbar() {
