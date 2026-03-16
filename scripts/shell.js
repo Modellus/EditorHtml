@@ -1489,6 +1489,25 @@ class Shell  {
     }
 
     onKeyDown(e) {
+        const isEditing = e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable;
+        if ((e.ctrlKey || e.metaKey) && !isEditing) {
+            const shape = this.board.selection.selectedShape;
+            if (e.key === "c" && shape) {
+                e.preventDefault();
+                shape.copyToClipboard();
+                return;
+            }
+            if (e.key === "v") {
+                e.preventDefault();
+                BaseShape.pasteFromClipboard(this.board, shape?.parent);
+                return;
+            }
+            if (e.key === "d" && shape) {
+                e.preventDefault();
+                shape.duplicate();
+                return;
+            }
+        }
         if (e.code !== 'Space' && e.key !== ' ')
             return;
         if (e.repeat)

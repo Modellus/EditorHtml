@@ -489,6 +489,52 @@ class ExpressionShape extends BaseShape {
         super.draw();
     }
 
+    toImageBlob() {
+        const width = this.properties.width;
+        const height = this.properties.height;
+        const color = this.properties.foregroundColor || "black";
+        const backgroundColor = this.properties.backgroundColor || "transparent";
+        const markup = MathLive.convertLatexToMarkup(this.properties.expression);
+        const mathStyles = BaseShape.embeddedMathStyles || "";
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+            <defs><style>${mathStyles}</style></defs>
+            <foreignObject width="100%" height="100%">
+                <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;width:${width}px;height:${height}px;padding:4px;box-sizing:border-box;background:${backgroundColor};color:${color};font-size:16px;overflow:hidden;">
+                    ${markup}
+                </div>
+            </foreignObject>
+        </svg>`;
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = width * 2;
+                canvas.height = height * 2;
+                const ctx = canvas.getContext("2d");
+                ctx.scale(2, 2);
+                ctx.drawImage(img, 0, 0);
+                canvas.toBlob(blob => resolve(blob), "image/png");
+            };
+            img.onerror = () => reject(new Error("SVG render failed"));
+            img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+        });
+    }
+
+    async copyToClipboard() {
+        const shapeData = this.getClipboardData();
+        const json = JSON.stringify(shapeData);
+        const jsonBlob = new Blob([json], { type: "text/plain" });
+        try {
+            const imageBlob = await this.toImageBlob();
+            await navigator.clipboard.write([new ClipboardItem({
+                "text/plain": jsonBlob,
+                "image/png": imageBlob
+            })]);
+        } catch (_) {
+            await navigator.clipboard.writeText(json);
+        }
+    }
+
     insert(text) {
         this.mathfield.executeCommand("insert", text);
         this.mathfield.focus();

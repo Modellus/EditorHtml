@@ -553,4 +553,34 @@ class ReferentialShape extends BaseShape {
     getClipId() {
         return `clip-${this.id}`;
     }
+
+    collectSvgElements() {
+        const elements = [this.element];
+        for (const child of this.children)
+            elements.push(child.element);
+        return elements;
+    }
+
+    toSvgString() {
+        const position = this.getBoardPosition();
+        const padding = 4;
+        const x = position.x - padding;
+        const y = position.y - padding;
+        const width = this.properties.width + padding * 2;
+        const height = this.properties.height + padding * 2;
+        const clipId = "export-clip";
+        let content = "";
+        for (const element of this.collectSvgElements()) {
+            const clone = element.cloneNode(true);
+            clone.removeAttribute("id");
+            clone.removeAttribute("clip-path");
+            content += clone.outerHTML;
+        }
+        const styleBlock = BaseShape.embeddedFontStyles ? `<defs><style>${BaseShape.embeddedFontStyles}</style></defs>` : "";
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${x} ${y} ${width} ${height}">
+            ${styleBlock}
+            <defs><clipPath id="${clipId}"><rect x="${position.x}" y="${position.y}" width="${this.properties.width}" height="${this.properties.height}"/></clipPath></defs>
+            <g clip-path="url(#${clipId})">${content}</g>
+        </svg>`;
+    }
 }

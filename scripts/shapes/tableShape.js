@@ -249,4 +249,38 @@ class TableShape extends BaseShape {
         }
         return super.enterEditMode();
     }
+
+    toHtmlTable() {
+        const columns = this._activeColumns ?? this.getSelectedColumns();
+        if (columns.length === 0)
+            return "";
+        const system = this.board.calculator.system;
+        const lastIteration = this.board.calculator.getLastIteration();
+        const precision = this.board.calculator.getPrecision();
+        const headerCells = columns.map(column => `<th>${column.term}</th>`).join("");
+        const rows = [];
+        for (let iteration = 1; iteration <= lastIteration; iteration++) {
+            const cells = columns.map(column => {
+                const value = system.getByNameOnIteration(iteration, column.term, column.case);
+                if (value == null || !Number.isFinite(value))
+                    return "<td></td>";
+                return `<td>${Utils.roundToPrecision(value, precision)}</td>`;
+            }).join("");
+            rows.push(`<tr>${cells}</tr>`);
+        }
+        return `<table><thead><tr>${headerCells}</tr></thead><tbody>${rows.join("")}</tbody></table>`;
+    }
+
+    async copyToClipboard() {
+        const shapeData = this.getClipboardData();
+        const json = JSON.stringify(shapeData);
+        const htmlTable = this.toHtmlTable();
+        const imageBlob = this.toImageBlob();
+        const items = [new ClipboardItem({
+            "text/plain": new Blob([json], { type: "text/plain" }),
+            "text/html": new Blob([htmlTable], { type: "text/html" }),
+            "image/png": imageBlob
+        })];
+        await navigator.clipboard.write(items);
+    }
 }

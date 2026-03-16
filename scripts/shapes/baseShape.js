@@ -1,6 +1,50 @@
 class BaseShape {
     
+    static embeddedFontStyles = "";
+    static embeddedMathStyles = "";
+
     static setup() {
+        BaseShape.loadEmbeddedFonts();
+    }
+
+    static async loadEmbeddedFonts() {
+        const fonts = [
+            { family: "KaTeX_Main", url: "libraries/css/fonts/KaTeX_Main-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Main", url: "libraries/css/fonts/KaTeX_Main-Italic.woff2", weight: "400", style: "italic" },
+            { family: "KaTeX_Main", url: "libraries/css/fonts/KaTeX_Main-Bold.woff2", weight: "700", style: "normal" },
+            { family: "KaTeX_Main", url: "libraries/css/fonts/KaTeX_Main-BoldItalic.woff2", weight: "700", style: "italic" },
+            { family: "KaTeX_Math", url: "libraries/css/fonts/KaTeX_Math-Italic.woff2", weight: "400", style: "italic" },
+            { family: "KaTeX_Math", url: "libraries/css/fonts/KaTeX_Math-BoldItalic.woff2", weight: "700", style: "italic" },
+            { family: "KaTeX_Size1", url: "libraries/css/fonts/KaTeX_Size1-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Size2", url: "libraries/css/fonts/KaTeX_Size2-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Size3", url: "libraries/css/fonts/KaTeX_Size3-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Size4", url: "libraries/css/fonts/KaTeX_Size4-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_AMS", url: "libraries/css/fonts/KaTeX_AMS-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Caligraphic", url: "libraries/css/fonts/KaTeX_Caligraphic-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Fraktur", url: "libraries/css/fonts/KaTeX_Fraktur-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_SansSerif", url: "libraries/css/fonts/KaTeX_SansSerif-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Script", url: "libraries/css/fonts/KaTeX_Script-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Typewriter", url: "libraries/css/fonts/KaTeX_Typewriter-Regular.woff2", weight: "400", style: "normal" }
+        ];
+        const rules = [];
+        const fontDataByFilename = {};
+        for (const font of fonts) {
+            const response = await fetch(font.url);
+            const buffer = await response.arrayBuffer();
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+            const filename = font.url.split("/").pop();
+            fontDataByFilename[filename] = base64;
+            rules.push(`@font-face { font-family: "${font.family}"; src: url("data:font/woff2;base64,${base64}") format("woff2"); font-weight: ${font.weight}; font-style: ${font.style}; }`);
+        }
+        BaseShape.embeddedFontStyles = rules.join("\n");
+        const cssResponse = await fetch("libraries/css/mathlive-static.css");
+        const cssText = await cssResponse.text();
+        BaseShape.embeddedMathStyles = cssText.replace(/url\(fonts\/([^)]+)\)/g, (match, filename) => {
+            const data = fontDataByFilename[filename];
+            if (data)
+                return `url(data:font/woff2;base64,${data})`;
+            return match;
+        });
     }
     
     constructor(board, parent, id) {
@@ -718,27 +762,25 @@ class BaseShape {
                         {
                             colSpan: 1,
                             label: { text: "Layers" },
-                            editorType: "dxButtonGroup",
-                            editorOptions: {
-                                selectionMode: "none",
-                                items: [
-                                    { icon: "fa-light fa-send-back", action: () => this.board.sendToBack(this) },
-                                    { icon: "fa-light fa-send-backward", action: () => this.board.sendBackward(this) },
-                                    { icon: "fa-light fa-bring-forward", action: () => this.board.bringForward(this) },
-                                    { icon: "fa-light fa-bring-front", action: () => this.board.bringToFront(this) }                            
-                                ],
-                                stylingMode: "text",
-                                onItemClick: e => e.itemData.action()
+                            template: _ => {
+                                const container = $("<div class='form-button-row'></div>");
+                                container.append($("<div>").dxButton({ icon: "fa-light fa-send-back", stylingMode: "text", onClick: () => this.board.sendToBack(this) }));
+                                container.append($("<div>").dxButton({ icon: "fa-light fa-send-backward", stylingMode: "text", onClick: () => this.board.sendBackward(this) }));
+                                container.append($("<div>").dxButton({ icon: "fa-light fa-bring-forward", stylingMode: "text", onClick: () => this.board.bringForward(this) }));
+                                container.append($("<div>").dxButton({ icon: "fa-light fa-bring-front", stylingMode: "text", onClick: () => this.board.bringToFront(this) }));
+                                return container;
                             }
                         },
                         {
                             colSpan: 1,
                             label: { text: "Actions" },
-                            editorType: "dxButton",
-                            editorOptions: {
-                                template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
-                                onClick: _ => this.remove(),
-                                stylingMode: "text"
+                            template: _ => {
+                                const container = $("<div class='form-button-row'></div>");
+                                container.append($("<div>").dxButton({ icon: "fa-duotone fa-light fa-copy", stylingMode: "text", onClick: () => this.copyToClipboard() }));
+                                container.append($("<div>").dxButton({ icon: "fa-duotone fa-light fa-paste", stylingMode: "text", onClick: () => BaseShape.pasteFromClipboard(this.board, this.parent) }));
+                                container.append($("<div>").dxButton({ icon: "fa-duotone fa-light fa-clone", stylingMode: "text", onClick: () => this.duplicate() }));
+                                container.append($("<div>").dxButton({ template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>", stylingMode: "text", onClick: () => this.remove() }));
+                                return container;
                             }
                         }
                     ]
@@ -917,6 +959,103 @@ class BaseShape {
 
     remove() {
         this.board.removeShape(this);
+    }
+
+    getClipboardData() {
+        const data = this.serialize();
+        data.id = undefined;
+        data.children = this.children.map(child => {
+            const childData = child.getClipboardData();
+            childData.parent = undefined;
+            return childData;
+        });
+        return data;
+    }
+
+    toSvgString() {
+        const bbox = this.element.getBBox();
+        const padding = 4;
+        const x = bbox.x - padding;
+        const y = bbox.y - padding;
+        const width = bbox.width + padding * 2;
+        const height = bbox.height + padding * 2;
+        let content = "";
+        for (const element of this.collectSvgElements()) {
+            const clone = element.cloneNode(true);
+            clone.removeAttribute("id");
+            clone.removeAttribute("clip-path");
+            content += clone.outerHTML;
+        }
+        const styleBlock = BaseShape.embeddedFontStyles ? `<defs><style>${BaseShape.embeddedFontStyles}</style></defs>` : "";
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${x} ${y} ${width} ${height}">${styleBlock}${content}</svg>`;
+    }
+
+    collectSvgElements() {
+        return [this.element];
+    }
+
+    toImageBlob() {
+        return new Promise(resolve => {
+            const svgString = this.toSvgString();
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = img.naturalWidth * 2;
+                canvas.height = img.naturalHeight * 2;
+                const ctx = canvas.getContext("2d");
+                ctx.scale(2, 2);
+                ctx.drawImage(img, 0, 0);
+                canvas.toBlob(blob => resolve(blob), "image/png");
+            };
+            img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`;
+        });
+    }
+
+    async copyToClipboard() {
+        const shapeData = this.getClipboardData();
+        const json = JSON.stringify(shapeData);
+        const imageBlob = this.toImageBlob();
+        const items = [new ClipboardItem({
+            "text/plain": new Blob([json], { type: "text/plain" }),
+            "image/png": imageBlob
+        })];
+        await navigator.clipboard.write(items);
+    }
+
+    static async pasteFromClipboard(board, parent) {
+        const text = await navigator.clipboard.readText();
+        let data;
+        try { data = JSON.parse(text); } catch (_) { return; }
+        if (!data?.type || !data?.properties)
+            return;
+        data.properties.x = (data.properties.x ?? 0) + 20;
+        data.properties.y = (data.properties.y ?? 0) + 20;
+        const shape = board.createShape(data.type, parent ?? null);
+        shape.setProperties(data.properties);
+        board.addShape(shape);
+        BaseShape.pasteChildren(board, shape, data.children);
+    }
+
+    duplicate() {
+        const data = this.getClipboardData();
+        data.properties.x = (data.properties.x ?? 0) + 20;
+        data.properties.y = (data.properties.y ?? 0) + 20;
+        const shape = this.board.createShape(data.type, this.parent);
+        shape.setProperties(data.properties);
+        this.board.addShape(shape);
+        BaseShape.pasteChildren(this.board, shape, data.children);
+    }
+
+    static pasteChildren(board, parentShape, children) {
+        if (!children)
+            return;
+        for (const childData of children) {
+            const child = board.createShape(childData.type, parentShape);
+            child.setProperties(childData.properties);
+            board.addShape(child);
+            child.draw();
+            BaseShape.pasteChildren(board, child, childData.children);
+        }
     }
 
     dragStart() {

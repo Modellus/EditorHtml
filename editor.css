@@ -455,6 +455,11 @@ body.read-only #shape-popup {
     box-shadow: none !important;
 }
 
+.form-button-row {
+    display: flex;
+    gap: 0;
+}
+
 .dx-button .trash {
     font-weight: 300;
     color: red;
