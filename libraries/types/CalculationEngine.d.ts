@@ -1,6 +1,6 @@
-import { EventEmitter } from 'events';
 import * as antlr from 'antlr4ng';
 import { ParseTreeListener, TerminalNode, ErrorNode, ParserRuleContext, AbstractParseTreeVisitor } from 'antlr4ng';
+import { EventEmitter } from 'events';
 
 declare class Branch {
     readonly text: string;
@@ -11,160 +11,6 @@ declare class Branch {
     constructor(text: string, calculate: (values: {
         [name: string]: number;
     }) => number, ...children: Branch[]);
-}
-
-declare enum TermType {
-    DIFFERENTIAL = 0,
-    FUNCTION = 1,
-    INDEPENDENT = 2,
-    PARAMETER = 3
-}
-
-declare class Term {
-    name: string;
-    type: TermType;
-    private _initialValues;
-    constructor(name: string, type?: TermType);
-    getInitialValue(iteration?: number): number;
-    setInitialValue(value: number, iteration?: number): void;
-    get initialValues(): number[];
-    set initialValues(values: number[]);
-    hasInitialValue(iteration: number): boolean;
-}
-
-declare class Expression {
-    name: string;
-    calculate: (input: {
-        [name: string]: number;
-    }) => number;
-    condition: ((input: {
-        [name: string]: number;
-    }) => boolean) | null;
-    type: TermType;
-    constructor(name: string, calculate: (input: {
-        [name: string]: number;
-    }) => number, type?: TermType, condition?: ((input: {
-        [name: string]: number;
-    }) => boolean) | null);
-}
-
-declare class PreloadedData {
-    private termNames;
-    private values;
-    private iterationCol;
-    private independentCol;
-    private cursor;
-    get names(): string[];
-    get isEmpty(): boolean;
-    load(names: string[], values: number[][], iterationTermName: string, independentTermName: string): void;
-    reset(): void;
-    clear(): void;
-    getDataTermNames(iterationTermName: string, independentTermName: string): string[];
-    apply(iteration: number, target: {
-        [name: string]: number;
-    }, independentTermName: string): void;
-    private applyRow;
-}
-
-declare class System {
-    private _independent;
-    private _iterationTerm;
-    terms: {
-        [name: string]: Term;
-    };
-    expressions: Array<Expression>;
-    values: Array<{
-        [name: string]: number;
-    }>;
-    iteration: number;
-    step: number;
-    casesCount: number;
-    private caseInitialValues;
-    private expressionsByName;
-    private termNames;
-    private differentialNames;
-    private functionExpressionsWithCondition;
-    private functionExpressionsWithoutCondition;
-    private readonly iterationValuesByKey;
-    private _lastIteration;
-    useRadians: boolean;
-    readonly preloadedData: PreloadedData;
-    constructor(independent?: string, iterationTerm?: string);
-    get independent(): Term;
-    set independent(name: string);
-    get iterationTerm(): Term;
-    set iterationTerm(name: string);
-    setCaseCount(count: number): void;
-    get lastIteration(): number;
-    get(caseNumber?: number): {
-        [name: string]: number;
-    };
-    getIteration(iteration: number, caseNumber?: number): {
-        [name: string]: number;
-    };
-    getByName(name: string, caseNumber?: number): number | undefined;
-    getByNameOnIteration(iteration: number, name: string, caseNumber?: number): number | undefined;
-    getIndependentOnIteration(iteration: number, caseNumber?: number): number;
-    getIterationTermOnIteration(iteration: number, caseNumber?: number): number;
-    getByExpression(expression: Expression, caseNumber?: number): number | undefined;
-    getByTerm(term: Term, caseNumber?: number): number | undefined;
-    addExpression(expression: Expression, termType?: TermType): void;
-    addTerm(term: Term): void;
-    addTermByName(term: string, type: TermType): void;
-    loadTerms(names: string[], values: number[][]): void;
-    reset(): void;
-    clear(): void;
-    calculateFunctions(): void;
-    private applyInitialValues;
-    addValues(values: {
-        [name: string]: number;
-    }): void;
-    calculate(values: {
-        [name: string]: number;
-    }, applyInitialValuesToCurrentIteration?: boolean): {
-        [name: string]: number;
-    };
-    getIndependent(caseNumber?: number): number;
-    setInitialIndependent(value: number): void;
-    isEditable(term: Term): boolean;
-    set(term: Term, value: number, caseNumber?: number): void;
-    setByExpression(expression: Expression, value: number, caseNumber?: number): void;
-    getExpression(name: string): Expression | undefined;
-    getTerm(name: string): Term | undefined;
-    isTerm(name: string): boolean;
-    setInitialByTerm(term: Term, value: number, iteration?: number, caseNumber?: number): void;
-    setInitialByName(name: string, value: number, iteration?: number, caseNumber?: number): void;
-    getValue(values: {
-        [name: string]: number;
-    }, term: string): number;
-    getValueAtIteration(iteration: number, term: string, caseNumber?: number): number;
-    getValueAtIndependent(value: number, term: string, caseNumber?: number): number;
-    getInitialByExpression(expression: Expression, iteration?: number): number;
-    getTermsNames(): string[];
-    getDifferentialTermsNames(): string[];
-    private hasInitialValueForCase;
-    private getInitialValueForCase;
-    private getIterationKey;
-    private indexIterationValue;
-    private getIterationValue;
-    private assertValidCase;
-}
-
-declare class Engine extends EventEmitter {
-    readonly system: System;
-    constructor(system: System);
-    private iterateInternal;
-    iterate(): void;
-    reset(): void;
-    onIterate(listener: any): void;
-}
-
-declare class Parser {
-    private readonly system;
-    hasErrors: boolean;
-    errors: string[];
-    constructor(system: System);
-    parse(expressions: string): Branch | null;
 }
 
 /**
@@ -454,6 +300,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitLogarithm?: (ctx: LogarithmContext) => void;
+    /**
+     * Enter a parse tree produced by the `Derivative`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivative?: (ctx: DerivativeContext) => void;
+    /**
+     * Exit a parse tree produced by the `Derivative`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivative?: (ctx: DerivativeContext) => void;
     /**
      * Enter a parse tree produced by the `Division`
      * labeled alternative in `LatexMathParser.expression`.
@@ -765,6 +623,14 @@ declare class LogarithmContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class DerivativeContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext;
+    name(): NameContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class DivisionContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext[];
@@ -1013,6 +879,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitLogarithm?: (ctx: LogarithmContext) => Result;
     /**
+     * Visit a parse tree produced by the `Derivative`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivative?: (ctx: DerivativeContext) => Result;
+    /**
      * Visit a parse tree produced by the `Division`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -1074,6 +947,205 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
     visitName?: (ctx: NameContext) => Result;
 }
 
+declare enum TermType {
+    DIFFERENTIAL = 0,
+    FUNCTION = 1,
+    INDEPENDENT = 2,
+    PARAMETER = 3
+}
+
+declare class Term {
+    name: string;
+    type: TermType;
+    private _initialValues;
+    constructor(name: string, type?: TermType);
+    getInitialValue(iteration?: number): number;
+    setInitialValue(value: number, iteration?: number): void;
+    get initialValues(): number[];
+    set initialValues(values: number[]);
+    hasInitialValue(iteration: number): boolean;
+}
+
+declare class Expression {
+    name: string;
+    calculate: (input: {
+        [name: string]: number;
+    }) => number;
+    condition: ((input: {
+        [name: string]: number;
+    }) => boolean) | null;
+    type: TermType;
+    constructor(name: string, calculate: (input: {
+        [name: string]: number;
+    }) => number, type?: TermType, condition?: ((input: {
+        [name: string]: number;
+    }) => boolean) | null);
+}
+
+declare class PreloadedData {
+    private termNames;
+    private values;
+    private iterationCol;
+    private independentCol;
+    private cursor;
+    get names(): string[];
+    get isEmpty(): boolean;
+    load(names: string[], values: number[][], iterationTermName: string, independentTermName: string): void;
+    reset(): void;
+    clear(): void;
+    getDataTermNames(iterationTermName: string, independentTermName: string): string[];
+    apply(iteration: number, target: {
+        [name: string]: number;
+    }, independentTermName: string): void;
+    private applyRow;
+}
+
+declare class System {
+    private _independent;
+    private _iterationTerm;
+    terms: {
+        [name: string]: Term;
+    };
+    expressions: Array<Expression>;
+    values: Array<{
+        [name: string]: number;
+    }>;
+    iteration: number;
+    step: number;
+    casesCount: number;
+    private caseInitialValues;
+    private expressionsByName;
+    private expressionTrees;
+    private termNames;
+    private differentialNames;
+    private functionExpressionsWithCondition;
+    private functionExpressionsWithoutCondition;
+    private readonly iterationValuesByKey;
+    private _lastIteration;
+    useRadians: boolean;
+    readonly preloadedData: PreloadedData;
+    constructor(independent?: string, iterationTerm?: string);
+    get independent(): Term;
+    set independent(name: string);
+    get iterationTerm(): Term;
+    set iterationTerm(name: string);
+    setCaseCount(count: number): void;
+    get lastIteration(): number;
+    get(caseNumber?: number): {
+        [name: string]: number;
+    };
+    getIteration(iteration: number, caseNumber?: number): {
+        [name: string]: number;
+    };
+    getByName(name: string, caseNumber?: number): number | undefined;
+    getByNameOnIteration(iteration: number, name: string, caseNumber?: number): number | undefined;
+    getIndependentOnIteration(iteration: number, caseNumber?: number): number;
+    getIterationTermOnIteration(iteration: number, caseNumber?: number): number;
+    getByExpression(expression: Expression, caseNumber?: number): number | undefined;
+    getByTerm(term: Term, caseNumber?: number): number | undefined;
+    addExpression(expression: Expression, termType?: TermType): void;
+    addTerm(term: Term): void;
+    addTermByName(term: string, type: TermType): void;
+    loadTerms(names: string[], values: number[][]): void;
+    reset(): void;
+    clear(): void;
+    calculateFunctions(): void;
+    private applyInitialValues;
+    addValues(values: {
+        [name: string]: number;
+    }): void;
+    calculate(values: {
+        [name: string]: number;
+    }, applyInitialValuesToCurrentIteration?: boolean): {
+        [name: string]: number;
+    };
+    getIndependent(caseNumber?: number): number;
+    setInitialIndependent(value: number): void;
+    isEditable(term: Term): boolean;
+    set(term: Term, value: number, caseNumber?: number): void;
+    setByExpression(expression: Expression, value: number, caseNumber?: number): void;
+    getExpression(name: string): Expression | undefined;
+    storeExpressionTree(name: string, tree: unknown): void;
+    getExpressionTree(name: string): unknown | undefined;
+    getTerm(name: string): Term | undefined;
+    isTerm(name: string): boolean;
+    setInitialByTerm(term: Term, value: number, iteration?: number, caseNumber?: number): void;
+    setInitialByName(name: string, value: number, iteration?: number, caseNumber?: number): void;
+    getValue(values: {
+        [name: string]: number;
+    }, term: string): number;
+    getValueAtIteration(iteration: number, term: string, caseNumber?: number): number;
+    getValueAtIndependent(value: number, term: string, caseNumber?: number): number;
+    getInitialByExpression(expression: Expression, iteration?: number): number;
+    getTermsNames(): string[];
+    getDifferentialTermsNames(): string[];
+    private hasInitialValueForCase;
+    private getInitialValueForCase;
+    private getIterationKey;
+    private indexIterationValue;
+    private getIterationValue;
+    private assertValidCase;
+}
+
+declare class Deriver extends LatexMathVisitor<Branch> {
+    private readonly variable;
+    private readonly system;
+    private readonly evalVisitor;
+    private readonly expander;
+    constructor(system: System, variable: string);
+    private eval;
+    visitVariable: (context: VariableContext) => Branch;
+    visitName: (context: NameContext) => Branch;
+    visitNumber: (context: NumberContext) => Branch;
+    visitDecimal: (context: DecimalContext) => Branch;
+    visitConstant: (context: ConstantContext) => Branch;
+    visitAddition: (context: AdditionContext) => Branch;
+    visitSubtraction: (context: SubtractionContext) => Branch;
+    visitMultiplication: (context: MultiplicationContext) => Branch;
+    visitMultiplicationDigit: (context: MultiplicationDigitContext) => Branch;
+    visitDivision: (context: DivisionContext) => Branch;
+    visitFraction: (context: FractionContext) => Branch;
+    visitFractionDigits: (context: FractionDigitsContext) => Branch;
+    visitPower: (context: PowerContext) => Branch;
+    visitNegation: (context: NegationContext) => Branch;
+    visitSine: (context: SineContext) => Branch;
+    visitCosine: (context: CosineContext) => Branch;
+    visitTangent: (context: TangentContext) => Branch;
+    visitCotangent: (context: CotangentContext) => Branch;
+    visitSecant: (context: SecantContext) => Branch;
+    visitCosecant: (context: CosecantContext) => Branch;
+    visitSquareRoot: (context: SquareRootContext) => Branch;
+    visitLogarithm: (context: LogarithmContext) => Branch;
+    visitParenthesis: (context: ParenthesisContext) => Branch;
+    visitSubscript: (context: SubscriptContext) => Branch;
+    visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
+}
+
+declare class Engine extends EventEmitter {
+    readonly system: System;
+    constructor(system: System);
+    private iterateInternal;
+    iterate(): void;
+    reset(): void;
+    onIterate(listener: any): void;
+}
+
+declare class ExpressionExpander {
+    private readonly system;
+    private readonly expandingNames;
+    constructor(system: System);
+    tryExpand(name: string): unknown | null;
+    endExpansion(name: string): void;
+}
+
+declare class Parser {
+    private readonly system;
+    hasErrors: boolean;
+    errors: string[];
+    constructor(system: System);
+    parse(expressions: string): Branch | null;
+}
+
 declare class Visitor extends LatexMathVisitor<Branch> {
     private readonly system;
     constructor(system: System);
@@ -1108,6 +1180,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitLogarithm: (context: LogarithmContext) => Branch;
     visitSubscript: (context: SubscriptContext) => Branch;
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
+    visitDerivative: (context: DerivativeContext) => Branch;
 }
 
-export { Branch, Engine, Expression, Parser, PreloadedData, System, Term, TermType, Visitor };
+export { Branch, Deriver, Engine, Expression, ExpressionExpander, Parser, PreloadedData, System, Term, TermType, Visitor };
