@@ -6,6 +6,8 @@ class BaseTranslations {
             {
                 "Clear": "Limpar",
                 "Save": "Guardar",
+                "Save Model": "Guardar modelo",
+                "Cancel": "Cancelar",
                 "Import": "Importar",
                 "From file": "Do ficheiro",
                 "Export": "Exportar",
@@ -78,6 +80,8 @@ class BaseTranslations {
             {
                 "Clear": "Clear",
                 "Save": "Save",
+                "Save Model": "Save Model",
+                "Cancel": "Cancel",
                 "Import": "Import",
                 "From file": "From file",
                 "Export": "Export",

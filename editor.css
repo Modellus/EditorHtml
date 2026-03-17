@@ -270,6 +270,13 @@ svg:active.pan-available {
     background-color: transparent;
 }
 
+.dx-popup-bottom .dx-toolbar-after,
+.dx-popup-bottom .dx-toolbar-before,
+.dx-popup-bottom .dx-toolbar-center {
+    box-shadow: none;
+    background-color: transparent;
+}
+
 .dx-chat .dx-toolbar-after,
 .dx-chat .dx-toolbar-before,
 .dx-chat .dx-toolbar-center {

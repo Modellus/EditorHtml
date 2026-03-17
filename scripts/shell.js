@@ -1358,6 +1358,11 @@ class Shell  {
             alert("No model id found.");
             return;
         }
+        if (this.isModelNameUndefined()) {
+            const accepted = await this.promptModelMetadata();
+            if (!accepted)
+                return;
+        }
         const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
         const headers = { "Content-Type": "application/json" };
         if (session && session.token) headers.Authorization = `Bearer ${session.token}`;
@@ -1379,6 +1384,128 @@ class Shell  {
         } catch (error) {
             alert("Failed to save model.");
         }
+    }
+
+    isModelNameUndefined() {
+        const name = this.properties.name;
+        return !name || name === "Model";
+    }
+
+    promptModelMetadata() {
+        return new Promise(resolve => {
+            const popupHost = document.getElementById("save-metadata-popup");
+            if (!popupHost) {
+                resolve(true);
+                return;
+            }
+            const formData = {
+                name: this.properties.name === "Model" ? "" : this.properties.name || "",
+                description: this.properties.description || ""
+            };
+            let formInstance = null;
+            let previewElement = null;
+            let hintElement = null;
+            let removeButtonElement = null;
+            const popup = $(popupHost).dxPopup({
+                width: 420,
+                height: "auto",
+                dragEnabled: false,
+                shading: false,
+                showTitle: true,
+                title: this.board.translations.get("Save Model"),
+                hideOnOutsideClick: false,
+                visible: true,
+                toolbarItems: [
+                    {
+                        widget: "dxButton",
+                        location: "after",
+                        toolbar: "bottom",
+                        options: {
+                            text: this.board.translations.get("Save"),
+                            type: "default",
+                            stylingMode: "contained",
+                            onClick: () => {
+                                const validation = formInstance.validate();
+                                if (!validation.isValid)
+                                    return;
+                                this.properties.name = formData.name;
+                                this.properties.description = formData.description;
+                                popup.dxPopup("hide");
+                                resolve(true);
+                            }
+                        }
+                    },
+                    {
+                        widget: "dxButton",
+                        location: "after",
+                        toolbar: "bottom",
+                        options: {
+                            text: this.board.translations.get("Cancel"),
+                            stylingMode: "text",
+                            onClick: () => {
+                                popup.dxPopup("hide");
+                                resolve(false);
+                            }
+                        }
+                    }
+                ],
+                contentTemplate: () => {
+                    const form = $("<div></div>").dxForm({
+                        formData,
+                        colCount: 1,
+                        items: [
+                            {
+                                template: () => {
+                                    const container = $("<div class='thumbnail-dropzone'></div>");
+                                    const preview = $("<img class='thumbnail-preview' alt='Thumbnail preview' />");
+                                    const hint = $("<div class='thumbnail-hint'></div>")
+                                        .text(this.board.translations.get("Thumbnail Dropzone"));
+                                    const removeButton = $("<button type='button' class='thumbnail-remove-button' aria-label='Remove model cover'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></button>");
+                                    const uploaderHost = $("<div class='thumbnail-uploader'></div>");
+                                    previewElement = preview.get(0);
+                                    hintElement = hint.get(0);
+                                    removeButtonElement = removeButton.get(0);
+                                    this.updateThumbnailPreview(previewElement, hintElement, removeButtonElement, this.getThumbnailSource());
+                                    container.append(preview, hint, removeButton, uploaderHost);
+                                    removeButton.on("mousedown", event => this.onThumbnailRemoveButtonMouseDown(event));
+                                    removeButton.on("click", event => this.onThumbnailRemoveButtonClick(event, previewElement, hintElement, removeButtonElement));
+                                    uploaderHost.dxFileUploader({
+                                        accept: "image/*",
+                                        multiple: false,
+                                        uploadMode: "useForm",
+                                        dropZone: container.get(0),
+                                        dialogTrigger: container.get(0),
+                                        onValueChanged: async e => {
+                                            const file = e.value && e.value[0];
+                                            if (!file)
+                                                return;
+                                            await this.setThumbnailFromFile(file, previewElement, hintElement, removeButtonElement);
+                                        }
+                                    });
+                                    return container;
+                                }
+                            },
+                            {
+                                dataField: "name",
+                                label: { text: this.board.translations.get("Name"), visible: true },
+                                editorType: "dxTextBox",
+                                editorOptions: { stylingMode: "filled" },
+                                validationRules: [{ type: "required" }]
+                            },
+                            {
+                                dataField: "description",
+                                label: { text: this.board.translations.get("Description"), visible: true },
+                                editorType: "dxHtmlEditor",
+                                editorOptions: { height: 120, stylingMode: "filled" }
+                            }
+                        ]
+                    });
+                    formInstance = form.dxForm("instance");
+                    return form;
+                },
+                position: { at: "center", of: window }
+            });
+        });
     }
 
     getModel() {

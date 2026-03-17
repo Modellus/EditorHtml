@@ -574,7 +574,10 @@ class ModelsApp {
     this.disposeMaintenanceGrid();
     const allModelsStore = new DevExpress.data.CustomStore({
       key: "id",
-      load: () => this.apiClient.fetchAllModels()
+      load: async () => {
+        const models = await this.apiClient.fetchAllModels();
+        return this.applyModelLookupLabels(models);
+      }
     });
     if (!this.maintenanceModelsGridInstance) {
       this.elements.cardView.innerHTML = "";
@@ -583,7 +586,6 @@ class ModelsApp {
         keyExpr: "id",
         height: "100%",
         showBorders: false,
-        columnAutoWidth: true,
         selection: { mode: "single" },
         paging: { enabled: true, pageSize: 20 },
         pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
@@ -591,13 +593,134 @@ class ModelsApp {
         sorting: { mode: "multiple" },
         filterRow: { visible: true },
         columns: [
-          { dataField: "id", caption: "ID", width: 110 },
+          {
+            dataField: "thumbnail",
+            caption: "",
+            width: 60,
+            allowFiltering: false,
+            allowSorting: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              const src = this.getModelThumbnailSource(cellInfo.value);
+              if (!src)
+                return;
+              const host = cellElement.get(0);
+              host.style.position = "relative";
+              host.innerHTML = `<img src="${src}" style="width:40px;height:24px;object-fit:cover;border-radius:4px;cursor:pointer;"><div class="maintenance-thumb-tooltip" style="display:none;position:fixed;z-index:10000;pointer-events:none;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);background:#fff;padding:4px;"><img src="${src}" style="max-width:280px;max-height:200px;object-fit:contain;border-radius:6px;display:block;"></div>`;
+              const img = host.querySelector("img");
+              const tooltip = host.querySelector(".maintenance-thumb-tooltip");
+              img.addEventListener("mouseenter", event => {
+                tooltip.style.display = "block";
+                tooltip.style.left = `${event.clientX + 12}px`;
+                tooltip.style.top = `${event.clientY + 12}px`;
+              });
+              img.addEventListener("mousemove", event => {
+                tooltip.style.left = `${event.clientX + 12}px`;
+                tooltip.style.top = `${event.clientY + 12}px`;
+              });
+              img.addEventListener("mouseleave", () => {
+                tooltip.style.display = "none";
+              });
+            }
+          },
           { dataField: "title", caption: "Title" },
-          { dataField: "description", caption: "Description" },
-          { dataField: "is_public", caption: "Public", width: 80, dataType: "boolean" },
-          { dataField: "user_id", caption: "User ID", width: 110 }
+          {
+            dataField: "description",
+            caption: "Description",
+            cellTemplate: (cellElement, cellInfo) => {
+              const host = cellElement.get(0);
+              host.innerHTML = cellInfo.value || "";
+            }
+          },
+          { dataField: "user_id", caption: "Creator", width: 110 },
+          { dataField: "education_level", caption: "Level", width: 130 },
+          { dataField: "science", caption: "Science", width: 130 },
+          {
+            caption: "Fav",
+            width: 50,
+            allowFiltering: false,
+            allowSorting: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              const isFavorite = this.isFavoriteValue(cellInfo.data);
+              const host = cellElement.get(0);
+              host.innerHTML = `<i class="${isFavorite ? "fa-solid fa-star" : "fa-regular fa-star"}" style="color:${isFavorite ? "#f59e0b" : "#9ca3af"};font-size:12px;cursor:pointer;"></i>`;
+              host.querySelector("i").addEventListener("click", event => {
+                event.stopPropagation();
+                this.toggleFavorite(cellInfo.data, !isFavorite).then(() => {
+                  if (this.maintenanceModelsGridInstance)
+                    this.maintenanceModelsGridInstance.refresh();
+                });
+              });
+            }
+          },
+          {
+            caption: "Library",
+            width: 60,
+            allowFiltering: false,
+            allowSorting: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              const isPicked = this.isPickedValue(cellInfo.data);
+              cellElement.get(0).innerHTML = `<i class="${isPicked ? "fa-solid fa-bookmark" : "fa-regular fa-bookmark"}" style="color:${isPicked ? "#dc2626" : "#9ca3af"};font-size:12px;"></i>`;
+            }
+          },
+          {
+            dataField: "is_public",
+            caption: "Public",
+            width: 70,
+            allowFiltering: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              const isPublic = cellInfo.data.is_public === true || cellInfo.data.is_public === 1;
+              const host = cellElement.get(0);
+              host.innerHTML = `<i class="${isPublic ? "fa-light fa-lock-open" : "fa-light fa-lock"}" style="color:${isPublic ? "#16a34a" : "#9ca3af"};font-size:12px;cursor:pointer;"></i>`;
+              host.querySelector("i").addEventListener("click", event => {
+                event.stopPropagation();
+                this.toggleVisibility(cellInfo.data).then(() => {
+                  if (this.maintenanceModelsGridInstance)
+                    this.maintenanceModelsGridInstance.refresh();
+                });
+              });
+            }
+          },
+          { dataField: "created_at", caption: "Created", width: 130, dataType: "date" },
+          {
+            caption: "",
+            width: 40,
+            allowFiltering: false,
+            allowSorting: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              cellElement.get(0).innerHTML = `<button class="maintenance-delete-btn" style="border:none;background:none;cursor:pointer;padding:4px;"><i class="fa-light fa-trash-can" style="color:red;font-size:12px;"></i></button>`;
+              cellElement.get(0).querySelector(".maintenance-delete-btn").addEventListener("click", event => {
+                event.stopPropagation();
+                this.deleteModel(cellInfo.data);
+              });
+            }
+          }
         ],
-        onRowClick: event => this.openModel(event.data)
+        onRowClick: event => this.openModel(event.data),
+        onContextMenuPreparing: event => {
+          if (event.row?.rowType !== "data")
+            return;
+          const model = event.row.data;
+          const modelUrl = new URL("/editor.html", window.location.origin);
+          modelUrl.searchParams.set("model_id", model.id);
+          const link = modelUrl.toString();
+          event.items = [
+            {
+              text: "Open",
+              icon: "fa-light fa-arrow-up-right-from-square",
+              onItemClick: () => this.openModel(model)
+            },
+            {
+              text: "Open in new tab",
+              icon: "fa-light fa-up-right-from-square",
+              onItemClick: () => window.open(link, "_blank")
+            },
+            {
+              text: "Copy link",
+              icon: "fa-light fa-link",
+              onItemClick: () => navigator.clipboard.writeText(link)
+            }
+          ];
+        }
       });
       return;
     }
