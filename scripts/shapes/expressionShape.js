@@ -53,7 +53,7 @@ class ExpressionShape extends BaseShape {
         this.properties.x = center.x - 150;
         this.properties.y = center.y - 25;
         this.properties.width = 300;
-        this.properties.height = 50;
+        this.properties.height = 150;
         this.properties.expression = "\\displaylines{}";
     }
 

@@ -349,6 +349,8 @@ class TermControl {
             };
             if (includeColor)
                 normalizedItem.color = normalizeColorValue(sourceItem?.color);
+            if (sourceItem?.showLabel === true)
+                normalizedItem.showLabel = true;
             selectedItems.push(normalizedItem);
         }
         if (selectedItems.length === 0) {
@@ -372,6 +374,8 @@ class TermControl {
             };
             if (includeColor)
                 item.color = normalizeColorValue(sourceItem?.color);
+            if (sourceItem?.showLabel === true)
+                item.showLabel = true;
             return item;
         });
     }
@@ -393,6 +397,8 @@ class TermControl {
             };
             if (includeColor)
                 selectedItem.color = normalizeColorValue(sourceItem?.color);
+            if (sourceItem?.showLabel === true)
+                selectedItem.showLabel = true;
             selectedItems.push(selectedItem);
         }
         return selectedItems;
@@ -490,6 +496,15 @@ class TermControl {
                         return;
                     items[index].color = normalizeColorValue(value);
                 })
+            } : null,
+            visibility: options.includeVisibility ? {
+                width: "24px",
+                getValue: item => item?.showLabel === true,
+                onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
+                    if (!items[index])
+                        return;
+                    items[index].showLabel = value;
+                })
             } : null
         });
     }
@@ -545,7 +560,7 @@ class TermControl {
             listOptions.itemDragging = {
                 allowReordering: true,
                 showDragIcons: false,
-                handle: `.${this.getDragHandleClassName()}`,
+                handle: `.${this.getDragHandleClassName().split(" ").join(".")}`,
                 onReorder: e => this.onReorder(e)
             };
         listHost.dxList(listOptions);
@@ -699,6 +714,7 @@ class TermControl {
         const showColor = this.shouldShowColorEditor(item, index);
         const showDragHandle = this.shouldShowDragHandle();
         const showTermEditor = this.shouldShowTermEditor(item, index);
+        const showVisibility = this.shouldShowVisibility(item, index);
         const row = $("<div>").addClass(this.getRowClassName()).css({
             display: "grid",
             gridTemplateColumns: this.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor),
@@ -711,9 +727,22 @@ class TermControl {
             row.append(dragHandleHost);
         }
         if (showTermEditor) {
-            const termHost = $("<div>").addClass("shape-term-term");
-            row.append(termHost);
-            termHost.dxSelectBox(this.getTermEditorOptions(item, index));
+            if (showVisibility) {
+                const termWrapper = $("<div>").addClass("term-packed-control");
+                const buttonHost = $("<div>").addClass("term-packed-control__button");
+                termWrapper.append(buttonHost);
+                TermControl.createVisibilityCheckbox(buttonHost, this.getVisibilityValue(item), value => {
+                    this.options.visibility.onValueChanged(index, value);
+                });
+                const selectHost = $("<div>").addClass("term-packed-control__select");
+                selectHost.dxSelectBox(this.getTermEditorOptions(item, index));
+                termWrapper.append(selectHost);
+                row.append(termWrapper);
+            } else {
+                const termHost = $("<div>").addClass("shape-term-term");
+                row.append(termHost);
+                termHost.dxSelectBox(this.getTermEditorOptions(item, index));
+            }
         }
         if (showSecondary) {
             const secondaryHost = $("<div>").addClass("shape-term-secondary");
@@ -920,6 +949,25 @@ class TermControl {
 
     hasColorSelection() {
         return this.secondaryColorSelector != null;
+    }
+
+    hasVisibility() {
+        return this.options.visibility != null;
+    }
+
+    shouldShowVisibility(item, index) {
+        if (!this.hasVisibility())
+            return false;
+        const visibility = this.options.visibility;
+        if (visibility.show)
+            return visibility.show(item, index);
+        return true;
+    }
+
+    getVisibilityValue(item) {
+        if (!this.options.visibility?.getValue)
+            return false;
+        return this.options.visibility.getValue(item);
     }
 
     shouldShowColorSelection(item, index) {

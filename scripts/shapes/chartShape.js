@@ -24,6 +24,7 @@ class ChartShape extends BaseShape {
             rowClassName: "shape-term-row chart-yterm-row",
             dragHandleClassName: "shape-term-drag-handle chart-yterm-drag-handle",
             includeColor: true,
+            includeVisibility: true,
             normalizeTermValue: value => this.normalizeYTermValue(value),
             normalizeColorValue: value => this.normalizeYTermColor(value)
         });
@@ -114,11 +115,15 @@ class ChartShape extends BaseShape {
                             ],
                             keyExpr: "type",
                             stylingMode: "text",
-                            selectedItemKeys: [this.properties.chartType],
-                            onItemClick: e => {
+                            selectionMode: "multiple",
+                            selectedItemKeys: [...this.properties.chartType],
+                            onSelectionChanged: e => {
+                                const selectedKeys = e.component.option("selectedItemKeys");
+                                if (selectedKeys.length === 0)
+                                    return;
                                 let formInstance = $("#shape-form").dxForm("instance");
-                                formInstance.updateData("chartType", e.itemData.type);
-                                this.setProperty("chartType", e.itemData.type);
+                                formInstance.updateData("chartType", [...selectedKeys]);
+                                this.setProperty("chartType", [...selectedKeys]);
                             }
                         }
                     }
@@ -147,9 +152,9 @@ class ChartShape extends BaseShape {
         this.properties.y = center.y - 100;
         this.properties.width = 200;
         this.properties.height = 200;
-        this.properties.chartType = "line";
+        this.properties.chartType = ["line"];
         this.properties.xTerm = null;
-        this.properties.yTerms = [{ term: "", case: 1, color: "" }];
+        this.properties.yTerms = [{ term: "", case: 1, color: "", showLabel: false }];
     }
 
     getChartControlOptions() {
@@ -271,6 +276,7 @@ class ChartShape extends BaseShape {
             term: yTerm.term,
             case: TermControl.getShapeCaseNumber(this, yTerm.term, yTerm.case ?? 1, value => this.normalizeYTermValue(value)),
             color: this.normalizeYTermColor(yTerm.color),
+            showLabel: yTerm.showLabel === true,
             valueField: this.getSeriesValueFieldName(index),
             name: this.getSeriesName(yTerm)
         }));
@@ -287,7 +293,8 @@ class ChartShape extends BaseShape {
             series: ySeries.map(series => ({
                 valueField: series.valueField,
                 name: series.name,
-                color: series.color === "" ? undefined : series.color
+                color: series.color === "" ? undefined : series.color,
+                showLabel: series.showLabel === true
             })),
             color: this.properties.foregroundColor,
             bg: this.properties.backgroundColor,
@@ -295,6 +302,11 @@ class ChartShape extends BaseShape {
             argTitle: this.getTermLabelWithCase(xTerm, xCase),
             valTitle: ySeries.map(series => series.name).join(", ")
         };
+        const dataConfig = {
+            argField: config.argField,
+            series: config.series.map(series => ({ valueField: series.valueField, name: series.name }))
+        };
+        const dataChanged = JSON.stringify(dataConfig) !== JSON.stringify(this._appliedDataConfig);
         const changed = JSON.stringify(config) !== JSON.stringify(this._appliedConfig);
         if (changed) {
             this.chart.setOptions({
@@ -307,8 +319,10 @@ class ChartShape extends BaseShape {
                 argumentTitle: config.argTitle,
                 valueTitle: config.valTitle
             });
-            this.resetChartValues();
+            if (dataChanged)
+                this.resetChartValues();
             this._appliedConfig = config;
+            this._appliedDataConfig = dataConfig;
         }
     }
 

@@ -113,7 +113,8 @@ class ChartControl {
         return series.map((item, index) => ({
             valueField: item?.valueField ?? `series${index}`,
             name: item?.name ?? `Series ${index + 1}`,
-            color: this.normalizeColor(item?.color, index)
+            color: this.normalizeColor(item?.color, index),
+            showLabel: item?.showLabel === true
         }));
     }
 
@@ -689,9 +690,16 @@ class ChartControl {
         return points;
     }
 
-    renderSeries(layout, xScale, yScale) {
+    getChartTypes() {
         const chartType = this.options.chartType;
-        if (chartType === "bar") {
+        if (Array.isArray(chartType))
+            return chartType;
+        return [chartType];
+    }
+
+    renderSeries(layout, xScale, yScale) {
+        const chartTypes = this.getChartTypes();
+        if (chartTypes.includes("bar")) {
             this.renderBarSeries(layout, xScale, yScale);
             return;
         }
@@ -700,12 +708,12 @@ class ChartControl {
             const points = this.getSeriesPoints(series, xScale, yScale);
             if (points.length === 0)
                 continue;
-            if (chartType === "scatter")
-                this.renderScatterSeries(points, series.color);
-            else if (chartType === "area")
+            if (chartTypes.includes("area"))
                 this.renderAreaSeries(points, series.color, layout.plotBottom);
-            else
+            else if (chartTypes.includes("line"))
                 this.renderLineSeries(points, series.color);
+            if (chartTypes.includes("scatter"))
+                this.renderPointMarkers(points, series.color);
         }
     }
 
@@ -720,7 +728,7 @@ class ChartControl {
 
     renderAreaSeries(points, color, baseY) {
         if (points.length < 2) {
-            this.renderScatterSeries(points, color);
+            this.renderPointMarkers(points, color);
             return;
         }
         const areaPath = this.createSvgElement("path");
@@ -732,7 +740,7 @@ class ChartControl {
         this.renderLineSeries(points, color);
     }
 
-    renderScatterSeries(points, color) {
+    renderPointMarkers(points, color) {
         for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
             const point = points[pointIndex];
             const circle = this.createSvgElement("circle");
@@ -742,6 +750,10 @@ class ChartControl {
             circle.setAttribute("fill", color);
             this.seriesLayer.appendChild(circle);
         }
+    }
+
+    renderScatterSeries(points, color) {
+        this.renderPointMarkers(points, color);
     }
 
     renderBarSeries(layout, xScale, yScale) {
@@ -868,6 +880,17 @@ class ChartControl {
         marker.setAttribute("stroke", "#ffffff");
         marker.setAttribute("stroke-width", "1");
         this.focusLayer.appendChild(marker);
+        if (series.showLabel) {
+            const label = this.createSvgElement("text");
+            label.setAttribute("x", `${xPosition}`);
+            label.setAttribute("y", `${yPosition - 8}`);
+            label.setAttribute("text-anchor", "middle");
+            label.setAttribute("font-family", "Katex_Main");
+            label.setAttribute("font-size", `${this.options.fontSize}`);
+            label.setAttribute("fill", series.color);
+            label.textContent = `${series.name} = ${this.formatAxisValue(nearestPoint.yValue)}`;
+            this.focusLayer.appendChild(label);
+        }
     }
 
     getNearestSeriesPoint(series, focusArgumentValue) {
