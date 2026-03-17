@@ -99,6 +99,8 @@ class ExpressionShape extends BaseShape {
         delete inlineShortcutMap.dx;
         delete inlineShortcutMap.dy;
         delete inlineShortcutMap.dt;
+        inlineShortcutMap["#"] = "\\sqrt{#0}";
+        inlineShortcutMap["%"] = "\\Delta";
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];

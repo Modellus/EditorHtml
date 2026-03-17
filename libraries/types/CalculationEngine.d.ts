@@ -121,18 +121,6 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitMultiplication?: (ctx: MultiplicationContext) => void;
     /**
-     * Enter a parse tree produced by the `Addition`
-     * labeled alternative in `LatexMathParser.expression`.
-     * @param ctx the parse tree
-     */
-    enterAddition?: (ctx: AdditionContext) => void;
-    /**
-     * Exit a parse tree produced by the `Addition`
-     * labeled alternative in `LatexMathParser.expression`.
-     * @param ctx the parse tree
-     */
-    exitAddition?: (ctx: AdditionContext) => void;
-    /**
      * Enter a parse tree produced by the `Variable`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -193,18 +181,6 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitSubscript?: (ctx: SubscriptContext) => void;
     /**
-     * Enter a parse tree produced by the `Fraction`
-     * labeled alternative in `LatexMathParser.expression`.
-     * @param ctx the parse tree
-     */
-    enterFraction?: (ctx: FractionContext) => void;
-    /**
-     * Exit a parse tree produced by the `Fraction`
-     * labeled alternative in `LatexMathParser.expression`.
-     * @param ctx the parse tree
-     */
-    exitFraction?: (ctx: FractionContext) => void;
-    /**
      * Enter a parse tree produced by the `Sine`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -217,17 +193,17 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitSine?: (ctx: SineContext) => void;
     /**
-     * Enter a parse tree produced by the `Tangent`
+     * Enter a parse tree produced by the `DeltaName`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
      */
-    enterTangent?: (ctx: TangentContext) => void;
+    enterDeltaName?: (ctx: DeltaNameContext) => void;
     /**
-     * Exit a parse tree produced by the `Tangent`
+     * Exit a parse tree produced by the `DeltaName`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
      */
-    exitTangent?: (ctx: TangentContext) => void;
+    exitDeltaName?: (ctx: DeltaNameContext) => void;
     /**
      * Enter a parse tree produced by the `Parenthesis`
      * labeled alternative in `LatexMathParser.expression`.
@@ -241,17 +217,17 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitParenthesis?: (ctx: ParenthesisContext) => void;
     /**
-     * Enter a parse tree produced by the `Subtraction`
+     * Enter a parse tree produced by the `DeltaExpression`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
      */
-    enterSubtraction?: (ctx: SubtractionContext) => void;
+    enterDeltaExpression?: (ctx: DeltaExpressionContext) => void;
     /**
-     * Exit a parse tree produced by the `Subtraction`
+     * Exit a parse tree produced by the `DeltaExpression`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
      */
-    exitSubtraction?: (ctx: SubtractionContext) => void;
+    exitDeltaExpression?: (ctx: DeltaExpressionContext) => void;
     /**
      * Enter a parse tree produced by the `Number`
      * labeled alternative in `LatexMathParser.expression`.
@@ -301,18 +277,6 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitLogarithm?: (ctx: LogarithmContext) => void;
     /**
-     * Enter a parse tree produced by the `Derivative`
-     * labeled alternative in `LatexMathParser.expression`.
-     * @param ctx the parse tree
-     */
-    enterDerivative?: (ctx: DerivativeContext) => void;
-    /**
-     * Exit a parse tree produced by the `Derivative`
-     * labeled alternative in `LatexMathParser.expression`.
-     * @param ctx the parse tree
-     */
-    exitDerivative?: (ctx: DerivativeContext) => void;
-    /**
      * Enter a parse tree produced by the `Division`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -348,6 +312,66 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitSubscriptDigit?: (ctx: SubscriptDigitContext) => void;
+    /**
+     * Enter a parse tree produced by the `Addition`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterAddition?: (ctx: AdditionContext) => void;
+    /**
+     * Exit a parse tree produced by the `Addition`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitAddition?: (ctx: AdditionContext) => void;
+    /**
+     * Enter a parse tree produced by the `Fraction`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterFraction?: (ctx: FractionContext) => void;
+    /**
+     * Exit a parse tree produced by the `Fraction`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitFraction?: (ctx: FractionContext) => void;
+    /**
+     * Enter a parse tree produced by the `Tangent`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterTangent?: (ctx: TangentContext) => void;
+    /**
+     * Exit a parse tree produced by the `Tangent`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitTangent?: (ctx: TangentContext) => void;
+    /**
+     * Enter a parse tree produced by the `Subtraction`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterSubtraction?: (ctx: SubtractionContext) => void;
+    /**
+     * Exit a parse tree produced by the `Subtraction`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitSubtraction?: (ctx: SubtractionContext) => void;
+    /**
+     * Enter a parse tree produced by the `Derivative`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivative?: (ctx: DerivativeContext) => void;
+    /**
+     * Exit a parse tree produced by the `Derivative`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivative?: (ctx: DerivativeContext) => void;
     /**
      * Enter a parse tree produced by the `Power`
      * labeled alternative in `LatexMathParser.expression`.
@@ -510,15 +534,6 @@ declare class MultiplicationContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
-declare class AdditionContext extends ExpressionContext {
-    constructor(ctx: ExpressionContext);
-    expression(): ExpressionContext[];
-    expression(i: number): ExpressionContext | null;
-    PLUS(): antlr.TerminalNode;
-    enterRule(listener: LatexMathListener): void;
-    exitRule(listener: LatexMathListener): void;
-    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
-}
 declare class VariableContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     name(): NameContext;
@@ -556,14 +571,6 @@ declare class SubscriptContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
-declare class FractionContext extends ExpressionContext {
-    constructor(ctx: ExpressionContext);
-    expression(): ExpressionContext[];
-    expression(i: number): ExpressionContext | null;
-    enterRule(listener: LatexMathListener): void;
-    exitRule(listener: LatexMathListener): void;
-    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
-}
 declare class SineContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
@@ -571,9 +578,9 @@ declare class SineContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
-declare class TangentContext extends ExpressionContext {
+declare class DeltaNameContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
-    expression(): ExpressionContext;
+    name(): NameContext;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -585,11 +592,9 @@ declare class ParenthesisContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
-declare class SubtractionContext extends ExpressionContext {
+declare class DeltaExpressionContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
-    expression(): ExpressionContext[];
-    expression(i: number): ExpressionContext | null;
-    MINUS(): antlr.TerminalNode;
+    expression(): ExpressionContext;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -623,14 +628,6 @@ declare class LogarithmContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
-declare class DerivativeContext extends ExpressionContext {
-    constructor(ctx: ExpressionContext);
-    expression(): ExpressionContext;
-    name(): NameContext;
-    enterRule(listener: LatexMathListener): void;
-    exitRule(listener: LatexMathListener): void;
-    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
-}
 declare class DivisionContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext[];
@@ -650,6 +647,47 @@ declare class SubscriptDigitContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     name(): NameContext;
     DIGIT(): antlr.TerminalNode;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class AdditionContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext[];
+    expression(i: number): ExpressionContext | null;
+    PLUS(): antlr.TerminalNode;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class FractionContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext[];
+    expression(i: number): ExpressionContext | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class TangentContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class SubtractionContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext[];
+    expression(i: number): ExpressionContext | null;
+    MINUS(): antlr.TerminalNode;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DerivativeContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext;
+    name(): NameContext;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -774,13 +812,6 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitMultiplication?: (ctx: MultiplicationContext) => Result;
     /**
-     * Visit a parse tree produced by the `Addition`
-     * labeled alternative in `LatexMathParser.expression`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitAddition?: (ctx: AdditionContext) => Result;
-    /**
      * Visit a parse tree produced by the `Variable`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -816,13 +847,6 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitSubscript?: (ctx: SubscriptContext) => Result;
     /**
-     * Visit a parse tree produced by the `Fraction`
-     * labeled alternative in `LatexMathParser.expression`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitFraction?: (ctx: FractionContext) => Result;
-    /**
      * Visit a parse tree produced by the `Sine`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -830,12 +854,12 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitSine?: (ctx: SineContext) => Result;
     /**
-     * Visit a parse tree produced by the `Tangent`
+     * Visit a parse tree produced by the `DeltaName`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
      * @return the visitor result
      */
-    visitTangent?: (ctx: TangentContext) => Result;
+    visitDeltaName?: (ctx: DeltaNameContext) => Result;
     /**
      * Visit a parse tree produced by the `Parenthesis`
      * labeled alternative in `LatexMathParser.expression`.
@@ -844,12 +868,12 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitParenthesis?: (ctx: ParenthesisContext) => Result;
     /**
-     * Visit a parse tree produced by the `Subtraction`
+     * Visit a parse tree produced by the `DeltaExpression`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
      * @return the visitor result
      */
-    visitSubtraction?: (ctx: SubtractionContext) => Result;
+    visitDeltaExpression?: (ctx: DeltaExpressionContext) => Result;
     /**
      * Visit a parse tree produced by the `Number`
      * labeled alternative in `LatexMathParser.expression`.
@@ -879,13 +903,6 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitLogarithm?: (ctx: LogarithmContext) => Result;
     /**
-     * Visit a parse tree produced by the `Derivative`
-     * labeled alternative in `LatexMathParser.expression`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitDerivative?: (ctx: DerivativeContext) => Result;
-    /**
      * Visit a parse tree produced by the `Division`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -906,6 +923,41 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitSubscriptDigit?: (ctx: SubscriptDigitContext) => Result;
+    /**
+     * Visit a parse tree produced by the `Addition`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitAddition?: (ctx: AdditionContext) => Result;
+    /**
+     * Visit a parse tree produced by the `Fraction`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitFraction?: (ctx: FractionContext) => Result;
+    /**
+     * Visit a parse tree produced by the `Tangent`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitTangent?: (ctx: TangentContext) => Result;
+    /**
+     * Visit a parse tree produced by the `Subtraction`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitSubtraction?: (ctx: SubtractionContext) => Result;
+    /**
+     * Visit a parse tree produced by the `Derivative`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivative?: (ctx: DerivativeContext) => Result;
     /**
      * Visit a parse tree produced by the `Power`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1119,6 +1171,8 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitParenthesis: (context: ParenthesisContext) => Branch;
     visitSubscript: (context: SubscriptContext) => Branch;
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
+    visitDeltaName: (context: DeltaNameContext) => Branch;
+    visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
 
 declare class Engine extends EventEmitter {
@@ -1181,6 +1235,8 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitSubscript: (context: SubscriptContext) => Branch;
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
     visitDerivative: (context: DerivativeContext) => Branch;
+    visitDeltaName: (context: DeltaNameContext) => Branch;
+    visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
 
 export { Branch, Deriver, Engine, Expression, ExpressionExpander, Parser, PreloadedData, System, Term, TermType, Visitor };

@@ -47,6 +47,7 @@ export class ModelsApiClient {
     const url = new URL(`${this.apiBaseUrl}/models`);
     const userId = this.getUserId();
     if (userId) url.searchParams.set("user_id", userId);
+    url.searchParams.set("scope", "own");
     const response = await fetch(url.toString(), { headers });
     if (!response.ok) throw new Error(`API error ${response.status}`);
     const data = await response.json();
@@ -61,8 +62,7 @@ export class ModelsApiClient {
     const headers = this.buildAuthHeaders();
     const url = new URL(`${this.apiBaseUrl}/models`);
     url.searchParams.set("user_id", userId);
-    url.searchParams.set("is_favorite", "1");
-    url.searchParams.set("filter", "favorite");
+    url.searchParams.set("scope", "favorites");
     const response = await fetch(url.toString(), { headers });
     if (!response.ok) throw new Error(`API error ${response.status}`);
     const data = await response.json();
@@ -77,12 +77,24 @@ export class ModelsApiClient {
     return Array.isArray(data) ? data : [];
   }
 
+  async fetchAllModels() {
+    const headers = this.buildAuthHeaders();
+    const url = new URL(`${this.apiBaseUrl}/models`);
+    const userId = this.getUserId();
+    if (userId) url.searchParams.set("user_id", userId);
+    url.searchParams.set("scope", "all");
+    const response = await fetch(url.toString(), { headers });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
   async fetchLibraryModels() {
     const headers = this.buildAuthHeaders();
     const url = new URL(`${this.apiBaseUrl}/models`);
     const userId = this.getUserId();
     if (userId) url.searchParams.set("user_id", userId);
-    url.searchParams.set("is_picked", "1");
+    url.searchParams.set("scope", "library");
     const response = await fetch(url.toString(), { headers });
     if (!response.ok) throw new Error(`API error ${response.status}`);
     const data = await response.json();

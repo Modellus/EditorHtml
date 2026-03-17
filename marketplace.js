@@ -14,6 +14,7 @@ const treeNodeIds = {
   marketplaceEducation: "market-education",
   marketplaceSciences: "market-sciences",
   maintenance: "maintenance",
+  maintenanceModels: "maintenance-models",
   maintenanceEducation: "maintenance-education",
   maintenanceSciences: "maintenance-sciences"
 };
@@ -68,6 +69,7 @@ class ModelsApp {
     this.treeViewInstance = null;
     this.toolbarInstance = null;
     this.maintenanceGridInstance = null;
+    this.maintenanceModelsGridInstance = null;
     this.personalModels = [];
     this.favoriteModels = [];
     this.libraryModels = [];
@@ -498,6 +500,7 @@ class ModelsApp {
   showMaintenanceGrid(maintenanceType) {
     if (!this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxDataGrid) return;
     this.disposeCardView();
+    this.disposeMaintenanceModelsGrid();
     const maintenanceStore = this.buildMaintenanceStore(maintenanceType);
     if (!this.maintenanceGridInstance) {
       this.elements.cardView.innerHTML = "";
@@ -555,7 +558,51 @@ class ModelsApp {
 
   showModelsCardView() {
     this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
     this.ensureCardView();
+  }
+
+  disposeMaintenanceModelsGrid() {
+    if (!this.maintenanceModelsGridInstance) return;
+    this.maintenanceModelsGridInstance.dispose();
+    this.maintenanceModelsGridInstance = null;
+  }
+
+  async showMaintenanceModelsGrid() {
+    if (!this.elements.cardView) return;
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    const allModelsStore = new DevExpress.data.CustomStore({
+      key: "id",
+      load: () => this.apiClient.fetchAllModels()
+    });
+    if (!this.maintenanceModelsGridInstance) {
+      this.elements.cardView.innerHTML = "";
+      this.maintenanceModelsGridInstance = new DevExpress.ui.dxDataGrid(this.elements.cardView, {
+        dataSource: allModelsStore,
+        keyExpr: "id",
+        height: "100%",
+        showBorders: false,
+        columnAutoWidth: true,
+        selection: { mode: "single" },
+        paging: { enabled: true, pageSize: 20 },
+        pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
+        searchPanel: { visible: true, width: 280, placeholder: "Search..." },
+        sorting: { mode: "multiple" },
+        filterRow: { visible: true },
+        columns: [
+          { dataField: "id", caption: "ID", width: 110 },
+          { dataField: "title", caption: "Title" },
+          { dataField: "description", caption: "Description" },
+          { dataField: "is_public", caption: "Public", width: 80, dataType: "boolean" },
+          { dataField: "user_id", caption: "User ID", width: 110 }
+        ],
+        onRowClick: event => this.openModel(event.data)
+      });
+      return;
+    }
+    this.maintenanceModelsGridInstance.option("dataSource", allModelsStore);
+    this.maintenanceModelsGridInstance.refresh();
   }
 
   getMaintenanceTypeByTreeNodeId(nodeId) {
@@ -565,6 +612,11 @@ class ModelsApp {
   }
 
   renderCurrentTreeNode() {
+    if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceModels) {
+      this.showMaintenanceModelsGrid();
+      this.setStatus("");
+      return;
+    }
     const maintenanceType = this.getMaintenanceTypeByTreeNodeId(this.state.selectedTreeNodeId);
     if (maintenanceType) {
       this.showMaintenanceGrid(maintenanceType);
@@ -841,6 +893,13 @@ class ModelsApp {
         expanded: true,
         selectable: false,
         items: [
+          {
+            id: treeNodeIds.maintenanceModels,
+            text: "Models",
+            nodeType: "maintenance-models",
+            iconClass: "fa-light fa-cube",
+            iconColor: "#475569"
+          },
           {
             id: treeNodeIds.maintenanceEducation,
             text: "Education Levels",
