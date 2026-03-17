@@ -68,6 +68,13 @@ class SliderShape extends BaseShape {
                 }
             ]
         });
+        items.push({
+            colSpan: 2,
+            dataField: "precision",
+            label: { text: "Precision" },
+            editorType: "dxNumberBox",
+            editorOptions: { min: 0, step: 0.1, showSpinButtons: true }
+        });
         instance.option("items", items);
         return form;
     }
@@ -86,6 +93,7 @@ class SliderShape extends BaseShape {
         this.properties.minimum = 0;
         this.properties.maximum = 1;
         this.properties.fillColor = this.board.theme.getBackgroundColors()[3].color;
+        this.properties.precision = 0;
     }
 
     createElement() {
@@ -94,10 +102,12 @@ class SliderShape extends BaseShape {
         this.bottomPart = this.board.createSvgElement("rect");
         this.container = this.board.createSvgElement("rect");
         this.splitter = this.board.createSvgElement("line");
+        this.ticksGroup = this.board.createSvgElement("g");
         this.container.setAttribute("stroke-width", 1);
         this.splitter.setAttribute("stroke-width", 2);
         element.appendChild(this.bottomPart);
         element.appendChild(this.topPart);
+        element.appendChild(this.ticksGroup);
         element.appendChild(this.container);
         element.appendChild(this.splitter);
         this._appliedConfig = null;
@@ -278,7 +288,15 @@ class SliderShape extends BaseShape {
         const position = this.getBoardPosition();
         const localY = this.clamp(boardY - position.y, 0, sliderHeight);
         const ratio = 1 - localY / sliderHeight;
-        return config.minimum + ratio * (config.maximum - config.minimum);
+        const rawValue = config.minimum + ratio * (config.maximum - config.minimum);
+        return this.snapToPrecision(rawValue);
+    }
+
+    snapToPrecision(value) {
+        const precision = Number(this.properties.precision);
+        if (!precision || precision <= 0)
+            return value;
+        return Math.round(value / precision) * precision;
     }
 
     setSplitterValue(value) {
@@ -342,7 +360,41 @@ class SliderShape extends BaseShape {
         this.splitter.setAttribute("y1", splitterY);
         this.splitter.setAttribute("x2", trackX + trackWidth);
         this.splitter.setAttribute("y2", splitterY);
+        this.drawTicks(trackX, trackWidth, sliderHeight);
         this.element.setAttribute("transform", `translate(${position.x} ${position.y}) rotate(${this.properties.rotation} ${sliderWidth / 2} ${sliderHeight / 2})`);
+    }
+
+    drawTicks(trackX, trackWidth, sliderHeight) {
+        if (!this.ticksGroup)
+            return;
+        while (this.ticksGroup.firstChild)
+            this.ticksGroup.removeChild(this.ticksGroup.firstChild);
+        const precision = Number(this.properties.precision);
+        if (!precision || precision <= 0)
+            return;
+        const config = this._sliderConfig ?? this.buildSliderConfig();
+        const range = config.maximum - config.minimum;
+        if (range <= 0)
+            return;
+        const tickCount = Math.floor(range / precision);
+        if (tickCount > 200)
+            return;
+        const borderColor = config.borderColor || "#999";
+        const tickLength = Math.min(6, trackWidth * 0.15);
+        for (let i = 0; i <= tickCount; i++) {
+            const value = config.minimum + i * precision;
+            const ratio = (value - config.minimum) / range;
+            const y = sliderHeight - ratio * sliderHeight;
+            const tick = this.board.createSvgElement("line");
+            tick.setAttribute("x1", trackX);
+            tick.setAttribute("y1", y);
+            tick.setAttribute("x2", trackX + tickLength);
+            tick.setAttribute("y2", y);
+            tick.setAttribute("stroke", borderColor);
+            tick.setAttribute("stroke-width", 0.5);
+            tick.setAttribute("opacity", "0.5");
+            this.ticksGroup.appendChild(tick);
+        }
     }
 
     getTermLabelAnchor() {
