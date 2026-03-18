@@ -229,8 +229,23 @@ class TableControl {
             showCase: column?.showCase === true,
             editable: column?.editable === true,
             precision: Number.isFinite(column?.precision) ? column.precision : null,
+            barColor: this.normalizeBarColor(column?.barColor),
             sourceColumn: column?.sourceColumn ?? null
         }));
+    }
+
+    normalizeBarColor(value) {
+        const normalizedValue = String(value ?? "").trim();
+        if (normalizedValue === "")
+            return "transparent";
+        return normalizedValue;
+    }
+
+    isTransparentColor(colorValue) {
+        const normalizedValue = String(colorValue ?? "").trim().toLowerCase();
+        if (normalizedValue === "" || normalizedValue === "transparent" || normalizedValue === "#00000000" || normalizedValue === "#0000")
+            return true;
+        return /^rgba\s*\([^)]*,\s*0(?:\.0+)?\s*\)$/.test(normalizedValue);
     }
 
     setOptions(options) {
@@ -369,12 +384,36 @@ class TableControl {
         const layout = this.getLayout();
         const columns = this.options.columns ?? [];
         const geometry = this.getColumnGeometry(layout, columns);
+        const columnValueRanges = this.getColumnValueRanges(columns);
         this.updateClipRect(layout);
         this.renderBackground(layout);
         this.renderHeader(layout, columns, geometry);
-        this.renderBody(layout, columns, geometry);
+        this.renderBody(layout, columns, geometry, columnValueRanges);
         this.renderScrollbar(layout);
         this.renderEditingValue(layout, geometry);
+    }
+
+    getColumnValueRanges(columns) {
+        if (!Array.isArray(columns) || columns.length === 0)
+            return [];
+        const ranges = [];
+        for (let columnIndex = 0; columnIndex < columns.length; columnIndex++) {
+            const column = columns[columnIndex];
+            let minValue = null;
+            let maxValue = null;
+            for (let rowIndex = 0; rowIndex < this.rows.length; rowIndex++) {
+                const row = this.rows[rowIndex];
+                const numericValue = Number(row?.[column.key]);
+                if (!Number.isFinite(numericValue))
+                    continue;
+                if (minValue == null || numericValue < minValue)
+                    minValue = numericValue;
+                if (maxValue == null || numericValue > maxValue)
+                    maxValue = numericValue;
+            }
+            ranges.push({ min: minValue, max: maxValue });
+        }
+        return ranges;
     }
 
     renderBackground(layout) {
@@ -444,7 +483,7 @@ class TableControl {
         this.headerLayer.appendChild(columnLine);
     }
 
-    renderBody(layout, columns, geometry) {
+    renderBody(layout, columns, geometry, columnValueRanges) {
         if (!columns.length)
             return;
         if (!this.rows.length)
@@ -453,11 +492,11 @@ class TableControl {
         const visible = this.getVisibleRange(layout);
         for (let rowIndex = visible.first; rowIndex <= visible.last; rowIndex++) {
             const y = layout.headerHeight + (rowIndex - visible.first) * rowHeight - visible.offset;
-            this.renderRow(layout, rowIndex, y, rowHeight, columns, geometry);
+            this.renderRow(layout, rowIndex, y, rowHeight, columns, geometry, columnValueRanges);
         }
     }
 
-    renderRow(layout, rowIndex, y, rowHeight, columns, geometry) {
+    renderRow(layout, rowIndex, y, rowHeight, columns, geometry, columnValueRanges) {
         const row = this.rows[rowIndex];
         if (!row)
             return;
@@ -486,6 +525,7 @@ class TableControl {
                 selectedRect.setAttribute("stroke-width", "1");
                 this.rowsLayer.appendChild(selectedRect);
             }
+            this.renderCellBar(cell, y, rowHeight, row, columns[columnIndex], columnValueRanges?.[columnIndex]);
             if (columnIndex < columns.length - 1) {
                 const line = this.createSvgElement("line");
                 line.setAttribute("x1", `${cell.x + cell.width}`);
@@ -515,6 +555,46 @@ class TableControl {
         rowLine.setAttribute("stroke", this.options.gridColor);
         rowLine.setAttribute("stroke-width", "1");
         this.rowsLayer.appendChild(rowLine);
+    }
+
+    renderCellBar(cellGeometry, y, rowHeight, row, column, range) {
+        if (!row || !column)
+            return;
+        const barColor = this.normalizeBarColor(column.barColor);
+        if (this.isTransparentColor(barColor))
+            return;
+        const value = Number(row[column.key]);
+        if (!Number.isFinite(value))
+            return;
+        const min = Number(range?.min);
+        const max = Number(range?.max);
+        if (!Number.isFinite(min) || !Number.isFinite(max))
+            return;
+        const maxWidth = Math.max(0, cellGeometry.width - 6);
+        if (maxWidth <= 0)
+            return;
+        let ratio = 1;
+        if (max > min)
+            ratio = (value - min) / (max - min);
+        if (!Number.isFinite(ratio))
+            return;
+        const clampedRatio = Math.max(0, Math.min(1, ratio));
+        let barWidth = maxWidth * clampedRatio;
+        if (barWidth <= 0)
+            return;
+        if (barWidth < 1)
+            barWidth = 1;
+        const barHeight = Math.max(1, rowHeight - 6);
+        const bar = this.createSvgElement("rect");
+        bar.setAttribute("x", `${cellGeometry.x + 3}`);
+        bar.setAttribute("y", `${y + 3}`);
+        bar.setAttribute("width", `${barWidth}`);
+        bar.setAttribute("height", `${barHeight}`);
+        bar.setAttribute("rx", "2");
+        bar.setAttribute("ry", "2");
+        bar.setAttribute("fill", barColor);
+        bar.setAttribute("fill-opacity", "0.35");
+        this.rowsLayer.appendChild(bar);
     }
 
     renderCellText(cellGeometry, y, rowHeight, textValue) {

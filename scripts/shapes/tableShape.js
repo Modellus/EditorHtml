@@ -31,7 +31,9 @@ class TableShape extends BaseShape {
             listClassName: "shape-terms-list table-columns-list",
             rowClassName: "shape-term-row table-column-row",
             dragHandleClassName: "shape-term-drag-handle table-column-drag-handle",
+            includeColor: true,
             normalizeTermValue: value => this.normalizeColumnValue(value),
+            normalizeColorValue: value => this.normalizeColumnColor(value),
             getFallbackItems: () => this.getLegacyColumns(),
             onChanged: () => this.refreshTableColumns()
         });
@@ -46,7 +48,7 @@ class TableShape extends BaseShape {
         this.properties.y = center.y - 100;
         this.properties.width = 200;
         this.properties.height = 200;
-        this.properties.columns = [{ term: "", case: 1 }];
+        this.properties.columns = [{ term: "", case: 1, color: "transparent" }];
     }
 
     createElement() {
@@ -85,6 +87,7 @@ class TableShape extends BaseShape {
             showCase: TermControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value)),
             editable: this._canEditTerm(column.term),
             precision: precision,
+            barColor: this.normalizeColumnColor(column.color),
             sourceColumn: column
         }));
     }
@@ -191,18 +194,21 @@ class TableShape extends BaseShape {
 
     getSelectedColumns() {
         const selectedColumns = TermControl.getSelectedShapeTermsCollection(this, "columns", {
+            includeColor: true,
             normalizeTermValue: value => this.normalizeColumnValue(value),
+            normalizeColorValue: value => this.normalizeColumnColor(value),
             getFallbackItems: () => this.getLegacyColumns()
         });
         return selectedColumns.map((column, index) => ({
             key: `column${index}`,
             term: column.term,
-            case: column.case
+            case: column.case,
+            color: this.normalizeColumnColor(column.color)
         }));
     }
 
     getColumnsStateKey(columns = this.getSelectedColumns()) {
-        return JSON.stringify(columns.map(column => ({ term: column.term, case: column.case })));
+        return JSON.stringify(columns.map(column => ({ term: column.term, case: column.case, color: this.normalizeColumnColor(column.color) })));
     }
 
     refreshColumnsControl() {
@@ -213,7 +219,9 @@ class TableShape extends BaseShape {
 
     normalizeColumns() {
         TermControl.normalizeShapeTermsCollection(this, "columns", {
+            includeColor: true,
             normalizeTermValue: value => this.normalizeColumnValue(value),
+            normalizeColorValue: value => this.normalizeColumnColor(value),
             getFallbackItems: () => this.getLegacyColumns()
         });
     }
@@ -223,16 +231,23 @@ class TableShape extends BaseShape {
         const column1Term = this.normalizeColumnValue(this.properties.column1Term);
         const column2Term = this.normalizeColumnValue(this.properties.column2Term);
         if (column1Term !== "")
-            columns.push({ term: column1Term, case: this.getClampedCaseNumber(this.properties.column1TermCase ?? 1) });
+            columns.push({ term: column1Term, case: this.getClampedCaseNumber(this.properties.column1TermCase ?? 1), color: "transparent" });
         if (column2Term !== "")
-            columns.push({ term: column2Term, case: this.getClampedCaseNumber(this.properties.column2TermCase ?? 1) });
+            columns.push({ term: column2Term, case: this.getClampedCaseNumber(this.properties.column2TermCase ?? 1), color: "transparent" });
         if (columns.length === 0)
-            columns.push({ term: "", case: 1 });
+            columns.push({ term: "", case: 1, color: "transparent" });
         return columns;
     }
 
     normalizeColumnValue(value) {
         return TermControl.normalizeTermValue(value);
+    }
+
+    normalizeColumnColor(value) {
+        const normalizedColor = TermControl.normalizeColorValue(value);
+        if (normalizedColor === "")
+            return "transparent";
+        return normalizedColor;
     }
 
     _canEditTerm(term) {
