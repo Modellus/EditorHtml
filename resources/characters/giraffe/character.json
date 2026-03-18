@@ -1,6 +1,6 @@
 {
-    "name": "Giraffe",
-    "description": "Victor, the giraffe.",
+    "name": "Victor",
+    "description": "The giraffe.",
     "image": "giraffe.png",
     "animations": [
         {

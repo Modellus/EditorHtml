@@ -46,12 +46,15 @@ class BodyShape extends BaseShape {
     setProperties(properties) {
         super.setProperties(properties);
         this.character = this.getSelectedCharacter();
+        this.synchronizeIdleAnimationTicker();
     }
 
     setProperty(name, value) {
         if (name === "characterKey")
             this.character = BodyShape.getCharacterByKey(value);
         super.setProperty(name, value);
+        if (name === "characterKey")
+            this.synchronizeIdleAnimationTicker();
     }
 
     getHandles() {
@@ -142,6 +145,7 @@ class BodyShape extends BaseShape {
         const buttonItems = characters.map(character => ({
             key: character.folder,
             name: character.name,
+            description: character.description,
             icon: `resources/characters/${character.folder}/${character.image}`
         }));
         items.push(
@@ -204,6 +208,7 @@ class BodyShape extends BaseShape {
                     },
                     itemTemplate: (itemData, itemIndex, itemElement) => {
                         itemElement[0].innerHTML = `<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;"><img src="${itemData.icon}" alt="${itemData.name}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+                        this.configureCharacterTooltip(itemData, itemElement[0]);
                     },
                     onItemClick: e => {
                         const formInstance = $("#shape-form").dxForm("instance");
@@ -215,6 +220,37 @@ class BodyShape extends BaseShape {
         );
         instance.option("items", items);
         return form;
+    }
+
+    configureCharacterTooltip(itemData, itemElement) {
+        if (itemElement.dataset.tooltipInitialized === "true")
+            return;
+        itemElement.dataset.tooltipInitialized = "true";
+        const name = this.escapeCharacterTooltipText(itemData.name ?? "");
+        const description = this.escapeCharacterTooltipText(itemData.description ?? "");
+        const tooltipHtml = `<div class="tooltip"><strong>${name}</strong><div>${description}</div></div>`;
+        $("<div>")
+            .appendTo("body")
+            .dxTooltip({
+                target: itemElement,
+                contentTemplate: contentElement => contentElement.append($("<div class='tooltip'/>").html(tooltipHtml)),
+                showEvent: {
+                    delay: 300,
+                    name: "mouseenter"
+                },
+                hideEvent: "mouseleave",
+                position: "top",
+                width: 220
+            });
+    }
+
+    escapeCharacterTooltipText(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
     }
 
     createImageDropZoneEditor() {
@@ -292,10 +328,53 @@ class BodyShape extends BaseShape {
         this.properties.imageBase64 = "";
         this.properties.characterKey = "";
         this.character = null;
+        this.lastBoardHorizontalPosition = null;
+        this.flipImageHorizontally = false;
+        this.idleAnimationIntervalId = null;
+        this.idleAnimationIntervalMs = null;
+    }
+
+    clearIdleAnimationTicker() {
+        if (this.idleAnimationIntervalId == null)
+            return;
+        clearInterval(this.idleAnimationIntervalId);
+        this.idleAnimationIntervalId = null;
+        this.idleAnimationIntervalMs = null;
+    }
+
+    synchronizeIdleAnimationTicker() {
+        const character = this.getSelectedCharacter();
+        if (!character) {
+            this.clearIdleAnimationTicker();
+            return;
+        }
+        const idleAnimation = this.getCharacterIdleAnimation(character);
+        if (!idleAnimation) {
+            this.clearIdleAnimationTicker();
+            return;
+        }
+        const frameCount = idleAnimation.frames;
+        if (!Number.isFinite(frameCount) || frameCount <= 0) {
+            this.clearIdleAnimationTicker();
+            return;
+        }
+        const intervalMs = 1000 / frameCount;
+        if (this.idleAnimationIntervalId != null && this.idleAnimationIntervalMs === intervalMs)
+            return;
+        this.clearIdleAnimationTicker();
+        this.idleAnimationIntervalMs = intervalMs;
+        this.idleAnimationIntervalId = setInterval(() => {
+            if (this.isSimulationPlaying())
+                return;
+            if (!this.getSelectedCharacter())
+                return;
+            this.board.markDirty(this);
+        }, intervalMs);
     }
 
     update() {
         super.update();
+        this.synchronizeIdleAnimationTicker();
         const character = this.getSelectedCharacter();
         if (character) {
             if (this.imageDropZoneControl)
@@ -329,6 +408,7 @@ class BodyShape extends BaseShape {
         const character = this.getSelectedCharacter();
         if (character) {
             this.drawCharacter(position, radius, diameter, character);
+            this.applyImageFlipTransform(position, true);
             return;
         }
         this.circle.setAttribute("cx", position.x);
@@ -341,6 +421,15 @@ class BodyShape extends BaseShape {
         this.image.setAttribute("width", diameter);
         this.image.setAttribute("height", diameter);
         this.image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+        this.applyImageFlipTransform(position, this.image.hasAttribute("href"));
+    }
+
+    applyImageFlipTransform(position, hasImage) {
+        if (!hasImage || !this.flipImageHorizontally) {
+            this.image.removeAttribute("transform");
+            return;
+        }
+        this.image.setAttribute("transform", `translate(${position.x * 2} 0) scale(-1 1)`);
     }
 
     getSelectedCharacter() {
@@ -350,6 +439,7 @@ class BodyShape extends BaseShape {
     }
 
     drawCharacter(position, radius, diameter, character) {
+        this.synchronizeIdleAnimationTicker();
         this.circle.setAttribute("cx", position.x);
         this.circle.setAttribute("cy", position.y);
         this.circle.setAttribute("r", radius);
@@ -361,11 +451,11 @@ class BodyShape extends BaseShape {
         this.image.setAttribute("height", diameter);
         this.image.setAttribute("preserveAspectRatio", "xMidYMid meet");
         const iteration = this.board.calculator.getIteration();
-        const animation = character.animations[0];
+        const animation = this.getCharacterAnimation(character);
         const frameCount = animation.frames;
         const animationFolder = animation.folder;
         const startIndex = animation.startIndex ?? 0;
-        const rawFrameIndex = (iteration % frameCount) + startIndex;
+        const rawFrameIndex = this.getAnimationFrameIndex(animation, frameCount, iteration, startIndex);
         const padLength = animation.padLength ?? 0;
         const frameIndex = padLength > 0 ? String(rawFrameIndex).padStart(padLength, "0") : String(rawFrameIndex);
         const filePrefix = animation.filePrefix ?? `${character.name} ${animation.name} `;
@@ -374,6 +464,45 @@ class BodyShape extends BaseShape {
         this._lastFrameName = frameName;
         this._lastAnimationFolder = animationFolder;
         this._lastCharacterFolder = character.folder;
+    }
+
+    getAnimationFrameIndex(animation, frameCount, iteration, startIndex) {
+        if (!this.isSimulationPlaying() && animation.name === "Idle") {
+            const frameIntervalMs = 1000 / frameCount;
+            const elapsedFrames = Math.floor(Date.now() / frameIntervalMs) % frameCount;
+            return elapsedFrames + startIndex;
+        }
+        return (iteration % frameCount) + startIndex;
+    }
+
+    getCharacterAnimation(character) {
+        const animations = character.animations ?? [];
+        if (animations.length === 0)
+            return { name: "Idle", folder: "", frames: 1 };
+        const idleAnimation = this.getCharacterIdleAnimation(character);
+        if (!this.isSimulationPlaying() && idleAnimation)
+            return idleAnimation;
+        const movingAnimation = this.getCharacterMovingAnimation(character);
+        return movingAnimation ?? idleAnimation ?? animations[0];
+    }
+
+    isSimulationPlaying() {
+        const playingStatus = typeof STATUS !== "undefined" ? STATUS.PLAYING : 0;
+        return this.board.calculator.status === playingStatus;
+    }
+
+    getCharacterIdleAnimation(character) {
+        return character.animations.find(animation => animation.name === "Idle") ?? null;
+    }
+
+    getCharacterMovingAnimation(character) {
+        const walkAnimation = character.animations.find(animation => animation.name === "Walk");
+        if (walkAnimation)
+            return walkAnimation;
+        const nonIdleAnimation = character.animations.find(animation => animation.name !== "Idle");
+        if (nonIdleAnimation)
+            return nonIdleAnimation;
+        return character.animations[0] ?? null;
     }
 
     tick() {
@@ -392,6 +521,11 @@ class BodyShape extends BaseShape {
         this.properties.x = scale.x !== 0 ? x / scale.x : 0;
         const y = -this.resolveTermNumeric(this.properties.yTerm, yCase);
         this.properties.y = scale.y !== 0 ? y / scale.y : 0;
+        const boardPosition = this.getBoardPosition();
+        if (this.lastBoardHorizontalPosition === boardPosition.x)
+            return;
+        this.flipImageHorizontally = this.lastBoardHorizontalPosition !== null && this.lastBoardHorizontalPosition > boardPosition.x;
+        this.lastBoardHorizontalPosition = boardPosition.x;
     }
 
     tickTrajectory() {

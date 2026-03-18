@@ -1,6 +1,6 @@
 {
-    "name": "Bird",
-    "description": "Duke, the bird.",
+    "name": "Duke",
+    "description": "The bird.",
     "image": "bird.png",
     "animations": [
         {
