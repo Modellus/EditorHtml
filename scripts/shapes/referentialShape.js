@@ -86,18 +86,6 @@ class ReferentialShape extends BaseShape {
                 widget: "dxButton",
                 options: {
                     elementAttr: {
-                        id: "character-button-context"
-                    },
-                    icon: "fa-regular fa-child-reaching",
-                    hint: this.board.translations.get("Character Name"),
-                    onClick: _ => window.shell?.commands?.addShape("CharacterShape", "Character")
-                }
-            },
-            {
-                location: "center",
-                widget: "dxButton",
-                options: {
-                    elementAttr: {
                         id: "image-button-context"
                     },
                     icon: "fa-light fa-image",

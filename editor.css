@@ -670,6 +670,63 @@ math-field {
     margin: 0;
 }
 
+.character-shape-picker .dx-buttongroup-item {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    height: 50px !important;
+    min-height: 50px !important;
+}
+
+.character-shape-picker .dx-buttongroup-wrapper {
+    align-items: stretch;
+}
+
+.character-shape-picker .dx-item {
+    height: 50px !important;
+    min-height: 50px !important;
+}
+
+.character-shape-picker .dx-item-content {
+    height: 50px !important;
+    min-height: 50px !important;
+    padding: 0 !important;
+}
+
+.character-shape-picker .dx-buttongroup-item .dx-button {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+    height: 50px !important;
+    min-height: 50px !important;
+    padding: 0 !important;
+}
+
+.character-shape-picker .dx-buttongroup-item .dx-button-content {
+    width: 50px !important;
+    height: 50px !important;
+    min-height: 50px !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.character-shape-picker .dx-buttongroup-item .dx-button-content img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    display: block;
+}
+
+.character-shape-picker .dx-buttongroup-item .dx-button-content .dx-icon {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    background-size: contain !important;
+    background-position: center;
+}
+
 .term-packed-control {
     display: flex;
     width: 100%;

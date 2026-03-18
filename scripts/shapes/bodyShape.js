@@ -1,6 +1,57 @@
 class BodyShape extends BaseShape {
+    static characters;
+    static loadCharactersPromise;
+
+    static setup() {
+        super.setup();
+        this.loadCharacters();
+    }
+
+    static loadCharacters() {
+        if (this.loadCharactersPromise)
+            return this.loadCharactersPromise;
+        this.loadCharactersPromise = fetch("resources/characters/characters.json")
+            .then(file => file.json())
+            .then(directories => Promise.all(directories.map(directory => this.loadCharacter(directory))))
+            .then(results => {
+                this.characters = results;
+                return results;
+            });
+        return this.loadCharactersPromise;
+    }
+
+    static loadCharacter(directory) {
+        return fetch(`resources/characters/${directory}/character.json`)
+            .then(file => file.json())
+            .then(data => {
+                data.folder = directory;
+                return data;
+            });
+    }
+
+    static getCharacters() {
+        if (!this.characters)
+            throw new Error("Characters not loaded. Call setup first.");
+        return this.characters;
+    }
+
+    static getCharacterByKey(characterKey) {
+        return this.getCharacters().find(character => character.folder === characterKey);
+    }
+
     constructor(board, parent, id) {
         super(board, parent, id);
+    }
+
+    setProperties(properties) {
+        super.setProperties(properties);
+        this.character = this.getSelectedCharacter();
+    }
+
+    setProperty(name, value) {
+        if (name === "characterKey")
+            this.character = BodyShape.getCharacterByKey(value);
+        super.setProperty(name, value);
     }
 
     getHandles() {
@@ -19,36 +70,50 @@ class BodyShape extends BaseShape {
                 })
             },
             {
-                className: "handle origin",
-                getAttributes: () => {
-                    const position = this.getBoardPosition();
-                    return { x: position.x - handleSize / 2, y: position.y - handleSize / 2, width: handleSize, height: handleSize };
-                },
-                getTransform: e => ({
-                    x: this.delta("x", e.dx),
-                    y: this.delta("y", e.dy)
-                })
+                className: "handle top-left",
+                getAttributes: () => this.getCornerHandleAttributes("top-left", handleSize),
+                getTransform: e => this.getCornerResizeTransform(e)
             },
             {
-                className: "handle radius",
-                getAttributes: () => {
-                    const position = this.getBoardPosition();
-                    return {
-                        x: position.x + Math.cos(this.properties.angle) * this.properties.radius,
-                        y: position.y + Math.sin(this.properties.angle) * this.properties.radius,
-                        width: handleSize,
-                        height: handleSize
-                    };
-                },
-                getTransform: e => {
-                    const position = this.getBoardPosition();
-                    return {
-                        radius: Math.sqrt((e.x - position.x) ** 2 + (e.y - position.y) ** 2),
-                        angle: Math.atan2(e.y - position.y, e.x - position.x)
-                    };
-                }
+                className: "handle top-right",
+                getAttributes: () => this.getCornerHandleAttributes("top-right", handleSize),
+                getTransform: e => this.getCornerResizeTransform(e)
+            },
+            {
+                className: "handle bottom-left",
+                getAttributes: () => this.getCornerHandleAttributes("bottom-left", handleSize),
+                getTransform: e => this.getCornerResizeTransform(e)
+            },
+            {
+                className: "handle bottom-right",
+                getAttributes: () => this.getCornerHandleAttributes("bottom-right", handleSize),
+                getTransform: e => this.getCornerResizeTransform(e)
             }
         ];
+    }
+
+    getCornerHandleAttributes(corner, handleSize) {
+        const position = this.getBoardPosition();
+        const radius = this.properties.radius ?? 0;
+        if (corner === "top-left")
+            return { x: position.x - radius - handleSize / 2, y: position.y - radius - handleSize / 2, width: handleSize, height: handleSize };
+        if (corner === "top-right")
+            return { x: position.x + radius - handleSize / 2, y: position.y - radius - handleSize / 2, width: handleSize, height: handleSize };
+        if (corner === "bottom-left")
+            return { x: position.x - radius - handleSize / 2, y: position.y + radius - handleSize / 2, width: handleSize, height: handleSize };
+        return { x: position.x + radius - handleSize / 2, y: position.y + radius - handleSize / 2, width: handleSize, height: handleSize };
+    }
+
+    getCornerResizeTransform(eventPoint) {
+        const position = this.getBoardPosition();
+        const horizontalRadius = Math.abs(eventPoint.x - position.x);
+        const verticalRadius = Math.abs(eventPoint.y - position.y);
+        const radius = Math.max(5, Math.max(horizontalRadius, verticalRadius));
+        return {
+            radius: radius,
+            width: radius * 2,
+            height: radius * 2
+        };
     }
 
     getHandleRotationCenter() {
@@ -73,6 +138,12 @@ class BodyShape extends BaseShape {
         this.addTerm("xTerm", "x", "Horizontal", false, true, 1, "x");
         this.addTerm("yTerm", "y", "Vertical", true, true, 1, "y");
         items = instance.option("items");
+        const characters = BodyShape.getCharacters();
+        const buttonItems = characters.map(character => ({
+            key: character.folder,
+            name: character.name,
+            icon: `resources/characters/${character.folder}/${character.image}`
+        }));
         items.push(
             {
                 colSpan: 2,
@@ -115,6 +186,31 @@ class BodyShape extends BaseShape {
                 colSpan: 2,
                 label: { text: "File" },
                 template: _ => this.createImageDropZoneEditor()
+            },
+            {
+                colSpan: 2,
+                dataField: "characterKey",
+                label: { text: "Character" },
+                editorType: "dxButtonGroup",
+                editorOptions: {
+                    stylingMode: "text",
+                    items: buttonItems,
+                    keyExpr: "key",
+                    selectionMode: "single",
+                    selectedItemKeys: this.properties.characterKey ? [this.properties.characterKey] : [],
+                    elementAttr: {
+                        class: "character-shape-picker",
+                        style: "height: auto; width: auto;"
+                    },
+                    itemTemplate: (itemData, itemIndex, itemElement) => {
+                        itemElement[0].innerHTML = `<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;"><img src="${itemData.icon}" alt="${itemData.name}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
+                    },
+                    onItemClick: e => {
+                        const formInstance = $("#shape-form").dxForm("instance");
+                        formInstance.updateData("characterKey", e.itemData.key);
+                        this.setProperty("characterKey", e.itemData.key);
+                    }
+                }
             }
         );
         instance.option("items", items);
@@ -153,7 +249,13 @@ class BodyShape extends BaseShape {
 
     createElement() {
         const element = this.board.createSvgElement("g");
+        this.hitArea = this.board.createSvgElement("rect");
+        this.hitArea.setAttribute("fill", "transparent");
+        this.hitArea.setAttribute("stroke", "none");
+        this.hitArea.setAttribute("pointer-events", "all");
+        element.appendChild(this.hitArea);
         this.circle = this.board.createSvgElement("circle");
+        this.circle.setAttribute("pointer-events", "all");
         element.appendChild(this.circle);
         this.image = this.board.createSvgElement("image");
         this.image.setAttribute("pointer-events", "none");
@@ -188,10 +290,18 @@ class BodyShape extends BaseShape {
         this.properties.stroboscopyOpacity = 0.5;
         this.properties.imageUrl = "";
         this.properties.imageBase64 = "";
+        this.properties.characterKey = "";
+        this.character = null;
     }
 
     update() {
         super.update();
+        const character = this.getSelectedCharacter();
+        if (character) {
+            if (this.imageDropZoneControl)
+                this.imageDropZoneControl.setImageSource(this.getImageSource());
+            return;
+        }
         const imageSource = this.getImageSource();
         if (imageSource != "")
             this.image.setAttribute("href", imageSource);
@@ -212,6 +322,15 @@ class BodyShape extends BaseShape {
         const position = this.getBoardPosition();
         const radius = this.properties.radius ?? 0;
         const diameter = radius * 2;
+        this.hitArea.setAttribute("x", position.x - radius);
+        this.hitArea.setAttribute("y", position.y - radius);
+        this.hitArea.setAttribute("width", diameter);
+        this.hitArea.setAttribute("height", diameter);
+        const character = this.getSelectedCharacter();
+        if (character) {
+            this.drawCharacter(position, radius, diameter, character);
+            return;
+        }
         this.circle.setAttribute("cx", position.x);
         this.circle.setAttribute("cy", position.y);
         this.circle.setAttribute("r", radius);
@@ -222,6 +341,39 @@ class BodyShape extends BaseShape {
         this.image.setAttribute("width", diameter);
         this.image.setAttribute("height", diameter);
         this.image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+    }
+
+    getSelectedCharacter() {
+        if (!this.properties.characterKey)
+            return null;
+        return BodyShape.getCharacterByKey(this.properties.characterKey);
+    }
+
+    drawCharacter(position, radius, diameter, character) {
+        this.circle.setAttribute("cx", position.x);
+        this.circle.setAttribute("cy", position.y);
+        this.circle.setAttribute("r", radius);
+        this.circle.setAttribute("fill", "transparent");
+        this.circle.setAttribute("stroke", "transparent");
+        this.image.setAttribute("x", position.x - radius);
+        this.image.setAttribute("y", position.y - radius);
+        this.image.setAttribute("width", diameter);
+        this.image.setAttribute("height", diameter);
+        this.image.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        const iteration = this.board.calculator.getIteration();
+        const animation = character.animations[0];
+        const frameCount = animation.frames;
+        const animationFolder = animation.folder;
+        const startIndex = animation.startIndex ?? 0;
+        const rawFrameIndex = (iteration % frameCount) + startIndex;
+        const padLength = animation.padLength ?? 0;
+        const frameIndex = padLength > 0 ? String(rawFrameIndex).padStart(padLength, "0") : String(rawFrameIndex);
+        const filePrefix = animation.filePrefix ?? `${character.name} ${animation.name} `;
+        const frameName = `${filePrefix}${frameIndex}.png`;
+        this.image.setAttribute("href", `resources/characters/${character.folder}/${animationFolder}/${frameName}`);
+        this._lastFrameName = frameName;
+        this._lastAnimationFolder = animationFolder;
+        this._lastCharacterFolder = character.folder;
     }
 
     tick() {

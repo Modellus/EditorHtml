@@ -1,0 +1,28 @@
+{
+    "name": "Bird",
+    "description": "Duke, the bird.",
+    "image": "bird.png",
+    "animations": [
+        {
+            "name": "Walk",
+            "folder": "fly",
+            "frames": 30,
+            "startIndex": 1,
+            "filePrefix": "bird_flyA"
+        },
+        {
+            "name": "Idle",
+            "folder": "idle",
+            "frames": 40,
+            "startIndex": 1,
+            "filePrefix": "bird_idle"
+        },
+        {
+            "name": "Celebrate",
+            "folder": "celebrate",
+            "frames": 98,
+            "startIndex": 1,
+            "filePrefix": "bird_celebrate"
+        }
+    ]
+}
