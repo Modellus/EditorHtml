@@ -950,23 +950,31 @@ class ChartControl {
         event.stopPropagation();
         event.preventDefault();
         const axis = hitArea.dataset.axis;
-        const tickIndex = Number(hitArea.dataset.index);
         const tickValue = Number(hitArea.dataset.value);
         const state = this.renderState;
         if (!state)
             return;
-        const ticks = axis === "x" ? state.xTicks : state.yTicks;
-        const totalTicks = ticks.length;
         const scale = axis === "x" ? state.xScale : state.yScale;
         const startPixel = scale(tickValue);
+        const layout = state.layout;
+        const domain = state.domain;
+        const axisStartPixel = axis === "x" ? layout.plotLeft : layout.plotBottom;
+        const baseValue = axis === "x" ? domain.xMin : domain.yMin;
+        const tickOffsetValue = tickValue - baseValue;
+        const tickOffsetPixel = axis === "x" ? startPixel - axisStartPixel : axisStartPixel - startPixel;
+        if (!Number.isFinite(tickOffsetValue) || Math.abs(tickOffsetValue) < 0.0001)
+            return;
+        if (!Number.isFinite(tickOffsetPixel) || Math.abs(tickOffsetPixel) < 0.0001)
+            return;
+        if (tickOffsetPixel * tickOffsetValue <= 0)
+            return;
         this._tickDragState = {
             axis,
-            tickIndex,
             tickValue,
-            totalTicks,
             startPixel,
-            domain: { ...state.domain },
-            layout: state.layout,
+            layout: layout,
+            baseValue: baseValue,
+            tickOffsetValue: tickOffsetValue,
             startX: event.clientX,
             startY: event.clientY,
             pointerId: event.pointerId
@@ -984,20 +992,27 @@ class ChartControl {
             return;
         event.preventDefault();
         const layout = drag.layout;
-        const domain = drag.domain;
         if (drag.axis === "x") {
             const pixelX = drag.startPixel + (event.clientX - drag.startX);
-            const ratio = (pixelX - layout.plotLeft) / layout.plotWidth;
-            const newDomain = this.computeStretchedDomain(domain.xMin, domain.xMax, drag.tickIndex, drag.totalTicks, drag.tickValue, ratio);
-            this.domainOverride.xMin = newDomain.min;
-            this.domainOverride.xMax = newDomain.max;
+            const pixelDistance = pixelX - layout.plotLeft;
+            if (Math.abs(pixelDistance) < 0.0001)
+                return;
+            if (pixelDistance * drag.tickOffsetValue <= 0)
+                return;
+            const scale = Math.abs(drag.tickOffsetValue / pixelDistance);
+            this.domainOverride.xMin = drag.baseValue;
+            this.domainOverride.xMax = drag.baseValue + scale * layout.plotWidth;
         }
         if (drag.axis === "y") {
             const pixelY = drag.startPixel + (event.clientY - drag.startY);
-            const ratio = (layout.plotBottom - pixelY) / layout.plotHeight;
-            const newDomain = this.computeStretchedDomain(domain.yMin, domain.yMax, drag.tickIndex, drag.totalTicks, drag.tickValue, ratio);
-            this.domainOverride.yMin = newDomain.min;
-            this.domainOverride.yMax = newDomain.max;
+            const pixelDistance = layout.plotBottom - pixelY;
+            if (Math.abs(pixelDistance) < 0.0001)
+                return;
+            if (pixelDistance * drag.tickOffsetValue <= 0)
+                return;
+            const scale = Math.abs(drag.tickOffsetValue / pixelDistance);
+            this.domainOverride.yMin = drag.baseValue;
+            this.domainOverride.yMax = drag.baseValue + scale * layout.plotHeight;
         }
         this.render();
     }
@@ -1014,22 +1029,6 @@ class ChartControl {
         this._tickDragState = null;
         if (typeof this.options.onDomainChanged === "function")
             this.options.onDomainChanged({ ...this.domainOverride });
-    }
-
-    computeStretchedDomain(domainMin, domainMax, tickIndex, totalTicks, tickValue, ratio) {
-        if (totalTicks < 2)
-            return { min: domainMin, max: domainMax };
-        const clampedRatio = Math.max(0.01, Math.min(0.99, ratio));
-        if (tickIndex <= 0) {
-            const newMin = tickValue - clampedRatio * (domainMax - tickValue) / (1 - clampedRatio);
-            if (newMin >= domainMax)
-                return { min: domainMax - 1, max: domainMax };
-            return { min: newMin, max: domainMax };
-        }
-        const newMax = domainMin + (tickValue - domainMin) / clampedRatio;
-        if (newMax <= domainMin)
-            return { min: domainMin, max: domainMin + 1 };
-        return { min: domainMin, max: newMax };
     }
 
     resetDomainOverride() {

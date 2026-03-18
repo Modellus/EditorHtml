@@ -2,6 +2,9 @@ class ReferentialShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, null, id);
         this.isReferential = true;
+        this._tickDragState = null;
+        this._onTickPointerMove = e => this.onTickPointerMove(e);
+        this._onTickPointerUp = e => this.onTickPointerUp(e);
     }
 
     getHandles() {
@@ -186,12 +189,18 @@ class ReferentialShape extends BaseShape {
         };
         this.tickLabels.horizontal.setAttribute("class", "referential-horizontal-labels");
         this.tickLabels.vertical.setAttribute("class", "referential-vertical-labels");
+        this.tickLabels.horizontal.setAttribute("clip-path", `url(#${this.getClipId()})`);
+        this.tickLabels.vertical.setAttribute("clip-path", `url(#${this.getClipId()})`);
         this.ticksLayer.appendChild(this.tickLabels.horizontal);
         this.ticksLayer.appendChild(this.tickLabels.vertical);
+        this.tickInteractionLayer = this.board.createSvgElement("g");
+        this.tickInteractionLayer.setAttribute("class", "referential-tick-interaction-layer");
+        this.ticksLayer.appendChild(this.tickInteractionLayer);
         const defs = this.board.createSvgElement("defs");
         g.appendChild(defs);
         const clipPath = this.board.createSvgElement("clipPath");
         clipPath.setAttribute("id", this.getClipId());
+        clipPath.setAttribute("clipPathUnits", "userSpaceOnUse");
         defs.appendChild(clipPath);
         this.containerClip = this.board.createSvgElement("rect");
         clipPath.appendChild(this.containerClip);
@@ -251,19 +260,21 @@ class ReferentialShape extends BaseShape {
         this.autoAdjustScales({ position, axisX, axisY });
         const scaleX = this.normalizeScale(this.properties.scaleX);
         const scaleY = this.normalizeScale(this.properties.scaleY);
-        const horizontalPositions = this.drawAxisTicks({
+        const horizontalTicks = this.drawAxisTicks({
             groups: this.tickGroups.horizontal,
             start: position.x,
             end: position.x + this.properties.width,
             origin: axisX,
             fixed: axisY,
             orientation: "horizontal",
-            color: axisColor
+            color: axisColor,
+            scale: scaleX
         });
-        if (horizontalPositions)
+        if (horizontalTicks)
             this.updateTickLabels({
                 group: this.tickLabels.horizontal,
-                positions: horizontalPositions,
+                positions: horizontalTicks.positions,
+                values: horizontalTicks.values,
                 orientation: "horizontal",
                 origin: axisX,
                 fixed: axisY,
@@ -273,19 +284,21 @@ class ReferentialShape extends BaseShape {
             });
         else
             this.clearLabels(this.tickLabels.horizontal);
-        const verticalPositions = this.drawAxisTicks({
+        const verticalTicks = this.drawAxisTicks({
             groups: this.tickGroups.vertical,
             start: position.y,
             end: position.y + this.properties.height,
             origin: axisY,
             fixed: axisX,
             orientation: "vertical",
-            color: axisColor
+            color: axisColor,
+            scale: scaleY
         });
-        if (verticalPositions)
+        if (verticalTicks)
             this.updateTickLabels({
                 group: this.tickLabels.vertical,
-                positions: verticalPositions,
+                positions: verticalTicks.positions,
+                values: verticalTicks.values,
                 orientation: "vertical",
                 origin: axisY,
                 fixed: axisX,
@@ -295,6 +308,128 @@ class ReferentialShape extends BaseShape {
             });
         else
             this.clearLabels(this.tickLabels.vertical);
+        this.updateTickInteractionHandles({
+            horizontalTicks: horizontalTicks,
+            verticalTicks: verticalTicks,
+            axisX: axisX,
+            axisY: axisY,
+            position: position
+        });
+    }
+
+    updateTickInteractionHandles({ horizontalTicks, verticalTicks, axisX, axisY, position }) {
+        const handles = [];
+        const horizontalPositions = horizontalTicks?.positions ?? [];
+        const horizontalValues = horizontalTicks?.values ?? [];
+        const verticalPositions = verticalTicks?.positions ?? [];
+        const verticalValues = verticalTicks?.values ?? [];
+        for (let index = 0; index < horizontalPositions.length; index++) {
+            const x = horizontalPositions[index];
+            const tickValue = horizontalValues[index];
+            if (!Number.isFinite(tickValue) || Math.abs(tickValue) < 0.0001)
+                continue;
+            handles.push({ axis: "x", position: x, fixed: axisY, value: tickValue, index: index, total: horizontalValues.length });
+        }
+        for (let index = 0; index < verticalPositions.length; index++) {
+            const y = verticalPositions[index];
+            const tickValue = verticalValues[index];
+            if (!Number.isFinite(tickValue) || Math.abs(tickValue) < 0.0001)
+                continue;
+            handles.push({ axis: "y", position: y, fixed: axisX, value: tickValue, index: index, total: verticalValues.length });
+        }
+        while (this.tickInteractionLayer.children.length > handles.length)
+            this.tickInteractionLayer.removeChild(this.tickInteractionLayer.lastChild);
+        for (let index = 0; index < handles.length; index++) {
+            const handleData = handles[index];
+            let hitArea = this.tickInteractionLayer.children[index];
+            if (!hitArea) {
+                hitArea = this.board.createSvgElement("rect");
+                hitArea.setAttribute("fill", "transparent");
+                hitArea.setAttribute("pointer-events", "all");
+                this.tickInteractionLayer.appendChild(hitArea);
+            }
+            if (handleData.axis === "x") {
+                hitArea.setAttribute("x", `${handleData.position - 12}`);
+                hitArea.setAttribute("y", `${axisY - 12}`);
+                hitArea.setAttribute("width", "24");
+                hitArea.setAttribute("height", "24");
+                hitArea.setAttribute("class", "chart-tick-handle chart-tick-handle-x");
+            } else {
+                hitArea.setAttribute("x", `${axisX - 12}`);
+                hitArea.setAttribute("y", `${handleData.position - 12}`);
+                hitArea.setAttribute("width", "24");
+                hitArea.setAttribute("height", "24");
+                hitArea.setAttribute("class", "chart-tick-handle chart-tick-handle-y");
+            }
+            hitArea.dataset.axis = handleData.axis;
+            hitArea.dataset.index = `${handleData.index}`;
+            hitArea.dataset.total = `${handleData.total}`;
+            hitArea.dataset.value = `${handleData.value}`;
+            hitArea.dataset.position = `${handleData.position}`;
+            hitArea.onpointerdown = e => this.onTickPointerDown(e, hitArea);
+        }
+    }
+
+    onTickPointerDown(event, hitArea) {
+        event.stopPropagation();
+        event.preventDefault();
+        const axis = hitArea.dataset.axis;
+        const tickValue = Number(hitArea.dataset.value);
+        if (!Number.isFinite(tickValue) || Math.abs(tickValue) < 0.0001)
+            return;
+        const position = this.getBoardPosition();
+        const axisX = position.x + this.properties.originX;
+        const axisY = position.y + this.properties.originY;
+        this._tickDragState = {
+            axis: axis,
+            tickValue: tickValue,
+            axisX: axisX,
+            axisY: axisY,
+            pointerId: event.pointerId
+        };
+        window.addEventListener("pointermove", this._onTickPointerMove);
+        window.addEventListener("pointerup", this._onTickPointerUp);
+        window.addEventListener("pointercancel", this._onTickPointerUp);
+    }
+
+    onTickPointerMove(event) {
+        const drag = this._tickDragState;
+        if (!drag)
+            return;
+        if (event.pointerId !== drag.pointerId)
+            return;
+        event.preventDefault();
+        const point = this.board.getMouseToSvgPoint(event);
+        if (drag.axis === "x") {
+            const pixelDistance = point.x - drag.axisX;
+            if (Math.abs(pixelDistance) < 0.0001)
+                return;
+            if (pixelDistance * drag.tickValue <= 0)
+                return;
+            this.properties.scaleX = Math.abs(drag.tickValue / pixelDistance);
+        } else {
+            const pixelDistance = drag.axisY - point.y;
+            if (Math.abs(pixelDistance) < 0.0001)
+                return;
+            if (pixelDistance * drag.tickValue <= 0)
+                return;
+            this.properties.scaleY = Math.abs(drag.tickValue / pixelDistance);
+        }
+        this.properties.autoScale = false;
+        this.tick();
+        this.board.markDirty(this);
+    }
+
+    onTickPointerUp(event) {
+        const drag = this._tickDragState;
+        if (!drag)
+            return;
+        if (event.pointerId !== drag.pointerId)
+            return;
+        window.removeEventListener("pointermove", this._onTickPointerMove);
+        window.removeEventListener("pointerup", this._onTickPointerUp);
+        window.removeEventListener("pointercancel", this._onTickPointerUp);
+        this._tickDragState = null;
     }
 
     autoAdjustScales({ position, axisX, axisY }) {
@@ -386,48 +521,28 @@ class ReferentialShape extends BaseShape {
         };
     }
 
-    drawAxisTicks({ groups, start, end, origin, fixed, orientation, color }) {
+    drawAxisTicks({ groups, start, end, origin, fixed, orientation, color, scale }) {
         const length = Math.abs(end - start);
-        if (length <= 0 || !Number.isFinite(length)) {
+        if (length <= 0 || !Number.isFinite(length) || !Number.isFinite(scale) || scale === 0) {
             this.clearTicks(groups.minor);
             this.clearTicks(groups.major);
             return null;
         }
-        const majorSpacing = this.getMajorTickSpacing(length);
-        const minorSpacing = this.getMinorTickSpacing(majorSpacing);
-        const majorPositions = this.calculateTickPositions(start, end, origin, majorSpacing);
-        const minorPositions = this.calculateTickPositions(start, end, origin, minorSpacing, majorSpacing);
-        this.updateTickLines(groups.major, majorPositions, orientation, fixed, 12, color, 0.5);
-        this.updateTickLines(groups.minor, minorPositions, orientation, fixed, 6, color, 0.8);
-        return majorPositions;
-    }
-
-    calculateTickPositions(start, end, origin, spacing, skipSpacing) {
-        if (!(spacing > 0) || !Number.isFinite(spacing))
-            return [];
-        const epsilon = 0.0001;
+        const domainMin = orientation === "horizontal"
+            ? (start - origin) * scale
+            : (origin - end) * scale;
+        const domainMax = orientation === "horizontal"
+            ? (end - origin) * scale
+            : (origin - start) * scale;
+        const values = this.buildTicks(domainMin, domainMax, this.getMaxMajorTickCount(length));
         const positions = [];
-        if (!skipSpacing)
-            positions.push(origin);
-        let forward = origin + spacing;
-        let iterations = 0;
-        const maxIterations = 1000;
-        while (forward <= end + epsilon && iterations < maxIterations) {
-            if (!skipSpacing || !this.isMultiple(forward - origin, skipSpacing))
-                positions.push(forward);
-            forward += spacing;
-            iterations++;
+        for (let index = 0; index < values.length; index++) {
+            const value = values[index];
+            positions.push(orientation === "horizontal" ? origin + value / scale : origin - value / scale);
         }
-        let backward = origin - spacing;
-        iterations = 0;
-        while (backward >= start - epsilon && iterations < maxIterations) {
-            if (!skipSpacing || !this.isMultiple(origin - backward, skipSpacing))
-                positions.push(backward);
-            backward -= spacing;
-            iterations++;
-        }
-        positions.sort((a, b) => a - b);
-        return positions;
+        this.clearTicks(groups.minor);
+        this.updateTickLines(groups.major, positions, orientation, fixed, 12, color, 0.5);
+        return { positions: positions, values: values };
     }
 
     updateTickLines(groupElement, positions, orientation, fixed, length, color, opacity) {
@@ -459,7 +574,7 @@ class ReferentialShape extends BaseShape {
         }
     }
 
-    updateTickLabels({ group, positions, orientation, origin, fixed, color, scale, precision }) {
+    updateTickLabels({ group, positions, values, orientation, origin, fixed, color, scale, precision }) {
         if (!group)
             return;
         if (!(Number.isFinite(scale) && scale !== 0)) {
@@ -489,7 +604,9 @@ class ReferentialShape extends BaseShape {
                 text.setAttribute("text-anchor", "end");
                 text.setAttribute("dominant-baseline", "middle");
             }
-            const labelValue = orientation === "horizontal" ? (value - origin) * scale : (origin - value) * scale;
+            const labelValue = Number.isFinite(values?.[index])
+                ? values[index]
+                : (orientation === "horizontal" ? (value - origin) * scale : (origin - value) * scale);
             const formatted = this.formatTickValue(labelValue, labelPrecision);
             text.textContent = formatted;
         }
@@ -522,20 +639,34 @@ class ReferentialShape extends BaseShape {
         return 1;
     }
 
-    getMajorTickSpacing(length) {
-        const spacing = length / 4;
-        return Math.max(spacing, 10);
+    getMaxMajorTickCount(axisLength) {
+        if (!Number.isFinite(axisLength) || axisLength <= 0)
+            return 11;
+        return Math.max(11, Math.floor(axisLength / 35) + 1);
     }
 
-    getMinorTickSpacing(majorSpacing) {
-        return Math.max(majorSpacing / 3, 6);
-    }
-
-    isMultiple(value, step) {
-        if (!(step > 0))
-            return false;
-        const ratio = value / step;
-        return Math.abs(ratio - Math.round(ratio)) < 0.0001;
+    buildTicks(minValue, maxValue, targetCount = 5) {
+        const ticks = [];
+        if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || minValue >= maxValue)
+            return ticks;
+        const range = maxValue - minValue;
+        const rawStep = range / Math.max(1, targetCount - 1);
+        const exponent = Math.floor(Math.log10(rawStep));
+        const magnitude = Math.pow(10, exponent);
+        const normalized = rawStep / magnitude;
+        let step;
+        if (normalized < 1.5)
+            step = magnitude;
+        else if (normalized < 3)
+            step = 2 * magnitude;
+        else if (normalized < 7)
+            step = 5 * magnitude;
+        else
+            step = 10 * magnitude;
+        const firstTick = Math.ceil(minValue / step) * step;
+        for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
+            ticks.push(Math.round(value * 1e10) / 1e10);
+        return ticks;
     }
 
     getClipId() {

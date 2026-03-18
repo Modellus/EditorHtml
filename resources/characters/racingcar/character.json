@@ -1,0 +1,14 @@
+{
+    "name": "Racing Car",
+    "description": "Vruuum, the racing car.",
+    "image": "racingcar.png",
+    "animations": [
+        {
+            "name": "Idle",
+            "folder": "idle",
+            "frames": 1,
+            "startIndex": 1,
+            "filePrefix": "racingcar_idle"
+        }
+    ]
+}

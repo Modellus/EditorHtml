@@ -369,9 +369,14 @@ class BaseShape {
     getElementUnderHandle(handle, event) {
         const saved = handle.style.pointerEvents;
         handle.style.pointerEvents = "none";
-        const element = document.elementFromPoint(event.clientX, event.clientY);
+        const elements = document.elementsFromPoint(event.clientX, event.clientY);
         handle.style.pointerEvents = saved;
-        return element;
+        for (let index = 0; index < elements.length; index++) {
+            const element = elements[index];
+            if (element?.classList?.contains("chart-tick-handle"))
+                return element;
+        }
+        return elements[0];
     }
 
     onHandlePointerDown = (event, handle) => {
