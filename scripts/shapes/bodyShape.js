@@ -41,6 +41,30 @@ class BodyShape extends BaseShape {
 
     constructor(board, parent, id) {
         super(board, parent, id);
+        this.ensureMotionTermMappings();
+    }
+
+    ensureMotionTermMappings() {
+        if (!this.termsMapping.some(mapping => mapping.termProperty === "xTerm")) {
+            this.termsMapping.push({
+                termProperty: "xTerm",
+                termValue: 0,
+                property: "x",
+                isInverted: false,
+                scaleProperty: "x",
+                caseProperty: "xTermCase"
+            });
+        }
+        if (!this.termsMapping.some(mapping => mapping.termProperty === "yTerm")) {
+            this.termsMapping.push({
+                termProperty: "yTerm",
+                termValue: 0,
+                property: "y",
+                isInverted: true,
+                scaleProperty: "y",
+                caseProperty: "yTermCase"
+            });
+        }
     }
 
     setProperties(properties) {
@@ -138,8 +162,9 @@ class BodyShape extends BaseShape {
             colorGroup.items = colorGroup.items.filter(item => item.dataField !== "backgroundColor");
         }
         instance.option("items", items);
-        this.addTerm("xTerm", "x", "Horizontal", false, true, 1, "x");
-        this.addTerm("yTerm", "y", "Vertical", true, true, 1, "y");
+        this.ensureMotionTermMappings();
+        this.addTermToForm("xTerm", "Horizontal", true, 1);
+        this.addTermToForm("yTerm", "Vertical", true, 1);
         items = instance.option("items");
         const characters = BodyShape.getCharacters();
         const buttonItems = characters.map(character => ({

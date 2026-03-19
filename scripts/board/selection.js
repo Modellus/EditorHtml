@@ -22,16 +22,17 @@ class Selection {
         this.board.svg.addEventListener("mouseleave", () => this.clearHover());
     }
 
-    dispatchEvent(name, shape) {
+    dispatchEvent(name, shape, modifiers = null) {
         const selectedEvent = new CustomEvent(name, {
             detail: {
-                shape: shape
+                shape: shape,
+                modifiers: modifiers
             }
         });
         this.board.svg.dispatchEvent(selectedEvent);
     }
 
-    select(shape) {
+    select(shape, modifiers = null) {
         this.deselect();
         this.clearHover();
         this.selectedShape = shape;
@@ -40,7 +41,7 @@ class Selection {
         this.updateOutline(this.selectedOutline, shape);
         if (shape.showContextToolbar)
             shape.showContextToolbar();
-        this.dispatchEvent("selected", this.selectedShape);
+        this.dispatchEvent("selected", this.selectedShape, modifiers);
     }
 
     deselect() {
@@ -141,7 +142,7 @@ class Selection {
         const childShape = this.findChildShapeAtPoint(shape, point);
         const selectedShape = childShape ?? shape;
         if (selectedShape !== this.selectedShape)
-            this.select(selectedShape);
+            this.select(selectedShape, { altKey: event.altKey === true });
     }
 
     resolveSelectionTarget(event) {

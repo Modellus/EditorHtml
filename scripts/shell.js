@@ -12,6 +12,7 @@ class Shell  {
         this.agentToolBridge = null;
         this.chatInstance = null;
         this.chatThreadId = null;
+        this.propertiesPopupSelectionEnabled = this.loadPropertiesPopupSelectionEnabled();
         this.chatBeforeUnloadHandler = () => this.disposeChatAdapter();
         if (typeof AgentToolBridge === "function")
             this.agentToolBridge = new AgentToolBridge({
@@ -651,6 +652,19 @@ class Shell  {
                 {
                     widget: "dxButton",
                     options: {
+                        elementAttr: {
+                            id: "properties-popup-toggle-button"
+                        },
+                        stylingMode: "text",
+                        icon: this.getPropertiesPopupToggleIcon(),
+                        onClick: _ => this.togglePropertiesPopupSelectionEnabled(),
+                        onInitialized: e => this.propertiesPopupToggleTooltip = this.createTranslatedTooltip(e, "Properties Popup Toggle Tooltip", 320)
+                    },
+                    location: "before"
+                },
+                {
+                    widget: "dxButton",
+                    options: {
                         icon: "fa-light fa-circle-minus",
                         onInitialized: e => this.createTranslatedTooltip(e, "Zoom Out Tooltip", 280)
                     },
@@ -828,6 +842,7 @@ class Shell  {
             ]
         });
         this.bottomToolbar = $("#bottom-toolbar").dxToolbar("instance");
+        this.propertiesPopupToggleButton = $("#properties-popup-toggle-button").dxButton("instance");
         this.zoom = $("#zoomButton").dxButton("instance");
         this.playPause = $("#playPauseButton").dxButton("instance");
         this.stop = $("#stopButton").dxButton("instance");
@@ -837,6 +852,7 @@ class Shell  {
         this.stepForward = $("#stepForwardButton").dxButton("instance");
         this.$playHeadMin = $("#playHeadMinLabel");
         this.$playHeadMax = $("#playHeadMaxLabel");
+        this.updatePropertiesPopupToggleButton();
     }
         
     createChat() {
@@ -1672,6 +1688,56 @@ class Shell  {
         return this.calculator.getValues();
     }
 
+    loadPropertiesPopupSelectionEnabled() {
+        try {
+            const stored = localStorage.getItem("modellus.propertiesPopupSelectionEnabled");
+            if (stored == null)
+                return true;
+            return stored === "true";
+        } catch (error) {
+            return true;
+        }
+    }
+
+    persistPropertiesPopupSelectionEnabled() {
+        try {
+            localStorage.setItem("modellus.propertiesPopupSelectionEnabled", this.propertiesPopupSelectionEnabled ? "true" : "false");
+        } catch (error) {
+        }
+    }
+
+    getPropertiesPopupToggleIcon() {
+        return this.propertiesPopupSelectionEnabled ? "fa-solid fa-square-list" : "fa-light fa-square-list";
+    }
+
+    updatePropertiesPopupToggleButton() {
+        if (!this.propertiesPopupToggleButton)
+            return;
+        this.propertiesPopupToggleButton.option("template", null);
+        this.propertiesPopupToggleButton.option("icon", this.getPropertiesPopupToggleIcon());
+        this.propertiesPopupToggleButton.option("type", this.propertiesPopupSelectionEnabled ? "default" : "normal");
+    }
+
+    togglePropertiesPopupSelectionEnabled() {
+        this.propertiesPopupSelectionEnabled = !this.propertiesPopupSelectionEnabled;
+        this.persistPropertiesPopupSelectionEnabled();
+        this.updatePropertiesPopupToggleButton();
+        const selectedShape = this.board.selection.selectedShape;
+        if (!selectedShape) {
+            this.shapePopup.hide();
+            return;
+        }
+        if (this.propertiesPopupSelectionEnabled) {
+            this.scheduleShapeSelection(selectedShape, { forceShowProperties: true });
+            return;
+        }
+        this.shapePopup.hide();
+    }
+
+    shouldShowPropertiesOnSelection(forceShowProperties = false) {
+        return forceShowProperties || this.propertiesPopupSelectionEnabled;
+    }
+
     exportData() {
         var values = this.calculator.getValues();
         var csv = "data:text/csv;charset=utf-8,";
@@ -1686,36 +1752,46 @@ class Shell  {
         link.click();
     }
 
-    selectShape(shape) {
+    selectShape(shape, { forceShowProperties = false } = {}) {
         if (window.modellusReadOnly)
             return;
         this.updateToolbar();
         this.shapeForm = null;
-        var form = shape.getForm();
-        if (form == null)
+        if (!this.shouldShowPropertiesOnSelection(forceShowProperties)) {
+            this.shapePopup.hide();
             return;
+        }
+        var form = shape.getForm();
+        if (form == null) {
+            this.shapePopup.hide();
+            return;
+        }
         this.shapeForm = form.dxForm("instance");
         this.shapePopup.content().empty();
         this.shapePopup.content().append(form);
         this.shapePopup.show();
     }
 
-    scheduleShapeSelection(shape) {
+    scheduleShapeSelection(shape, { forceShowProperties = false } = {}) {
         this.pendingSelectedShape = shape;
+        this.pendingSelectedShapeOptions = { forceShowProperties: forceShowProperties };
         if (this.selectedShapeFrame != null)
             cancelAnimationFrame(this.selectedShapeFrame);
         this.selectedShapeFrame = requestAnimationFrame(() => {
             this.selectedShapeFrame = null;
             const pendingShape = this.pendingSelectedShape;
+            const pendingOptions = this.pendingSelectedShapeOptions ?? { forceShowProperties: false };
             this.pendingSelectedShape = null;
+            this.pendingSelectedShapeOptions = null;
             if (!pendingShape)
                 return;
-            this.selectShape(pendingShape);
+            this.selectShape(pendingShape, pendingOptions);
         });
     }
 
     deselectShape({ skipBoard = false } = {}) {
         this.pendingSelectedShape = null;
+        this.pendingSelectedShapeOptions = null;
         if (this.selectedShapeFrame != null) {
             cancelAnimationFrame(this.selectedShapeFrame);
             this.selectedShapeFrame = null;
@@ -1727,7 +1803,7 @@ class Shell  {
     }
     
     onSelected(e) {
-        this.scheduleShapeSelection(e.detail.shape);
+        this.scheduleShapeSelection(e.detail.shape, { forceShowProperties: e.detail.modifiers?.altKey === true });
     }
     
     onDeselected(e) {

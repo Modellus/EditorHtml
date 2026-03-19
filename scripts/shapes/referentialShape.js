@@ -107,6 +107,11 @@ class ReferentialShape extends BaseShape {
         items.push(
             {
                 colSpan: 2,
+                label: { text: "Display" },
+                template: _ => this.createDisplayOptionsEditor()
+            },
+            {
+                colSpan: 2,
                 dataField: "autoScale",
                 label: { text: "Auto scale" },
                 editorType: "dxSwitch"
@@ -135,6 +140,53 @@ class ReferentialShape extends BaseShape {
         return form;
     }
 
+    createDisplayOptionsEditor() {
+        return $("<div>").dxButtonGroup({
+            stylingMode: "text",
+            keyExpr: "key",
+            selectionMode: "multiple",
+            selectedItemKeys: this.getDisplayOptionKeys(),
+            items: [
+                { key: "showHorizontalAxis", hint: "Show horizontal axis" },
+                { key: "showVerticalAxis", hint: "Show vertical axis" },
+                { key: "showTicksWithValues", hint: "Show ticks with values" },
+                { key: "showHorizontalGrid", hint: "Show horizontal grid lines" },
+                { key: "showVerticalGrid", hint: "Show vertical grid lines" },
+                { key: "equalAxisScales", hint: "Use equal horizontal and vertical scales" }
+            ],
+            buttonTemplate: (data, container) => {
+                container.html(this.getDisplayOptionIconMarkup(data.key, data.hint));
+            },
+            onSelectionChanged: e => {
+                const selectedKeys = e.component.option("selectedItemKeys") ?? [];
+                this.properties.showHorizontalAxis = selectedKeys.includes("showHorizontalAxis");
+                this.properties.showVerticalAxis = selectedKeys.includes("showVerticalAxis");
+                this.properties.showTicksWithValues = selectedKeys.includes("showTicksWithValues");
+                this.properties.showHorizontalGrid = selectedKeys.includes("showHorizontalGrid");
+                this.properties.showVerticalGrid = selectedKeys.includes("showVerticalGrid");
+                this.properties.equalAxisScales = selectedKeys.includes("equalAxisScales");
+                this.tick();
+                this.board.markDirty(this);
+            }
+        });
+    }
+
+    getDisplayOptionIconMarkup(key, hint) {
+        if (key === "showHorizontalAxis")
+            return `<i class="dx-icon fa-light fa-square-half-stroke-horizontal" title="${hint}"></i>`;
+        if (key === "showVerticalAxis")
+            return `<i class="dx-icon fa-light fa-square-half-stroke" title="${hint}"></i>`;
+        if (key === "showTicksWithValues")
+            return `<i class="dx-icon fa-light fa-square-ellipsis" title="${hint}"></i>`;
+        if (key === "showHorizontalGrid")
+            return `<i class="dx-icon fa-light fa-border-center-h" title="${hint}"></i>`;
+        if (key === "showVerticalGrid")
+            return `<i class="dx-icon fa-light fa-border-center-v" title="${hint}"></i>`;
+        if (key === "equalAxisScales")
+            return `<i class="dx-icon fa-light fa-square-equals" title="${hint}"></i>`;
+        return `<i class="dx-icon" title="${hint}"></i>`;
+    }
+
     setDefaults() {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Referential Name");
@@ -148,6 +200,12 @@ class ReferentialShape extends BaseShape {
         this.properties.scaleX = 1;
         this.properties.scaleY = 1;
         this.properties.autoScale = true;
+        this.properties.showHorizontalAxis = true;
+        this.properties.showVerticalAxis = true;
+        this.properties.showTicksWithValues = true;
+        this.properties.showHorizontalGrid = true;
+        this.properties.showVerticalGrid = true;
+        this.properties.equalAxisScales = true;
     }
 
     createElement() {
@@ -165,6 +223,14 @@ class ReferentialShape extends BaseShape {
         g.appendChild(this.verticalAxis);
         this.ticksLayer = this.board.createSvgElement("g");
         g.appendChild(this.ticksLayer);
+        this.gridGroups = {
+            horizontal: this.board.createSvgElement("g"),
+            vertical: this.board.createSvgElement("g")
+        };
+        this.gridGroups.horizontal.setAttribute("class", "referential-grid-lines horizontal");
+        this.gridGroups.vertical.setAttribute("class", "referential-grid-lines vertical");
+        this.ticksLayer.appendChild(this.gridGroups.horizontal);
+        this.ticksLayer.appendChild(this.gridGroups.vertical);
         this.tickGroups = {
             horizontal: {
                 minor: this.board.createSvgElement("g"),
@@ -246,6 +312,8 @@ class ReferentialShape extends BaseShape {
         this.verticalAxis.setAttribute("y2", position.y + this.properties.height);
         this.verticalAxis.setAttribute("stroke", axisColor);
         this.verticalAxis.setAttribute("transform", rotationTransform);
+        this.horizontalAxis.setAttribute("visibility", this.properties.showHorizontalAxis === false ? "hidden" : "visible");
+        this.verticalAxis.setAttribute("visibility", this.properties.showVerticalAxis === false ? "hidden" : "visible");
         if (this.ticksLayer)
             this.ticksLayer.setAttribute("transform", rotationTransform);
     }
@@ -258,8 +326,9 @@ class ReferentialShape extends BaseShape {
         const axisX = position.x + this.properties.originX;
         const axisY = position.y + this.properties.originY;
         this.autoAdjustScales({ position, axisX, axisY });
-        const scaleX = this.normalizeScale(this.properties.scaleX);
-        const scaleY = this.normalizeScale(this.properties.scaleY);
+        const scales = this.getAxisScales();
+        const scaleX = scales.scaleX;
+        const scaleY = scales.scaleY;
         const horizontalTicks = this.drawAxisTicks({
             groups: this.tickGroups.horizontal,
             start: position.x,
@@ -270,7 +339,20 @@ class ReferentialShape extends BaseShape {
             color: axisColor,
             scale: scaleX
         });
-        if (horizontalTicks)
+        if (horizontalTicks && this.properties.showVerticalGrid === true)
+            this.updateGridLines({
+                group: this.gridGroups.vertical,
+                positions: horizontalTicks.positions,
+                values: horizontalTicks.values,
+                orientation: "vertical",
+                min: position.y,
+                max: position.y + this.properties.height,
+                color: axisColor,
+                axisVisibility: this.properties.showVerticalAxis !== false
+            });
+        else
+            this.clearTicks(this.gridGroups.vertical);
+        if (horizontalTicks && this.properties.showTicksWithValues !== false)
             this.updateTickLabels({
                 group: this.tickLabels.horizontal,
                 positions: horizontalTicks.positions,
@@ -294,7 +376,20 @@ class ReferentialShape extends BaseShape {
             color: axisColor,
             scale: scaleY
         });
-        if (verticalTicks)
+        if (verticalTicks && this.properties.showHorizontalGrid === true)
+            this.updateGridLines({
+                group: this.gridGroups.horizontal,
+                positions: verticalTicks.positions,
+                values: verticalTicks.values,
+                orientation: "horizontal",
+                min: position.x,
+                max: position.x + this.properties.width,
+                color: axisColor,
+                axisVisibility: this.properties.showHorizontalAxis !== false
+            });
+        else
+            this.clearTicks(this.gridGroups.horizontal);
+        if (verticalTicks && this.properties.showTicksWithValues !== false)
             this.updateTickLabels({
                 group: this.tickLabels.vertical,
                 positions: verticalTicks.positions,
@@ -308,13 +403,48 @@ class ReferentialShape extends BaseShape {
             });
         else
             this.clearLabels(this.tickLabels.vertical);
-        this.updateTickInteractionHandles({
-            horizontalTicks: horizontalTicks,
-            verticalTicks: verticalTicks,
-            axisX: axisX,
-            axisY: axisY,
-            position: position
-        });
+        if (this.properties.showTicksWithValues !== false)
+            this.updateTickInteractionHandles({
+                horizontalTicks: horizontalTicks,
+                verticalTicks: verticalTicks,
+                axisX: axisX,
+                axisY: axisY,
+                position: position
+            });
+        else
+            this.clearTicks(this.tickInteractionLayer);
+    }
+
+    getDisplayOptionKeys() {
+        const selectedKeys = [];
+        if (this.properties.showHorizontalAxis !== false)
+            selectedKeys.push("showHorizontalAxis");
+        if (this.properties.showVerticalAxis !== false)
+            selectedKeys.push("showVerticalAxis");
+        if (this.properties.showTicksWithValues !== false)
+            selectedKeys.push("showTicksWithValues");
+        if (this.properties.showHorizontalGrid === true)
+            selectedKeys.push("showHorizontalGrid");
+        if (this.properties.showVerticalGrid === true)
+            selectedKeys.push("showVerticalGrid");
+        if (this.properties.equalAxisScales === true)
+            selectedKeys.push("equalAxisScales");
+        return selectedKeys;
+    }
+
+    getAxisScales() {
+        let scaleX = this.normalizeScale(this.properties.scaleX);
+        let scaleY = this.normalizeScale(this.properties.scaleY);
+        if (this.properties.equalAxisScales === true) {
+            const equalScale = scaleX;
+            if (this.properties.scaleX !== equalScale)
+                this.properties.scaleX = equalScale;
+            if (this.properties.scaleY !== equalScale)
+                this.properties.scaleY = equalScale;
+            scaleX = equalScale;
+            scaleY = equalScale;
+        }
+        return { scaleX: scaleX, scaleY: scaleY };
     }
 
     updateTickInteractionHandles({ horizontalTicks, verticalTicks, axisX, axisY, position }) {
@@ -407,6 +537,8 @@ class ReferentialShape extends BaseShape {
             if (pixelDistance * drag.tickValue <= 0)
                 return;
             this.properties.scaleX = Math.abs(drag.tickValue / pixelDistance);
+            if (this.properties.equalAxisScales === true)
+                this.properties.scaleY = this.properties.scaleX;
         } else {
             const pixelDistance = drag.axisY - point.y;
             if (Math.abs(pixelDistance) < 0.0001)
@@ -414,6 +546,8 @@ class ReferentialShape extends BaseShape {
             if (pixelDistance * drag.tickValue <= 0)
                 return;
             this.properties.scaleY = Math.abs(drag.tickValue / pixelDistance);
+            if (this.properties.equalAxisScales === true)
+                this.properties.scaleX = this.properties.scaleY;
         }
         this.properties.autoScale = false;
         this.tick();
@@ -453,14 +587,24 @@ class ReferentialShape extends BaseShape {
         const currentMaxValueY = maxAxisPxY * scaleY;
         const observedValueX = Math.max(Math.abs(minOffsetX), Math.abs(maxOffsetX)) * scaleX;
         const observedValueY = Math.max(Math.abs(minOffsetY), Math.abs(maxOffsetY)) * scaleY;
+        let nextScaleX = scaleX;
+        let nextScaleY = scaleY;
         if (observedValueX > currentMaxValueX) {
             const targetValueX = observedValueX * 1.3;
-            this.properties.scaleX = targetValueX / maxAxisPxX;
+            nextScaleX = targetValueX / maxAxisPxX;
         }
         if (observedValueY > currentMaxValueY) {
             const targetValueY = observedValueY * 1.3;
-            this.properties.scaleY = targetValueY / maxAxisPxY;
+            nextScaleY = targetValueY / maxAxisPxY;
         }
+        if (this.properties.equalAxisScales === true) {
+            const equalScale = Math.max(nextScaleX, nextScaleY);
+            this.properties.scaleX = equalScale;
+            this.properties.scaleY = equalScale;
+            return;
+        }
+        this.properties.scaleX = nextScaleX;
+        this.properties.scaleY = nextScaleY;
     }
 
     getChildOffsetRanges(axisX, axisY) {
@@ -541,8 +685,45 @@ class ReferentialShape extends BaseShape {
             positions.push(orientation === "horizontal" ? origin + value / scale : origin - value / scale);
         }
         this.clearTicks(groups.minor);
-        this.updateTickLines(groups.major, positions, orientation, fixed, 12, color, 0.5);
+        if (this.properties.showTicksWithValues !== false)
+            this.updateTickLines(groups.major, positions, orientation, fixed, 12, color, 0.5);
+        else
+            this.clearTicks(groups.major);
         return { positions: positions, values: values };
+    }
+
+    updateGridLines({ group, positions, values, orientation, min, max, color, axisVisibility }) {
+        if (!group)
+            return;
+        const filteredPositions = [];
+        for (let index = 0; index < positions.length; index++) {
+            if (axisVisibility !== false && Math.abs(values[index]) < 0.0001)
+                continue;
+            filteredPositions.push(positions[index]);
+        }
+        while (group.children.length > filteredPositions.length)
+            group.removeChild(group.lastChild);
+        for (let index = 0; index < filteredPositions.length; index++) {
+            const position = filteredPositions[index];
+            let line = group.children[index];
+            if (!line) {
+                line = this.board.createSvgElement("line");
+                line.setAttribute("class", "referential-grid-line");
+                group.appendChild(line);
+            }
+            line.setAttribute("stroke", color);
+            if (orientation === "vertical") {
+                line.setAttribute("x1", position);
+                line.setAttribute("x2", position);
+                line.setAttribute("y1", min);
+                line.setAttribute("y2", max);
+            } else {
+                line.setAttribute("x1", min);
+                line.setAttribute("x2", max);
+                line.setAttribute("y1", position);
+                line.setAttribute("y2", position);
+            }
+        }
     }
 
     updateTickLines(groupElement, positions, orientation, fixed, length, color, opacity) {
