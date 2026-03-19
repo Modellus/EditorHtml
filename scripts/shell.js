@@ -55,6 +55,7 @@ class Shell  {
         this.properties.language = "en-US";
         this.properties.name = "Model";
         this.properties.description = "";
+        this.properties.backgroundColor = "#FFFFFF";
         this.properties.precision = 2;
         this.properties.angleUnit = "radians";
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1, noLimit: false };
@@ -62,6 +63,24 @@ class Shell  {
         this.properties.casesCount = 1;
         this.properties.initialValuesByCase = {};
         this.properties.thumbnailUrl = "";
+        this.applySvgBackgroundColor();
+    }
+
+    getSettingsColorControl() {
+        if (!this.settingsColorControl)
+            this.settingsColorControl = new ColorControl();
+        return this.settingsColorControl;
+    }
+
+    createSettingsColorPickerEditor(itemElement, fieldName) {
+        const colorPicker = this.getSettingsColorControl().createEditor(this.properties[fieldName], value => this.setProperty(fieldName, value));
+        $(itemElement).append(colorPicker);
+    }
+
+    applySvgBackgroundColor() {
+        if (!this.board?.svg)
+            return;
+        this.board.svg.style.backgroundColor = this.properties.backgroundColor;
     }
 
     createTooltip(e, html, width, canShow) {
@@ -177,6 +196,14 @@ class Shell  {
                         items: ["en-US", "pt-BR"],
                         value: this.properties.language
                     }
+                },
+                {
+                    colSpan: 2,
+                    dataField: "backgroundColor",
+                    label: {
+                        text: this.board.translations.get("Background Color")
+                    },
+                    template: (data, itemElement) => this.createSettingsColorPickerEditor(itemElement, "backgroundColor")
                 },
                 {
                     itemType: "group",
@@ -1139,6 +1166,7 @@ class Shell  {
             Utils.mergeProperties(properties, this.properties);
         this.properties.casesCount = this.calculator.normalizeCasesCount(this.properties.casesCount);
         this.calculator.setProperties(this.properties);
+        this.applySvgBackgroundColor();
     }
     
     setProperty(name, value) {
@@ -1149,6 +1177,8 @@ class Shell  {
         for (let i = 0; i < keys.length - 1; i++)
             current = current[keys[i]];
         current[keys[keys.length - 1]] = value;
+        if (name === "backgroundColor")
+            this.applySvgBackgroundColor();
         if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit")
             this.calculator.setProperty(name, value);    
         if (name === "casesCount" && this.board?.selection?.selectedShape)
