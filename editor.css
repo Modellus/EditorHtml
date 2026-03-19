@@ -579,6 +579,48 @@ math-field {
     font-size: 10px !important;
 }
 
+.dx-buttongroup-item.dx-state-selected .dx-button,
+.dx-buttongroup-item.dx-buttongroup-item-selected .dx-button,
+.dx-buttongroup-item .dx-button.dx-state-selected,
+.dx-buttongroup-item[aria-pressed="true"] .dx-button {
+    background-color: rgb(15, 108, 189) !important;
+    border-color: rgb(15, 108, 189) !important;
+    color: #ffffff !important;
+}
+
+.dx-buttongroup-item.dx-state-selected .dx-icon,
+.dx-buttongroup-item.dx-buttongroup-item-selected .dx-icon,
+.dx-buttongroup-item .dx-button.dx-state-selected .dx-icon,
+.dx-buttongroup-item[aria-pressed="true"] .dx-icon {
+    color: #ffffff !important;
+}
+
+.referential-display-options .dx-item.dx-item-selected .dx-button,
+.referential-display-options .dx-buttongroup-item.dx-item-selected .dx-button,
+.referential-display-options .dx-buttongroup-item.dx-state-selected .dx-button,
+.referential-display-options .dx-buttongroup-item[aria-pressed="true"] .dx-button {
+    background: rgb(15, 108, 189) !important;
+    border-color: rgb(15, 108, 189) !important;
+    color: #ffffff !important;
+}
+
+.referential-display-options .dx-item.dx-item-selected .dx-icon,
+.referential-display-options .dx-buttongroup-item.dx-item-selected .dx-icon,
+.referential-display-options .dx-buttongroup-item.dx-state-selected .dx-icon,
+.referential-display-options .dx-buttongroup-item[aria-pressed="true"] .dx-icon {
+    color: #ffffff !important;
+}
+
+#properties-popup-toggle-button.dx-button-default {
+    background-color: rgb(15, 108, 189);
+    border-color: rgb(15, 108, 189);
+    color: #ffffff;
+}
+
+#properties-popup-toggle-button.dx-button-default .dx-icon {
+    color: #ffffff;
+}
+
 .mdl-shortcuts .dx-button {
     height: auto;
 }

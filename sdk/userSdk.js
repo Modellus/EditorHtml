@@ -157,6 +157,28 @@ export class UserSdk {
     return payload.exp > currentSeconds + 30;
   }
 
+  isSessionValid(session = this.readSession()) {
+    if (!session?.token)
+      return false;
+    return this.isTokenValid(session.token);
+  }
+
+  ensureAuthenticated(state) {
+    const session = this.readSession();
+    if (!this.isSessionValid(session)) {
+      this.clearToken();
+      this.clearSession();
+      this.clearUser();
+      this.redirectToLogin();
+      return false;
+    }
+    if (state) {
+      state.session = session;
+      state.user = this.readUser();
+    }
+    return true;
+  }
+
   tryAutoRedirect() {
     const token = this.readToken();
     if (token && this.isTokenValid(token)) {

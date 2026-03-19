@@ -62,8 +62,8 @@ class ModelsApp {
       selectedTreeNodeId: treeNodeIds.myPersonal
     };
     this.apiClient = new ModelsApiClient(apiBase, () => this.state.session, () => this.userSdk.getUserId(this.state.session));
-    if (!this.state.session)
-      this.userSdk.redirectToLogin();
+    if (!this.userSdk.ensureAuthenticated(this.state))
+      return;
     this.cardViewInstance = null;
     this.drawerInstance = null;
     this.treeViewInstance = null;
@@ -757,6 +757,8 @@ class ModelsApp {
   }
 
   async loadModels(selectedTreeNodeId = this.state.selectedTreeNodeId) {
+    if (!this.userSdk.ensureAuthenticated(this.state))
+      return;
     this.setStatus("Loading models…");
     try {
       this.userSdk.refreshState(this.state);
@@ -768,6 +770,10 @@ class ModelsApp {
       this.renderCurrentTreeNode();
       this.refreshTreeSelection();
     } catch (error) {
+      if (error?.message?.includes("401")) {
+        this.userSdk.logout();
+        return;
+      }
       this.setStatus(error && error.message ? error.message : "Failed to load models.", true);
       this.showModelsCardView();
       this.renderModels([]);

@@ -12,7 +12,7 @@ class Shell  {
         this.agentToolBridge = null;
         this.chatInstance = null;
         this.chatThreadId = null;
-        this.propertiesPopupSelectionEnabled = this.loadPropertiesPopupSelectionEnabled();
+        this.propertiesPopupSelectionEnabled = true;
         this.chatBeforeUnloadHandler = () => this.disposeChatAdapter();
         if (typeof AgentToolBridge === "function")
             this.agentToolBridge = new AgentToolBridge({
@@ -294,17 +294,22 @@ class Shell  {
                         });
                         $('<div>').appendTo($container).dxButtonGroup({
                             items: [
-                                { key: "noLimit", icon: "fa-solid fa-infinity", hint: "No Limit" }
+                                { key: "noLimit", hint: "No Limit" }
                             ],
                             keyExpr: "key",
                             selectedItemKeys: this.properties.independent.noLimit ? ["noLimit"] : [],
+                            buttonTemplate: (itemData, container) => {
+                                const iconWeight = "fa-light";
+                                container.html(`<i class="dx-icon ${iconWeight} fa-infinity" title="${itemData.hint}"></i>`);
+                            },
                             onSelectionChanged: e => {
                                 const noLimit = e.addedItems.length > 0;
                                 this.setProperty("independent.noLimit", noLimit);
                                 $numberBox.dxNumberBox("instance").option("disabled", noLimit);
+                                e.component.repaint();
                             },
                             stylingMode: "outlined",
-                            elementAttr: { class: "mdl-no-limit" }
+                            elementAttr: { class: "mdl-no-limit toggle-option-group" }
                         });
                     }
                 }
@@ -1688,26 +1693,9 @@ class Shell  {
         return this.calculator.getValues();
     }
 
-    loadPropertiesPopupSelectionEnabled() {
-        try {
-            const stored = localStorage.getItem("modellus.propertiesPopupSelectionEnabled");
-            if (stored == null)
-                return true;
-            return stored === "true";
-        } catch (error) {
-            return true;
-        }
-    }
-
-    persistPropertiesPopupSelectionEnabled() {
-        try {
-            localStorage.setItem("modellus.propertiesPopupSelectionEnabled", this.propertiesPopupSelectionEnabled ? "true" : "false");
-        } catch (error) {
-        }
-    }
 
     getPropertiesPopupToggleIcon() {
-        return this.propertiesPopupSelectionEnabled ? "fa-solid fa-square-list" : "fa-light fa-square-list";
+        return "fa-light fa-square-list";
     }
 
     updatePropertiesPopupToggleButton() {
@@ -1720,7 +1708,6 @@ class Shell  {
 
     togglePropertiesPopupSelectionEnabled() {
         this.propertiesPopupSelectionEnabled = !this.propertiesPopupSelectionEnabled;
-        this.persistPropertiesPopupSelectionEnabled();
         this.updatePropertiesPopupToggleButton();
         const selectedShape = this.board.selection.selectedShape;
         if (!selectedShape) {

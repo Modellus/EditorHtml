@@ -107,16 +107,21 @@ class ChartShape extends BaseShape {
                         label: { text: "Type" },
                         editorType: "dxButtonGroup",
                         editorOptions: {
+                            elementAttr: { class: "toggle-option-group" },
                             items: [
-                                { type: "scatter", icon: "fa-light fa-chart-scatter" },
-                                { type: "line", icon: "fa-light fa-chart-line" },
-                                { type: "area", icon: "fa-light fa-chart-area" },
-                                { type: "bar", icon: "fa-light fa-chart-column" }
+                                { type: "scatter", iconName: "fa-chart-scatter" },
+                                { type: "line", iconName: "fa-chart-line" },
+                                { type: "area", iconName: "fa-chart-area" },
+                                { type: "bar", iconName: "fa-chart-column" }
                             ],
                             keyExpr: "type",
                             stylingMode: "text",
                             selectionMode: "multiple",
                             selectedItemKeys: [...this.properties.chartType],
+                            buttonTemplate: (itemData, container) => {
+                                const iconWeight = "fa-light";
+                                container.html(`<i class="dx-icon ${iconWeight} ${itemData.iconName}"></i>`);
+                            },
                             onSelectionChanged: e => {
                                 const selectedKeys = e.component.option("selectedItemKeys");
                                 if (selectedKeys.length === 0)
@@ -124,6 +129,7 @@ class ChartShape extends BaseShape {
                                 let formInstance = $("#shape-form").dxForm("instance");
                                 formInstance.updateData("chartType", [...selectedKeys]);
                                 this.setProperty("chartType", [...selectedKeys]);
+                                e.component.repaint();
                             }
                         }
                     }

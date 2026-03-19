@@ -107,8 +107,48 @@ class ReferentialShape extends BaseShape {
         items.push(
             {
                 colSpan: 2,
+                dataField: "displayOptions",
                 label: { text: "Display" },
-                template: _ => this.createDisplayOptionsEditor()
+                editorType: "dxButtonGroup",
+                editorOptions: {
+                    stylingMode: "text",
+                    elementAttr: { class: "referential-display-options toggle-option-group" },
+                    keyExpr: "key",
+                    selectionMode: "multiple",
+                    selectedItemKeys: this.getDisplayOptionKeys(),
+                    onContentReady: e => {
+                        this.syncDisplayOptionsVisualState(e.component);
+                        this.debugDisplayOptionsState(e.component, "contentReady");
+                    },
+                    items: [
+                        { key: "showHorizontalAxis", hint: "Show horizontal axis", iconClass: "fa-square-half-stroke-horizontal" },
+                        { key: "showVerticalAxis", hint: "Show vertical axis", iconClass: "fa-square-half-stroke" },
+                        { key: "showTicksWithValues", hint: "Show ticks with values", iconClass: "fa-square-ellipsis" },
+                        { key: "showHorizontalGrid", hint: "Show horizontal grid lines", iconClass: "fa-border-center-h" },
+                        { key: "showVerticalGrid", hint: "Show vertical grid lines", iconClass: "fa-border-center-v" },
+                        { key: "equalAxisScales", hint: "Use equal horizontal and vertical scales", iconClass: "fa-square-equals" }
+                    ],
+                    buttonTemplate: (data, container) => {
+                        container.html(`<i class="dx-icon fa-light ${data.iconClass}" title="${data.hint}"></i>`);
+                    },
+                    onSelectionChanged: e => {
+                        const selectedKeys = e.component.option("selectedItemKeys") ?? [];
+                        this.properties.showHorizontalAxis = selectedKeys.includes("showHorizontalAxis");
+                        this.properties.showVerticalAxis = selectedKeys.includes("showVerticalAxis");
+                        this.properties.showTicksWithValues = selectedKeys.includes("showTicksWithValues");
+                        this.properties.showHorizontalGrid = selectedKeys.includes("showHorizontalGrid");
+                        this.properties.showVerticalGrid = selectedKeys.includes("showVerticalGrid");
+                        this.properties.equalAxisScales = selectedKeys.includes("equalAxisScales");
+                        instance.updateData("displayOptions", [...selectedKeys]);
+                        e.component.repaint();
+                        requestAnimationFrame(() => {
+                            this.syncDisplayOptionsVisualState(e.component);
+                            this.debugDisplayOptionsState(e.component, "selectionChanged");
+                        });
+                        this.tick();
+                        this.board.markDirty(this);
+                    }
+                }
             },
             {
                 colSpan: 2,
@@ -140,51 +180,72 @@ class ReferentialShape extends BaseShape {
         return form;
     }
 
-    createDisplayOptionsEditor() {
-        return $("<div>").dxButtonGroup({
-            stylingMode: "text",
-            keyExpr: "key",
-            selectionMode: "multiple",
-            selectedItemKeys: this.getDisplayOptionKeys(),
-            items: [
-                { key: "showHorizontalAxis", hint: "Show horizontal axis" },
-                { key: "showVerticalAxis", hint: "Show vertical axis" },
-                { key: "showTicksWithValues", hint: "Show ticks with values" },
-                { key: "showHorizontalGrid", hint: "Show horizontal grid lines" },
-                { key: "showVerticalGrid", hint: "Show vertical grid lines" },
-                { key: "equalAxisScales", hint: "Use equal horizontal and vertical scales" }
-            ],
-            buttonTemplate: (data, container) => {
-                container.html(this.getDisplayOptionIconMarkup(data.key, data.hint));
-            },
-            onSelectionChanged: e => {
-                const selectedKeys = e.component.option("selectedItemKeys") ?? [];
-                this.properties.showHorizontalAxis = selectedKeys.includes("showHorizontalAxis");
-                this.properties.showVerticalAxis = selectedKeys.includes("showVerticalAxis");
-                this.properties.showTicksWithValues = selectedKeys.includes("showTicksWithValues");
-                this.properties.showHorizontalGrid = selectedKeys.includes("showHorizontalGrid");
-                this.properties.showVerticalGrid = selectedKeys.includes("showVerticalGrid");
-                this.properties.equalAxisScales = selectedKeys.includes("equalAxisScales");
-                this.tick();
-                this.board.markDirty(this);
+    syncDisplayOptionsVisualState(component) {
+        if (!component)
+            return;
+        const componentElement = component.element?.()?.get?.(0) ?? component.element?.()[0];
+        if (!componentElement)
+            return;
+        const selectedKeys = component.option("selectedItemKeys") ?? [];
+        const itemData = component.option("items") ?? [];
+        const buttonElements = componentElement.querySelectorAll(".dx-button");
+        for (let index = 0; index < buttonElements.length; index++) {
+            const buttonElement = buttonElements[index];
+            const item = itemData[index];
+            const key = item?.key;
+            const isSelected = key != null && selectedKeys.includes(key);
+            const iconElement = buttonElement.querySelector(".dx-icon");
+            if (buttonElement) {
+                if (isSelected) {
+                    buttonElement.style.backgroundColor = "rgb(15, 108, 189)";
+                    buttonElement.style.borderColor = "rgb(15, 108, 189)";
+                    buttonElement.style.color = "#ffffff";
+                } else {
+                    buttonElement.style.backgroundColor = "";
+                    buttonElement.style.borderColor = "";
+                    buttonElement.style.color = "";
+                }
             }
-        });
+            if (iconElement)
+                iconElement.style.color = isSelected ? "#ffffff" : "";
+        }
     }
 
-    getDisplayOptionIconMarkup(key, hint) {
-        if (key === "showHorizontalAxis")
-            return `<i class="dx-icon fa-light fa-square-half-stroke-horizontal" title="${hint}"></i>`;
-        if (key === "showVerticalAxis")
-            return `<i class="dx-icon fa-light fa-square-half-stroke" title="${hint}"></i>`;
-        if (key === "showTicksWithValues")
-            return `<i class="dx-icon fa-light fa-square-ellipsis" title="${hint}"></i>`;
-        if (key === "showHorizontalGrid")
-            return `<i class="dx-icon fa-light fa-border-center-h" title="${hint}"></i>`;
-        if (key === "showVerticalGrid")
-            return `<i class="dx-icon fa-light fa-border-center-v" title="${hint}"></i>`;
-        if (key === "equalAxisScales")
-            return `<i class="dx-icon fa-light fa-square-equals" title="${hint}"></i>`;
-        return `<i class="dx-icon" title="${hint}"></i>`;
+    debugDisplayOptionsState(component, phase) {
+        if (!component)
+            return;
+        const element = component.element?.()?.get?.(0) ?? component.element?.()[0];
+        if (!element)
+            return;
+        const buttonElements = element.querySelectorAll(".dx-button");
+        const itemData = component.option("items") ?? [];
+        const debugRows = [];
+        for (let index = 0; index < buttonElements.length; index++) {
+            const buttonElement = buttonElements[index];
+            const optionElement = buttonElement.closest(".dx-buttongroup-item") ?? buttonElement;
+            const iconElement = buttonElement.querySelector(".dx-icon");
+            const buttonStyle = buttonElement ? window.getComputedStyle(buttonElement) : null;
+            const iconStyle = iconElement ? window.getComputedStyle(iconElement) : null;
+            debugRows.push({
+                index: index,
+                key: itemData[index]?.key ?? null,
+                className: optionElement.className,
+                buttonClassName: buttonElement.className,
+                ariaPressedOption: optionElement.getAttribute("aria-pressed"),
+                ariaPressedButton: buttonElement?.getAttribute("aria-pressed") ?? null,
+                hasStateSelected: optionElement.classList.contains("dx-state-selected"),
+                hasItemSelected: optionElement.classList.contains("dx-item-selected"),
+                hasButtonGroupItemSelected: optionElement.classList.contains("dx-buttongroup-item-selected"),
+                buttonBackgroundColor: buttonStyle?.backgroundColor ?? null,
+                buttonBorderColor: buttonStyle?.borderColor ?? null,
+                buttonTextColor: buttonStyle?.color ?? null,
+                iconColor: iconStyle?.color ?? null
+            });
+        }
+        console.group(`Referential displayOptions debug: ${phase}`);
+        console.log("selectedItemKeys", component.option("selectedItemKeys"));
+        console.table(debugRows);
+        console.groupEnd();
     }
 
     setDefaults() {
