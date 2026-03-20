@@ -3,16 +3,20 @@ class ImageControl {
         this.options = {
             imageSource: "",
             dropHint: "Drop an image or click to select",
+            accept: "image/*",
             onUploadFile: null,
             onImageChanged: null,
             onImageCleared: null,
             ...options
         };
         this.currentImageSource = this.normalizeImageSource(this.options.imageSource);
+        this.currentIsVideo = false;
+        this._thumbnailCapturedFor = null;
         this.container = null;
         this.previewElement = null;
         this.hintElement = null;
         this.removeButtonElement = null;
+        this.progressBarElement = null;
     }
 
     createHost() {
@@ -21,17 +25,20 @@ class ImageControl {
         const hint = $("<div class='shape-image-dropzone__hint'></div>").text(this.options.dropHint);
         const removeButton = $("<button type='button' class='shape-image-dropzone__remove' aria-label='Remove image'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></button>");
         const uploaderHost = $("<div class='shape-image-dropzone__uploader'></div>");
+        const progressBarHost = $('<div class="shape-image-dropzone__progress"></div>');
         this.previewElement = preview.get(0);
         this.hintElement = hint.get(0);
         this.removeButtonElement = removeButton.get(0);
+        this.progressBarElement = progressBarHost.get(0);
+        progressBarHost.dxProgressBar({ min: 0, max: 100, value: 0, visible: false });
         this.updatePreview();
-        this.container.append(preview, hint, removeButton, uploaderHost);
+        this.container.append(preview, hint, removeButton, progressBarHost, uploaderHost);
         removeButton.on("mousedown", event => this.onRemoveButtonMouseDown(event));
         removeButton.on("click", event => this.onRemoveButtonClick(event));
         this.container.on("dragover", event => this.onDropZoneDragOver(event));
         this.container.on("drop", event => this.onDropZoneDrop(event));
         uploaderHost.dxFileUploader({
-            accept: "image/*",
+            accept: this.options.accept,
             multiple: false,
             uploadMode: "useForm",
             dropZone: this.container.get(0),
@@ -44,7 +51,14 @@ class ImageControl {
     }
 
     setImageSource(imageSource) {
+        this.currentIsVideo = false;
         this.currentImageSource = this.normalizeImageSource(imageSource);
+        this.updatePreview();
+    }
+
+    setVideoSource(videoUrl) {
+        this.currentIsVideo = true;
+        this.currentImageSource = this.normalizeImageSource(videoUrl);
         this.updatePreview();
     }
 
@@ -54,16 +68,55 @@ class ImageControl {
         return imageSource.trim();
     }
 
+    isVideoSource(source) {
+        if (this.currentIsVideo)
+            return true;
+        return /\.(mp4|webm|ogg|mov|avi|mkv)(\?.*)?$/i.test(source);
+    }
+
+    captureVideoFirstFrame(url) {
+        const video = document.createElement("video");
+        video.src = url;
+        video.muted = true;
+        video.preload = "metadata";
+        video.crossOrigin = "anonymous";
+        video.addEventListener("loadeddata", () => { video.currentTime = 0; }, { once: true });
+        video.addEventListener("seeked", () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth || 320;
+            canvas.height = video.videoHeight || 180;
+            canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+            if (this.previewElement) {
+                this.previewElement.setAttribute("src", canvas.toDataURL("image/jpeg", 0.85));
+                this.hintElement.style.display = "none";
+            }
+            video.src = "";
+        }, { once: true });
+        video.load();
+    }
+
     updatePreview() {
         if (!this.previewElement || !this.hintElement || !this.removeButtonElement)
             return;
         if (this.currentImageSource !== "") {
+            this.removeButtonElement.style.display = "flex";
+            if (this.isVideoSource(this.currentImageSource)) {
+                if (this._thumbnailCapturedFor !== this.currentImageSource) {
+                    this._thumbnailCapturedFor = this.currentImageSource;
+                    this.previewElement.removeAttribute("src");
+                    this.hintElement.innerHTML = "<i class='fa-light fa-film fa-2x'></i>";
+                    this.hintElement.style.display = "";
+                    this.captureVideoFirstFrame(this.currentImageSource);
+                }
+                return;
+            }
             this.previewElement.setAttribute("src", this.currentImageSource);
             this.hintElement.style.display = "none";
-            this.removeButtonElement.style.display = "flex";
             return;
         }
+        this._thumbnailCapturedFor = null;
         this.previewElement.removeAttribute("src");
+        this.hintElement.textContent = this.options.dropHint;
         this.hintElement.style.display = "";
         this.removeButtonElement.style.display = "none";
     }
@@ -129,18 +182,40 @@ class ImageControl {
         await this.handleFile(file);
     }
 
+    setProgress(percent) {
+        if (!this.progressBarElement)
+            return;
+        const instance = $(this.progressBarElement).dxProgressBar("instance");
+        if (!instance)
+            return;
+        instance.option("value", percent);
+        instance.option("visible", true);
+    }
+
+    clearProgress() {
+        if (!this.progressBarElement)
+            return;
+        const instance = $(this.progressBarElement).dxProgressBar("instance");
+        if (!instance)
+            return;
+        instance.option("visible", false);
+        instance.option("value", 0);
+    }
+
     async handleFile(file) {
         const onUploadFile = this.options.onUploadFile;
         if (typeof onUploadFile !== "function")
             return;
-        const imageSource = await onUploadFile(file);
+        this.setProgress(0);
+        const imageSource = await onUploadFile(file, percent => this.setProgress(percent));
+        this.clearProgress();
         if (!imageSource)
             return;
         this.currentImageSource = this.normalizeImageSource(imageSource);
         this.updatePreview();
         const onImageChanged = this.options.onImageChanged;
         if (typeof onImageChanged === "function")
-            onImageChanged(this.currentImageSource);
+            onImageChanged(this.currentImageSource, file.type);
     }
 
     toNativeDragEvent(event) {

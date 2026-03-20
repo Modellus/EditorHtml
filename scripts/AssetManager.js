@@ -7,7 +7,7 @@ class AssetManager {
         return new URLSearchParams(window.location.search).get("model_id");
     }
 
-    async uploadAsset(assetId, file, fileName = "asset.png") {
+    async uploadAsset(assetId, file, fileName = "asset.png", onProgress = null) {
         const modelId = this.getCurrentModelId();
         if (!modelId) {
             this.showError("Open a saved model before uploading assets.");
@@ -18,7 +18,7 @@ class AssetManager {
             return null;
         }
         try {
-            return await this.modelsApiClient.uploadModelAsset(modelId, assetId, file, fileName);
+            return await this.modelsApiClient.uploadModelAsset(modelId, assetId, file, fileName, onProgress);
         } catch (error) {
             this.showError(error?.message || "Failed to upload asset.");
             return null;

@@ -39,7 +39,7 @@ class Shell  {
         this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
-        [BodyShape, ExpressionShape, ValueShape, ChartShape, TableShape, SliderShape, BackgroundShape, VectorShape, ImageShape, ReferentialShape, TextShape, RulerShape, ProtractorShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyShape, ExpressionShape, ValueShape, ChartShape, TableShape, SliderShape, VectorShape, ImageShape, ReferentialShape, TextShape, RulerShape, ProtractorShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.calculator.on("iterate", e => this.onIterate(e));
         if (model != undefined)
             this.openModel(model);
@@ -616,10 +616,8 @@ class Shell  {
                         elementAttr: {
                             id: "background-button"
                         },
-                        template: `<div class='dx-icon'>
-                                <i class='fa-light fa-panorama fa-lg'></i>
-                            </div>`,
-                        onClick: _ => this.commands.addShape("BackgroundShape", "Background"),
+                        icon: "fa-light fa-image",
+                        onClick: _ => this.commands.addShape("ImageShape", "Image"),
                         onInitialized: e => this.createTranslatedTooltip(e, "Background Tooltip", 280)
                     }
                 },

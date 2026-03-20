@@ -231,22 +231,41 @@ export class ModelsApiClient {
     return await response.json();
   }
 
-  async uploadModelAsset(modelId, assetId, file, fileName = "asset.png") {
-    const formData = new FormData();
-    formData.append("id", assetId);
-    if (file instanceof File)
-      formData.append("file", file);
-    else
-      formData.append("file", file, fileName);
-    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}/assets`, {
-      method: "POST",
-      headers: this.buildAuthHeaders(),
-      body: formData
+  uploadModelAsset(modelId, assetId, file, fileName = "asset.png", onProgress = null) {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append("id", assetId);
+      if (file instanceof File)
+        formData.append("file", file);
+      else
+        formData.append("file", file, fileName);
+      const xhr = new XMLHttpRequest();
+      if (typeof onProgress === "function") {
+        xhr.upload.onprogress = event => {
+          if (event.lengthComputable)
+            onProgress(Math.round((event.loaded / event.total) * 100));
+        };
+      }
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) {
+          reject(new Error(`Asset upload failed (${xhr.status})`));
+          return;
+        }
+        let payload;
+        try { payload = JSON.parse(xhr.responseText); } catch { payload = null; }
+        if (!payload?.url) {
+          reject(new Error("The API did not return an asset URL."));
+          return;
+        }
+        resolve(payload.url);
+      };
+      xhr.onerror = () => reject(new Error("Asset upload failed (network error)"));
+      const authHeaders = this.buildAuthHeaders();
+      xhr.open("POST", `${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}/assets`);
+      for (const [key, value] of Object.entries(authHeaders))
+        xhr.setRequestHeader(key, value);
+      xhr.send(formData);
     });
-    if (!response.ok) throw new Error(`Asset upload failed (${response.status})`);
-    const payload = await response.json();
-    if (!payload?.url) throw new Error("The API did not return an asset URL.");
-    return payload.url;
   }
 
   async deleteModel(modelId) {

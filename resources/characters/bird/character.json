@@ -6,7 +6,7 @@
         {
             "name": "Walk",
             "folder": "fly",
-            "frames": 30,
+            "frames": 23,
             "startIndex": 1,
             "filePrefix": "bird_flyA"
         },
@@ -20,7 +20,7 @@
         {
             "name": "Celebrate",
             "folder": "celebrate",
-            "frames": 98,
+            "frames": 73,
             "startIndex": 1,
             "filePrefix": "bird_celebrate"
         }
