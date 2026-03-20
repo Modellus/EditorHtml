@@ -379,7 +379,7 @@ class BodyShape extends BaseShape {
             return;
         }
         const frameCount = idleAnimation.frames;
-        if (!Number.isFinite(frameCount) || frameCount <= 0) {
+        if (!Number.isFinite(frameCount) || frameCount <= 1) {
             this.clearIdleAnimationTicker();
             return;
         }
@@ -470,8 +470,10 @@ class BodyShape extends BaseShape {
         this.circle.setAttribute("r", radius);
         this.circle.setAttribute("fill", "transparent");
         this.circle.setAttribute("stroke", "transparent");
-        this.image.setAttribute("x", position.x - radius);
-        this.image.setAttribute("y", position.y - radius);
+        const pivotX = character.centerPoint?.x ?? 0.5;
+        const pivotY = character.centerPoint?.y ?? 0.5;
+        this.image.setAttribute("x", position.x - pivotX * diameter);
+        this.image.setAttribute("y", position.y - pivotY * diameter);
         this.image.setAttribute("width", diameter);
         this.image.setAttribute("height", diameter);
         this.image.setAttribute("preserveAspectRatio", "xMidYMid meet");

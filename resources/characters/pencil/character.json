@@ -1,0 +1,15 @@
+{
+    "name": "Pencil",
+    "description": "The pencil.",
+    "image": "pencil.png",
+    "centerPoint": { "x": 0.2, "y": 0.85 },
+    "animations": [
+        {
+            "name": "Idle",
+            "folder": "idle",
+            "frames": 1,
+            "startIndex": 1,
+            "filePrefix": "pencil_idle"
+        }
+    ]
+}
