@@ -48,6 +48,8 @@ class Shell  {
         window.addEventListener("keydown", e => this.onKeyDown(e));
         window.addEventListener("keyup", e => this.onKeyUp(e));
         window.addEventListener("beforeunload", e => this.onBeforeUnload(e));
+        window.addEventListener("popstate", e => this.onPopState(e));
+        history.pushState(null, "");
         this.reset();
     }
 
@@ -1449,6 +1451,22 @@ class Shell  {
         if (!this._hasChanges)
             return;
         event.preventDefault();
+    }
+
+    async onPopState(event) {
+        if (!this._hasChanges) {
+            history.back();
+            return;
+        }
+        history.pushState(null, "");
+        const result = await this.promptSaveBeforeExit();
+        if (result === "cancel")
+            return;
+        if (result === "save")
+            await this.saveToApi();
+        else
+            this._hasChanges = false;
+        window.location.href = "/marketplace.html";
     }
 
     async exitEditor() {
