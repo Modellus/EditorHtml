@@ -316,6 +316,24 @@ body.read-only #shape-popup {
     gap: 4px;
 }
 
+.vector-term-toolbar-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 130px;
+}
+
+.vector-term-toolbar-label {
+    font-size: 11px;
+    color: #666;
+    flex: 0 0 auto;
+}
+
+.vector-term-toolbar-item .term-packed-control {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .thumbnail-dropzone {
     display: grid;
     gap: 0.5rem;

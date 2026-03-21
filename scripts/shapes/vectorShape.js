@@ -73,61 +73,141 @@ class VectorShape extends ChildShape {
     }
 
     createForm() {
-        var form = super.createForm();
-        var instance = form.dxForm("instance");
-        var items = instance.option("items");
-        const colorGroup = items.find(item => item.itemType === "group" && item.colCount === 3);
-        if (colorGroup)
-            colorGroup.items = colorGroup.items.filter(item => item.dataField !== "backgroundColor");
-        items.push({
-            itemType: "group",
-            colCount: 2,
-            items: [
-                {
-                    colSpan: 1,
-                    dataField: "tipType",
-                    label: { text: "Tip" },
-                    editorType: "dxButtonGroup",
-                    editorOptions: {
-                        items: [
-                            { key: "arrow", icon: "fa-light fa-arrow-right" },
-                            { key: "closed", icon: "fa-light fa-right-long" },
-                            { key: "none", icon: "fa-light fa-dash" }
-                        ],
-                        keyExpr: "key",
-                        stylingMode: "text",
-                        selectedItemKeys: [this.properties.tipType],
-                        onItemClick: e => {
-                            let formInstance = $("#shape-form").dxForm("instance");
-                            formInstance.updateData("tipType", e.itemData.key);
-                            this.setProperty("tipType", e.itemData.key);
-                        }
-                    }
-                },
-                {
-                    colSpan: 1,
-                    dataField: "lineWidth",
-                    label: { text: "Width" },
-                    editorType: "dxNumberBox",
-                    editorOptions: {
-                        showSpinButtons: true,
-                        min: 1,
-                        max: 50,
-                        step: 1,
-                        stylingMode: "filled"
+        return null;
+    }
+
+    createToolbar() {
+        const items = super.createToolbar();
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._trajectoryColorPicker = this.createColorPickerEditor("trajectoryColor");
+        const formAdapter = { updateData: (field, value) => this.setProperty(field, value) };
+        const xDisplayMode = this.getTermDisplayModeProperty("xTerm");
+        const yDisplayMode = this.getTermDisplayModeProperty("yTerm");
+        const xDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "xTerm", "xTermCase", false, xDisplayMode, false);
+        this.termFormControls["xTerm"] = { termControl: xDescriptor.termControl };
+        const yDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "yTerm", "yTermCase", false, yDisplayMode, false);
+        this.termFormControls["yTerm"] = { termControl: yDescriptor.termControl };
+        items.push(
+            {
+                location: "center",
+                template: () => this._fgColorPicker
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                widget: "dxDropDownButton",
+                options: {
+                    items: [
+                        { key: "arrow", icon: "fa-light fa-arrow-right", text: "" },
+                        { key: "closed", icon: "fa-light fa-right-long", text: "" },
+                        { key: "none", icon: "fa-light fa-dash", text: "" }
+                    ],
+                    keyExpr: "key",
+                    displayExpr: "text",
+                    useSelectMode: true,
+                    showArrowIcon: false,
+                    stylingMode: "text",
+                    selectedItemKey: this.properties.tipType,
+                    onInitialized: e => { this._tipTypeControl = e.component; },
+                    onSelectionChanged: e => this.setProperty("tipType", e.item.key),
+                    dropDownOptions: { width: 52 },
+                    buttonTemplate: (data, element) => {
+                        const key = data?.selectedItem?.key ?? this.properties.tipType;
+                        const iconMap = { arrow: "fa-light fa-arrow-right", closed: "fa-light fa-right-long", none: "fa-light fa-dash" };
+                        element[0].innerHTML = `<i class="dx-icon ${iconMap[key] ?? iconMap.arrow}"></i>`;
                     }
                 }
-            ]
-        });
-        instance.option("items", items);
-        this.addTerm("xTerm", "width", "Horizontal", false, true, 1, "x");
-        this.addTerm("yTerm", "height", "Vertical", true, true, 1, "y");
-        items = instance.option("items");
-        items.push(
-            this.createColorPickerFormItem("trajectoryColor", "Trajectory color")
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: {
+                    value: this.properties.lineWidth,
+                    min: 1,
+                    max: 50,
+                    step: 1,
+                    showSpinButtons: true,
+                    width: 50,
+                    hint: "Line width",
+                    stylingMode: "filled",
+                    onInitialized: e => { this._lineWidthControl = e.component; },
+                    onValueChanged: e => this.setProperty("lineWidth", e.value)
+                }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $(`<div class="vector-term-toolbar-item"><span class="vector-term-toolbar-label">H</span></div>`);
+                    wrapper.append(xDescriptor.control);
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $(`<div class="vector-term-toolbar-item"><span class="vector-term-toolbar-label">V</span></div>`);
+                    wrapper.append(yDescriptor.control);
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                template: () => this._trajectoryColorPicker
+            }
         );
-        instance.option("items", items);
-        return form;
+        return items;
+    }
+
+    positionContextToolbar() {
+        const referential = this.getReferentialParent();
+        if (referential && referential !== this) {
+            if (!this.contextToolbar)
+                return;
+            const anchor = referential.getScreenAnchorPoint();
+            if (!anchor)
+                return;
+            const toolbarRect = this.contextToolbar.getBoundingClientRect();
+            const toolbarWidth = toolbarRect.width || this.contextToolbar.offsetWidth || 0;
+            const toolbarHeight = toolbarRect.height || this.contextToolbar.offsetHeight || 0;
+            const padding = 8;
+            let left = anchor.centerX - toolbarWidth / 2;
+            let top = anchor.bottomY + padding;
+            const maxLeft = window.innerWidth - toolbarWidth - padding;
+            const maxTop = window.innerHeight - toolbarHeight - padding;
+            left = Math.max(padding, Math.min(left, maxLeft));
+            top = Math.max(padding, Math.min(top, maxTop));
+            this.contextToolbar.style.left = `${left}px`;
+            this.contextToolbar.style.top = `${top}px`;
+            return;
+        }
+        super.positionContextToolbar();
+    }
+
+    showContextToolbar() {
+        super.showContextToolbar();
+        if (this._tipTypeControl) {
+            this._tipTypeControl.option("selectedItemKey", this.properties.tipType);
+            this._tipTypeControl.repaint();
+        }
+        if (this._lineWidthControl)
+            this._lineWidthControl.option("value", this.properties.lineWidth);
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._trajectoryColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._trajectoryColorPicker, this.properties.trajectoryColor);
+        this.termFormControls["xTerm"]?.termControl?.refresh();
+        this.termFormControls["yTerm"]?.termControl?.refresh();
     }
 
     setDefaults() {
@@ -139,11 +219,19 @@ class VectorShape extends ChildShape {
         this.properties.height = -30;
         this.properties.xTerm = "30";
         this.properties.yTerm = "30";
+        this.properties.xTermCase = 1;
+        this.properties.yTermCase = 1;
+        this.properties.xTermDisplayMode = "none";
+        this.properties.yTermDisplayMode = "none";
         this.properties.foregroundColor = "#000000";
         this.properties.borderColor = "transparent";
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.lineWidth = 1;
         this.properties.tipType = "arrow";
+        this.termsMapping.push({ termProperty: "xTerm", termValue: 0, property: "width", isInverted: false, scaleProperty: "x", caseProperty: "xTermCase" });
+        this.termsMapping.push({ termProperty: "yTerm", termValue: 0, property: "height", isInverted: true, scaleProperty: "y", caseProperty: "yTermCase" });
+        this.termDisplayEntries.push({ term: "xTerm", caseProperty: "xTermCase", title: "Horizontal" });
+        this.termDisplayEntries.push({ term: "yTerm", caseProperty: "yTermCase", title: "Vertical" });
     }
 
     createElement() {
