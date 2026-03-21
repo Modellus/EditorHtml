@@ -1,7 +1,7 @@
 {
     "name": "Pencil",
     "description": "The pencil.",
-    "image": "pencil.png",
+    "image": "Pencil.png",
     "centerPoint": { "x": 0.2, "y": 0.85 },
     "animations": [
         {
