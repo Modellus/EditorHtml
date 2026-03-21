@@ -97,6 +97,7 @@ class SaveFormController {
                 const $editorHost = $("<div>").appendTo(itemElement);
                 const $toolbarHost = $("<div>").appendTo(itemElement);
                 $editorHost.dxHtmlEditor({
+                    valueType: "markdown",
                     value: formData.description,
                     height: 120,
                     stylingMode: "filled",

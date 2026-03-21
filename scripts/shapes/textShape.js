@@ -3,6 +3,11 @@ class TextShape extends BaseShape {
         super(board, null, id);
     }
 
+    _onDocumentMouseDown = e => {
+        if (!this.element.contains(e.target))
+            this.exitEditMode();
+    };
+
     setDefaults() {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Text Name");
@@ -16,23 +21,34 @@ class TextShape extends BaseShape {
 
     createElement() {
         const foreignObject = this.board.createSvgElement("foreignObject");
-        const $div = $("<div>").appendTo(foreignObject);
-        this.container = $div.get(0);
-        $div.css({ "width": "100%", "height": "100%" });
-        this.htmlEditor = $div.dxHtmlEditor({
-            toolbar1: {
+        const $wrapper = $("<div>").appendTo(foreignObject);
+        this.container = $wrapper.get(0);
+        $wrapper.css({ "width": "100%", "height": "100%", "display": "flex", "flex-direction": "column" });
+        const $editorHost = $("<div>").appendTo($wrapper);
+        $editorHost.css({ "flex": "1", "min-height": "0" });
+        this.$toolbarHost = $("<div>").appendTo($wrapper);
+        this.$toolbarHost.css({ "display": "none", "background-color": "#fff", "border-top": "1px solid #e0e0e0" });
+        this.htmlEditor = $editorHost.dxHtmlEditor({
+            valueType: "markdown",
+            toolbar: {
+                container: this.$toolbarHost[0],
                 items: [
-                    "undo", "redo", "separator", "bold", "italic", "separator",
+                    "undo", "redo", "separator",
+                    "bold", "italic", "underline", "strike", "separator",
                     {
                         name: "header",
                         acceptedValues: [false, 1, 2, 3, 4, 5],
-                        options: { 
-                            inputAttr: { 
-                                "aria-label": "Header" } 
-                            },
+                        options: { inputAttr: { "aria-label": "Header" } },
                     },
                     "separator",
-                    "orderedList", "bulletList",
+                    { name: "font", acceptedValues: ["Arial", "Georgia", "Tahoma", "Times New Roman", "Verdana"] },
+                    { name: "size", acceptedValues: ["8pt", "10pt", "12pt", "14pt", "18pt", "24pt", "36pt"] },
+                    "separator",
+                    "alignLeft", "alignCenter", "alignRight", "alignJustify", "separator",
+                    "orderedList", "bulletList", "separator",
+                    "link", "insertTable", "separator",
+                    "blockquote", "codeBlock", "separator",
+                    "clear",
                 ],
             },
             value: this.properties.text,
@@ -49,11 +65,22 @@ class TextShape extends BaseShape {
     }
 
     enterEditMode() {
-        if (this.htmlEditor && typeof this.htmlEditor.focus === "function") {
-            this.htmlEditor.focus();
-            return true;
-        }
-        return super.enterEditMode();
+        if (!this.htmlEditor || typeof this.htmlEditor.focus !== "function")
+            return super.enterEditMode();
+        this.container.style.cursor = "text";
+        this.$toolbarHost.css("display", "");
+        this.board.pointerLocked = true;
+        document.addEventListener("mousedown", this._onDocumentMouseDown);
+        this.htmlEditor.focus();
+        return true;
+    }
+
+    exitEditMode() {
+        this.container.style.cursor = "";
+        this.$toolbarHost.css("display", "none");
+        this.board.pointerLocked = false;
+        document.removeEventListener("mousedown", this._onDocumentMouseDown);
+        this.htmlEditor.blur();
     }
 
     draw() {

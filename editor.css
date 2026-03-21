@@ -462,6 +462,10 @@ body.read-only #shape-popup {
     box-shadow: none !important;
 }
 
+.dx-htmleditor .dx-htmleditor-content {
+    cursor: inherit;
+}
+
 .form-button-row {
     display: flex;
     gap: 0;
