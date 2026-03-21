@@ -1,4 +1,4 @@
-class VectorShape extends BaseShape {
+class VectorShape extends ChildShape {
     constructor(board, parent, id) {
         super(board, parent, id);
     }

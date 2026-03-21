@@ -107,7 +107,7 @@ class ChartShape extends BaseShape {
                         label: { text: "Type" },
                         editorType: "dxButtonGroup",
                         editorOptions: {
-                            elementAttr: { class: "toggle-option-group" },
+                            elementAttr: {},
                             items: [
                                 { type: "scatter", iconName: "fa-chart-scatter" },
                                 { type: "line", iconName: "fa-chart-line" },

@@ -1095,6 +1095,7 @@ class BaseShape {
         return Object.assign({
             showSpinButtons: true,
             stylingMode: "filled",
+            elementAttr: { class: "mdl-math-input" },
             format: { type: "fixedPoint", precision: precision },
             step: step
         }, editorOptions);

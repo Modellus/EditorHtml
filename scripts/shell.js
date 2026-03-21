@@ -219,7 +219,8 @@ class Shell  {
                             },
                             editorType: "dxTextBox",
                             editorOptions: {
-                                stylingMode: "filled"
+                                stylingMode: "filled",
+                                elementAttr: { class: "mdl-math-input" }
                             }
                         },
                         {
@@ -233,7 +234,8 @@ class Shell  {
                                 max: 10,
                                 step: 1,
                                 showSpinButtons: true,
-                                stylingMode: "filled"
+                                stylingMode: "filled",
+                                elementAttr: { class: "mdl-math-input" }
                             }
                         },
                         {
@@ -247,7 +249,8 @@ class Shell  {
                                 max: 9,
                                 step: 1,
                                 showSpinButtons: true,
-                                stylingMode: "filled"
+                                stylingMode: "filled",
+                                elementAttr: { class: "mdl-math-input" }
                             }
                         },
                         {
@@ -255,21 +258,26 @@ class Shell  {
                             label: {
                                 text: this.board.translations.get("AngleUnit")
                             },
-                            template: (data, itemElement) => {
-                                $('<div>').appendTo(itemElement).dxButtonGroup({
-                                    items: [
-                                        { key: "radians", icon: "fa-solid fa-pi", hint: this.board.translations.get("Radians") },
-                                        { key: "degrees", icon: "fa-solid fa-angle", hint: this.board.translations.get("Degrees") }
-                                    ],
-                                    keyExpr: "key",
-                                    selectedItemKeys: [this.properties.angleUnit],
-                                    onSelectionChanged: e => {
-                                        if (e.addedItems.length > 0)
-                                            this.setProperty("angleUnit", e.addedItems[0].key);
-                                    },
-                                    stylingMode: "outlined",
-                                    elementAttr: { class: "mdl-angle-unit" }
-                                });
+                            editorType: "dxButtonGroup",
+                            editorOptions: {
+                                items: [
+                                    { key: "radians", icon: "fa-light fa-pi",    hint: "Radians" },
+                                    { key: "degrees", icon: "fa-light fa-angle", hint: "Degrees" }
+                                ],
+                                keyExpr: "key",
+                                selectedItemKeys: [this.properties.angleUnit],
+                                stylingMode: "outlined",
+                                elementAttr: { class: "mdl-pill-group mdl-small-icon" },
+                                buttonTemplate: (data, container) => {
+                                    container[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
+                                },
+                                onContentReady: e => this._initPillButtonGroup(e.element[0]),
+                                onSelectionChanged: e => {
+                                    if (e.addedItems.length > 0)
+                                        this.setProperty("angleUnit", e.addedItems[0].key);
+                                    this._movePill(e.component.element()[0]);
+                                    e.component.repaint();
+                                }
                             }
                         }
                     ]
@@ -282,19 +290,55 @@ class Shell  {
                     },
                     editorType: "dxTextBox",
                     editorOptions: {
-                        stylingMode: "filled"
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" }
                     }
                 },
                 {
+                    itemType: "group",
                     colSpan: 1,
-                    dataField: "independent.step",
-                    label: { 
-                        text: this.board.translations.get("Independent.Step") 
-                    },
-                    editorType: "dxNumberBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
+                    colCount: 2,
+                    items: [
+                        {
+                            dataField: "independent.step",
+                            label: { 
+                                text: this.board.translations.get("Independent.Step") 
+                            },
+                            editorType: "dxNumberBox",
+                            editorOptions: {
+                                stylingMode: "filled",
+                                elementAttr: { class: "mdl-math-input" }
+                            }
+                        },
+                        {
+                            dataField: "independent.noLimit",
+                            label: { text: "Type" },
+                            editorType: "dxButtonGroup",
+                            editorOptions: {
+                                items: [
+                                    { key: false, icon: "fa-light fa-bracket-square-right", hint: "Limited" },
+                                    { key: true,  icon: "fa-light fa-infinity",             hint: "Unlimited" }
+                                ],
+                                keyExpr: "key",
+                                selectedItemKeys: [this.properties.independent.noLimit],
+                                stylingMode: "outlined",
+                                elementAttr: { class: "mdl-pill-group mdl-small-icon" },
+                                buttonTemplate: (data, container) => {
+                                    container[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
+                                },
+                                onContentReady: e => this._initPillButtonGroup(e.element[0]),
+                                onSelectionChanged: e => {
+                                    if (e.addedItems.length > 0) {
+                                        const noLimit = e.addedItems[0].key;
+                                        this.setProperty("independent.noLimit", noLimit);
+                                        this.settingsForm.getEditor("independent.end").option("disabled", noLimit);
+                                    }
+                                    this._movePill(e.component.element()[0]);
+                                    e.component.repaint();
+                                }
+                            }
+                        }
+                    ]
                 },
                 {
                     colSpan: 1,
@@ -304,42 +348,19 @@ class Shell  {
                     },
                     editorType: "dxNumberBox",
                     editorOptions: {
-                        stylingMode: "filled"
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" }
                     }
                 },
                 {
                     colSpan: 1,
                     dataField: "independent.end",
-                    label: { 
-                        text: this.board.translations.get("Independent.End") 
-                    },
-                    template: (data, itemElement) => {
-                        const $container = $(`<div style="display:flex; align-items:center; gap:4px"></div>`).appendTo(itemElement);
-                        const $numberBox = $('<div style="flex:1">').appendTo($container).dxNumberBox({
-                            value: this.properties.independent.end,
-                            stylingMode: "filled",
-                            disabled: this.properties.independent.noLimit,
-                            onValueChanged: e => this.setProperty("independent.end", e.value)
-                        });
-                        $('<div>').appendTo($container).dxButtonGroup({
-                            items: [
-                                { key: "noLimit", hint: "No Limit" }
-                            ],
-                            keyExpr: "key",
-                            selectedItemKeys: this.properties.independent.noLimit ? ["noLimit"] : [],
-                            buttonTemplate: (itemData, container) => {
-                                const iconWeight = "fa-light";
-                                container.html(`<i class="dx-icon ${iconWeight} fa-infinity" title="${itemData.hint}"></i>`);
-                            },
-                            onSelectionChanged: e => {
-                                const noLimit = e.addedItems.length > 0;
-                                this.setProperty("independent.noLimit", noLimit);
-                                $numberBox.dxNumberBox("instance").option("disabled", noLimit);
-                                e.component.repaint();
-                            },
-                            stylingMode: "outlined",
-                            elementAttr: { class: "mdl-no-limit toggle-option-group" }
-                        });
+                    label: { text: this.board.translations.get("Independent.End") },
+                    editorType: "dxNumberBox",
+                    editorOptions: {
+                        stylingMode: "filled",
+                        disabled: this.properties.independent.noLimit,
+                        elementAttr: { class: "mdl-math-input" }
                     }
                 }
             ],
@@ -1323,15 +1344,35 @@ class Shell  {
             popup.hide();
     }
 
+    _initPillButtonGroup(element) {
+        const pill = document.createElement("div");
+        pill.className = "mdl-pill";
+        element.style.position = "relative";
+        element.appendChild(pill);
+        this._movePill(element);
+    }
+
+    _movePill(element) {
+        const pill = element.querySelector(".mdl-pill");
+        if (!pill)
+            return;
+        const selected = element.querySelector(".dx-item-selected .dx-button");
+        if (!selected)
+            return;
+        pill.style.left = selected.offsetLeft + "px";
+        pill.style.width = selected.offsetWidth + "px";
+    }
+
     openSettings() {
-        this.board.deselect();        
+        this.board.deselect();
         if (this.settingsForm) {
             this.settingsForm.formData = null;
             this.settingsForm.updateData(this.properties);
+            this.settingsForm.getEditor("independent.end")?.option("disabled", this.properties.independent.noLimit);
         }
         this.settingsPopup.show();
     }
-    
+
     async importFromFile() {
         const [fileHandle] = await window.showOpenFilePicker();
         const file = await fileHandle.getFile();

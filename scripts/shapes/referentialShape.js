@@ -111,15 +111,11 @@ class ReferentialShape extends BaseShape {
                 label: { text: "Display" },
                 editorType: "dxButtonGroup",
                 editorOptions: {
-                    stylingMode: "text",
-                    elementAttr: { class: "referential-display-options toggle-option-group" },
+                    stylingMode: "outlined",
+                    elementAttr: { class: "mdl-display-group mdl-small-icon" },
                     keyExpr: "key",
                     selectionMode: "multiple",
                     selectedItemKeys: this.getDisplayOptionKeys(),
-                    onContentReady: e => {
-                        this.syncDisplayOptionsVisualState(e.component);
-                        this.debugDisplayOptionsState(e.component, "contentReady");
-                    },
                     items: [
                         { key: "showHorizontalAxis", hint: "Show horizontal axis", iconClass: "fa-square-half-stroke-horizontal" },
                         { key: "showVerticalAxis", hint: "Show vertical axis", iconClass: "fa-square-half-stroke" },
@@ -140,11 +136,6 @@ class ReferentialShape extends BaseShape {
                         this.properties.showVerticalGrid = selectedKeys.includes("showVerticalGrid");
                         this.properties.equalAxisScales = selectedKeys.includes("equalAxisScales");
                         instance.updateData("displayOptions", [...selectedKeys]);
-                        e.component.repaint();
-                        requestAnimationFrame(() => {
-                            this.syncDisplayOptionsVisualState(e.component);
-                            this.debugDisplayOptionsState(e.component, "selectionChanged");
-                        });
                         this.tick();
                         this.board.markDirty(this);
                     }
@@ -165,87 +156,19 @@ class ReferentialShape extends BaseShape {
                         dataField: "scaleX",
                         label: { text: "Horizontal Scale" },
                         editorType: "dxNumberBox",
-                        editorOptions: this.getPrecisionNumberEditorOptions({ showSpinButtons: false })
+                        editorOptions: this.getPrecisionNumberEditorOptions({ showSpinButtons: false, elementAttr: { class: "mdl-math-input" } })
                     },
                     {
                         dataField: "scaleY",
                         label: { text: "Vertical Scale" },
                         editorType: "dxNumberBox",
-                        editorOptions: this.getPrecisionNumberEditorOptions({ showSpinButtons: false })
+                        editorOptions: this.getPrecisionNumberEditorOptions({ showSpinButtons: false, elementAttr: { class: "mdl-math-input" } })
                     }
                 ]
             }
         );
         instance.option("items", items);
         return form;
-    }
-
-    syncDisplayOptionsVisualState(component) {
-        if (!component)
-            return;
-        const componentElement = component.element?.()?.get?.(0) ?? component.element?.()[0];
-        if (!componentElement)
-            return;
-        const selectedKeys = component.option("selectedItemKeys") ?? [];
-        const itemData = component.option("items") ?? [];
-        const buttonElements = componentElement.querySelectorAll(".dx-button");
-        for (let index = 0; index < buttonElements.length; index++) {
-            const buttonElement = buttonElements[index];
-            const item = itemData[index];
-            const key = item?.key;
-            const isSelected = key != null && selectedKeys.includes(key);
-            const iconElement = buttonElement.querySelector(".dx-icon");
-            if (buttonElement) {
-                if (isSelected) {
-                    buttonElement.style.backgroundColor = "rgb(15, 108, 189)";
-                    buttonElement.style.borderColor = "rgb(15, 108, 189)";
-                    buttonElement.style.color = "#ffffff";
-                } else {
-                    buttonElement.style.backgroundColor = "";
-                    buttonElement.style.borderColor = "";
-                    buttonElement.style.color = "";
-                }
-            }
-            if (iconElement)
-                iconElement.style.color = isSelected ? "#ffffff" : "";
-        }
-    }
-
-    debugDisplayOptionsState(component, phase) {
-        if (!component)
-            return;
-        const element = component.element?.()?.get?.(0) ?? component.element?.()[0];
-        if (!element)
-            return;
-        const buttonElements = element.querySelectorAll(".dx-button");
-        const itemData = component.option("items") ?? [];
-        const debugRows = [];
-        for (let index = 0; index < buttonElements.length; index++) {
-            const buttonElement = buttonElements[index];
-            const optionElement = buttonElement.closest(".dx-buttongroup-item") ?? buttonElement;
-            const iconElement = buttonElement.querySelector(".dx-icon");
-            const buttonStyle = buttonElement ? window.getComputedStyle(buttonElement) : null;
-            const iconStyle = iconElement ? window.getComputedStyle(iconElement) : null;
-            debugRows.push({
-                index: index,
-                key: itemData[index]?.key ?? null,
-                className: optionElement.className,
-                buttonClassName: buttonElement.className,
-                ariaPressedOption: optionElement.getAttribute("aria-pressed"),
-                ariaPressedButton: buttonElement?.getAttribute("aria-pressed") ?? null,
-                hasStateSelected: optionElement.classList.contains("dx-state-selected"),
-                hasItemSelected: optionElement.classList.contains("dx-item-selected"),
-                hasButtonGroupItemSelected: optionElement.classList.contains("dx-buttongroup-item-selected"),
-                buttonBackgroundColor: buttonStyle?.backgroundColor ?? null,
-                buttonBorderColor: buttonStyle?.borderColor ?? null,
-                buttonTextColor: buttonStyle?.color ?? null,
-                iconColor: iconStyle?.color ?? null
-            });
-        }
-        console.group(`Referential displayOptions debug: ${phase}`);
-        console.log("selectedItemKeys", component.option("selectedItemKeys"));
-        console.table(debugRows);
-        console.groupEnd();
     }
 
     setDefaults() {

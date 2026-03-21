@@ -1,4 +1,4 @@
-class BodyShape extends BaseShape {
+class BodyShape extends ChildShape {
     static characters;
     static loadCharactersPromise;
 
