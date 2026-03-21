@@ -11,9 +11,15 @@ class Shell  {
         this.chatAdapter = null;
         this.agentToolBridge = null;
         this.chatInstance = null;
-        this.chatThreadId = null;
+        this.chatThreadIdRef = { value: null };
         this.propertiesPopupSelectionEnabled = true;
         this.chatBeforeUnloadHandler = () => this.disposeChatAdapter();
+        this.aiSdk = new AiSdk({
+            host: "agent-modellus.interactivebook.workers.dev",
+            agent: "ChatAgent",
+            getSession: () => window.modellus?.auth?.getSession?.(),
+            getUserId: () => this.aiSdk.getCurrentUserId()
+        });
         if (typeof AgentToolBridge === "function")
             this.agentToolBridge = new AgentToolBridge({
                 sendToolResult: result => this.chatAdapter?.sendToolResult(
@@ -137,59 +143,6 @@ class Shell  {
             colCount: 2,
             formData: this.properties,
             items: [
-                {
-                    colSpan: 2,
-                    template: () => {
-                        const container = $("<div class='thumbnail-dropzone'></div>");
-                        const preview = $("<img class='thumbnail-preview' alt='Thumbnail preview' />");
-                        const hint = $("<div class='thumbnail-hint'></div>")
-                            .text(this.board.translations.get("Thumbnail Dropzone"));
-                        const removeButton = $("<button type='button' class='thumbnail-remove-button' aria-label='Remove model cover'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></button>");
-                        const uploaderHost = $("<div class='thumbnail-uploader'></div>");
-                        const previewElement = preview.get(0);
-                        const hintElement = hint.get(0);
-                        const removeButtonElement = removeButton.get(0);
-                        this.updateThumbnailPreview(previewElement, hintElement, removeButtonElement, this.getThumbnailSource());
-                        container.append(preview, hint, removeButton, uploaderHost);
-                        removeButton.on("mousedown", event => this.onThumbnailRemoveButtonMouseDown(event));
-                        removeButton.on("click", event => this.onThumbnailRemoveButtonClick(event, previewElement, hintElement, removeButtonElement));
-                        uploaderHost.dxFileUploader({
-                            accept: "image/*",
-                            multiple: false,
-                            uploadMode: "useForm",
-                            dropZone: container.get(0),
-                            dialogTrigger: container.get(0),
-                            onValueChanged: async e => {
-                                const file = e.value && e.value[0];
-                                if (!file)
-                                    return;
-                                await this.setThumbnailFromFile(file, previewElement, hintElement, removeButtonElement);
-                            }
-                        });
-                        return container;
-                    }
-                },
-                {
-                    colSpan: 2,
-                    dataField: "name",
-                    label: { text: this.board.translations.get("Name"), visible: true },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled"
-                    }
-                },
-                {
-                    colSpan: 2,
-                    dataField: "description",
-                    label: {
-                        text: this.board.translations.get("Description")
-                    },
-                    editorType: "dxHtmlEditor",
-                    editorOptions: {
-                        height: 120,
-                        stylingMode: "filled"
-                    }
-                },
                 {
                     colSpan: 2,
                     dataField: "language",
@@ -375,10 +328,7 @@ class Shell  {
     }
 
     createChatId(prefix) {
-        if (window.crypto?.randomUUID)
-            return `${prefix}-${window.crypto.randomUUID()}`;
-        const randomValue = Math.floor(Math.random() * 1000000000);
-        return `${prefix}-${Date.now()}-${randomValue}`;
+        return this.aiSdk.createId(prefix);
     }
 
     createAssetId(prefix) {
@@ -389,71 +339,31 @@ class Shell  {
     }
 
     getCurrentUserId() {
-        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
-        if (session?.userId)
-            return String(session.userId);
-        const user = window.modellus?.auth?.getUser ? window.modellus.auth.getUser() : null;
-        if (user?.id)
-            return String(user.id);
-        return "anonymous-user";
+        return this.aiSdk.getCurrentUserId();
     }
 
     getChatThreadId() {
-        if (this.chatThreadId)
-            return this.chatThreadId;
-        const urlParams = new URLSearchParams(window.location.search);
-        const modelId = urlParams.get("model_id");
-        if (modelId) {
-            this.chatThreadId = `model-${modelId}`;
-            return this.chatThreadId;
-        }
-        const modelName = urlParams.get("model");
-        if (modelName) {
-            this.chatThreadId = `template-${modelName}`;
-            return this.chatThreadId;
-        }
-        const storageKey = "modellus.chat.threadId";
-        const storedThreadId = sessionStorage.getItem(storageKey);
-        if (storedThreadId) {
-            this.chatThreadId = storedThreadId;
-            return this.chatThreadId;
-        }
-        const generatedThreadId = this.createChatId("draft");
-        sessionStorage.setItem(storageKey, generatedThreadId);
-        this.chatThreadId = generatedThreadId;
-        return this.chatThreadId;
+        return this.aiSdk.getChatThreadId(this.chatThreadIdRef);
     }
 
     getChatConversationName() {
-        const userId = this.getCurrentUserId();
-        const threadId = this.getChatThreadId();
-        return `${userId}:${threadId}`;
+        return this.aiSdk.getChatConversationName(this.chatThreadIdRef);
     }
 
     getInitialChatMessages() {
-        const secondUser = { id: "2", name: "Modellus", avatarUrl: "/scripts/themes/modellus bot.svg" };
-        return [{
-            timestamp: Date.now(),
-            author: secondUser,
-            text: "Hello! I'm here to help you craft your own model. Ask me to create a model."
-        }];
+        return this.aiSdk.getInitialChatMessages();
     }
 
     createChatAdapter(chat, firstUser, secondUser, initialMessages) {
         this.disposeChatAdapter();
-        const chatConversationName = this.getChatConversationName();
-        this.chatAdapter = new AgentChatAdapter({
-            host: "agent-modellus.interactivebook.workers.dev",
-            agent: "ChatAgent",
-            name: chatConversationName,
+        this.chatAdapter = this.aiSdk.createChatAdapter({
             chat,
-            user: firstUser,
-            assistant: secondUser,
-            initialItems: initialMessages,
-            debugEnabled: false,
+            firstUser,
+            secondUser,
+            initialMessages,
+            chatThreadIdRef: this.chatThreadIdRef,
             onClientToolCall: toolCall => this.agentToolBridge?.handleToolCall(toolCall)
         });
-        this.chatAdapter.connect();
     }
 
     disposeChatAdapter() {
@@ -1064,7 +974,7 @@ class Shell  {
                 action: _ => this.clearKeepIdentity()
             },
             {
-                text: this.board.translations.get("Save"),
+                text: this.board.translations.get("Save") + "...",
                 icon: "fa-light fa-cloud-arrow-down",
                 shortcut: "Ctrl+S",
                 name: "Save",
@@ -1329,7 +1239,7 @@ class Shell  {
     }
 
     clearChat() {
-        this.chatThreadId = this.createChatId("chat");
+        this.chatThreadIdRef.value = this.aiSdk.createId("chat");
         const popup = $("#chat-popup").dxPopup("instance");
         if (!popup)
             return;
@@ -1458,11 +1368,9 @@ class Shell  {
             alert("No model id found.");
             return;
         }
-        if (this.isModelNameUndefined()) {
-            const accepted = await this.promptModelMetadata();
-            if (!accepted)
-                return;
-        }
+        const accepted = await this.promptModelMetadata();
+        if (!accepted)
+            return;
         const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
         const headers = { "Content-Type": "application/json" };
         if (session && session.token) headers.Authorization = `Bearer ${session.token}`;
@@ -1649,8 +1557,46 @@ class Shell  {
                             {
                                 dataField: "description",
                                 label: { text: this.board.translations.get("Description"), visible: true },
-                                editorType: "dxHtmlEditor",
-                                editorOptions: { height: 120, stylingMode: "filled" }
+                                template: (data, itemElement) => {
+                                    const $editorHost = $("<div>").appendTo(itemElement);
+                                    const $toolbarHost = $("<div>").appendTo(itemElement);
+                                    $editorHost.dxHtmlEditor({
+                                        value: formData.description,
+                                        height: 120,
+                                        stylingMode: "filled",
+                                        toolbar: {
+                                            container: $toolbarHost[0],
+                                            items: [
+                                                "bold", "italic", "underline", "separator",
+                                                "orderedList", "bulletList", "separator",
+                                                {
+                                                    name: "generateDescription",
+                                                    widget: "dxButton",
+                                                    options: {
+                                                        icon: "fa-light fa-wand-magic-sparkles",
+                                                        hint: "Generate description with AI",
+                                                        stylingMode: "text",
+                                                        onClick: async e => {
+                                                            const buttonEl = e.element[0];
+                                                            buttonEl.classList.add("mdl-wand-loading");
+                                                            const editor = $editorHost.dxHtmlEditor("instance");
+                                                            try {
+                                                                const description = await this.aiSdk.generateDescription(this.getModel());
+                                                                editor.option("value", description);
+                                                                formData.description = description;
+                                                            } catch (error) {
+                                                                console.error("AI description failed:", error);
+                                                            } finally {
+                                                                buttonEl.classList.remove("mdl-wand-loading");
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        onValueChanged: e => { formData.description = e.value; }
+                                    });
+                                }
                             }
                         ]
                     });
@@ -1766,8 +1712,46 @@ class Shell  {
                             {
                                 dataField: "description",
                                 label: { text: this.board.translations.get("Description"), visible: true },
-                                editorType: "dxHtmlEditor",
-                                editorOptions: { height: 120, stylingMode: "filled" }
+                                template: (data, itemElement) => {
+                                    const $editorHost = $("<div>").appendTo(itemElement);
+                                    const $toolbarHost = $("<div>").appendTo(itemElement);
+                                    $editorHost.dxHtmlEditor({
+                                        value: formData.description,
+                                        height: 120,
+                                        stylingMode: "filled",
+                                        toolbar: {
+                                            container: $toolbarHost[0],
+                                            items: [
+                                                "bold", "italic", "underline", "separator",
+                                                "orderedList", "bulletList", "separator",
+                                                {
+                                                    name: "generateDescription",
+                                                    widget: "dxButton",
+                                                    options: {
+                                                        icon: "fa-light fa-wand-magic-sparkles",
+                                                        hint: "Generate description with AI",
+                                                        stylingMode: "text",
+                                                        onClick: async e => {
+                                                            const buttonEl = e.element[0];
+                                                            buttonEl.classList.add("mdl-wand-loading");
+                                                            const editor = $editorHost.dxHtmlEditor("instance");
+                                                            try {
+                                                                const description = await this.aiSdk.generateDescription(this.getModel());
+                                                                editor.option("value", description);
+                                                                formData.description = description;
+                                                            } catch (error) {
+                                                                console.error("AI description failed:", error);
+                                                            } finally {
+                                                                buttonEl.classList.remove("mdl-wand-loading");
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        onValueChanged: e => { formData.description = e.value; }
+                                    });
+                                }
                             }
                         ]
                     });
