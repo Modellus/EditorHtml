@@ -11,6 +11,7 @@ class TopToolbar {
         this.textButton = null;
         this.rulerButton = null;
         this.protractorButton = null;
+        this.gaugeButton = null;
         this._create();
     }
 
@@ -170,8 +171,18 @@ class TopToolbar {
                 {
                     location: "center",
                     widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-angle",
+                    options: {                        icon: "fa-light fa-gauge",
+                        elementAttr: {
+                            id: "gauge-button"
+                        },
+                        onClick: _ => this.shell.commands.addShape("GaugeShape", "Gauge"),
+                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Gauge Tooltip", 280)
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
+                    options: {                        icon: "fa-light fa-angle",
                         elementAttr: {
                             id: "protractor-button"
                         },
@@ -191,6 +202,7 @@ class TopToolbar {
         this.textButton = $("#text-button").dxButton("instance");
         this.rulerButton = $("#ruler-button").dxButton("instance");
         this.protractorButton = $("#protractor-button").dxButton("instance");
+        this.gaugeButton = $("#gauge-button").dxButton("instance");
     }
 
     update() {

@@ -28,7 +28,7 @@ class Shell  {
         this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
-        [BodyShape, ExpressionShape, ValueShape, ChartShape, TableShape, SliderShape, VectorShape, ImageShape, ReferentialShape, TextShape, RulerShape, ProtractorShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyShape, ExpressionShape, ValueShape, ChartShape, TableShape, SliderShape, GaugeShape, VectorShape, ImageShape, ReferentialShape, TextShape, RulerShape, ProtractorShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.calculator.on("iterate", e => this.onIterate(e));
         if (model != undefined)
             this.openModel(model);
