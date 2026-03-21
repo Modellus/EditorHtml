@@ -703,15 +703,22 @@ class Shell  {
         $("#bottom-toolbar").dxToolbar({
             items: [
                 {
-                    widget: "dxButton",
+                    widget: "dxButtonGroup",
                     options: {
-                        elementAttr: {
-                            id: "properties-popup-toggle-button"
+                        elementAttr: { id: "properties-popup-toggle-button" },
+                        stylingMode: "outlined",
+                        selectionMode: "multiple",
+                        keyExpr: "key",
+                        selectedItemKeys: this.propertiesPopupSelectionEnabled ? ["toggle"] : [],
+                        items: [{ key: "toggle", icon: "fa-light fa-square-list" }],
+                        buttonTemplate: (data, container) => {
+                            container[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
                         },
-                        stylingMode: "text",
-                        icon: this.getPropertiesPopupToggleIcon(),
-                        onClick: _ => this.togglePropertiesPopupSelectionEnabled(),
-                        onInitialized: e => this.propertiesPopupToggleTooltip = this.createTranslatedTooltip(e, "Properties Popup Toggle Tooltip", 320)
+                        onInitialized: e => {
+                            this.propertiesPopupToggleButton = e.component;
+                            this.createTranslatedTooltip(e, "Properties Popup Toggle Tooltip", 320);
+                        },
+                        onSelectionChanged: _ => this.togglePropertiesPopupSelectionEnabled()
                     },
                     location: "before"
                 },
@@ -895,7 +902,7 @@ class Shell  {
             ]
         });
         this.bottomToolbar = $("#bottom-toolbar").dxToolbar("instance");
-        this.propertiesPopupToggleButton = $("#properties-popup-toggle-button").dxButton("instance");
+        this.propertiesPopupToggleButton = $("#properties-popup-toggle-button").dxButtonGroup("instance");
         this.zoom = $("#zoomButton").dxButton("instance");
         this.playPause = $("#playPauseButton").dxButton("instance");
         this.stop = $("#stopButton").dxButton("instance");
@@ -1788,14 +1795,14 @@ class Shell  {
     updatePropertiesPopupToggleButton() {
         if (!this.propertiesPopupToggleButton)
             return;
-        this.propertiesPopupToggleButton.option("template", null);
-        this.propertiesPopupToggleButton.option("icon", this.getPropertiesPopupToggleIcon());
-        this.propertiesPopupToggleButton.option("type", this.propertiesPopupSelectionEnabled ? "default" : "normal");
+        this.propertiesPopupToggleButton.option(
+            "selectedItemKeys",
+            this.propertiesPopupSelectionEnabled ? ["toggle"] : []
+        );
     }
 
     togglePropertiesPopupSelectionEnabled() {
         this.propertiesPopupSelectionEnabled = !this.propertiesPopupSelectionEnabled;
-        this.updatePropertiesPopupToggleButton();
         const selectedShape = this.board.selection.selectedShape;
         if (!selectedShape) {
             this.shapePopup.hide();
