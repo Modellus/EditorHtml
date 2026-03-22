@@ -153,7 +153,7 @@ class ExpressionShape extends BaseShape {
         this.mathfield.smartMode = false;
         this.mathfield.multiline = true;
         this.mathfield.returnKeyAction = "none";
-        this.mathfield.soundsDirectory = null;
+        MathfieldElement.soundsDirectory = null;
         this.mathfield.addEventListener("input", inputEvent => this.onInput(inputEvent));
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());
