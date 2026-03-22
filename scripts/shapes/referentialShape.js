@@ -97,20 +97,26 @@ class ReferentialShape extends BaseShape {
                 }
             }
         );
-        return items;
-    }
-
-    createForm() {
-        var form = super.createForm();
-        var instance = form.dxForm("instance");
-        var items = instance.option("items");
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        this._borderColorPicker = this.createColorPickerEditor("borderColor");
         items.push(
             {
-                colSpan: 2,
-                dataField: "displayOptions",
-                label: { text: "Display" },
-                editorType: "dxButtonGroup",
-                editorOptions: {
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div style="width:180px"></div>');
+                    wrapper.append(this.createNameFormControl());
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                widget: "dxButtonGroup",
+                options: {
                     stylingMode: "outlined",
                     elementAttr: { class: "mdl-display-group mdl-small-icon" },
                     keyExpr: "key",
@@ -127,6 +133,7 @@ class ReferentialShape extends BaseShape {
                     buttonTemplate: (data, container) => {
                         container.html(`<i class="dx-icon fa-light ${data.iconClass}" title="${data.hint}"></i>`);
                     },
+                    onInitialized: e => { this._displayButtonGroupInstance = e.component; },
                     onSelectionChanged: e => {
                         const selectedKeys = e.component.option("selectedItemKeys") ?? [];
                         this.properties.showHorizontalAxis = selectedKeys.includes("showHorizontalAxis");
@@ -135,40 +142,101 @@ class ReferentialShape extends BaseShape {
                         this.properties.showHorizontalGrid = selectedKeys.includes("showHorizontalGrid");
                         this.properties.showVerticalGrid = selectedKeys.includes("showVerticalGrid");
                         this.properties.equalAxisScales = selectedKeys.includes("equalAxisScales");
-                        instance.updateData("displayOptions", [...selectedKeys]);
                         this.tick();
                         this.board.markDirty(this);
                     }
                 }
             },
             {
-                colSpan: 2,
-                dataField: "autoScale",
-                label: { text: "Auto scale" },
-                editorType: "dxSwitch"
+                location: "center",
+                widget: "dxSwitch",
+                options: {
+                    value: this.properties.autoScale !== false,
+                    hint: "Auto scale",
+                    onInitialized: e => { this._autoScaleSwitchInstance = e.component; },
+                    onValueChanged: e => {
+                        this.properties.autoScale = e.value;
+                        this.tick();
+                        this.board.markDirty(this);
+                    }
+                }
             },
             {
-                colSpan: 2,
-                itemType: "group",
-                colCount: 2,
-                items: [
-                    {
-                        dataField: "scaleX",
-                        label: { text: "Horizontal Scale" },
-                        editorType: "dxNumberBox",
-                        editorOptions: this.getPrecisionNumberEditorOptions({ showSpinButtons: false, elementAttr: { class: "mdl-math-input" } })
-                    },
-                    {
-                        dataField: "scaleY",
-                        label: { text: "Vertical Scale" },
-                        editorType: "dxNumberBox",
-                        editorOptions: this.getPrecisionNumberEditorOptions({ showSpinButtons: false, elementAttr: { class: "mdl-math-input" } })
+                location: "center",
+                widget: "dxNumberBox",
+                options: Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    value: this.properties.scaleX,
+                    hint: "Horizontal Scale",
+                    onInitialized: e => { this._scaleXBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.properties.scaleX = e.value;
+                        this.properties.autoScale = false;
+                        this.tick();
+                        this.board.markDirty(this);
                     }
-                ]
+                })
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    value: this.properties.scaleY,
+                    hint: "Vertical Scale",
+                    onInitialized: e => { this._scaleYBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.properties.scaleY = e.value;
+                        this.properties.autoScale = false;
+                        this.tick();
+                        this.board.markDirty(this);
+                    }
+                })
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                template: () => this._fgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._bgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._borderColorPicker
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                    stylingMode: "text",
+                    onClick: () => this.remove()
+                }
             }
         );
-        instance.option("items", items);
-        return form;
+        return items;
+    }
+
+    showContextToolbar() {
+        this.refreshNameToolbarControl();
+        this._displayButtonGroupInstance?.option("selectedItemKeys", this.getDisplayOptionKeys());
+        this._autoScaleSwitchInstance?.option("value", this.properties.autoScale !== false);
+        this._scaleXBoxInstance?.option("value", this.properties.scaleX);
+        this._scaleYBoxInstance?.option("value", this.properties.scaleY);
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        if (this._borderColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+        super.showContextToolbar();
     }
 
     setDefaults() {

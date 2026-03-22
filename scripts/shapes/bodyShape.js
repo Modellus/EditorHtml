@@ -272,6 +272,19 @@ class BodyShape extends ChildShape {
                     hint: "Image",
                     onClick: _ => this.openImageFileDialog()
                 }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                    stylingMode: "text",
+                    onClick: () => this.remove()
+                }
             }
         );
         return items;
