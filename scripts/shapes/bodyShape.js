@@ -153,98 +153,233 @@ class BodyShape extends ChildShape {
     }
 
     createForm() {
-        var form = super.createForm();
-        var instance = form.dxForm("instance");
-        var items = instance.option("items");
-        const colorGroup = items.find(item => item.itemType === "group" && item.colCount === 3);
-        if (colorGroup) {
-            colorGroup.colCount = 2;
-            colorGroup.items = colorGroup.items.filter(item => item.dataField !== "backgroundColor");
-        }
-        instance.option("items", items);
-        this.ensureMotionTermMappings();
-        this.addTermToForm("xTerm", "Horizontal", true, 1);
-        this.addTermToForm("yTerm", "Vertical", true, 1);
-        items = instance.option("items");
-        const characters = BodyShape.getCharacters();
-        const buttonItems = characters.map(character => ({
-            key: character.folder,
-            name: character.name,
-            description: character.description,
-            icon: `resources/characters/${character.folder}/${character.image}`
-        }));
+        return null;
+    }
+
+    getScreenAnchorPoint() {
+        return this.parent?.getScreenAnchorPoint?.() ?? super.getScreenAnchorPoint();
+    }
+
+    createToolbar() {
+        const items = super.createToolbar();
+        this._trajectoryColorPicker = this.createColorPickerEditor("trajectoryColor");
+        this._stroboscopyColorPicker = this.createColorPickerEditor("stroboscopyColor");
+        const formAdapter = { updateData: (field, value) => this.setProperty(field, value) };
+        const xDisplayMode = this.getTermDisplayModeProperty("xTerm");
+        const yDisplayMode = this.getTermDisplayModeProperty("yTerm");
+        const xDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "xTerm", "xTermCase", false, xDisplayMode, true);
+        this.termFormControls["xTerm"] = { termControl: xDescriptor.termControl };
+        const yDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "yTerm", "yTermCase", false, yDisplayMode, true);
+        this.termFormControls["yTerm"] = { termControl: yDescriptor.termControl };
         items.push(
             {
-                colSpan: 2,
-                itemType: "group",
-                colCount: 2,
-                items: [
-                    this.createColorPickerFormItem("trajectoryColor", "Trajectory color", 1),
-                    this.createColorPickerFormItem("stroboscopyColor", "Stroboscopy color", 1)
-                ]
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div style="width:180px"></div>');
+                    wrapper.append(this.createNameFormControl());
+                    return wrapper;
+                }
             },
             {
-                colSpan: 2,
-                itemType: "group",
-                colCount: 2,
-                items: [
-                    {
-                        colSpan: 1,
-                        dataField: "stroboscopyInterval",
-                        label: { text: "Interval" },
-                        editorType: "dxNumberBox",
-                        editorOptions: {
-                            showSpinButtons: true,
-                            stylingMode: "filled"
-                        }
-                    },
-                    {
-                        colSpan: 1,
-                        dataField: "stroboscopyOpacity",
-                        label: { text: "Opacity" },
-                        editorType: "dxNumberBox",
-                        editorOptions: {
-                            showSpinButtons: true,
-                            step: 0.1,
-                            stylingMode: "filled"
-                        }
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div style="width:150px"></div>');
+                    this.createParentDropDownButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $(`<div class="vector-term-toolbar-item"><span class="vector-term-toolbar-label">H</span></div>`);
+                    wrapper.append(xDescriptor.control);
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $(`<div class="vector-term-toolbar-item"><span class="vector-term-toolbar-label">V</span></div>`);
+                    wrapper.append(yDescriptor.control);
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                template: () => this._trajectoryColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._stroboscopyColorPicker
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: {
+                    value: this.properties.stroboscopyInterval,
+                    hint: "Stroboscopy interval",
+                    showSpinButtons: true,
+                    min: 1,
+                    width: 90,
+                    stylingMode: "filled",
+                    onInitialized: e => { this.stroboscopyIntervalToolbarWidget = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("stroboscopyInterval", e.value);
+                        this.board.markDirty(this);
                     }
-                ]
+                }
             },
             {
-                colSpan: 2,
-                label: { text: "File" },
-                template: _ => this.createImageDropZoneEditor()
-            },
-            {
-                colSpan: 2,
-                dataField: "characterKey",
-                label: { text: "Character" },
-                editorType: "dxButtonGroup",
-                editorOptions: {
-                    stylingMode: "text",
-                    items: buttonItems,
-                    keyExpr: "key",
-                    selectionMode: "single",
-                    selectedItemKeys: this.properties.characterKey ? [this.properties.characterKey] : [],
-                    elementAttr: {
-                        class: "character-shape-picker",
-                        style: "height: auto; width: auto;"
-                    },
-                    itemTemplate: (itemData, itemIndex, itemElement) => {
-                        itemElement[0].innerHTML = `<div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;"><img src="${itemData.icon}" alt="${itemData.name}" style="width:100%;height:100%;object-fit:contain;" /></div>`;
-                        this.configureCharacterTooltip(itemData, itemElement[0]);
-                    },
-                    onItemClick: e => {
-                        const formInstance = $("#shape-form").dxForm("instance");
-                        formInstance.updateData("characterKey", e.itemData.key);
-                        this.setProperty("characterKey", e.itemData.key);
+                location: "center",
+                widget: "dxNumberBox",
+                options: {
+                    value: this.properties.stroboscopyOpacity,
+                    hint: "Stroboscopy opacity",
+                    showSpinButtons: true,
+                    min: 0,
+                    max: 1,
+                    step: 0.1,
+                    width: 90,
+                    stylingMode: "filled",
+                    onInitialized: e => { this.stroboscopyOpacityToolbarWidget = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("stroboscopyOpacity", e.value);
+                        this.board.markDirty(this);
                     }
+                }
+            },
+            {
+                location: "center",
+                template: () => this.createCharacterPickerButton()
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-image",
+                    hint: "Image",
+                    onClick: _ => this.openImageFileDialog()
                 }
             }
         );
-        instance.option("items", items);
-        return form;
+        return items;
+    }
+
+    createCharacterPickerButton() {
+        const baseItemSize = 50;
+        const columns = 4;
+        const itemMargin = 2;
+        const step = baseItemSize + itemMargin * 2;
+        const popupPadding = 6;
+        this._characterPicker = $('<div class="mdl-character-picker"></div>');
+        this._characterPicker.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            hint: "Character",
+            buttonTemplate: (data, element) => this.renderCharacterPickerButtonTemplate(element),
+            dropDownOptions: {
+                width: columns * step + popupPadding * 2,
+                wrapperAttr: { class: "mdl-character-picker-menu" },
+                contentTemplate: contentElement => this.createCharacterPickerGrid(contentElement)
+            }
+        });
+        return this._characterPicker;
+    }
+
+    renderCharacterPickerButtonTemplate(element) {
+        const character = this.getSelectedCharacter();
+        const content = $('<div class="mdl-character-picker-button-template"></div>');
+        if (character)
+            content.html(`<img src="resources/characters/${character.folder}/${character.image}" alt="${character.name}" />`);
+        else
+            content.html(`<i class="fa-light fa-circle mdl-character-picker-button-icon"></i>`);
+        $(element).empty().append(content);
+    }
+
+    createCharacterPickerGrid(contentElement) {
+        const baseItemSize = 50;
+        const columns = 4;
+        const itemMargin = 2;
+        const step = baseItemSize + itemMargin * 2;
+        const characters = BodyShape.characters ?? [];
+        const allItems = [
+            { key: "", name: "None", icon: null },
+            ...characters.map(c => ({ key: c.folder, name: c.name, icon: `resources/characters/${c.folder}/${c.image}` }))
+        ];
+        const rows = Math.ceil(allItems.length / columns);
+        $(contentElement).empty();
+        const container = $('<div class="mdl-character-picker-grid"></div>');
+        $(contentElement).append(container);
+        container.dxTileView({
+            items: allItems,
+            baseItemHeight: baseItemSize,
+            baseItemWidth: baseItemSize,
+            itemMargin: itemMargin,
+            direction: "vertical",
+            height: rows * step,
+            width: columns * step,
+            itemTemplate: (itemData, index, element) => {
+                const cell = $(`<div class="mdl-character-picker-item" title="${itemData.name}"></div>`);
+                if (itemData.icon)
+                    cell.html(`<img src="${itemData.icon}" alt="${itemData.name}" />`);
+                else
+                    cell.html(`<i class="fa-light fa-ban"></i>`);
+                $(element).append(cell);
+            },
+            onItemClick: e => {
+                this.setProperty("characterKey", e.itemData.key ?? "");
+                this._characterPicker?.dxDropDownButton("instance")?.close();
+                this.refreshCharacterPickerButtonTemplate();
+            }
+        });
+    }
+
+    refreshCharacterPickerButtonTemplate() {
+        if (!this._characterPicker)
+            return;
+        const buttonContentElement = this._characterPicker.find(".dx-button-content")[0];
+        if (buttonContentElement)
+            this.renderCharacterPickerButtonTemplate(buttonContentElement);
+    }
+
+    showContextToolbar() {
+        this.refreshNameToolbarControl();
+        this.refreshParentToolbarControl();
+        if (this._trajectoryColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._trajectoryColorPicker, this.properties.trajectoryColor);
+        if (this._stroboscopyColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._stroboscopyColorPicker, this.properties.stroboscopyColor);
+        this.stroboscopyIntervalToolbarWidget?.option("value", this.properties.stroboscopyInterval);
+        this.stroboscopyOpacityToolbarWidget?.option("value", this.properties.stroboscopyOpacity);
+        this.refreshCharacterPickerButtonTemplate();
+        this.termFormControls["xTerm"]?.termControl?.refresh();
+        this.termFormControls["yTerm"]?.termControl?.refresh();
+        super.showContextToolbar();
+    }
+
+    openImageFileDialog() {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = async e => {
+            const imageSource = await this.board.assetManager.uploadAsset(this.id, e.target.files[0]);
+            if (imageSource)
+                this.onImageControlChanged(imageSource);
+        };
+        input.click();
     }
 
     configureCharacterTooltip(itemData, itemElement) {

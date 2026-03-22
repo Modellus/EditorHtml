@@ -727,10 +727,12 @@ class BaseShape {
         });
         const colorPicker = this.createColorPickerEditor("nameColor");
         colorPicker.addClass("name-packed-control__picker");
+        this._nameColorPicker = colorPicker;
         colorHost.append(colorPicker);
         inputHost.dxTextBox({
             value: this.properties.name,
             stylingMode: "filled",
+            onInitialized: e => { this._nameTextBoxInstance = e.component; },
             onValueChanged: event => {
                 const formInstance = this.getShapeFormInstance();
                 if (formInstance)
@@ -740,6 +742,12 @@ class BaseShape {
             }
         });
         return control;
+    }
+
+    refreshNameToolbarControl() {
+        this._nameTextBoxInstance?.option("value", this.properties.name);
+        if (this._nameColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._nameColorPicker, this.properties.nameColor);
     }
 
     createForm() {

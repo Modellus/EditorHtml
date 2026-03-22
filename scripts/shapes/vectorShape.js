@@ -83,11 +83,35 @@ class VectorShape extends ChildShape {
         const formAdapter = { updateData: (field, value) => this.setProperty(field, value) };
         const xDisplayMode = this.getTermDisplayModeProperty("xTerm");
         const yDisplayMode = this.getTermDisplayModeProperty("yTerm");
-        const xDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "xTerm", "xTermCase", false, xDisplayMode, false);
+        const xDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "xTerm", "xTermCase", false, xDisplayMode, true);
         this.termFormControls["xTerm"] = { termControl: xDescriptor.termControl };
-        const yDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "yTerm", "yTermCase", false, yDisplayMode, false);
+        const yDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "yTerm", "yTermCase", false, yDisplayMode, true);
         this.termFormControls["yTerm"] = { termControl: yDescriptor.termControl };
         items.push(
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div style="width:180px"></div>');
+                    wrapper.append(this.createNameFormControl());
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div style="width:150px"></div>');
+                    this.createParentDropDownButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
             {
                 location: "center",
                 template: () => this._fgColorPicker
@@ -196,6 +220,8 @@ class VectorShape extends ChildShape {
 
     showContextToolbar() {
         super.showContextToolbar();
+        this.refreshNameToolbarControl();
+        this.refreshParentToolbarControl();
         if (this._tipTypeControl) {
             this._tipTypeControl.option("selectedItemKey", this.properties.tipType);
             this._tipTypeControl.repaint();

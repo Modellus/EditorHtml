@@ -121,7 +121,7 @@ class ChildShape extends BaseShape {
                     stylingMode: "borderless"
                 });
             },
-            onInitialized: e => { dropdownInstance = e.component; },
+            onInitialized: e => { dropdownInstance = e.component; this._parentDropdownInstance = e.component; },
             onOpened: () => {
                 const items = treeItems();
                 if (treeViewInstance)
@@ -150,6 +150,14 @@ class ChildShape extends BaseShape {
                 return $tree;
             }
         });
+    }
+
+    refreshParentToolbarControl() {
+        if (!this._parentDropdownInstance)
+            return;
+        const flatItems = this.flattenTreeItems(this.buildParentTreeItems(this.getReferential()));
+        this._parentDropdownInstance.option("dataSource", flatItems);
+        this._parentDropdownInstance.option("value", this.properties.parentId);
     }
 
     createForm() {
