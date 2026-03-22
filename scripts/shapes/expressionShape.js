@@ -6,44 +6,127 @@ class ExpressionShape extends BaseShape {
         this.focusDispatchFrame = null;
     }
 
-    createForm() {
-        var form = super.createForm();
-        var instance = form.dxForm("instance");
-        var items = instance.option("items");
-        items.push({
-            itemType: "group",
-            colCount: "auto",
-            minColWidth: 200,
-            items: [
-                {
-                    colSpan: 2,
-                    label: { text: "Shortcuts" },
-                    editorType: "dxButtonGroup",
-                    editorOptions: {
-                        elementAttr: { class: "mdl-shortcuts" },
-                        buttonTemplate: function (data, container) {
-                            $("<math-field>")
-                                .attr("read-only", true)
-                                .html(data.text)
-                                .css("height", "auto", "width", "auto")
-                                .addClass("form-math-field")
-                                .appendTo(container);
-                        },
-                        items: [
-                            { name: "Differential", text: "\\frac{dx}{dt}" },
-                            { name: "Power", text: "x^2" },
-                            { name: "Squareroot", text: "\\sqrt{x}" },
-                            { name: "Index", text: "x_{t-1}" }
-                        ],
-                        keyExpr: "name",
-                        selectionMode: "none",
-                        onItemClick: e => this.insert(e.itemData.text)
-                    }
+    createToolbar() {
+        const items = super.createToolbar();
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        this._borderColorPicker = this.createColorPickerEditor("borderColor");
+        items.push(
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div style="width:180px"></div>');
+                    wrapper.append(this.createNameFormControl());
+                    return wrapper;
                 }
-            ]
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => this.createShortcutsPickerButton()
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => this._fgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._bgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._borderColorPicker
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                    stylingMode: "text",
+                    onClick: () => this.remove()
+                }
+            }
+        );
+        return items;
+    }
+
+    createShortcutsPickerButton() {
+        const baseItemSize = 50;
+        const columns = 4;
+        const itemMargin = 2;
+        const step = baseItemSize + itemMargin * 2;
+        const popupPadding = 6;
+        this._shortcutsPicker = $('<div class="mdl-shortcuts-picker"></div>');
+        this._shortcutsPicker.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            hint: "Shortcuts",
+            icon: "fa-light fa-sigma",
+            dropDownOptions: {
+                width: columns * step + popupPadding * 2,
+                wrapperAttr: { class: "mdl-shortcuts-picker-menu" },
+                contentTemplate: contentElement => this.createShortcutsPickerGrid(contentElement)
+            }
         });
-        instance.option("items", items);
-        return form;
+        return this._shortcutsPicker;
+    }
+
+    createShortcutsPickerGrid(contentElement) {
+        const baseItemSize = 50;
+        const columns = 4;
+        const itemMargin = 2;
+        const step = baseItemSize + itemMargin * 2;
+        const shortcutItems = [
+            { name: "Differential", text: "\\frac{dx}{dt}" },
+            { name: "Power", text: "x^2" },
+            { name: "Squareroot", text: "\\sqrt{x}" },
+            { name: "Index", text: "x_{t-1}" }
+        ];
+        const rows = Math.ceil(shortcutItems.length / columns);
+        $(contentElement).empty();
+        const container = $('<div class="mdl-shortcuts-picker-grid"></div>');
+        $(contentElement).append(container);
+        container.dxTileView({
+            items: shortcutItems,
+            baseItemHeight: baseItemSize,
+            baseItemWidth: baseItemSize,
+            itemMargin: itemMargin,
+            direction: "vertical",
+            height: rows * step,
+            width: columns * step,
+            itemTemplate: (itemData, index, element) => {
+                const cell = $(`<div class="mdl-shortcuts-picker-item" title="${itemData.name}"></div>`);
+                cell.html(`<math-field read-only class="form-math-field" style="height:auto;width:auto">${itemData.text}</math-field>`);
+                $(element).append(cell);
+            },
+            onItemClick: e => {
+                this.insert(e.itemData.text);
+                this._shortcutsPicker?.dxDropDownButton("instance")?.close();
+            }
+        });
+    }
+
+    showContextToolbar() {
+        this.refreshNameToolbarControl();
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        if (this._borderColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+        super.showContextToolbar();
     }
 
     setDefaults() {
@@ -70,6 +153,7 @@ class ExpressionShape extends BaseShape {
         this.mathfield.smartMode = false;
         this.mathfield.multiline = true;
         this.mathfield.returnKeyAction = "none";
+        this.mathfield.soundsDirectory = null;
         this.mathfield.addEventListener("input", inputEvent => this.onInput(inputEvent));
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());

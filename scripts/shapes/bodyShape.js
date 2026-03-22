@@ -152,10 +152,6 @@ class BodyShape extends ChildShape {
         return false;
     }
 
-    createForm() {
-        return null;
-    }
-
     getScreenAnchorPoint() {
         return this.parent?.getScreenAnchorPoint?.() ?? super.getScreenAnchorPoint();
     }

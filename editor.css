@@ -285,8 +285,7 @@ svg:active.pan-available {
 }
 
 body.read-only #toolbar-container,
-body.read-only #context-menu,
-body.read-only #shape-popup {
+body.read-only #context-menu {
     display: none;
 }
 
@@ -482,11 +481,6 @@ body.read-only #shape-popup {
 
 .dx-htmleditor .dx-htmleditor-content {
     cursor: inherit;
-}
-
-.form-button-row {
-    display: flex;
-    gap: 0;
 }
 
 .dx-button .trash {
@@ -709,6 +703,37 @@ math-field {
     display: inline-flex;
     align-items: center;
     height: auto;
+}
+
+.mdl-display-options-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    align-items: center;
+    padding: 0 4px;
+    min-width: 16px;
+}
+
+.mdl-display-option-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px;
+    white-space: nowrap;
+}
+
+.mdl-display-options-panel {
+    position: fixed;
+    z-index: 9999;
+    display: none;
+    background: var(--dx-color-main-bg, #fff);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    padding: 4px;
+}
+
+.mdl-display-options-panel.visible {
+    display: block;
 }
 
 .mdl-variable-selector {

@@ -115,37 +115,7 @@ class ReferentialShape extends BaseShape {
             },
             {
                 location: "center",
-                widget: "dxButtonGroup",
-                options: {
-                    stylingMode: "outlined",
-                    elementAttr: { class: "mdl-display-group mdl-small-icon" },
-                    keyExpr: "key",
-                    selectionMode: "multiple",
-                    selectedItemKeys: this.getDisplayOptionKeys(),
-                    items: [
-                        { key: "showHorizontalAxis", hint: "Show horizontal axis", iconClass: "fa-square-half-stroke-horizontal" },
-                        { key: "showVerticalAxis", hint: "Show vertical axis", iconClass: "fa-square-half-stroke" },
-                        { key: "showTicksWithValues", hint: "Show ticks with values", iconClass: "fa-square-ellipsis" },
-                        { key: "showHorizontalGrid", hint: "Show horizontal grid lines", iconClass: "fa-border-center-h" },
-                        { key: "showVerticalGrid", hint: "Show vertical grid lines", iconClass: "fa-border-center-v" },
-                        { key: "equalAxisScales", hint: "Use equal horizontal and vertical scales", iconClass: "fa-square-equals" }
-                    ],
-                    buttonTemplate: (data, container) => {
-                        container.html(`<i class="dx-icon fa-light ${data.iconClass}" title="${data.hint}"></i>`);
-                    },
-                    onInitialized: e => { this._displayButtonGroupInstance = e.component; },
-                    onSelectionChanged: e => {
-                        const selectedKeys = e.component.option("selectedItemKeys") ?? [];
-                        this.properties.showHorizontalAxis = selectedKeys.includes("showHorizontalAxis");
-                        this.properties.showVerticalAxis = selectedKeys.includes("showVerticalAxis");
-                        this.properties.showTicksWithValues = selectedKeys.includes("showTicksWithValues");
-                        this.properties.showHorizontalGrid = selectedKeys.includes("showHorizontalGrid");
-                        this.properties.showVerticalGrid = selectedKeys.includes("showVerticalGrid");
-                        this.properties.equalAxisScales = selectedKeys.includes("equalAxisScales");
-                        this.tick();
-                        this.board.markDirty(this);
-                    }
-                }
+                template: () => this.createDisplayOptionsButton()
             },
             {
                 location: "center",
@@ -193,6 +163,30 @@ class ReferentialShape extends BaseShape {
             },
             {
                 location: "center",
+                widget: "dxButtonGroup",
+                options: {
+                    stylingMode: "outlined",
+                    elementAttr: { class: "mdl-display-group mdl-small-icon" },
+                    keyExpr: "key",
+                    selectionMode: "multiple",
+                    selectedItemKeys: this.properties.equalAxisScales === true ? ["equalAxisScales"] : [],
+                    items: [
+                        { key: "equalAxisScales", hint: "Use equal horizontal and vertical scales", iconClass: "fa-square-equals" }
+                    ],
+                    buttonTemplate: (data, container) => {
+                        container.html(`<i class="dx-icon fa-light ${data.iconClass}" title="${data.hint}"></i>`);
+                    },
+                    onInitialized: e => { this._equalScalesButtonInstance = e.component; },
+                    onSelectionChanged: e => {
+                        const selectedKeys = e.component.option("selectedItemKeys") ?? [];
+                        this.properties.equalAxisScales = selectedKeys.includes("equalAxisScales");
+                        this.tick();
+                        this.board.markDirty(this);
+                    }
+                }
+            },
+            {
+                location: "center",
                 template: () => $(`<div class="toolbar-separator">|</div>`)
             },
             {
@@ -224,9 +218,84 @@ class ReferentialShape extends BaseShape {
         return items;
     }
 
+    createDisplayOptionsButton() {
+        this._displayOptionsItems = [
+            { key: "showHorizontalAxis", hint: "Show horizontal axis", iconClass: "fa-square-half-stroke-horizontal" },
+            { key: "showVerticalAxis", hint: "Show vertical axis", iconClass: "fa-square-half-stroke" },
+            { key: "showTicksWithValues", hint: "Show ticks with values", iconClass: "fa-square-ellipsis" },
+            { key: "showHorizontalGrid", hint: "Show horizontal grid lines", iconClass: "fa-border-center-h" },
+            { key: "showVerticalGrid", hint: "Show vertical grid lines", iconClass: "fa-border-center-v" }
+        ];
+        const buttonHost = $('<div></div>');
+        buttonHost.dxButton({
+            icon: "fa-light fa-display",
+            stylingMode: "outlined",
+            hint: "Display options",
+            onClick: e => this.toggleDisplayOptionsPanel(e.element[0])
+        });
+        return buttonHost;
+    }
+
+    toggleDisplayOptionsPanel(anchorElement) {
+        if (this._displayOptionsPanel?.classList.contains("visible")) {
+            this.hideDisplayOptionsPanel();
+            return;
+        }
+        this.showDisplayOptionsPanel(anchorElement);
+    }
+
+    showDisplayOptionsPanel(anchorElement) {
+        if (!this._displayOptionsPanel) {
+            const panel = document.createElement("div");
+            panel.className = "mdl-display-options-panel";
+            document.body.appendChild(panel);
+            this._displayOptionsPanel = panel;
+            $(panel).dxButtonGroup({
+                stylingMode: "outlined",
+                orientation: "vertical",
+                keyExpr: "key",
+                selectionMode: "multiple",
+                selectedItemKeys: this.getDisplayOptionKeys(),
+                items: this._displayOptionsItems,
+                buttonTemplate: (data, container) => {
+                    container.html(`<i class="dx-icon fa-light ${data.iconClass}" title="${data.hint}"></i>`);
+                },
+                onInitialized: e => { this._displayButtonGroupInstance = e.component; },
+                onSelectionChanged: e => {
+                    const selectedKeys = e.component.option("selectedItemKeys") ?? [];
+                    this.properties.showHorizontalAxis = selectedKeys.includes("showHorizontalAxis");
+                    this.properties.showVerticalAxis = selectedKeys.includes("showVerticalAxis");
+                    this.properties.showTicksWithValues = selectedKeys.includes("showTicksWithValues");
+                    this.properties.showHorizontalGrid = selectedKeys.includes("showHorizontalGrid");
+                    this.properties.showVerticalGrid = selectedKeys.includes("showVerticalGrid");
+                    this.tick();
+                    this.board.markDirty(this);
+                }
+            });
+            this._displayOptionsPanelOutsideClick = e => {
+                if (!this._displayOptionsPanel.contains(e.target) && !anchorElement?.contains(e.target))
+                    this.hideDisplayOptionsPanel();
+            };
+        }
+        this._displayButtonGroupInstance?.option("selectedItemKeys", this.getDisplayOptionKeys());
+        const rect = anchorElement.getBoundingClientRect();
+        this._displayOptionsPanel.style.left = `${rect.left}px`;
+        this._displayOptionsPanel.style.top = `${rect.bottom + 8}px`;
+        this._displayOptionsPanel.classList.add("visible");
+        document.addEventListener("pointerdown", this._displayOptionsPanelOutsideClick, true);
+    }
+
+    hideDisplayOptionsPanel() {
+        if (!this._displayOptionsPanel)
+            return;
+        this._displayOptionsPanel.classList.remove("visible");
+        document.removeEventListener("pointerdown", this._displayOptionsPanelOutsideClick, true);
+    }
+
     showContextToolbar() {
         this.refreshNameToolbarControl();
         this._displayButtonGroupInstance?.option("selectedItemKeys", this.getDisplayOptionKeys());
+        this._equalScalesButtonInstance?.option("selectedItemKeys", this.properties.equalAxisScales === true ? ["equalAxisScales"] : []);
         this._autoScaleSwitchInstance?.option("value", this.properties.autoScale !== false);
         this._scaleXBoxInstance?.option("value", this.properties.scaleX);
         this._scaleYBoxInstance?.option("value", this.properties.scaleY);
@@ -479,8 +548,6 @@ class ReferentialShape extends BaseShape {
             selectedKeys.push("showHorizontalGrid");
         if (this.properties.showVerticalGrid === true)
             selectedKeys.push("showVerticalGrid");
-        if (this.properties.equalAxisScales === true)
-            selectedKeys.push("equalAxisScales");
         return selectedKeys;
     }
 

@@ -96,18 +96,7 @@ class BaseShape {
         this.initializeContextToolbar();
     }
 
-    getForm() {
-        var form = this.createForm();
-        if (form == null)
-            return null;
-        var instance = form.dxForm("instance");
-        instance.formData = null;
-        instance.updateData(this.properties);
-        this.refreshTermFormLayouts(instance);
-        const observer = new ResizeObserver(e => instance.option("colCount", e[0].contentRect.width > 300 ? 2 : 1));
-        observer.observe(form[0]);
-        return form;
-    };
+
 
     serialize() {
         return { type: this.constructor.name, id: this.id, parent: this.parent?.id, properties: this.properties };
@@ -705,30 +694,8 @@ class BaseShape {
     }
 
     createColorPickerEditor(dataField, options = {}) {
-        const onValueChanged = value => {
-            const formInstance = this.getShapeFormInstance();
-            if (formInstance)
-                formInstance.updateData(dataField, value);
-            else
-                this.setProperty(dataField, value);
-        };
+        const onValueChanged = value => this.setProperty(dataField, value);
         return this.getColorControl().createEditor(this.properties[dataField], onValueChanged, options);
-    }
-
-    createColorPickerFormItem(dataField, label, colSpan = 2, options = {}) {
-        return {
-            colSpan: colSpan,
-            dataField: dataField,
-            label: { text: label },
-            template: _ => this.createColorPickerEditor(dataField, options)
-        };
-    }
-
-    getShapeFormInstance() {
-        const formElement = $("#shape-form");
-        if (formElement.length == 0)
-            return null;
-        return formElement.dxForm("instance");
     }
 
     createNameFormControl() {
@@ -739,11 +706,7 @@ class BaseShape {
         const isVisible = this.properties.showName === true;
         control.append(visibilityHost, colorHost, inputHost);
         TermControl.createVisibilityCheckbox(visibilityHost, isVisible, value => {
-            const formInstance = this.getShapeFormInstance();
-            if (formInstance)
-                formInstance.updateData("showName", value);
-            else
-                this.setProperty("showName", value);
+            this.setProperty("showName", value);
         });
         const colorPicker = this.createColorPickerEditor("nameColor");
         colorPicker.addClass("name-packed-control__picker");
@@ -754,11 +717,7 @@ class BaseShape {
             stylingMode: "filled",
             onInitialized: e => { this._nameTextBoxInstance = e.component; },
             onValueChanged: event => {
-                const formInstance = this.getShapeFormInstance();
-                if (formInstance)
-                    formInstance.updateData("name", event.value);
-                else
-                    this.setProperty("name", event.value);
+                this.setProperty("name", event.value);
             }
         });
         return control;
@@ -768,77 +727,6 @@ class BaseShape {
         this._nameTextBoxInstance?.option("value", this.properties.name);
         if (this._nameColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._nameColorPicker, this.properties.nameColor);
-    }
-
-    createForm() {
-        this.form = $("<div id='shape-form'></div>").dxForm({
-            onFieldDataChanged: e => this.setProperty(e.dataField, e.value),
-            colCount: "1",
-            minColWidth: 300,
-            items: [
-                {
-                    itemType: "group",
-                    colCount: 2,
-                    items: [
-                        {
-                            colSpan: 2,
-                            dataField: "name",
-                            label: { text: this.board.translations.get("Name") },
-                            template: _ => this.createNameFormControl()
-                        },
-                        {
-                            colSpan: 1,
-                            label: { text: "Layers" },
-                            template: _ => {
-                                const container = $("<div class='form-button-row'></div>");
-                                container.append($("<div>").dxButton({ icon: "fa-light fa-send-back", stylingMode: "text", onClick: () => this.board.sendToBack(this) }));
-                                container.append($("<div>").dxButton({ icon: "fa-light fa-send-backward", stylingMode: "text", onClick: () => this.board.sendBackward(this) }));
-                                container.append($("<div>").dxButton({ icon: "fa-light fa-bring-forward", stylingMode: "text", onClick: () => this.board.bringForward(this) }));
-                                container.append($("<div>").dxButton({ icon: "fa-light fa-bring-front", stylingMode: "text", onClick: () => this.board.bringToFront(this) }));
-                                return container;
-                            }
-                        },
-                        {
-                            colSpan: 1,
-                            label: { text: "Actions" },
-                            template: _ => {
-                                const container = $("<div class='form-button-row'></div>");
-                                container.append($("<div>").dxButton({ icon: "fa-duotone fa-light fa-copy", stylingMode: "text", onClick: () => this.copyToClipboard() }));
-                                container.append($("<div>").dxButton({ icon: "fa-duotone fa-light fa-paste", stylingMode: "text", onClick: () => BaseShape.pasteFromClipboard(this.board, this.parent) }));
-                                container.append($("<div>").dxButton({ icon: "fa-duotone fa-light fa-clone", stylingMode: "text", onClick: () => this.duplicate() }));
-                                container.append($("<div>").dxButton({ template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>", stylingMode: "text", onClick: () => this.remove() }));
-                                return container;
-                            }
-                        }
-                    ]
-                },
-                {
-                    itemType: "group",
-                    colCount: 3,
-                    items: [
-                        {
-                            colSpan: 1,
-                            dataField: "foregroundColor",
-                            label: { text: "Color" },
-                            template: _ => this.createColorPickerEditor("foregroundColor")
-                        },
-                        {
-                            colSpan: 1,
-                            dataField: "borderColor",
-                            label: { text: "Border" },
-                            template: _ => this.createColorPickerEditor("borderColor")
-                        },
-                        {
-                            colSpan: 1,
-                            dataField: "backgroundColor",
-                            label: { text: "Background" },
-                            template: _ => this.createColorPickerEditor("backgroundColor")
-                        }
-                    ]
-                }
-            ]
-        });
-        return this.form;
     }
 
     delta(property, delta) {

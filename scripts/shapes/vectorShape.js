@@ -72,10 +72,6 @@ class VectorShape extends ChildShape {
         return false;
     }
 
-    createForm() {
-        return null;
-    }
-
     createToolbar() {
         const items = super.createToolbar();
         this._fgColorPicker = this.createColorPickerEditor("foregroundColor");

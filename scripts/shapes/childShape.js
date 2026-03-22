@@ -160,16 +160,5 @@ class ChildShape extends BaseShape {
         this._parentDropdownInstance.option("value", this.properties.parentId);
     }
 
-    createForm() {
-        const form = super.createForm();
-        const instance = form.dxForm("instance");
-        const items = instance.option("items");
-        items.push({
-            colSpan: 2,
-            label: { text: "Parent" },
-            template: (_, itemElement) => this.createParentDropDownButton(itemElement)
-        });
-        instance.option("items", items);
-        return form;
-    }
 }
+

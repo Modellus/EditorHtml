@@ -20,12 +20,9 @@ class Shell  {
         this.settingsController = new SettingsController(this);
         this.contextMenuController = new ContextMenuController(this);
         this.topToolbar = new TopToolbar(this);
-        this.shapePopupController = new ShapePopupController(this);
         this.chatController = new ChatController(this);
         this.bottomToolbar = new BottomToolbar(this);
         this.saveFormController = new SaveFormController(this);
-        this.board.svg.addEventListener("selected", e => this.onSelected(e));
-        this.board.svg.addEventListener("deselected", e => this.onDeselected(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
         [BodyShape, ExpressionShape, ValueShape, ChartShape, TableShape, SliderShape, GaugeShape, VectorShape, ImageShape, ReferentialShape, TextShape, RulerShape, ProtractorShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
@@ -134,7 +131,7 @@ class Shell  {
         if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit")
             this.calculator.setProperty(name, value);    
         if (name === "casesCount" && this.board?.selection?.selectedShape)
-            this.scheduleShapeSelection(this.board.selection.selectedShape);
+            this.board.selection.selectedShape.showContextToolbar?.();
         this.reset();
     }
 
@@ -393,24 +390,9 @@ class Shell  {
         return this.calculator.getValues();
     }
 
-    getPropertiesPopupToggleIcon() {
-        return "fa-light fa-square-list";
-    }
-
-    selectShape(shape, options) {
-        this.shapePopupController.select(shape, options);
-    }
-
-    scheduleShapeSelection(shape, options) {
-        this.shapePopupController.scheduleSelection(shape, options);
-    }
-
     deselectShape(options) {
-        this.shapePopupController.deselect(options);
-    }
-
-    shouldShowPropertiesOnSelection(forceShowProperties = false) {
-        return this.shapePopupController.shouldShowOnSelection(forceShowProperties);
+        this.board.selection.deselect();
+        this.topToolbar.update();
     }
 
     isChatOpen() {
@@ -520,14 +502,6 @@ class Shell  {
             }
         });
         $popup.dxPopup("instance").show();
-    }
-
-    onSelected(e) {
-        this.shapePopupController.scheduleSelection(e.detail.shape, { forceShowProperties: e.detail.modifiers?.altKey === true });
-    }
-
-    onDeselected(e) {
-        this.shapePopupController.deselect({ skipBoard: true });
     }
 
     onShapeChanged(e) {

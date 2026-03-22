@@ -2,7 +2,6 @@ class BottomToolbar {
     constructor(shell) {
         this.shell = shell;
         this.instance = null;
-        this.propertiesPopupToggleButton = null;
         this.zoom = null;
         this.playPause = null;
         this.stop = null;
@@ -18,26 +17,6 @@ class BottomToolbar {
     _create() {
         $("#bottom-toolbar").dxToolbar({
             items: [
-                {
-                    widget: "dxButtonGroup",
-                    options: {
-                        elementAttr: { id: "properties-popup-toggle-button" },
-                        stylingMode: "outlined",
-                        selectionMode: "multiple",
-                        keyExpr: "key",
-                        selectedItemKeys: this.shell.shapePopupController.selectionEnabled ? ["toggle"] : [],
-                        items: [{ key: "toggle", icon: "fa-light fa-square-list" }],
-                        buttonTemplate: (data, container) => {
-                            container[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
-                        },
-                        onInitialized: e => {
-                            this.propertiesPopupToggleButton = e.component;
-                            this.shell.createTranslatedTooltip(e, "Properties Popup Toggle Tooltip", 320);
-                        },
-                        onSelectionChanged: _ => this.shell.shapePopupController.toggleSelectionEnabled()
-                    },
-                    location: "before"
-                },
                 {
                     widget: "dxButton",
                     options: {
@@ -220,7 +199,6 @@ class BottomToolbar {
             ]
         });
         this.instance = $("#bottom-toolbar").dxToolbar("instance");
-        this.propertiesPopupToggleButton = $("#properties-popup-toggle-button").dxButtonGroup("instance");
         this.zoom = $("#zoomButton").dxButton("instance");
         this.playPause = $("#playPauseButton").dxButton("instance");
         this.stop = $("#stopButton").dxButton("instance");
@@ -255,12 +233,4 @@ class BottomToolbar {
             this.$playHeadMax.text(this.shell.calculator.getEnd().toFixed(Utils.getPrecision(this.shell.calculator.properties.independent.step)));
     }
 
-    updatePropertiesPopupToggleButton() {
-        if (!this.propertiesPopupToggleButton)
-            return;
-        this.propertiesPopupToggleButton.option(
-            "selectedItemKeys",
-            this.shell.shapePopupController.selectionEnabled ? ["toggle"] : []
-        );
-    }
 }
