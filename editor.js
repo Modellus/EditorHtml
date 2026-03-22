@@ -137,7 +137,14 @@ function redirectToLogin() {
         }
         if (!hasValidSession()) {
             clearAuthState();
-            redirectToLogin();
+            if (modelName) {
+                const response = await fetch(`resources/models/${modelName}.json`);
+                const payload = await response.text();
+                shell = new Shell(payload, modelsApiClient);
+                return;
+            }
+            const anonModel = sessionStorage.getItem("mp.anon.model");
+            shell = new Shell(anonModel || null, modelsApiClient);
             return;
         }
         if (modelName) {

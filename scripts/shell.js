@@ -305,6 +305,11 @@ class Shell  {
     }
 
     async saveToApi() {
+        if (this.isAnonymous()) {
+            this.saveToSessionStorage();
+            window.location.href = "/login.html";
+            return;
+        }
         const modelId = this.getCurrentModelId();
         if (!modelId) {
             alert("No model id found.");
@@ -504,12 +509,27 @@ class Shell  {
         $popup.dxPopup("instance").show();
     }
 
+    isAnonymous() {
+        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
+        if (session?.token)
+            return false;
+        return !this.getCurrentModelId();
+    }
+
+    saveToSessionStorage() {
+        sessionStorage.setItem("mp.anon.model", JSON.stringify(this.serialize()));
+    }
+
     onShapeChanged(e) {
         this._hasChanges = true;
+        if (this.isAnonymous())
+            this.saveToSessionStorage();
     }
 
     onExpressionChanged(e) {
         this._hasChanges = true;
+        if (this.isAnonymous())
+            this.saveToSessionStorage();
         this.reset();
         this.calculator.calculate();
     }

@@ -250,6 +250,40 @@ export class UserSdk {
     } catch (_) {}
   }
 
+  async promoteAnonymousModel(session, apiBaseUrl) {
+    const stored = sessionStorage.getItem("mp.anon.model");
+    if (!stored)
+      return null;
+    sessionStorage.removeItem("mp.anon.model");
+    let definition;
+    try {
+      definition = JSON.parse(stored);
+    } catch {
+      return null;
+    }
+    const headers = Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders(session));
+    const payload = {
+      title: definition.properties?.name || "Untitled model",
+      description: definition.properties?.description || "",
+      definition: stored,
+      lastModified: new Date().toISOString(),
+      user_id: session.userId
+    };
+    try {
+      const response = await fetch(`${apiBaseUrl}/models`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok)
+        return null;
+      const model = await response.json();
+      return model.id || null;
+    } catch {
+      return null;
+    }
+  }
+
   async handleCredentialResponse(credential, apiBaseUrl) {
     if (!credential)
       return;
@@ -258,6 +292,11 @@ export class UserSdk {
     this.saveSession(session);
     this.saveUser(this.buildUserFromSession(session));
     await this.ensureUser(session, apiBaseUrl);
+    const promotedModelId = await this.promoteAnonymousModel(session, apiBaseUrl);
+    if (promotedModelId) {
+      window.location.href = `/editor.html?model_id=${encodeURIComponent(promotedModelId)}`;
+      return;
+    }
     this.redirectToApp();
   }
 

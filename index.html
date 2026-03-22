@@ -1,7 +1,1530 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta http-equiv="refresh" content="0; URL='login.html'" />
-    <title>Redirecting...</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Modellus – Interactive Learning for Math and Science</title>
+    <meta name="description" content="Build, simulate, and analyze mathematical models with ease. Explore complex scientific concepts through interactive visualizations." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="libraries/fontawesome/css/all.css" />
+    <style>
+        :root {
+            --default-font: "Roboto", system-ui, sans-serif;
+            --heading-font: "Nunito", sans-serif;
+            --nav-font: "Inter", sans-serif;
+            --background-color: #ffffff;
+            --default-color: #212529;
+            --heading-color: #2d465e;
+            --accent-color: #0d83fd;
+            --surface-color: #ffffff;
+            --contrast-color: #ffffff;
+            --nav-color: #212529;
+            --nav-hover-color: #0d83fd;
+            --light-bg: #f3f9ff;
+        }
+
+        * { box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--default-font);
+            color: var(--default-color);
+            background-color: var(--background-color);
+            margin: 0;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--heading-font);
+            color: var(--heading-color);
+        }
+
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: 0.3s;
+        }
+
+        a:hover { color: color-mix(in srgb, var(--accent-color), transparent 25%); }
+
+        /* ── Header ── */
+        .site-header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 997;
+            padding: 16px 0;
+            transition: all 0.4s;
+        }
+
+        .site-header.scrolled { padding: 10px 0; }
+
+        .header-inner {
+            background: var(--surface-color);
+            border-radius: 50px;
+            padding: 8px 28px;
+            box-shadow: 0 2px 15px rgba(0,0,0,.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .site-header.scrolled .header-inner {
+            box-shadow: 0 4px 20px rgba(0,0,0,.13);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .logo img { height: 32px; }
+
+        .logo span {
+            font-family: var(--heading-font);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--heading-color);
+        }
+
+        .navmenu ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .navmenu a {
+            font-family: var(--nav-font);
+            color: var(--nav-color);
+            font-size: 15px;
+            font-weight: 500;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: 0.2s;
+            text-decoration: none;
+            display: block;
+        }
+
+        .navmenu a:hover { color: var(--nav-hover-color); background: var(--light-bg); }
+
+        .header-actions { display: flex; gap: 10px; align-items: center; }
+
+        .btn-login {
+            font-family: var(--nav-font);
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 22px;
+            border-radius: 50px;
+            border: 2px solid var(--accent-color);
+            color: var(--accent-color);
+            background: transparent;
+            cursor: pointer;
+            transition: 0.25s;
+            text-decoration: none;
+        }
+
+        .btn-login:hover {
+            background: var(--accent-color);
+            color: var(--contrast-color);
+        }
+
+        .btn-try {
+            font-family: var(--nav-font);
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 22px;
+            border-radius: 50px;
+            border: 2px solid var(--accent-color);
+            background: var(--accent-color);
+            color: var(--contrast-color);
+            cursor: pointer;
+            transition: 0.25s;
+            text-decoration: none;
+        }
+
+        .btn-try:hover {
+            background: color-mix(in srgb, var(--accent-color), black 15%);
+            border-color: color-mix(in srgb, var(--accent-color), black 15%);
+            color: var(--contrast-color);
+        }
+
+        .mobile-nav-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--nav-color);
+            cursor: pointer;
+        }
+
+        /* ── Hero ── */
+        .hero {
+            padding-top: 140px;
+            padding-bottom: 80px;
+            background: linear-gradient(135deg,
+                color-mix(in srgb, var(--accent-color), transparent 95%) 50%,
+                color-mix(in srgb, var(--accent-color), transparent 98%) 25%,
+                transparent 50%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 90% 10%,
+                color-mix(in srgb, var(--accent-color), transparent 92%), transparent 40%);
+            pointer-events: none;
+        }
+
+        .hero-content { position: relative; z-index: 1; }
+
+        .company-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            background: color-mix(in srgb, var(--accent-color), transparent 90%);
+            border-radius: 50px;
+            color: var(--accent-color);
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            font-family: var(--heading-font);
+            font-size: 3.4rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1.4rem;
+            color: var(--heading-color);
+        }
+
+        .hero h1 .accent-text { color: var(--accent-color); }
+
+        .hero p.lead {
+            font-size: 1.1rem;
+            color: color-mix(in srgb, var(--default-color), transparent 20%);
+            margin-bottom: 2rem;
+            max-width: 520px;
+        }
+
+        .hero-buttons { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+
+        .btn-hero-primary {
+            background: var(--accent-color);
+            color: var(--contrast-color);
+            padding: 14px 36px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            transition: 0.25s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-hero-primary:hover {
+            background: color-mix(in srgb, var(--accent-color), black 18%);
+            color: var(--contrast-color);
+        }
+
+        .btn-hero-outline {
+            background: transparent;
+            color: var(--heading-color);
+            padding: 14px 36px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 15px;
+            border: 2px solid color-mix(in srgb, var(--heading-color), transparent 60%);
+            cursor: pointer;
+            transition: 0.25s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-hero-outline:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .hero-image-wrap {
+            position: relative;
+            text-align: center;
+            z-index: 1;
+        }
+
+        .hero-image-wrap img.hero-illustration {
+            max-width: 100%;
+            height: auto;
+            filter: drop-shadow(0 10px 40px rgba(13,131,253,.18));
+            border-radius: 16px;
+        }
+
+        .customers-badge {
+            position: absolute;
+            bottom: -10px;
+            right: 20px;
+            background: var(--surface-color);
+            padding: 14px 18px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,.1);
+            max-width: 260px;
+            animation: float-badge 3s ease-in-out infinite;
+        }
+
+        .customer-avatars {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .avatar-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--surface-color);
+            margin-left: -8px;
+            object-fit: cover;
+            background: var(--light-bg);
+        }
+
+        .avatar-img:first-child { margin-left: 0; }
+
+        .avatar-more {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            color: var(--contrast-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: -8px;
+            border: 2px solid var(--surface-color);
+        }
+
+        .customers-badge p {
+            margin: 0;
+            font-size: 12px;
+            color: color-mix(in srgb, var(--default-color), transparent 40%);
+            line-height: 1.4;
+        }
+
+        .customers-badge strong { font-weight: 700; color: var(--heading-color); }
+
+        @keyframes float-badge {
+            0%, 100% { transform: translateY(0); }
+            50%       { transform: translateY(-8px); }
+        }
+
+        /* ── Stats row ── */
+        .stats-row {
+            background: var(--surface-color);
+            border-radius: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,.07);
+            margin-top: 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 28px 24px;
+            border-right: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+        }
+
+        .stat-item:last-child { border-right: none; }
+
+        .stat-icon {
+            flex-shrink: 0;
+            width: 56px;
+            height: 56px;
+            background: color-mix(in srgb, var(--accent-color), transparent 90%);
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+        }
+
+        .stat-item:hover .stat-icon { background: var(--accent-color); }
+        .stat-item:hover .stat-icon i { color: var(--contrast-color); }
+
+        .stat-icon i {
+            font-size: 1.4rem;
+            color: var(--accent-color);
+            transition: 0.3s;
+        }
+
+        .stat-content h4 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 0 0 2px;
+            color: var(--heading-color);
+        }
+
+        .stat-content p {
+            font-size: 13px;
+            color: color-mix(in srgb, var(--default-color), transparent 40%);
+            margin: 0;
+        }
+
+        /* ── Section shared ── */
+        section { padding: 80px 0; }
+
+        .section-title {
+            text-align: center;
+            padding-bottom: 50px;
+        }
+
+        .section-title h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title h2::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 3px;
+            background: var(--accent-color);
+            border-radius: 2px;
+        }
+
+        .section-title p {
+            color: color-mix(in srgb, var(--default-color), transparent 30%);
+            font-size: 1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* ── About ── */
+        .about { background: var(--light-bg); }
+
+        .about .about-meta {
+            color: var(--accent-color);
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .about .about-title {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.25;
+            margin-bottom: 16px;
+        }
+
+        .about .about-desc {
+            color: color-mix(in srgb, var(--default-color), transparent 20%);
+            margin-bottom: 24px;
+            font-size: 15px;
+            line-height: 1.7;
+        }
+
+        .about .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 28px;
+        }
+
+        .about .feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .about .feature-list li i { color: var(--accent-color); font-size: 1.1rem; }
+
+        .about .experience-badge {
+            background: var(--accent-color);
+            color: var(--contrast-color);
+            padding: 22px 28px;
+            border-radius: 12px;
+            text-align: center;
+            animation: float-badge 3s ease-in-out infinite;
+            display: inline-block;
+        }
+
+        .about .experience-badge h3 {
+            color: var(--contrast-color);
+            font-size: 2.8rem;
+            font-weight: 900;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .about .experience-badge p {
+            margin: 8px 0 0;
+            font-size: 13px;
+            opacity: 0.88;
+        }
+
+        .about .profile-img {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        /* ── Features Cards ── */
+        .feature-card {
+            padding: 36px 28px;
+            border-radius: 12px;
+            height: 100%;
+            transition: transform 0.25s, box-shadow 0.25s;
+        }
+
+        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,0,0,.09); }
+
+        .feature-card i {
+            font-size: 2.6rem;
+            margin-bottom: 18px;
+            display: block;
+        }
+
+        .feature-card h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            font-size: 14px;
+            margin: 0;
+            line-height: 1.65;
+        }
+
+        .fc-orange { background: #fff3e2; }
+        .fc-orange i { color: #edb86e; }
+        .fc-blue   { background: #deedfd; }
+        .fc-blue  i { color: #20a5f8; }
+        .fc-green  { background: #d5f1e4; }
+        .fc-green  i { color: #48c88a; }
+        .fc-purple { background: #fdedfc; }
+        .fc-purple i { color: #f284e3; }
+        .fc-teal   { background: #e0f7f5; }
+        .fc-teal   i { color: #1db5a8; }
+        .fc-red    { background: #fde8e8; }
+        .fc-red    i { color: #f26868; }
+
+        /* ── Audience tabs ── */
+        .features-tabs { background: var(--light-bg); }
+
+        .tab-pills {
+            background: color-mix(in srgb, var(--default-color), transparent 95%);
+            display: inline-flex;
+            border-radius: 50px;
+            padding: 6px;
+            gap: 4px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 40px;
+        }
+
+        .tab-pill {
+            background: none;
+            border: none;
+            padding: 9px 26px;
+            border-radius: 50px;
+            font-family: var(--heading-font);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.25s;
+            color: var(--heading-color);
+        }
+
+        .tab-pill.active {
+            background: var(--accent-color);
+            color: var(--contrast-color);
+        }
+
+        .tab-pill:hover:not(.active) { background: color-mix(in srgb, var(--accent-color), transparent 85%); }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: flex; }
+
+        .tab-panel h3 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            position: relative;
+        }
+
+        .tab-panel h3::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 52px;
+            height: 3px;
+            background: var(--accent-color);
+            border-radius: 2px;
+        }
+
+        .tab-panel ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .tab-panel ul li {
+            padding: 8px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 15px;
+        }
+
+        .tab-panel ul li i { color: var(--accent-color); font-size: 1.1rem; margin-top: 2px; }
+
+        /* ── Testimonials ── */
+        .testimonials { background: var(--light-bg); }
+
+        .testimonial-card {
+            background: var(--surface-color);
+            border-radius: 12px;
+            padding: 28px;
+            box-shadow: 0 2px 20px rgba(0,0,0,.07);
+            height: 100%;
+            transition: transform 0.25s;
+        }
+
+        .testimonial-card:hover { transform: translateY(-3px); }
+
+        .testimonial-card .tc-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .testimonial-card .tc-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--light-bg);
+            background: var(--light-bg);
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--accent-color);
+        }
+
+        .testimonial-card .tc-name {
+            font-weight: 700;
+            font-size: 15px;
+            margin: 0 0 2px;
+        }
+
+        .testimonial-card .tc-role {
+            font-size: 12px;
+            color: color-mix(in srgb, var(--default-color), transparent 35%);
+            margin: 0;
+        }
+
+        .testimonial-card .tc-stars { margin-bottom: 10px; }
+        .testimonial-card .tc-stars i { color: #ffc107; font-size: 13px; }
+
+        .testimonial-card .tc-quote-icon {
+            color: color-mix(in srgb, var(--accent-color), transparent 45%);
+            font-size: 22px;
+        }
+
+        .testimonial-card p.tc-text {
+            font-style: italic;
+            font-size: 14px;
+            line-height: 1.7;
+            margin: 0;
+            color: color-mix(in srgb, var(--default-color), transparent 20%);
+        }
+
+        /* ── FAQ ── */
+        .faq-item {
+            background: var(--surface-color);
+            border-radius: 10px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 8px rgba(0,0,0,.05);
+        }
+
+        .faq-question {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 22px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .faq-question h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 0;
+            line-height: 1.4;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: color 0.2s;
+        }
+
+        .faq-question h3 .faq-num { color: var(--accent-color); font-weight: 700; }
+
+        .faq-item.active .faq-question h3 { color: var(--accent-color); }
+
+        .faq-toggle {
+            font-size: 15px;
+            color: color-mix(in srgb, var(--default-color), transparent 40%);
+            transition: transform 0.3s, color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .faq-item.active .faq-toggle {
+            transform: rotate(90deg);
+            color: var(--accent-color);
+        }
+
+        .faq-answer {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.3s ease;
+        }
+
+        .faq-answer-inner { overflow: hidden; }
+
+        .faq-item.active .faq-answer { grid-template-rows: 1fr; }
+
+        .faq-answer p {
+            margin: 0;
+            padding: 0 22px 18px;
+            font-size: 14px;
+            color: color-mix(in srgb, var(--default-color), transparent 20%);
+            line-height: 1.7;
+        }
+
+        /* ── CTA ── */
+        .cta-section { padding: 80px 0; }
+
+        .cta-inner {
+            background: var(--accent-color);
+            border-radius: 20px;
+            padding: 60px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-inner h2 {
+            color: var(--contrast-color);
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 14px;
+        }
+
+        .cta-inner p {
+            color: rgba(255,255,255,.85);
+            font-size: 16px;
+            margin-bottom: 32px;
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .cta-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+        .btn-cta-white {
+            background: #fff;
+            color: var(--accent-color);
+            padding: 13px 36px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            transition: 0.25s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-cta-white:hover { background: color-mix(in srgb, #fff, transparent 8%); color: var(--accent-color); }
+
+        .btn-cta-outline {
+            background: transparent;
+            color: #fff;
+            padding: 13px 36px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 15px;
+            border: 2px solid rgba(255,255,255,.55);
+            cursor: pointer;
+            transition: 0.25s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-cta-outline:hover { border-color: #fff; color: #fff; }
+
+        .cta-shape {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+            background: rgba(255,255,255,.06);
+        }
+
+        .cta-shape-1 { width: 300px; height: 300px; top: -100px; right: -60px; }
+        .cta-shape-2 { width: 180px; height: 180px; bottom: -50px; left: -40px; }
+
+        /* ── Footer ── */
+        .site-footer {
+            background: var(--heading-color);
+            color: rgba(255,255,255,.75);
+            padding-top: 60px;
+        }
+
+        .site-footer .footer-logo span {
+            font-family: var(--heading-font);
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .site-footer .footer-logo img { height: 28px; }
+
+        .site-footer p {
+            font-size: 14px;
+            line-height: 1.7;
+            margin-top: 14px;
+        }
+
+        .site-footer h5 {
+            font-family: var(--heading-font);
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,.12);
+        }
+
+        .footer-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .footer-links li { margin-bottom: 10px; }
+
+        .footer-links a {
+            color: rgba(255,255,255,.65);
+            font-size: 14px;
+            transition: 0.2s;
+        }
+
+        .footer-links a:hover { color: #fff; }
+
+        .footer-contact p {
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .footer-contact a { color: rgba(255,255,255,.75); }
+        .footer-contact a:hover { color: #fff; }
+
+        .footer-contact i { color: var(--accent-color); }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,.1);
+            padding: 18px 0;
+            margin-top: 40px;
+            font-size: 13px;
+            text-align: center;
+            color: rgba(255,255,255,.5);
+        }
+
+        /* ── Scroll-to-top ── */
+        #scroll-top {
+            position: fixed;
+            bottom: -20px;
+            right: 18px;
+            width: 42px;
+            height: 42px;
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.35s;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #scroll-top.active { bottom: 18px; opacity: 1; visibility: visible; }
+        #scroll-top:hover { background: color-mix(in srgb, var(--accent-color), black 16%); }
+
+        /* ── Responsive ── */
+        @media (max-width: 991.98px) {
+            .hero { padding-top: 110px; }
+            .hero h1 { font-size: 2.4rem; }
+            .hero-image-wrap { margin-top: 40px; }
+            .customers-badge { position: static; margin: 16px auto 0; max-width: 200px; }
+            .stat-item { border-right: none; border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 90%); }
+            .stat-item:last-child { border-bottom: none; }
+        }
+
+        @media (max-width: 767.98px) {
+            .hero h1 { font-size: 2rem; }
+            .hero-buttons { justify-content: center; }
+            .hero-content { text-align: center; }
+            .hero-content p.lead { margin: 0 auto 2rem; }
+            .navmenu { display: none; }
+            .mobile-nav-toggle { display: block; }
+            .navmenu.open {
+                display: block;
+                position: fixed;
+                top: 80px;
+                left: 16px;
+                right: 16px;
+                background: var(--surface-color);
+                border-radius: 16px;
+                box-shadow: 0 10px 40px rgba(0,0,0,.12);
+                padding: 16px 0;
+                z-index: 999;
+            }
+            .navmenu.open ul { flex-direction: column; gap: 2px; }
+            .navmenu.open a { padding: 10px 22px; border-radius: 0; }
+            .cta-inner { padding: 40px 24px; }
+        }
+
+        @media (max-width: 575.98px) {
+            section { padding: 60px 0; }
+            .hero h1 { font-size: 1.8rem; }
+            .btn-hero-primary, .btn-hero-outline { padding: 11px 26px; font-size: 14px; }
+        }
+    </style>
 </head>
+<body>
+
+<!-- ══════ HEADER ══════ -->
+<header class="site-header" id="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="index.html" class="logo">
+                <img src="scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu" id="navmenu">
+                <ul>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#testimonials">Testimonials</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="login.html" class="btn-login">Login</a>
+                <a href="editor.html" class="btn-try">Create a Model</a>
+                <button class="mobile-nav-toggle" id="nav-toggle" aria-label="Toggle navigation">
+                    <i class="fa-light fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ══════ HERO ══════ -->
+<section class="hero" id="hero">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <div class="hero-content">
+                    <div class="company-badge">
+                        <i class="fa-light fa-atom"></i>
+                        Interactive Science &amp; Math Learning
+                    </div>
+                    <h1>Interactive Learning<br>For <span class="accent-text">Math and Science</span><br>Through Simulation</h1>
+                    <p class="lead">Build, simulate, and analyze mathematical models with ease. Explore complex scientific concepts through interactive visualizations and gain a deeper understanding of the world.</p>
+                    <div class="hero-buttons">
+                        <a href="editor.html" class="btn-hero-primary">
+                            <i class="fa-light fa-rocket me-2"></i> Create a Model
+                        </a>
+                        <a href="login.html" class="btn-hero-outline">
+                            Login <i class="fa-light fa-arrow-right ms-2"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="hero-image-wrap">
+                    <img
+                        src="https://www.modellus.science/assets/img/King%20Prince%20Princess.png"
+                        alt="Modellus simulation illustration"
+                        class="hero-illustration"
+                    />
+                    <div class="customers-badge">
+                        <div class="customer-avatars">
+                            <img src="https://www.modellus.science/assets/img/Student%201.png" alt="Student" class="avatar-img" />
+                            <img src="https://www.modellus.science/assets/img/Teacher%201.png" alt="Teacher" class="avatar-img" />
+                            <img src="https://www.modellus.science/assets/img/Student%203.png" alt="Student" class="avatar-img" />
+                            <div class="avatar-more">12k+</div>
+                        </div>
+                        <p><strong>12,000+ classrooms</strong> and universities around the world</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="row stats-row mx-0">
+            <div class="col-sm-6 col-xl-3 p-0">
+                <div class="stat-item">
+                    <div class="stat-icon"><i class="fa-light fa-trophy"></i></div>
+                    <div class="stat-content">
+                        <h4>3× Won Awards</h4>
+                        <p>Best app for education</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl-3 p-0">
+                <div class="stat-item">
+                    <div class="stat-icon"><i class="fa-light fa-book-open"></i></div>
+                    <div class="stat-content">
+                        <h4>6,500 Publications</h4>
+                        <p>Research papers</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl-3 p-0">
+                <div class="stat-item">
+                    <div class="stat-icon"><i class="fa-light fa-earth-europe"></i></div>
+                    <div class="stat-content">
+                        <h4>80+ Countries</h4>
+                        <p>In several languages</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-xl-3 p-0">
+                <div class="stat-item">
+                    <div class="stat-icon"><i class="fa-light fa-diagram-project"></i></div>
+                    <div class="stat-content">
+                        <h4>100k Models</h4>
+                        <p>Imagined &amp; explored</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════ ABOUT ══════ -->
+<section class="about" id="about">
+    <div class="container">
+        <div class="row align-items-center gy-5">
+            <div class="col-lg-6">
+                <span class="about-meta">Why Modellus?</span>
+                <h2 class="about-title">Transforming the Learning Experience</h2>
+                <p class="about-desc">Modellus revolutionizes how students engage with complex concepts, making abstract ideas tangible and fostering deeper understanding. It empowers educators to create dynamic simulations, visualize scientific principles, and promote active learning.</p>
+                <ul class="feature-list">
+                    <li><i class="fa-light fa-circle-check"></i> Visualizes abstract concepts through real-time simulation</li>
+                    <li><i class="fa-light fa-circle-check"></i> Facilitates interactive learning for all skill levels</li>
+                    <li><i class="fa-light fa-circle-check"></i> Enhances problem-solving abilities</li>
+                    <li><i class="fa-light fa-circle-check"></i> Encourages scientific exploration</li>
+                    <li><i class="fa-light fa-circle-check"></i> Supports data interpretation with charts &amp; tables</li>
+                    <li><i class="fa-light fa-circle-check"></i> Boosts student engagement through animated models</li>
+                </ul>
+                <div class="d-flex align-items-center gap-3">
+                    <img src="https://www.modellus.science/assets/img/VDT.jpeg" alt="Vitor Teodoro" class="profile-img" />
+                    <div>
+                        <p class="mb-0 fw-bold" style="color:var(--heading-color)">Vitor Teodoro</p>
+                        <p class="mb-0" style="font-size:13px;color:var(--accent-color)">Founder</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="position-relative d-inline-block">
+                    <img src="https://www.modellus.science/assets/img/Classroom.png" alt="Classroom" style="max-width:100%;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.1)" />
+                    <div class="experience-badge position-absolute" style="bottom:-20px;right:-20px">
+                        <h3>40<span style="font-size:1rem">+</span></h3>
+                        <p>Years of experience<br>in science education</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════ FEATURES CARDS ══════ -->
+<section id="features">
+    <div class="container">
+        <div class="section-title">
+            <h2>Features</h2>
+            <p>Discover the powerful capabilities of Modellus, designed to enhance understanding and engagement through interactive and dynamic learning experiences.</p>
+        </div>
+        <div class="row gy-4">
+            <div class="col-sm-6 col-lg-4">
+                <div class="feature-card fc-blue">
+                    <i class="fa-light fa-play-circle"></i>
+                    <h4>Interactive Simulations</h4>
+                    <p>Bring abstract concepts to life. Manipulate and observe phenomena in real-time, fostering a deeper understanding of scientific principles.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="feature-card fc-orange">
+                    <i class="fa-light fa-function"></i>
+                    <h4>Hand-Written Math</h4>
+                    <p>Create and edit mathematical equations just like writing by hand, perfectly representing the processes you are learning.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="feature-card fc-green">
+                    <i class="fa-light fa-chart-line"></i>
+                    <h4>Charts &amp; Tables</h4>
+                    <p>Display your data clearly with charts and tables, enabling insightful analysis and easy pattern detection.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="feature-card fc-purple">
+                    <i class="fa-light fa-person-running"></i>
+                    <h4>Animated Characters</h4>
+                    <p>Bring stories to life with animated characters that add movement and interaction to physical or mathematical models.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="feature-card fc-teal">
+                    <i class="fa-light fa-ruler-combined"></i>
+                    <h4>Measurement Tools</h4>
+                    <p>Accurately collect data to compare models with real experiments and explore discrepancies or consistencies.</p>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="feature-card fc-red">
+                    <i class="fa-light fa-image"></i>
+                    <h4>Illustrate with Images</h4>
+                    <p>Add images to clarify concepts, helping to visibly explain complex theories and enhance understanding.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════ AUDIENCE TABS ══════ -->
+<section class="features-tabs">
+    <div class="container">
+        <div class="section-title">
+            <h2>Built for Everyone</h2>
+            <p>Whether you're a student, parent, teacher, or school — Modellus adapts to your needs.</p>
+        </div>
+        <div class="text-center">
+            <div class="tab-pills">
+                <button class="tab-pill active" data-tab="students">For Students</button>
+                <button class="tab-pill" data-tab="teachers">For Teachers</button>
+                <button class="tab-pill" data-tab="parents">For Parents</button>
+                <button class="tab-pill" data-tab="schools">For Schools</button>
+            </div>
+        </div>
+        <div class="tab-panel active" id="tab-students">
+            <div class="row align-items-center gy-4">
+                <div class="col-lg-6">
+                    <h3>Learning Made Alive</h3>
+                    <p style="color:color-mix(in srgb,var(--default-color),transparent 20%);margin-bottom:20px">Modellus makes learning physics and math come alive! Visualize abstract concepts, experiment with simulations, and discover how the world works.</p>
+                    <ul>
+                        <li><i class="fa-light fa-circle-check"></i> Visualize abstract physics and math concepts</li>
+                        <li><i class="fa-light fa-circle-check"></i> Experiment with variables and see instant results</li>
+                        <li><i class="fa-light fa-circle-check"></i> Build intuition for complex theories</li>
+                        <li><i class="fa-light fa-circle-check"></i> Fun, interactive way to boost your grades</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <img src="https://www.modellus.science/assets/img/Student%201.png" alt="Student" style="max-height:300px" />
+                </div>
+            </div>
+        </div>
+        <div class="tab-panel" id="tab-teachers">
+            <div class="row align-items-center gy-4">
+                <div class="col-lg-6">
+                    <h3>Transform Your Lessons</h3>
+                    <p style="color:color-mix(in srgb,var(--default-color),transparent 20%);margin-bottom:20px">Easily create dynamic simulations and interactive models that bring abstract concepts to life. Engage students more effectively and cater to diverse learning styles.</p>
+                    <ul>
+                        <li><i class="fa-light fa-circle-check"></i> Create dynamic, interactive simulations with ease</li>
+                        <li><i class="fa-light fa-circle-check"></i> Engage students across different learning styles</li>
+                        <li><i class="fa-light fa-circle-check"></i> Make complex topics accessible and exciting</li>
+                        <li><i class="fa-light fa-circle-check"></i> AI assistant to speed up model creation</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <img src="https://www.modellus.science/assets/img/Teacher%201.png" alt="Teacher" style="max-height:300px" />
+                </div>
+            </div>
+        </div>
+        <div class="tab-panel" id="tab-parents">
+            <div class="row align-items-center gy-4">
+                <div class="col-lg-6">
+                    <h3>Give Your Child the Edge</h3>
+                    <p style="color:color-mix(in srgb,var(--default-color),transparent 20%);margin-bottom:20px">Provide an engaging and intuitive platform for exploring complex scientific principles. Foster critical thinking and problem-solving skills that set children up for success.</p>
+                    <ul>
+                        <li><i class="fa-light fa-circle-check"></i> Engaging platform for STEM exploration</li>
+                        <li><i class="fa-light fa-circle-check"></i> Builds critical thinking and problem-solving</li>
+                        <li><i class="fa-light fa-circle-check"></i> Safe, ad-free learning environment</li>
+                        <li><i class="fa-light fa-circle-check"></i> Prepares for academic success in science</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <img src="https://www.modellus.science/assets/img/Student%202.png" alt="Parent and child" style="max-height:300px" />
+                </div>
+            </div>
+        </div>
+        <div class="tab-panel" id="tab-schools">
+            <div class="row align-items-center gy-4">
+                <div class="col-lg-6">
+                    <h3>Elevate Your Curriculum</h3>
+                    <p style="color:color-mix(in srgb,var(--default-color),transparent 20%);margin-bottom:20px">Invest in a powerful tool that elevates STEM education. Modellus enhances student engagement, improves comprehension, and supports a modern, interactive learning environment.</p>
+                    <ul>
+                        <li><i class="fa-light fa-circle-check"></i> Institution-wide deployment and management</li>
+                        <li><i class="fa-light fa-circle-check"></i> Aligns with high school and university curricula</li>
+                        <li><i class="fa-light fa-circle-check"></i> Shared model library for all students</li>
+                        <li><i class="fa-light fa-circle-check"></i> Measurable improvement in STEM outcomes</li>
+                    </ul>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <img src="https://www.modellus.science/assets/img/Teacher.png" alt="School" style="max-height:300px" />
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════ TESTIMONIALS ══════ -->
+<section class="testimonials" id="testimonials">
+    <div class="container">
+        <div class="section-title">
+            <h2>Testimonials</h2>
+            <p>Hear what educators and students say about using Modellus in real classrooms.</p>
+        </div>
+        <div class="row gy-4">
+            <div class="col-md-6 col-lg-4">
+                <div class="testimonial-card">
+                    <div class="tc-header">
+                        <div class="tc-avatar"><i class="fa-light fa-user"></i></div>
+                        <div>
+                            <p class="tc-name">José Tello</p>
+                            <p class="tc-role">Professional Educativo, Chile</p>
+                        </div>
+                    </div>
+                    <div class="tc-stars">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                    </div>
+                    <i class="fa-light fa-quote-left tc-quote-icon"></i>
+                    <p class="tc-text">Maestros y estudiantes pueden usar Modellus para construir modelos matemáticos y explorarlos mediante animaciones, gráficos y tablas.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="testimonial-card">
+                    <div class="tc-header">
+                        <div class="tc-avatar"><i class="fa-light fa-user-graduate"></i></div>
+                        <div>
+                            <p class="tc-name">Julius Gosens</p>
+                            <p class="tc-role">Student, Germany</p>
+                        </div>
+                    </div>
+                    <div class="tc-stars">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                    </div>
+                    <i class="fa-light fa-quote-left tc-quote-icon"></i>
+                    <p class="tc-text">I worked with this software for many hours… and it is great! If you're teaching or learning science you should use this tool. We should nominate the maker for a prize.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="testimonial-card">
+                    <div class="tc-header">
+                        <div class="tc-avatar"><i class="fa-light fa-chalkboard-teacher"></i></div>
+                        <div>
+                            <p class="tc-name">Philip Britton</p>
+                            <p class="tc-role">Teacher, UK</p>
+                        </div>
+                    </div>
+                    <div class="tc-stars">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                    </div>
+                    <i class="fa-light fa-quote-left tc-quote-icon"></i>
+                    <p class="tc-text">Yes, it is a very good 'experimental interface' in this sense. The pupils really do say 'I wonder what would happen if…?' — that's exactly the engagement we want.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="testimonial-card">
+                    <div class="tc-header">
+                        <div class="tc-avatar"><i class="fa-light fa-microscope"></i></div>
+                        <div>
+                            <p class="tc-name">Tom Jarle Christiansen</p>
+                            <p class="tc-role">Sciences Teacher, Norway</p>
+                        </div>
+                    </div>
+                    <div class="tc-stars">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                    </div>
+                    <i class="fa-light fa-quote-left tc-quote-icon"></i>
+                    <p class="tc-text">Modellus er et fantastisk program til matematisk modellering. Det lar elevene utforske og visualisere matematiske og fysiske begreper på en engasjerende måte.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="testimonial-card">
+                    <div class="tc-header">
+                        <div class="tc-avatar"><i class="fa-light fa-university"></i></div>
+                        <div>
+                            <p class="tc-name">Ana Rodrigues</p>
+                            <p class="tc-role">Professor, Portugal</p>
+                        </div>
+                    </div>
+                    <div class="tc-stars">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                    </div>
+                    <i class="fa-light fa-quote-left tc-quote-icon"></i>
+                    <p class="tc-text">A platform that genuinely bridges the gap between theoretical knowledge and practical application. My students engage far more deeply with difficult concepts.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <div class="testimonial-card">
+                    <div class="tc-header">
+                        <div class="tc-avatar"><i class="fa-light fa-atom"></i></div>
+                        <div>
+                            <p class="tc-name">Luiza Fernández</p>
+                            <p class="tc-role">Biology Student, Brazil</p>
+                        </div>
+                    </div>
+                    <div class="tc-stars">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+                    </div>
+                    <i class="fa-light fa-quote-left tc-quote-icon"></i>
+                    <p class="tc-text">I used Modellus for my biology project and the ability to combine equations with animations truly helped me understand population dynamics in a way textbooks never could.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════ FAQ ══════ -->
+<section style="background:var(--light-bg)" id="faq">
+    <div class="container">
+        <div class="row gy-5 align-items-start">
+            <div class="col-lg-4">
+                <h2 style="font-size:2.2rem;font-weight:800;margin-bottom:14px">Have a question?<br>Check out the FAQ</h2>
+                <p style="color:color-mix(in srgb,var(--default-color),transparent 30%);font-size:15px;margin-bottom:28px">Our FAQ covers the most common topics about using Modellus — from subscription plans and marketplace credits to sharing models and working with students.</p>
+                <a href="editor.html" class="btn-hero-primary" style="display:inline-block">
+                    <i class="fa-light fa-play me-2"></i> Explore Modellus
+                </a>
+            </div>
+            <div class="col-lg-8">
+                <div class="faq-item active">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <h3><span class="faq-num">01.</span> What is Modellus and how does it work?</h3>
+                        <i class="fa-light fa-chevron-right faq-toggle"></i>
+                    </div>
+                    <div class="faq-answer"><div class="faq-answer-inner">
+                        <p>Modellus is an interactive platform for building and exploring mathematical and scientific models. You write equations just like on paper, and Modellus instantly translates them into animated simulations, charts, and tables — making abstract concepts tangible and easy to explore in real time.</p>
+                    </div></div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <h3><span class="faq-num">02.</span> Do I need to install anything to use Modellus?</h3>
+                        <i class="fa-light fa-chevron-right faq-toggle"></i>
+                    </div>
+                    <div class="faq-answer"><div class="faq-answer-inner">
+                        <p>No installation is required. Modellus runs entirely in your web browser — just open the editor and start building. You can even try it without creating an account. If you sign in, your models are saved to the cloud so you can access them from any device.</p>
+                    </div></div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <h3><span class="faq-num">03.</span> How does the monthly marketplace credit work?</h3>
+                        <i class="fa-light fa-chevron-right faq-toggle"></i>
+                    </div>
+                    <div class="faq-answer"><div class="faq-answer-inner">
+                        <p>Marketplace credit is added to your account at the start of each billing cycle. Standard plan subscribers receive €5 and Premium plan subscribers receive €15. Credits can be used to purchase premium content created by the Modellus team and community educators. Unused credits do not roll over.</p>
+                    </div></div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <h3><span class="faq-num">04.</span> Can I share my models with others?</h3>
+                        <i class="fa-light fa-chevron-right faq-toggle"></i>
+                    </div>
+                    <div class="faq-answer"><div class="faq-answer-inner">
+                        <p>Yes! All plans include the ability to share your models. You can make a model public so anyone can view and interact with it, or share a direct link with specific people. Teachers often share models directly with their class.</p>
+                    </div></div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <h3><span class="faq-num">05.</span> I'm a teacher. Can I use Modellus with my students?</h3>
+                        <i class="fa-light fa-chevron-right faq-toggle"></i>
+                    </div>
+                    <div class="faq-answer"><div class="faq-answer-inner">
+                        <p>Absolutely. Modellus is designed with educators in mind. You can create models that your students interact with, share worksheets, and build a library of content tailored to your curriculum. Many teachers use Modellus for both in-class and remote learning.</p>
+                    </div></div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question" onclick="toggleFaq(this)">
+                        <h3><span class="faq-num">06.</span> What is the AI assistant, and how can I use it?</h3>
+                        <i class="fa-light fa-chevron-right faq-toggle"></i>
+                    </div>
+                    <div class="faq-answer"><div class="faq-answer-inner">
+                        <p>The AI assistant is available in Standard and Premium plans. It helps you build models faster by interpreting natural language descriptions and generating the equations and model structure for you. Simply describe the concept you want to simulate and the AI will set it up.</p>
+                    </div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════ CTA ══════ -->
+<section class="cta-section">
+    <div class="container">
+        <div class="cta-inner">
+            <div class="cta-shape cta-shape-1"></div>
+            <div class="cta-shape cta-shape-2"></div>
+            <h2>Move Beyond Static Equations</h2>
+            <p>Modellus empowers you to dynamically explore complex concepts, visualize abstract theories, and build your own interactive models — start simulating your way to profound insights.</p>
+            <div class="cta-buttons">
+                <a href="editor.html" class="btn-cta-white"><i class="fa-light fa-rocket me-2"></i>Create a Model</a>
+                <a href="login.html" class="btn-cta-outline"><i class="fa-light fa-right-to-bracket me-2"></i>Login</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ══════ FOOTER ══════ -->
+<footer class="site-footer">
+    <div class="container">
+        <div class="row gy-5">
+            <div class="col-lg-4">
+                <div class="d-flex align-items-center gap-2 footer-logo mb-2">
+                    <img src="scripts/themes/modellus.svg" alt="Modellus" />
+                    <span>Modellus</span>
+                </div>
+                <p>Interactive math and science learning through simulation. Empowering students and educators in 80+ countries.</p>
+                <p style="margin-top:4px">Portugal, Europe</p>
+            </div>
+            <div class="col-sm-6 col-lg-2">
+                <h5>Useful Links</h5>
+                <ul class="footer-links">
+                    <li><a href="index.html">Home</a></li>
+                    <li><a href="marketplace.html">Marketplace</a></li>
+                    <li><a href="editor.html">Editor</a></li>
+                    <li><a href="login.html">Sign In</a></li>
+                </ul>
+            </div>
+            <div class="col-sm-6 col-lg-2">
+                <h5>Marketplace</h5>
+                <ul class="footer-links">
+                    <li><a href="marketplace.html">Models</a></li>
+                    <li><a href="marketplace.html">Work Sheets</a></li>
+                    <li><a href="marketplace.html">Animated Characters</a></li>
+                    <li><a href="marketplace.html">Programmatic Content</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-4">
+                <h5>Contact</h5>
+                <div class="footer-contact">
+                    <p><i class="fa-light fa-location-dot"></i> Portugal, Europe</p>
+                    <p><i class="fa-light fa-phone"></i> <a href="tel:+351935334120">+351 93 533 4120</a></p>
+                    <p><i class="fa-light fa-envelope"></i> <a href="mailto:info@modellus.science">info@modellus.science</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <div class="container">
+            <p>© 2025 Modellus. All Rights Reserved. Designed with ♥ for education.</p>
+        </div>
+    </div>
+</footer>
+
+<!-- Scroll to top -->
+<button id="scroll-top" title="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <i class="fa-light fa-arrow-up"></i>
+</button>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const header = document.getElementById("site-header");
+    const scrollTop = document.getElementById("scroll-top");
+    const navToggle = document.getElementById("nav-toggle");
+    const navmenu = document.getElementById("navmenu");
+
+    window.addEventListener("scroll", () => {
+        if (window.scrollY > 60) {
+            header.classList.add("scrolled");
+            scrollTop.classList.add("active");
+        } else {
+            header.classList.remove("scrolled");
+            scrollTop.classList.remove("active");
+        }
+    });
+
+    navToggle.addEventListener("click", () => {
+        navmenu.classList.toggle("open");
+    });
+
+    document.querySelectorAll(".navmenu a").forEach(link => {
+        link.addEventListener("click", () => navmenu.classList.remove("open"));
+    });
+
+    function toggleFaq(questionEl) {
+        const item = questionEl.closest(".faq-item");
+        const isActive = item.classList.contains("active");
+        document.querySelectorAll(".faq-item.active").forEach(el => el.classList.remove("active"));
+        if (!isActive)
+            item.classList.add("active");
+    }
+
+    const tabPills = document.querySelectorAll(".tab-pill");
+    tabPills.forEach(pill => {
+        pill.addEventListener("click", () => {
+            tabPills.forEach(p => p.classList.remove("active"));
+            pill.classList.add("active");
+            document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+            document.getElementById("tab-" + pill.dataset.tab).classList.add("active");
+        });
+    });
+</script>
+
+</body>
 </html>
