@@ -599,6 +599,26 @@ class BaseShape {
         return [];
     }
 
+    createTermSelectorToolbarItem(termProperty, title, showVisibilityToggle = true) {
+        const caseProperty = `${termProperty}Case`;
+        const displayModeProperty = this.getTermDisplayModeProperty(termProperty);
+        if (this.properties[caseProperty] == null)
+            this.properties[caseProperty] = 1;
+        if (this.properties[displayModeProperty] == null)
+            this.properties[displayModeProperty] = "none";
+        if (!this.termDisplayEntries.some(entry => entry.term === termProperty))
+            this.termDisplayEntries.push({ term: termProperty, caseProperty: caseProperty, title: title });
+        const mockFormInstance = { updateData: (field, value) => this.setProperty(field, value) };
+        return {
+            location: "center",
+            template: () => {
+                const wrapper = $('<div style="width:160px"></div>');
+                wrapper.append(this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, false, displayModeProperty, showVisibilityToggle));
+                return wrapper;
+            }
+        };
+    }
+
     enterEditMode() {
         return false;
     }

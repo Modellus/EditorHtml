@@ -9,33 +9,93 @@ class ImageShape extends ChildShape {
         return false;
     }
 
-    createForm() {
-        var form = super.createForm();
-        var instance = form.dxForm("instance");
-        var items = instance.option("items");
+    createToolbar() {
+        const items = super.createToolbar();
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
         items.push(
             {
-                colSpan: 2,
-                label: { text: "File" },
-                template: _ => this.createImageDropZoneEditor()
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div style="width:180px"></div>');
+                    wrapper.append(this.createNameFormControl());
+                    return wrapper;
+                }
             },
             {
-                colSpan: 1,
-                dataField: "lockAspectRatio",
-                label: { text: "Keep Proportions" },
-                editorType: "dxSwitch",
-                editorOptions: { stylingMode: "filled" }
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
             },
             {
-                colSpan: 1,
-                dataField: "videoStepsPerFrame",
-                label: { text: "Iterations/Frame" },
-                editorType: "dxNumberBox",
-                editorOptions: { showSpinButtons: true, min: 1, step: 1, stylingMode: "filled" }
+                location: "center",
+                template: () => this.createImageDropZoneEditor()
+            },
+            {
+                location: "center",
+                widget: "dxSwitch",
+                options: {
+                    value: this.properties.lockAspectRatio !== false,
+                    hint: "Keep Proportions",
+                    onInitialized: e => { this._lockAspectRatioSwitchInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("lockAspectRatio", e.value);
+                    }
+                }
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: {
+                    value: this.properties.videoStepsPerFrame,
+                    hint: "Iterations/Frame",
+                    showSpinButtons: true,
+                    min: 1,
+                    step: 1,
+                    stylingMode: "filled",
+                    onInitialized: e => { this._videoStepsBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("videoStepsPerFrame", e.value);
+                    }
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => this._fgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._bgColorPicker
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                    stylingMode: "text",
+                    onClick: () => this.remove()
+                }
             }
         );
-        instance.option("items", items);
-        return form;
+        return items;
+    }
+
+    showContextToolbar() {
+        this.refreshNameToolbarControl();
+        this._lockAspectRatioSwitchInstance?.option("value", this.properties.lockAspectRatio !== false);
+        this._videoStepsBoxInstance?.option("value", this.properties.videoStepsPerFrame);
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        super.showContextToolbar();
     }
 
     createImageDropZoneEditor() {

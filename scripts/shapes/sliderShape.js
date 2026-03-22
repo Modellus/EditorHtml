@@ -36,47 +36,124 @@ class SliderShape extends BaseShape {
         return false;
     }
 
-    createForm() {
-        var form = super.createForm();
-        var instance = form.dxForm("instance");
-        this.addTermToForm("term", "Value", false, 2);
-        var items = instance.option("items");
+    createToolbar() {
+        const items = super.createToolbar();
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        this._borderColorPicker = this.createColorPickerEditor("borderColor");
         items.push(
             {
-                colSpan: 2,
-                dataField: "autoScale",
-                label: { text: "Auto scale" },
-                editorType: "dxSwitch"
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div style="width:180px"></div>');
+                    wrapper.append(this.createNameFormControl());
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            this.createTermSelectorToolbarItem("term", "Value"),
+            {
+                location: "center",
+                widget: "dxSwitch",
+                options: {
+                    value: this.properties.autoScale !== false,
+                    hint: "Auto scale",
+                    onInitialized: e => { this._autoScaleSwitchInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("autoScale", e.value);
+                    }
+                }
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    value: this.properties.minimum,
+                    hint: "Minimum",
+                    onInitialized: e => { this._minimumBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("minimum", e.value);
+                    }
+                })
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    value: this.properties.maximum,
+                    hint: "Maximum",
+                    onInitialized: e => { this._maximumBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("maximum", e.value);
+                    }
+                })
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: {
+                    value: this.properties.precision,
+                    hint: "Precision",
+                    min: 0,
+                    step: 0.1,
+                    showSpinButtons: true,
+                    stylingMode: "filled",
+                    onInitialized: e => { this._precisionBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("precision", e.value);
+                    }
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => this._fgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._bgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._borderColorPicker
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                    stylingMode: "text",
+                    onClick: () => this.remove()
+                }
             }
         );
-        items.push({
-            colSpan: 2,
-            itemType: "group",
-            colCount: 2,
-            items: [
-                {
-                    dataField: "minimum",
-                    label: { text: "Minimum" },
-                    editorType: "dxNumberBox",
-                    editorOptions: this.getPrecisionNumberEditorOptions()
-                },
-                {
-                    dataField: "maximum",
-                    label: { text: "Maximum" },
-                    editorType: "dxNumberBox",
-                    editorOptions: this.getPrecisionNumberEditorOptions()
-                }
-            ]
-        });
-        items.push({
-            colSpan: 2,
-            dataField: "precision",
-            label: { text: "Precision" },
-            editorType: "dxNumberBox",
-            editorOptions: { min: 0, step: 0.1, showSpinButtons: true }
-        });
-        instance.option("items", items);
-        return form;
+        return items;
+    }
+
+    showContextToolbar() {
+        this.refreshNameToolbarControl();
+        this.termFormControls["term"]?.termControl?.refresh();
+        this._autoScaleSwitchInstance?.option("value", this.properties.autoScale !== false);
+        this._minimumBoxInstance?.option("value", this.properties.minimum);
+        this._maximumBoxInstance?.option("value", this.properties.maximum);
+        this._precisionBoxInstance?.option("value", this.properties.precision);
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        if (this._borderColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+        super.showContextToolbar();
     }
 
     setDefaults() {

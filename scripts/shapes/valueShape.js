@@ -23,10 +23,68 @@ class ValueShape extends BaseShape {
         return true;
     }
 
-    createForm() {
-        var form = super.createForm();
-        this.addTermToForm("term", "Term", false, 2, { showVisibilityToggle: false });
-        return form;
+    createToolbar() {
+        const items = super.createToolbar();
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        this._borderColorPicker = this.createColorPickerEditor("borderColor");
+        items.push(
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div style="width:180px"></div>');
+                    wrapper.append(this.createNameFormControl());
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            this.createTermSelectorToolbarItem("term", "Term", false),
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => this._fgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._bgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._borderColorPicker
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                    stylingMode: "text",
+                    onClick: () => this.remove()
+                }
+            }
+        );
+        return items;
+    }
+
+    showContextToolbar() {
+        this.refreshNameToolbarControl();
+        this.termFormControls["term"]?.termControl?.refresh();
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        if (this._borderColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+        super.showContextToolbar();
     }
 
     setDefaults() {

@@ -61,88 +61,185 @@ class GaugeShape extends BaseShape {
         this.properties.borderColor = this.properties.foregroundColor;
     }
 
-    createForm() {
-        const form = super.createForm();
-        const instance = form.dxForm("instance");
-        this.addTermToForm("angleTerm", "Angle", false, 2);
-        this.addTermToForm("magnitudeTerm", "Magnitude", false, 2);
-        const items = instance.option("items");
-        items.push({
-            colSpan: 2,
-            itemType: "group",
-            colCount: 2,
-            items: [
-                {
-                    dataField: "startAngle",
-                    label: { text: "Start angle (°)" },
-                    editorType: "dxNumberBox",
-                    editorOptions: { showSpinButtons: true, step: 1, stylingMode: "filled" }
-                },
-                {
-                    dataField: "endAngle",
-                    label: { text: "End angle (°)" },
-                    editorType: "dxNumberBox",
-                    editorOptions: { showSpinButtons: true, step: 1, stylingMode: "filled" }
+    createToolbar() {
+        const items = super.createToolbar();
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        this._borderColorPicker = this.createColorPickerEditor("borderColor");
+        items.push(
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div style="width:180px"></div>');
+                    wrapper.append(this.createNameFormControl());
+                    return wrapper;
                 }
-            ]
-        });
-        items.push({
-            colSpan: 2,
-            itemType: "group",
-            colCount: 2,
-            items: [
-                {
-                    dataField: "minimumMagnitude",
-                    label: { text: "Min magnitude" },
-                    editorType: "dxNumberBox",
-                    editorOptions: this.getPrecisionNumberEditorOptions()
-                },
-                {
-                    dataField: "maximumMagnitude",
-                    label: { text: "Max magnitude" },
-                    editorType: "dxNumberBox",
-                    editorOptions: this.getPrecisionNumberEditorOptions()
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            this.createTermSelectorToolbarItem("angleTerm", "Angle"),
+            this.createTermSelectorToolbarItem("magnitudeTerm", "Magnitude"),
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: {
+                    value: this.properties.startAngle,
+                    hint: "Start angle (°)",
+                    showSpinButtons: true,
+                    step: 1,
+                    stylingMode: "filled",
+                    onInitialized: e => { this._startAngleBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("startAngle", e.value);
+                    }
                 }
-            ]
-        });
-        items.push({
-            colSpan: 2,
-            itemType: "group",
-            colCount: 2,
-            items: [
-                {
-                    dataField: "anglePrecision",
-                    label: { text: "Angle step (°)" },
-                    editorType: "dxNumberBox",
-                    editorOptions: { min: 0, showSpinButtons: true, step: 1, stylingMode: "filled", format: { type: "fixedPoint", precision: 0 } }
-                },
-                {
-                    dataField: "snapToAngleTick",
-                    label: { text: "Snap angle" },
-                    editorType: "dxSwitch"
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: {
+                    value: this.properties.endAngle,
+                    hint: "End angle (°)",
+                    showSpinButtons: true,
+                    step: 1,
+                    stylingMode: "filled",
+                    onInitialized: e => { this._endAngleBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("endAngle", e.value);
+                    }
                 }
-            ]
-        });
-        items.push({
-            colSpan: 2,
-            itemType: "group",
-            colCount: 2,
-            items: [
-                {
-                    dataField: "magnitudePrecision",
-                    label: { text: "Magnitude step" },
-                    editorType: "dxNumberBox",
-                    editorOptions: this.getPrecisionNumberEditorOptions({ min: 0 })
-                },
-                {
-                    dataField: "snapToMagnitudeTick",
-                    label: { text: "Snap magnitude" },
-                    editorType: "dxSwitch"
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    value: this.properties.minimumMagnitude,
+                    hint: "Min magnitude",
+                    onInitialized: e => { this._minimumMagnitudeBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("minimumMagnitude", e.value);
+                    }
+                })
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    value: this.properties.maximumMagnitude,
+                    hint: "Max magnitude",
+                    onInitialized: e => { this._maximumMagnitudeBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("maximumMagnitude", e.value);
+                    }
+                })
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: {
+                    value: this.properties.anglePrecision,
+                    hint: "Angle step (°)",
+                    min: 0,
+                    showSpinButtons: true,
+                    step: 1,
+                    stylingMode: "filled",
+                    format: { type: "fixedPoint", precision: 0 },
+                    onInitialized: e => { this._anglePrecisionBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("anglePrecision", e.value);
+                    }
                 }
-            ]
-        });
-        instance.option("items", items);
-        return form;
+            },
+            {
+                location: "center",
+                widget: "dxSwitch",
+                options: {
+                    value: this.properties.snapToAngleTick === true,
+                    hint: "Snap angle",
+                    onInitialized: e => { this._snapToAngleTickSwitchInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("snapToAngleTick", e.value);
+                    }
+                }
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false, min: 0 }), {
+                    value: this.properties.magnitudePrecision,
+                    hint: "Magnitude step",
+                    onInitialized: e => { this._magnitudePrecisionBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("magnitudePrecision", e.value);
+                    }
+                })
+            },
+            {
+                location: "center",
+                widget: "dxSwitch",
+                options: {
+                    value: this.properties.snapToMagnitudeTick === true,
+                    hint: "Snap magnitude",
+                    onInitialized: e => { this._snapToMagnitudeTickSwitchInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("snapToMagnitudeTick", e.value);
+                    }
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => this._fgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._bgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._borderColorPicker
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                    stylingMode: "text",
+                    onClick: () => this.remove()
+                }
+            }
+        );
+        return items;
+    }
+
+    showContextToolbar() {
+        this.refreshNameToolbarControl();
+        this.termFormControls["angleTerm"]?.termControl?.refresh();
+        this.termFormControls["magnitudeTerm"]?.termControl?.refresh();
+        this._startAngleBoxInstance?.option("value", this.properties.startAngle);
+        this._endAngleBoxInstance?.option("value", this.properties.endAngle);
+        this._minimumMagnitudeBoxInstance?.option("value", this.properties.minimumMagnitude);
+        this._maximumMagnitudeBoxInstance?.option("value", this.properties.maximumMagnitude);
+        this._anglePrecisionBoxInstance?.option("value", this.properties.anglePrecision);
+        this._snapToAngleTickSwitchInstance?.option("value", this.properties.snapToAngleTick === true);
+        this._magnitudePrecisionBoxInstance?.option("value", this.properties.magnitudePrecision);
+        this._snapToMagnitudeTickSwitchInstance?.option("value", this.properties.snapToMagnitudeTick === true);
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        if (this._borderColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+        super.showContextToolbar();
     }
 
     createElement() {

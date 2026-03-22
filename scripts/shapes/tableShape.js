@@ -3,25 +3,77 @@ class TableShape extends BaseShape {
         super(board, null, id);
     }
 
-    createForm() {
-        var form = super.createForm();
-        var instance = form.dxForm("instance");
-        var items = instance.option("items");
+    createToolbar() {
+        const items = super.createToolbar();
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        this._borderColorPicker = this.createColorPickerEditor("borderColor");
         this.normalizeColumns();
-        items.push({
-            colSpan: 2,
-            itemType: "group",
-            colCount: 1,
-            items: [
-                {
-                    colSpan: 2,
-                    label: { text: "Columns" },
-                    template: _ => this.createColumnsControl()
+        items.push(
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div style="width:180px"></div>');
+                    wrapper.append(this.createNameFormControl());
+                    return wrapper;
                 }
-            ]
-        });
-        instance.option("items", items);
-        return form;
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div></div>');
+                    wrapper.append(this.createColumnsControl());
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => this._fgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._bgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._borderColorPicker
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                    stylingMode: "text",
+                    onClick: () => this.remove()
+                }
+            }
+        );
+        return items;
+    }
+
+    showContextToolbar() {
+        this.refreshNameToolbarControl();
+        if (this._columnsControl)
+            this._columnsControl.refresh();
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        if (this._borderColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+        super.showContextToolbar();
     }
 
     createColumnsControl() {

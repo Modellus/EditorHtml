@@ -91,63 +91,100 @@ class ChartShape extends BaseShape {
         return TermControl.normalizeColorValue(value);
     }
 
-    createForm() {
-        var form = super.createForm();
-        var instance = form.dxForm("instance");
-        var items = instance.option("items");
+    createToolbar() {
+        const items = super.createToolbar();
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
         this.normalizeYTerms();
         items.push(
             {
-                itemType: "group",
-                colCount: 2,
-                items: [
-                    {
-                        colSpan: 2,
-                        dataField: "chartType",
-                        label: { text: "Type" },
-                        editorType: "dxButtonGroup",
-                        editorOptions: {
-                            elementAttr: {},
-                            items: [
-                                { type: "scatter", iconName: "fa-chart-scatter" },
-                                { type: "line", iconName: "fa-chart-line" },
-                                { type: "area", iconName: "fa-chart-area" },
-                                { type: "bar", iconName: "fa-chart-column" }
-                            ],
-                            keyExpr: "type",
-                            stylingMode: "text",
-                            selectionMode: "multiple",
-                            selectedItemKeys: [...this.properties.chartType],
-                            buttonTemplate: (itemData, container) => {
-                                const iconWeight = "fa-light";
-                                container.html(`<i class="dx-icon ${iconWeight} ${itemData.iconName}"></i>`);
-                            },
-                            onSelectionChanged: e => {
-                                const selectedKeys = e.component.option("selectedItemKeys");
-                                if (selectedKeys.length === 0)
-                                    return;
-                                let formInstance = $("#shape-form").dxForm("instance");
-                                formInstance.updateData("chartType", [...selectedKeys]);
-                                this.setProperty("chartType", [...selectedKeys]);
-                                e.component.repaint();
-                            }
-                        }
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div style="width:180px"></div>');
+                    wrapper.append(this.createNameFormControl());
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                widget: "dxButtonGroup",
+                options: {
+                    stylingMode: "outlined",
+                    elementAttr: { class: "mdl-display-group mdl-small-icon" },
+                    keyExpr: "type",
+                    selectionMode: "multiple",
+                    selectedItemKeys: [...this.properties.chartType],
+                    items: [
+                        { type: "scatter", iconName: "fa-chart-scatter", hint: "Scatter" },
+                        { type: "line", iconName: "fa-chart-line", hint: "Line" },
+                        { type: "area", iconName: "fa-chart-area", hint: "Area" },
+                        { type: "bar", iconName: "fa-chart-column", hint: "Bar" }
+                    ],
+                    buttonTemplate: (data, container) => {
+                        container.html(`<i class="dx-icon fa-light ${data.iconName}" title="${data.hint}"></i>`);
+                    },
+                    onInitialized: e => { this._chartTypeButtonGroupInstance = e.component; },
+                    onSelectionChanged: e => {
+                        const selectedKeys = e.component.option("selectedItemKeys") ?? [];
+                        if (selectedKeys.length === 0)
+                            return;
+                        this.setProperty("chartType", [...selectedKeys]);
+                        e.component.repaint();
                     }
-                ]
+                }
+            },
+            this.createTermSelectorToolbarItem("xTerm", "Horizontal", false),
+            {
+                location: "center",
+                template: () => {
+                    const wrapper = $('<div></div>');
+                    wrapper.append(this.createYTermsControl());
+                    return wrapper;
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => this._fgColorPicker
+            },
+            {
+                location: "center",
+                template: () => this._bgColorPicker
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                    stylingMode: "text",
+                    onClick: () => this.remove()
+                }
             }
         );
-        instance.option("items", items);
-        this.addTermToForm("xTerm", "Horizontal", false, 2, { showVisibilityToggle: false });
-        items = instance.option("items");
-        items.push(
-            {
-                colSpan: 2,
-                dataField: "yTerms",
-                label: { text: "Vertical" },
-                template: _ => this.createYTermsControl()
-            });
-        instance.option("items", items);
-        return form;
+        return items;
+    }
+
+    showContextToolbar() {
+        this.refreshNameToolbarControl();
+        this._chartTypeButtonGroupInstance?.option("selectedItemKeys", [...(this.properties.chartType ?? [])]);
+        this.termFormControls["xTerm"]?.termControl?.refresh();
+        this.refreshYTermsControl();
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        super.showContextToolbar();
     }
 
     setDefaults() {
