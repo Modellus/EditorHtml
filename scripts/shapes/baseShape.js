@@ -72,7 +72,7 @@ class BaseShape {
     }
 
     setDefaults() {
-        this.properties.foregroundColor = this.board.theme.getStrokeColors()[2].color;
+        this.properties.foregroundColor = this.board.theme.getRandomStrokeColor();
         this.properties.borderColor = this.properties.foregroundColor;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[2].color;
         this.properties.rotation = 0;
@@ -689,7 +689,7 @@ class BaseShape {
 
     getColorControl() {
         if (!this.colorControl)
-            this.colorControl = new ColorControl();
+            this.colorControl = new ColorControl({ palette: this.board.theme.getColorPickerPalette() });
         return this.colorControl;
     }
 
@@ -717,7 +717,8 @@ class BaseShape {
             stylingMode: "filled",
             onInitialized: e => { this._nameTextBoxInstance = e.component; },
             onValueChanged: event => {
-                this.setProperty("name", event.value);
+                if (event.event)
+                    this.setProperty("name", event.value);
             }
         });
         return control;

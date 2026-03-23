@@ -168,7 +168,7 @@ class SliderShape extends BaseShape {
         this.properties.value = 0;
         this.properties.autoScale = true;
         this.properties.minimum = 0;
-        this.properties.maximum = 1;
+        this.properties.maximum = 10;
         this.properties.fillColor = this.board.theme.getBackgroundColors()[3].color;
         this.properties.precision = 0;
     }

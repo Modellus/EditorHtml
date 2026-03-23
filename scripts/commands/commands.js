@@ -44,10 +44,19 @@ class Commands {
         var parentShape = typeof parent === "string" ? this.shapes.getByName(parent) : parent ?? this.shell.board.selection.selectedShape;
         var shape = this.shapes.createShape(type, parentShape);
         var position = this.getFreePosition(shape);
-        shape.setProperties({ name: name, x: position.x, y: position.y });
+        shape.setProperties({ name: this.uniquifyShapeName(name), x: position.x, y: position.y });
         shape.element.addEventListener("changed", e => this.shell.onShapeChanged(e));
         const command = new AddShapeCommand(this.shell.board, shape);
         this.invoker.execute(command);
+    }
+
+    uniquifyShapeName(name) {
+        if (!this.shapes.getByName(name))
+            return name;
+        let index = 2;
+        while (this.shapes.getByName(`${name} ${index}`))
+            index++;
+        return `${name} ${index}`;
     }
 
     removeShape(name) {

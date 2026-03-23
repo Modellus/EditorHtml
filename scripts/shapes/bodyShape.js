@@ -80,11 +80,23 @@ class BodyShape extends ChildShape {
     }
 
     setProperty(name, value) {
+        if (name === "name")
+            this.properties.nameIsDefault = false;
         if (name === "characterKey")
             this.character = BodyShape.getCharacterByKey(value);
         super.setProperty(name, value);
-        if (name === "characterKey")
+        if (name === "characterKey") {
             this.synchronizeIdleAnimationTicker();
+            if (this.properties.nameIsDefault) {
+                const character = this.getSelectedCharacter();
+                if (character) {
+                    const uniqueName = window.shell?.commands?.uniquifyShapeName(character.name) ?? character.name;
+                    this.properties.nameIsDefault = true;
+                    super.setProperty("name", uniqueName);
+                    this.refreshNameToolbarControl();
+                }
+            }
+        }
     }
 
     getHandles() {
@@ -348,8 +360,8 @@ class BodyShape extends ChildShape {
         const step = baseItemSize + itemMargin * 2;
         const characters = BodyShape.characters ?? [];
         const allItems = [
-            { key: "", name: "None", icon: null },
-            ...characters.map(c => ({ key: c.folder, name: c.name, icon: `resources/characters/${c.folder}/${c.image}` }))
+            { key: "", name: "None", description: "", icon: null },
+            ...characters.map(c => ({ key: c.folder, name: c.name, description: c.description ?? "", icon: `resources/characters/${c.folder}/${c.image}` }))
         ];
         const rows = Math.ceil(allItems.length / columns);
         $(contentElement).empty();
@@ -364,12 +376,13 @@ class BodyShape extends ChildShape {
             height: rows * step,
             width: columns * step,
             itemTemplate: (itemData, index, element) => {
-                const cell = $(`<div class="mdl-character-picker-item" title="${itemData.name}"></div>`);
+                const cell = $(`<div class="mdl-character-picker-item"></div>`);
                 if (itemData.icon)
                     cell.html(`<img src="${itemData.icon}" alt="${itemData.name}" />`);
                 else
                     cell.html(`<i class="fa-light fa-ban"></i>`);
                 $(element).append(cell);
+                this.configureCharacterTooltip(itemData, $(element)[0]);
             },
             onItemClick: e => {
                 this.setProperty("characterKey", e.itemData.key ?? "");
@@ -521,6 +534,7 @@ class BodyShape extends ChildShape {
         this.properties.imageUrl = "";
         this.properties.imageBase64 = "";
         this.properties.characterKey = "";
+        this.properties.nameIsDefault = true;
         this.character = null;
         this.lastBoardHorizontalPosition = null;
         this.flipImageHorizontally = false;
