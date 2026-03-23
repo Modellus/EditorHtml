@@ -132,6 +132,8 @@ class Shell  {
             this.calculator.setProperty(name, value);    
         if (name === "casesCount" && this.board?.selection?.selectedShape)
             this.board.selection.selectedShape.showContextToolbar?.();
+        if (this.isAnonymous())
+            this.saveToSessionStorage();
         this.reset();
     }
 

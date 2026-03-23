@@ -70,6 +70,12 @@ class BodyShape extends ChildShape {
     setProperties(properties) {
         super.setProperties(properties);
         this.character = this.getSelectedCharacter();
+        if (!this.character && this.properties.characterKey)
+            BodyShape.loadCharactersPromise?.then(() => {
+                this.character = this.getSelectedCharacter();
+                this.synchronizeIdleAnimationTicker();
+                this.board.markDirty(this);
+            });
         this.synchronizeIdleAnimationTicker();
     }
 
