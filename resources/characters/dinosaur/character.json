@@ -1,0 +1,14 @@
+{
+    "name": "Dino",
+    "description": "The dinosaur.",
+    "image": "dinosaur.png",
+    "animations": [
+        {
+            "name": "Walk",
+            "folder": "walk",
+            "frames": 45,
+            "startIndex": 1,
+            "filePrefix": "dinosaur_walk"
+        }
+    ]
+}

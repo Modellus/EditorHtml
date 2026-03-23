@@ -31,7 +31,7 @@ class BodyShape extends ChildShape {
 
     static getCharacters() {
         if (!this.characters)
-            throw new Error("Characters not loaded. Call setup first.");
+            return [];
         return this.characters;
     }
 
@@ -241,6 +241,23 @@ class BodyShape extends ChildShape {
                 location: "center",
                 widget: "dxNumberBox",
                 options: {
+                    value: this.properties.animationFrameStep,
+                    hint: "Animation frame step",
+                    showSpinButtons: true,
+                    min: 1,
+                    width: 90,
+                    stylingMode: "filled",
+                    onInitialized: e => { this.animationFrameStepToolbarWidget = e.component; },
+                    onValueChanged: e => {
+                        this.setProperty("animationFrameStep", e.value);
+                        this.board.markDirty(this);
+                    }
+                }
+            },
+            {
+                location: "center",
+                widget: "dxNumberBox",
+                options: {
                     value: this.properties.stroboscopyOpacity,
                     hint: "Stroboscopy opacity",
                     showSpinButtons: true,
@@ -373,6 +390,7 @@ class BodyShape extends ChildShape {
             this.getColorControl().refreshColorPickerButtonTemplate(this._stroboscopyColorPicker, this.properties.stroboscopyColor);
         this.stroboscopyIntervalToolbarWidget?.option("value", this.properties.stroboscopyInterval);
         this.stroboscopyOpacityToolbarWidget?.option("value", this.properties.stroboscopyOpacity);
+        this.animationFrameStepToolbarWidget?.option("value", this.properties.animationFrameStep);
         this.refreshCharacterPickerButtonTemplate();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();
@@ -493,6 +511,7 @@ class BodyShape extends ChildShape {
         this.properties.stroboscopyColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.stroboscopyInterval = 10;
         this.properties.stroboscopyOpacity = 0.5;
+        this.properties.animationFrameStep = 1;
         this.properties.imageUrl = "";
         this.properties.imageBase64 = "";
         this.properties.characterKey = "";
@@ -643,7 +662,8 @@ class BodyShape extends ChildShape {
             const elapsedFrames = Math.floor(Date.now() / frameIntervalMs) % frameCount;
             return elapsedFrames + startIndex;
         }
-        return (iteration % frameCount) + startIndex;
+        const frameStep = Math.max(1, this.properties.animationFrameStep ?? 1);
+        return (Math.floor(iteration / frameStep) % frameCount) + startIndex;
     }
 
     getCharacterAnimation(character) {

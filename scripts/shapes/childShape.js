@@ -106,21 +106,17 @@ class ChildShape extends BaseShape {
             stylingMode: "outlined",
             width: "100%",
             showClearButton: false,
-            fieldTemplate: (data, container) => {
-                const allItems = flatItems();
-                const selectedId = data?.id ?? data ?? this.properties.parentId;
-                const item = allItems.find(i => i.id === selectedId) ?? null;
-                const $wrapper = $("<div class='mdl-parent-field'>").appendTo(container);
-                if (item?.icon) {
-                    const colorStyle = item.color ? ` style="color:${item.color}"` : "";
-                    $wrapper[0].insertAdjacentHTML("beforeend", `<i class="dx-icon ${item.icon}"${colorStyle}></i>`);
+            fieldAddons: [{
+                location: "before",
+                template: (_, container) => {
+                    const allItems = flatItems();
+                    const item = allItems.find(i => i.id === this.properties.parentId) ?? null;
+                    if (item?.icon) {
+                        const colorStyle = item.color ? ` style="color:${item.color}"` : "";
+                        container[0].insertAdjacentHTML("beforeend", `<i class="dx-icon ${item.icon}"${colorStyle}></i>`);
+                    }
                 }
-                $("<div>").appendTo($wrapper).dxTextBox({
-                    value: item?.text ?? "",
-                    readOnly: true,
-                    stylingMode: "borderless"
-                });
-            },
+            }],
             onInitialized: e => { dropdownInstance = e.component; this._parentDropdownInstance = e.component; },
             onOpened: () => {
                 const items = treeItems();

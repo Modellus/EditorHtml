@@ -313,6 +313,7 @@ body.read-only #context-menu {
 
 .shape-context-toolbar .dx-toolbar-items-container {
     gap: 4px;
+    overflow: visible;
 }
 
 .vector-term-toolbar-item {
