@@ -40,14 +40,14 @@ class ChildShape extends BaseShape {
     }
 
     buildParentTreeItem(shape) {
-        const children = (shape.children ?? [])
-            .filter(child => child !== this && !this.wouldCreateCycle(child))
-            .map(child => this.buildParentTreeItem(child));
+        const children = (shape.children ?? []).map(child => this.buildParentTreeItem(child));
+        const characterImage = shape.character ? `resources/characters/${shape.character.folder}/${shape.character.image}` : null;
         return {
             id: shape.id,
-            text: shape.properties.name ?? shape.constructor.name,
+            text: shape.properties.name ?? "",
             icon: ChildShape.shapeIcons[shape.constructor.name] ?? "fa-light fa-shapes",
             color: shape.properties.foregroundColor ?? null,
+            characterImage,
             expanded: true,
             items: children
         };
@@ -93,67 +93,115 @@ class ChildShape extends BaseShape {
         this.board.markDirty(this);
     }
 
+    renderParentButtonTemplate(element) {
+        const parentShape = this.parent ?? this.getReferential();
+        const name = parentShape?.properties?.name ?? "";
+        const icon = (ChildShape.shapeIcons[parentShape?.constructor?.name] ?? "fa-light fa-shapes").replace("fa-light", "fa-solid");
+        const color = parentShape?.properties?.foregroundColor ?? "";
+        const colorStyle = color ? `color:${color}` : "";
+        element.innerHTML = `<i class="${icon}" title="${name}" style="${colorStyle}"></i>`;
+    }
+
     createParentDropDownButton(itemElement) {
-        let dropdownInstance;
-        let treeViewInstance;
-        const flatItems = () => this.flattenTreeItems(this.buildParentTreeItems(this.getReferential()));
         const treeItems = () => this.buildParentTreeItems(this.getReferential());
-        $("<div>").appendTo(itemElement).dxDropDownBox({
-            value: this.properties.parentId,
-            valueExpr: "id",
-            displayExpr: "text",
-            dataSource: flatItems(),
-            stylingMode: "outlined",
-            width: "100%",
-            showClearButton: false,
-            fieldAddons: [{
-                location: "before",
-                template: (_, container) => {
-                    const allItems = flatItems();
-                    const item = allItems.find(i => i.id === this.properties.parentId) ?? null;
-                    if (item?.icon) {
-                        const colorStyle = item.color ? ` style="color:${item.color}"` : "";
-                        container[0].insertAdjacentHTML("beforeend", `<i class="dx-icon ${item.icon}"${colorStyle}></i>`);
-                    }
+        this._parentDropdownElement = $('<div class="mdl-parent-selector">');
+        this._parentDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            buttonTemplate: (data, element) => this.renderParentButtonTemplate(element[0]),
+            dropDownOptions: {
+                width: 280,
+                wrapperAttr: { class: "mdl-parent-dropdown-popup" },
+                contentTemplate: contentElement => {
+                    $(contentElement).empty();
+                    const $container = $('<div class="mdl-parent-popup-content">').appendTo(contentElement);
+                    $('<div class="mdl-parent-tree">').appendTo($container).dxTreeView({
+                        items: treeItems(),
+                        dataStructure: "tree",
+                        keyExpr: "id",
+                        displayExpr: "text",
+                        selectionMode: "single",
+                        selectByClick: true,
+                        itemTemplate: (data, _, el) => {
+                            if (data.characterImage)
+                                el[0].innerHTML = `<img class="mdl-parent-tree-character" src="${data.characterImage}" alt="${data.text}"/>${data.text}`;
+                            else {
+                                const solidIcon = data.icon.replace("fa-light", "fa-solid");
+                                const colorStyle = data.color ? ` style="color:${data.color}"` : "";
+                                el[0].innerHTML = `<i class="dx-icon ${solidIcon}"${colorStyle}></i>${data.text}`;
+                            }
+                        },
+                        onItemClick: e => {
+                            const targetShape = this.board.shapes.getById(e.itemData.id);
+                            if (this.wouldCreateCycle(targetShape))
+                                return;
+                            this.setProperty("parentId", e.itemData.id);
+                            this._parentDropdownElement.dxDropDownButton("instance").close();
+                            this.refreshParentToolbarControl();
+                        }
+                    });
                 }
-            }],
-            onInitialized: e => { dropdownInstance = e.component; this._parentDropdownInstance = e.component; },
-            onOpened: () => {
-                const items = treeItems();
-                if (treeViewInstance)
-                    treeViewInstance.option("items", items);
-                dropdownInstance.option("dataSource", flatItems());
-            },
-            contentTemplate: () => {
-                const $tree = $("<div class='mdl-parent-tree'>").dxTreeView({
-                    items: treeItems(),
-                    dataStructure: "tree",
-                    keyExpr: "id",
-                    displayExpr: "text",
-                    selectionMode: "single",
-                    selectByClick: true,
-                    itemTemplate: (data, _, el) => {
-                        const colorStyle = data.color ? ` style="color:${data.color}"` : "";
-                        el[0].innerHTML = `<i class="dx-icon ${data.icon}"${colorStyle}></i>${data.text}`;
-                    },
-                    onItemClick: e => {
-                        this.setProperty("parentId", e.itemData.id);
-                        dropdownInstance.option("value", e.itemData.id);
-                        dropdownInstance.close();
-                    }
-                });
-                treeViewInstance = $tree.dxTreeView("instance");
-                return $tree;
             }
         });
+        this._parentDropdownElement.appendTo(itemElement);
     }
 
     refreshParentToolbarControl() {
-        if (!this._parentDropdownInstance)
+        if (!this._parentDropdownElement)
             return;
-        const flatItems = this.flattenTreeItems(this.buildParentTreeItems(this.getReferential()));
-        this._parentDropdownInstance.option("dataSource", flatItems);
-        this._parentDropdownInstance.option("value", this.properties.parentId);
+        const buttonContentElement = this._parentDropdownElement.find(".dx-button-content")[0];
+        if (buttonContentElement)
+            this.renderParentButtonTemplate(buttonContentElement);
+    }
+
+    renderShapeColorButtonTemplate(element) {
+        const icon = (ChildShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes").replace("fa-light", "fa-solid");
+        const fgColor = this.properties.foregroundColor ?? "";
+        const borderColor = this.properties.borderColor ?? "";
+        const fgStyle = fgColor ? `color:${fgColor}` : "";
+        const hasBorder = borderColor && borderColor !== "transparent";
+        const borderStyle = hasBorder ? `border:1px solid ${borderColor}` : "";
+        element.innerHTML = `<span class="mdl-shape-color-btn" style="${borderStyle}"><i class="${icon}" style="${fgStyle}"></i></span>`;
+    }
+
+    createShapeColorDropDownButton(itemElement) {
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._borderColorPicker = this.createColorPickerEditor("borderColor");
+        this._shapeColorDropdownElement = $('<div class="mdl-shape-color-selector">');
+        this._shapeColorDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            buttonTemplate: (data, element) => this.renderShapeColorButtonTemplate(element[0]),
+            dropDownOptions: {
+                width: "auto",
+                wrapperAttr: { class: "mdl-shape-color-dropdown-popup" },
+                contentTemplate: contentElement => {
+                    $(contentElement).empty();
+                    const $content = $('<div class="mdl-shape-color-popup-content">').appendTo(contentElement);
+                    const fgLabel = this.board.translations.get("Foreground Color") ?? "Foreground";
+                    const borderLabel = this.board.translations.get("Border Color") ?? "Border";
+                    $content.append(`<div class="mdl-shape-color-row">${fgLabel}</div>`);
+                    $content.find(".mdl-shape-color-row").last().prepend(this._fgColorPicker);
+                    $content.append(`<div class="mdl-shape-color-row">${borderLabel}</div>`);
+                    $content.find(".mdl-shape-color-row").last().prepend(this._borderColorPicker);
+                }
+            }
+        });
+        this._shapeColorDropdownElement.appendTo(itemElement);
+    }
+
+    refreshShapeColorToolbarControl() {
+        if (!this._shapeColorDropdownElement)
+            return;
+        const buttonContentElement = this._shapeColorDropdownElement.find(".dx-button-content")[0];
+        if (buttonContentElement)
+            this.renderShapeColorButtonTemplate(buttonContentElement);
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._borderColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
     }
 
 }

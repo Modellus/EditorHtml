@@ -636,26 +636,49 @@ math-field {
     font-weight: 400;
 }
 
-.mdl-parent-field {
+.mdl-parent-btn-character {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    display: block;
+}
+
+.mdl-parent-popup-content {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.mdl-parent-tree-character {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+
+.mdl-shape-color-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+
+.mdl-shape-color-popup-content {
     display: flex;
+    flex-direction: column;
+    padding: 4px;
+}
+
+.mdl-shape-color-row {
+    display: flex;
+    flex-direction: row;
     align-items: center;
     gap: 6px;
-    padding: 0 8px;
-    height: 100%;
-    overflow: hidden;
-}
-
-.mdl-parent-field .dx-icon {
-    flex-shrink: 0;
-}
-
-.mdl-parent-field span,
-.mdl-parent-field .dx-textbox {
-    flex: 1;
+    padding: 2px 4px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
 }
 
 .mdl-parent-tree .dx-treeview-item {

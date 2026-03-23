@@ -201,8 +201,20 @@ class BodyShape extends ChildShape {
             {
                 location: "center",
                 template: () => {
-                    const container = $('<div style="width:150px"></div>');
+                    const container = $('<div></div>');
                     this.createParentDropDownButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createShapeColorDropDownButton(container);
                     return container;
                 }
             },
@@ -400,9 +412,21 @@ class BodyShape extends ChildShape {
             this.renderCharacterPickerButtonTemplate(buttonContentElement);
     }
 
+    renderParentButtonTemplate(element) {
+        const parentShape = this.parent ?? this.getReferential();
+        const parentCharacter = parentShape?.character;
+        if (parentCharacter) {
+            const name = parentShape.properties.name ?? parentCharacter.name;
+            element.innerHTML = `<img class="mdl-parent-btn-character" src="resources/characters/${parentCharacter.folder}/${parentCharacter.image}" title="${name}" alt="${name}"/>`;
+            return;
+        }
+        super.renderParentButtonTemplate(element);
+    }
+
     showContextToolbar() {
         this.refreshNameToolbarControl();
         this.refreshParentToolbarControl();
+        this.refreshShapeColorToolbarControl();
         if (this._trajectoryColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._trajectoryColorPicker, this.properties.trajectoryColor);
         if (this._stroboscopyColorPicker)

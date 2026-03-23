@@ -74,7 +74,6 @@ class VectorShape extends ChildShape {
 
     createToolbar() {
         const items = super.createToolbar();
-        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
         this._trajectoryColorPicker = this.createColorPickerEditor("trajectoryColor");
         const formAdapter = { updateData: (field, value) => this.setProperty(field, value) };
         const xDisplayMode = this.getTermDisplayModeProperty("xTerm");
@@ -99,7 +98,7 @@ class VectorShape extends ChildShape {
             {
                 location: "center",
                 template: () => {
-                    const container = $('<div style="width:150px"></div>');
+                    const container = $('<div></div>');
                     this.createParentDropDownButton(container);
                     return container;
                 }
@@ -110,7 +109,11 @@ class VectorShape extends ChildShape {
             },
             {
                 location: "center",
-                template: () => this._fgColorPicker
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createShapeColorDropDownButton(container);
+                    return container;
+                }
             },
             {
                 location: "center",
@@ -237,8 +240,7 @@ class VectorShape extends ChildShape {
         }
         if (this._lineWidthControl)
             this._lineWidthControl.option("value", this.properties.lineWidth);
-        if (this._fgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        this.refreshShapeColorToolbarControl();
         if (this._trajectoryColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._trajectoryColorPicker, this.properties.trajectoryColor);
         this.termFormControls["xTerm"]?.termControl?.refresh();
