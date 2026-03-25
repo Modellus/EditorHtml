@@ -109,14 +109,16 @@ class ChildShape extends BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            hint: "Attached To",
             buttonTemplate: (data, element) => this.renderParentButtonTemplate(element[0]),
             dropDownOptions: {
-                width: 280,
-                wrapperAttr: { class: "mdl-parent-dropdown-popup" },
+                container: document.body,
+                wrapperAttr: { style: "z-index:10000" },
+                width: "auto",
                 contentTemplate: contentElement => {
                     $(contentElement).empty();
-                    const $container = $('<div class="mdl-parent-popup-content">').appendTo(contentElement);
-                    $('<div class="mdl-parent-tree">').appendTo($container).dxTreeView({
+                    $(contentElement).dxScrollView({ height: 300, width: "100%" });
+                    $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxTreeView({
                         items: treeItems(),
                         dataStructure: "tree",
                         keyExpr: "id",
@@ -173,23 +175,68 @@ class ChildShape extends BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            hint: "Name",
             buttonTemplate: (data, element) => this.renderShapeColorButtonTemplate(element[0]),
             dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:10000" },
                 width: "auto",
-                wrapperAttr: { class: "mdl-shape-color-dropdown-popup" },
-                contentTemplate: contentElement => {
-                    $(contentElement).empty();
-                    const $content = $('<div class="mdl-shape-color-popup-content">').appendTo(contentElement);
-                    const fgLabel = this.board.translations.get("Foreground Color") ?? "Foreground";
-                    const borderLabel = this.board.translations.get("Border Color") ?? "Border";
-                    $content.append(`<div class="mdl-shape-color-row">${fgLabel}</div>`);
-                    $content.find(".mdl-shape-color-row").last().prepend(this._fgColorPicker);
-                    $content.append(`<div class="mdl-shape-color-row">${borderLabel}</div>`);
-                    $content.find(".mdl-shape-color-row").last().prepend(this._borderColorPicker);
-                }
+                contentTemplate: contentElement => this.buildShapeMenuContent(contentElement)
             }
         });
         this._shapeColorDropdownElement.appendTo(itemElement);
+    }
+
+    menuIconHtml(iconName, isSet) {
+        const weight = isSet ? "fa-solid" : "fa-light";
+        return `<i class="${weight} ${iconName} mdl-menu-icon"></i>`;
+    }
+
+    buildShapeMenuContent(contentElement) {
+        const fgLabel = this.board.translations.get("Foreground Color") ?? "Foreground";
+        const borderLabel = this.board.translations.get("Border Color") ?? "Border";
+        const fgColor = this.properties.foregroundColor ?? "";
+        const borderColor = this.properties.borderColor ?? "";
+        const hasBorder = borderColor && borderColor !== "transparent";
+        const shapeIconName = (ChildShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes").split(" ")[1];
+        const sections = [
+            {
+                text: "Colors",
+                iconHtml: this.menuIconHtml(shapeIconName, !!fgColor),
+                items: [
+                    {
+                        text: fgLabel,
+                        iconHtml: this.menuIconHtml("fa-droplet", !!fgColor),
+                        buildControl: $p => $p.append(this._fgColorPicker)
+                    },
+                    {
+                        text: borderLabel,
+                        iconHtml: this.menuIconHtml("fa-square", !!hasBorder),
+                        buildControl: $p => $p.append(this._borderColorPicker)
+                    }
+                ]
+            }
+        ];
+        this.populateShapeColorMenuSections(sections);
+        const listItems = sections.flatMap(section => section.items);
+        $(contentElement).empty();
+        $(contentElement).dxScrollView({ height: 300, width: "100%" });
+        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                if (data.stacked) {
+                    el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
+                    data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
+                } else {
+                    el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                    data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                }
+            }
+        });
+    }
+
+    populateShapeColorMenuSections(sections) {
     }
 
     refreshShapeColorToolbarControl() {

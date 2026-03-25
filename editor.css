@@ -643,10 +643,13 @@ math-field {
     display: block;
 }
 
-.mdl-parent-popup-content {
-    max-height: 300px;
-    overflow-y: auto;
+.mdl-name-btn-character {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    display: block;
 }
+
 
 .mdl-parent-tree-character {
     width: 18px;
@@ -654,6 +657,107 @@ math-field {
     object-fit: contain;
     vertical-align: middle;
     margin-right: 4px;
+}
+
+.mdl-parent-selector-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 2px;
+    border-radius: 4px;
+}
+
+.mdl-parent-selector-icon:hover {
+    background: rgba(0,0,0,0.06);
+}
+
+.mdl-parent-inline-tree {
+    padding-top: 4px;
+}
+
+.mdl-dropdown-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mdl-dropdown-list-label {
+    flex: 1;
+    white-space: nowrap;
+}
+
+.mdl-dropdown-list-control {
+    display: flex;
+    align-items: center;
+}
+
+.mdl-dropdown-list-item-stacked {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mdl-dropdown-list-stacked-label {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.mdl-dropdown-list-stacked-control {
+    width: 100%;
+}
+
+.mdl-parent-selector .dx-button-content i,
+.mdl-shape-color-selector .dx-button-content i,
+.mdl-motion-selector .dx-button-content i,
+.mdl-shape-color-btn i {
+    font-size: 18px;
+}
+
+.mdl-shape-color-selector .dx-button-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 200px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.mdl-name-selector .dx-button-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 220px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.mdl-name-btn-label {
+    font-family: "Segoe UI", sans-serif;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mdl-name-btn-term {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.mdl-name-btn-icon {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.mdl-name-btn-term-text {
+    font-family: KaTeX_Math, serif;
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1;
 }
 
 .mdl-shape-color-btn {
@@ -669,27 +773,10 @@ math-field {
 .mdl-shape-color-popup-content {
     display: flex;
     flex-direction: column;
-    padding: 4px;
+    min-width: 160px;
 }
 
-.mdl-shape-color-row {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 4px;
-    white-space: nowrap;
-}
 
-.mdl-parent-tree .dx-treeview-item {
-    padding-top: 3px;
-    padding-bottom: 3px;
-    min-height: 0;
-}
-
-.mdl-parent-tree .dx-treeview-node {
-    padding-bottom: 0;
-}
 @keyframes iconpop {
     0%   { transform: scale(1); }
     40%  { transform: scale(0.7) rotate(-8deg); }

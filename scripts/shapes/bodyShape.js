@@ -85,6 +85,8 @@ class BodyShape extends ChildShape {
         if (name === "characterKey")
             this.character = BodyShape.getCharacterByKey(value);
         super.setProperty(name, value);
+        if (name === "trajectoryColor" || name === "stroboscopyColor")
+            this.refreshMotionToolbarControl();
         if (name === "characterKey") {
             this.synchronizeIdleAnimationTicker();
             if (this.properties.nameIsDefault) {
@@ -94,8 +96,15 @@ class BodyShape extends ChildShape {
                     this.properties.nameIsDefault = true;
                     super.setProperty("name", uniqueName);
                     this.refreshNameToolbarControl();
+                } else {
+                    const defaultName = this.board.translations.get("Body Name") ?? "Body";
+                    const uniqueName = window.shell?.commands?.uniquifyShapeName(defaultName) ?? defaultName;
+                    this.properties.nameIsDefault = true;
+                    super.setProperty("name", uniqueName);
+                    this.refreshNameToolbarControl();
                 }
             }
+            this.refreshShapeColorToolbarControl();
         }
     }
 
@@ -189,30 +198,6 @@ class BodyShape extends ChildShape {
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $('<div style="width:180px"></div>');
-                    wrapper.append(this.createNameFormControl());
-                    return wrapper;
-                }
-            },
-            {
-                location: "center",
-                template: () => $(`<div class="toolbar-separator">|</div>`)
-            },
-            {
-                location: "center",
-                template: () => {
-                    const container = $('<div></div>');
-                    this.createParentDropDownButton(container);
-                    return container;
-                }
-            },
-            {
-                location: "center",
-                template: () => $(`<div class="toolbar-separator">|</div>`)
-            },
-            {
-                location: "center",
-                template: () => {
                     const container = $('<div></div>');
                     this.createShapeColorDropDownButton(container);
                     return container;
@@ -225,95 +210,21 @@ class BodyShape extends ChildShape {
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $(`<div class="vector-term-toolbar-item"><span class="vector-term-toolbar-label">H</span></div>`);
-                    wrapper.append(xDescriptor.control);
-                    return wrapper;
+                    const container = $('<div></div>');
+                    this.createBodyNameDropDownButton(container, xDescriptor, yDescriptor);
+                    return container;
                 }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
             },
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $(`<div class="vector-term-toolbar-item"><span class="vector-term-toolbar-label">V</span></div>`);
-                    wrapper.append(yDescriptor.control);
-                    return wrapper;
-                }
-            },
-            {
-                location: "center",
-                template: () => $(`<div class="toolbar-separator">|</div>`)
-            },
-            {
-                location: "center",
-                template: () => this._trajectoryColorPicker
-            },
-            {
-                location: "center",
-                template: () => this._stroboscopyColorPicker
-            },
-            {
-                location: "center",
-                widget: "dxNumberBox",
-                options: {
-                    value: this.properties.stroboscopyInterval,
-                    hint: "Stroboscopy interval",
-                    showSpinButtons: true,
-                    min: 1,
-                    width: 90,
-                    stylingMode: "filled",
-                    onInitialized: e => { this.stroboscopyIntervalToolbarWidget = e.component; },
-                    onValueChanged: e => {
-                        this.setProperty("stroboscopyInterval", e.value);
-                        this.board.markDirty(this);
-                    }
-                }
-            },
-            {
-                location: "center",
-                widget: "dxNumberBox",
-                options: {
-                    value: this.properties.animationFrameStep,
-                    hint: "Animation frame step",
-                    showSpinButtons: true,
-                    min: 1,
-                    width: 90,
-                    stylingMode: "filled",
-                    onInitialized: e => { this.animationFrameStepToolbarWidget = e.component; },
-                    onValueChanged: e => {
-                        this.setProperty("animationFrameStep", e.value);
-                        this.board.markDirty(this);
-                    }
-                }
-            },
-            {
-                location: "center",
-                widget: "dxNumberBox",
-                options: {
-                    value: this.properties.stroboscopyOpacity,
-                    hint: "Stroboscopy opacity",
-                    showSpinButtons: true,
-                    min: 0,
-                    max: 1,
-                    step: 0.1,
-                    width: 90,
-                    stylingMode: "filled",
-                    onInitialized: e => { this.stroboscopyOpacityToolbarWidget = e.component; },
-                    onValueChanged: e => {
-                        this.setProperty("stroboscopyOpacity", e.value);
-                        this.board.markDirty(this);
-                    }
-                }
-            },
-            {
-                location: "center",
-                template: () => this.createCharacterPickerButton()
-            },
-            {
-                location: "center",
-                widget: "dxButton",
-                options: {
-                    icon: "fa-light fa-image",
-                    hint: "Image",
-                    onClick: _ => this.openImageFileDialog()
+                    const container = $('<div></div>');
+                    this.createMotionDropDownButton(container);
+                    return container;
                 }
             },
             {
@@ -324,6 +235,7 @@ class BodyShape extends ChildShape {
                 location: "center",
                 widget: "dxButton",
                 options: {
+                    hint: "Remove",
                     template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
                     stylingMode: "text",
                     onClick: () => this.remove()
@@ -347,8 +259,9 @@ class BodyShape extends ChildShape {
             hint: "Character",
             buttonTemplate: (data, element) => this.renderCharacterPickerButtonTemplate(element),
             dropDownOptions: {
-                width: columns * step + popupPadding * 2,
-                wrapperAttr: { class: "mdl-character-picker-menu" },
+                container: document.body,
+                wrapperAttr: { class: "mdl-character-picker-menu", style: "z-index:10000" },
+                width: "auto",
                 contentTemplate: contentElement => this.createCharacterPickerGrid(contentElement)
             }
         });
@@ -423,18 +336,285 @@ class BodyShape extends ChildShape {
         super.renderParentButtonTemplate(element);
     }
 
-    showContextToolbar() {
-        this.refreshNameToolbarControl();
-        this.refreshParentToolbarControl();
+    renderShapeColorButtonTemplate(element) {
+        const name = this.properties.name ?? "";
+        if (this.character) {
+            element.innerHTML = `<img class="mdl-name-btn-character" src="resources/characters/${this.character.folder}/${this.character.image}" alt="${name}"/><span>${name}</span>`;
+            return;
+        }
+        const icon = (ChildShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes").replace("fa-light", "fa-solid");
+        const fgColor = this.properties.foregroundColor ?? "";
+        const borderColor = this.properties.borderColor ?? "";
+        const fgStyle = fgColor ? `color:${fgColor}` : "";
+        const hasBorder = borderColor && borderColor !== "transparent";
+        const borderStyle = hasBorder ? `border:1px solid ${borderColor}` : "";
+        element.innerHTML = `<span class="mdl-shape-color-btn" style="${borderStyle}"><i class="${icon}" style="${fgStyle}"></i></span><span>${name}</span>`;
+    }
+
+    populateShapeColorMenuSections(sections) {
+        sections[0].items.unshift(
+            {
+                text: "Name",
+                stacked: true,
+                buildControl: $p => $p.append(this.createNameFormControl())
+            }
+        );
+        const character = this.character;
+        sections.push(
+            {
+                text: "Character",
+                items: [
+                    {
+                        text: "",
+                        buildControl: $p => this.createCharacterPickerGrid($p[0])
+                    }
+                ]
+            },
+            {
+                text: "Image",
+                items: [
+                    {
+                        text: "Upload",
+                        buildControl: $p => $('<div>').dxButton({
+                            icon: "fa-light fa-image",
+                            hint: "Image",
+                            stylingMode: "text",
+                            onClick: _ => this.openImageFileDialog()
+                        }).appendTo($p)
+                    }
+                ]
+            }
+        );
+    }
+
+    createBodyNameDropDownButton(itemElement, xDescriptor, yDescriptor) {
+        const listItems = [
+            { text: "Horizontal", stacked: true, buildControl: $p => $p.append(xDescriptor.control) },
+            { text: "Vertical", stacked: true, buildControl: $p => $p.append(yDescriptor.control) },
+            {
+                text: "Attached To",
+                parentSelector: true,
+                buildControl: $el => {
+                    const iconSpan = $('<span class="mdl-parent-selector-icon"></span>');
+                    this._parentInlineIconHolder = iconSpan;
+                    this.renderParentButtonTemplate(iconSpan[0]);
+                    const treeContainer = $('<div class="mdl-parent-inline-tree" style="display:none"></div>');
+                    const row = $(`<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">Attached To</span></div>`);
+                    row.append(iconSpan);
+                    iconSpan.on("click", () => {
+                        if (treeContainer.is(":visible")) {
+                            treeContainer.hide();
+                            return;
+                        }
+                        treeContainer.empty();
+                        $('<div>').dxTreeView({
+                            items: this.buildParentTreeItems(this.getReferential()),
+                            dataStructure: "tree",
+                            keyExpr: "id",
+                            displayExpr: "text",
+                            selectionMode: "single",
+                            selectByClick: true,
+                            itemTemplate: (data, _, el) => {
+                                if (data.characterImage)
+                                    el[0].innerHTML = `<img class="mdl-parent-tree-character" src="${data.characterImage}" alt="${data.text}"/>${data.text}`;
+                                else {
+                                    const solidIcon = data.icon.replace("fa-light", "fa-solid");
+                                    const colorStyle = data.color ? ` style="color:${data.color}"` : "";
+                                    el[0].innerHTML = `<i class="dx-icon ${solidIcon}"${colorStyle}></i>${data.text}`;
+                                }
+                            },
+                            onItemClick: e => {
+                                const targetShape = this.board.shapes.getById(e.itemData.id);
+                                if (this.wouldCreateCycle(targetShape))
+                                    return;
+                                this.setProperty("parentId", e.itemData.id);
+                                treeContainer.hide();
+                                this.renderParentButtonTemplate(iconSpan[0]);
+                                this._nameDropdownButtonElement.dxDropDownButton("instance").close();
+                            }
+                        }).appendTo(treeContainer);
+                        treeContainer.show();
+                    });
+                    $el.empty();
+                    $el.append(row, treeContainer);
+                }
+            }
+        ];
+        this._nameDropdownButtonElement = $('<div class="mdl-name-selector">').appendTo(itemElement);
+        this._nameDropdownButtonElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            hint: "Coordinates",
+            buttonTemplate: (data, element) => this.renderNameDropdownButtonTemplate(element[0]),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:10000" },
+                width: "auto",
+                contentTemplate: contentElement => {
+                    $(contentElement).empty();
+                    $(contentElement).dxScrollView({ height: 300, width: "100%" });
+                    $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
+                        dataSource: listItems,
+                        scrollingEnabled: false,
+                        itemTemplate: (data, _, el) => {
+                            if (data.stacked) {
+                                el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
+                                data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
+                            } else if (data.text === "Name") {
+                                data.buildControl($(el));
+                            } else if (data.parentSelector) {
+                                data.buildControl($(el));
+                            } else {
+                                el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                                data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    refreshParentToolbarControl() {
+        if (this._parentInlineIconHolder)
+            this.renderParentButtonTemplate(this._parentInlineIconHolder[0]);
+    }
+
+    renderNameDropdownButtonTemplate(element) {
+        const xTerm = this.properties.xTerm ?? "";
+        const yTerm = this.properties.yTerm ?? "";
+        const xPart = xTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` : "";
+        const yPart = yTerm ? `<span class="mdl-name-btn-term"><i style="font-size:6px" class="fa-light fa-x mdl-name-btn-icon"></i><span class="mdl-name-btn-term-text">${yTerm}</span></span>` : "";
+        element.innerHTML = `${xPart}${yPart}`;
+    }
+
+    refreshNameToolbarControl() {
+        super.refreshNameToolbarControl();
+        if (this._nameDropdownButtonElement) {
+            const buttonContentElement = this._nameDropdownButtonElement.find(".dx-button-content")[0];
+            if (buttonContentElement)
+                this.renderNameDropdownButtonTemplate(buttonContentElement);
+        }
         this.refreshShapeColorToolbarControl();
-        if (this._trajectoryColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._trajectoryColorPicker, this.properties.trajectoryColor);
+    }
+
+    refreshMotionToolbarControl() {
+        if (!this._motionDropdownElement)
+            return;
+        const buttonContentElement = this._motionDropdownElement.find(".dx-button-content")[0];
+        if (buttonContentElement)
+            this.renderMotionButtonTemplate(buttonContentElement);
+    }
+
+    renderMotionButtonTemplate(element) {
+        const trajColor = this.properties.trajectoryColor ?? "";
+        const strobeColor = this.properties.stroboscopyColor ?? "";
+        const trajSet = !!trajColor && trajColor !== "transparent" && trajColor !== "#00000000";
+        const strobeSet = !!strobeColor && strobeColor !== "transparent" && strobeColor !== "#00000000";
+        if (trajSet || strobeSet) {
+            const primaryColor = trajSet ? trajColor : "transparent";
+            const secondaryColor = strobeSet ? strobeColor : "transparent";
+            const primaryOpacity = trajSet ? 1 : 0;
+            const secondaryOpacity = strobeSet ? 1 : 0;
+            element.innerHTML = `<i class="fa-duotone fa-arrow-down-big-small fa-rotate-270" style="--fa-primary-color:${primaryColor};--fa-primary-opacity:${primaryOpacity};--fa-secondary-color:${secondaryColor};--fa-secondary-opacity:${secondaryOpacity}"></i>`;
+        } else {
+            element.innerHTML = `<i class="fa-thin fa-arrow-down-big-small fa-rotate-270" style="color:#000"></i>`;
+        }
+    }
+
+    createMotionDropDownButton(itemElement) {
+        this._motionDropdownElement = $('<div class="mdl-motion-selector">');
+        this._motionDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            hint: "Trajectory & Stroboscopy",
+            buttonTemplate: (data, element) => this.renderMotionButtonTemplate(element[0]),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:10000" },
+                width: "auto",
+                contentTemplate: contentElement => {
+                    $(contentElement).empty();
+                    const items = [
+                        {
+                            text: "Trajectory color",
+                            buildControl: $p => $p.append(this._trajectoryColorPicker)
+                        },
+                        {
+                            text: "Stroboscopy color",
+                            buildControl: $p => $p.append(this._stroboscopyColorPicker)
+                        },
+                        {
+                            text: "Interval",
+                            buildControl: $p => $('<div>').dxNumberBox({
+                                value: this.properties.stroboscopyInterval,
+                                showSpinButtons: true,
+                                min: 1,
+                                width: 90,
+                                stylingMode: "filled",
+                                onInitialized: e => { this.stroboscopyIntervalToolbarWidget = e.component; },
+                                onValueChanged: e => { this.setProperty("stroboscopyInterval", e.value); this.board.markDirty(this); }
+                            }).appendTo($p)
+                        },
+                        {
+                            text: "Opacity",
+                            buildControl: $p => $('<div>').dxNumberBox({
+                                value: this.properties.stroboscopyOpacity,
+                                showSpinButtons: true,
+                                min: 0,
+                                max: 1,
+                                step: 0.1,
+                                width: 90,
+                                stylingMode: "filled",
+                                onInitialized: e => { this.stroboscopyOpacityToolbarWidget = e.component; },
+                                onValueChanged: e => { this.setProperty("stroboscopyOpacity", e.value); this.board.markDirty(this); }
+                            }).appendTo($p)
+                        },
+                        {
+                            text: "Frame step",
+                            buildControl: $p => $('<div>').dxNumberBox({
+                                value: this.properties.animationFrameStep,
+                                showSpinButtons: true,
+                                min: 1,
+                                width: 90,
+                                stylingMode: "filled",
+                                onInitialized: e => { this.animationFrameStepToolbarWidget = e.component; },
+                                onValueChanged: e => { this.setProperty("animationFrameStep", e.value); this.board.markDirty(this); }
+                            }).appendTo($p)
+                        }
+                    ];
+                    const listItems = items;
+                    $(contentElement).empty();
+                    $(contentElement).dxScrollView({ height: 300, width: "100%" });
+                    $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
+                        dataSource: listItems,
+                        scrollingEnabled: false,
+                        itemTemplate: (data, _, el) => {
+                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                            data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                        }
+                    });
+                }
+            }
+        });
+        this._motionDropdownElement.appendTo(itemElement);
+    }
+
+    refreshStroboscopyToolbarControl() {
         if (this._stroboscopyColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._stroboscopyColorPicker, this.properties.stroboscopyColor);
         this.stroboscopyIntervalToolbarWidget?.option("value", this.properties.stroboscopyInterval);
         this.stroboscopyOpacityToolbarWidget?.option("value", this.properties.stroboscopyOpacity);
         this.animationFrameStepToolbarWidget?.option("value", this.properties.animationFrameStep);
-        this.refreshCharacterPickerButtonTemplate();
+    }
+
+    showContextToolbar() {
+        this.refreshNameToolbarControl();
+        this.refreshParentToolbarControl();
+        this.refreshShapeColorToolbarControl();
+        this.refreshMotionToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();
         super.showContextToolbar();
@@ -550,8 +730,8 @@ class BodyShape extends ChildShape {
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[3].color;
         this.properties.borderColor = this.properties.foregroundColor;
-        this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
-        this.properties.stroboscopyColor = this.board.theme.getBackgroundColors()[0].color;
+        this.properties.trajectoryColor = "transparent";
+        this.properties.stroboscopyColor = "transparent";
         this.properties.stroboscopyInterval = 10;
         this.properties.stroboscopyOpacity = 0.5;
         this.properties.animationFrameStep = 1;
@@ -778,8 +958,7 @@ class BodyShape extends ChildShape {
     }
 
     tickStroboscopy() {
-        const defaultStrobeColor = this.board.theme.getBackgroundColors()[0].color;
-        if (this.properties.stroboscopyColor === defaultStrobeColor) {
+        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
             this._stroboscopyPositions = [];
             return;
         }
@@ -798,7 +977,7 @@ class BodyShape extends ChildShape {
     }
 
     drawTrajectory() {
-        if (this.properties.trajectoryColor != this.board.theme.getBackgroundColors()[0].color) {
+        if (this.properties.trajectoryColor && this.properties.trajectoryColor !== "transparent" && this.properties.trajectoryColor !== "#00000000") {
             this.trajectory.element.setAttribute("points", this.trajectory.pointsString);
             this.trajectory.element.setAttribute("stroke", this.properties.trajectoryColor);
             this.trajectory.element.setAttribute("stroke-width", 1);
@@ -807,8 +986,7 @@ class BodyShape extends ChildShape {
     }
 
     drawStroboscopy() {
-        const defaultStrobeColor = this.board.theme.getBackgroundColors()[0].color;
-        if (this.properties.stroboscopyColor === defaultStrobeColor) {
+        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
             while (this.stroboscopy.firstChild)
                 this.stroboscopy.removeChild(this.stroboscopy.firstChild);
             return;
