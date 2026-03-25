@@ -50,6 +50,7 @@ class Shell  {
         this.properties.iterationTerm = "n";
         this.properties.casesCount = 1;
         this.properties.initialValuesByCase = {};
+        this.properties.iterationDuration = null;
         this.properties.thumbnailUrl = "";
         this.applySvgBackgroundColor();
     }

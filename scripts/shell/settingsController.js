@@ -213,6 +213,17 @@ class SettingsController {
                         disabled: this.shell.properties.independent.noLimit,
                         elementAttr: { class: "mdl-math-input" }
                     }
+                },
+                {
+                    colSpan: 2,
+                    dataField: "iterationDuration",
+                    label: { text: "Iteration Duration (seconds)" },
+                    editorType: "dxNumberBox",
+                    editorOptions: {
+                        stylingMode: "filled",
+                        min: 0,
+                        showClearButton: true
+                    }
                 }
             ],
             onFieldDataChanged: e => this.shell.setProperty(e.dataField, e.value),

@@ -15,7 +15,7 @@ class Calculator extends EventTarget {
     }
 
     createDefaultProperties() {
-        return { precision: 2, angleUnit: "radians", independent: { name: "t", start: 0, end: 10, step: 0.1, noLimit: false }, iterationTerm: "n", casesCount: 1, initialValuesByCase: {} };
+        return { precision: 2, angleUnit: "radians", independent: { name: "t", start: 0, end: 10, step: 0.1, noLimit: false }, iterationTerm: "n", casesCount: 1, initialValuesByCase: {}, iterationDuration: null };
     }
 
     setDefaults() {
@@ -63,8 +63,10 @@ class Calculator extends EventTarget {
     }
 
     _iterate = () => {
-        if (this.frameId)
+        if (this.frameId) {
             cancelAnimationFrame(this.frameId);
+            clearTimeout(this.frameId);
+        }
         if (this.status != STATUS.PLAYING)
             return;
         if (!this.properties.independent.noLimit && Math.abs(this.system.getIndependent() - this.properties.independent.end) < this.properties.independent.step / 10.0)
@@ -72,8 +74,10 @@ class Calculator extends EventTarget {
         else
             this.engine.iterate();
         this.emit("iterate", { calculator: this });     
-        if (this.status == STATUS.PLAYING)
-            this.frameId = requestAnimationFrame(this._iterate);
+        if (this.status == STATUS.PLAYING) {
+            const delayMs = this.properties.iterationDuration > 0 ? this.properties.iterationDuration * 1000 : 0;
+            this.frameId = delayMs > 0 ? setTimeout(this._iterate, delayMs) : requestAnimationFrame(this._iterate);
+        }
     }
 
     calculate() {
@@ -106,14 +110,17 @@ class Calculator extends EventTarget {
     }
 
     _replay = () => {
-        if (this.frameId)
+        if (this.frameId) {
             cancelAnimationFrame(this.frameId);
+            clearTimeout(this.frameId);
+        }
         this.emit("iterate", { calculator: this }); 
         if (this.system.iteration > this.system.lastIteration)
             this.system.iteration = 1;
         if (this.status == STATUS.PLAYING) {
             this.system.iteration++;
-            this.frameId = requestAnimationFrame(this._replay);
+            const delayMs = this.properties.iterationDuration > 0 ? this.properties.iterationDuration * 1000 : 0;
+            this.frameId = delayMs > 0 ? setTimeout(this._replay, delayMs) : requestAnimationFrame(this._replay);
         }
     }
 
