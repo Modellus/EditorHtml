@@ -82,10 +82,8 @@ class ChildShape extends BaseShape {
     renderParentButtonTemplate(element) {
         const parentShape = this.parent ?? this.getReferential();
         const name = parentShape?.properties?.name ?? "";
-        const icon = (BaseShape.shapeIcons[parentShape?.constructor?.name] ?? "fa-light fa-shapes").replace("fa-light", "fa-solid");
-        const color = parentShape?.properties?.foregroundColor ?? "";
-        const colorStyle = color ? `color:${color}` : "";
-        element.innerHTML = `<i class="${icon}" title="${name}" style="${colorStyle}"></i>`;
+        const icon = BaseShape.shapeIcons[parentShape?.constructor?.name] ?? "fa-light fa-shapes";
+        element.innerHTML = `<i class="${icon}" title="${name}"></i>`;
     }
 
     createParentDropDownButton(itemElement) {

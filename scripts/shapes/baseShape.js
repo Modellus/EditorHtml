@@ -760,13 +760,8 @@ class BaseShape {
 
     renderShapeColorButtonTemplate(element) {
         const name = this.properties.name ?? "";
-        const icon = (BaseShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes").replace("fa-light", "fa-solid");
-        const fgColor = this.properties.foregroundColor ?? "";
-        const borderColor = this.properties.borderColor ?? "";
-        const fgStyle = fgColor ? `color:${fgColor}` : "";
-        const hasBorder = borderColor && borderColor !== "transparent";
-        const borderStyle = hasBorder ? `border:1px solid ${borderColor}` : "";
-        element.innerHTML = `<span class="mdl-shape-color-btn" style="${borderStyle}"><i class="${icon}" style="${fgStyle}"></i></span><span>${name}</span>`;
+        const icon = BaseShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes";
+        element.innerHTML = `<span class="mdl-shape-color-btn"><i class="${icon}"></i></span><span>${name}</span>`;
     }
 
     createShapeColorDropDownButton(itemElement) {
