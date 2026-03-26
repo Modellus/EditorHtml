@@ -105,43 +105,10 @@ class VectorShape extends ChildShape {
             },
             {
                 location: "center",
-                widget: "dxDropDownButton",
-                options: {
-                    items: [
-                        { key: "arrow", icon: "fa-light fa-arrow-right", text: "" },
-                        { key: "closed", icon: "fa-light fa-right-long", text: "" },
-                        { key: "none", icon: "fa-light fa-dash", text: "" }
-                    ],
-                    keyExpr: "key",
-                    displayExpr: "text",
-                    useSelectMode: true,
-                    showArrowIcon: false,
-                    stylingMode: "text",
-                    selectedItemKey: this.properties.tipType,
-                    onInitialized: e => { this._tipTypeControl = e.component; },
-                    onSelectionChanged: e => this.setProperty("tipType", e.item.key),
-                    dropDownOptions: { width: 52 },
-                    buttonTemplate: (data, element) => {
-                        const key = data?.selectedItem?.key ?? this.properties.tipType;
-                        const iconMap = { arrow: "fa-light fa-arrow-right", closed: "fa-light fa-right-long", none: "fa-light fa-dash" };
-                        element[0].innerHTML = `<i class="dx-icon ${iconMap[key] ?? iconMap.arrow}"></i>`;
-                    }
-                }
-            },
-            {
-                location: "center",
-                widget: "dxNumberBox",
-                options: {
-                    value: this.properties.lineWidth,
-                    min: 1,
-                    max: 50,
-                    step: 1,
-                    showSpinButtons: true,
-                    width: 50,
-                    hint: "Line width",
-                    stylingMode: "filled",
-                    onInitialized: e => { this._lineWidthControl = e.component; },
-                    onValueChanged: e => this.setProperty("lineWidth", e.value)
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createTipTypeDropDownButton(container);
+                    return container;
                 }
             },
             {
@@ -225,17 +192,94 @@ class VectorShape extends ChildShape {
         super.showContextToolbar();
         this.refreshNameToolbarControl();
         this.refreshParentToolbarControl();
-        if (this._tipTypeControl) {
-            this._tipTypeControl.option("selectedItemKey", this.properties.tipType);
-            this._tipTypeControl.repaint();
-        }
-        if (this._lineWidthControl)
-            this._lineWidthControl.option("value", this.properties.lineWidth);
+        this.refreshTipTypeToolbarControl();
         this.refreshShapeColorToolbarControl();
         this.refreshMotionToolbarControl();
         this.refreshTermsToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();
+    }
+
+    refreshTipTypeToolbarControl() {
+        if (!this._tipTypeDropdownElement)
+            return;
+        const buttonContent = this._tipTypeDropdownElement.find(".dx-button-content")[0];
+        if (buttonContent)
+            this.renderTipTypeButtonTemplate(buttonContent);
+    }
+
+    createTipTypeDropDownButton(container) {
+        this._tipTypeDropdownElement = $('<div class="mdl-tip-type-selector">');
+        this._tipTypeDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            template: (data, element) => this.renderTipTypeButtonTemplate(element[0]),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:20000" },
+                width: "auto",
+                contentTemplate: contentElement => {
+                    const listItems = [
+                        {
+                            text: "Type",
+                            buildControl: $container => {
+                                $('<div>').dxButtonGroup({
+                                    items: [
+                                        { key: "arrow", icon: "fa-light fa-arrow-right" },
+                                        { key: "closed", icon: "fa-light fa-right-long" },
+                                        { key: "none", icon: "fa-light fa-dash" }
+                                    ],
+                                    keyExpr: "key",
+                                    selectedItemKeys: [this.properties.tipType],
+                                    stylingMode: "outlined",
+                                    buttonTemplate: (data, btnContainer) => {
+                                        btnContainer[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
+                                    },
+                                    onSelectionChanged: e => {
+                                        if (e.addedItems.length > 0) {
+                                            this.setProperty("tipType", e.addedItems[0].key);
+                                            this.refreshTipTypeToolbarControl();
+                                        }
+                                    }
+                                }).appendTo($container);
+                            }
+                        },
+                        {
+                            text: "Width",
+                            buildControl: $container => {
+                                $('<div>').dxNumberBox({
+                                    value: this.properties.lineWidth,
+                                    min: 1,
+                                    max: 50,
+                                    step: 1,
+                                    showSpinButtons: true,
+                                    width: 80,
+                                    stylingMode: "filled",
+                                    onValueChanged: e => this.setProperty("lineWidth", e.value)
+                                }).appendTo($container);
+                            }
+                        }
+                    ];
+                    $(contentElement).empty();
+                    $('<div>').appendTo(contentElement).dxList({
+                        dataSource: listItems,
+                        scrollingEnabled: false,
+                        itemTemplate: (data, _, el) => {
+                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                            data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                        }
+                    });
+                }
+            }
+        });
+        this._tipTypeDropdownElement.appendTo(container);
+    }
+
+    renderTipTypeButtonTemplate(element) {
+        const key = this.properties.tipType;
+        const iconMap = { arrow: "fa-light fa-arrow-right", closed: "fa-light fa-right-long", none: "fa-light fa-dash" };
+        element.innerHTML = `<i class="dx-icon ${iconMap[key] ?? iconMap.arrow}"></i>`;
     }
 
     setDefaults() {
@@ -281,7 +325,7 @@ class VectorShape extends ChildShape {
     }
 
     getMarkerId() {
-        return `vector-marker-${this.id}`;
+        return `vector-marker-${this.id}-${this.properties.tipType}`;
     }
 
     buildMarker() {
