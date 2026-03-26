@@ -759,11 +759,26 @@ math-field {
     line-height: 1;
 }
 
+.mdl-name-btn-separator {
+    font-size: 6px;
+    line-height: 1;
+    margin: 0 4px;
+}
+
 .mdl-name-btn-term-text {
     font-family: KaTeX_Math, serif;
     font-style: italic;
     font-size: 16px;
     line-height: 1;
+}
+
+.mdl-name-btn-extra {
+    font-size: 10px;
+    line-height: 1;
+    padding: 1px 4px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.10);
+    margin-left: 2px;
 }
 
 .mdl-shape-color-btn {

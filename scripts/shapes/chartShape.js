@@ -205,14 +205,17 @@ class ChartShape extends BaseShape {
 
     renderTermsButtonTemplate(element) {
         const xTerm = this.properties.xTerm ?? "";
-        const yTerms = this.properties.yTerms ?? [];
-        const yCount = yTerms.filter(y => y.term).length;
+        const yTerms = (this.properties.yTerms ?? []).filter(y => y.term);
+        const firstYTerm = yTerms.length > 0 ? yTerms[0].term : "";
         const xPart = xTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` : "";
-        const yPart = yCount > 0 ? `<span class="mdl-name-btn-term"><i style="font-size:6px" class="fa-light fa-x mdl-name-btn-icon"></i><span class="mdl-name-btn-term-text">${yCount}Y</span></span>` : "";
+        const separator = (xTerm && firstYTerm) ? `<i class="fa-light fa-x mdl-name-btn-separator"></i>` : "";
+        const yPart = firstYTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${firstYTerm}</span></span>` : "";
+        const extraCount = yTerms.length - 1;
+        const extraPart = extraCount > 0 ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-extra">+${extraCount}</span></span>` : "";
         if (!xPart && !yPart)
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
         else
-            element.innerHTML = `${xPart}${yPart}`;
+            element.innerHTML = `${xPart}${separator}${yPart}${extraPart}`;
     }
 
     populateShapeColorMenuSections(sections) {

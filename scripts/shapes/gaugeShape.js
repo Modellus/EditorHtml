@@ -140,11 +140,12 @@ class GaugeShape extends BaseShape {
         const angleTerm = this.properties.angleTerm ?? "";
         const magnitudeTerm = this.properties.magnitudeTerm ?? "";
         const anglePart = angleTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${angleTerm}</span></span>` : "";
-        const magnitudePart = magnitudeTerm ? `<span class="mdl-name-btn-term"><i style="font-size:6px" class="fa-light fa-x mdl-name-btn-icon"></i><span class="mdl-name-btn-term-text">${magnitudeTerm}</span></span>` : "";
+        const separator = (angleTerm && magnitudeTerm) ? `<i class="fa-light fa-x mdl-name-btn-separator"></i>` : "";
+        const magnitudePart = magnitudeTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${magnitudeTerm}</span></span>` : "";
         if (!anglePart && !magnitudePart)
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
         else
-            element.innerHTML = `${anglePart}${magnitudePart}`;
+            element.innerHTML = `${anglePart}${separator}${magnitudePart}`;
     }
 
     createGaugeSettingsDropDownButton(itemElement) {

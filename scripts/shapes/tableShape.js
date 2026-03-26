@@ -41,11 +41,14 @@ class TableShape extends BaseShape {
     }
 
     renderTermsButtonTemplate(element) {
-        const columns = this.properties.columns ?? [];
-        const count = columns.filter(c => c.term).length;
-        if (count > 0)
-            element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${count} col</span></span>`;
-        else
+        const columns = (this.properties.columns ?? []).filter(c => c.term);
+        const firstTerm = columns.length > 0 ? columns[0].term : "";
+        const extraCount = columns.length - 1;
+        if (firstTerm) {
+            const termPart = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${firstTerm}</span></span>`;
+            const extraPart = extraCount > 0 ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-extra">+${extraCount}</span></span>` : "";
+            element.innerHTML = `${termPart}${extraPart}`;
+        } else
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Columns</span></span>`;
     }
 

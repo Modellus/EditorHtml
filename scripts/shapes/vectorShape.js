@@ -188,11 +188,12 @@ class VectorShape extends ChildShape {
         const xTerm = this.properties.xTerm ?? "";
         const yTerm = this.properties.yTerm ?? "";
         const xPart = xTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` : "";
-        const yPart = yTerm ? `<span class="mdl-name-btn-term"><i style="font-size:6px" class="fa-light fa-x mdl-name-btn-icon"></i><span class="mdl-name-btn-term-text">${yTerm}</span></span>` : "";
+        const separator = (xTerm && yTerm) ? `<i class="fa-light fa-x mdl-name-btn-separator"></i>` : "";
+        const yPart = yTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yTerm}</span></span>` : "";
         if (!xPart && !yPart)
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
         else
-            element.innerHTML = `${xPart}${yPart}`;
+            element.innerHTML = `${xPart}${separator}${yPart}`;
     }
 
     positionContextToolbar() {
