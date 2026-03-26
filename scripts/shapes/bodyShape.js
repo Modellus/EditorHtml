@@ -85,8 +85,6 @@ class BodyShape extends ChildShape {
         if (name === "characterKey")
             this.character = BodyShape.getCharacterByKey(value);
         super.setProperty(name, value);
-        if (name === "trajectoryColor" || name === "stroboscopyColor")
-            this.refreshMotionToolbarControl();
         if (name === "characterKey") {
             this.synchronizeIdleAnimationTicker();
             if (this.properties.nameIsDefault) {
@@ -185,7 +183,6 @@ class BodyShape extends ChildShape {
 
     createToolbar() {
         const items = super.createToolbar();
-        this._stroboscopyColorPicker = this.createColorPickerEditor("stroboscopyColor");
         const formAdapter = { updateData: (field, value) => this.setProperty(field, value) };
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
@@ -443,37 +440,8 @@ class BodyShape extends ChildShape {
     }
 
     populateMotionMenuSections(sections) {
+        super.populateMotionMenuSections(sections);
         sections[0].items.push(
-            {
-                text: "Stroboscopy color",
-                buildControl: $p => $p.append(this._stroboscopyColorPicker)
-            },
-            {
-                text: "Interval",
-                buildControl: $p => $('<div>').dxNumberBox({
-                    value: this.properties.stroboscopyInterval,
-                    showSpinButtons: true,
-                    min: 1,
-                    width: 90,
-                    stylingMode: "filled",
-                    onInitialized: e => { this.stroboscopyIntervalToolbarWidget = e.component; },
-                    onValueChanged: e => { this.setProperty("stroboscopyInterval", e.value); this.board.markDirty(this); }
-                }).appendTo($p)
-            },
-            {
-                text: "Opacity",
-                buildControl: $p => $('<div>').dxNumberBox({
-                    value: this.properties.stroboscopyOpacity,
-                    showSpinButtons: true,
-                    min: 0,
-                    max: 1,
-                    step: 0.1,
-                    width: 90,
-                    stylingMode: "filled",
-                    onInitialized: e => { this.stroboscopyOpacityToolbarWidget = e.component; },
-                    onValueChanged: e => { this.setProperty("stroboscopyOpacity", e.value); this.board.markDirty(this); }
-                }).appendTo($p)
-            },
             {
                 text: "Frame step",
                 buildControl: $p => $('<div>').dxNumberBox({
@@ -490,10 +458,7 @@ class BodyShape extends ChildShape {
     }
 
     refreshStroboscopyToolbarControl() {
-        if (this._stroboscopyColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._stroboscopyColorPicker, this.properties.stroboscopyColor);
-        this.stroboscopyIntervalToolbarWidget?.option("value", this.properties.stroboscopyInterval);
-        this.stroboscopyOpacityToolbarWidget?.option("value", this.properties.stroboscopyOpacity);
+        super.refreshStroboscopyToolbarControl();
         this.animationFrameStepToolbarWidget?.option("value", this.properties.animationFrameStep);
     }
 
@@ -617,9 +582,6 @@ class BodyShape extends ChildShape {
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[3].color;
         this.properties.borderColor = this.properties.foregroundColor;
-        this.properties.stroboscopyColor = "transparent";
-        this.properties.stroboscopyInterval = 10;
-        this.properties.stroboscopyOpacity = 0.5;
         this.properties.animationFrameStep = 1;
         this.properties.imageUrl = "";
         this.properties.imageBase64 = "";
@@ -808,91 +770,14 @@ class BodyShape extends ChildShape {
 
     tick() {
         super.tick();
-        this.tickShape();
-        this.tickTrajectory();
-        this.tickStroboscopy();
-        this.board.markDirty(this);
-    }
-
-    tickShape() {
-        const scale = this.getScale();
-        const xCase = this.properties.xTermCase ?? 1;
-        const yCase = this.properties.yTermCase ?? 1;
-        const x = this.resolveTermNumeric(this.properties.xTerm, xCase);
-        this.properties.x = scale.x !== 0 ? x / scale.x : 0;
-        const y = -this.resolveTermNumeric(this.properties.yTerm, yCase);
-        this.properties.y = scale.y !== 0 ? y / scale.y : 0;
         const boardPosition = this.getBoardPosition();
-        if (this.lastBoardHorizontalPosition === boardPosition.x)
-            return;
-        this.flipImageHorizontally = this.lastBoardHorizontalPosition !== null && this.lastBoardHorizontalPosition > boardPosition.x;
-        this.lastBoardHorizontalPosition = boardPosition.x;
-    }
-
-    tickTrajectory() {
-        const lastIteration = this.board.calculator.getLastIteration();
-        this.trajectory.values = this.trajectory.values.slice(0, lastIteration);
-        if (this.trajectory.values.length <= lastIteration) {
-            const position = this.getBoardPosition();
-            this.trajectory.values.push({ x: position.x, y: position.y });
-        }
-        const currentCount = this.trajectory.values.length;
-        if (currentCount !== this.trajectory.lastCount) {
-            this.trajectory.pointsString = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
-            this.trajectory.lastCount = currentCount;
+        if (this.lastBoardHorizontalPosition !== boardPosition.x) {
+            this.flipImageHorizontally = this.lastBoardHorizontalPosition !== null && this.lastBoardHorizontalPosition > boardPosition.x;
+            this.lastBoardHorizontalPosition = boardPosition.x;
         }
     }
 
-    tickStroboscopy() {
-        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
-            this._stroboscopyPositions = [];
-            return;
-        }
-        const lastIteration = this.board.calculator.getLastIteration();
-        if (lastIteration === 0)
-            this._stroboscopyPositions = [];
-        const interval = Math.max(1, this.properties.stroboscopyInterval);
-        const desired = Math.floor(lastIteration / interval);
-        const positions = [];
-        for (let i = 0; i < desired; i++) {
-            const idx = i * interval;
-            const pos = this.trajectory.values[idx] ?? this.getBoardPosition();
-            positions.push(pos);
-        }
-        this._stroboscopyPositions = positions;
-    }
-
-    drawTrajectory() {
-        if (this.properties.trajectoryColor && this.properties.trajectoryColor !== "transparent" && this.properties.trajectoryColor !== "#00000000") {
-            this.trajectory.element.setAttribute("points", this.trajectory.pointsString);
-            this.trajectory.element.setAttribute("stroke", this.properties.trajectoryColor);
-            this.trajectory.element.setAttribute("stroke-width", 1);
-        } else
-            this.trajectory.element.removeAttribute("points");
-    }
-
-    drawStroboscopy() {
-        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
-            while (this.stroboscopy.firstChild)
-                this.stroboscopy.removeChild(this.stroboscopy.firstChild);
-            return;
-        }
-        const positions = this._stroboscopyPositions ?? [];
-        const desiredLength = positions.length;
-        while (this.stroboscopy.children.length > desiredLength)
-            this.stroboscopy.removeChild(this.stroboscopy.lastChild);
-        for (let i = 0; i < desiredLength; i++) {
-            const pos = positions[i];
-            let circle = this.stroboscopy.children[i];
-            if (!circle) {
-                circle = this.board.createSvgElement("circle");
-                this.stroboscopy.appendChild(circle);
-            }
-            circle.setAttribute("cx", pos.x);
-            circle.setAttribute("cy", pos.y);
-            circle.setAttribute("r", this.properties.radius);
-            circle.setAttribute("fill", this.properties.stroboscopyColor);
-            circle.setAttribute("opacity", this.properties.stroboscopyOpacity);
-        }
+    getStroboscopyRadius() {
+        return this.properties.radius;
     }
 }

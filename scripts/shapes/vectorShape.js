@@ -317,6 +317,10 @@ class VectorShape extends ChildShape {
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
         this.trajectory.element.setAttribute("fill", "none");
         element.appendChild(this.trajectory.element);
+        this.stroboscopy = this.board.createSvgElement("g");
+        this.stroboscopy.setAttribute("pointer-events", "none");
+        element.appendChild(this.stroboscopy);
+        this._stroboscopyPositions = [];
         return element;
     }    
 
@@ -382,15 +386,7 @@ class VectorShape extends ChildShape {
             this.line.removeAttribute("marker-end");
         }
         this.drawTrajectory();
-    }
-
-    drawTrajectory () {
-        if (this.properties.trajectoryColor != this.board.theme.getBackgroundColors()[0].color) {
-            this.trajectory.element.setAttribute("points", this.trajectory.pointsString);
-            this.trajectory.element.setAttribute("stroke", this.properties.trajectoryColor);
-            this.trajectory.element.setAttribute("stroke-width", 1);
-        } else
-            this.trajectory.element.removeAttribute("points");
+        this.drawStroboscopy();
     }
 
     getShapeCenterPosition() {
@@ -398,33 +394,52 @@ class VectorShape extends ChildShape {
         return { x: position.x + this.properties.width, y: position.y + this.properties.height };
     }
 
-    getDefaultComponent() {
-        return (this.parent?.properties?.width ?? 150) * 0.2;
+    getTrajectoryPosition() {
+        const position = this.getBoardPosition();
+        return { x: position.x + this.properties.width, y: position.y + this.properties.height, startX: position.x, startY: position.y };
     }
 
-    tick() {
-        super.tick();
-        const xCase = this.properties.xTermCase ?? 1;
-        const yCase = this.properties.yTermCase ?? 1;
-        const newW = this.resolveTermNumeric(this.properties.xTerm, xCase);
-        const newH = this.resolveTermNumeric(this.properties.yTerm, yCase);
-        this.properties.width = Number.isFinite(newW) ? newW : this.getDefaultComponent();
-        this.properties.height = Number.isFinite(newH) ? -newH : -this.getDefaultComponent();
-        const calculator = this.board.calculator;
-        this.trajectory.values = this.trajectory.values.slice(0, calculator.getLastIteration());
-        if (this.trajectory.values.length <= calculator.getLastIteration()) {
-            const position = this.getBoardPosition();
-            this.trajectory.values.push({ x: position.x + this.properties.width, y: position.y + this.properties.height });
+    buildStroboscopyMarker() {
+        const tipType = this.properties.tipType;
+        const lineWidth = this.properties.lineWidth ?? 1;
+        const color = this.properties.stroboscopyColor;
+        const markerId = `${this.getMarkerId()}-stroboscopy`;
+        if (tipType === "none")
+            return "";
+        const size = Math.max(8, lineWidth * 3);
+        const spread = tipType === "arrow" ? size * 0.7 : size * 0.5;
+        const half = spread;
+        const markerWidth = size + lineWidth;
+        const markerHeight = half * 2 + lineWidth;
+        const refX = size + lineWidth / 2;
+        const refY = half + lineWidth / 2;
+        const ox = lineWidth / 2;
+        const oy = lineWidth / 2;
+        if (tipType === "closed")
+            return `<marker id="${markerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse"><polygon points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="${color}" stroke="none"/></marker>`;
+        return `<marker id="${markerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse"><polyline points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="none" stroke="${color}" stroke-width="${lineWidth}" stroke-linejoin="round"/></marker>`;
+    }
+
+    drawStroboscopy() {
+        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+            this.stroboscopy.innerHTML = "";
+            return;
         }
-        if (this.trajectory.values.length < this.trajectory.lastCount) {
-            this.trajectory.pointsString = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
-            this.trajectory.lastCount = this.trajectory.values.length;
-        } else if (this.trajectory.values.length > this.trajectory.lastCount) {
-            const newPoints = this.trajectory.values.slice(this.trajectory.lastCount)
-                .map(v => `${v.x},${v.y}`).join(" ");
-            this.trajectory.pointsString += (this.trajectory.pointsString && newPoints ? " " : "") + newPoints;
-            this.trajectory.lastCount = this.trajectory.values.length;
+        const positions = this._stroboscopyPositions ?? [];
+        const desiredLength = positions.length;
+        const lineWidth = this.properties.lineWidth ?? 1;
+        const color = this.properties.stroboscopyColor;
+        const opacity = this.properties.stroboscopyOpacity;
+        const markerId = `${this.getMarkerId()}-stroboscopy`;
+        const markerHtml = this.buildStroboscopyMarker();
+        const useMarker = this.properties.tipType !== "none" && markerHtml;
+        let html = markerHtml ? `<defs>${markerHtml}</defs>` : "";
+        for (let i = 0; i < desiredLength; i++) {
+            const pos = positions[i];
+            const startX = pos.startX ?? pos.x;
+            const startY = pos.startY ?? pos.y;
+            html += `<line x1="${startX}" y1="${startY}" x2="${pos.x}" y2="${pos.y}" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"${useMarker ? ` marker-end="url(#${markerId})"` : ""}/>`;
         }
-        this.board.markDirty(this);
+        this.stroboscopy.innerHTML = html;
     }
 }

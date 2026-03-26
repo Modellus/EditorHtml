@@ -3,6 +3,102 @@ class ChildShape extends BaseShape {
         super.setDefaults();
         this.properties.parentId = this.parent?.id ?? null;
         this.properties.trajectoryColor = "transparent";
+        this.properties.stroboscopyColor = "transparent";
+        this.properties.stroboscopyInterval = 10;
+        this.properties.stroboscopyOpacity = 0.5;
+    }
+
+    tick() {
+        super.tick();
+        this.tickShape();
+        this.tickTrajectory();
+        this.tickStroboscopy();
+        this.board.markDirty(this);
+    }
+
+    tickShape() {
+        const scale = this.getScale();
+        for (const mapping of this.termsMapping) {
+            const caseNumber = this.properties[mapping.caseProperty] ?? 1;
+            const rawValue = this.resolveTermNumeric(this.properties[mapping.termProperty], caseNumber);
+            const axisScale = scale[mapping.scaleProperty] ?? 1;
+            const value = mapping.isInverted ? -rawValue : rawValue;
+            this.properties[mapping.property] = Number.isFinite(value) ? (axisScale !== 0 ? value / axisScale : 0) : 0;
+        }
+    }
+
+    getTrajectoryPosition() {
+        return this.getBoardPosition();
+    }
+
+    tickTrajectory() {
+        const lastIteration = this.board.calculator.getLastIteration();
+        this.trajectory.values = this.trajectory.values.slice(0, lastIteration);
+        if (this.trajectory.values.length <= lastIteration)
+            this.trajectory.values.push(this.getTrajectoryPosition());
+        const currentCount = this.trajectory.values.length;
+        if (currentCount !== this.trajectory.lastCount) {
+            this.trajectory.pointsString = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
+            this.trajectory.lastCount = currentCount;
+        }
+    }
+
+    tickStroboscopy() {
+        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+            this._stroboscopyPositions = [];
+            return;
+        }
+        const lastIteration = this.board.calculator.getLastIteration();
+        if (lastIteration === 0)
+            this._stroboscopyPositions = [];
+        const interval = Math.max(1, this.properties.stroboscopyInterval);
+        const desired = Math.floor(lastIteration / interval);
+        const positions = [];
+        for (let i = 0; i < desired; i++) {
+            const idx = i * interval;
+            const pos = this.trajectory.values[idx] ?? this.getTrajectoryPosition();
+            positions.push(pos);
+        }
+        this._stroboscopyPositions = positions;
+    }
+
+    drawTrajectory() {
+        if (this.properties.trajectoryColor && this.properties.trajectoryColor !== "transparent" && this.properties.trajectoryColor !== "#00000000") {
+            this.trajectory.element.setAttribute("points", this.trajectory.pointsString);
+            this.trajectory.element.setAttribute("stroke", this.properties.trajectoryColor);
+            this.trajectory.element.setAttribute("stroke-width", 1);
+        } else
+            this.trajectory.element.removeAttribute("points");
+    }
+
+    getStroboscopyRadius() {
+        return 3;
+    }
+
+    drawStroboscopy() {
+        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+            while (this.stroboscopy.firstChild)
+                this.stroboscopy.removeChild(this.stroboscopy.firstChild);
+            return;
+        }
+        const positions = this._stroboscopyPositions ?? [];
+        const desiredLength = positions.length;
+        while (this.stroboscopy.children.length > desiredLength)
+            this.stroboscopy.removeChild(this.stroboscopy.lastChild);
+        const radius = this.getStroboscopyRadius();
+        for (let i = 0; i < desiredLength; i++) {
+            const pos = positions[i];
+            let circle = this.stroboscopy.children[i];
+            if (!circle) {
+                circle = this.board.createSvgElement("circle");
+                this.stroboscopy.appendChild(circle);
+            }
+            circle.setAttribute("cx", pos.x);
+            circle.setAttribute("cy", pos.y);
+            circle.setAttribute("r", radius);
+            circle.setAttribute("fill", this.properties.stroboscopyColor);
+            circle.setAttribute("opacity", this.properties.stroboscopyOpacity);
+        }
     }
 
     wouldCreateCycle(candidate) {
@@ -61,6 +157,8 @@ class ChildShape extends BaseShape {
             return;
         }
         super.setProperty(name, value);
+        if (name === "trajectoryColor" || name === "stroboscopyColor")
+            this.refreshMotionToolbarControl();
     }
 
     reparent(newParentId) {
@@ -147,6 +245,7 @@ class ChildShape extends BaseShape {
 
     createMotionDropDownButton(itemElement) {
         this._trajectoryColorPicker = this.createColorPickerEditor("trajectoryColor");
+        this._stroboscopyColorPicker = this.createColorPickerEditor("stroboscopyColor");
         this._motionDropdownElement = $('<div class="mdl-motion-selector">');
         this._motionDropdownElement.dxDropDownButton({
             showArrowIcon: false,
@@ -189,6 +288,38 @@ class ChildShape extends BaseShape {
     }
 
     populateMotionMenuSections(sections) {
+        sections[0].items.push(
+            {
+                text: "Stroboscopy color",
+                buildControl: $p => $p.append(this._stroboscopyColorPicker)
+            },
+            {
+                text: "Interval",
+                buildControl: $p => $('<div>').dxNumberBox({
+                    value: this.properties.stroboscopyInterval,
+                    showSpinButtons: true,
+                    min: 1,
+                    width: 90,
+                    stylingMode: "filled",
+                    onInitialized: e => { this.stroboscopyIntervalToolbarWidget = e.component; },
+                    onValueChanged: e => { this.setProperty("stroboscopyInterval", e.value); this.board.markDirty(this); }
+                }).appendTo($p)
+            },
+            {
+                text: "Opacity",
+                buildControl: $p => $('<div>').dxNumberBox({
+                    value: this.properties.stroboscopyOpacity,
+                    showSpinButtons: true,
+                    min: 0,
+                    max: 1,
+                    step: 0.1,
+                    width: 90,
+                    stylingMode: "filled",
+                    onInitialized: e => { this.stroboscopyOpacityToolbarWidget = e.component; },
+                    onValueChanged: e => { this.setProperty("stroboscopyOpacity", e.value); this.board.markDirty(this); }
+                }).appendTo($p)
+            }
+        );
     }
 
     refreshMotionToolbarControl() {
@@ -199,6 +330,14 @@ class ChildShape extends BaseShape {
             this.renderMotionButtonTemplate(buttonContentElement);
         if (this._trajectoryColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._trajectoryColorPicker, this.properties.trajectoryColor);
+        this.refreshStroboscopyToolbarControl();
+    }
+
+    refreshStroboscopyToolbarControl() {
+        if (this._stroboscopyColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._stroboscopyColorPicker, this.properties.stroboscopyColor);
+        this.stroboscopyIntervalToolbarWidget?.option("value", this.properties.stroboscopyInterval);
+        this.stroboscopyOpacityToolbarWidget?.option("value", this.properties.stroboscopyOpacity);
     }
 }
 
