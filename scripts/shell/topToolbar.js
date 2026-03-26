@@ -110,6 +110,17 @@ class TopToolbar {
                 {
                     location: "center",
                     widget: "dxButton",
+                    options: {                        icon: "fa-light fa-gauge",
+                        elementAttr: {
+                            id: "gauge-button"
+                        },
+                        onClick: _ => this.shell.commands.addShape("GaugeShape", "Gauge"),
+                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Gauge Tooltip", 280)
+                    }
+                },
+                {
+                    location: "center",
+                    widget: "dxButton",
                     options: {
                         icon: "fa-light fa-input-numeric",
                         elementAttr: {
@@ -166,17 +177,6 @@ class TopToolbar {
                         },
                         onClick: _ => this.shell.commands.addShape("RulerShape", "Ruler"),
                         onInitialized: e => this.shell.createTranslatedTooltip(e, "Ruler Tooltip", 280)
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {                        icon: "fa-light fa-gauge",
-                        elementAttr: {
-                            id: "gauge-button"
-                        },
-                        onClick: _ => this.shell.commands.addShape("GaugeShape", "Gauge"),
-                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Gauge Tooltip", 280)
                     }
                 },
                 {

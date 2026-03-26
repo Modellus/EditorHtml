@@ -56,7 +56,7 @@ class GaugeShape extends BaseShape {
         this.properties.snapToAngleTick = false;
         this.properties.magnitudePrecision = 0;
         this.properties.snapToMagnitudeTick = false;
-        this.properties.backgroundColor = "#FFFFFF";
+        this.properties.backgroundColor = "#f7f7f7";
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[2].color;
         this.properties.borderColor = this.properties.foregroundColor;
     }
@@ -111,6 +111,22 @@ class GaugeShape extends BaseShape {
         this.refreshTermsToolbarControl();
         this.refreshGaugeSettingsToolbarControl();
         super.showContextToolbar();
+    }
+
+    populateShapeColorMenuSections(sections) {
+        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        sections[0].items.push({
+            text: bgLabel,
+            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
+            buildControl: $p => $p.append(this._bgColorPicker)
+        });
+    }
+
+    refreshShapeColorToolbarControl() {
+        super.refreshShapeColorToolbarControl();
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
     }
 
     populateTermsMenuSections(listItems) {
