@@ -439,19 +439,7 @@ class BodyShape extends ChildShape {
     }
 
     renderMotionButtonTemplate(element) {
-        const trajColor = this.properties.trajectoryColor ?? "";
-        const strobeColor = this.properties.stroboscopyColor ?? "";
-        const trajSet = !!trajColor && trajColor !== "transparent" && trajColor !== "#00000000";
-        const strobeSet = !!strobeColor && strobeColor !== "transparent" && strobeColor !== "#00000000";
-        if (trajSet || strobeSet) {
-            const primaryColor = trajSet ? trajColor : "transparent";
-            const secondaryColor = strobeSet ? strobeColor : "transparent";
-            const primaryOpacity = trajSet ? 1 : 0;
-            const secondaryOpacity = strobeSet ? 1 : 0;
-            element.innerHTML = `<i class="fa-duotone fa-arrow-down-big-small fa-rotate-270" style="--fa-primary-color:${primaryColor};--fa-primary-opacity:${primaryOpacity};--fa-secondary-color:${secondaryColor};--fa-secondary-opacity:${secondaryOpacity}"></i>`;
-        } else {
-            element.innerHTML = `<i class="fa-thin fa-arrow-down-big-small fa-rotate-270" style="color:#000"></i>`;
-        }
+        element.innerHTML = `<i class="fa-light fa-scribble"></i>`;
     }
 
     populateMotionMenuSections(sections) {

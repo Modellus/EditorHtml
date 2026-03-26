@@ -142,12 +142,7 @@ class ChildShape extends BaseShape {
     }
 
     renderMotionButtonTemplate(element) {
-        const trajColor = this.properties.trajectoryColor ?? "";
-        const trajSet = !!trajColor && trajColor !== "transparent" && trajColor !== "#00000000";
-        if (trajSet)
-            element.innerHTML = `<i class="fa-duotone fa-arrow-down-big-small fa-rotate-270" style="--fa-primary-color:${trajColor};--fa-primary-opacity:1;--fa-secondary-color:transparent;--fa-secondary-opacity:0"></i>`;
-        else
-            element.innerHTML = `<i class="fa-thin fa-arrow-down-big-small fa-rotate-270" style="color:#000"></i>`;
+        element.innerHTML = `<i class="fa-light fa-scribble"></i>`;
     }
 
     createMotionDropDownButton(itemElement) {
