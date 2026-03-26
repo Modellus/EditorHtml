@@ -781,7 +781,7 @@ class BaseShape {
             buttonTemplate: (data, element) => this.renderShapeColorButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:10000" },
+                wrapperAttr: { style: "z-index:20000" },
                 width: "auto",
                 contentTemplate: contentElement => this.buildShapeMenuContent(contentElement)
             }
@@ -881,7 +881,7 @@ class BaseShape {
             buttonTemplate: (data, element) => this.renderTermsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:10000" },
+                wrapperAttr: { style: "z-index:20000" },
                 width: "auto",
                 contentTemplate: contentElement => this.buildTermsMenuContent(contentElement)
             }

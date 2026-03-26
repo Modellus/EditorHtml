@@ -73,6 +73,18 @@ class BottomToolbar {
                     location: "before"
                 },
                 {
+                    location: "center",
+                    template: () => {
+                        const container = $('<div></div>');
+                        this.createIndependentDropDownButton(container);
+                        return container;
+                    }
+                },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
+            },
+                {
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-play",
@@ -210,6 +222,151 @@ class BottomToolbar {
         this.$playHeadMax = $("#playHeadMaxLabel");
     }
 
+    createIndependentDropDownButton(container) {
+        this._independentDropdownElement = $('<div id="independentDropDown">');
+        this._independentDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            template: (data, element) => {
+                const $span = $('<span>')
+                    .css({
+                        fontFamily: "KaTeX_Math, serif",
+                        fontStyle: "italic",
+                        fontSize: "16px"
+                    })
+                    .text(this.shell.calculator.properties.independent.name);
+                this._independentNameLabel = $span[0];
+                element[0].appendChild($span[0]);
+            },
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-independent-dropdown" },
+                width: "auto",
+                contentTemplate: contentElement => this.buildIndependentMenuContent(contentElement)
+            }
+        });
+        this._independentDropdownElement.appendTo(container);
+    }
+
+    buildIndependentMenuContent(contentElement) {
+        const independent = this.shell.calculator.properties.independent;
+        const listItems = [
+            {
+                text: this.shell.board.translations.get("Independent.Name"),
+                buildControl: $container => {
+                    $('<div>').appendTo($container).dxTextBox({
+                        value: independent.name,
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" },
+                        onValueChanged: e => {
+                            this.shell.setProperty("independent.name", e.value);
+                            this._independentNameLabel.textContent = e.value;
+                        }
+                    });
+                }
+            },
+            {
+                text: this.shell.board.translations.get("Independent.Start"),
+                buildControl: $container => {
+                    $('<div>').dxNumberBox({
+                        value: independent.start,
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" },
+                        onValueChanged: e => this.shell.setProperty("independent.start", e.value)
+                    }).appendTo($container);
+                }
+            },
+            {
+                text: this.shell.board.translations.get("Independent.End"),
+                buildControl: $container => {
+                    $('<div>').dxNumberBox({
+                        value: independent.end,
+                        stylingMode: "filled",
+                        disabled: independent.noLimit,
+                        elementAttr: { class: "mdl-math-input" },
+                        onValueChanged: e => this.shell.setProperty("independent.end", e.value)
+                    }).appendTo($container);
+                    this._endEditor = $container.find(".dx-numberbox").dxNumberBox("instance");
+                }
+            },
+            {
+                text: this.shell.board.translations.get("Independent.Step"),
+                buildControl: $container => {
+                    $('<div>').dxNumberBox({
+                        value: independent.step,
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" },
+                        onValueChanged: e => this.shell.setProperty("independent.step", e.value)
+                    }).appendTo($container);
+                }
+            },
+            {
+                text: "Type",
+                buildControl: $container => {
+                    $('<div>').dxButtonGroup({
+                        items: [
+                            { key: false, icon: "fa-light fa-bracket-square-right", hint: "Limited" },
+                            { key: true,  icon: "fa-light fa-infinity",             hint: "Unlimited" }
+                        ],
+                        keyExpr: "key",
+                        selectedItemKeys: [independent.noLimit],
+                        stylingMode: "outlined",
+                        elementAttr: { class: "mdl-pill-group mdl-small-icon" },
+                        buttonTemplate: (data, container) => {
+                            container[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
+                        },
+                        onContentReady: e => this._initPillButtonGroup(e.element[0]),
+                        onSelectionChanged: e => {
+                            if (e.addedItems.length > 0) {
+                                const noLimit = e.addedItems[0].key;
+                                this.shell.setProperty("independent.noLimit", noLimit);
+                                this._endEditor?.option("disabled", noLimit);
+                            }
+                            this._movePill(e.component.element()[0]);
+                            e.component.repaint();
+                        }
+                    }).appendTo($container);
+                }
+            }
+        ];
+        $(contentElement).empty();
+        $(contentElement).dxScrollView({ height: 350, width: "100%" });
+        const scrollContent = $(contentElement).dxScrollView("instance").content();
+        $('<div>').appendTo(scrollContent).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                if (data.stacked) {
+                    el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
+                    data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
+                } else {
+                    el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                    data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                }
+            }
+        });
+    }
+
+    _initPillButtonGroup(element) {
+        const pill = document.createElement("div");
+        pill.className = "mdl-pill";
+        element.style.position = "relative";
+        element.appendChild(pill);
+        this._movePill(element);
+    }
+
+    _movePill(element) {
+        const pill = element.querySelector(".mdl-pill");
+        if (!pill)
+            return;
+        const selected = element.querySelector(".dx-item-selected .dx-button");
+        if (!selected)
+            return;
+        pill.style.left = selected.offsetLeft + "px";
+        pill.style.width = selected.offsetWidth + "px";
+    }
+
     updatePlayer() {
         const lastIteration = this.shell.calculator.getLastIteration();
         const finalIteration = this.shell.calculator.getFinalIteration();
@@ -231,6 +388,8 @@ class BottomToolbar {
             this.$playHeadMax.html('<i class="fa-light fa-infinity" style="font-size:14px; font-weight:400; padding-top:3px"></i>');
         else
             this.$playHeadMax.text(this.shell.calculator.getEnd().toFixed(Utils.getPrecision(this.shell.calculator.properties.independent.step)));
+        if (this._independentNameLabel)
+            this._independentNameLabel.textContent = this.shell.calculator.properties.independent.name;
     }
 
 }

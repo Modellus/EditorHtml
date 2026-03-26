@@ -42,6 +42,10 @@ svg {
     z-index: 10;
 }
 
+.mdl-independent-dropdown {
+    z-index: 9 !important;
+}
+
 #chat-popup {
     display: flex;
     justify-content: center;

@@ -117,10 +117,10 @@ class ReferentialShape extends BaseShape {
             stylingMode: "text",
             useSelectMode: false,
             hint: "Add shape",
-            buttonTemplate: (data, element) => this.renderAddShapeButtonTemplate(element[0]),
+            template: (data, element) => this.renderAddShapeButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:10000" },
+                wrapperAttr: { style: "z-index:20000" },
                 width: "auto",
                 contentTemplate: contentElement => {
                     $(contentElement).empty();
@@ -158,10 +158,10 @@ class ReferentialShape extends BaseShape {
             stylingMode: "text",
             useSelectMode: false,
             hint: "Settings",
-            buttonTemplate: (data, element) => this.renderSettingsButtonTemplate(element[0]),
+            template: (data, element) => this.renderSettingsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:10000" },
+                wrapperAttr: { style: "z-index:20000" },
                 width: "auto",
                 contentTemplate: contentElement => {
                     $(contentElement).empty();
