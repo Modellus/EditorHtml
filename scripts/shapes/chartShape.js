@@ -110,30 +110,10 @@ class ChartShape extends BaseShape {
             },
             {
                 location: "center",
-                widget: "dxButtonGroup",
-                options: {
-                    stylingMode: "outlined",
-                    elementAttr: { class: "mdl-display-group mdl-small-icon" },
-                    keyExpr: "type",
-                    selectionMode: "multiple",
-                    selectedItemKeys: [...this.properties.chartType],
-                    items: [
-                        { type: "scatter", iconName: "fa-chart-scatter", hint: "Scatter" },
-                        { type: "line", iconName: "fa-chart-line", hint: "Line" },
-                        { type: "area", iconName: "fa-chart-area", hint: "Area" },
-                        { type: "bar", iconName: "fa-chart-column", hint: "Bar" }
-                    ],
-                    buttonTemplate: (data, container) => {
-                        container.html(`<i class="dx-icon fa-light ${data.iconName}" title="${data.hint}"></i>`);
-                    },
-                    onInitialized: e => { this._chartTypeButtonGroupInstance = e.component; },
-                    onSelectionChanged: e => {
-                        const selectedKeys = e.component.option("selectedItemKeys") ?? [];
-                        if (selectedKeys.length === 0)
-                            return;
-                        this.setProperty("chartType", [...selectedKeys]);
-                        e.component.repaint();
-                    }
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createChartTypeDropDownButton(container);
+                    return container;
                 }
             },
             {
@@ -151,6 +131,69 @@ class ChartShape extends BaseShape {
             this.createRemoveToolbarItem()
         );
         return items;
+    }
+
+    createChartTypeDropDownButton(container) {
+        this._chartTypeDropdownElement = $('<div class="mdl-chart-type-selector">');
+        this._chartTypeDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            icon: "fa-light fa-chart-mixed",
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:20000" },
+                width: "auto",
+                contentTemplate: contentElement => this.buildChartTypeMenuContent(contentElement)
+            }
+        });
+        this._chartTypeDropdownElement.appendTo(container);
+    }
+
+    buildChartTypeMenuContent(contentElement) {
+        const chartTypes = [
+            { type: "scatter", iconName: "fa-chart-scatter", text: "Scatter" },
+            { type: "line", iconName: "fa-chart-line", text: "Line" },
+            { type: "area", iconName: "fa-chart-area", text: "Area" },
+            { type: "bar", iconName: "fa-chart-column", text: "Bar" }
+        ];
+        const selectedKeys = new Set(this.properties.chartType ?? []);
+        const listItems = chartTypes.map(chartType => ({
+            text: chartType.text,
+            buildControl: $container => {
+                $('<div>').appendTo($container).dxButtonGroup({
+                    stylingMode: "outlined",
+                    elementAttr: { class: "mdl-display-group mdl-small-icon" },
+                    keyExpr: "key",
+                    selectionMode: "multiple",
+                    selectedItemKeys: selectedKeys.has(chartType.type) ? [chartType.type] : [],
+                    items: [{ key: chartType.type, iconName: chartType.iconName }],
+                    buttonTemplate: (data, buttonContainer) => {
+                        buttonContainer.html(`<i class="dx-icon fa-light ${data.iconName}"></i>`);
+                    },
+                    onSelectionChanged: e => {
+                        const current = new Set(this.properties.chartType ?? []);
+                        if (e.addedItems.length > 0)
+                            current.add(chartType.type);
+                        else if (current.size > 1)
+                            current.delete(chartType.type);
+                        this.setProperty("chartType", [...current]);
+                        e.component.option("selectedItemKeys", current.has(chartType.type) ? [chartType.type] : []);
+                        e.component.repaint();
+                    }
+                });
+            }
+        }));
+        $(contentElement).empty();
+        $(contentElement).dxScrollView({ height: 300, width: "100%" });
+        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                data.buildControl($(el).find(".mdl-dropdown-list-control"));
+            }
+        });
     }
 
     populateTermsMenuSections(listItems) {
@@ -184,7 +227,6 @@ class ChartShape extends BaseShape {
 
     showContextToolbar() {
         this.refreshNameToolbarControl();
-        this._chartTypeButtonGroupInstance?.option("selectedItemKeys", [...(this.properties.chartType ?? [])]);
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.refreshYTermsControl();
         this.refreshShapeColorToolbarControl();
