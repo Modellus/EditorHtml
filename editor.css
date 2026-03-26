@@ -711,6 +711,8 @@ math-field {
 .mdl-parent-selector .dx-button-content i,
 .mdl-shape-color-selector .dx-button-content i,
 .mdl-motion-selector .dx-button-content i,
+.mdl-add-shape-selector .dx-button-content i,
+.mdl-settings-selector .dx-button-content i,
 .mdl-shape-color-btn i {
     font-size: 18px;
 }

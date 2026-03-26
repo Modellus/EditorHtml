@@ -11,15 +11,13 @@ class ImageShape extends ChildShape {
 
     createToolbar() {
         const items = super.createToolbar();
-        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
-        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
         items.push(
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $('<div style="width:180px"></div>');
-                    wrapper.append(this.createNameFormControl());
-                    return wrapper;
+                    const container = $('<div></div>');
+                    this.createShapeColorDropDownButton(container);
+                    return container;
                 }
             },
             {
@@ -62,39 +60,26 @@ class ImageShape extends ChildShape {
                 location: "center",
                 template: () => $('<div class="toolbar-separator">|</div>')
             },
-            {
-                location: "center",
-                template: () => this._fgColorPicker
-            },
-            {
-                location: "center",
-                template: () => this._bgColorPicker
-            },
-            {
-                location: "center",
-                template: () => $('<div class="toolbar-separator">|</div>')
-            },
-            {
-                location: "center",
-                widget: "dxButton",
-                options: {
-                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
-                    stylingMode: "text",
-                    onClick: () => this.remove()
-                }
-            }
+            this.createRemoveToolbarItem()
         );
         return items;
+    }
+
+    populateShapeColorMenuSections(sections) {
+        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        sections[0].items.push({
+            text: bgLabel,
+            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
+            buildControl: $p => $p.append(this._bgColorPicker)
+        });
     }
 
     showContextToolbar() {
         this.refreshNameToolbarControl();
         this._lockAspectRatioSwitchInstance?.option("value", this.properties.lockAspectRatio !== false);
         this._videoStepsBoxInstance?.option("value", this.properties.videoStepsPerFrame);
-        if (this._fgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
-        if (this._bgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        this.refreshShapeColorToolbarControl();
         super.showContextToolbar();
     }
 

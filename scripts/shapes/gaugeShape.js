@@ -63,24 +63,29 @@ class GaugeShape extends BaseShape {
 
     createToolbar() {
         const items = super.createToolbar();
-        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
-        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
-        this._borderColorPicker = this.createColorPickerEditor("borderColor");
+        this._angleTermControl = this.createTermControl("angleTerm", "Angle");
+        this._magnitudeTermControl = this.createTermControl("magnitudeTerm", "Magnitude");
         items.push(
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $('<div style="width:180px"></div>');
-                    wrapper.append(this.createNameFormControl());
-                    return wrapper;
+                    const container = $('<div></div>');
+                    this.createShapeColorDropDownButton(container);
+                    return container;
                 }
             },
             {
                 location: "center",
                 template: () => $('<div class="toolbar-separator">|</div>')
             },
-            this.createTermSelectorToolbarItem("angleTerm", "Angle"),
-            this.createTermSelectorToolbarItem("magnitudeTerm", "Magnitude"),
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createTermsDropDownButton(container);
+                    return container;
+                }
+            },
             {
                 location: "center",
                 widget: "dxNumberBox",
@@ -192,31 +197,7 @@ class GaugeShape extends BaseShape {
                 location: "center",
                 template: () => $('<div class="toolbar-separator">|</div>')
             },
-            {
-                location: "center",
-                template: () => this._fgColorPicker
-            },
-            {
-                location: "center",
-                template: () => this._bgColorPicker
-            },
-            {
-                location: "center",
-                template: () => this._borderColorPicker
-            },
-            {
-                location: "center",
-                template: () => $('<div class="toolbar-separator">|</div>')
-            },
-            {
-                location: "center",
-                widget: "dxButton",
-                options: {
-                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
-                    stylingMode: "text",
-                    onClick: () => this.remove()
-                }
-            }
+            this.createRemoveToolbarItem()
         );
         return items;
     }
@@ -233,13 +214,27 @@ class GaugeShape extends BaseShape {
         this._snapToAngleTickSwitchInstance?.option("value", this.properties.snapToAngleTick === true);
         this._magnitudePrecisionBoxInstance?.option("value", this.properties.magnitudePrecision);
         this._snapToMagnitudeTickSwitchInstance?.option("value", this.properties.snapToMagnitudeTick === true);
-        if (this._fgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
-        if (this._bgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
-        if (this._borderColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+        this.refreshShapeColorToolbarControl();
+        this.refreshTermsToolbarControl();
         super.showContextToolbar();
+    }
+
+    populateTermsMenuSections(listItems) {
+        listItems.push(
+            { text: "Angle", stacked: true, buildControl: $p => $p.append(this._angleTermControl) },
+            { text: "Magnitude", stacked: true, buildControl: $p => $p.append(this._magnitudeTermControl) }
+        );
+    }
+
+    renderTermsButtonTemplate(element) {
+        const angleTerm = this.properties.angleTerm ?? "";
+        const magnitudeTerm = this.properties.magnitudeTerm ?? "";
+        const anglePart = angleTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${angleTerm}</span></span>` : "";
+        const magnitudePart = magnitudeTerm ? `<span class="mdl-name-btn-term"><i style="font-size:6px" class="fa-light fa-x mdl-name-btn-icon"></i><span class="mdl-name-btn-term-text">${magnitudeTerm}</span></span>` : "";
+        if (!anglePart && !magnitudePart)
+            element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
+        else
+            element.innerHTML = `${anglePart}${magnitudePart}`;
     }
 
     createElement() {

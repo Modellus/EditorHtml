@@ -93,16 +93,15 @@ class ChartShape extends BaseShape {
 
     createToolbar() {
         const items = super.createToolbar();
-        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
-        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
         this.normalizeYTerms();
+        this._xTermControl = this.createTermControl("xTerm", "Horizontal", false);
         items.push(
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $('<div style="width:180px"></div>');
-                    wrapper.append(this.createNameFormControl());
-                    return wrapper;
+                    const container = $('<div></div>');
+                    this.createShapeColorDropDownButton(container);
+                    return container;
                 }
             },
             {
@@ -137,42 +136,50 @@ class ChartShape extends BaseShape {
                     }
                 }
             },
-            this.createTermSelectorToolbarItem("xTerm", "Horizontal", false),
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $('<div></div>');
-                    wrapper.append(this.createYTermsControl());
-                    return wrapper;
+                    const container = $('<div></div>');
+                    this.createTermsDropDownButton(container);
+                    return container;
                 }
             },
             {
                 location: "center",
                 template: () => $('<div class="toolbar-separator">|</div>')
             },
-            {
-                location: "center",
-                template: () => this._fgColorPicker
-            },
-            {
-                location: "center",
-                template: () => this._bgColorPicker
-            },
-            {
-                location: "center",
-                template: () => $('<div class="toolbar-separator">|</div>')
-            },
-            {
-                location: "center",
-                widget: "dxButton",
-                options: {
-                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
-                    stylingMode: "text",
-                    onClick: () => this.remove()
-                }
-            }
+            this.createRemoveToolbarItem()
         );
         return items;
+    }
+
+    populateTermsMenuSections(listItems) {
+        listItems.push(
+            { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xTermControl) },
+            { text: "Vertical", stacked: true, buildControl: $p => $p.append(this.createYTermsControl()) }
+        );
+    }
+
+    renderTermsButtonTemplate(element) {
+        const xTerm = this.properties.xTerm ?? "";
+        const yTerms = this.properties.yTerms ?? [];
+        const yCount = yTerms.filter(y => y.term).length;
+        const xPart = xTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` : "";
+        const yPart = yCount > 0 ? `<span class="mdl-name-btn-term"><i style="font-size:6px" class="fa-light fa-x mdl-name-btn-icon"></i><span class="mdl-name-btn-term-text">${yCount}Y</span></span>` : "";
+        if (!xPart && !yPart)
+            element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
+        else
+            element.innerHTML = `${xPart}${yPart}`;
+    }
+
+    populateShapeColorMenuSections(sections) {
+        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        sections[0].items.push({
+            text: bgLabel,
+            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
+            buildControl: $p => $p.append(this._bgColorPicker)
+        });
     }
 
     showContextToolbar() {
@@ -180,10 +187,8 @@ class ChartShape extends BaseShape {
         this._chartTypeButtonGroupInstance?.option("selectedItemKeys", [...(this.properties.chartType ?? [])]);
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.refreshYTermsControl();
-        if (this._fgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
-        if (this._bgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        this.refreshShapeColorToolbarControl();
+        this.refreshTermsToolbarControl();
         super.showContextToolbar();
     }
 

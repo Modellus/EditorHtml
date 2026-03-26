@@ -38,23 +38,28 @@ class SliderShape extends BaseShape {
 
     createToolbar() {
         const items = super.createToolbar();
-        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
-        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
-        this._borderColorPicker = this.createColorPickerEditor("borderColor");
+        this._termControl = this.createTermControl("term", "Value");
         items.push(
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $('<div style="width:180px"></div>');
-                    wrapper.append(this.createNameFormControl());
-                    return wrapper;
+                    const container = $('<div></div>');
+                    this.createShapeColorDropDownButton(container);
+                    return container;
                 }
             },
             {
                 location: "center",
                 template: () => $('<div class="toolbar-separator">|</div>')
             },
-            this.createTermSelectorToolbarItem("term", "Value"),
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createTermsDropDownButton(container);
+                    return container;
+                }
+            },
             {
                 location: "center",
                 widget: "dxSwitch",
@@ -111,31 +116,7 @@ class SliderShape extends BaseShape {
                 location: "center",
                 template: () => $('<div class="toolbar-separator">|</div>')
             },
-            {
-                location: "center",
-                template: () => this._fgColorPicker
-            },
-            {
-                location: "center",
-                template: () => this._bgColorPicker
-            },
-            {
-                location: "center",
-                template: () => this._borderColorPicker
-            },
-            {
-                location: "center",
-                template: () => $('<div class="toolbar-separator">|</div>')
-            },
-            {
-                location: "center",
-                widget: "dxButton",
-                options: {
-                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
-                    stylingMode: "text",
-                    onClick: () => this.remove()
-                }
-            }
+            this.createRemoveToolbarItem()
         );
         return items;
     }
@@ -147,13 +128,20 @@ class SliderShape extends BaseShape {
         this._minimumBoxInstance?.option("value", this.properties.minimum);
         this._maximumBoxInstance?.option("value", this.properties.maximum);
         this._precisionBoxInstance?.option("value", this.properties.precision);
-        if (this._fgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
-        if (this._bgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
-        if (this._borderColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+        this.refreshShapeColorToolbarControl();
+        this.refreshTermsToolbarControl();
         super.showContextToolbar();
+    }
+
+    populateTermsMenuSections(listItems) {
+        listItems.push({ text: "Value", stacked: true, buildControl: $p => $p.append(this._termControl) });
+    }
+
+    renderTermsButtonTemplate(element) {
+        const term = this.properties.term ?? "";
+        element.innerHTML = term
+            ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${term}</span></span>`
+            : `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Value</span></span>`;
     }
 
     setDefaults() {

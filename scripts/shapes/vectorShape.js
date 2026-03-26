@@ -74,32 +74,16 @@ class VectorShape extends ChildShape {
 
     createToolbar() {
         const items = super.createToolbar();
-        this._trajectoryColorPicker = this.createColorPickerEditor("trajectoryColor");
         const formAdapter = { updateData: (field, value) => this.setProperty(field, value) };
-        const xDisplayMode = this.getTermDisplayModeProperty("xTerm");
-        const yDisplayMode = this.getTermDisplayModeProperty("yTerm");
-        const xDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "xTerm", "xTermCase", false, xDisplayMode, true);
-        this.termFormControls["xTerm"] = { termControl: xDescriptor.termControl };
-        const yDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "yTerm", "yTermCase", false, yDisplayMode, true);
-        this.termFormControls["yTerm"] = { termControl: yDescriptor.termControl };
+        const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
+        this._xDescriptor = xDescriptor;
+        this._yDescriptor = yDescriptor;
         items.push(
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $('<div style="width:180px"></div>');
-                    wrapper.append(this.createNameFormControl());
-                    return wrapper;
-                }
-            },
-            {
-                location: "center",
-                template: () => $(`<div class="toolbar-separator">|</div>`)
-            },
-            {
-                location: "center",
-                template: () => {
                     const container = $('<div></div>');
-                    this.createParentDropDownButton(container);
+                    this.createShapeColorDropDownButton(container);
                     return container;
                 }
             },
@@ -111,7 +95,7 @@ class VectorShape extends ChildShape {
                 location: "center",
                 template: () => {
                     const container = $('<div></div>');
-                    this.createShapeColorDropDownButton(container);
+                    this.createParentDropDownButton(container);
                     return container;
                 }
             },
@@ -167,42 +151,48 @@ class VectorShape extends ChildShape {
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $(`<div class="vector-term-toolbar-item"><span class="vector-term-toolbar-label">H</span></div>`);
-                    wrapper.append(xDescriptor.control);
-                    return wrapper;
+                    const container = $('<div></div>');
+                    this.createTermsDropDownButton(container);
+                    return container;
                 }
+            },
+            {
+                location: "center",
+                template: () => $(`<div class="toolbar-separator">|</div>`)
             },
             {
                 location: "center",
                 template: () => {
-                    const wrapper = $(`<div class="vector-term-toolbar-item"><span class="vector-term-toolbar-label">V</span></div>`);
-                    wrapper.append(yDescriptor.control);
-                    return wrapper;
+                    const container = $('<div></div>');
+                    this.createMotionDropDownButton(container);
+                    return container;
                 }
             },
             {
                 location: "center",
                 template: () => $(`<div class="toolbar-separator">|</div>`)
             },
-            {
-                location: "center",
-                template: () => this._trajectoryColorPicker
-            },
-            {
-                location: "center",
-                template: () => $(`<div class="toolbar-separator">|</div>`)
-            },
-            {
-                location: "center",
-                widget: "dxButton",
-                options: {
-                    template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
-                    stylingMode: "text",
-                    onClick: () => this.remove()
-                }
-            }
+            this.createRemoveToolbarItem()
         );
         return items;
+    }
+
+    populateTermsMenuSections(listItems) {
+        listItems.push(
+            { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
+            { text: "Vertical", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) }
+        );
+    }
+
+    renderTermsButtonTemplate(element) {
+        const xTerm = this.properties.xTerm ?? "";
+        const yTerm = this.properties.yTerm ?? "";
+        const xPart = xTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` : "";
+        const yPart = yTerm ? `<span class="mdl-name-btn-term"><i style="font-size:6px" class="fa-light fa-x mdl-name-btn-icon"></i><span class="mdl-name-btn-term-text">${yTerm}</span></span>` : "";
+        if (!xPart && !yPart)
+            element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
+        else
+            element.innerHTML = `${xPart}${yPart}`;
     }
 
     positionContextToolbar() {
@@ -241,8 +231,8 @@ class VectorShape extends ChildShape {
         if (this._lineWidthControl)
             this._lineWidthControl.option("value", this.properties.lineWidth);
         this.refreshShapeColorToolbarControl();
-        if (this._trajectoryColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._trajectoryColorPicker, this.properties.trajectoryColor);
+        this.refreshMotionToolbarControl();
+        this.refreshTermsToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();
     }

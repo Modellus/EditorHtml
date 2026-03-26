@@ -1,22 +1,8 @@
 class ChildShape extends BaseShape {
-    static shapeIcons = {
-        BodyShape: "fa-light fa-circle",
-        VectorShape: "fa-light fa-arrow-right-long",
-        ChartShape: "fa-light fa-chart-line",
-        TableShape: "fa-light fa-table",
-        SliderShape: "fa-light fa-slider",
-        ValueShape: "fa-light fa-input-numeric",
-        ImageShape: "fa-light fa-image",
-        ExpressionShape: "fa-light fa-function",
-        TextShape: "fa-light fa-quotes",
-        RulerShape: "fa-light fa-ruler",
-        ProtractorShape: "fa-light fa-angle",
-        ReferentialShape: "fa-light fa-shapes"
-    };
-
     setDefaults() {
         super.setDefaults();
         this.properties.parentId = this.parent?.id ?? null;
+        this.properties.trajectoryColor = "transparent";
     }
 
     wouldCreateCycle(candidate) {
@@ -45,7 +31,7 @@ class ChildShape extends BaseShape {
         return {
             id: shape.id,
             text: shape.properties.name ?? "",
-            icon: ChildShape.shapeIcons[shape.constructor.name] ?? "fa-light fa-shapes",
+            icon: BaseShape.shapeIcons[shape.constructor.name] ?? "fa-light fa-shapes",
             color: shape.properties.foregroundColor ?? null,
             characterImage,
             expanded: true,
@@ -96,7 +82,7 @@ class ChildShape extends BaseShape {
     renderParentButtonTemplate(element) {
         const parentShape = this.parent ?? this.getReferential();
         const name = parentShape?.properties?.name ?? "";
-        const icon = (ChildShape.shapeIcons[parentShape?.constructor?.name] ?? "fa-light fa-shapes").replace("fa-light", "fa-solid");
+        const icon = (BaseShape.shapeIcons[parentShape?.constructor?.name] ?? "fa-light fa-shapes").replace("fa-light", "fa-solid");
         const color = parentShape?.properties?.foregroundColor ?? "";
         const colorStyle = color ? `color:${color}` : "";
         element.innerHTML = `<i class="${icon}" title="${name}" style="${colorStyle}"></i>`;
@@ -157,99 +143,69 @@ class ChildShape extends BaseShape {
             this.renderParentButtonTemplate(buttonContentElement);
     }
 
-    renderShapeColorButtonTemplate(element) {
-        const icon = (ChildShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes").replace("fa-light", "fa-solid");
-        const fgColor = this.properties.foregroundColor ?? "";
-        const borderColor = this.properties.borderColor ?? "";
-        const fgStyle = fgColor ? `color:${fgColor}` : "";
-        const hasBorder = borderColor && borderColor !== "transparent";
-        const borderStyle = hasBorder ? `border:1px solid ${borderColor}` : "";
-        element.innerHTML = `<span class="mdl-shape-color-btn" style="${borderStyle}"><i class="${icon}" style="${fgStyle}"></i></span>`;
+    renderMotionButtonTemplate(element) {
+        const trajColor = this.properties.trajectoryColor ?? "";
+        const trajSet = !!trajColor && trajColor !== "transparent" && trajColor !== "#00000000";
+        if (trajSet)
+            element.innerHTML = `<i class="fa-duotone fa-arrow-down-big-small fa-rotate-270" style="--fa-primary-color:${trajColor};--fa-primary-opacity:1;--fa-secondary-color:transparent;--fa-secondary-opacity:0"></i>`;
+        else
+            element.innerHTML = `<i class="fa-thin fa-arrow-down-big-small fa-rotate-270" style="color:#000"></i>`;
     }
 
-    createShapeColorDropDownButton(itemElement) {
-        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
-        this._borderColorPicker = this.createColorPickerEditor("borderColor");
-        this._shapeColorDropdownElement = $('<div class="mdl-shape-color-selector">');
-        this._shapeColorDropdownElement.dxDropDownButton({
+    createMotionDropDownButton(itemElement) {
+        this._trajectoryColorPicker = this.createColorPickerEditor("trajectoryColor");
+        this._motionDropdownElement = $('<div class="mdl-motion-selector">');
+        this._motionDropdownElement.dxDropDownButton({
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Name",
-            buttonTemplate: (data, element) => this.renderShapeColorButtonTemplate(element[0]),
+            hint: "Trajectory",
+            buttonTemplate: (data, element) => this.renderMotionButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: { style: "z-index:10000" },
                 width: "auto",
-                contentTemplate: contentElement => this.buildShapeMenuContent(contentElement)
-            }
-        });
-        this._shapeColorDropdownElement.appendTo(itemElement);
-    }
-
-    menuIconHtml(iconName, isSet) {
-        const weight = isSet ? "fa-solid" : "fa-light";
-        return `<i class="${weight} ${iconName} mdl-menu-icon"></i>`;
-    }
-
-    buildShapeMenuContent(contentElement) {
-        const fgLabel = this.board.translations.get("Foreground Color") ?? "Foreground";
-        const borderLabel = this.board.translations.get("Border Color") ?? "Border";
-        const fgColor = this.properties.foregroundColor ?? "";
-        const borderColor = this.properties.borderColor ?? "";
-        const hasBorder = borderColor && borderColor !== "transparent";
-        const shapeIconName = (ChildShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes").split(" ")[1];
-        const sections = [
-            {
-                text: "Colors",
-                iconHtml: this.menuIconHtml(shapeIconName, !!fgColor),
-                items: [
-                    {
-                        text: fgLabel,
-                        iconHtml: this.menuIconHtml("fa-droplet", !!fgColor),
-                        buildControl: $p => $p.append(this._fgColorPicker)
-                    },
-                    {
-                        text: borderLabel,
-                        iconHtml: this.menuIconHtml("fa-square", !!hasBorder),
-                        buildControl: $p => $p.append(this._borderColorPicker)
-                    }
-                ]
-            }
-        ];
-        this.populateShapeColorMenuSections(sections);
-        const listItems = sections.flatMap(section => section.items);
-        $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 300, width: "100%" });
-        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
-            dataSource: listItems,
-            scrollingEnabled: false,
-            itemTemplate: (data, _, el) => {
-                if (data.stacked) {
-                    el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
-                    data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
-                } else {
-                    el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
-                    data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                contentTemplate: contentElement => {
+                    const sections = [
+                        {
+                            text: "Motion",
+                            items: [
+                                {
+                                    text: "Trajectory color",
+                                    buildControl: $p => $p.append(this._trajectoryColorPicker)
+                                }
+                            ]
+                        }
+                    ];
+                    this.populateMotionMenuSections(sections);
+                    const listItems = sections.flatMap(section => section.items);
+                    $(contentElement).empty();
+                    $(contentElement).dxScrollView({ height: 300, width: "100%" });
+                    $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
+                        dataSource: listItems,
+                        scrollingEnabled: false,
+                        itemTemplate: (data, _, el) => {
+                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                            data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                        }
+                    });
                 }
             }
         });
+        this._motionDropdownElement.appendTo(itemElement);
     }
 
-    populateShapeColorMenuSections(sections) {
+    populateMotionMenuSections(sections) {
     }
 
-    refreshShapeColorToolbarControl() {
-        if (!this._shapeColorDropdownElement)
+    refreshMotionToolbarControl() {
+        if (!this._motionDropdownElement)
             return;
-        const buttonContentElement = this._shapeColorDropdownElement.find(".dx-button-content")[0];
+        const buttonContentElement = this._motionDropdownElement.find(".dx-button-content")[0];
         if (buttonContentElement)
-            this.renderShapeColorButtonTemplate(buttonContentElement);
-        if (this._fgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
-        if (this._borderColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+            this.renderMotionButtonTemplate(buttonContentElement);
+        if (this._trajectoryColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._trajectoryColorPicker, this.properties.trajectoryColor);
     }
-
 }
 

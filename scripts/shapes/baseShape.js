@@ -2,6 +2,21 @@ class BaseShape {
     
     static embeddedFontStyles = "";
     static embeddedMathStyles = "";
+    static shapeIcons = {
+        BodyShape: "fa-light fa-circle",
+        VectorShape: "fa-light fa-arrow-right-long",
+        ChartShape: "fa-light fa-chart-line",
+        TableShape: "fa-light fa-table",
+        SliderShape: "fa-light fa-slider",
+        ValueShape: "fa-light fa-input-numeric",
+        ImageShape: "fa-light fa-image",
+        ExpressionShape: "fa-light fa-function",
+        TextShape: "fa-light fa-quotes",
+        RulerShape: "fa-light fa-ruler",
+        ProtractorShape: "fa-light fa-angle",
+        ReferentialShape: "fa-light fa-shapes",
+        GaugeShape: "fa-light fa-gauge"
+    };
 
     static setup() {
         BaseShape.loadEmbeddedFonts();
@@ -608,6 +623,19 @@ class BaseShape {
         };
     }
 
+    createTermControl(termProperty, title, showVisibilityToggle = true) {
+        const caseProperty = `${termProperty}Case`;
+        const displayModeProperty = this.getTermDisplayModeProperty(termProperty);
+        if (this.properties[caseProperty] == null)
+            this.properties[caseProperty] = 1;
+        if (this.properties[displayModeProperty] == null)
+            this.properties[displayModeProperty] = "none";
+        if (!this.termDisplayEntries.some(entry => entry.term === termProperty))
+            this.termDisplayEntries.push({ term: termProperty, caseProperty, title });
+        const mockFormInstance = { updateData: (field, value) => this.setProperty(field, value) };
+        return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, false, displayModeProperty, showVisibilityToggle);
+    }
+
     enterEditMode() {
         return false;
     }
@@ -728,6 +756,183 @@ class BaseShape {
         this._nameTextBoxInstance?.option("value", this.properties.name);
         if (this._nameColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._nameColorPicker, this.properties.nameColor);
+    }
+
+    renderShapeColorButtonTemplate(element) {
+        const name = this.properties.name ?? "";
+        const icon = (BaseShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes").replace("fa-light", "fa-solid");
+        const fgColor = this.properties.foregroundColor ?? "";
+        const borderColor = this.properties.borderColor ?? "";
+        const fgStyle = fgColor ? `color:${fgColor}` : "";
+        const hasBorder = borderColor && borderColor !== "transparent";
+        const borderStyle = hasBorder ? `border:1px solid ${borderColor}` : "";
+        element.innerHTML = `<span class="mdl-shape-color-btn" style="${borderStyle}"><i class="${icon}" style="${fgStyle}"></i></span><span>${name}</span>`;
+    }
+
+    createShapeColorDropDownButton(itemElement) {
+        this._fgColorPicker = this.createColorPickerEditor("foregroundColor");
+        this._borderColorPicker = this.createColorPickerEditor("borderColor");
+        this._shapeColorDropdownElement = $('<div class="mdl-shape-color-selector">');
+        this._shapeColorDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            hint: "Name",
+            buttonTemplate: (data, element) => this.renderShapeColorButtonTemplate(element[0]),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:10000" },
+                width: "auto",
+                contentTemplate: contentElement => this.buildShapeMenuContent(contentElement)
+            }
+        });
+        this._shapeColorDropdownElement.appendTo(itemElement);
+    }
+
+    menuIconHtml(iconName, isSet) {
+        const weight = isSet ? "fa-solid" : "fa-light";
+        return `<i class="${weight} ${iconName} mdl-menu-icon"></i>`;
+    }
+
+    buildShapeMenuContent(contentElement) {
+        const fgLabel = this.board.translations.get("Foreground Color") ?? "Foreground";
+        const borderLabel = this.board.translations.get("Border Color") ?? "Border";
+        const fgColor = this.properties.foregroundColor ?? "";
+        const borderColor = this.properties.borderColor ?? "";
+        const hasBorder = borderColor && borderColor !== "transparent";
+        const shapeIconName = (BaseShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes").split(" ")[1];
+        const sections = [
+            {
+                text: "Colors",
+                iconHtml: this.menuIconHtml(shapeIconName, !!fgColor),
+                items: [
+                    {
+                        text: "Name",
+                        stacked: true,
+                        buildControl: $p => $p.append(this.createNameFormControl())
+                    },
+                    {
+                        text: fgLabel,
+                        iconHtml: this.menuIconHtml("fa-droplet", !!fgColor),
+                        buildControl: $p => $p.append(this._fgColorPicker)
+                    },
+                    {
+                        text: borderLabel,
+                        iconHtml: this.menuIconHtml("fa-square", !!hasBorder),
+                        buildControl: $p => $p.append(this._borderColorPicker)
+                    }
+                ]
+            }
+        ];
+        this.populateShapeColorMenuSections(sections);
+        const listItems = sections.flatMap(section => section.items);
+        $(contentElement).empty();
+        $(contentElement).dxScrollView({ height: 300, width: "100%" });
+        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                if (data.stacked) {
+                    el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
+                    data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
+                } else {
+                    el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                    data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                }
+            }
+        });
+    }
+
+    populateShapeColorMenuSections(sections) {
+    }
+
+    refreshShapeColorToolbarControl() {
+        if (!this._shapeColorDropdownElement)
+            return;
+        const buttonContentElement = this._shapeColorDropdownElement.find(".dx-button-content")[0];
+        if (buttonContentElement)
+            this.renderShapeColorButtonTemplate(buttonContentElement);
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._borderColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+    }
+
+    createRemoveToolbarItem() {
+        return {
+            location: "center",
+            widget: "dxButton",
+            options: {
+                hint: "Remove",
+                template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+                stylingMode: "text",
+                onClick: () => this.remove()
+            }
+        };
+    }
+
+    createTermsDropDownButton(itemElement) {
+        this._termsDropdownElement = $('<div class="mdl-terms-selector">');
+        this._termsDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            hint: "Terms",
+            buttonTemplate: (data, element) => this.renderTermsButtonTemplate(element[0]),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:10000" },
+                width: "auto",
+                contentTemplate: contentElement => this.buildTermsMenuContent(contentElement)
+            }
+        });
+        this._termsDropdownElement.appendTo(itemElement);
+    }
+
+    buildTermsMenuContent(contentElement) {
+        const listItems = [];
+        this.populateTermsMenuSections(listItems);
+        $(contentElement).empty();
+        $(contentElement).dxScrollView({ height: 300, width: "100%" });
+        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                if (data.stacked) {
+                    el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
+                    data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
+                } else if (data.parentSelector) {
+                    data.buildControl($(el));
+                } else {
+                    el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                    data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                }
+            }
+        });
+    }
+
+    populateTermsMenuSections(listItems) {
+    }
+
+    renderTermsButtonTemplate(element) {
+    }
+
+    refreshTermsToolbarControl() {
+        if (!this._termsDropdownElement)
+            return;
+        const buttonContentElement = this._termsDropdownElement.find(".dx-button-content")[0];
+        if (buttonContentElement)
+            this.renderTermsButtonTemplate(buttonContentElement);
+    }
+
+    createTermPairFormControls(formAdapter) {
+        const xDisplayMode = this.getTermDisplayModeProperty("xTerm");
+        const yDisplayMode = this.getTermDisplayModeProperty("yTerm");
+        const xDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "xTerm", "xTermCase", false, xDisplayMode, true);
+        this.termFormControls["xTerm"] = { termControl: xDescriptor.termControl };
+        const yDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "yTerm", "yTermCase", false, yDisplayMode, true);
+        this.termFormControls["yTerm"] = { termControl: yDescriptor.termControl };
+        return { xDescriptor, yDescriptor };
     }
 
     delta(property, delta) {
