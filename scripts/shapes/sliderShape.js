@@ -62,54 +62,10 @@ class SliderShape extends BaseShape {
             },
             {
                 location: "center",
-                widget: "dxSwitch",
-                options: {
-                    value: this.properties.autoScale !== false,
-                    hint: "Auto scale",
-                    onInitialized: e => { this._autoScaleSwitchInstance = e.component; },
-                    onValueChanged: e => {
-                        this.setProperty("autoScale", e.value);
-                    }
-                }
-            },
-            {
-                location: "center",
-                widget: "dxNumberBox",
-                options: Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                    value: this.properties.minimum,
-                    hint: "Minimum",
-                    onInitialized: e => { this._minimumBoxInstance = e.component; },
-                    onValueChanged: e => {
-                        this.setProperty("minimum", e.value);
-                    }
-                })
-            },
-            {
-                location: "center",
-                widget: "dxNumberBox",
-                options: Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                    value: this.properties.maximum,
-                    hint: "Maximum",
-                    onInitialized: e => { this._maximumBoxInstance = e.component; },
-                    onValueChanged: e => {
-                        this.setProperty("maximum", e.value);
-                    }
-                })
-            },
-            {
-                location: "center",
-                widget: "dxNumberBox",
-                options: {
-                    value: this.properties.precision,
-                    hint: "Precision",
-                    min: 0,
-                    step: 0.1,
-                    showSpinButtons: true,
-                    stylingMode: "filled",
-                    onInitialized: e => { this._precisionBoxInstance = e.component; },
-                    onValueChanged: e => {
-                        this.setProperty("precision", e.value);
-                    }
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createScaleDropDownButton(container);
+                    return container;
                 }
             },
             {
@@ -124,10 +80,6 @@ class SliderShape extends BaseShape {
     showContextToolbar() {
         this.refreshNameToolbarControl();
         this.termFormControls["term"]?.termControl?.refresh();
-        this._autoScaleSwitchInstance?.option("value", this.properties.autoScale !== false);
-        this._minimumBoxInstance?.option("value", this.properties.minimum);
-        this._maximumBoxInstance?.option("value", this.properties.maximum);
-        this._precisionBoxInstance?.option("value", this.properties.precision);
         this.refreshShapeColorToolbarControl();
         this.refreshTermsToolbarControl();
         super.showContextToolbar();
@@ -142,6 +94,81 @@ class SliderShape extends BaseShape {
         element.innerHTML = term
             ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${term}</span></span>`
             : `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Value</span></span>`;
+    }
+
+    createScaleDropDownButton(container) {
+        this._scaleDropdownElement = $('<div>');
+        this._scaleDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            icon: "fa-light fa-ruler-vertical",
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:20000" },
+                width: "auto",
+                contentTemplate: contentElement => this.buildScaleMenuContent(contentElement)
+            }
+        });
+        this._scaleDropdownElement.appendTo(container);
+    }
+
+    buildScaleMenuContent(contentElement) {
+        const listItems = [
+            {
+                text: "Auto Scale",
+                buildControl: $container => {
+                    $('<div>').appendTo($container).dxSwitch({
+                        value: this.properties.autoScale !== false,
+                        onValueChanged: e => {
+                            this.setProperty("autoScale", e.value);
+                        }
+                    });
+                }
+            },
+            {
+                text: "Minimum",
+                buildControl: $container => {
+                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                        value: this.properties.minimum,
+                        onValueChanged: e => this.setProperty("minimum", e.value)
+                    })).appendTo($container);
+                }
+            },
+            {
+                text: "Maximum",
+                buildControl: $container => {
+                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                        value: this.properties.maximum,
+                        onValueChanged: e => this.setProperty("maximum", e.value)
+                    })).appendTo($container);
+                }
+            },
+            {
+                text: "Precision",
+                buildControl: $container => {
+                    $('<div>').dxNumberBox({
+                        value: this.properties.precision,
+                        min: 0,
+                        step: 0.1,
+                        showSpinButtons: true,
+                        stylingMode: "filled",
+                        onValueChanged: e => this.setProperty("precision", e.value)
+                    }).appendTo($container);
+                }
+            }
+        ];
+        $(contentElement).empty();
+        $(contentElement).dxScrollView({ height: 300, width: "100%" });
+        const scrollContent = $(contentElement).dxScrollView("instance").content();
+        $('<div>').appendTo(scrollContent).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                data.buildControl($(el).find(".mdl-dropdown-list-control"));
+            }
+        });
     }
 
     setDefaults() {
