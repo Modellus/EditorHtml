@@ -26,34 +26,10 @@ class ImageShape extends ChildShape {
             },
             {
                 location: "center",
-                template: () => this.createImageDropZoneEditor()
-            },
-            {
-                location: "center",
-                widget: "dxSwitch",
-                options: {
-                    value: this.properties.lockAspectRatio !== false,
-                    hint: "Keep Proportions",
-                    onInitialized: e => { this._lockAspectRatioSwitchInstance = e.component; },
-                    onValueChanged: e => {
-                        this.setProperty("lockAspectRatio", e.value);
-                    }
-                }
-            },
-            {
-                location: "center",
-                widget: "dxNumberBox",
-                options: {
-                    value: this.properties.videoStepsPerFrame,
-                    hint: "Iterations/Frame",
-                    showSpinButtons: true,
-                    min: 1,
-                    step: 1,
-                    stylingMode: "filled",
-                    onInitialized: e => { this._videoStepsBoxInstance = e.component; },
-                    onValueChanged: e => {
-                        this.setProperty("videoStepsPerFrame", e.value);
-                    }
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createImageSettingsDropDownButton(container);
+                    return container;
                 }
             },
             {
@@ -72,6 +48,73 @@ class ImageShape extends ChildShape {
             text: bgLabel,
             iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
             buildControl: $p => $p.append(this._bgColorPicker)
+        });
+    }
+
+    createImageSettingsDropDownButton(container) {
+        this._imageSettingsDropdownElement = $('<div class="mdl-image-settings-selector">');
+        this._imageSettingsDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            icon: "fa-light fa-image",
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:20000" },
+                width: "auto",
+                contentTemplate: contentElement => this.buildImageSettingsMenuContent(contentElement)
+            }
+        });
+        this._imageSettingsDropdownElement.appendTo(container);
+    }
+
+    buildImageSettingsMenuContent(contentElement) {
+        const listItems = [
+            {
+                text: "Image",
+                stacked: true,
+                buildControl: $container => $container.append(this.createImageDropZoneEditor())
+            },
+            {
+                text: "Keep Proportions",
+                buildControl: $container => {
+                    $('<div>').appendTo($container).dxSwitch({
+                        value: this.properties.lockAspectRatio !== false,
+                        onInitialized: e => { this._lockAspectRatioSwitchInstance = e.component; },
+                        onValueChanged: e => this.setProperty("lockAspectRatio", e.value)
+                    });
+                }
+            },
+            {
+                text: "Iterations/Frame",
+                buildControl: $container => {
+                    $('<div>').appendTo($container).dxNumberBox({
+                        value: this.properties.videoStepsPerFrame,
+                        showSpinButtons: true,
+                        min: 1,
+                        step: 1,
+                        stylingMode: "filled",
+                        onInitialized: e => { this._videoStepsBoxInstance = e.component; },
+                        onValueChanged: e => this.setProperty("videoStepsPerFrame", e.value)
+                    });
+                }
+            }
+        ];
+        $(contentElement).empty();
+        $(contentElement).dxScrollView({ height: 350, width: "100%" });
+        const scrollContent = $(contentElement).dxScrollView("instance").content();
+        $('<div>').appendTo(scrollContent).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                if (data.stacked) {
+                    el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
+                    data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
+                } else {
+                    el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                    data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                }
+            }
         });
     }
 
