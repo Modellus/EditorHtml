@@ -201,8 +201,8 @@ class ChartShape extends BaseShape {
         this.properties.width = 200;
         this.properties.height = 200;
         this.properties.chartType = ["line"];
-        this.properties.xTerm = null;
-        this.properties.yTerms = [{ term: "", case: 1, color: "", showLabel: false }];
+        this.properties.xTerm = this.board.calculator.properties.independent.name;
+        this.properties.yTerms = [{ term: this.board.calculator.getDefaultTerm(), case: 1, color: "", showLabel: false }];
     }
 
     getChartControlOptions() {

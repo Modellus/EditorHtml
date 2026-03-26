@@ -152,7 +152,7 @@ class SliderShape extends BaseShape {
         this.properties.y = center.y - 125;
         this.properties.width = 70;
         this.properties.height = 250;
-        this.properties.term = null;
+        this.properties.term = this.board.calculator.getDefaultTerm();
         this.properties.value = 0;
         this.properties.autoScale = true;
         this.properties.minimum = 0;

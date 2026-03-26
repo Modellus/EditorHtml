@@ -82,7 +82,11 @@ class TableShape extends BaseShape {
         this.properties.y = center.y - 100;
         this.properties.width = 200;
         this.properties.height = 200;
-        this.properties.columns = [{ term: "", case: 1, color: "transparent" }];
+        const defaultTerm = this.board.calculator.getDefaultTerm();
+        this.properties.columns = [
+            { term: this.board.calculator.properties.independent.name, case: 1, color: "transparent" },
+            { term: defaultTerm, case: 1, color: "transparent" }
+        ];
     }
 
     createElement() {

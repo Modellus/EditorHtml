@@ -44,9 +44,9 @@ class GaugeShape extends BaseShape {
         this.properties.y = center.y - 90;
         this.properties.width = 180;
         this.properties.height = 180;
-        this.properties.angleTerm = null;
+        this.properties.angleTerm = this.board.calculator.properties.independent.name;
         this.properties.angleValue = 0;
-        this.properties.magnitudeTerm = null;
+        this.properties.magnitudeTerm = this.board.calculator.getDefaultTerm();
         this.properties.magnitudeValue = 0;
         this.properties.startAngle = 225;
         this.properties.endAngle = -45;

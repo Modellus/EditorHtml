@@ -83,7 +83,7 @@ class ValueShape extends BaseShape {
         this.properties.y = center.y - 20;
         this.properties.width = 180;
         this.properties.height = 40;
-        this.properties.term = null;
+        this.properties.term = this.board.calculator.getDefaultTerm();
         this.properties.termCase = 1;
         this.properties.backgroundColor = "#FFFFFF";
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[2].color;

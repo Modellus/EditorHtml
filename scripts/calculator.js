@@ -316,6 +316,41 @@ class Calculator extends EventTarget {
     isTerm(name = "") {
         return this.system.terms[name] !== undefined;
     }
+
+    getTermsByType() {
+        const independentName = this.properties.independent.name;
+        const iterationName = this.properties.iterationTerm;
+        const derivatives = [];
+        const functions = [];
+        const parameters = [];
+        const termNames = this.getTermsNames();
+        for (let i = 0; i < termNames.length; i++) {
+            const name = termNames[i];
+            if (name === independentName || name === iterationName)
+                continue;
+            const term = this.system.getTerm(name);
+            if (!term)
+                continue;
+            if (term.type === Modellus.TermType.DIFFERENTIAL)
+                derivatives.push(name);
+            else if (term.type === Modellus.TermType.FUNCTION)
+                functions.push(name);
+            else if (term.type === Modellus.TermType.PARAMETER)
+                parameters.push(name);
+        }
+        return { derivatives, functions, parameters };
+    }
+
+    getDefaultTerm() {
+        const { derivatives, functions, parameters } = this.getTermsByType();
+        if (derivatives.length > 0)
+            return derivatives[0];
+        if (functions.length > 0)
+            return functions[0];
+        if (parameters.length > 0)
+            return parameters[0];
+        return this.properties.independent.name;
+    }
 }
 
 if (typeof module !== "undefined" && module.exports)
