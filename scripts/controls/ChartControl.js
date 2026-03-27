@@ -703,13 +703,14 @@ class ChartControl {
             this.renderBarSeries(layout, xScale, yScale);
             return;
         }
+        const areaBaseY = Math.min(Math.max(yScale(0), layout.plotTop), layout.plotBottom);
         for (let seriesIndex = 0; seriesIndex < this.options.series.length; seriesIndex++) {
             const series = this.options.series[seriesIndex];
             const points = this.getSeriesPoints(series, xScale, yScale);
             if (points.length === 0)
                 continue;
             if (chartTypes.includes("area"))
-                this.renderAreaSeries(points, series.color, layout.plotBottom);
+                this.renderAreaSeries(points, series.color, areaBaseY);
             else if (chartTypes.includes("line"))
                 this.renderLineSeries(points, series.color);
             if (chartTypes.includes("scatter"))
