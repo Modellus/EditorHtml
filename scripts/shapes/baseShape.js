@@ -644,6 +644,8 @@ class BaseShape {
         const toolbarItems = this.createToolbar();
         if (!toolbarItems || !toolbarItems.length || !window.DevExpress?.ui?.dxToolbar)
             return;
+        const separator = { location: "center", template: () => $('<div class="toolbar-separator">|</div>') };
+        toolbarItems.splice(toolbarItems.length - 1, 0, this.createActionsToolbarItem(), separator);
         const toolbarHost = document.createElement("div");
         toolbarHost.className = "shape-context-toolbar";
         document.body.appendChild(toolbarHost);
@@ -864,6 +866,82 @@ class BaseShape {
                 onClick: () => this.remove()
             }
         };
+    }
+
+    createActionsToolbarItem() {
+        return {
+            location: "center",
+            template: () => {
+                const container = $('<div></div>');
+                this.createActionsDropDownButton(container);
+                return container;
+            }
+        };
+    }
+
+    createActionsDropDownButton(itemElement) {
+        const isMac = /mac/i.test(navigator.platform);
+        const mod = isMac ? "⌘" : "Ctrl+";
+        this._actionsDropdownElement = $('<div class="mdl-actions-selector">');
+        this._actionsDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            hint: "Actions",
+            icon: "fa-light fa-ellipsis-vertical",
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:20000" },
+                width: "auto"
+            },
+            items: [
+                { text: "Bring to Front", icon: "fa-light fa-bring-front", shortcut: "" },
+                { text: "Bring Forward", icon: "fa-light fa-bring-forward", shortcut: "" },
+                { text: "Send Backward", icon: "fa-light fa-send-backward", shortcut: "" },
+                { text: "Send to Back", icon: "fa-light fa-send-back", shortcut: "" },
+                { separator: true },
+                { text: "Copy", icon: "fa-light fa-copy", shortcut: `${mod}C` },
+                { text: "Paste", icon: "fa-light fa-paste", shortcut: `${mod}V` },
+                { text: "Duplicate", icon: "fa-light fa-clone", shortcut: `${mod}D` }
+            ],
+            itemTemplate: itemData => {
+                if (itemData.separator)
+                    return `<div style="border-top:1px solid #e0e0e0;margin:4px 0"></div>`;
+                return `<div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+                            <span class="${itemData.icon}" style="width:15px;margin-right:10px;text-align:left;display:inline-block"></span>
+                            <span style="text-align:left;padding-right:20px;flex-grow:1">${itemData.text}</span>
+                            <span style="color:#999">${itemData.shortcut}</span>
+                        </div>`;
+            },
+            onItemClick: e => this.onActionsItemClick(e.itemData.text)
+        });
+        this._actionsDropdownElement.appendTo(itemElement);
+    }
+
+    onActionsItemClick(action) {
+        switch (action) {
+            case "Bring to Front":
+                this.board.bringToFront(this);
+                break;
+            case "Bring Forward":
+                this.board.bringForward(this);
+                break;
+            case "Send Backward":
+                this.board.sendBackward(this);
+                break;
+            case "Send to Back":
+                this.board.sendToBack(this);
+                break;
+            case "Copy":
+                this.copyToClipboard();
+                break;
+            case "Paste":
+                BaseShape.pasteFromClipboard(this.board, this.parent);
+                break;
+            case "Duplicate":
+                this.duplicate();
+                break;
+        }
     }
 
     createTermsDropDownButton(itemElement) {

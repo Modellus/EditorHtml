@@ -6,18 +6,20 @@ class ContextMenuController {
     }
 
     _create() {
+        const isMac = /mac/i.test(navigator.platform);
+        const mod = isMac ? "⌘" : "Ctrl+";
         const menuItems = [
             {
                 text: this.shell.board.translations.get("Clear"),
                 icon: "fa-light fa-file",
-                shortcut: "Ctrl+N",
+                shortcut: `${mod}N`,
                 name: "Clear",
                 action: _ => this.shell.clearKeepIdentity()
             },
             {
                 text: this.shell.board.translations.get("Save") + "...",
                 icon: "fa-light fa-cloud-arrow-down",
-                shortcut: "Ctrl+S",
+                shortcut: `${mod}S`,
                 name: "Save",
                 action: _ => this.shell.saveToApi()
             },
@@ -31,7 +33,7 @@ class ContextMenuController {
                     {
                         text: this.shell.board.translations.get("From file"),
                         icon: "fa-light fa-file-import",
-                        shortcut: "Ctrl+O",
+                        shortcut: `${mod}O`,
                         name: "ImportFromFile",
                         action: _ => this.shell.importFromFile()
                     }
