@@ -147,6 +147,15 @@ class Calculator extends EventTarget {
         this.engine.reset();
         this.system.reset();
         this.status = STATUS.STOPPED;
+        this.clearHook();
+    }
+
+    setHook(hookFunctionBody) {
+        this.hookFunction = new Function("values", "setTermValue", hookFunctionBody);
+    }
+
+    clearHook() {
+        this.hookFunction = null;
     }
 
     /** @param {string[]} names @param {number[][]} values */

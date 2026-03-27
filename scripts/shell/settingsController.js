@@ -224,6 +224,17 @@ class SettingsController {
                         min: 0,
                         showClearButton: true
                     }
+                },
+                {
+                    colSpan: 2,
+                    dataField: "instructions",
+                    label: { text: "AI Instructions" },
+                    editorType: "dxTextArea",
+                    editorOptions: {
+                        height: 120,
+                        stylingMode: "filled",
+                        placeholder: "e.g. when x is 10, change y to 100"
+                    }
                 }
             ],
             onFieldDataChanged: e => this.shell.setPropertyCommand(e.dataField, e.value),

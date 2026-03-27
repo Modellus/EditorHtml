@@ -52,6 +52,7 @@ class Shell  {
         this.properties.initialValuesByCase = {};
         this.properties.iterationDuration = null;
         this.properties.thumbnailUrl = "";
+        this.properties.instructions = "";
         this.applySvgBackgroundColor();
     }
 
@@ -244,6 +245,18 @@ class Shell  {
         this.board.refresh();
         this.bottomToolbar.updatePlayer();
         this.topToolbar.update();
+        if (this.properties.instructions)
+            this.generateAndInstallHooks();
+    }
+
+    async generateAndInstallHooks() {
+        try {
+            const hooks = await this.aiSdk.generateHooks(this.properties.instructions, this.calculator.getTermsNames());
+            if (hooks)
+                this.calculator.setHook(hooks);
+        } catch (error) {
+            console.warn("Failed to generate hooks:", error);
+        }
     }
 
     async importFromFile() {
@@ -549,6 +562,14 @@ class Shell  {
     }
 
     onIterate(e) {
+        if (this.calculator.hookFunction) {
+            try {
+                const values = this.calculator.get();
+                this.calculator.hookFunction(values, this.calculator.setTermValue.bind(this.calculator));
+            } catch (error) {
+                console.warn("Hook execution error:", error);
+            }
+        }
         this.board.shapes.shapes.forEach(s => s.tick());
         this.board.refresh();
         this.bottomToolbar.updatePlayer();

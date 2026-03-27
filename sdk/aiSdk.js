@@ -95,4 +95,16 @@ class AiSdk {
         const { description } = await response.json();
         return description;
     }
+
+    async generateHooks(instructions, variableNames) {
+        const response = await fetch("https://agent-modellus.interactivebook.workers.dev/generate-hooks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ instructions, variableNames })
+        });
+        if (!response.ok)
+            throw new Error(`AI request failed: ${response.status}`);
+        const { hooks } = await response.json();
+        return hooks;
+    }
 }
