@@ -250,12 +250,16 @@ class Shell  {
     }
 
     async generateAndInstallHooks() {
+        const robotIcon = document.querySelector("#chat-button .dx-icon");
+        robotIcon?.classList.add("fa-fade");
         try {
             const hooks = await this.aiSdk.generateHooks(this.properties.instructions, this.calculator.getTermsNames());
             if (hooks)
                 this.calculator.setHook(hooks);
         } catch (error) {
             console.warn("Failed to generate hooks:", error);
+        } finally {
+            robotIcon?.classList.remove("fa-fade");
         }
     }
 
