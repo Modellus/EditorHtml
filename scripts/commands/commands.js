@@ -3,6 +3,7 @@ class Commands {
         this.shell = shell;
         this.shapes = shell.board.shapes;
         this.invoker = new CommandsInvoker();
+        shell.board.invoker = this.invoker;
     }
 
     registerShape(shapeClass) {

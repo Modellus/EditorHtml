@@ -177,7 +177,7 @@ class ChartShape extends BaseShape {
                             current.add(chartType.type);
                         else if (current.size > 1)
                             current.delete(chartType.type);
-                        this.setProperty("chartType", [...current]);
+                        this.setPropertyCommand("chartType", [...current]);
                         e.component.option("selectedItemKeys", current.has(chartType.type) ? [chartType.type] : []);
                         e.component.repaint();
                     }

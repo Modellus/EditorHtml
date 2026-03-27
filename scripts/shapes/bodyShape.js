@@ -183,7 +183,7 @@ class BodyShape extends ChildShape {
 
     createToolbar() {
         const items = super.createToolbar();
-        const formAdapter = { updateData: (field, value) => this.setProperty(field, value) };
+        const formAdapter = { updateData: (field, value) => this.setPropertyCommand(field, value) };
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
         this._yDescriptor = yDescriptor;
@@ -294,7 +294,7 @@ class BodyShape extends ChildShape {
                 this.configureCharacterTooltip(itemData, $(element)[0]);
             },
             onItemClick: e => {
-                this.setProperty("characterKey", e.itemData.key ?? "");
+                this.setPropertyCommand("characterKey", e.itemData.key ?? "");
                 this._characterPicker?.dxDropDownButton("instance")?.close();
                 this.refreshCharacterPickerButtonTemplate();
             }
@@ -397,7 +397,7 @@ class BodyShape extends ChildShape {
                                 const targetShape = this.board.shapes.getById(e.itemData.id);
                                 if (this.wouldCreateCycle(targetShape))
                                     return;
-                                this.setProperty("parentId", e.itemData.id);
+                                this.setPropertyCommand("parentId", e.itemData.id);
                                 treeContainer.hide();
                                 this.renderParentButtonTemplate(iconSpan[0]);
                                 this._termsDropdownElement.dxDropDownButton("instance").close();
@@ -451,7 +451,7 @@ class BodyShape extends ChildShape {
                     width: 90,
                     stylingMode: "filled",
                     onInitialized: e => { this.animationFrameStepToolbarWidget = e.component; },
-                    onValueChanged: e => { this.setProperty("animationFrameStep", e.value); this.board.markDirty(this); }
+                    onValueChanged: e => this.setPropertyCommand("animationFrameStep", e.value)
                 }).appendTo($p)
             }
         );
@@ -527,12 +527,12 @@ class BodyShape extends ChildShape {
 
     onImageControlChanged(imageSource) {
         this.properties.imageBase64 = "";
-        this.setProperty("imageUrl", imageSource);
+        this.setPropertyCommand("imageUrl", imageSource);
     }
 
     onImageControlCleared() {
         this.properties.imageBase64 = "";
-        this.setProperty("imageUrl", "");
+        this.setPropertyCommand("imageUrl", "");
     }
 
     getImageSource() {

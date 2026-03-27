@@ -220,7 +220,7 @@ class ChildShape extends BaseShape {
                             const targetShape = this.board.shapes.getById(e.itemData.id);
                             if (this.wouldCreateCycle(targetShape))
                                 return;
-                            this.setProperty("parentId", e.itemData.id);
+                            this.setPropertyCommand("parentId", e.itemData.id);
                             this._parentDropdownElement.dxDropDownButton("instance").close();
                             this.refreshParentToolbarControl();
                         }
@@ -302,7 +302,7 @@ class ChildShape extends BaseShape {
                     width: 90,
                     stylingMode: "filled",
                     onInitialized: e => { this.stroboscopyIntervalToolbarWidget = e.component; },
-                    onValueChanged: e => { this.setProperty("stroboscopyInterval", e.value); this.board.markDirty(this); }
+                    onValueChanged: e => this.setPropertyCommand("stroboscopyInterval", e.value)
                 }).appendTo($p)
             },
             {
@@ -316,7 +316,7 @@ class ChildShape extends BaseShape {
                     width: 90,
                     stylingMode: "filled",
                     onInitialized: e => { this.stroboscopyOpacityToolbarWidget = e.component; },
-                    onValueChanged: e => { this.setProperty("stroboscopyOpacity", e.value); this.board.markDirty(this); }
+                    onValueChanged: e => this.setPropertyCommand("stroboscopyOpacity", e.value)
                 }).appendTo($p)
             }
         );

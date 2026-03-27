@@ -121,7 +121,7 @@ class SliderShape extends BaseShape {
                     $('<div>').appendTo($container).dxSwitch({
                         value: this.properties.autoScale !== false,
                         onValueChanged: e => {
-                            this.setProperty("autoScale", e.value);
+                            this.setPropertyCommand("autoScale", e.value);
                         }
                     });
                 }
@@ -131,7 +131,7 @@ class SliderShape extends BaseShape {
                 buildControl: $container => {
                     $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
                         value: this.properties.minimum,
-                        onValueChanged: e => this.setProperty("minimum", e.value)
+                        onValueChanged: e => this.setPropertyCommand("minimum", e.value)
                     })).appendTo($container);
                 }
             },
@@ -140,7 +140,7 @@ class SliderShape extends BaseShape {
                 buildControl: $container => {
                     $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
                         value: this.properties.maximum,
-                        onValueChanged: e => this.setProperty("maximum", e.value)
+                        onValueChanged: e => this.setPropertyCommand("maximum", e.value)
                     })).appendTo($container);
                 }
             },
@@ -153,7 +153,7 @@ class SliderShape extends BaseShape {
                         step: 0.1,
                         showSpinButtons: true,
                         stylingMode: "filled",
-                        onValueChanged: e => this.setProperty("precision", e.value)
+                        onValueChanged: e => this.setPropertyCommand("precision", e.value)
                     }).appendTo($container);
                 }
             }

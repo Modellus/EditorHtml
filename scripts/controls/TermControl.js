@@ -196,7 +196,7 @@ class TermControl {
             const buttonHost = $("<div>").addClass("term-packed-control__button");
             control.append(buttonHost);
             TermControl.createVisibilityCheckbox(buttonHost, isVisible, value => {
-                baseShape.setProperty(displayModeProperty, value ? "nameValue" : "none");
+                baseShape.setPropertyCommand(displayModeProperty, value ? "nameValue" : "none");
                 baseShape.board.markDirty(baseShape);
             });
         } else
@@ -426,7 +426,7 @@ class TermControl {
         mutateItems(items);
         shape.properties[propertyName] = items;
         TermControl.normalizeShapeTermsCollection(shape, propertyName, options);
-        shape.setProperty(propertyName, shape.properties[propertyName]);
+        shape.setPropertyCommand(propertyName, shape.properties[propertyName]);
         if (typeof options.onChanged === "function")
             options.onChanged(shape.properties[propertyName]);
     }

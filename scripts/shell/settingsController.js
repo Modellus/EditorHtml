@@ -14,7 +14,7 @@ class SettingsController {
     }
 
     createColorPickerEditor(itemElement, fieldName) {
-        const colorPicker = this.getColorControl().createEditor(this.shell.properties[fieldName], value => this.shell.setProperty(fieldName, value));
+        const colorPicker = this.getColorControl().createEditor(this.shell.properties[fieldName], value => this.shell.setPropertyCommand(fieldName, value));
         $(itemElement).append(colorPicker);
     }
 
@@ -125,7 +125,7 @@ class SettingsController {
                                 onContentReady: e => this._initPillButtonGroup(e.element[0]),
                                 onSelectionChanged: e => {
                                     if (e.addedItems.length > 0)
-                                        this.shell.setProperty("angleUnit", e.addedItems[0].key);
+                                        this.shell.setPropertyCommand("angleUnit", e.addedItems[0].key);
                                     this._movePill(e.component.element()[0]);
                                     e.component.repaint();
                                 }
@@ -181,7 +181,7 @@ class SettingsController {
                                 onSelectionChanged: e => {
                                     if (e.addedItems.length > 0) {
                                         const noLimit = e.addedItems[0].key;
-                                        this.shell.setProperty("independent.noLimit", noLimit);
+                                        this.shell.setPropertyCommand("independent.noLimit", noLimit);
                                         this.form.getEditor("independent.end").option("disabled", noLimit);
                                     }
                                     this._movePill(e.component.element()[0]);
@@ -226,7 +226,7 @@ class SettingsController {
                     }
                 }
             ],
-            onFieldDataChanged: e => this.shell.setProperty(e.dataField, e.value),
+            onFieldDataChanged: e => this.shell.setPropertyCommand(e.dataField, e.value),
         });
         this.form = $form.dxForm("instance");
         return $form;

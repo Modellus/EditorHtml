@@ -81,7 +81,7 @@ class ImageShape extends ChildShape {
                     $('<div>').appendTo($container).dxSwitch({
                         value: this.properties.lockAspectRatio !== false,
                         onInitialized: e => { this._lockAspectRatioSwitchInstance = e.component; },
-                        onValueChanged: e => this.setProperty("lockAspectRatio", e.value)
+                        onValueChanged: e => this.setPropertyCommand("lockAspectRatio", e.value)
                     });
                 }
             },
@@ -95,7 +95,7 @@ class ImageShape extends ChildShape {
                         step: 1,
                         stylingMode: "filled",
                         onInitialized: e => { this._videoStepsBoxInstance = e.component; },
-                        onValueChanged: e => this.setProperty("videoStepsPerFrame", e.value)
+                        onValueChanged: e => this.setPropertyCommand("videoStepsPerFrame", e.value)
                     });
                 }
             }
@@ -155,18 +155,18 @@ class ImageShape extends ChildShape {
         if (typeof mimeType === "string" && mimeType.startsWith("video/")) {
             this.properties.imageUrl = "";
             this._mediaAspectRatio = 0;
-            this.setProperty("videoUrl", url);
+            this.setPropertyCommand("videoUrl", url);
         } else {
             this.properties.videoUrl = "";
             this._mediaAspectRatio = 0;
-            this.setProperty("imageUrl", url);
+            this.setPropertyCommand("imageUrl", url);
         }
     }
 
     onImageControlCleared() {
         this.properties.imageBase64 = "";
         this.properties.videoUrl = "";
-        this.setProperty("imageUrl", "");
+        this.setPropertyCommand("imageUrl", "");
     }
 
     setDefaults() {

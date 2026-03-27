@@ -612,7 +612,7 @@ class BaseShape {
             this.properties[displayModeProperty] = "none";
         if (!this.termDisplayEntries.some(entry => entry.term === termProperty))
             this.termDisplayEntries.push({ term: termProperty, caseProperty: caseProperty, title: title });
-        const mockFormInstance = { updateData: (field, value) => this.setProperty(field, value) };
+        const mockFormInstance = { updateData: (field, value) => this.setPropertyCommand(field, value) };
         return {
             location: "center",
             template: () => {
@@ -632,7 +632,7 @@ class BaseShape {
             this.properties[displayModeProperty] = "none";
         if (!this.termDisplayEntries.some(entry => entry.term === termProperty))
             this.termDisplayEntries.push({ term: termProperty, caseProperty, title });
-        const mockFormInstance = { updateData: (field, value) => this.setProperty(field, value) };
+        const mockFormInstance = { updateData: (field, value) => this.setPropertyCommand(field, value) };
         return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, false, displayModeProperty, showVisibilityToggle);
     }
 
@@ -722,7 +722,7 @@ class BaseShape {
     }
 
     createColorPickerEditor(dataField, options = {}) {
-        const onValueChanged = value => this.setProperty(dataField, value);
+        const onValueChanged = value => this.setPropertyCommand(dataField, value);
         return this.getColorControl().createEditor(this.properties[dataField], onValueChanged, options);
     }
 
@@ -734,7 +734,7 @@ class BaseShape {
         const isVisible = this.properties.showName === true;
         control.append(visibilityHost, colorHost, inputHost);
         TermControl.createVisibilityCheckbox(visibilityHost, isVisible, value => {
-            this.setProperty("showName", value);
+            this.setPropertyCommand("showName", value);
         });
         const colorPicker = this.createColorPickerEditor("nameColor");
         colorPicker.addClass("name-packed-control__picker");
@@ -746,7 +746,7 @@ class BaseShape {
             onInitialized: e => { this._nameTextBoxInstance = e.component; },
             onValueChanged: event => {
                 if (event.event)
-                    this.setProperty("name", event.value);
+                    this.setPropertyCommand("name", event.value);
             }
         });
         return control;
@@ -970,6 +970,11 @@ class BaseShape {
         this.dispatchEvent("shapeChanged", { property: name, value: value });
     }
 
+    setPropertyCommand(name, value) {
+        const command = new SetShapePropertiesCommand(this.board, this, { [name]: value });
+        this.board.invoker.execute(command);
+    }
+
     update() {
         this.children.forEach(child => child.update());
     }
@@ -1074,7 +1079,8 @@ class BaseShape {
     }
 
     remove() {
-        this.board.removeShape(this);
+        const command = new RemoveShapeCommand(this.board, this);
+        this.board.invoker.execute(command);
     }
 
     getClipboardData() {
@@ -1148,7 +1154,8 @@ class BaseShape {
         data.properties.y = (data.properties.y ?? 0) + 20;
         const shape = board.createShape(data.type, parent ?? null);
         shape.setProperties(data.properties);
-        board.addShape(shape);
+        const command = new AddShapeCommand(board, shape);
+        board.invoker.execute(command);
         BaseShape.pasteChildren(board, shape, data.children);
     }
 
@@ -1158,7 +1165,8 @@ class BaseShape {
         data.properties.y = (data.properties.y ?? 0) + 20;
         const shape = this.board.createShape(data.type, this.parent);
         shape.setProperties(data.properties);
-        this.board.addShape(shape);
+        const command = new AddShapeCommand(this.board, shape);
+        this.board.invoker.execute(command);
         BaseShape.pasteChildren(this.board, shape, data.children);
     }
 
@@ -1175,22 +1183,18 @@ class BaseShape {
     }
 
     dragStart() {
+        this._dragStartSnapshot = Utils.cloneProperties(this.properties);
         this.dispatchEvent("shapeDragStart", {});
-        const calculator = this.board?.calculator;
-        if (!calculator)
-            return;
-        const casesCount = Math.max(1, parseInt(calculator.properties.casesCount ?? 1, 10) || 1);
-        const terms = typeof calculator.getTermsNames === "function" ? calculator.getTermsNames() : [];
-        const iteration = typeof calculator.getIteration === "function" ? calculator.getIteration() : undefined;
-        terms.forEach(term => {
-            const values = [];
-            for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
-                values.push({ case: caseNumber, value: calculator.getByName(term, caseNumber) });
-        });
     }
 
     dragEnd() {
         this.dispatchEvent("shapeDragEnd", {});
+        if (!this._dragStartSnapshot)
+            return;
+        const command = new SetShapePropertiesCommand(this.board, this, Utils.cloneProperties(this.properties));
+        command.previousProperties = this._dragStartSnapshot;
+        this._dragStartSnapshot = null;
+        this.board.invoker.record(command);
     }
 
     getModelPrecision() {

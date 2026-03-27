@@ -7,7 +7,7 @@ class SetShapePropertiesCommand extends Command {
     }
 
     execute() {
-        this.previousProperties = this.shape.properties;
+        this.previousProperties = Utils.cloneProperties(this.shape.properties);
         this.board.setShapeProperties(this.shape, this.properties);
     }
     

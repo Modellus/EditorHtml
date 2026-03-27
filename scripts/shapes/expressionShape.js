@@ -495,6 +495,7 @@ class ExpressionShape extends BaseShape {
         if (properties.expression != undefined) {
             this.mathfield.value = properties.expression;
             this.ensureCaretIsClamped();
+            this._committedExpression = properties.expression;
         }
         this.onChange();
     }
@@ -508,9 +509,20 @@ class ExpressionShape extends BaseShape {
         const expression = this.mathfield.getValue();
         if (expression === this.properties.expression)
             return;
+        if (this._committedExpression === undefined)
+            this._committedExpression = this.properties.expression;
         this.properties.expression = expression;
         clearTimeout(this._changeTimer);
         this._changeTimer = setTimeout(() => {
+            const previousExpression = this._committedExpression;
+            this._committedExpression = this.properties.expression;
+            const currentExpression = this.properties.expression;
+            if (currentExpression !== previousExpression) {
+                const command = new SetShapePropertiesCommand(this.board, this, { expression: currentExpression });
+                command.previousProperties = Utils.cloneProperties(this.properties);
+                command.previousProperties.expression = previousExpression;
+                this.board.invoker.record(command);
+            }
             this.dispatchEvent("changed", { expression: this.properties.expression });
         }, 300);
     }

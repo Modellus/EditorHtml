@@ -10,6 +10,7 @@ class Board {
         this._dirtyShapes = new Set();
         this.suppressNextFocusSelect = false;
         this.pointerLocked = false;
+        this.invoker = null;
     }
 
     createSvgElement(name) {
@@ -88,7 +89,9 @@ class Board {
 
     setShapeProperties(shape, properties) {
         shape.setProperties(properties);
+        shape.tick();
         this.refresh();
+        this.dispatchShapeEvent("shapeChanged", shape);
     }
 
     onShapeFocused(e) {

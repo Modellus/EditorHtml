@@ -260,7 +260,7 @@ class BottomToolbar {
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: e => {
-                            this.shell.setProperty("independent.name", e.value);
+                            this.shell.setPropertyCommand("independent.name", e.value);
                             this._independentNameLabel.textContent = e.value;
                         }
                     });
@@ -273,7 +273,7 @@ class BottomToolbar {
                         value: independent.start,
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
-                        onValueChanged: e => this.shell.setProperty("independent.start", e.value)
+                        onValueChanged: e => this.shell.setPropertyCommand("independent.start", e.value)
                     }).appendTo($container);
                 }
             },
@@ -285,7 +285,7 @@ class BottomToolbar {
                         stylingMode: "filled",
                         disabled: independent.noLimit,
                         elementAttr: { class: "mdl-math-input" },
-                        onValueChanged: e => this.shell.setProperty("independent.end", e.value)
+                        onValueChanged: e => this.shell.setPropertyCommand("independent.end", e.value)
                     }).appendTo($container);
                     this._endEditor = $container.find(".dx-numberbox").dxNumberBox("instance");
                 }
@@ -297,7 +297,7 @@ class BottomToolbar {
                         value: independent.step,
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
-                        onValueChanged: e => this.shell.setProperty("independent.step", e.value)
+                        onValueChanged: e => this.shell.setPropertyCommand("independent.step", e.value)
                     }).appendTo($container);
                 }
             },
@@ -320,7 +320,7 @@ class BottomToolbar {
                         onSelectionChanged: e => {
                             if (e.addedItems.length > 0) {
                                 const noLimit = e.addedItems[0].key;
-                                this.shell.setProperty("independent.noLimit", noLimit);
+                                this.shell.setPropertyCommand("independent.noLimit", noLimit);
                                 this._endEditor?.option("disabled", noLimit);
                             }
                             this._movePill(e.component.element()[0]);

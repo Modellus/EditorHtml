@@ -180,7 +180,7 @@ class GaugeShape extends BaseShape {
                         showSpinButtons: true,
                         step: 1,
                         stylingMode: "filled",
-                        onValueChanged: e => this.setProperty("startAngle", e.value)
+                        onValueChanged: e => this.setPropertyCommand("startAngle", e.value)
                     }).appendTo($container);
                 }
             },
@@ -192,7 +192,7 @@ class GaugeShape extends BaseShape {
                         showSpinButtons: true,
                         step: 1,
                         stylingMode: "filled",
-                        onValueChanged: e => this.setProperty("endAngle", e.value)
+                        onValueChanged: e => this.setPropertyCommand("endAngle", e.value)
                     }).appendTo($container);
                 }
             },
@@ -206,7 +206,7 @@ class GaugeShape extends BaseShape {
                         step: 1,
                         stylingMode: "filled",
                         format: { type: "fixedPoint", precision: 0 },
-                        onValueChanged: e => this.setProperty("anglePrecision", e.value)
+                        onValueChanged: e => this.setPropertyCommand("anglePrecision", e.value)
                     }).appendTo($container);
                 }
             },
@@ -215,7 +215,7 @@ class GaugeShape extends BaseShape {
                 buildControl: $container => {
                     $('<div>').dxSwitch({
                         value: this.properties.snapToAngleTick === true,
-                        onValueChanged: e => this.setProperty("snapToAngleTick", e.value)
+                        onValueChanged: e => this.setPropertyCommand("snapToAngleTick", e.value)
                     }).appendTo($container);
                 }
             },
@@ -224,7 +224,7 @@ class GaugeShape extends BaseShape {
                 buildControl: $container => {
                     $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
                         value: this.properties.minimumMagnitude,
-                        onValueChanged: e => this.setProperty("minimumMagnitude", e.value)
+                        onValueChanged: e => this.setPropertyCommand("minimumMagnitude", e.value)
                     })).appendTo($container);
                 }
             },
@@ -233,7 +233,7 @@ class GaugeShape extends BaseShape {
                 buildControl: $container => {
                     $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
                         value: this.properties.maximumMagnitude,
-                        onValueChanged: e => this.setProperty("maximumMagnitude", e.value)
+                        onValueChanged: e => this.setPropertyCommand("maximumMagnitude", e.value)
                     })).appendTo($container);
                 }
             },
@@ -242,7 +242,7 @@ class GaugeShape extends BaseShape {
                 buildControl: $container => {
                     $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false, min: 0 }), {
                         value: this.properties.magnitudePrecision,
-                        onValueChanged: e => this.setProperty("magnitudePrecision", e.value)
+                        onValueChanged: e => this.setPropertyCommand("magnitudePrecision", e.value)
                     })).appendTo($container);
                 }
             },
@@ -251,7 +251,7 @@ class GaugeShape extends BaseShape {
                 buildControl: $container => {
                     $('<div>').dxSwitch({
                         value: this.properties.snapToMagnitudeTick === true,
-                        onValueChanged: e => this.setProperty("snapToMagnitudeTick", e.value)
+                        onValueChanged: e => this.setPropertyCommand("snapToMagnitudeTick", e.value)
                     }).appendTo($container);
                 }
             }

@@ -19,6 +19,11 @@ class CommandsInvoker {
         }
     }
     
+    record(command) {
+        this.history.push(command);
+        this.redoStack = [];
+    }
+
     redo() {
         if (this.redoStack.length > 0) {
             const command = this.redoStack.pop();

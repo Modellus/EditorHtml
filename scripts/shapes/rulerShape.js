@@ -30,7 +30,7 @@ class RulerShape extends BaseShape {
                     hint: "Scale",
                     onInitialized: e => { this._scaleBoxInstance = e.component; },
                     onValueChanged: e => {
-                        this.setProperty("scale", e.value);
+                        this.setPropertyCommand("scale", e.value);
                     }
                 })
             },

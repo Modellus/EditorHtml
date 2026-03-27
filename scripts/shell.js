@@ -138,6 +138,17 @@ class Shell  {
         this.reset();
     }
 
+    setPropertyCommand(name, value) {
+        const previousProperties = Utils.cloneProperties(this.properties);
+        this.setProperty(name, value);
+        const newProperties = Utils.cloneProperties(this.properties);
+        const command = {
+            execute: () => this.setProperties(newProperties),
+            undo: () => this.setProperties(previousProperties)
+        };
+        this.commands.invoker.record(command);
+    }
+
     undoPressed() {
         this.commands.invoker.undo();
     }

@@ -74,7 +74,7 @@ class VectorShape extends ChildShape {
 
     createToolbar() {
         const items = super.createToolbar();
-        const formAdapter = { updateData: (field, value) => this.setProperty(field, value) };
+        const formAdapter = { updateData: (field, value) => this.setPropertyCommand(field, value) };
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
         this._yDescriptor = yDescriptor;
@@ -238,7 +238,7 @@ class VectorShape extends ChildShape {
                                     },
                                     onSelectionChanged: e => {
                                         if (e.addedItems.length > 0) {
-                                            this.setProperty("tipType", e.addedItems[0].key);
+                                            this.setPropertyCommand("tipType", e.addedItems[0].key);
                                             this.refreshTipTypeToolbarControl();
                                         }
                                     }
@@ -256,7 +256,7 @@ class VectorShape extends ChildShape {
                                     showSpinButtons: true,
                                     width: 80,
                                     stylingMode: "filled",
-                                    onValueChanged: e => this.setProperty("lineWidth", e.value)
+                                    onValueChanged: e => this.setPropertyCommand("lineWidth", e.value)
                                 }).appendTo($container);
                             }
                         }
