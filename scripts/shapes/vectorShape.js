@@ -295,7 +295,7 @@ class VectorShape extends ChildShape {
         this.properties.yTermCase = 1;
         this.properties.xTermDisplayMode = "none";
         this.properties.yTermDisplayMode = "none";
-        this.properties.foregroundColor = "#000000";
+        this.properties.foregroundColor = this.board.theme.getRandomStrokeColor();
         this.properties.borderColor = "transparent";
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.lineWidth = 1;

@@ -35,11 +35,10 @@ class TopToolbar {
                     location: "center",
                     widget: "dxButton",
                     options: {
+                        icon: "fa-light fa-function",
                         elementAttr: {
-                            id: "expression-button",
-                            style: "font-family: cursive; font-size: 16px"
+                            id: "expression-button"
                         },
-                        text: "X",
                         onClick: _ => this.shell.commands.addShape("ExpressionShape", "Expression"),
                         onInitialized: e => this.shell.createTranslatedTooltip(e, "Expression Tooltip", 280)
                     }

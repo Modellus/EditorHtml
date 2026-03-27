@@ -580,7 +580,7 @@ class BodyShape extends ChildShape {
         this.properties.width = 10;
         this.properties.height = 10;
         this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
-        this.properties.foregroundColor = this.board.theme.getStrokeColors()[3].color;
+        this.properties.foregroundColor = this.board.theme.getRandomStrokeColor();
         this.properties.borderColor = this.properties.foregroundColor;
         this.properties.animationFrameStep = 1;
         this.properties.imageUrl = "";

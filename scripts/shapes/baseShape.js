@@ -87,7 +87,7 @@ class BaseShape {
     }
 
     setDefaults() {
-        this.properties.foregroundColor = this.board.theme.getRandomStrokeColor();
+        this.properties.foregroundColor = "#000000";
         this.properties.borderColor = this.properties.foregroundColor;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[2].color;
         this.properties.rotation = 0;
