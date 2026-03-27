@@ -58,13 +58,17 @@ class ChartControl {
         this.axisLayer = this.createSvgElement("g");
         this.focusLayer = this.createSvgElement("g");
         this.focusLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
+        this.crosshairLayer = this.createSvgElement("g");
         this.tickInteractionLayer = this.createSvgElement("g");
+        this.crosshairInteractionLayer = this.createSvgElement("g");
         this.rootElement.appendChild(this.backgroundLayer);
         this.rootElement.appendChild(this.gridLayer);
         this.rootElement.appendChild(this.seriesLayer);
         this.rootElement.appendChild(this.axisLayer);
         this.rootElement.appendChild(this.focusLayer);
+        this.rootElement.appendChild(this.crosshairLayer);
         this.rootElement.appendChild(this.tickInteractionLayer);
+        this.rootElement.appendChild(this.crosshairInteractionLayer);
         if (this.hostElement)
             this.hostElement.appendChild(this.rootElement);
     }
@@ -524,7 +528,9 @@ class ChartControl {
         this.clearLayer(this.seriesLayer);
         this.clearLayer(this.axisLayer);
         this.clearLayer(this.focusLayer);
+        this.clearLayer(this.crosshairLayer);
         this.clearLayer(this.tickInteractionLayer);
+        this.clearLayer(this.crosshairInteractionLayer);
         this.renderState = null;
         if (width <= 2 || height <= 2)
             return;
@@ -553,6 +559,7 @@ class ChartControl {
             argumentField: this.options.argumentField
         };
         this.renderTickHitAreas(layout, scales.xScale, scales.yScale, xTicks, yTicks);
+        this.renderCrosshairHitArea(layout);
         this.renderFocus();
     }
 
@@ -1037,5 +1044,119 @@ class ChartControl {
         this.render();
         if (typeof this.options.onDomainChanged === "function")
             this.options.onDomainChanged({ ...this.domainOverride });
+    }
+
+    renderCrosshairHitArea(layout) {
+        const hitArea = this.createSvgElement("rect");
+        hitArea.setAttribute("x", `${layout.plotLeft}`);
+        hitArea.setAttribute("y", `${layout.plotTop}`);
+        hitArea.setAttribute("width", `${layout.plotWidth}`);
+        hitArea.setAttribute("height", `${layout.plotHeight}`);
+        hitArea.setAttribute("fill", "transparent");
+        hitArea.setAttribute("style", "pointer-events: all");
+        hitArea.addEventListener("pointermove", e => this.onCrosshairPointerMove(e));
+        hitArea.addEventListener("pointerleave", () => this.clearCrosshair());
+        this.crosshairInteractionLayer.appendChild(hitArea);
+    }
+
+    onCrosshairPointerMove(event) {
+        if (this._tickDragState)
+            return;
+        const state = this.renderState;
+        if (!state)
+            return;
+        const svgRoot = this.rootElement.closest("svg");
+        if (!svgRoot)
+            return;
+        const point = svgRoot.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        const localPoint = point.matrixTransform(this.rootElement.getScreenCTM().inverse());
+        const mouseX = localPoint.x;
+        if (mouseX < state.layout.plotLeft || mouseX > state.layout.plotRight) {
+            this.clearCrosshair();
+            return;
+        }
+        const domain = state.domain;
+        const layout = state.layout;
+        const dataX = domain.xMin + (mouseX - layout.plotLeft) / layout.plotWidth * (domain.xMax - domain.xMin);
+        this.renderCrosshair(dataX);
+    }
+
+    clearCrosshair() {
+        this.clearLayer(this.crosshairLayer);
+    }
+
+    renderCrosshair(argumentValue) {
+        this.clearLayer(this.crosshairLayer);
+        const state = this.renderState;
+        if (!state)
+            return;
+        const layout = state.layout;
+        const xScale = state.xScale;
+        const yScale = state.yScale;
+        const crosshairX = xScale(argumentValue);
+        if (!Number.isFinite(crosshairX))
+            return;
+        if (crosshairX < layout.plotLeft || crosshairX > layout.plotRight)
+            return;
+        const verticalLine = this.createSvgElement("line");
+        verticalLine.setAttribute("x1", `${crosshairX}`);
+        verticalLine.setAttribute("y1", `${layout.plotTop}`);
+        verticalLine.setAttribute("x2", `${crosshairX}`);
+        verticalLine.setAttribute("y2", `${layout.plotBottom}`);
+        verticalLine.setAttribute("stroke", this.options.foregroundColor);
+        verticalLine.setAttribute("stroke-width", "1");
+        verticalLine.setAttribute("stroke-opacity", "0.5");
+        this.crosshairLayer.appendChild(verticalLine);
+        const firstSeries = state.series.length > 0 ? this.getNearestSeriesPoint(state.series[0], argumentValue) : null;
+        const snappedX = firstSeries ? firstSeries.xValue : argumentValue;
+        const axisLabelX = xScale(snappedX);
+        const axisBackground = this.createSvgElement("rect");
+        const axisLabelText = this.formatAxisValue(snappedX);
+        const axisLabelWidth = this.estimateTextWidth(axisLabelText, 10) + 8;
+        axisBackground.setAttribute("x", `${axisLabelX - axisLabelWidth / 2}`);
+        axisBackground.setAttribute("y", `${layout.plotBottom + 4}`);
+        axisBackground.setAttribute("width", `${axisLabelWidth}`);
+        axisBackground.setAttribute("height", "16");
+        axisBackground.setAttribute("rx", "3");
+        axisBackground.setAttribute("fill", this.options.foregroundColor);
+        axisBackground.setAttribute("fill-opacity", "0.85");
+        this.crosshairLayer.appendChild(axisBackground);
+        const axisLabel = this.createSvgElement("text");
+        axisLabel.setAttribute("x", `${axisLabelX}`);
+        axisLabel.setAttribute("y", `${layout.plotBottom + 16}`);
+        axisLabel.setAttribute("text-anchor", "middle");
+        axisLabel.setAttribute("font-family", this.options.fontFamily);
+        axisLabel.setAttribute("font-size", "10");
+        axisLabel.setAttribute("fill", this.options.backgroundColor || "#ffffff");
+        axisLabel.textContent = axisLabelText;
+        this.crosshairLayer.appendChild(axisLabel);
+        for (let seriesIndex = 0; seriesIndex < state.series.length; seriesIndex++) {
+            const series = state.series[seriesIndex];
+            const nearestPoint = this.getNearestSeriesPoint(series, argumentValue);
+            if (!nearestPoint)
+                continue;
+            const pointX = xScale(nearestPoint.xValue);
+            const pointY = yScale(nearestPoint.yValue);
+            if (!Number.isFinite(pointX) || !Number.isFinite(pointY))
+                continue;
+            const marker = this.createSvgElement("circle");
+            marker.setAttribute("cx", `${pointX}`);
+            marker.setAttribute("cy", `${pointY}`);
+            marker.setAttribute("r", "4");
+            marker.setAttribute("fill", series.color);
+            marker.setAttribute("stroke", "#ffffff");
+            marker.setAttribute("stroke-width", "1.5");
+            this.crosshairLayer.appendChild(marker);
+            const label = this.createSvgElement("text");
+            label.setAttribute("x", `${pointX + 6}`);
+            label.setAttribute("y", `${pointY - 6}`);
+            label.setAttribute("font-family", this.options.fontFamily);
+            label.setAttribute("font-size", "11");
+            label.setAttribute("fill", series.color);
+            label.textContent = this.formatAxisValue(nearestPoint.yValue);
+            this.crosshairLayer.appendChild(label);
+        }
     }
 }

@@ -260,6 +260,10 @@ class BaseShape {
     }
 
     removeHandles() {
+        if (this._lastUnderlyingMoveElement) {
+            this._lastUnderlyingMoveElement.dispatchEvent(new PointerEvent("pointerleave"));
+            this._lastUnderlyingMoveElement = null;
+        }
         if (!this.handleElements)
             return;
         this.handleElements.forEach(handle => handle.remove());
@@ -394,6 +398,13 @@ class BaseShape {
             handle.style.cursor = window.getComputedStyle(underlying).cursor;
         else
             handle.style.cursor = "";
+        if (underlying !== this._lastUnderlyingMoveElement) {
+            if (this._lastUnderlyingMoveElement)
+                this._lastUnderlyingMoveElement.dispatchEvent(new PointerEvent("pointerleave", event));
+            this._lastUnderlyingMoveElement = underlying;
+        }
+        if (underlying)
+            underlying.dispatchEvent(new PointerEvent("pointermove", event));
     }
 
     onHandlePointerDown = (event, handle) => {
