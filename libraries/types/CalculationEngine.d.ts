@@ -301,6 +301,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitDeltaExpression?: (ctx: DeltaExpressionContext) => void;
     /**
+     * Enter a parse tree produced by the `Braces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterBraces?: (ctx: BracesContext) => void;
+    /**
+     * Exit a parse tree produced by the `Braces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitBraces?: (ctx: BracesContext) => void;
+    /**
      * Enter a parse tree produced by the `HyperbolicTangent`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -835,6 +847,13 @@ declare class DeltaExpressionContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class BracesContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class HyperbolicTangentContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
@@ -1223,6 +1242,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitDeltaExpression?: (ctx: DeltaExpressionContext) => Result;
+    /**
+     * Visit a parse tree produced by the `Braces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitBraces?: (ctx: BracesContext) => Result;
     /**
      * Visit a parse tree produced by the `HyperbolicTangent`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1656,6 +1682,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitSubtraction: (context: SubtractionContext) => Branch;
     visitAddition: (context: AdditionContext) => Branch;
     visitParenthesis: (context: ParenthesisContext) => Branch;
+    visitBraces: (context: BracesContext) => Branch;
     visitDifferential: (context: DifferentialContext) => Branch;
     private toRadians;
     visitSine: (context: SineContext) => Branch;

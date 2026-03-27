@@ -370,33 +370,50 @@ class BaseShape {
         handle.setAttribute("transform", `rotate(${rotation} ${center.x} ${center.y})`);
     }
 
-    getElementUnderHandle(handle, event) {
-        const saved = handle.style.pointerEvents;
-        handle.style.pointerEvents = "none";
-        const elements = document.elementsFromPoint(event.clientX, event.clientY);
-        handle.style.pointerEvents = saved;
-        for (let index = 0; index < elements.length; index++) {
-            const element = elements[index];
-            if (element?.classList?.contains("chart-tick-handle"))
-                return element;
-        }
-        return elements[0];
+    getElementUnderMoveHandle(handle, event) {
+        const overlays = this.board.svg.querySelectorAll(".handle, .bounding-box, .hover-outline, .selected-outline, .resize-handle, .rotation-handle");
+        const savedStyles = [];
+        overlays.forEach(element => {
+            savedStyles.push({ element: element, pointerEvents: element.style.pointerEvents });
+            element.style.pointerEvents = "none";
+        });
+        const underlying = document.elementFromPoint(event.clientX, event.clientY);
+        savedStyles.forEach(entry => entry.element.style.pointerEvents = entry.pointerEvents);
+        if (underlying && this.element.contains(underlying))
+            return underlying;
+        return null;
+    }
+
+    onHandlePointerMove = (event, handle) => {
+        if (this.draggedHandle)
+            return;
+        if (!handle.classList.contains("move"))
+            return;
+        const underlying = this.getElementUnderMoveHandle(handle, event);
+        if (underlying)
+            handle.style.cursor = window.getComputedStyle(underlying).cursor;
+        else
+            handle.style.cursor = "";
     }
 
     onHandlePointerDown = (event, handle) => {
         if (handle.classList.contains("move")) {
-            const underlying = this.getElementUnderHandle(handle, event);
-            if (underlying?.classList?.contains("chart-tick-handle")) {
-                handle.style.pointerEvents = "none";
-                const restoreHandle = () => {
-                    handle.style.pointerEvents = "";
-                    window.removeEventListener("pointerup", restoreHandle);
-                    window.removeEventListener("pointercancel", restoreHandle);
-                };
-                window.addEventListener("pointerup", restoreHandle);
-                window.addEventListener("pointercancel", restoreHandle);
-                underlying.dispatchEvent(new PointerEvent("pointerdown", event));
-                return;
+            const underlying = this.getElementUnderMoveHandle(handle, event);
+            if (underlying) {
+                const probeEvent = new PointerEvent("pointerdown", event);
+                underlying.dispatchEvent(probeEvent);
+                if (probeEvent.defaultPrevented) {
+                    this.board.selection.select(this);
+                    handle.style.pointerEvents = "none";
+                    const restoreHandle = () => {
+                        handle.style.pointerEvents = "";
+                        window.removeEventListener("pointerup", restoreHandle);
+                        window.removeEventListener("pointercancel", restoreHandle);
+                    };
+                    window.addEventListener("pointerup", restoreHandle);
+                    window.addEventListener("pointercancel", restoreHandle);
+                    return;
+                }
             }
         }
         event.stopPropagation();
@@ -412,18 +429,6 @@ class BaseShape {
         window.addEventListener("pointermove", this.onHandleDrag);
         window.addEventListener("pointerup", this.onHandleDragEnd);
         window.addEventListener("pointercancel", this.onHandleDragEnd);
-    }
-
-    onHandlePointerMove = (event, handle) => {
-        if (this.draggedHandle)
-            return;
-        if (!handle.classList.contains("move"))
-            return;
-        const underlying = this.getElementUnderHandle(handle, event);
-        if (underlying?.classList?.contains("chart-tick-handle"))
-            handle.style.cursor = underlying.classList.contains("chart-tick-handle-x") ? "ew-resize" : "ns-resize";
-        else
-            handle.style.cursor = "";
     }
 
     onHandleDrag = event => {
