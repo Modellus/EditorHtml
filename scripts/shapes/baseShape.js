@@ -1017,9 +1017,9 @@ class BaseShape {
     createTermPairFormControls(formAdapter) {
         const xDisplayMode = this.getTermDisplayModeProperty("xTerm");
         const yDisplayMode = this.getTermDisplayModeProperty("yTerm");
-        const xDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "xTerm", "xTermCase", false, xDisplayMode, true);
+        const xDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "xTerm", "xTermCase", true, xDisplayMode, true);
         this.termFormControls["xTerm"] = { termControl: xDescriptor.termControl };
-        const yDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "yTerm", "yTermCase", false, yDisplayMode, true);
+        const yDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "yTerm", "yTermCase", true, yDisplayMode, true);
         this.termFormControls["yTerm"] = { termControl: yDescriptor.termControl };
         return { xDescriptor, yDescriptor };
     }

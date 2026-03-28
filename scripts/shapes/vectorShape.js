@@ -207,7 +207,7 @@ class VectorShape extends ChildShape {
             `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xOriginTerm}</span></span>` +
             `<i class="fa-light fa-circle-dot mdl-name-btn-separator"></i>` +
             `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yOriginTerm}</span></span>` +
-            `<span style="margin-left:6px"></span>` +
+            `<i class="fa-light fa-pipe mdl-name-btn-separator" style="opacity:0.3"></i>` +
             `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
             `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yTerm}</span></span>`;
