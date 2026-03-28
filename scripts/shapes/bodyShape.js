@@ -65,6 +65,16 @@ class BodyShape extends ChildShape {
                 caseProperty: "yTermCase"
             });
         }
+        if (!this.termsMapping.some(mapping => mapping.termProperty === "sizeTerm")) {
+            this.termsMapping.push({
+                termProperty: "sizeTerm",
+                termValue: 0,
+                property: "radius",
+                isInverted: false,
+                scaleProperty: "x",
+                caseProperty: "sizeTermCase"
+            });
+        }
     }
 
     setProperties(properties) {
@@ -187,6 +197,10 @@ class BodyShape extends ChildShape {
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
         this._yDescriptor = yDescriptor;
+        const sizeDisplayMode = this.getTermDisplayModeProperty("sizeTerm");
+        const sizeDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "sizeTerm", "sizeTermCase", true, sizeDisplayMode, true);
+        this.termFormControls["sizeTerm"] = { termControl: sizeDescriptor.termControl };
+        this._sizeDescriptor = sizeDescriptor;
         items.push(
             {
                 location: "center",
@@ -361,6 +375,7 @@ class BodyShape extends ChildShape {
         listItems.push(
             { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
             { text: "Vertical", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) },
+            { text: "Size", stacked: true, buildControl: $p => $p.append(this._sizeDescriptor.control) },
             {
                 text: "Attached To",
                 parentSelector: true,
@@ -420,13 +435,13 @@ class BodyShape extends ChildShape {
     renderTermsButtonTemplate(element) {
         const xTerm = this.properties.xTerm ?? "";
         const yTerm = this.properties.yTerm ?? "";
-        const xPart = xTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` : "";
-        const separator = (xTerm && yTerm) ? `<i class="fa-light fa-x mdl-name-btn-separator"></i>` : "";
-        const yPart = yTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yTerm}</span></span>` : "";
-        if (!xPart && !yPart)
-            element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
-        else
-            element.innerHTML = `${xPart}${separator}${yPart}`;
+        const sizeTerm = this.properties.sizeTerm ?? "";
+        element.innerHTML =
+            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` +
+            `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
+            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yTerm}</span></span>` +
+            `<i class="fa-light fa-arrow-up-right mdl-name-btn-separator"></i>` +
+            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${sizeTerm}</span></span>`;
     }
 
     refreshNameToolbarControl() {
@@ -469,6 +484,7 @@ class BodyShape extends ChildShape {
         this.refreshMotionToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();
+        this.termFormControls["sizeTerm"]?.termControl?.refresh();
         super.showContextToolbar();
     }
 
@@ -573,6 +589,7 @@ class BodyShape extends ChildShape {
         super.setDefaults();
         this.properties.xTerm = "0";
         this.properties.yTerm = "0";
+        this.properties.sizeTerm = "";
         this.properties.name = this.board.translations.get("Body Name");
         this.properties.x = 0;
         this.properties.y = 0;
@@ -766,6 +783,20 @@ class BodyShape extends ChildShape {
         if (nonIdleAnimation)
             return nonIdleAnimation;
         return character.animations[0] ?? null;
+    }
+
+    tickShape() {
+        const scale = this.getScale();
+        for (const mapping of this.termsMapping) {
+            const termValue = this.properties[mapping.termProperty];
+            if (mapping.termProperty === "sizeTerm" && (termValue == null || String(termValue).trim() === ""))
+                continue;
+            const caseNumber = this.properties[mapping.caseProperty] ?? 1;
+            const rawValue = this.resolveTermNumeric(termValue, caseNumber);
+            const axisScale = scale[mapping.scaleProperty] ?? 1;
+            const value = mapping.isInverted ? -rawValue : rawValue;
+            this.properties[mapping.property] = Number.isFinite(value) ? (axisScale !== 0 ? value / axisScale : 0) : 0;
+        }
     }
 
     tick() {

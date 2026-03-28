@@ -78,24 +78,20 @@ class VectorShape extends ChildShape {
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
         this._yDescriptor = yDescriptor;
+        const xOriginDisplayMode = this.getTermDisplayModeProperty("xOriginTerm");
+        const xOriginDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "xOriginTerm", "xOriginTermCase", true, xOriginDisplayMode, true);
+        this.termFormControls["xOriginTerm"] = { termControl: xOriginDescriptor.termControl };
+        this._xOriginDescriptor = xOriginDescriptor;
+        const yOriginDisplayMode = this.getTermDisplayModeProperty("yOriginTerm");
+        const yOriginDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "yOriginTerm", "yOriginTermCase", true, yOriginDisplayMode, true);
+        this.termFormControls["yOriginTerm"] = { termControl: yOriginDescriptor.termControl };
+        this._yOriginDescriptor = yOriginDescriptor;
         items.push(
             {
                 location: "center",
                 template: () => {
                     const container = $('<div></div>');
                     this.createShapeColorDropDownButton(container);
-                    return container;
-                }
-            },
-            {
-                location: "center",
-                template: () => $(`<div class="toolbar-separator">|</div>`)
-            },
-            {
-                location: "center",
-                template: () => {
-                    const container = $('<div></div>');
-                    this.createParentDropDownButton(container);
                     return container;
                 }
             },
@@ -147,20 +143,74 @@ class VectorShape extends ChildShape {
     populateTermsMenuSections(listItems) {
         listItems.push(
             { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
-            { text: "Vertical", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) }
+            { text: "Vertical", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) },
+            { text: "Origin X", stacked: true, buildControl: $p => $p.append(this._xOriginDescriptor.control) },
+            { text: "Origin Y", stacked: true, buildControl: $p => $p.append(this._yOriginDescriptor.control) },
+            {
+                text: "Attached To",
+                parentSelector: true,
+                buildControl: $el => {
+                    const iconSpan = $('<span class="mdl-parent-selector-icon"></span>');
+                    this._parentInlineIconHolder = iconSpan;
+                    this.renderParentButtonTemplate(iconSpan[0]);
+                    const treeContainer = $('<div class="mdl-parent-inline-tree" style="display:none"></div>');
+                    const row = $(`<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">Attached To</span></div>`);
+                    row.append(iconSpan);
+                    iconSpan.on("click", () => {
+                        if (treeContainer.is(":visible")) {
+                            treeContainer.hide();
+                            return;
+                        }
+                        treeContainer.empty();
+                        $('<div>').dxTreeView({
+                            items: this.buildParentTreeItems(this.getReferential()),
+                            dataStructure: "tree",
+                            keyExpr: "id",
+                            displayExpr: "text",
+                            selectionMode: "single",
+                            selectByClick: true,
+                            itemTemplate: (data, _, el) => {
+                                const solidIcon = data.icon.replace("fa-light", "fa-solid");
+                                const colorStyle = data.color ? ` style="color:${data.color}"` : "";
+                                el[0].innerHTML = `<i class="dx-icon ${solidIcon}"${colorStyle}></i>${data.text}`;
+                            },
+                            onItemClick: e => {
+                                const targetShape = this.board.shapes.getById(e.itemData.id);
+                                if (this.wouldCreateCycle(targetShape))
+                                    return;
+                                this.setPropertyCommand("parentId", e.itemData.id);
+                                treeContainer.hide();
+                                this.renderParentButtonTemplate(iconSpan[0]);
+                                this._termsDropdownElement.dxDropDownButton("instance").close();
+                            }
+                        }).appendTo(treeContainer);
+                        treeContainer.show();
+                    });
+                    $el.empty();
+                    $el.append(row, treeContainer);
+                }
+            }
         );
+    }
+
+    refreshParentToolbarControl() {
+        if (this._parentInlineIconHolder)
+            this.renderParentButtonTemplate(this._parentInlineIconHolder[0]);
     }
 
     renderTermsButtonTemplate(element) {
         const xTerm = this.properties.xTerm ?? "";
         const yTerm = this.properties.yTerm ?? "";
-        const xPart = xTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` : "";
-        const separator = (xTerm && yTerm) ? `<i class="fa-light fa-x mdl-name-btn-separator"></i>` : "";
-        const yPart = yTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yTerm}</span></span>` : "";
-        if (!xPart && !yPart)
-            element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
-        else
-            element.innerHTML = `${xPart}${separator}${yPart}`;
+        const xOriginTerm = this.properties.xOriginTerm ?? "";
+        const yOriginTerm = this.properties.yOriginTerm ?? "";
+        element.innerHTML =
+            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xOriginTerm}</span></span>` +
+            `<i class="fa-light fa-circle-dot mdl-name-btn-separator"></i>` +
+            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yOriginTerm}</span></span>` +
+            `<span style="margin-left:6px"></span>` +
+            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` +
+            `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
+            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yTerm}</span></span>`;
     }
 
     positionContextToolbar() {
@@ -198,6 +248,8 @@ class VectorShape extends ChildShape {
         this.refreshTermsToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();
+        this.termFormControls["xOriginTerm"]?.termControl?.refresh();
+        this.termFormControls["yOriginTerm"]?.termControl?.refresh();
     }
 
     refreshTipTypeToolbarControl() {
@@ -300,10 +352,28 @@ class VectorShape extends ChildShape {
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.lineWidth = 1;
         this.properties.tipType = "arrow";
+        this.properties.xOriginTerm = "";
+        this.properties.yOriginTerm = "";
         this.termsMapping.push({ termProperty: "xTerm", termValue: 0, property: "width", isInverted: false, scaleProperty: "x", caseProperty: "xTermCase" });
         this.termsMapping.push({ termProperty: "yTerm", termValue: 0, property: "height", isInverted: true, scaleProperty: "y", caseProperty: "yTermCase" });
+        this.termsMapping.push({ termProperty: "xOriginTerm", termValue: 0, property: "x", isInverted: false, scaleProperty: "x", caseProperty: "xOriginTermCase" });
+        this.termsMapping.push({ termProperty: "yOriginTerm", termValue: 0, property: "y", isInverted: true, scaleProperty: "y", caseProperty: "yOriginTermCase" });
         this.termDisplayEntries.push({ term: "xTerm", caseProperty: "xTermCase", title: "Horizontal" });
         this.termDisplayEntries.push({ term: "yTerm", caseProperty: "yTermCase", title: "Vertical" });
+    }
+
+    tickShape() {
+        const scale = this.getScale();
+        for (const mapping of this.termsMapping) {
+            const termValue = this.properties[mapping.termProperty];
+            if ((mapping.termProperty === "xOriginTerm" || mapping.termProperty === "yOriginTerm") && (termValue == null || String(termValue).trim() === ""))
+                continue;
+            const caseNumber = this.properties[mapping.caseProperty] ?? 1;
+            const rawValue = this.resolveTermNumeric(termValue, caseNumber);
+            const axisScale = scale[mapping.scaleProperty] ?? 1;
+            const value = mapping.isInverted ? -rawValue : rawValue;
+            this.properties[mapping.property] = Number.isFinite(value) ? (axisScale !== 0 ? value / axisScale : 0) : 0;
+        }
     }
 
     createElement() {
