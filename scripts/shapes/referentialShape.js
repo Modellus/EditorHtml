@@ -33,10 +33,40 @@ class ReferentialShape extends BaseShape {
     }
 
     transformShape(transform) {
+        const oldX = this.properties.x;
+        const oldY = this.properties.y;
+        const oldOriginX = this.properties.originX ?? this.properties.width / 2;
+        const oldOriginY = this.properties.originY ?? this.properties.height / 2;
         super.transformShape(transform);
         if (transform.originX && transform.originY) {
             this.properties.originX = transform.originX;
             this.properties.originY = transform.originY;
+        }
+        const newOriginX = this.properties.originX ?? this.properties.width / 2;
+        const newOriginY = this.properties.originY ?? this.properties.height / 2;
+        const deltaX = (this.properties.x - oldX) + (newOriginX - oldOriginX);
+        const deltaY = (this.properties.y - oldY) + (newOriginY - oldOriginY);
+        if (deltaX !== 0 || deltaY !== 0)
+            this.offsetDescendantTrajectories(deltaX, deltaY);
+    }
+
+    offsetDescendantTrajectories(deltaX, deltaY) {
+        const stack = [...this.children];
+        while (stack.length > 0) {
+            const child = stack.pop();
+            if (child.trajectory?.values) {
+                for (const point of child.trajectory.values) {
+                    point.x += deltaX;
+                    point.y += deltaY;
+                    if (point.startX !== undefined)
+                        point.startX += deltaX;
+                    if (point.startY !== undefined)
+                        point.startY += deltaY;
+                }
+                child.trajectory.pointsString = child.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
+            }
+            if (child.children)
+                stack.push(...child.children);
         }
     }
 
