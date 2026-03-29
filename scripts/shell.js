@@ -53,13 +53,19 @@ class Shell  {
         this.properties.iterationDuration = null;
         this.properties.thumbnailUrl = "";
         this.properties.instructions = "";
+        this.properties.educationLevel = "university";
         this.applySvgBackgroundColor();
+        this.applyEducationLevel();
     }
 
     applySvgBackgroundColor() {
         if (!this.board?.svg)
             return;
         this.board.svg.style.backgroundColor = this.properties.backgroundColor;
+    }
+
+    applyEducationLevel() {
+        document.body.classList.toggle("mid-school", this.properties.educationLevel === "midSchool");
     }
 
     createTooltip(e, html, width, canShow) {
@@ -118,6 +124,7 @@ class Shell  {
         this.properties.casesCount = this.calculator.normalizeCasesCount(this.properties.casesCount);
         this.calculator.setProperties(this.properties);
         this.applySvgBackgroundColor();
+        this.applyEducationLevel();
     }
     
     setProperty(name, value) {
@@ -130,6 +137,8 @@ class Shell  {
         current[keys[keys.length - 1]] = value;
         if (name === "backgroundColor")
             this.applySvgBackgroundColor();
+        if (name === "educationLevel")
+            this.applyEducationLevel();
         if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit")
             this.calculator.setProperty(name, value);    
         if (name === "casesCount" && this.board?.selection?.selectedShape)

@@ -80,7 +80,10 @@ class BaseTranslations {
                 "Enter CSV URL": "Introduza o URL do CSV",
                 "Preloaded Data": "Dados pré-carregados",
                 "Apply": "Aplicar",
-                "Clear Data": "Limpar dados"
+                "Clear Data": "Limpar dados",
+                "Education Level": "Nível de ensino",
+                "Mid School": "Básico",
+                "University": "Universitário"
             };
         this.languages["en-US"] =
             {
@@ -160,7 +163,10 @@ class BaseTranslations {
                 "Enter CSV URL": "Enter CSV URL",
                 "Preloaded Data": "Preloaded Data",
                 "Apply": "Apply",
-                "Clear Data": "Clear Data"
+                "Clear Data": "Clear Data",
+                "Education Level": "Education Level",
+                "Mid School": "Mid School",
+                "University": "University"
             };
     }
 

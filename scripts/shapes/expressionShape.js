@@ -144,6 +144,24 @@ class ExpressionShape extends BaseShape {
         this.interceptDeadKeySuperscript();
         this.mathfield.focus();
         this.ensureCaretIsClamped();
+        this.syncHandwrittenStyle();
+    }
+
+    syncHandwrittenStyle() {
+        const shadowRoot = this.mathfield.shadowRoot;
+        if (!shadowRoot)
+            return;
+        const isMidSchool = document.body.classList.contains("mid-school");
+        let styleElement = shadowRoot.querySelector("#mdl-handwritten-style");
+        if (isMidSchool) {
+            if (!styleElement) {
+                styleElement = document.createElement("style");
+                styleElement.id = "mdl-handwritten-style";
+                shadowRoot.appendChild(styleElement);
+            }
+            styleElement.textContent = `.ML__latex, .ML__text, .ML__cmr, .ML__mathit, .ML__ams, .ML__bb, .ML__cal, .ML__frak, .ML__tt, .ML__script, .ML__sans { font-family: "Caveat", cursive !important; }`;
+        } else if (styleElement)
+            styleElement.remove();
     }
 
     removeExpressionInlineShortcuts() {
@@ -548,6 +566,7 @@ class ExpressionShape extends BaseShape {
         this.element.style.backgroundColor = this.properties.backgroundColor;
         this.applyBorderStyle(this.container, 1);
         this.mathfield.style.color = this.properties.foregroundColor;
+        this.syncHandwrittenStyle();
     }
 
     draw() {
@@ -567,8 +586,12 @@ class ExpressionShape extends BaseShape {
         const backgroundColor = this.properties.backgroundColor || "transparent";
         const markup = MathLive.convertLatexToMarkup(this.properties.expression);
         const mathStyles = BaseShape.embeddedMathStyles || "";
+        const isMidSchool = document.body.classList.contains("mid-school");
+        const handwrittenOverride = isMidSchool
+            ? `@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap'); .ML__latex, .ML__text, .ML__mathit, .ML__cmr, .ML__ams { font-family: "Caveat", cursive !important; }`
+            : "";
         const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-            <defs><style>${mathStyles}</style></defs>
+            <defs><style>${mathStyles} ${handwrittenOverride}</style></defs>
             <foreignObject width="100%" height="100%">
                 <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;width:${width}px;height:${height}px;padding:4px;box-sizing:border-box;background:${backgroundColor};color:${color};font-size:16px;overflow:hidden;">
                     ${markup}

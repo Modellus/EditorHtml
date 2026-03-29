@@ -43,6 +43,34 @@ class SettingsController {
             items: [
                 {
                     colSpan: 2,
+                    dataField: "educationLevel",
+                    label: {
+                        text: this.shell.board.translations.get("Education Level")
+                    },
+                    editorType: "dxButtonGroup",
+                    editorOptions: {
+                        items: [
+                            { key: "midSchool", icon: "fa-light fa-pencil", text: this.shell.board.translations.get("Mid School") },
+                            { key: "university", icon: "fa-light fa-graduation-cap", text: this.shell.board.translations.get("University") }
+                        ],
+                        keyExpr: "key",
+                        selectedItemKeys: [this.shell.properties.educationLevel],
+                        stylingMode: "outlined",
+                        elementAttr: { class: "mdl-pill-group" },
+                        buttonTemplate: (data, container) => {
+                            container[0].innerHTML = `<i class="dx-icon ${data.icon}"></i><span class="mdl-button-text">${data.text}</span>`;
+                        },
+                        onContentReady: e => this._initPillButtonGroup(e.element[0]),
+                        onSelectionChanged: e => {
+                            if (e.addedItems.length > 0)
+                                this.shell.setPropertyCommand("educationLevel", e.addedItems[0].key);
+                            this._movePill(e.component.element()[0]);
+                            e.component.repaint();
+                        }
+                    }
+                },
+                {
+                    colSpan: 2,
                     dataField: "language",
                     editorType: "dxSelectBox",
                     editorOptions: {

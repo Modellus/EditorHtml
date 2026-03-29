@@ -66,7 +66,7 @@
     <script src="scripts/shell/saveFormController.js"></script>
     <script src="scripts/shell.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="libraries/fontawesome/css/all.min.css">
     <script src="libraries/scripts/jquery.min.js"></script>
     <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/25.2.3/css/dx.fluent.blue.light.compact.css">
@@ -80,6 +80,12 @@
     <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg">
 </head>
 <body>
+    <svg width="0" height="0" style="position:absolute;pointer-events:none">
+        <filter id="sketchy-line">
+            <feTurbulence type="turbulence" baseFrequency="0.04" numOctaves="1" seed="2" result="turbulence"/>
+            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="0.6" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+    </svg>
     <div id="svg-container">
         <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
