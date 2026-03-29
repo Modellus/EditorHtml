@@ -656,6 +656,10 @@ class ReferentialShape extends BaseShape {
             axisY: axisY,
             pointerId: event.pointerId
         };
+        this._handlePending = null;
+        this._handlePendingStart = null;
+        this._handleActivePointerId = null;
+        this.board.pointerLocked = true;
         window.addEventListener("pointermove", this._onTickPointerMove);
         window.addEventListener("pointerup", this._onTickPointerUp);
         window.addEventListener("pointercancel", this._onTickPointerUp);
@@ -703,6 +707,7 @@ class ReferentialShape extends BaseShape {
         window.removeEventListener("pointerup", this._onTickPointerUp);
         window.removeEventListener("pointercancel", this._onTickPointerUp);
         this._tickDragState = null;
+        this.board.pointerLocked = false;
     }
 
     autoAdjustScales({ position, axisX, axisY }) {

@@ -381,10 +381,12 @@ class BaseShape {
             savedStyles.push({ element: element, pointerEvents: element.style.pointerEvents });
             element.style.pointerEvents = "none";
         });
-        const underlying = document.elementFromPoint(event.clientX, event.clientY);
+        const elements = document.elementsFromPoint(event.clientX, event.clientY);
         savedStyles.forEach(entry => entry.element.style.pointerEvents = entry.pointerEvents);
-        if (underlying && this.element.contains(underlying))
-            return underlying;
+        for (const element of elements) {
+            if (element && this.element.contains(element))
+                return element;
+        }
         return null;
     }
 
@@ -443,6 +445,8 @@ class BaseShape {
     }
 
     onHandleDrag = event => {
+        if (this._tickDragState)
+            return;
         if (this._handleActivePointerId != null && event.pointerId !== this._handleActivePointerId)
             return;
         const p = this.board.getMouseToSvgPoint(event);

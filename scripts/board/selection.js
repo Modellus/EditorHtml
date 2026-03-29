@@ -208,6 +208,11 @@ class Selection {
             if (handle.parentNode !== this.board.svg || this.board.svg.lastChild !== handle)
                 this.board.svg.appendChild(handle);
         });
+        if (this.selectedShape?.handleElements) {
+            this.selectedShape.handleElements.forEach(handle => {
+                this.board.svg.appendChild(handle);
+            });
+        }
     }
 
     hideHoverRotationHandles() {

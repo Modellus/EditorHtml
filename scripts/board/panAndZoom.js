@@ -1,5 +1,6 @@
 class PanAndZoom {
   constructor(board) {
+      this.board = board;
       this.svg = board.svg;
       this.isPanning = false;
       this.startX = 0;
@@ -34,6 +35,8 @@ class PanAndZoom {
 
   onMouseDown(event) {
       if (event.target !== this.svg)
+          return;
+      if (this.board.pointerLocked)
           return;
       this.isPanning = true;
       this.startX = event.clientX;
