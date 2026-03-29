@@ -274,7 +274,31 @@ class VectorShape extends ChildShape {
                 contentTemplate: contentElement => {
                     const listItems = [
                         {
-                            text: "Type",
+                            text: "Start",
+                            buildControl: $container => {
+                                $('<div>').dxButtonGroup({
+                                    items: [
+                                        { key: "arrow", icon: "fa-light fa-arrow-left" },
+                                        { key: "closed", icon: "fa-light fa-left-long" },
+                                        { key: "none", icon: "fa-light fa-dash" }
+                                    ],
+                                    keyExpr: "key",
+                                    selectedItemKeys: [this.properties.startTipType],
+                                    stylingMode: "outlined",
+                                    buttonTemplate: (data, btnContainer) => {
+                                        btnContainer[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
+                                    },
+                                    onSelectionChanged: e => {
+                                        if (e.addedItems.length > 0) {
+                                            this.setPropertyCommand("startTipType", e.addedItems[0].key);
+                                            this.refreshTipTypeToolbarControl();
+                                        }
+                                    }
+                                }).appendTo($container);
+                            }
+                        },
+                        {
+                            text: "End",
                             buildControl: $container => {
                                 $('<div>').dxButtonGroup({
                                     items: [
@@ -283,14 +307,14 @@ class VectorShape extends ChildShape {
                                         { key: "none", icon: "fa-light fa-dash" }
                                     ],
                                     keyExpr: "key",
-                                    selectedItemKeys: [this.properties.tipType],
+                                    selectedItemKeys: [this.properties.endTipType],
                                     stylingMode: "outlined",
                                     buttonTemplate: (data, btnContainer) => {
                                         btnContainer[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
                                     },
                                     onSelectionChanged: e => {
                                         if (e.addedItems.length > 0) {
-                                            this.setPropertyCommand("tipType", e.addedItems[0].key);
+                                            this.setPropertyCommand("endTipType", e.addedItems[0].key);
                                             this.refreshTipTypeToolbarControl();
                                         }
                                     }
@@ -329,9 +353,7 @@ class VectorShape extends ChildShape {
     }
 
     renderTipTypeButtonTemplate(element) {
-        const key = this.properties.tipType;
-        const iconMap = { arrow: "fa-light fa-arrow-right", closed: "fa-light fa-right-long", none: "fa-light fa-dash" };
-        element.innerHTML = `<i class="dx-icon ${iconMap[key] ?? iconMap.arrow}"></i>`;
+        element.innerHTML = `<i class="dx-icon fa-light fa-line-height"></i>`;
     }
 
     setDefaults() {
@@ -351,7 +373,8 @@ class VectorShape extends ChildShape {
         this.properties.borderColor = "transparent";
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
         this.properties.lineWidth = 1;
-        this.properties.tipType = "arrow";
+        this.properties.startTipType = "none";
+        this.properties.endTipType = "arrow";
         this.properties.xOriginTerm = "";
         this.properties.yOriginTerm = "";
         this.termsMapping.push({ termProperty: "xTerm", termValue: 0, property: "width", isInverted: false, scaleProperty: "x", caseProperty: "xTermCase" });
@@ -398,17 +421,19 @@ class VectorShape extends ChildShape {
         super.update();
     }
 
-    getMarkerId() {
-        return `vector-marker-${this.id}-${this.properties.tipType}`;
+    getMarkerId(end) {
+        const tipType = end === "start" ? this.properties.startTipType : this.properties.endTipType;
+        return `vector-marker-${this.id}-${end}-${tipType}`;
     }
 
-    buildMarker() {
-        const tipType = this.properties.tipType;
+    buildMarkerForTip(end) {
+        const tipType = end === "start" ? this.properties.startTipType : this.properties.endTipType;
         const lineWidth = this.properties.lineWidth ?? 1;
         const color = this.properties.foregroundColor;
         const borderColor = this.getBorderColor();
-        const markerId = this.getMarkerId();
+        const markerId = this.getMarkerId(end);
         const borderMarkerId = markerId + "-border";
+        const orient = end === "start" ? "auto-start-reverse" : "auto";
         if (tipType === "none")
             return "";
         const size = Math.max(8, lineWidth * 3);
@@ -421,8 +446,12 @@ class VectorShape extends ChildShape {
         const ox = lineWidth / 2;
         const oy = lineWidth / 2;
         if (tipType === "closed")
-            return `<marker id="${borderMarkerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse"><polygon points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="${borderColor}" stroke="${borderColor}" stroke-width="${lineWidth}" stroke-linejoin="round"/></marker><marker id="${markerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse"><polygon points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="${color}" stroke="none"/></marker>`;
-        return `<marker id="${borderMarkerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse"><polyline points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="none" stroke="${borderColor}" stroke-width="${lineWidth + 2}" stroke-linejoin="round"/></marker><marker id="${markerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse"><polyline points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="none" stroke="${color}" stroke-width="${lineWidth}" stroke-linejoin="round"/></marker>`;
+            return `<marker id="${borderMarkerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="${orient}" markerUnits="userSpaceOnUse"><polygon points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="${borderColor}" stroke="${borderColor}" stroke-width="${lineWidth}" stroke-linejoin="round"/></marker><marker id="${markerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="${orient}" markerUnits="userSpaceOnUse"><polygon points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="${color}" stroke="none"/></marker>`;
+        return `<marker id="${borderMarkerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="${orient}" markerUnits="userSpaceOnUse"><polyline points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="none" stroke="${borderColor}" stroke-width="${lineWidth + 2}" stroke-linejoin="round"/></marker><marker id="${markerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="${orient}" markerUnits="userSpaceOnUse"><polyline points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="none" stroke="${color}" stroke-width="${lineWidth}" stroke-linejoin="round"/></marker>`;
+    }
+
+    buildMarker() {
+        return this.buildMarkerForTip("start") + this.buildMarkerForTip("end");
     }
 
     draw() {
@@ -448,9 +477,16 @@ class VectorShape extends ChildShape {
         this.line.setAttribute("y2", tipY);
         this.line.setAttribute("stroke", color);
         this.line.setAttribute("stroke-width", lineWidth);
-        if (this.properties.tipType !== "none") {
-            this.borderLine.setAttribute("marker-end", `url(#${this.getMarkerId()}-border)`);
-            this.line.setAttribute("marker-end", `url(#${this.getMarkerId()})`);
+        if (this.properties.startTipType !== "none") {
+            this.borderLine.setAttribute("marker-start", `url(#${this.getMarkerId("start")}-border)`);
+            this.line.setAttribute("marker-start", `url(#${this.getMarkerId("start")})`);
+        } else {
+            this.borderLine.removeAttribute("marker-start");
+            this.line.removeAttribute("marker-start");
+        }
+        if (this.properties.endTipType !== "none") {
+            this.borderLine.setAttribute("marker-end", `url(#${this.getMarkerId("end")}-border)`);
+            this.line.setAttribute("marker-end", `url(#${this.getMarkerId("end")})`);
         } else {
             this.borderLine.removeAttribute("marker-end");
             this.line.removeAttribute("marker-end");
@@ -469,11 +505,12 @@ class VectorShape extends ChildShape {
         return { x: position.x + this.properties.width, y: position.y + this.properties.height, startX: position.x, startY: position.y };
     }
 
-    buildStroboscopyMarker() {
-        const tipType = this.properties.tipType;
+    buildStroboscopyMarkerForTip(end) {
+        const tipType = end === "start" ? this.properties.startTipType : this.properties.endTipType;
         const lineWidth = this.properties.lineWidth ?? 1;
         const color = this.properties.stroboscopyColor;
-        const markerId = `${this.getMarkerId()}-stroboscopy`;
+        const markerId = `${this.getMarkerId(end)}-stroboscopy`;
+        const orient = end === "start" ? "auto-start-reverse" : "auto";
         if (tipType === "none")
             return "";
         const size = Math.max(8, lineWidth * 3);
@@ -486,8 +523,12 @@ class VectorShape extends ChildShape {
         const ox = lineWidth / 2;
         const oy = lineWidth / 2;
         if (tipType === "closed")
-            return `<marker id="${markerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse"><polygon points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="${color}" stroke="none"/></marker>`;
-        return `<marker id="${markerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="auto" markerUnits="userSpaceOnUse"><polyline points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="none" stroke="${color}" stroke-width="${lineWidth}" stroke-linejoin="round"/></marker>`;
+            return `<marker id="${markerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="${orient}" markerUnits="userSpaceOnUse"><polygon points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="${color}" stroke="none"/></marker>`;
+        return `<marker id="${markerId}" markerWidth="${markerWidth}" markerHeight="${markerHeight}" refX="${refX}" refY="${refY}" orient="${orient}" markerUnits="userSpaceOnUse"><polyline points="${ox} ${oy}, ${size + ox} ${half + oy}, ${ox} ${markerHeight - oy}" fill="none" stroke="${color}" stroke-width="${lineWidth}" stroke-linejoin="round"/></marker>`;
+    }
+
+    buildStroboscopyMarker() {
+        return this.buildStroboscopyMarkerForTip("start") + this.buildStroboscopyMarkerForTip("end");
     }
 
     drawStroboscopy() {
@@ -500,15 +541,22 @@ class VectorShape extends ChildShape {
         const lineWidth = this.properties.lineWidth ?? 1;
         const color = this.properties.stroboscopyColor;
         const opacity = this.properties.stroboscopyOpacity;
-        const markerId = `${this.getMarkerId()}-stroboscopy`;
+        const startMarkerId = `${this.getMarkerId("start")}-stroboscopy`;
+        const endMarkerId = `${this.getMarkerId("end")}-stroboscopy`;
         const markerHtml = this.buildStroboscopyMarker();
-        const useMarker = this.properties.tipType !== "none" && markerHtml;
+        const useStartMarker = this.properties.startTipType !== "none";
+        const useEndMarker = this.properties.endTipType !== "none";
         let html = markerHtml ? `<defs>${markerHtml}</defs>` : "";
         for (let i = 0; i < desiredLength; i++) {
             const pos = positions[i];
             const startX = pos.startX ?? pos.x;
             const startY = pos.startY ?? pos.y;
-            html += `<line x1="${startX}" y1="${startY}" x2="${pos.x}" y2="${pos.y}" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"${useMarker ? ` marker-end="url(#${markerId})"` : ""}/>`;
+            let markerAttributes = "";
+            if (useStartMarker)
+                markerAttributes += ` marker-start="url(#${startMarkerId})"`;
+            if (useEndMarker)
+                markerAttributes += ` marker-end="url(#${endMarkerId})"`;
+            html += `<line x1="${startX}" y1="${startY}" x2="${pos.x}" y2="${pos.y}" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"${markerAttributes}/>`;
         }
         this.stroboscopy.innerHTML = html;
     }
