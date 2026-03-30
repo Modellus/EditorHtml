@@ -1,11 +1,10 @@
-class LineShape extends ChildShape {
+class ArcShape extends ChildShape {
     constructor(board, parent, id) {
         super(board, parent, id);
     }
 
     getHandles() {
         const handleSize = 12;
-        const lineLength = this.getLineLength();
         return [
             {
                 className: "handle move",
@@ -17,33 +16,6 @@ class LineShape extends ChildShape {
                     x: this.delta("x", e.dx),
                     y: this.delta("y", e.dy)
                 })
-            },
-            {
-                tag: "circle",
-                className: "handle tip",
-                getAttributes: () => {
-                    const position = this.getBoardPosition();
-                    const angleRad = this.getAngleRadians();
-                    return {
-                        cx: position.x + Math.cos(angleRad) * lineLength,
-                        cy: position.y - Math.sin(angleRad) * lineLength,
-                        r: 5
-                    };
-                },
-                getTransform: e => {
-                    const position = this.getBoardPosition();
-                    const dx = e.x - position.x;
-                    const dy = -(e.y - position.y);
-                    const angleRadians = Math.atan2(dy, dx);
-                    const angleDegrees = angleRadians * 180 / Math.PI;
-                    const scale = this.getScale();
-                    const axisScale = scale.x ?? 1;
-                    const scaledAngle = axisScale !== 0 ? angleDegrees : 0;
-                    this.properties.angleTerm = String(Utils.roundToPrecision(scaledAngle, this.board.calculator.getPrecision()));
-                    this.tick();
-                    this.board.markDirty(this);
-                    return {};
-                }
             }
         ];
     }
@@ -83,16 +55,14 @@ class LineShape extends ChildShape {
         return false;
     }
 
-    getLineLength() {
-        const referential = this.getReferentialParent();
-        if (!referential)
-            return 200;
-        return Math.max(referential.properties.width, referential.properties.height) * 2;
+    getUseRadians() {
+        return this.board.calculator.properties.angleUnit === "radians";
     }
 
-    getAngleRadians() {
-        const angleDeg = this.properties.angle ?? 0;
-        return angleDeg * Math.PI / 180;
+    toRadians(angle) {
+        if (this.getUseRadians())
+            return angle;
+        return angle * Math.PI / 180;
     }
 
     createToolbar() {
@@ -101,10 +71,18 @@ class LineShape extends ChildShape {
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
         this._yDescriptor = yDescriptor;
-        const angleDisplayMode = this.getTermDisplayModeProperty("angleTerm");
-        const angleDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "angleTerm", "angleTermCase", true, angleDisplayMode, true);
-        this.termFormControls["angleTerm"] = { termControl: angleDescriptor.termControl };
-        this._angleDescriptor = angleDescriptor;
+        const radiusDisplayMode = this.getTermDisplayModeProperty("radiusTerm");
+        const radiusDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "radiusTerm", "radiusTermCase", true, radiusDisplayMode, true);
+        this.termFormControls["radiusTerm"] = { termControl: radiusDescriptor.termControl };
+        this._radiusDescriptor = radiusDescriptor;
+        const startAngleDisplayMode = this.getTermDisplayModeProperty("startAngleTerm");
+        const startAngleDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "startAngleTerm", "startAngleTermCase", true, startAngleDisplayMode, true);
+        this.termFormControls["startAngleTerm"] = { termControl: startAngleDescriptor.termControl };
+        this._startAngleDescriptor = startAngleDescriptor;
+        const endAngleDisplayMode = this.getTermDisplayModeProperty("endAngleTerm");
+        const endAngleDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "endAngleTerm", "endAngleTermCase", true, endAngleDisplayMode, true);
+        this.termFormControls["endAngleTerm"] = { termControl: endAngleDescriptor.termControl };
+        this._endAngleDescriptor = endAngleDescriptor;
         items.push(
             {
                 location: "center",
@@ -163,7 +141,9 @@ class LineShape extends ChildShape {
         listItems.push(
             { text: "Point X", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
             { text: "Point Y", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) },
-            { text: "Angle", stacked: true, buildControl: $p => $p.append(this._angleDescriptor.control) },
+            { text: "Radius", stacked: true, buildControl: $p => $p.append(this._radiusDescriptor.control) },
+            { text: "Start Angle", stacked: true, buildControl: $p => $p.append(this._startAngleDescriptor.control) },
+            { text: "End Angle", stacked: true, buildControl: $p => $p.append(this._endAngleDescriptor.control) },
             {
                 text: "Attached To",
                 parentSelector: true,
@@ -219,13 +199,19 @@ class LineShape extends ChildShape {
     renderTermsButtonTemplate(element) {
         const xTerm = this.formatTermForDisplay(this.properties.xTerm);
         const yTerm = this.formatTermForDisplay(this.properties.yTerm);
-        const angleTerm = this.formatTermForDisplay(this.properties.angleTerm);
+        const radiusTerm = this.formatTermForDisplay(this.properties.radiusTerm);
+        const startAngleTerm = this.formatTermForDisplay(this.properties.startAngleTerm);
+        const endAngleTerm = this.formatTermForDisplay(this.properties.endAngleTerm);
         element.innerHTML =
             `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
             `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yTerm}</span></span>` +
-            `<i class="fa-light fa-angle mdl-name-btn-separator"></i>` +
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${angleTerm}</span></span>`;
+            `<i class="fa-light fa-pipe mdl-name-btn-separator" style="opacity:0.3"></i>` +
+            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${radiusTerm}</span></span>` +
+            `<i class="fa-light fa-pipe mdl-name-btn-separator" style="opacity:0.3"></i>` +
+            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${startAngleTerm}</span></span>` +
+            `<i class="fa-light fa-arrow-right mdl-name-btn-separator"></i>` +
+            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${endAngleTerm}</span></span>`;
     }
 
     renderLineWidthButtonTemplate(element) {
@@ -310,12 +296,14 @@ class LineShape extends ChildShape {
         this.refreshTermsToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();
-        this.termFormControls["angleTerm"]?.termControl?.refresh();
+        this.termFormControls["radiusTerm"]?.termControl?.refresh();
+        this.termFormControls["startAngleTerm"]?.termControl?.refresh();
+        this.termFormControls["endAngleTerm"]?.termControl?.refresh();
     }
 
     setDefaults() {
         super.setDefaults();
-        this.properties.name = this.board.translations.get("Line Name");
+        this.properties.name = this.board.translations.get("Arc Name");
         this.properties.x = 0;
         this.properties.y = 0;
         this.properties.xTerm = "0";
@@ -324,20 +312,32 @@ class LineShape extends ChildShape {
         this.properties.yTermCase = 1;
         this.properties.xTermDisplayMode = "none";
         this.properties.yTermDisplayMode = "none";
-        this.properties.angleTerm = "45";
-        this.properties.angleTermCase = 1;
-        this.properties.angleTermDisplayMode = "none";
-        this.properties.angle = 45;
+        this.properties.radiusTerm = "5";
+        this.properties.radiusTermCase = 1;
+        this.properties.radiusTermDisplayMode = "none";
+        this.properties.radius = 50;
+        this.properties.startAngleTerm = "0";
+        this.properties.startAngleTermCase = 1;
+        this.properties.startAngleTermDisplayMode = "none";
+        this.properties.startAngle = 0;
+        this.properties.endAngleTerm = this.getUseRadians() ? String(Math.PI / 2) : "90";
+        this.properties.endAngleTermCase = 1;
+        this.properties.endAngleTermDisplayMode = "none";
+        this.properties.endAngle = this.getUseRadians() ? Math.PI / 2 : 90;
         this.properties.foregroundColor = this.board.theme.getRandomStrokeColor();
         this.properties.borderColor = "transparent";
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
-        this.properties.lineWidth = 1;
+        this.properties.lineWidth = 2;
         this.termsMapping.push({ termProperty: "xTerm", termValue: 0, property: "x", isInverted: false, scaleProperty: "x", caseProperty: "xTermCase" });
         this.termsMapping.push({ termProperty: "yTerm", termValue: 0, property: "y", isInverted: true, scaleProperty: "y", caseProperty: "yTermCase" });
-        this.termsMapping.push({ termProperty: "angleTerm", termValue: 0, property: "angle", isInverted: false, scaleProperty: "x", caseProperty: "angleTermCase" });
+        this.termsMapping.push({ termProperty: "radiusTerm", termValue: 0, property: "radius", isInverted: false, scaleProperty: "x", caseProperty: "radiusTermCase" });
+        this.termsMapping.push({ termProperty: "startAngleTerm", termValue: 0, property: "startAngle", isInverted: false, scaleProperty: null, caseProperty: "startAngleTermCase" });
+        this.termsMapping.push({ termProperty: "endAngleTerm", termValue: 0, property: "endAngle", isInverted: false, scaleProperty: null, caseProperty: "endAngleTermCase" });
         this.termDisplayEntries.push({ term: "xTerm", caseProperty: "xTermCase", title: "Point X" });
         this.termDisplayEntries.push({ term: "yTerm", caseProperty: "yTermCase", title: "Point Y" });
-        this.termDisplayEntries.push({ term: "angleTerm", caseProperty: "angleTermCase", title: "Angle" });
+        this.termDisplayEntries.push({ term: "radiusTerm", caseProperty: "radiusTermCase", title: "Radius" });
+        this.termDisplayEntries.push({ term: "startAngleTerm", caseProperty: "startAngleTermCase", title: "Start Angle" });
+        this.termDisplayEntries.push({ term: "endAngleTerm", caseProperty: "endAngleTermCase", title: "End Angle" });
     }
 
     tickShape() {
@@ -345,8 +345,13 @@ class LineShape extends ChildShape {
         for (const mapping of this.termsMapping) {
             const caseNumber = this.properties[mapping.caseProperty] ?? 1;
             const rawValue = this.resolveTermNumeric(this.properties[mapping.termProperty], caseNumber);
-            if (mapping.property === "angle") {
-                this.properties.angle = Number.isFinite(rawValue) ? rawValue : 0;
+            if (mapping.property === "startAngle" || mapping.property === "endAngle") {
+                this.properties[mapping.property] = Number.isFinite(rawValue) ? rawValue : 0;
+                continue;
+            }
+            if (mapping.property === "radius") {
+                const axisScale = scale[mapping.scaleProperty] ?? 1;
+                this.properties.radius = Number.isFinite(rawValue) ? (axisScale !== 0 ? Math.abs(rawValue) / axisScale : 0) : 0;
                 continue;
             }
             const axisScale = scale[mapping.scaleProperty] ?? 1;
@@ -357,8 +362,9 @@ class LineShape extends ChildShape {
 
     createElement() {
         const element = this.board.createSvgElement("g");
-        this.mainLine = this.board.createSvgElement("line");
-        element.appendChild(this.mainLine);
+        this.arcPath = this.board.createSvgElement("path");
+        this.arcPath.setAttribute("fill", "none");
+        element.appendChild(this.arcPath);
         this.pointMarker = this.board.createSvgElement("circle");
         this.pointMarker.setAttribute("pointer-events", "all");
         element.appendChild(this.pointMarker);
@@ -377,17 +383,57 @@ class LineShape extends ChildShape {
         super.update();
     }
 
+    buildArcPathData(cx, cy, pixelRadius, startRad, endRad) {
+        if (pixelRadius <= 0)
+            return "";
+        let sweep = endRad - startRad;
+        if (Math.abs(sweep) >= 2 * Math.PI) {
+            return `M ${cx + pixelRadius} ${cy} ` +
+                `A ${pixelRadius} ${pixelRadius} 0 1 0 ${cx - pixelRadius} ${cy} ` +
+                `A ${pixelRadius} ${pixelRadius} 0 1 0 ${cx + pixelRadius} ${cy}`;
+        }
+        const startX = cx + pixelRadius * Math.cos(startRad);
+        const startY = cy - pixelRadius * Math.sin(startRad);
+        const endX = cx + pixelRadius * Math.cos(endRad);
+        const endY = cy - pixelRadius * Math.sin(endRad);
+        const largeArc = Math.abs(sweep) > Math.PI ? 1 : 0;
+        const sweepFlag = sweep > 0 ? 0 : 1;
+        return `M ${startX} ${startY} A ${pixelRadius} ${pixelRadius} 0 ${largeArc} ${sweepFlag} ${endX} ${endY}`;
+    }
+
+    draw() {
+        super.draw();
+        const position = this.getBoardPosition();
+        const cx = position.x;
+        const cy = position.y;
+        const pixelRadius = Math.abs(this.properties.radius);
+        const startRad = this.toRadians(this.properties.startAngle);
+        const endRad = this.toRadians(this.properties.endAngle);
+        const lineWidth = this.properties.lineWidth ?? 2;
+        const color = this.properties.foregroundColor;
+        const pathData = this.buildArcPathData(cx, cy, pixelRadius, startRad, endRad);
+        if (pathData) {
+            this.arcPath.setAttribute("d", pathData);
+            this.arcPath.setAttribute("stroke", color);
+            this.arcPath.setAttribute("stroke-width", lineWidth);
+        } else
+            this.arcPath.removeAttribute("d");
+        this.pointMarker.setAttribute("cx", cx);
+        this.pointMarker.setAttribute("cy", cy);
+        this.pointMarker.setAttribute("r", 3);
+        this.pointMarker.setAttribute("fill", color);
+        this.drawTrajectory();
+        this.drawStroboscopy();
+    }
+
     getTrajectoryPosition() {
         const xCase = this.properties.xTermCase ?? 1;
         const yCase = this.properties.yTermCase ?? 1;
-        const angleCase = this.properties.angleTermCase ?? 1;
         const logicalX = this.resolveTermNumeric(this.properties.xTerm, xCase);
         const logicalY = this.resolveTermNumeric(this.properties.yTerm, yCase);
-        const angle = this.resolveTermNumeric(this.properties.angleTerm, angleCase);
         return {
             logicalX: Number.isFinite(logicalX) ? logicalX : 0,
-            logicalY: Number.isFinite(logicalY) ? logicalY : 0,
-            angle: Number.isFinite(angle) ? angle : 0
+            logicalY: Number.isFinite(logicalY) ? logicalY : 0
         };
     }
 
@@ -447,29 +493,6 @@ class LineShape extends ChildShape {
         this._stroboscopyPositions = positions;
     }
 
-    draw() {
-        super.draw();
-        const position = this.getBoardPosition();
-        const angleRad = this.getAngleRadians();
-        const lineLength = this.getLineLength();
-        const lineWidth = this.properties.lineWidth ?? 1;
-        const color = this.properties.foregroundColor;
-        const dx = Math.cos(angleRad) * lineLength;
-        const dy = -Math.sin(angleRad) * lineLength;
-        this.mainLine.setAttribute("x1", position.x - dx);
-        this.mainLine.setAttribute("y1", position.y + dy);
-        this.mainLine.setAttribute("x2", position.x + dx);
-        this.mainLine.setAttribute("y2", position.y - dy);
-        this.mainLine.setAttribute("stroke", color);
-        this.mainLine.setAttribute("stroke-width", lineWidth);
-        this.pointMarker.setAttribute("cx", position.x);
-        this.pointMarker.setAttribute("cy", position.y);
-        this.pointMarker.setAttribute("r", 3);
-        this.pointMarker.setAttribute("fill", color);
-        this.drawTrajectory();
-        this.drawStroboscopy();
-    }
-
     drawStroboscopy() {
         if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
             this.stroboscopy.innerHTML = "";
@@ -477,18 +500,14 @@ class LineShape extends ChildShape {
         }
         const positions = this._stroboscopyPositions ?? [];
         const desiredLength = positions.length;
-        const lineWidth = this.properties.lineWidth ?? 1;
         const color = this.properties.stroboscopyColor;
         const opacity = this.properties.stroboscopyOpacity;
-        const lineLength = this.getLineLength();
+        const radius = this.getStroboscopyRadius();
         let html = "";
         for (let i = 0; i < desiredLength; i++) {
             const logical = positions[i];
             const pos = this.logicalToBoardPosition(logical.logicalX, logical.logicalY);
-            const angleRad = (logical.angle ?? 0) * Math.PI / 180;
-            const dx = Math.cos(angleRad) * lineLength;
-            const dy = -Math.sin(angleRad) * lineLength;
-            html += `<line x1="${pos.x - dx}" y1="${pos.y + dy}" x2="${pos.x + dx}" y2="${pos.y - dy}" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"/>`;
+            html += `<circle cx="${pos.x}" cy="${pos.y}" r="${radius}" fill="${color}" opacity="${opacity}"/>`;
         }
         this.stroboscopy.innerHTML = html;
     }

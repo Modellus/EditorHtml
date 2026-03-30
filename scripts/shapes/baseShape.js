@@ -6,6 +6,7 @@ class BaseShape {
         BodyShape: "fa-light fa-circle",
         VectorShape: "fa-light fa-arrow-right-long",
         LineShape: "fa-light fa-slash-forward",
+        ArcShape: "fa-light fa-circle-half-stroke",
         ChartShape: "fa-light fa-chart-line",
         TableShape: "fa-light fa-table",
         SliderShape: "fa-light fa-slider",
@@ -1453,6 +1454,16 @@ class BaseShape {
         if (precision > 0)
             return normalized.toFixed(precision);
         return normalized.toString();
+    }
+
+    formatTermForDisplay(term) {
+        if (term == null || term === "")
+            return "";
+        const str = String(term);
+        const numeric = Number(str);
+        if (!Number.isFinite(numeric))
+            return str;
+        return this.formatModelValue(numeric);
     }
 
     buildTermDisplayLabel(entry) {

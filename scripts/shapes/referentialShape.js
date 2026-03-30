@@ -158,7 +158,8 @@ class ReferentialShape extends BaseShape {
                         dataSource: [
                             { key: "BodyShape", type: "Body", icon: "fa-light fa-circle", text: this.board.translations.get("Body Name") },
                             { key: "VectorShape", type: "Vector", icon: "fa-light fa-arrow-right-long fa-rotate-by", text: this.board.translations.get("Vector Name") },
-                            { key: "LineShape", type: "Line", icon: "fa-light fa-slash-forward", text: this.board.translations.get("Line Name") }
+                            { key: "LineShape", type: "Line", icon: "fa-light fa-slash-forward", text: this.board.translations.get("Line Name") },
+                            { key: "ArcShape", type: "Arc", icon: "fa-light fa-circle-half-stroke", text: this.board.translations.get("Arc Name") }
                         ],
                         scrollingEnabled: false,
                         itemTemplate: (data, _, el) => {

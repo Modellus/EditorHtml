@@ -592,13 +592,16 @@ class ModelsApp {
         searchPanel: { visible: true, width: 280, placeholder: "Search..." },
         sorting: { mode: "multiple" },
         filterRow: { visible: true },
+        columnChooser: { enabled: true, mode: "select" },
         columns: [
+          { dataField: "id", caption: "ID", visible: false },
           {
             dataField: "thumbnail",
             caption: "",
             width: 60,
             allowFiltering: false,
             allowSorting: false,
+            showInColumnChooser: false,
             cellTemplate: (cellElement, cellInfo) => {
               const src = this.getModelThumbnailSource(cellInfo.value);
               if (!src)
@@ -686,6 +689,7 @@ class ModelsApp {
             width: 40,
             allowFiltering: false,
             allowSorting: false,
+            showInColumnChooser: false,
             cellTemplate: (cellElement, cellInfo) => {
               cellElement.get(0).innerHTML = `<button class="maintenance-delete-btn" style="border:none;background:none;cursor:pointer;padding:4px;"><i class="fa-light fa-trash-can" style="color:red;font-size:12px;"></i></button>`;
               cellElement.get(0).querySelector(".maintenance-delete-btn").addEventListener("click", event => {

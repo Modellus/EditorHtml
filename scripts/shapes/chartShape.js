@@ -204,9 +204,9 @@ class ChartShape extends BaseShape {
     }
 
     renderTermsButtonTemplate(element) {
-        const xTerm = this.properties.xTerm ?? "";
+        const xTerm = this.formatTermForDisplay(this.properties.xTerm);
         const yTerms = (this.properties.yTerms ?? []).filter(y => y.term);
-        const firstYTerm = yTerms.length > 0 ? yTerms[0].term : "";
+        const firstYTerm = yTerms.length > 0 ? this.formatTermForDisplay(yTerms[0].term) : "";
         const xPart = xTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` : "";
         const separator = (xTerm && firstYTerm) ? `<i class="fa-light fa-x mdl-name-btn-separator"></i>` : "";
         const yPart = firstYTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${firstYTerm}</span></span>` : "";

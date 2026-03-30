@@ -6,6 +6,7 @@ var modellus = {
         addBody: (name, parentName) => shell.commands.addShape("BodyShape", name, parentName),
         addReferential: name => shell.commands.addShape("ReferentialShape", name),
         addVector: (name, parentName) => shell.commands.addShape("VectorShape", name, parentName),
+        addArc: (name, parentName) => shell.commands.addShape("ArcShape", name, parentName),
         addChart: name => shell.commands.addShape("ChartShape", name),
         addText: name => shell.commands.addShape("TextShape", name),
         addImage: name => shell.commands.addShape("ImageShape", name),

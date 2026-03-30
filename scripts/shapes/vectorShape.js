@@ -199,10 +199,10 @@ class VectorShape extends ChildShape {
     }
 
     renderTermsButtonTemplate(element) {
-        const xTerm = this.properties.xTerm ?? "";
-        const yTerm = this.properties.yTerm ?? "";
-        const xOriginTerm = this.properties.xOriginTerm ?? "";
-        const yOriginTerm = this.properties.yOriginTerm ?? "";
+        const xTerm = this.formatTermForDisplay(this.properties.xTerm);
+        const yTerm = this.formatTermForDisplay(this.properties.yTerm);
+        const xOriginTerm = this.formatTermForDisplay(this.properties.xOriginTerm);
+        const yOriginTerm = this.formatTermForDisplay(this.properties.yOriginTerm);
         element.innerHTML =
             `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xOriginTerm}</span></span>` +
             `<i class="fa-light fa-circle-dot mdl-name-btn-separator"></i>` +

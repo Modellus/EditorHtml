@@ -433,9 +433,9 @@ class BodyShape extends ChildShape {
     }
 
     renderTermsButtonTemplate(element) {
-        const xTerm = this.properties.xTerm ?? "";
-        const yTerm = this.properties.yTerm ?? "";
-        const sizeTerm = this.properties.sizeTerm ?? "";
+        const xTerm = this.formatTermForDisplay(this.properties.xTerm);
+        const yTerm = this.formatTermForDisplay(this.properties.yTerm);
+        const sizeTerm = this.formatTermForDisplay(this.properties.sizeTerm);
         element.innerHTML =
             `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +

@@ -195,6 +195,8 @@ class ExpressionShape extends BaseShape {
     onKeyDown(keydownEvent) {
         if (this.handleEnterKeydown(keydownEvent))
             return;
+        if (this.handleSpaceKeydown(keydownEvent))
+            return;
         this.handleBackspaceKeydown(keydownEvent);
     }
 
@@ -338,6 +340,20 @@ class ExpressionShape extends BaseShape {
 
     isAsciiLetter(text) {
         return /^[A-Za-z]$/.test(text);
+    }
+
+    handleSpaceKeydown(keydownEvent) {
+        if (keydownEvent.key !== " ")
+            return false;
+        if (this.hasSelection())
+            return false;
+        keydownEvent.preventDefault();
+        keydownEvent.stopImmediatePropagation();
+        const savedPosition = this.mathfield.position;
+        this.mathfield.executeCommand("moveAfterParent");
+        if (this.mathfield.position === savedPosition)
+            this.mathfield.executeCommand("insert", "\\quad\\textcolor{gray}{\\mathrm{#0}}");
+        return true;
     }
 
     handleEnterKeydown(keydownEvent) {
