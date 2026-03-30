@@ -378,8 +378,73 @@ class LineShape extends ChildShape {
     }
 
     getTrajectoryPosition() {
-        const position = this.getBoardPosition();
-        return { x: position.x, y: position.y, angle: this.properties.angle ?? 0 };
+        const xCase = this.properties.xTermCase ?? 1;
+        const yCase = this.properties.yTermCase ?? 1;
+        const angleCase = this.properties.angleTermCase ?? 1;
+        const logicalX = this.resolveTermNumeric(this.properties.xTerm, xCase);
+        const logicalY = this.resolveTermNumeric(this.properties.yTerm, yCase);
+        const angle = this.resolveTermNumeric(this.properties.angleTerm, angleCase);
+        return {
+            logicalX: Number.isFinite(logicalX) ? logicalX : 0,
+            logicalY: Number.isFinite(logicalY) ? logicalY : 0,
+            angle: Number.isFinite(angle) ? angle : 0
+        };
+    }
+
+    logicalToBoardPosition(logicalX, logicalY) {
+        const scale = this.getScale();
+        const scaleX = scale.x ?? 1;
+        const scaleY = scale.y ?? 1;
+        const localX = scaleX !== 0 ? logicalX / scaleX : 0;
+        const localY = scaleY !== 0 ? -logicalY / scaleY : 0;
+        const parent = this.parent;
+        if (!parent)
+            return { x: localX, y: localY };
+        const parentPosition = parent.getBoardPosition?.() ?? { x: 0, y: 0 };
+        return {
+            x: localX + parentPosition.x + (parent.properties?.originX ?? 0),
+            y: localY + parentPosition.y + (parent.properties?.originY ?? 0)
+        };
+    }
+
+    tickTrajectory() {
+        const lastIteration = this.board.calculator.getLastIteration();
+        this.trajectory.values = this.trajectory.values.slice(0, lastIteration);
+        if (this.trajectory.values.length <= lastIteration)
+            this.trajectory.values.push(this.getTrajectoryPosition());
+        this.trajectory.lastCount = -1;
+    }
+
+    drawTrajectory() {
+        if (this.properties.trajectoryColor && this.properties.trajectoryColor !== "transparent" && this.properties.trajectoryColor !== "#00000000") {
+            const points = this.trajectory.values.map(v => {
+                const pos = this.logicalToBoardPosition(v.logicalX, v.logicalY);
+                return `${pos.x},${pos.y}`;
+            }).join(" ");
+            this.trajectory.element.setAttribute("points", points);
+            this.trajectory.element.setAttribute("stroke", this.properties.trajectoryColor);
+            this.trajectory.element.setAttribute("stroke-width", 1);
+        } else
+            this.trajectory.element.removeAttribute("points");
+    }
+
+    tickStroboscopy() {
+        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+            this._stroboscopyPositions = [];
+            return;
+        }
+        const lastIteration = this.board.calculator.getLastIteration();
+        if (lastIteration === 0)
+            this._stroboscopyPositions = [];
+        const interval = Math.max(1, this.properties.stroboscopyInterval);
+        const desired = Math.floor(lastIteration / interval);
+        const positions = [];
+        for (let i = 0; i < desired; i++) {
+            const idx = i * interval;
+            const logical = this.trajectory.values[idx] ?? this.getTrajectoryPosition();
+            positions.push(logical);
+        }
+        this._stroboscopyPositions = positions;
     }
 
     draw() {
@@ -418,8 +483,9 @@ class LineShape extends ChildShape {
         const lineLength = this.getLineLength();
         let html = "";
         for (let i = 0; i < desiredLength; i++) {
-            const pos = positions[i];
-            const angleRad = (pos.angle ?? 0) * Math.PI / 180;
+            const logical = positions[i];
+            const pos = this.logicalToBoardPosition(logical.logicalX, logical.logicalY);
+            const angleRad = (logical.angle ?? 0) * Math.PI / 180;
             const dx = Math.cos(angleRad) * lineLength;
             const dy = -Math.sin(angleRad) * lineLength;
             html += `<line x1="${pos.x - dx}" y1="${pos.y + dy}" x2="${pos.x + dx}" y2="${pos.y - dy}" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"/>`;
