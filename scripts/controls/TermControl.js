@@ -188,6 +188,8 @@ class TermControl {
     }
 
     static createBaseShapeTermFormControl(baseShape, formInstance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true) {
+        if (!baseShape.termDisplayEntries.some(entry => entry.term === term))
+            baseShape.termDisplayEntries.push({ term: term, caseProperty: caseProperty });
         const control = $("<div>").addClass("term-packed-control");
         const selectHost = $("<div>").addClass("term-packed-control__select");
         const displayModeValue = baseShape.properties[displayModeProperty] ?? "none";

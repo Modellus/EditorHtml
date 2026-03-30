@@ -171,6 +171,17 @@ class BodyShape extends ChildShape {
         const horizontalRadius = Math.abs(eventPoint.x - position.x);
         const verticalRadius = Math.abs(eventPoint.y - position.y);
         const radius = Math.max(5, Math.max(horizontalRadius, verticalRadius));
+        const scale = this.getScale();
+        const axisScale = scale.x ?? 1;
+        const sizeValue = axisScale !== 0 ? radius * axisScale : radius;
+        const calculator = this.board.calculator;
+        const termValue = this.properties.sizeTerm;
+        if (calculator.isTerm(termValue)) {
+            const caseNumber = this.properties.sizeTermCase ?? 1;
+            calculator.setTermValue(termValue, sizeValue, calculator.system.iteration, caseNumber);
+            calculator.calculate();
+        } else
+            this.properties.sizeTerm = String(Utils.roundToPrecision(sizeValue, calculator.getPrecision()));
         return {
             radius: radius,
             width: radius * 2,
@@ -590,12 +601,12 @@ class BodyShape extends ChildShape {
         const metrics = this.getReferentialDefaultMetrics();
         this.properties.xTerm = metrics ? String(metrics.centerX) : "0";
         this.properties.yTerm = metrics ? String(metrics.centerY) : "0";
-        this.properties.sizeTerm = "";
         this.properties.name = this.board.translations.get("Body Name");
         this.properties.x = metrics ? metrics.centerX / metrics.scaleX : 0;
         this.properties.y = metrics ? -metrics.centerY / metrics.scaleY : 0;
         this.properties.angle = 0;
         const radius = metrics ? metrics.size / metrics.scaleX : 10;
+        this.properties.sizeTerm = String(metrics ? metrics.size : radius);
         this.properties.width = radius * 2;
         this.properties.height = radius * 2;
         this.properties.radius = radius;
