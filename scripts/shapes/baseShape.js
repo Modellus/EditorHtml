@@ -5,6 +5,7 @@ class BaseShape {
     static shapeIcons = {
         BodyShape: "fa-light fa-circle",
         VectorShape: "fa-light fa-arrow-right-long",
+        LineShape: "fa-light fa-slash-forward",
         ChartShape: "fa-light fa-chart-line",
         TableShape: "fa-light fa-table",
         SliderShape: "fa-light fa-slider",
