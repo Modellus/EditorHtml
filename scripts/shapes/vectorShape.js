@@ -358,13 +358,14 @@ class VectorShape extends ChildShape {
 
     setDefaults() {
         super.setDefaults();
+        const metrics = this.getReferentialDefaultMetrics();
         this.properties.name = this.board.translations.get("Vector Name");
         this.properties.x = 0;
         this.properties.y = 0;
-        this.properties.width = 30;
-        this.properties.height = -30;
-        this.properties.xTerm = "30";
-        this.properties.yTerm = "30";
+        this.properties.width = metrics ? metrics.size / metrics.scaleX : 30;
+        this.properties.height = metrics ? -metrics.size / metrics.scaleY : -30;
+        this.properties.xTerm = metrics ? String(metrics.size) : "30";
+        this.properties.yTerm = metrics ? String(metrics.size) : "30";
         this.properties.xTermCase = 1;
         this.properties.yTermCase = 1;
         this.properties.xTermDisplayMode = "none";

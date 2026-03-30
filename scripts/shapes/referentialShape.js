@@ -348,10 +348,14 @@ class ReferentialShape extends BaseShape {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Referential Name");
         var center = this.board.getClientCenter();
-        this.properties.x = center.x - 200;
-        this.properties.y = center.y - 100;
-        this.properties.width = 400;
-        this.properties.height = 200;
+        const parentRect = this.board.svg.parentNode.getBoundingClientRect();
+        const svgCTM = this.board.svg.getScreenCTM().inverse();
+        const screenWidth = Math.abs(parentRect.width * svgCTM.a);
+        const screenHeight = Math.abs(parentRect.height * svgCTM.d);
+        this.properties.width = screenWidth * 0.5;
+        this.properties.height = screenHeight * 0.5;
+        this.properties.x = center.x - this.properties.width / 2;
+        this.properties.y = center.y - this.properties.height / 2;
         this.properties.originX = this.properties.width / 2;
         this.properties.originY = this.properties.height / 2;
         this.properties.scaleX = 0.05;

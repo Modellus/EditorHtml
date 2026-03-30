@@ -587,16 +587,18 @@ class BodyShape extends ChildShape {
 
     setDefaults() {
         super.setDefaults();
-        this.properties.xTerm = "0";
-        this.properties.yTerm = "0";
+        const metrics = this.getReferentialDefaultMetrics();
+        this.properties.xTerm = metrics ? String(metrics.centerX) : "0";
+        this.properties.yTerm = metrics ? String(metrics.centerY) : "0";
         this.properties.sizeTerm = "";
         this.properties.name = this.board.translations.get("Body Name");
-        this.properties.x = 0;
-        this.properties.y = 0;
+        this.properties.x = metrics ? metrics.centerX / metrics.scaleX : 0;
+        this.properties.y = metrics ? -metrics.centerY / metrics.scaleY : 0;
         this.properties.angle = 0;
-        this.properties.width = 10;
-        this.properties.height = 10;
-        this.properties.radius = (this.properties.width ** 2 + this.properties.height ** 2) ** 0.5;
+        const radius = metrics ? metrics.size / metrics.scaleX : 10;
+        this.properties.width = radius * 2;
+        this.properties.height = radius * 2;
+        this.properties.radius = radius;
         this.properties.foregroundColor = this.board.theme.getRandomStrokeColor();
         this.properties.borderColor = this.properties.foregroundColor;
         this.properties.animationFrameStep = 1;

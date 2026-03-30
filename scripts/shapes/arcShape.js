@@ -303,19 +303,20 @@ class ArcShape extends ChildShape {
 
     setDefaults() {
         super.setDefaults();
+        const metrics = this.getReferentialDefaultMetrics();
         this.properties.name = this.board.translations.get("Arc Name");
-        this.properties.x = 0;
-        this.properties.y = 0;
-        this.properties.xTerm = "0";
-        this.properties.yTerm = "0";
+        this.properties.x = metrics ? metrics.centerX / metrics.scaleX : 0;
+        this.properties.y = metrics ? -metrics.centerY / metrics.scaleY : 0;
+        this.properties.xTerm = metrics ? String(metrics.centerX) : "0";
+        this.properties.yTerm = metrics ? String(metrics.centerY) : "0";
         this.properties.xTermCase = 1;
         this.properties.yTermCase = 1;
         this.properties.xTermDisplayMode = "none";
         this.properties.yTermDisplayMode = "none";
-        this.properties.radiusTerm = "5";
+        this.properties.radiusTerm = metrics ? String(metrics.size) : "5";
         this.properties.radiusTermCase = 1;
         this.properties.radiusTermDisplayMode = "none";
-        this.properties.radius = 50;
+        this.properties.radius = metrics ? metrics.size / metrics.scaleX : 50;
         this.properties.startAngleTerm = "0";
         this.properties.startAngleTermCase = 1;
         this.properties.startAngleTermDisplayMode = "none";
@@ -429,11 +430,20 @@ class ArcShape extends ChildShape {
     getTrajectoryPosition() {
         const xCase = this.properties.xTermCase ?? 1;
         const yCase = this.properties.yTermCase ?? 1;
+        const radiusCase = this.properties.radiusTermCase ?? 1;
+        const startAngleCase = this.properties.startAngleTermCase ?? 1;
+        const endAngleCase = this.properties.endAngleTermCase ?? 1;
         const logicalX = this.resolveTermNumeric(this.properties.xTerm, xCase);
         const logicalY = this.resolveTermNumeric(this.properties.yTerm, yCase);
+        const radius = this.resolveTermNumeric(this.properties.radiusTerm, radiusCase);
+        const startAngle = this.resolveTermNumeric(this.properties.startAngleTerm, startAngleCase);
+        const endAngle = this.resolveTermNumeric(this.properties.endAngleTerm, endAngleCase);
         return {
             logicalX: Number.isFinite(logicalX) ? logicalX : 0,
-            logicalY: Number.isFinite(logicalY) ? logicalY : 0
+            logicalY: Number.isFinite(logicalY) ? logicalY : 0,
+            radius: Number.isFinite(radius) ? radius : 0,
+            startAngle: Number.isFinite(startAngle) ? startAngle : 0,
+            endAngle: Number.isFinite(endAngle) ? endAngle : 0
         };
     }
 
@@ -455,9 +465,10 @@ class ArcShape extends ChildShape {
 
     tickTrajectory() {
         const lastIteration = this.board.calculator.getLastIteration();
-        this.trajectory.values = this.trajectory.values.slice(0, lastIteration);
-        if (this.trajectory.values.length <= lastIteration)
-            this.trajectory.values.push(this.getTrajectoryPosition());
+        const currentIndex = lastIteration - 1;
+        if (this.trajectory.values.length > currentIndex)
+            this.trajectory.values.length = currentIndex;
+        this.trajectory.values[currentIndex] = this.getTrajectoryPosition();
         this.trajectory.lastCount = -1;
     }
 
@@ -502,12 +513,19 @@ class ArcShape extends ChildShape {
         const desiredLength = positions.length;
         const color = this.properties.stroboscopyColor;
         const opacity = this.properties.stroboscopyOpacity;
-        const radius = this.getStroboscopyRadius();
+        const lineWidth = this.properties.lineWidth ?? 2;
+        const scale = this.getScale();
+        const scaleX = scale.x ?? 1;
         let html = "";
         for (let i = 0; i < desiredLength; i++) {
             const logical = positions[i];
             const pos = this.logicalToBoardPosition(logical.logicalX, logical.logicalY);
-            html += `<circle cx="${pos.x}" cy="${pos.y}" r="${radius}" fill="${color}" opacity="${opacity}"/>`;
+            const pixelRadius = scaleX !== 0 ? Math.abs(logical.radius) / scaleX : 0;
+            const startRad = this.toRadians(logical.startAngle);
+            const endRad = this.toRadians(logical.endAngle);
+            const pathData = this.buildArcPathData(pos.x, pos.y, pixelRadius, startRad, endRad);
+            if (pathData)
+                html += `<path d="${pathData}" fill="none" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"/>`;
         }
         this.stroboscopy.innerHTML = html;
     }

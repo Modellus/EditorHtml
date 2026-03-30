@@ -315,11 +315,12 @@ class LineShape extends ChildShape {
 
     setDefaults() {
         super.setDefaults();
+        const metrics = this.getReferentialDefaultMetrics();
         this.properties.name = this.board.translations.get("Line Name");
-        this.properties.x = 0;
-        this.properties.y = 0;
-        this.properties.xTerm = "0";
-        this.properties.yTerm = "0";
+        this.properties.x = metrics ? metrics.centerX / metrics.scaleX : 0;
+        this.properties.y = metrics ? -metrics.centerY / metrics.scaleY : 0;
+        this.properties.xTerm = metrics ? String(metrics.centerX) : "0";
+        this.properties.yTerm = metrics ? String(metrics.centerY) : "0";
         this.properties.xTermCase = 1;
         this.properties.yTermCase = 1;
         this.properties.xTermDisplayMode = "none";
@@ -409,9 +410,10 @@ class LineShape extends ChildShape {
 
     tickTrajectory() {
         const lastIteration = this.board.calculator.getLastIteration();
-        this.trajectory.values = this.trajectory.values.slice(0, lastIteration);
-        if (this.trajectory.values.length <= lastIteration)
-            this.trajectory.values.push(this.getTrajectoryPosition());
+        const currentIndex = lastIteration - 1;
+        if (this.trajectory.values.length > currentIndex)
+            this.trajectory.values.length = currentIndex;
+        this.trajectory.values[currentIndex] = this.getTrajectoryPosition();
         this.trajectory.lastCount = -1;
     }
 

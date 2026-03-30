@@ -59,14 +59,11 @@ class ChildShape extends BaseShape {
 
     tickTrajectory() {
         const lastIteration = this.board.calculator.getLastIteration();
-        this.trajectory.values = this.trajectory.values.slice(0, lastIteration);
-        if (this.trajectory.values.length <= lastIteration)
-            this.trajectory.values.push(this.getTrajectoryPosition());
-        const currentCount = this.trajectory.values.length;
-        if (currentCount !== this.trajectory.lastCount) {
-            this.trajectory.pointsString = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
-            this.trajectory.lastCount = currentCount;
-        }
+        const currentIndex = lastIteration - 1;
+        if (this.trajectory.values.length > currentIndex)
+            this.trajectory.values.length = currentIndex;
+        this.trajectory.values[currentIndex] = this.getTrajectoryPosition();
+        this.trajectory.pointsString = this.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
     }
 
     tickStroboscopy() {
@@ -135,6 +132,20 @@ class ChildShape extends BaseShape {
             node = node.parent;
         }
         return false;
+    }
+
+    getReferentialDefaultMetrics() {
+        const referential = this.getReferentialParent();
+        if (!referential)
+            return null;
+        const originX = referential.properties.originX ?? referential.properties.width / 2;
+        const originY = referential.properties.originY ?? referential.properties.height / 2;
+        const scaleX = referential.properties.scaleX ?? 1;
+        const scaleY = referential.properties.scaleY ?? 1;
+        const maxX = (referential.properties.width - originX) * scaleX;
+        const maxY = originY * scaleY;
+        const axisMax = Math.max(maxX, maxY);
+        return { size: axisMax * 0.1, centerX: maxX / 2, centerY: maxY / 2, scaleX, scaleY };
     }
 
     getReferential() {
