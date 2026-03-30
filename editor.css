@@ -320,6 +320,14 @@ body.read-only #context-menu {
     overflow: visible;
 }
 
+.mdl-actions-context-menu {
+    z-index: 20000 !important;
+}
+
+.mdl-actions-context-menu .dx-submenu {
+    z-index: 20001 !important;
+}
+
 .vector-term-toolbar-item {
     display: flex;
     align-items: center;

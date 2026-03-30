@@ -91,6 +91,18 @@ class ExpressionShape extends BaseShape {
         });
     }
 
+    getCopySubMenuItems() {
+        return [
+            ...super.getCopySubMenuItems(),
+            { text: "Copy as Math", icon: "fa-light fa-square-root-variable", shortcut: "", action: () => this.copyAsMath() }
+        ];
+    }
+
+    async copyAsMath() {
+        const mathml = this.mathfield.getValue("math-ml");
+        await navigator.clipboard.writeText(mathml);
+    }
+
     showContextToolbar() {
         this.refreshNameToolbarControl();
         this.refreshShapeColorToolbarControl();

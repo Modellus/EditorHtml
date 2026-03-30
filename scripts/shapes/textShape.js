@@ -28,6 +28,23 @@ class TextShape extends BaseShape {
         return items;
     }
 
+    getCopySubMenuItems() {
+        return [
+            ...super.getCopySubMenuItems(),
+            { text: "Copy as Text", icon: "fa-light fa-align-left", shortcut: "", action: () => this.copyAsText() },
+            { text: "Copy as Markup", icon: "fa-light fa-code", shortcut: "", action: () => this.copyAsMarkup() }
+        ];
+    }
+
+    async copyAsText() {
+        const plainText = this.htmlEditor.getQuillInstance().getText();
+        await navigator.clipboard.writeText(plainText);
+    }
+
+    async copyAsMarkup() {
+        await navigator.clipboard.writeText(this.properties.text ?? "");
+    }
+
     showContextToolbar() {
         this.refreshNameToolbarControl();
         this.refreshShapeColorToolbarControl();

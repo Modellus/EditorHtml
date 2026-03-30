@@ -52,6 +52,32 @@ class TableShape extends BaseShape {
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Columns</span></span>`;
     }
 
+    getCopySubMenuItems() {
+        return [
+            ...super.getCopySubMenuItems(),
+            { text: "Copy as CSV", icon: "fa-light fa-file-csv", shortcut: "", action: () => this.copyAsCsv() }
+        ];
+    }
+
+    async copyAsCsv() {
+        const columns = this._activeColumns ?? this.getSelectedColumns();
+        if (columns.length === 0)
+            return;
+        const system = this.board.calculator.system;
+        const lastIteration = this.board.calculator.getLastIteration();
+        const precision = this.board.calculator.getPrecision();
+        const header = columns.map(column => column.term).join(",");
+        const rows = [header];
+        for (let iteration = 1; iteration <= lastIteration; iteration++) {
+            const values = columns.map(column => {
+                const value = system.getByNameOnIteration(iteration, column.term, column.case);
+                return Number.isFinite(value) ? Utils.roundToPrecision(value, precision) : "";
+            });
+            rows.push(values.join(","));
+        }
+        await navigator.clipboard.writeText(rows.join("\n"));
+    }
+
     showContextToolbar() {
         this.refreshNameToolbarControl();
         if (this._columnsControl)

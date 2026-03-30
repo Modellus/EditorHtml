@@ -900,69 +900,58 @@ class BaseShape {
         };
     }
 
+    getCopySubMenuItems() {
+        return [
+            { text: "Copy as Image", icon: "fa-light fa-image", shortcut: "", action: () => this.copyAsImage() },
+            { text: "Copy as SVG", icon: "fa-light fa-vector-square", shortcut: "", action: () => this.copyAsSvg() }
+        ];
+    }
+
     createActionsDropDownButton(itemElement) {
         const isMac = /mac/i.test(navigator.platform);
         const mod = isMac ? "⌘" : "Ctrl+";
+        const copySubItems = this.getCopySubMenuItems();
         this._actionsDropdownElement = $('<div class="mdl-actions-selector">');
-        this._actionsDropdownElement.dxDropDownButton({
-            showArrowIcon: false,
-            stylingMode: "text",
-            useSelectMode: false,
-            hint: "Actions",
+        const buttonId = `actions-btn-${this.id}`;
+        this._actionsDropdownElement.html(`<div id="${buttonId}"></div><div id="${buttonId}-menu"></div>`);
+        $(`#${buttonId}`, this._actionsDropdownElement).dxButton({
             icon: "fa-light fa-ellipsis-vertical",
-            dropDownOptions: {
-                container: document.body,
-                wrapperAttr: { style: "z-index:20000" },
-                width: "auto"
-            },
-            items: [
-                { text: "Bring to Front", icon: "fa-light fa-bring-front", shortcut: "" },
-                { text: "Bring Forward", icon: "fa-light fa-bring-forward", shortcut: "" },
-                { text: "Send Backward", icon: "fa-light fa-send-backward", shortcut: "" },
-                { text: "Send to Back", icon: "fa-light fa-send-back", shortcut: "" },
-                { separator: true },
-                { text: "Copy", icon: "fa-light fa-copy", shortcut: `${mod}C` },
-                { text: "Paste", icon: "fa-light fa-paste", shortcut: `${mod}V` },
-                { text: "Duplicate", icon: "fa-light fa-clone", shortcut: `${mod}D` }
+            stylingMode: "text",
+            hint: "Actions",
+            onClick: e => {
+                this._actionsMenuInstance.option("target", e.component.element());
+                this._actionsMenuInstance.show();
+            }
+        });
+        $(`#${buttonId}-menu`, this._actionsDropdownElement).dxContextMenu({
+            dataSource: [
+                { text: "Bring to Front", icon: "fa-light fa-bring-front", shortcut: "", action: () => this.board.bringToFront(this) },
+                { text: "Bring Forward", icon: "fa-light fa-bring-forward", shortcut: "", action: () => this.board.bringForward(this) },
+                { text: "Send Backward", icon: "fa-light fa-send-backward", shortcut: "", action: () => this.board.sendBackward(this) },
+                { text: "Send to Back", icon: "fa-light fa-send-back", shortcut: "", action: () => this.board.sendToBack(this) },
+                { text: "Copy", icon: "fa-light fa-copy", shortcut: `${mod}C`, beginGroup: true, action: () => this.copyToClipboard(), items: copySubItems },
+                { text: "Paste", icon: "fa-light fa-paste", shortcut: `${mod}V`, action: () => BaseShape.pasteFromClipboard(this.board, this.parent) },
+                { text: "Duplicate", icon: "fa-light fa-clone", shortcut: `${mod}D`, action: () => this.duplicate() }
             ],
             itemTemplate: itemData => {
-                if (itemData.separator)
-                    return `<div style="border-top:1px solid #e0e0e0;margin:4px 0"></div>`;
+                const hasChildren = itemData.items?.length > 0;
                 return `<div style="display:flex;justify-content:space-between;align-items:center;width:100%">
                             <span class="${itemData.icon}" style="width:15px;margin-right:10px;text-align:left;display:inline-block"></span>
                             <span style="text-align:left;padding-right:20px;flex-grow:1">${itemData.text}</span>
                             <span style="color:#999">${itemData.shortcut}</span>
+                            <span style="width:12px;text-align:right">${hasChildren ? "<i class='fa-light fa-chevron-right'></i>" : ""}</span>
                         </div>`;
             },
-            onItemClick: e => this.onActionsItemClick(e.itemData.text)
+            onItemClick: e => {
+                if (e.itemData?.action)
+                    e.itemData.action();
+            },
+            showEvent: null,
+            position: { my: "top left", at: "bottom left" },
+            cssClass: "mdl-actions-context-menu"
         });
+        this._actionsMenuInstance = $(`#${buttonId}-menu`, this._actionsDropdownElement).dxContextMenu("instance");
         this._actionsDropdownElement.appendTo(itemElement);
-    }
-
-    onActionsItemClick(action) {
-        switch (action) {
-            case "Bring to Front":
-                this.board.bringToFront(this);
-                break;
-            case "Bring Forward":
-                this.board.bringForward(this);
-                break;
-            case "Send Backward":
-                this.board.sendBackward(this);
-                break;
-            case "Send to Back":
-                this.board.sendToBack(this);
-                break;
-            case "Copy":
-                this.copyToClipboard();
-                break;
-            case "Paste":
-                BaseShape.pasteFromClipboard(this.board, this.parent);
-                break;
-            case "Duplicate":
-                this.duplicate();
-                break;
-        }
     }
 
     createTermsDropDownButton(itemElement) {
@@ -1241,6 +1230,17 @@ class BaseShape {
             "image/png": imageBlob
         })];
         await navigator.clipboard.write(items);
+    }
+
+    async copyAsImage() {
+        const imageBlob = await this.toImageBlob();
+        const items = [new ClipboardItem({ "image/png": imageBlob })];
+        await navigator.clipboard.write(items);
+    }
+
+    async copyAsSvg() {
+        const svgString = this.toSvgString();
+        await navigator.clipboard.writeText(svgString);
     }
 
     static async pasteFromClipboard(board, parent) {
