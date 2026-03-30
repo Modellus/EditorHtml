@@ -272,6 +272,14 @@ class ImageShape extends ChildShape {
             this.board.markDirty(this);
         });
         element.appendChild(this.videoForeignObject);
+        this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
+        this.trajectory.element.setAttribute("fill", "none");
+        this.trajectory.element.setAttribute("pointer-events", "none");
+        element.appendChild(this.trajectory.element);
+        this.stroboscopy = this.board.createSvgElement("g");
+        this.stroboscopy.setAttribute("pointer-events", "none");
+        element.appendChild(this.stroboscopy);
+        this._stroboscopyPositions = [];
         this.border = this.board.createSvgElement("rect");
         this.border.setAttribute("fill", "none");
         element.appendChild(this.border);

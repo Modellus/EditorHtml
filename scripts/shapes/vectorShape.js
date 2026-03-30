@@ -335,6 +335,15 @@ class VectorShape extends ChildShape {
                                     onValueChanged: e => this.setPropertyCommand("lineWidth", e.value)
                                 }).appendTo($container);
                             }
+                        },
+                        {
+                            text: "Components",
+                            buildControl: $container => {
+                                $('<div>').dxSwitch({
+                                    value: this.properties.showComponents === true,
+                                    onValueChanged: e => this.setPropertyCommand("showComponents", e.value)
+                                }).appendTo($container);
+                            }
                         }
                     ];
                     $(contentElement).empty();
@@ -376,6 +385,7 @@ class VectorShape extends ChildShape {
         this.properties.lineWidth = 1;
         this.properties.startTipType = "none";
         this.properties.endTipType = "arrow";
+        this.properties.showComponents = false;
         this.properties.xOriginTerm = "";
         this.properties.yOriginTerm = "";
         this.termsMapping.push({ termProperty: "xTerm", termValue: 0, property: "width", isInverted: false, scaleProperty: "x", caseProperty: "xTermCase" });
@@ -404,6 +414,13 @@ class VectorShape extends ChildShape {
         const element = this.board.createSvgElement("g");
         this.defs = this.board.createSvgElement("defs");
         element.appendChild(this.defs);
+        this.componentGroup = this.board.createSvgElement("g");
+        this.componentGroup.setAttribute("pointer-events", "none");
+        this.horizontalComponentLine = this.board.createSvgElement("line");
+        this.componentGroup.appendChild(this.horizontalComponentLine);
+        this.verticalComponentLine = this.board.createSvgElement("line");
+        this.componentGroup.appendChild(this.verticalComponentLine);
+        element.appendChild(this.componentGroup);
         this.borderLine = this.board.createSvgElement("line");
         element.appendChild(this.borderLine);
         this.line = this.board.createSvgElement("line");
@@ -492,8 +509,60 @@ class VectorShape extends ChildShape {
             this.borderLine.removeAttribute("marker-end");
             this.line.removeAttribute("marker-end");
         }
+        this.drawComponents(startX, startY, tipX, tipY, color, lineWidth);
         this.drawTrajectory();
         this.drawStroboscopy();
+    }
+
+    drawComponents(startX, startY, tipX, tipY, color, lineWidth) {
+        if (!this.properties.showComponents) {
+            this.componentGroup.setAttribute("display", "none");
+            return;
+        }
+        this.componentGroup.removeAttribute("display");
+        const componentOpacity = 0.4;
+        const hasHorizontal = Math.abs(tipX - startX) > 0.5;
+        const hasVertical = Math.abs(tipY - startY) > 0.5;
+        if (hasHorizontal) {
+            this.horizontalComponentLine.removeAttribute("display");
+            this.horizontalComponentLine.setAttribute("x1", startX);
+            this.horizontalComponentLine.setAttribute("y1", startY);
+            this.horizontalComponentLine.setAttribute("x2", tipX);
+            this.horizontalComponentLine.setAttribute("y2", startY);
+            this.horizontalComponentLine.setAttribute("stroke", color);
+            this.horizontalComponentLine.setAttribute("stroke-width", lineWidth);
+            this.horizontalComponentLine.setAttribute("opacity", componentOpacity);
+            if (this.properties.startTipType !== "none")
+                this.horizontalComponentLine.setAttribute("marker-start", `url(#${this.getMarkerId("start")})`);
+            else
+                this.horizontalComponentLine.removeAttribute("marker-start");
+            if (this.properties.endTipType !== "none")
+                this.horizontalComponentLine.setAttribute("marker-end", `url(#${this.getMarkerId("end")})`);
+            else
+                this.horizontalComponentLine.removeAttribute("marker-end");
+        } else {
+            this.horizontalComponentLine.setAttribute("display", "none");
+        }
+        if (hasVertical) {
+            this.verticalComponentLine.removeAttribute("display");
+            this.verticalComponentLine.setAttribute("x1", startX);
+            this.verticalComponentLine.setAttribute("y1", startY);
+            this.verticalComponentLine.setAttribute("x2", startX);
+            this.verticalComponentLine.setAttribute("y2", tipY);
+            this.verticalComponentLine.setAttribute("stroke", color);
+            this.verticalComponentLine.setAttribute("stroke-width", lineWidth);
+            this.verticalComponentLine.setAttribute("opacity", componentOpacity);
+            if (this.properties.startTipType !== "none")
+                this.verticalComponentLine.setAttribute("marker-start", `url(#${this.getMarkerId("start")})`);
+            else
+                this.verticalComponentLine.removeAttribute("marker-start");
+            if (this.properties.endTipType !== "none")
+                this.verticalComponentLine.setAttribute("marker-end", `url(#${this.getMarkerId("end")})`);
+            else
+                this.verticalComponentLine.removeAttribute("marker-end");
+        } else {
+            this.verticalComponentLine.setAttribute("display", "none");
+        }
     }
 
     getShapeCenterPosition() {
