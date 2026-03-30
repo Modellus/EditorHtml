@@ -27,6 +27,32 @@ class ChildShape extends BaseShape {
         }
     }
 
+    snapDragPoint(point) {
+        const referential = this.getReferential();
+        if (!referential?.properties?.snapToTicks)
+            return point;
+        const spacing = referential.getTickPixelSpacing();
+        if (!spacing.x || !spacing.y)
+            return point;
+        if (!this._snapGrabOffset) {
+            const boardPosition = this.getBoardPosition();
+            this._snapGrabOffset = { x: point.x - boardPosition.x, y: point.y - boardPosition.y };
+        }
+        const refPosition = referential.getBoardPosition();
+        const originX = referential.properties.originX ?? referential.properties.width / 2;
+        const originY = referential.properties.originY ?? referential.properties.height / 2;
+        const desiredLocalX = point.x - this._snapGrabOffset.x - refPosition.x - originX;
+        const desiredLocalY = point.y - this._snapGrabOffset.y - refPosition.y - originY;
+        const snappedX = Math.round(desiredLocalX / spacing.x) * spacing.x;
+        const snappedY = Math.round(desiredLocalY / spacing.y) * spacing.y;
+        return { x: point.x, y: point.y, dx: snappedX - this.properties.x, dy: snappedY - this.properties.y };
+    }
+
+    dragEnd() {
+        this._snapGrabOffset = null;
+        super.dragEnd();
+    }
+
     getTrajectoryPosition() {
         return this.getBoardPosition();
     }

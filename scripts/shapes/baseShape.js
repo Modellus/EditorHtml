@@ -343,6 +343,10 @@ class BaseShape {
         return Object.assign({}, transform, { rotation: snappedRotation });
     }
 
+    snapDragPoint(point) {
+        return point;
+    }
+
     getHandleRotationCenter() {
         const position = this.getBoardPosition();
         const radius = Number(this.properties?.radius);
@@ -475,7 +479,8 @@ class BaseShape {
                     return;
                 const point = this._handlePendingPoint;
                 this._handlePendingPoint = null;
-                const transform = this.applyTransformSnapping(this.draggedHandle.getTransform(point));
+                const dragPoint = this.draggedHandle.classList.contains("move") ? this.snapDragPoint(point) : point;
+                const transform = this.applyTransformSnapping(this.draggedHandle.getTransform(dragPoint));
                 this.transformShape(transform);
                 this.updateHandles();
                 this.handleStartX = point.x;

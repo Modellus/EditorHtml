@@ -284,6 +284,19 @@ class ReferentialShape extends BaseShape {
                                     }
                                 }).appendTo($p);
                             }
+                        },
+                        {
+                            text: "Snap to Ticks",
+                            buildControl: $p => {
+                                $('<div>').dxSwitch({
+                                    value: this.properties.snapToTicks === true,
+                                    onInitialized: e => { this._snapToTicksSwitchInstance = e.component; },
+                                    onValueChanged: e => {
+                                        this.properties.snapToTicks = e.value;
+                                        this.board.markDirty(this);
+                                    }
+                                }).appendTo($p);
+                            }
                         }
                     ];
                     $('<div>').appendTo(scrollContent).dxList({
@@ -311,6 +324,7 @@ class ReferentialShape extends BaseShape {
         this._autoScaleSwitchInstance?.option("value", this.properties.autoScale !== false);
         this._scaleXBoxInstance?.option("value", this.properties.scaleX);
         this._scaleYBoxInstance?.option("value", this.properties.scaleY);
+        this._snapToTicksSwitchInstance?.option("value", this.properties.snapToTicks === true);
     }
 
     populateShapeColorMenuSections(sections) {
@@ -349,6 +363,7 @@ class ReferentialShape extends BaseShape {
         this.properties.showHorizontalGrid = true;
         this.properties.showVerticalGrid = true;
         this.properties.equalAxisScales = true;
+        this.properties.snapToTicks = false;
     }
 
     createElement() {
@@ -994,6 +1009,34 @@ class ReferentialShape extends BaseShape {
         for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
             ticks.push(Math.round(value * 1e10) / 1e10);
         return ticks;
+    }
+
+    computeTickStep(axisLength, scale) {
+        if (!Number.isFinite(axisLength) || axisLength <= 0 || !Number.isFinite(scale) || scale === 0)
+            return 0;
+        const maxTicks = this.getMaxMajorTickCount(axisLength);
+        const range = axisLength * scale;
+        const rawStep = range / Math.max(1, maxTicks - 1);
+        const exponent = Math.floor(Math.log10(rawStep));
+        const magnitude = Math.pow(10, exponent);
+        const normalized = rawStep / magnitude;
+        if (normalized < 1.5)
+            return magnitude;
+        if (normalized < 3)
+            return 2 * magnitude;
+        if (normalized < 7)
+            return 5 * magnitude;
+        return 10 * magnitude;
+    }
+
+    getTickPixelSpacing() {
+        const scales = this.getAxisScales();
+        const xStep = this.computeTickStep(this.properties.width, scales.scaleX);
+        const yStep = this.computeTickStep(this.properties.height, scales.scaleY);
+        return {
+            x: scales.scaleX !== 0 ? xStep / scales.scaleX : 0,
+            y: scales.scaleY !== 0 ? yStep / scales.scaleY : 0
+        };
     }
 
     getClipId() {
