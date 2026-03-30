@@ -306,9 +306,42 @@ export class UserSdk {
       callback();
       return;
     }
-    if (tries <= 0) {
+    if (tries <= 0)
       return;
-    }
     setTimeout(() => this.waitForGoogleIdentity(callback, tries - 1), 50);
+  }
+
+  startTokenRefresh(googleClientId, apiBaseUrl) {
+    this.waitForGoogleIdentity(() => {
+      google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async ({ credential }) => {
+          if (!credential)
+            return;
+          const session = this.buildSessionFromCredential(credential);
+          this.saveToken(credential);
+          this.saveSession(session);
+          this.saveUser(this.buildUserFromSession(session));
+          this.scheduleTokenRefresh(googleClientId, apiBaseUrl);
+        },
+        auto_select: true,
+        use_fedcm_for_prompt: false
+      });
+      this.scheduleTokenRefresh(googleClientId, apiBaseUrl);
+    });
+  }
+
+  scheduleTokenRefresh(googleClientId, apiBaseUrl) {
+    if (this.refreshTimer)
+      clearTimeout(this.refreshTimer);
+    const session = this.readSession();
+    if (!session?.exp)
+      return;
+    const currentSeconds = Math.floor(Date.now() / 1000);
+    const secondsUntilExpiry = session.exp - currentSeconds;
+    const refreshInSeconds = Math.max(secondsUntilExpiry - 300, 30);
+    this.refreshTimer = setTimeout(() => {
+      google.accounts.id.prompt();
+    }, refreshInSeconds * 1000);
   }
 }

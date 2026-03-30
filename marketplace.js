@@ -2,6 +2,7 @@ import { ModelsApiClient } from "./sdk/modelsApiClient.js";
 import { UserSdk } from "./sdk/userSdk.js";
 
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
+const googleClientId = "616832441203-a45kghte7c05vdkj5ri5ejp8qu81vcae.apps.googleusercontent.com";
 const sessionKey = window.modellus?.auth?.sessionKey || "mp.session";
 const userKey = window.modellus?.auth?.userKey || "mp.user";
 const maintenanceAccessFeatureFlagKey = "can_access_maintenance";
@@ -90,6 +91,7 @@ class ModelsApp {
     this.initDrawer();
     this.initDeletePopup();
     this.userSdk.refreshState(this.state);
+    this.userSdk.startTokenRefresh(googleClientId, apiBase);
     this.loadModels();
   }
   initDeletePopup() {

@@ -1,5 +1,6 @@
 DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjUyCn0=.WlJvwd9AewkKcLiqaZc3LVfKt9FGlzfDD16Zi6iEW4KIN+1MFccO3f68vdJoStCEqtYXdaUrX48WcQJMNg/7K+geEzM2ZVRCeJKxjXIi8OFVU8lXf6cvC+4b3MRFaijuN3c4ug==' });
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
+const googleClientId = "616832441203-a45kghte7c05vdkj5ri5ejp8qu81vcae.apps.googleusercontent.com";
 const urlParams = new URLSearchParams(window.location.search);
 const modelName = urlParams.get("model");
 const modelId = urlParams.get("model_id");
@@ -88,6 +89,7 @@ function redirectToLogin() {
 
 (async () => {
     const { ModelsApiClient } = await import("./sdk/modelsApiClient.js");
+    const { UserSdk } = await import("./sdk/userSdk.js");
     const modelsApiClient = new ModelsApiClient(
         apiBase,
         () => getCurrentSession(),
@@ -96,6 +98,8 @@ function redirectToLogin() {
             return currentSession?.userId || "";
         }
     );
+    const userSdk = new UserSdk("mp.session", "mp.user", "/login.html", "modellus_id_token", "/marketplace.html");
+    userSdk.startTokenRefresh(googleClientId, apiBase);
     try {
         if (modelId) {
             const session = getCurrentSession();
