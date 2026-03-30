@@ -377,6 +377,11 @@ class LineShape extends ChildShape {
         super.update();
     }
 
+    getTrajectoryPosition() {
+        const position = this.getBoardPosition();
+        return { x: position.x, y: position.y, angle: this.properties.angle ?? 0 };
+    }
+
     draw() {
         super.draw();
         const position = this.getBoardPosition();
@@ -398,6 +403,28 @@ class LineShape extends ChildShape {
         this.pointMarker.setAttribute("fill", color);
         this.drawTrajectory();
         this.drawStroboscopy();
+    }
+
+    drawStroboscopy() {
+        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+            this.stroboscopy.innerHTML = "";
+            return;
+        }
+        const positions = this._stroboscopyPositions ?? [];
+        const desiredLength = positions.length;
+        const lineWidth = this.properties.lineWidth ?? 1;
+        const color = this.properties.stroboscopyColor;
+        const opacity = this.properties.stroboscopyOpacity;
+        const lineLength = this.getLineLength();
+        let html = "";
+        for (let i = 0; i < desiredLength; i++) {
+            const pos = positions[i];
+            const angleRad = (pos.angle ?? 0) * Math.PI / 180;
+            const dx = Math.cos(angleRad) * lineLength;
+            const dy = -Math.sin(angleRad) * lineLength;
+            html += `<line x1="${pos.x - dx}" y1="${pos.y + dy}" x2="${pos.x + dx}" y2="${pos.y - dy}" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"/>`;
+        }
+        this.stroboscopy.innerHTML = html;
     }
 
     getScreenAnchorPoint() {
