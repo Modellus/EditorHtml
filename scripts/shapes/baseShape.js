@@ -110,6 +110,7 @@ class BaseShape {
         this.initializeTermDisplayLayer();
         this.initializeShapeNameLayer();
         this.draw();
+        this.update();
         this.initializeContextToolbar();
     }
 
