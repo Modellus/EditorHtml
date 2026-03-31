@@ -1,11 +1,13 @@
 export class UserSdk {
-  constructor(sessionKey, userKey, loginPath, tokenStorageKey = "modellus_id_token", appHome = "/marketplace.html") {
+  constructor(sessionKey, userKey, loginPath, tokenStorageKey = "modellus_id_token", appHome = "/marketplace.html", refreshTokenStorageKey = "modellus_refresh_token") {
     this.sessionKey = sessionKey;
     this.userKey = userKey;
     this.loginPath = loginPath;
     this.tokenStorageKey = tokenStorageKey;
     this.appHome = appHome;
+    this.refreshTokenStorageKey = refreshTokenStorageKey;
     this.featureFlags = [];
+    this.refreshTimer = null;
   }
 
   readSession() {
@@ -38,6 +40,10 @@ export class UserSdk {
     return localStorage.getItem(this.tokenStorageKey) || "";
   }
 
+  readRefreshToken() {
+    return localStorage.getItem(this.refreshTokenStorageKey) || "";
+  }
+
   saveSession(session) {
     localStorage.setItem(this.sessionKey, JSON.stringify(session));
   }
@@ -50,6 +56,10 @@ export class UserSdk {
     localStorage.setItem(this.tokenStorageKey, token);
   }
 
+  saveRefreshToken(refreshToken) {
+    localStorage.setItem(this.refreshTokenStorageKey, refreshToken);
+  }
+
   clearSession() {
     localStorage.removeItem(this.sessionKey);
   }
@@ -60,6 +70,10 @@ export class UserSdk {
 
   clearToken() {
     localStorage.removeItem(this.tokenStorageKey);
+  }
+
+  clearRefreshToken() {
+    localStorage.removeItem(this.refreshTokenStorageKey);
   }
 
   refreshState(state) {
@@ -131,8 +145,11 @@ export class UserSdk {
   }
 
   logout() {
+    if (this.refreshTimer)
+      clearTimeout(this.refreshTimer);
     this.clearSession();
     this.clearToken();
+    this.clearRefreshToken();
     this.clearUser();
     this.featureFlags = [];
     this.redirectToLogin();
@@ -160,6 +177,10 @@ export class UserSdk {
   isSessionValid(session = this.readSession()) {
     if (!session?.token)
       return false;
+    if (session?.exp) {
+      const currentSeconds = Math.floor(Date.now() / 1000);
+      return session.exp > currentSeconds + 30;
+    }
     return this.isTokenValid(session.token);
   }
 
@@ -167,6 +188,7 @@ export class UserSdk {
     const session = this.readSession();
     if (!this.isSessionValid(session)) {
       this.clearToken();
+      this.clearRefreshToken();
       this.clearSession();
       this.clearUser();
       this.redirectToLogin();
@@ -179,13 +201,20 @@ export class UserSdk {
     return true;
   }
 
-  tryAutoRedirect() {
-    const token = this.readToken();
-    if (token && this.isTokenValid(token)) {
+  async tryAutoRedirect(apiBaseUrl) {
+    const session = this.readSession();
+    if (this.isSessionValid(session)) {
+      this.startSessionRefresh(apiBaseUrl);
+      this.redirectToApp();
+      return;
+    }
+    const refreshed = await this.refreshSession(apiBaseUrl);
+    if (refreshed) {
       this.redirectToApp();
       return;
     }
     this.clearToken();
+    this.clearRefreshToken();
     this.clearSession();
     this.clearUser();
   }
@@ -199,6 +228,21 @@ export class UserSdk {
       email: payload.email || "",
       avatar: payload.picture || "",
       exp: payload.exp || 0
+    };
+  }
+
+  buildSessionFromAuthPayload(authPayload) {
+    const token = authPayload?.token || "";
+    if (!token)
+      return null;
+    const payload = this.decodeJwtPayload(token) || {};
+    return {
+      token: token,
+      userId: authPayload?.userId || payload.sub || "",
+      name: authPayload?.name || payload.name || "",
+      email: authPayload?.email || payload.email || "",
+      avatar: authPayload?.avatar || payload.picture || "",
+      exp: authPayload?.exp || payload.exp || 0
     };
   }
 
@@ -287,16 +331,28 @@ export class UserSdk {
   async handleCredentialResponse(credential, apiBaseUrl) {
     if (!credential)
       return;
-    const session = this.buildSessionFromCredential(credential);
-    this.saveToken(credential);
+    const response = await fetch(`${apiBaseUrl}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential: credential })
+    });
+    if (!response.ok)
+      return;
+    const authPayload = await response.json();
+    const session = this.buildSessionFromAuthPayload(authPayload);
+    if (!session)
+      return;
+    this.saveToken(session.token);
     this.saveSession(session);
     this.saveUser(this.buildUserFromSession(session));
-    await this.ensureUser(session, apiBaseUrl);
+    if (authPayload?.refreshToken)
+      this.saveRefreshToken(authPayload.refreshToken);
     const promotedModelId = await this.promoteAnonymousModel(session, apiBaseUrl);
     if (promotedModelId) {
       window.location.href = `/editor.html?model_id=${encodeURIComponent(promotedModelId)}`;
       return;
     }
+    this.startSessionRefresh(apiBaseUrl);
     this.redirectToApp();
   }
 
@@ -311,27 +367,35 @@ export class UserSdk {
     setTimeout(() => this.waitForGoogleIdentity(callback, tries - 1), 50);
   }
 
-  startTokenRefresh(googleClientId, apiBaseUrl) {
-    this.waitForGoogleIdentity(() => {
-      google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: async ({ credential }) => {
-          if (!credential)
-            return;
-          const session = this.buildSessionFromCredential(credential);
-          this.saveToken(credential);
-          this.saveSession(session);
-          this.saveUser(this.buildUserFromSession(session));
-          this.scheduleTokenRefresh(googleClientId, apiBaseUrl);
-        },
-        auto_select: true,
-        use_fedcm_for_prompt: false
+  async refreshSession(apiBaseUrl) {
+    const refreshToken = this.readRefreshToken();
+    if (!refreshToken)
+      return false;
+    try {
+      const response = await fetch(`${apiBaseUrl}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: refreshToken })
       });
-      this.scheduleTokenRefresh(googleClientId, apiBaseUrl);
-    });
+      if (!response.ok)
+        return false;
+      const authPayload = await response.json();
+      const session = this.buildSessionFromAuthPayload(authPayload);
+      if (!session)
+        return false;
+      this.saveToken(session.token);
+      this.saveSession(session);
+      this.saveUser(this.buildUserFromSession(session));
+      if (authPayload?.refreshToken)
+        this.saveRefreshToken(authPayload.refreshToken);
+      this.startSessionRefresh(apiBaseUrl);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  scheduleTokenRefresh(googleClientId, apiBaseUrl) {
+  startSessionRefresh(apiBaseUrl, onAuthFailed = null) {
     if (this.refreshTimer)
       clearTimeout(this.refreshTimer);
     const session = this.readSession();
@@ -339,9 +403,20 @@ export class UserSdk {
       return;
     const currentSeconds = Math.floor(Date.now() / 1000);
     const secondsUntilExpiry = session.exp - currentSeconds;
-    const refreshInSeconds = Math.max(secondsUntilExpiry - 300, 30);
-    this.refreshTimer = setTimeout(() => {
-      google.accounts.id.prompt();
-    }, refreshInSeconds * 1000);
+    const refreshDelaySeconds = secondsUntilExpiry <= 60 ? 1 : Math.max(secondsUntilExpiry - 300, 30);
+    this.refreshTimer = setTimeout(async () => {
+      const refreshed = await this.refreshSession(apiBaseUrl);
+      if (refreshed)
+        return;
+      this.clearToken();
+      this.clearRefreshToken();
+      this.clearSession();
+      this.clearUser();
+      if (typeof onAuthFailed === "function") {
+        onAuthFailed();
+        return;
+      }
+      this.redirectToLogin();
+    }, refreshDelaySeconds * 1000);
   }
 }

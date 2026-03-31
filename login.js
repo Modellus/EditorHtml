@@ -16,8 +16,8 @@ window.handleCredentialResponse = async ({ credential }) => {
   await userSdk.handleCredentialResponse(credential, apiBase);
 };
 
-window.onload = () => {
-  userSdk.tryAutoRedirect();
+window.onload = async () => {
+  await userSdk.tryAutoRedirect(apiBase);
   userSdk.waitForGoogleIdentity(() => {
     google.accounts.id.initialize({ client_id: googleClientId, callback: window.handleCredentialResponse, ux_mode: "popup", use_fedcm_for_prompt: false });
     const buttonHost = document.getElementById("google-login-btn");
