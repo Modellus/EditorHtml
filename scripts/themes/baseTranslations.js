@@ -170,7 +170,8 @@ class BaseTranslations {
                 "Clear Data": "Clear Data",
                 "Education Level": "Education Level",
                 "Mid School": "Mid School",
-                "University": "University"
+                "University": "University",
+                "Select": "Select"
             };
     }
 

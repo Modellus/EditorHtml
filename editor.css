@@ -56,39 +56,31 @@ svg {
     stroke: #4039d7;
     stroke-width: 1px;
     pointer-events: all;
-    opacity: 0;
+    opacity: 1;
 }
 
 .handle.top-left {
     cursor: nwse-resize;
-    width: 8px;
-    height: 8px;
-    rx: 2px;
-    ry: 2px;
+    fill: #4039d7;
+    stroke: none;
 }
 
 .handle.top-right {
     cursor: nesw-resize;
-    width: 8px;
-    height: 8px;
-    rx: 2px;
-    ry: 2px;
+    fill: #4039d7;
+    stroke: none;
 }
 
 .handle.bottom-left {
     cursor: nesw-resize;
-    width: 8px;
-    height: 8px;
-    rx: 2px;
-    ry: 2px;
+    fill: #4039d7;
+    stroke: none;
 }
 
 .handle.bottom-right {
     cursor: nwse-resize;
-    width: 8px;
-    height: 8px;
-    rx: 2px;
-    ry: 2px;
+    fill: #4039d7;
+    stroke: none;
 }
 
 .handle.move {
@@ -167,6 +159,10 @@ line.handle.move {
     stroke-dasharray: 1;
     fill: transparent;
     cursor: move;
+}
+
+.highlighted {
+    filter: var(--highlight-filter);
 }
 
 .hover-outline {

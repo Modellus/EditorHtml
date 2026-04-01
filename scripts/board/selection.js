@@ -38,7 +38,7 @@ class Selection {
         this.selectedShape = shape;
         shape.createHandles();
         shape.showHandles();
-        this.updateOutline(this.selectedOutline, shape);
+        this.applyHighlight(shape);
         if (shape.showContextToolbar)
             shape.showContextToolbar();
         this.dispatchEvent("selected", this.selectedShape, modifiers);
@@ -47,9 +47,10 @@ class Selection {
     deselect() {
         var selectedShape = this.selectedShape;
         this.selectedShape = null;
-        if (selectedShape)
+        if (selectedShape) {
             selectedShape.removeHandles();
-        this.selectedOutline.setAttribute("visibility", "hidden");
+            this.removeHighlight(selectedShape);
+        }
         if (selectedShape?.hideContextToolbar)
             selectedShape.hideContextToolbar();
         if (selectedShape != null)
@@ -100,10 +101,6 @@ class Selection {
         }
         if (hoveredShape !== this.hoveredShape)
             this.setHover(hoveredShape);
-        else {
-            this.updateHoverHandles();
-            this.updateHoverOutline(hoveredShape);
-        }
     }
 
     onDoubleClick(event) {
@@ -189,47 +186,26 @@ class Selection {
             return;
         this.hoveredShape = shape;
         shape.createHandles();
-        shape.showHandles();
-        this.hideHoverRotationHandles();
-        this.updateHoverHandles();
-        this.updateHoverOutline(shape);
-    }
-
-    updateHoverOutline(shape) {
-        this.updateOutline(this.hoverOutline, shape);
-    }
-
-    updateHoverHandles() {
-        if (!this.hoveredShape?.handleElements)
-            return;
-        this.hoveredShape.updateHandles();
-        this.hideHoverRotationHandles();
-        this.hoveredShape.handleElements.forEach(handle => {
-            if (handle.parentNode !== this.board.svg || this.board.svg.lastChild !== handle)
-                this.board.svg.appendChild(handle);
-        });
-        if (this.selectedShape?.handleElements) {
-            this.selectedShape.handleElements.forEach(handle => {
-                this.board.svg.appendChild(handle);
-            });
-        }
-    }
-
-    hideHoverRotationHandles() {
-        if (!this.hoveredShape?.handleElements)
-            return;
-        this.hoveredShape.handleElements.forEach(handle => {
-            if (!handle.classList.contains("rotation"))
-                return;
-            handle.setAttribute("visibility", "hidden");
-        });
+        this.applyHighlight(shape);
     }
 
     clearHover() {
-        if (this.hoveredShape)
+        if (this.hoveredShape) {
             this.hoveredShape.removeHandles();
+            this.removeHighlight(this.hoveredShape);
+        }
         this.hoveredShape = null;
-        this.hoverOutline.setAttribute("visibility", "hidden");
+    }
+
+    applyHighlight(shape) {
+        const color = shape.properties?.foregroundColor ?? "#000000";
+        shape.element?.style.setProperty("--highlight-filter", `drop-shadow(0 0 2px ${color})`);
+        shape.element?.classList.add("highlighted");
+    }
+
+    removeHighlight(shape) {
+        shape.element?.classList.remove("highlighted");
+        shape.element?.style.removeProperty("--highlight-filter");
     }
 
     setDragging(isDragging, shape = null) {
@@ -237,8 +213,13 @@ class Selection {
         if (isDragging) {
             if (shape && shape !== this.hoveredShape)
                 this.clearHover();
-            this.hoverOutline.setAttribute("visibility", "hidden");
-            this.selectedOutline.setAttribute("visibility", "hidden");
+            if (this.selectedShape)
+                this.removeHighlight(this.selectedShape);
+            this.selectedShape?.hideHandles();
+        } else {
+            if (this.selectedShape)
+                this.applyHighlight(this.selectedShape);
+            this.selectedShape?.showHandles();
         }
     }
 
@@ -375,7 +356,5 @@ class Selection {
     update() {
         if (this.selectedShape)
             this.selectedShape.updateHandles();
-        if (this.selectedShape)
-            this.updateOutline(this.selectedOutline, this.selectedShape);
     }
 }

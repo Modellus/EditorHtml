@@ -106,6 +106,13 @@ class ContextMenuController {
                 action: _ => this.shell.openSettings()
             },
             {
+                text: this.shell.board.translations.get("Select"),
+                icon: "fa-light fa-arrow-pointer",
+                shortcut: "",
+                name: "Shapes",
+                items: []
+            },
+            {
                 text: this.shell.board.translations.get("Exit"),
                 icon: "fa-light fa-chevrons-left",
                 shortcut: "",
@@ -141,6 +148,31 @@ class ContextMenuController {
     }
 
     show() {
+        this._refreshShapesMenu();
         this.instance.show();
+    }
+
+    _refreshShapesMenu() {
+        const allShapes = this.shell.board.shapes.shapes;
+        const rootShapes = allShapes.filter(shape => !shape.parent);
+        const shapeItems = rootShapes.map(shape => this._buildShapeMenuItem(shape));
+        const dataSource = this.instance.option("dataSource");
+        const shapesEntry = dataSource.find(item => item.name === "Shapes");
+        if (shapesEntry)
+            shapesEntry.items = shapeItems;
+        this.instance.option("dataSource", dataSource);
+    }
+
+    _buildShapeMenuItem(shape) {
+        const icon = BaseShape.shapeIcons[shape.constructor.name] ?? "fa-light fa-shapes";
+        const children = (shape.children ?? []).map(child => this._buildShapeMenuItem(child));
+        return {
+            text: shape.properties.name ?? "",
+            icon: icon,
+            shortcut: "",
+            name: `Shape_${shape.id}`,
+            action: () => this.shell.board.selectShape(shape),
+            items: children.length > 0 ? children : undefined
+        };
     }
 }

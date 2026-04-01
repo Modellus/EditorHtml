@@ -136,7 +136,7 @@ class BaseShape {
     }
 
     getHandles() {
-        const handleSize = 12;
+        const handleRadius = 4;
         const rotationSize = 8;
         return [
             {
@@ -153,10 +153,11 @@ class BaseShape {
                 })
             },
             {
+                tag: "circle",
                 className: "handle top-left",
                 getAttributes: () => {
                     const position = this.getBoardPosition();
-                    return { x: position.x - handleSize / 2, y: position.y - handleSize / 2, width: handleSize, height: handleSize };
+                    return { cx: position.x, cy: position.y, r: handleRadius };
                 },
                 getTransform: e => ({
                     x: this.properties.width - e.dx > 10 ? this.properties.x + e.dx : this.properties.x,
@@ -166,10 +167,11 @@ class BaseShape {
                 })
             },
             {
+                tag: "circle",
                 className: "handle top-right",
                 getAttributes: () => {
                     const position = this.getBoardPosition();
-                    return { x: position.x + this.properties.width - handleSize / 2, y: position.y - handleSize / 2, width: handleSize, height: handleSize };
+                    return { cx: position.x + this.properties.width, cy: position.y, r: handleRadius };
                 },
                 getTransform: e => ({
                     x: this.properties.x,
@@ -179,10 +181,11 @@ class BaseShape {
                 })
             },
             {
+                tag: "circle",
                 className: "handle bottom-left",
                 getAttributes: () => {
                     const position = this.getBoardPosition();
-                    return { x: position.x - handleSize / 2, y: position.y + this.properties.height - handleSize / 2, width: handleSize, height: handleSize };
+                    return { cx: position.x, cy: position.y + this.properties.height, r: handleRadius };
                 },
                 getTransform: e => ({
                     x: this.properties.width - e.dx > 10 ? this.properties.x + e.dx : this.properties.x,
@@ -192,10 +195,11 @@ class BaseShape {
                 })
             },
             {
+                tag: "circle",
                 className: "handle bottom-right",
                 getAttributes: () => {
                     const position = this.getBoardPosition();
-                    return { x: position.x + this.properties.width - handleSize / 2, y: position.y + this.properties.height - handleSize / 2, width: handleSize, height: handleSize };
+                    return { cx: position.x + this.properties.width, cy: position.y + this.properties.height, r: handleRadius };
                 },
                 getTransform: e => ({
                     x: this.properties.x,
@@ -222,9 +226,10 @@ class BaseShape {
         this._handlePendingPoint = null;
         this._handleActivePointerId = null;
         const handles = this.getHandles();
-        handles.forEach(({ className, getAttributes, getTransform }) => {
-            const handle = this.board.createSvgElement("rect");
+        handles.forEach(({ tag, className, getAttributes, getTransform }) => {
+            const handle = this.board.createSvgElement(tag ?? "rect");
             handle.setAttribute("class", className);
+            handle.setAttribute("visibility", "hidden");
             handle._shape = this;
             this.board.svg.appendChild(handle);
             this.handleElements.push(handle);
@@ -253,7 +258,10 @@ class BaseShape {
     showHandles() {
         if (!this.handleElements)
             return;
-        this.handleElements.forEach(handle => handle.setAttribute("visibility", "visible"));
+        this.handleElements.forEach(handle => {
+            if (handle.classList.contains("rotation"))
+                handle.setAttribute("visibility", "visible");
+        });
     }
 
     hideHandles() {
@@ -1086,9 +1094,11 @@ class BaseShape {
                 }
                 calculator.setTermValue(term, value + delta, calculator.system.iteration, caseNumber);
                 calculator.calculate();
-            } else
-                this.properties[termMapping.termProperty] = Utils.roundToPrecision(
-                    parseFloat(this.properties[termMapping.termProperty]) + delta, calculator.getPrecision());
+            } else {
+                const currentTermValue = parseFloat(this.properties[termMapping.termProperty]);
+                const baseValue = Number.isFinite(currentTermValue) ? currentTermValue : 0;
+                this.properties[termMapping.termProperty] = Utils.roundToPrecision(baseValue + delta, calculator.getPrecision());
+            }
         } else
             this.properties[property] = parseFloat(this.properties[property]) + delta;
         this.tick();

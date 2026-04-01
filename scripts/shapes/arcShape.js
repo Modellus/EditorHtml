@@ -35,6 +35,7 @@ class ArcShape extends ChildShape {
         handles.forEach(({ tag, className, getAttributes, getTransform }) => {
             const handle = this.board.createSvgElement(tag ?? "rect");
             handle.setAttribute("class", className);
+            handle.setAttribute("visibility", "hidden");
             handle._shape = this;
             this.board.svg.appendChild(handle);
             this.handleElements.push(handle);

@@ -117,7 +117,6 @@ class BodyShape extends ChildShape {
     }
 
     getHandles() {
-        const handleSize = 12;
         return [
             {
                 className: "handle move",
@@ -132,38 +131,43 @@ class BodyShape extends ChildShape {
                 })
             },
             {
+                tag: "circle",
                 className: "handle top-left",
-                getAttributes: () => this.getCornerHandleAttributes("top-left", handleSize),
+                getAttributes: () => this.getCornerHandleAttributes("top-left"),
                 getTransform: e => this.getCornerResizeTransform(e)
             },
             {
+                tag: "circle",
                 className: "handle top-right",
-                getAttributes: () => this.getCornerHandleAttributes("top-right", handleSize),
+                getAttributes: () => this.getCornerHandleAttributes("top-right"),
                 getTransform: e => this.getCornerResizeTransform(e)
             },
             {
+                tag: "circle",
                 className: "handle bottom-left",
-                getAttributes: () => this.getCornerHandleAttributes("bottom-left", handleSize),
+                getAttributes: () => this.getCornerHandleAttributes("bottom-left"),
                 getTransform: e => this.getCornerResizeTransform(e)
             },
             {
+                tag: "circle",
                 className: "handle bottom-right",
-                getAttributes: () => this.getCornerHandleAttributes("bottom-right", handleSize),
+                getAttributes: () => this.getCornerHandleAttributes("bottom-right"),
                 getTransform: e => this.getCornerResizeTransform(e)
             }
         ];
     }
 
-    getCornerHandleAttributes(corner, handleSize) {
+    getCornerHandleAttributes(corner) {
         const position = this.getBoardPosition();
         const radius = this.properties.radius ?? 0;
+        const handleRadius = 4;
         if (corner === "top-left")
-            return { x: position.x - radius - handleSize / 2, y: position.y - radius - handleSize / 2, width: handleSize, height: handleSize };
+            return { cx: position.x - radius, cy: position.y - radius, r: handleRadius };
         if (corner === "top-right")
-            return { x: position.x + radius - handleSize / 2, y: position.y - radius - handleSize / 2, width: handleSize, height: handleSize };
+            return { cx: position.x + radius, cy: position.y - radius, r: handleRadius };
         if (corner === "bottom-left")
-            return { x: position.x - radius - handleSize / 2, y: position.y + radius - handleSize / 2, width: handleSize, height: handleSize };
-        return { x: position.x + radius - handleSize / 2, y: position.y + radius - handleSize / 2, width: handleSize, height: handleSize };
+            return { cx: position.x - radius, cy: position.y + radius, r: handleRadius };
+        return { cx: position.x + radius, cy: position.y + radius, r: handleRadius };
     }
 
     getCornerResizeTransform(eventPoint) {
