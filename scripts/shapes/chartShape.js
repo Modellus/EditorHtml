@@ -241,13 +241,33 @@ class ChartShape extends BaseShape {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Chart Name");
         var center = this.board.getClientCenter();
-        this.properties.x = center.x - 100;
+        this.properties.x = center.x - 200;
         this.properties.y = center.y - 100;
-        this.properties.width = 200;
+        this.properties.width = 400;
         this.properties.height = 200;
         this.properties.chartType = ["line"];
         this.properties.xTerm = this.board.calculator.properties.independent.name;
         this.properties.yTerms = [{ term: this.board.calculator.getDefaultTerm(), case: 1, color: "", showLabel: false }];
+        this.properties.domainOverride = this.getDefaultDomainOverride();
+    }
+
+    getDefaultDomainOverride() {
+        const independent = this.board.calculator.properties.independent;
+        let xMin = independent.start;
+        let xMax = independent.end;
+        if (xMin === xMax) {
+            xMin -= 1;
+            xMax += 1;
+        }
+        let yMin = independent.start;
+        let yMax = independent.end;
+        if (yMin === yMax) {
+            yMin -= 1;
+            yMax += 1;
+        }
+        const xMargin = (xMax - xMin) * 0.04;
+        const yMargin = (yMax - yMin) * 0.08;
+        return { xMin: xMin - xMargin, xMax: xMax + xMargin, yMin: yMin - yMargin, yMax: yMax + yMargin };
     }
 
     getChartControlOptions() {
