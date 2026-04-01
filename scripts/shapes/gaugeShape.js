@@ -431,6 +431,8 @@ class GaugeShape extends BaseShape {
     }
 
     setGaugeTermValue(termProperty, caseProperty, stateProperty, value) {
+        if (this.isTermLocked(termProperty))
+            return;
         const term = this.properties[termProperty];
         if (!term || !this.board.calculator.isTerm(term)) {
             this.properties[stateProperty] = value;

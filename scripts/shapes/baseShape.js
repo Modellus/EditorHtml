@@ -653,9 +653,12 @@ class BaseShape {
 
     createTermControl(termProperty, title, showVisibilityToggle = true) {
         const caseProperty = `${termProperty}Case`;
+        const lockedProperty = `${termProperty}Locked`;
         const displayModeProperty = this.getTermDisplayModeProperty(termProperty);
         if (this.properties[caseProperty] == null)
             this.properties[caseProperty] = 1;
+        if (this.properties[lockedProperty] == null)
+            this.properties[lockedProperty] = false;
         if (this.properties[displayModeProperty] == null)
             this.properties[displayModeProperty] = "none";
         if (!this.termDisplayEntries.some(entry => entry.term === termProperty))
@@ -1065,6 +1068,8 @@ class BaseShape {
         let updatedValue = this.properties[property];
         let value;
         if (termMapping != null) {
+            if (this.isTermLocked(termMapping.termProperty))
+                return updatedValue;
             const scale = this.getScale();
             let axisScale = scale[termMapping.scaleProperty] ?? 1;
             var term = this.properties[termMapping.termProperty];
@@ -1849,8 +1854,11 @@ class BaseShape {
 
     addTerm(termProperty, property, title, isInverted = false, isEditable = true, colSpan = 1, scaleProperty = null) {
         const caseProperty = `${termProperty}Case`;
+        const lockedProperty = `${termProperty}Locked`;
         if (this.properties[caseProperty] == null)
             this.properties[caseProperty] = 1;
+        if (this.properties[lockedProperty] == null)
+            this.properties[lockedProperty] = false;
         this.termsMapping.push({
             termProperty: termProperty,
             termValue: 0,
@@ -1860,6 +1868,10 @@ class BaseShape {
             caseProperty: caseProperty
         });
         this.addTermToForm(termProperty, title, isEditable, colSpan);
+    }
+
+    isTermLocked(termProperty) {
+        return this.properties[`${termProperty}Locked`] === true;
     }
 
     getCasesCount() {
@@ -1915,9 +1927,12 @@ class BaseShape {
         var instance = this.form.dxForm("instance");
         var items = instance.option("items");
         const caseProperty = `${term}Case`;
+        const lockedProperty = `${term}Locked`;
         const displayModeProperty = this.getTermDisplayModeProperty(term);
         if (this.properties[caseProperty] == null)
             this.properties[caseProperty] = 1;
+        if (this.properties[lockedProperty] == null)
+            this.properties[lockedProperty] = false;
         if (this.properties[displayModeProperty] == null)
             this.properties[displayModeProperty] = "none";
         if (!this.termDisplayEntries.some(entry => entry.term === term))

@@ -918,6 +918,68 @@ math-field {
     min-width: 0;
 }
 
+.shape-term-lock {
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.term-packed-lock-checkbox {
+    margin: 0;
+    padding: 0;
+    width: 28px;
+    min-width: 28px;
+    height: 32px;
+    background-color: transparent;
+}
+
+.term-packed-lock-checkbox .dx-checkbox-container {
+    width: 28px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.term-packed-lock-checkbox .dx-checkbox-icon {
+    width: 28px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.term-packed-lock-checkbox.dx-state-focused .dx-checkbox-icon,
+.term-packed-lock-checkbox.dx-state-hover .dx-checkbox-icon,
+.term-packed-lock-checkbox.dx-checkbox-checked .dx-checkbox-icon,
+.term-packed-lock-checkbox.dx-checkbox-checked.dx-state-focused .dx-checkbox-icon,
+.term-packed-lock-checkbox.dx-checkbox-checked.dx-state-hover .dx-checkbox-icon,
+.term-packed-lock-checkbox.dx-checkbox-checked.dx-state-active .dx-checkbox-icon {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.term-packed-lock-checkbox .dx-checkbox-icon::before,
+.term-packed-lock-checkbox .dx-checkbox-icon::after {
+    display: none;
+}
+
+.term-packed-lock-icon {
+    font-size: 13px !important;
+    line-height: 1;
+    color: #4d4d4d !important;
+    cursor: pointer;
+}
+
 .shape-term-secondary-dropdown .dx-button {
     width: 100%;
     min-height: 32px;

@@ -392,6 +392,8 @@ class SliderShape extends BaseShape {
     setSplitterValue(value) {
         if (!Number.isFinite(value))
             return;
+        if (this.isTermLocked("term"))
+            return;
         const config = this._sliderConfig ?? this.buildSliderConfig();
         const adjustedValue = this.clamp(value, config.minimum, config.maximum);
         const term = this.properties.term;

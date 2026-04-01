@@ -69,6 +69,37 @@ class TermControl {
         return "fa-light fa-eye-closed";
     }
 
+    static getLockIconClass(locked) {
+        if (locked)
+            return "fa-light fa-lock";
+        return "fa-light fa-lock-open";
+    }
+
+    static updateLockCheckboxIcon(checkboxInstance, iconClassName = "term-packed-lock-icon") {
+        if (!checkboxInstance)
+            return;
+        const iconContainer = checkboxInstance.element().find(".dx-checkbox-icon");
+        if (iconContainer.length == 0)
+            return;
+        iconContainer.empty();
+        const iconClass = TermControl.getLockIconClass(checkboxInstance.option("value") === true);
+        $("<i>").addClass(`${iconClass} ${iconClassName}`).appendTo(iconContainer);
+    }
+
+    static createLockCheckbox(buttonHost, initialValue, onValueChanged, options = {}) {
+        const checkboxClassName = options.checkboxClassName ?? "term-packed-lock-checkbox";
+        const iconClassName = options.iconClassName ?? "term-packed-lock-icon";
+        return buttonHost.dxCheckBox({
+            value: initialValue === true,
+            elementAttr: { class: checkboxClassName },
+            onContentReady: e => TermControl.updateLockCheckboxIcon(e.component, iconClassName),
+            onValueChanged: e => {
+                TermControl.updateLockCheckboxIcon(e.component, iconClassName);
+                onValueChanged(e.value === true);
+            }
+        }).dxCheckBox("instance");
+    }
+
     static updateVisibilityCheckboxIcon(checkboxInstance, iconClassName = "term-packed-checkbox-icon") {
         if (!checkboxInstance)
             return;
@@ -174,8 +205,10 @@ class TermControl {
     static getBaseShapeTermControlStateKey(baseShape, term, caseProperty) {
         const selectedTerm = TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]);
         const selectedCase = TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1);
+        const lockedProperty = `${term}Locked`;
+        const locked = baseShape.properties[lockedProperty] === true;
         const terms = baseShape.board.calculator.getTermsNames();
-        return `${selectedTerm}|${selectedCase}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}`;
+        return `${selectedTerm}|${selectedCase}|${locked}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}`;
     }
 
     static syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl = null) {
@@ -190,6 +223,9 @@ class TermControl {
     static createBaseShapeTermFormControl(baseShape, formInstance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true) {
         if (!baseShape.termDisplayEntries.some(entry => entry.term === term))
             baseShape.termDisplayEntries.push({ term: term, caseProperty: caseProperty });
+        const lockedProperty = `${term}Locked`;
+        if (baseShape.properties[lockedProperty] == null)
+            baseShape.properties[lockedProperty] = false;
         const control = $("<div>").addClass("term-packed-control");
         const selectHost = $("<div>").addClass("term-packed-control__select");
         const displayModeValue = baseShape.properties[displayModeProperty] ?? "none";
@@ -218,7 +254,7 @@ class TermControl {
             showDragHandle: false,
             rowGap: "0",
             rowMarginBottom: "0",
-            getItems: () => [{ term: TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1) }],
+            getItems: () => [{ term: TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1), locked: baseShape.properties[lockedProperty] === true }],
             getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term),
             normalizeTermValue: value => TermControl.normalizeBaseShapeTermValue(value),
@@ -258,6 +294,14 @@ class TermControl {
                     formInstance.updateData(caseProperty, caseNumber);
                     TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl);
                     baseShape.board.markDirty(baseShape);
+                }
+            },
+            lock: {
+                width: "28px",
+                getValue: item => item?.locked === true,
+                onValueChanged: (_, value) => {
+                    formInstance.updateData(lockedProperty, value);
+                    TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl);
                 }
             }
         });
@@ -353,6 +397,8 @@ class TermControl {
                 normalizedItem.color = normalizeColorValue(sourceItem?.color);
             if (sourceItem?.showLabel === true)
                 normalizedItem.showLabel = true;
+            if (sourceItem?.locked === true)
+                normalizedItem.locked = true;
             selectedItems.push(normalizedItem);
         }
         if (selectedItems.length === 0) {
@@ -378,6 +424,8 @@ class TermControl {
                 item.color = normalizeColorValue(sourceItem?.color);
             if (sourceItem?.showLabel === true)
                 item.showLabel = true;
+            if (sourceItem?.locked === true)
+                item.locked = true;
             return item;
         });
     }
@@ -401,6 +449,8 @@ class TermControl {
                 selectedItem.color = normalizeColorValue(sourceItem?.color);
             if (sourceItem?.showLabel === true)
                 selectedItem.showLabel = true;
+            if (sourceItem?.locked === true)
+                selectedItem.locked = true;
             selectedItems.push(selectedItem);
         }
         return selectedItems;
@@ -507,7 +557,16 @@ class TermControl {
                         return;
                     items[index].showLabel = value;
                 })
-            } : null
+            } : null,
+            lock: {
+                width: "28px",
+                getValue: item => item?.locked === true,
+                onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
+                    if (!items[index])
+                        return;
+                    items[index].locked = value;
+                })
+            }
         });
     }
 
@@ -694,9 +753,49 @@ class TermControl {
         return this.shouldShowColorSelection(item, index);
     }
 
-    getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle = true, showTermEditor = true) {
+    hasLock() {
+        return this.options.lock != null;
+    }
+
+    shouldShowLockEditor(item, index) {
+        if (!this.hasLock())
+            return false;
+        const lock = this.options.lock;
+        if (lock.show)
+            return lock.show(item, index);
+        return this.normalizeTermValue(item?.term) !== "";
+    }
+
+    getLockWidth() {
+        const lock = this.options.lock;
+        if (lock?.width)
+            return lock.width;
+        return "28px";
+    }
+
+    getLockValue(item, index) {
+        const lock = this.options.lock;
+        if (lock?.getValue)
+            return lock.getValue(item, index);
+        return item?.locked === true;
+    }
+
+    renderLockEditor(host, item, index) {
+        if (!this.hasLock())
+            return;
+        TermControl.createLockCheckbox(host, this.getLockValue(item, index), value => this.onLockValueChanged(index, value));
+    }
+
+    onLockValueChanged(index, value) {
+        const lock = this.options.lock;
+        if (lock?.onValueChanged)
+            lock.onValueChanged(index, value);
+        this.render();
+    }
+
+    getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle = true, showTermEditor = true, showLock = false) {
         if (this.options.getRowTemplateColumns)
-            return this.options.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor);
+            return this.options.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor, showLock);
         const columns = [];
         if (showDragHandle)
             columns.push("24px");
@@ -706,6 +805,8 @@ class TermControl {
             columns.push(this.getSecondaryWidth());
         if (showColor)
             columns.push(this.getColorSelectionWidth());
+        if (showLock)
+            columns.push(this.getLockWidth());
         if (columns.length == 0)
             return "minmax(0, 1fr)";
         return columns.join(" ");
@@ -717,9 +818,10 @@ class TermControl {
         const showDragHandle = this.shouldShowDragHandle();
         const showTermEditor = this.shouldShowTermEditor(item, index);
         const showVisibility = this.shouldShowVisibility(item, index);
+        const showLock = this.shouldShowLockEditor(item, index);
         const row = $("<div>").addClass(this.getRowClassName()).css({
             display: "grid",
-            gridTemplateColumns: this.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor),
+            gridTemplateColumns: this.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor, showLock),
             gap: this.getRowGap(),
             marginBottom: this.getRowMarginBottom()
         });
@@ -755,6 +857,11 @@ class TermControl {
             const colorHost = $("<div>").addClass("shape-term-color");
             row.append(colorHost);
             this.renderColorEditor(colorHost, item, index);
+        }
+        if (showLock) {
+            const lockHost = $("<div>").addClass("shape-term-lock");
+            row.append(lockHost);
+            this.renderLockEditor(lockHost, item, index);
         }
         element.append(row);
     }
