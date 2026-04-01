@@ -103,12 +103,6 @@ class ExpressionShape extends BaseShape {
         await navigator.clipboard.writeText(mathml);
     }
 
-    showContextToolbar() {
-        this.refreshNameToolbarControl();
-        this.refreshShapeColorToolbarControl();
-        super.showContextToolbar();
-    }
-
     setDefaults() {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Expression Name");

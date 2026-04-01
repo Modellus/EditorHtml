@@ -229,10 +229,8 @@ class ChartShape extends BaseShape {
     }
 
     showContextToolbar() {
-        this.refreshNameToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.refreshYTermsControl();
-        this.refreshShapeColorToolbarControl();
         this.refreshTermsToolbarControl();
         super.showContextToolbar();
     }
@@ -446,6 +444,7 @@ class ChartShape extends BaseShape {
         const height = this.properties.height;
         this.chart.setSize(width, height);
         this.element.setAttribute("transform", `translate(${x} ${y}) rotate(${this.properties.rotation} ${width / 2} ${height / 2})`);
+        super.draw();
     }
 
     tick() {

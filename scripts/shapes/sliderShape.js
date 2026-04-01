@@ -78,9 +78,7 @@ class SliderShape extends BaseShape {
     }
 
     showContextToolbar() {
-        this.refreshNameToolbarControl();
         this.termFormControls["term"]?.termControl?.refresh();
-        this.refreshShapeColorToolbarControl();
         this.refreshTermsToolbarControl();
         super.showContextToolbar();
     }
@@ -495,13 +493,6 @@ class SliderShape extends BaseShape {
         if (Number.isFinite(width) && Number.isFinite(height))
             return { x: width / 2, y: height + 4 };
         return super.getTermLabelAnchor();
-    }
-
-    getShapeNameLabelAnchor() {
-        const width = Number(this.properties.width);
-        if (Number.isFinite(width))
-            return { x: width / 2, y: -2 };
-        return super.getShapeNameLabelAnchor();
     }
 
     tick() {

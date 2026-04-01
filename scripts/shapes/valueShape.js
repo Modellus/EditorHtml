@@ -68,9 +68,7 @@ class ValueShape extends BaseShape {
     }
 
     showContextToolbar() {
-        this.refreshNameToolbarControl();
         this.termFormControls["term"]?.termControl?.refresh();
-        this.refreshShapeColorToolbarControl();
         this.refreshTermsToolbarControl();
         super.showContextToolbar();
     }

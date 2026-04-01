@@ -79,10 +79,8 @@ class TableShape extends BaseShape {
     }
 
     showContextToolbar() {
-        this.refreshNameToolbarControl();
         if (this._columnsControl)
             this._columnsControl.refresh();
-        this.refreshShapeColorToolbarControl();
         this.refreshTermsToolbarControl();
         super.showContextToolbar();
     }

@@ -683,6 +683,8 @@ class BaseShape {
     }
 
     showContextToolbar() {
+        this.refreshNameToolbarControl();
+        this.refreshShapeColorToolbarControl();
         if (this.contextToolbar)
             this.contextToolbar.classList.add("visible");
         requestAnimationFrame(() => requestAnimationFrame(() => this.positionContextToolbar()));
@@ -1432,24 +1434,26 @@ class BaseShape {
     }
 
     getShapeNameLabelAnchor() {
+        const margin = 8;
         const position = this.getBoardPosition?.();
         if (!position)
             return null;
+        const nameLayerIsLocal = this.shapeNameLayer?.parentNode === this.element;
+        const elementHasTranslate = nameLayerIsLocal && this.element.getAttribute("transform")?.includes("translate");
         const radius = Number(this.properties.radius);
         if (Number.isFinite(radius))
-            return { x: position.x, y: position.y - radius - 2 };
+            return { x: position.x, y: position.y - radius - margin };
         const width = Number(this.properties.width);
         const height = Number(this.properties.height);
-        const hasCenteredImageBounds = !!this.image && !this.container && !this.path && Number.isFinite(width) && Number.isFinite(height);
-        if (hasCenteredImageBounds)
-            return { x: position.x, y: position.y - height / 2 - 2 };
         if (Number.isFinite(width) && Number.isFinite(height)) {
+            if (elementHasTranslate)
+                return { x: width / 2, y: -margin };
             const left = Math.min(position.x, position.x + width);
             const right = Math.max(position.x, position.x + width);
             const top = Math.min(position.y, position.y + height);
-            return { x: (left + right) / 2, y: top - 2 };
+            return { x: (left + right) / 2, y: top - margin };
         }
-        return { x: position.x, y: position.y - 2 };
+        return { x: position.x, y: position.y - margin };
     }
 
     drawShapeNameLabel() {

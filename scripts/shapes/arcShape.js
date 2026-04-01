@@ -288,16 +288,14 @@ class ArcShape extends ChildShape {
     }
 
     showContextToolbar() {
-        super.showContextToolbar();
-        this.refreshNameToolbarControl();
         this.refreshParentToolbarControl();
-        this.refreshShapeColorToolbarControl();
         this.refreshMotionToolbarControl();
         this.refreshTermsToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();
         this.termFormControls["radiusTerm"]?.termControl?.refresh();
         this.termFormControls["startAngleTerm"]?.termControl?.refresh();
+        super.showContextToolbar();
         this.termFormControls["endAngleTerm"]?.termControl?.refresh();
     }
 

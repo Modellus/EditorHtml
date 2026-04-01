@@ -239,17 +239,15 @@ class VectorShape extends ChildShape {
     }
 
     showContextToolbar() {
-        super.showContextToolbar();
-        this.refreshNameToolbarControl();
         this.refreshParentToolbarControl();
         this.refreshTipTypeToolbarControl();
-        this.refreshShapeColorToolbarControl();
         this.refreshMotionToolbarControl();
         this.refreshTermsToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();
         this.termFormControls["xOriginTerm"]?.termControl?.refresh();
         this.termFormControls["yOriginTerm"]?.termControl?.refresh();
+        super.showContextToolbar();
     }
 
     refreshTipTypeToolbarControl() {

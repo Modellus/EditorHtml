@@ -119,10 +119,8 @@ class ImageShape extends ChildShape {
     }
 
     showContextToolbar() {
-        this.refreshNameToolbarControl();
         this._lockAspectRatioSwitchInstance?.option("value", this.properties.lockAspectRatio !== false);
         this._videoStepsBoxInstance?.option("value", this.properties.videoStepsPerFrame);
-        this.refreshShapeColorToolbarControl();
         super.showContextToolbar();
     }
 

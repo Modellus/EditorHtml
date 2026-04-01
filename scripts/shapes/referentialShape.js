@@ -338,9 +338,7 @@ class ReferentialShape extends BaseShape {
     }
 
     showContextToolbar() {
-        this.refreshNameToolbarControl();
         this.refreshSettingsToolbarControl();
-        this.refreshShapeColorToolbarControl();
         super.showContextToolbar();
     }
 

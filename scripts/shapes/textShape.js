@@ -45,12 +45,6 @@ class TextShape extends BaseShape {
         await navigator.clipboard.writeText(this.properties.text ?? "");
     }
 
-    showContextToolbar() {
-        this.refreshNameToolbarControl();
-        this.refreshShapeColorToolbarControl();
-        super.showContextToolbar();
-    }
-
     setDefaults() {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Text Name");

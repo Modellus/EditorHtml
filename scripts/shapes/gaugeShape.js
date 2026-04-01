@@ -104,10 +104,8 @@ class GaugeShape extends BaseShape {
     }
 
     showContextToolbar() {
-        this.refreshNameToolbarControl();
         this.termFormControls["angleTerm"]?.termControl?.refresh();
         this.termFormControls["magnitudeTerm"]?.termControl?.refresh();
-        this.refreshShapeColorToolbarControl();
         this.refreshTermsToolbarControl();
         this.refreshGaugeSettingsToolbarControl();
         super.showContextToolbar();

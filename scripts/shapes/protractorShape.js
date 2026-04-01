@@ -44,9 +44,7 @@ class ProtractorShape extends BaseShape {
     }
 
     showContextToolbar() {
-        this.refreshNameToolbarControl();
         this._scaleBoxInstance?.option("value", this.properties.scale);
-        this.refreshShapeColorToolbarControl();
         super.showContextToolbar();
     }
 

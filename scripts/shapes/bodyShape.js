@@ -489,9 +489,7 @@ class BodyShape extends ChildShape {
     }
 
     showContextToolbar() {
-        this.refreshNameToolbarControl();
         this.refreshParentToolbarControl();
-        this.refreshShapeColorToolbarControl();
         this.refreshMotionToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();

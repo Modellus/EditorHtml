@@ -302,15 +302,13 @@ class LineShape extends ChildShape {
     }
 
     showContextToolbar() {
-        super.showContextToolbar();
-        this.refreshNameToolbarControl();
         this.refreshParentToolbarControl();
-        this.refreshShapeColorToolbarControl();
         this.refreshMotionToolbarControl();
         this.refreshTermsToolbarControl();
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.termFormControls["yTerm"]?.termControl?.refresh();
         this.termFormControls["angleTerm"]?.termControl?.refresh();
+        super.showContextToolbar();
     }
 
     setDefaults() {
