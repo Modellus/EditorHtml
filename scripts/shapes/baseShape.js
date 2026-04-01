@@ -886,14 +886,47 @@ class BaseShape {
     createRemoveToolbarItem() {
         return {
             location: "center",
-            widget: "dxButton",
-            options: {
-                hint: "Remove",
-                template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
-                stylingMode: "text",
-                onClick: () => this.remove()
+            template: () => {
+                const container = $('<div></div>');
+                this.createRemoveDropDownButton(container);
+                return container;
             }
         };
+    }
+
+    createRemoveDropDownButton(itemElement) {
+        this._removeDropdownElement = $('<div class="mdl-remove-selector">');
+        const buttonId = `remove-btn-${this.id}`;
+        this._removeDropdownElement.html(`<div id="${buttonId}"></div><div id="${buttonId}-menu"></div>`);
+        $(`#${buttonId}`, this._removeDropdownElement).dxButton({
+            template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+            stylingMode: "text",
+            hint: "Remove",
+            onClick: e => {
+                this._removeMenuInstance.option("target", e.component.element());
+                this._removeMenuInstance.show();
+            }
+        });
+        $(`#${buttonId}-menu`, this._removeDropdownElement).dxContextMenu({
+            dataSource: [
+                { text: "Remove", icon: "fa-light fa-trash-can", action: () => this.remove() },
+                { text: "Reset", icon: "fa-light fa-arrow-rotate-left", action: () => this.resetToDefaults() }
+            ],
+            itemTemplate: itemData => {
+                return `<div style="display:flex;align-items:center;width:100%">
+                            <span class="${itemData.icon}" style="width:15px;margin-right:10px;text-align:left;display:inline-block"></span>
+                            <span style="text-align:left;flex-grow:1">${itemData.text}</span>
+                        </div>`;
+            },
+            onItemClick: e => {
+                e.itemData.action();
+            },
+            showEvent: null,
+            position: { my: "top left", at: "bottom left" },
+            cssClass: "mdl-remove-context-menu"
+        });
+        this._removeMenuInstance = $(`#${buttonId}-menu`, this._removeDropdownElement).dxContextMenu("instance");
+        this._removeDropdownElement.appendTo(itemElement);
     }
 
     createActionsToolbarItem() {
@@ -1175,6 +1208,16 @@ class BaseShape {
 
     remove() {
         const command = new RemoveShapeCommand(this.board, this);
+        this.board.invoker.execute(command);
+    }
+
+    resetToDefaults() {
+        const previousProperties = Utils.cloneProperties(this.properties);
+        const defaultProperties = { x: previousProperties.x, y: previousProperties.y, width: previousProperties.width, height: previousProperties.height };
+        this.setDefaults();
+        Object.assign(defaultProperties, this.properties);
+        this.setProperties(previousProperties);
+        const command = new SetShapePropertiesCommand(this.board, this, defaultProperties);
         this.board.invoker.execute(command);
     }
 

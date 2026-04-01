@@ -92,6 +92,8 @@ class Board {
         shape.tick();
         this.refresh();
         this.dispatchShapeEvent("shapeChanged", shape);
+        if (this.selection.selectedShape === shape)
+            shape.showContextToolbar();
     }
 
     onShapeFocused(e) {
