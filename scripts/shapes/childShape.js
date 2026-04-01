@@ -59,6 +59,8 @@ class ChildShape extends BaseShape {
 
     tickTrajectory() {
         const lastIteration = this.board.calculator.getLastIteration();
+        if (this.board.calculator.getIteration() < lastIteration)
+            return;
         const currentIndex = lastIteration - 1;
         if (this.trajectory.values.length > currentIndex)
             this.trajectory.values.length = currentIndex;
@@ -67,20 +69,19 @@ class ChildShape extends BaseShape {
     }
 
     tickStroboscopy() {
-        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+        const lastIteration = this.board.calculator.getLastIteration();
+        if (lastIteration === 0) {
             this._stroboscopyPositions = [];
             return;
         }
-        const lastIteration = this.board.calculator.getLastIteration();
-        if (lastIteration === 0)
-            this._stroboscopyPositions = [];
         const interval = Math.max(1, this.properties.stroboscopyInterval);
         const desired = Math.floor(lastIteration / interval);
         const positions = [];
         for (let i = 0; i < desired; i++) {
             const idx = i * interval;
-            const pos = this.trajectory.values[idx] ?? this.getTrajectoryPosition();
-            positions.push(pos);
+            const pos = this.trajectory.values[idx];
+            if (pos)
+                positions.push(pos);
         }
         this._stroboscopyPositions = positions;
     }
