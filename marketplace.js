@@ -1188,7 +1188,7 @@ class ModelsApp {
     const currentFavoriteState = this.isFavoriteValue(modelData);
     const desiredFavoriteState = typeof shouldFavorite === "boolean" ? shouldFavorite : !currentFavoriteState;
     try {
-      await this.apiClient.patchUserModelInteraction(modelData.id, this.state.session.userId, {
+      await this.apiClient.patchUserModelInteraction(modelData.id, {
         is_favorite: desiredFavoriteState
       });
       this.loadModels();
@@ -1204,7 +1204,7 @@ class ModelsApp {
     const currentPickedState = this.isPickedValue(modelData);
     const desiredPickedState = typeof shouldPick === "boolean" ? shouldPick : !currentPickedState;
     try {
-      await this.apiClient.patchUserModelInteraction(modelData.id, this.state.session.userId, {
+      await this.apiClient.patchUserModelInteraction(modelData.id, {
         is_picked: desiredPickedState
       });
       this.loadModels();
@@ -1227,7 +1227,7 @@ class ModelsApp {
     const nextValue = !(modelData.is_public === true || modelData.is_public === 1);
     this.setStatus(nextValue ? "Setting public…" : "Setting private…");
     try {
-      await this.apiClient.updateModelVisibility(modelData.id, nextValue, this.state.session.userId);
+      await this.apiClient.updateModelVisibility(modelData.id, nextValue);
       this.setStatus(nextValue ? "Model is public." : "Model is private.");
       this.loadModels();
     } catch (error) {
@@ -1318,9 +1318,7 @@ class ModelsApp {
         description: "",
         type: "model",
         status: "draft",
-        userId: userId,
-        createdAt: new Date().toISOString(),
-        lastModified: new Date().toISOString()
+        createdAt: new Date().toISOString()
       });
       this.setStatus("Model created.");
       this.loadModels();

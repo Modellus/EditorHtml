@@ -312,10 +312,8 @@ export class UserSdk {
       description: definition.properties?.description || "",
       type: "model",
       status: "draft",
-      userId: session.userId,
       definition: stored,
-      createdAt: now,
-      lastModified: now
+      createdAt: now
     };
     try {
       const response = await fetch(`${apiBaseUrl}/models`, {

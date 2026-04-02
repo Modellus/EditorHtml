@@ -391,8 +391,7 @@ class Shell  {
             const payload = {
                 title: this.properties.name || "Untitled model",
                 description: this.properties.description || "",
-                definition: JSON.stringify(this.serialize()),
-                lastModified: new Date().toISOString()
+                definition: JSON.stringify(this.serialize())
             };
             if (this.properties.thumbnailUrl)
                 payload.thumbnail = this.properties.thumbnailUrl;
@@ -424,9 +423,7 @@ class Shell  {
                 description: metadata.description || "",
                 type: "model",
                 status: "draft",
-                userId: this.getCurrentUserId(),
-                createdAt: now,
-                lastModified: now
+                createdAt: now
             });
             if (!newModel?.id)
                 return;
@@ -439,8 +436,7 @@ class Shell  {
             const savePayload = {
                 title: metadata.name || "Untitled model",
                 description: metadata.description || "",
-                definition: JSON.stringify(definition),
-                lastModified: new Date().toISOString()
+                definition: JSON.stringify(definition)
             };
             if (this.properties.thumbnailUrl)
                 savePayload.thumbnail = this.properties.thumbnailUrl;

@@ -201,22 +201,20 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Metadata update failed (${response.status})`);
   }
 
-  async patchUserModelInteraction(modelId, userId, payload) {
+  async patchUserModelInteraction(modelId, payload) {
     const response = await fetch(`${this.apiBaseUrl}/user-model-interactions`, {
       method: "PATCH",
       headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
-      body: JSON.stringify(Object.assign({ model_id: modelId, user_id: userId }, payload))
+      body: JSON.stringify(Object.assign({ model_id: modelId }, payload))
     });
     if (!response.ok) throw new Error(`Interaction update failed (${response.status})`);
   }
 
-  async updateModelVisibility(modelId, isPublic, userId) {
-    const url = new URL(`${this.apiBaseUrl}/models/${modelId}`);
-    url.searchParams.set("user_id", userId);
-    const response = await fetch(url.toString(), {
+  async updateModelVisibility(modelId, isPublic) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${modelId}`, {
       method: "PATCH",
       headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
-      body: JSON.stringify({ is_public: isPublic, user_id: userId })
+      body: JSON.stringify({ is_public: isPublic })
     });
     if (!response.ok) throw new Error(`Visibility update failed (${response.status})`);
   }
