@@ -306,12 +306,16 @@ export class UserSdk {
       return null;
     }
     const headers = Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders(session));
+    const now = new Date().toISOString();
     const payload = {
       title: definition.properties?.name || "Untitled model",
       description: definition.properties?.description || "",
+      type: "model",
+      status: "draft",
+      userId: session.userId,
       definition: stored,
-      lastModified: new Date().toISOString(),
-      user_id: session.userId
+      createdAt: now,
+      lastModified: now
     };
     try {
       const response = await fetch(`${apiBaseUrl}/models`, {

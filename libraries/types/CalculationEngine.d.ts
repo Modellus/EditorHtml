@@ -97,6 +97,16 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitFunctionIndependent?: (ctx: FunctionIndependentContext) => void;
     /**
+     * Enter a parse tree produced by `LatexMathParser.units`.
+     * @param ctx the parse tree
+     */
+    enterUnits?: (ctx: UnitsContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.units`.
+     * @param ctx the parse tree
+     */
+    exitUnits?: (ctx: UnitsContext) => void;
+    /**
      * Enter a parse tree produced by the `FractionDigits`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -529,6 +539,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitSubtraction?: (ctx: SubtractionContext) => void;
     /**
+     * Enter a parse tree produced by the `Positive`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterPositive?: (ctx: PositiveContext) => void;
+    /**
+     * Exit a parse tree produced by the `Positive`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitPositive?: (ctx: PositiveContext) => void;
+    /**
      * Enter a parse tree produced by the `Derivative`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -672,6 +694,7 @@ declare class DifferentialContext extends antlr.ParserRuleContext {
     name(): NameContext[];
     name(i: number): NameContext | null;
     expression(): ExpressionContext;
+    units(): UnitsContext | null;
     get ruleIndex(): number;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
@@ -686,6 +709,7 @@ declare class FunctionContext extends AssignmentContext {
     constructor(ctx: AssignmentContext);
     name(): NameContext;
     expression(): ExpressionContext;
+    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -695,6 +719,7 @@ declare class FunctionIndependentContext extends AssignmentContext {
     name(): NameContext;
     expression(): ExpressionContext[];
     expression(i: number): ExpressionContext | null;
+    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -704,6 +729,7 @@ declare class FunctionSubscriptDigitContext extends AssignmentContext {
     name(): NameContext;
     DIGIT(): antlr.TerminalNode;
     expression(): ExpressionContext;
+    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -713,6 +739,16 @@ declare class FunctionSubscriptContext extends AssignmentContext {
     name(): NameContext;
     expression(): ExpressionContext[];
     expression(i: number): ExpressionContext | null;
+    units(): UnitsContext | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class UnitsContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    name(): NameContext;
+    expression(): ExpressionContext;
+    get ruleIndex(): number;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -989,6 +1025,14 @@ declare class SubtractionContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class PositiveContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    PLUS(): antlr.TerminalNode;
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class DerivativeContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
@@ -1123,6 +1167,12 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitFunctionIndependent?: (ctx: FunctionIndependentContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.units`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitUnits?: (ctx: UnitsContext) => Result;
     /**
      * Visit a parse tree produced by the `FractionDigits`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1376,6 +1426,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitSubtraction?: (ctx: SubtractionContext) => Result;
     /**
+     * Visit a parse tree produced by the `Positive`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitPositive?: (ctx: PositiveContext) => Result;
+    /**
      * Visit a parse tree produced by the `Derivative`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -1454,6 +1511,8 @@ declare enum TermType {
 declare class Term {
     name: string;
     type: TermType;
+    unitsTree: Branch | null;
+    unitsText: string | null;
     private _initialValues;
     constructor(name: string, type?: TermType);
     getInitialValue(iteration?: number): number;
@@ -1663,7 +1722,9 @@ declare class Parser {
 
 declare class Visitor extends LatexMathVisitor<Branch> {
     private readonly system;
+    private isParsingUnits;
     constructor(system: System);
+    private extractUnits;
     visitFractionDigits: (context: FractionDigitsContext) => Branch;
     visitFraction: (context: FractionContext) => Branch;
     visitVariable: (context: VariableContext) => Branch;
@@ -1699,6 +1760,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitCosecant: (context: CosecantContext) => Branch;
     visitSquareRoot: (context: SquareRootContext) => Branch;
     visitNegation: (context: NegationContext) => Branch;
+    visitPositive: (context: PositiveContext) => Branch;
     visitLogarithm: (context: LogarithmContext) => Branch;
     visitNaturalLogarithm: (context: NaturalLogarithmContext) => Branch;
     visitMaximum: (context: MaximumContext) => Branch;
