@@ -453,6 +453,8 @@ class BaseShape {
                 const probeEvent = new PointerEvent("pointerdown", event);
                 underlying.dispatchEvent(probeEvent);
                 if (probeEvent.defaultPrevented) {
+                    event.stopPropagation();
+                    event.preventDefault();
                     this.board.selection.select(this);
                     handle.style.pointerEvents = "none";
                     const restoreHandle = () => {

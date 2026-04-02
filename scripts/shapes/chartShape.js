@@ -278,12 +278,24 @@ class ChartShape extends BaseShape {
             foregroundColor: this.properties.foregroundColor,
             backgroundColor: this.properties.backgroundColor,
             borderColor: this.getBorderColor(),
-            onDomainChanged: domain => this.onDomainChanged(domain)
+            onDomainChanged: domain => this.onDomainChanged(domain),
+            onTickDragStarted: () => this.onTickDragStarted(),
+            onTickDragEnded: () => this.onTickDragEnded()
         };
     }
 
     onDomainChanged(domain) {
         this.properties.domainOverride = domain;
+    }
+
+    onTickDragStarted() {
+        this._tickDragState = true;
+        this.board.pointerLocked = true;
+    }
+
+    onTickDragEnded() {
+        this._tickDragState = null;
+        this.board.pointerLocked = false;
     }
 
     createElement() {

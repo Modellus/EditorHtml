@@ -987,6 +987,8 @@ class ChartControl {
             startY: event.clientY,
             pointerId: event.pointerId
         };
+        if (typeof this.options.onTickDragStarted === "function")
+            this.options.onTickDragStarted();
         window.addEventListener("pointermove", this._onPointerMove);
         window.addEventListener("pointerup", this._onPointerUp);
         window.addEventListener("pointercancel", this._onPointerUp);
@@ -1035,6 +1037,8 @@ class ChartControl {
         window.removeEventListener("pointerup", this._onPointerUp);
         window.removeEventListener("pointercancel", this._onPointerUp);
         this._tickDragState = null;
+        if (typeof this.options.onTickDragEnded === "function")
+            this.options.onTickDragEnded();
         if (typeof this.options.onDomainChanged === "function")
             this.options.onDomainChanged({ ...this.domainOverride });
     }
