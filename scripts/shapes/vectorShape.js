@@ -171,9 +171,7 @@ class VectorShape extends ChildShape {
                             selectionMode: "single",
                             selectByClick: true,
                             itemTemplate: (data, _, el) => {
-                                const solidIcon = data.icon.replace("fa-light", "fa-solid");
-                                const colorStyle = data.color ? ` style="color:${data.color}"` : "";
-                                el[0].innerHTML = `<i class="dx-icon ${solidIcon}"${colorStyle}></i>${data.text}`;
+                                el[0].innerHTML = BaseShape.renderShapeTreeItemHtml(data);
                             },
                             onItemClick: e => {
                                 const targetShape = this.board.shapes.getById(e.itemData.id);

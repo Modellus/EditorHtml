@@ -124,7 +124,12 @@ class ContextMenuController {
         $("#context-menu").dxContextMenu({
             dataSource: menuItems,
             itemTemplate: itemData => {
-                const hasChildren = itemData && itemData.items && itemData.items.length;
+                const hasChildren = itemData?.items?.length > 0;
+                if (itemData.name?.startsWith("Shape_"))
+                    return `<div style="display: flex; align-items: center; width: 100%">
+                                <span style="flex-grow: 1">${BaseShape.renderShapeTreeItemHtml(itemData)}</span>
+                                <span style="width: 12px; text-align: right;">${hasChildren ? "<i class='fa-light fa-chevron-right'></i>" : ""}</span>
+                            </div>`;
                 return `<div style="display: flex; justify-content: space-between; align-items: center;width: 100%">
                             <span class="${itemData.icon}" style="width: 15px; margin-right: 10px; text-align: left; display: inline-block"></span>
                             <span style="text-align: left; padding-right: 5px; flex-grow: 1">${itemData.text}</span>
@@ -164,15 +169,26 @@ class ContextMenuController {
     }
 
     _buildShapeMenuItem(shape) {
-        const icon = BaseShape.shapeIcons[shape.constructor.name] ?? "fa-light fa-shapes";
-        const children = (shape.children ?? []).map(child => this._buildShapeMenuItem(child));
-        return {
-            text: shape.properties.name ?? "",
-            icon: icon,
-            shortcut: "",
-            name: `Shape_${shape.id}`,
-            action: () => this.shell.board.selectShape(shape),
-            items: children.length > 0 ? children : undefined
-        };
+        const item = BaseShape.buildShapeTreeItem(shape);
+        item.shortcut = "";
+        item.name = `Shape_${shape.id}`;
+        item.action = () => this.shell.board.selectShape(shape);
+        if (item.items?.length)
+            item.items = item.items.map(child => this._enrichShapeMenuItem(child));
+        else
+            item.items = undefined;
+        return item;
+    }
+
+    _enrichShapeMenuItem(treeItem) {
+        const shape = this.shell.board.shapes.getById(treeItem.id);
+        treeItem.shortcut = "";
+        treeItem.name = `Shape_${treeItem.id}`;
+        treeItem.action = () => { if (shape) this.shell.board.selectShape(shape); };
+        if (treeItem.items?.length)
+            treeItem.items = treeItem.items.map(child => this._enrichShapeMenuItem(child));
+        else
+            treeItem.items = undefined;
+        return treeItem;
     }
 }

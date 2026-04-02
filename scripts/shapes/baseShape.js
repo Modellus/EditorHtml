@@ -20,6 +20,28 @@ class BaseShape {
         GaugeShape: "fa-light fa-gauge"
     };
 
+    static buildShapeTreeItem(shape) {
+        const children = (shape.children ?? []).map(child => BaseShape.buildShapeTreeItem(child));
+        const characterImage = shape.character ? `resources/characters/${shape.character.folder}/${shape.character.image}` : null;
+        return {
+            id: shape.id,
+            text: shape.properties.name ?? "",
+            icon: BaseShape.shapeIcons[shape.constructor.name] ?? "fa-light fa-shapes",
+            color: shape.properties.foregroundColor ?? null,
+            characterImage,
+            expanded: true,
+            items: children
+        };
+    }
+
+    static renderShapeTreeItemHtml(data) {
+        if (data.characterImage)
+            return `<img class="mdl-parent-tree-character" src="${data.characterImage}" alt="${data.text}"/>${data.text}`;
+        const solidIcon = data.icon.replace("fa-light", "fa-solid");
+        const colorPart = data.color ? `color:${data.color};` : "";
+        return `<i class="dx-icon ${solidIcon}" style="${colorPart}margin-right:8px"></i>${data.text}`;
+    }
+
     static setup() {
         BaseShape.loadEmbeddedFonts();
     }

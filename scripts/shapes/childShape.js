@@ -160,17 +160,7 @@ class ChildShape extends BaseShape {
     }
 
     buildParentTreeItem(shape) {
-        const children = (shape.children ?? []).map(child => this.buildParentTreeItem(child));
-        const characterImage = shape.character ? `resources/characters/${shape.character.folder}/${shape.character.image}` : null;
-        return {
-            id: shape.id,
-            text: shape.properties.name ?? "",
-            icon: BaseShape.shapeIcons[shape.constructor.name] ?? "fa-light fa-shapes",
-            color: shape.properties.foregroundColor ?? null,
-            characterImage,
-            expanded: true,
-            items: children
-        };
+        return BaseShape.buildShapeTreeItem(shape);
     }
 
     buildParentTreeItems(referential) {
@@ -246,13 +236,7 @@ class ChildShape extends BaseShape {
                         selectionMode: "single",
                         selectByClick: true,
                         itemTemplate: (data, _, el) => {
-                            if (data.characterImage)
-                                el[0].innerHTML = `<img class="mdl-parent-tree-character" src="${data.characterImage}" alt="${data.text}"/>${data.text}`;
-                            else {
-                                const solidIcon = data.icon.replace("fa-light", "fa-solid");
-                                const colorStyle = data.color ? ` style="color:${data.color}"` : "";
-                                el[0].innerHTML = `<i class="dx-icon ${solidIcon}"${colorStyle}></i>${data.text}`;
-                            }
+                            el[0].innerHTML = BaseShape.renderShapeTreeItemHtml(data);
                         },
                         onItemClick: e => {
                             const targetShape = this.board.shapes.getById(e.itemData.id);

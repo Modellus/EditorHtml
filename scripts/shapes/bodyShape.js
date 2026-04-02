@@ -131,43 +131,15 @@ class BodyShape extends ChildShape {
                 })
             },
             {
-                tag: "circle",
-                className: "handle top-left",
-                getAttributes: () => this.getCornerHandleAttributes("top-left"),
-                getTransform: e => this.getCornerResizeTransform(e)
-            },
-            {
-                tag: "circle",
-                className: "handle top-right",
-                getAttributes: () => this.getCornerHandleAttributes("top-right"),
-                getTransform: e => this.getCornerResizeTransform(e)
-            },
-            {
-                tag: "circle",
-                className: "handle bottom-left",
-                getAttributes: () => this.getCornerHandleAttributes("bottom-left"),
-                getTransform: e => this.getCornerResizeTransform(e)
-            },
-            {
-                tag: "circle",
-                className: "handle bottom-right",
-                getAttributes: () => this.getCornerHandleAttributes("bottom-right"),
+                className: "handle edge-resize",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    const radius = this.properties.radius ?? 0;
+                    return { x: position.x - radius, y: position.y - radius, width: radius * 2, height: radius * 2 };
+                },
                 getTransform: e => this.getCornerResizeTransform(e)
             }
         ];
-    }
-
-    getCornerHandleAttributes(corner) {
-        const position = this.getBoardPosition();
-        const radius = this.properties.radius ?? 0;
-        const handleRadius = 4;
-        if (corner === "top-left")
-            return { cx: position.x - radius, cy: position.y - radius, r: handleRadius };
-        if (corner === "top-right")
-            return { cx: position.x + radius, cy: position.y - radius, r: handleRadius };
-        if (corner === "bottom-left")
-            return { cx: position.x - radius, cy: position.y + radius, r: handleRadius };
-        return { cx: position.x + radius, cy: position.y + radius, r: handleRadius };
     }
 
     getCornerResizeTransform(eventPoint) {
@@ -415,13 +387,7 @@ class BodyShape extends ChildShape {
                             selectionMode: "single",
                             selectByClick: true,
                             itemTemplate: (data, _, el) => {
-                                if (data.characterImage)
-                                    el[0].innerHTML = `<img class="mdl-parent-tree-character" src="${data.characterImage}" alt="${data.text}"/>${data.text}`;
-                                else {
-                                    const solidIcon = data.icon.replace("fa-light", "fa-solid");
-                                    const colorStyle = data.color ? ` style="color:${data.color}"` : "";
-                                    el[0].innerHTML = `<i class="dx-icon ${solidIcon}"${colorStyle}></i>${data.text}`;
-                                }
+                                el[0].innerHTML = BaseShape.renderShapeTreeItemHtml(data);
                             },
                             onItemClick: e => {
                                 const targetShape = this.board.shapes.getById(e.itemData.id);
