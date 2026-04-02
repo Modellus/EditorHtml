@@ -205,6 +205,14 @@ class ModelsApp {
       .replace(/\s+/g, " ")
       .trim();
   }
+  formatShortDate(value) {
+    if (!value)
+      return "";
+    const date = new Date(value);
+    if (isNaN(date.getTime()))
+      return "";
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
   createNodeFromMarkup(markup) {
     const fragment = document.createRange().createContextualFragment(markup);
     return fragment.firstElementChild;
@@ -263,6 +271,10 @@ class ModelsApp {
         const escapedEducationLabel = this.escapeHtml(educationLabel);
         const escapedScienceLabel = this.escapeHtml(scienceLabel);
         const escapedDescriptionLabel = this.escapeHtml(descriptionLabel);
+        const creatorName = this.escapeHtml(data.user_name);
+        const creatorAvatar = data.user_avatar || "";
+        const createdDate = this.formatShortDate(data.created_at);
+        const modifiedDate = this.formatShortDate(data.updated_at);
         const taxonomyDropDownMarkup = `
           <div class="card-thumb-dropdowns">
             <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
@@ -282,6 +294,13 @@ class ModelsApp {
             <div class="card-body">
               <h3 class="card-title">${data.title || "Untitled model"}</h3>
               <p class="card-desc">${escapedDescriptionLabel}</p>
+              <div class="card-meta">
+                ${creatorName ? `<div class="card-creator">${creatorAvatar ? `<img class="card-creator-avatar" src="${creatorAvatar}" alt="">` : ""}<span class="card-creator-name">${creatorName}</span></div>` : ""}
+                <div class="card-dates">
+                  ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
+                  ${modifiedDate ? `<span class="card-date"><i class="fa-light fa-calendar-pen" aria-hidden="true"></i>${modifiedDate}</span>` : ""}
+                </div>
+              </div>
               <div class="card-meta-actions">
                 <button class="favorite-button${isFavorite ? " is-favorite" : ""}" aria-label="${isFavorite ? "Unfavorite" : "Favorite"}">
                   <i class="${isFavorite ? "fa-solid fa-star favorite-icon" : "fa-regular fa-star favorite-icon"}" aria-hidden="true"></i>
@@ -597,6 +616,11 @@ class ModelsApp {
         keyExpr: "id",
         height: "100%",
         showBorders: false,
+        scrolling: { mode: "standard", useNative: true, columnRenderingMode: "standard" },
+        columnAutoWidth: false,
+        allowColumnResizing: true,
+        columnResizingMode: "widget",
+        columnMinWidth: 50,
         selection: { mode: "single" },
         paging: { enabled: true, pageSize: 20 },
         pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
@@ -640,9 +664,11 @@ class ModelsApp {
           {
             dataField: "description",
             caption: "Description",
+            width: 220,
             cellTemplate: (cellElement, cellInfo) => {
+              const plainText = this.getModelDescriptionText(cellInfo.value);
               const host = cellElement.get(0);
-              host.innerHTML = cellInfo.value || "";
+              host.innerHTML = `<span style="display:block;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default" title="${this.escapeHtml(plainText)}">${this.escapeHtml(plainText)}</span>`;
             }
           },
           { dataField: "user_id", caption: "Creator", width: 110 },
@@ -695,6 +721,7 @@ class ModelsApp {
             }
           },
           { dataField: "created_at", caption: "Created", width: 130, dataType: "date" },
+          { dataField: "updated_at", caption: "Modified", width: 130, dataType: "date" },
           {
             caption: "",
             width: 40,

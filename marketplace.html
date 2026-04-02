@@ -76,6 +76,13 @@
       .card-body { display: flex; flex-direction: column; gap: 0.5rem; flex: 1 1 auto; min-height: 0; }
       .card-title { font-size: 1rem; margin: 0; }
       .card-desc { color: var(--c-muted); margin: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; line-height: 1.25; max-height: calc(2 * 1.25em); }
+      .card-meta { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.25rem; }
+      .card-creator { display: flex; align-items: center; gap: 0.4rem; }
+      .card-creator-avatar { width: 18px; height: 18px; border-radius: 999px; object-fit: cover; border: 1px solid var(--c-border); }
+      .card-creator-name { font-size: 0.78rem; color: var(--c-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .card-dates { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+      .card-date { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.72rem; color: var(--c-muted); white-space: nowrap; }
+      .card-date i { font-size: 10px; }
       .card-meta-actions { display: flex; gap: 0.35rem; align-items: center; margin-top: auto; }
       .card-badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
       .card-badge { display: inline-flex; align-items: center; gap: 0.35rem; background: rgba(37, 99, 235, 0.1); color: var(--c-text); padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.85rem; }
