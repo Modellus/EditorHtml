@@ -106,13 +106,6 @@ class ContextMenuController {
                 action: _ => this.shell.openSettings()
             },
             {
-                text: this.shell.board.translations.get("Select"),
-                icon: "fa-light fa-arrow-pointer",
-                shortcut: "",
-                name: "Shapes",
-                items: []
-            },
-            {
                 text: this.shell.board.translations.get("More Models"),
                 icon: "fa-light fa-chevrons-left",
                 shortcut: "",
@@ -153,42 +146,6 @@ class ContextMenuController {
     }
 
     show() {
-        this._refreshShapesMenu();
         this.instance.show();
-    }
-
-    _refreshShapesMenu() {
-        const allShapes = this.shell.board.shapes.shapes;
-        const rootShapes = allShapes.filter(shape => !shape.parent);
-        const shapeItems = rootShapes.map(shape => this._buildShapeMenuItem(shape));
-        const dataSource = this.instance.option("dataSource");
-        const shapesEntry = dataSource.find(item => item.name === "Shapes");
-        if (shapesEntry)
-            shapesEntry.items = shapeItems;
-        this.instance.option("dataSource", dataSource);
-    }
-
-    _buildShapeMenuItem(shape) {
-        const item = BaseShape.buildShapeTreeItem(shape);
-        item.shortcut = "";
-        item.name = `Shape_${shape.id}`;
-        item.action = () => this.shell.board.selectShape(shape);
-        if (item.items?.length)
-            item.items = item.items.map(child => this._enrichShapeMenuItem(child));
-        else
-            item.items = undefined;
-        return item;
-    }
-
-    _enrichShapeMenuItem(treeItem) {
-        const shape = this.shell.board.shapes.getById(treeItem.id);
-        treeItem.shortcut = "";
-        treeItem.name = `Shape_${treeItem.id}`;
-        treeItem.action = () => { if (shape) this.shell.board.selectShape(shape); };
-        if (treeItem.items?.length)
-            treeItem.items = treeItem.items.map(child => this._enrichShapeMenuItem(child));
-        else
-            treeItem.items = undefined;
-        return treeItem;
     }
 }

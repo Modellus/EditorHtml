@@ -188,6 +188,56 @@ class TopToolbar {
                         onClick: _ => this.shell.commands.addShape("ProtractorShape", "Protractor"),
                         onInitialized: e => this.shell.createTranslatedTooltip(e, "Protractor Tooltip", 280)
                     }
+                },
+                {
+                    location: "center",
+                    template() {
+                        return $("<div id='select-tools-separator' class='toolbar-separator'>|</div>");
+                    }
+                },
+                {
+                    location: "center",
+                    template: () => {
+                        const container = $('<div id="select-shape-dropdown">');
+                        container.dxDropDownButton({
+                            icon: "fa-light fa-arrow-pointer",
+                            showArrowIcon: false,
+                            stylingMode: "text",
+                            dropDownOptions: {
+                                container: document.body,
+                                wrapperAttr: { style: "z-index:20000" },
+                                width: "auto",
+                                onShowing: () => {
+                                    if (this._shapesTreeView)
+                                        this._shapesTreeView.option("items", this._buildShapeTreeItems());
+                                },
+                                contentTemplate: contentElement => {
+                                    $(contentElement).empty();
+                                    const treeContainer = $('<div>').appendTo(contentElement);
+                                    treeContainer.dxTreeView({
+                                        items: this._buildShapeTreeItems(),
+                                        dataStructure: "tree",
+                                        keyExpr: "id",
+                                        displayExpr: "text",
+                                        selectionMode: "single",
+                                        selectByClick: true,
+                                        itemTemplate: (data, _, el) => {
+                                            el[0].innerHTML = BaseShape.renderShapeTreeItemHtml(data);
+                                        },
+                                        onItemClick: e => {
+                                            const shape = this.shell.board.shapes.getById(e.itemData.id);
+                                            if (shape)
+                                                this.shell.board.selectShape(shape);
+                                            this._selectDropdownInstance.close();
+                                        }
+                                    });
+                                    this._shapesTreeView = treeContainer.dxTreeView("instance");
+                                }
+                            }
+                        });
+                        this._selectDropdownInstance = container.dxDropDownButton("instance");
+                        return container;
+                    }
                 }
             ]
         });
@@ -202,6 +252,12 @@ class TopToolbar {
         this.rulerButton = $("#ruler-button").dxButton("instance");
         this.protractorButton = $("#protractor-button").dxButton("instance");
         this.gaugeButton = $("#gauge-button").dxButton("instance");
+    }
+
+    _buildShapeTreeItems() {
+        const allShapes = this.shell.board.shapes.shapes;
+        const rootShapes = allShapes.filter(shape => !shape.parent);
+        return rootShapes.map(shape => BaseShape.buildShapeTreeItem(shape));
     }
 
     update() {
