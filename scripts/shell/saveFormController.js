@@ -230,6 +230,85 @@ class SaveFormController {
         });
     }
 
+    promptDuplicateMetadata() {
+        return new Promise(resolve => {
+            const popupHost = document.getElementById("save-metadata-popup");
+            if (!popupHost) {
+                resolve(null);
+                return;
+            }
+            const currentName = this.shell.properties.name || "";
+            const formData = {
+                name: currentName === "Model" ? "" : currentName,
+                description: this.shell.properties.description || ""
+            };
+            let formInstance = null;
+            const popup = $(popupHost).dxPopup({
+                width: 420,
+                height: "auto",
+                dragEnabled: false,
+                shading: false,
+                showTitle: true,
+                title: this.shell.board.translations.get("Duplicate Model"),
+                hideOnOutsideClick: false,
+                visible: true,
+                toolbarItems: [
+                    {
+                        widget: "dxButton",
+                        location: "after",
+                        toolbar: "bottom",
+                        options: {
+                            text: this.shell.board.translations.get("Duplicate"),
+                            type: "default",
+                            stylingMode: "contained",
+                            onClick: () => {
+                                const validation = formInstance.validate();
+                                if (!validation.isValid)
+                                    return;
+                                popup.dxPopup("hide");
+                                resolve({ name: formData.name, description: formData.description });
+                            }
+                        }
+                    },
+                    {
+                        widget: "dxButton",
+                        location: "after",
+                        toolbar: "bottom",
+                        options: {
+                            text: this.shell.board.translations.get("Cancel"),
+                            stylingMode: "text",
+                            onClick: () => {
+                                popup.dxPopup("hide");
+                                resolve(null);
+                            }
+                        }
+                    }
+                ],
+                contentTemplate: () => {
+                    const thumbnailItem = this._createThumbnailEditor(formData);
+                    const form = $("<div></div>").dxForm({
+                        formData,
+                        colCount: 1,
+                        items: [
+                            thumbnailItem,
+                            {
+                                dataField: "name",
+                                label: { text: this.shell.board.translations.get("Name"), visible: true },
+                                editorType: "dxTextBox",
+                                editorOptions: { stylingMode: "filled" },
+                                validationRules: [{ type: "required" }]
+                            },
+                            this._createDescriptionEditor(formData)
+                        ]
+                    });
+                    formInstance = form.dxForm("instance");
+                    return form;
+                },
+                position: { at: "center", of: window }
+            });
+        });
+    }
+
     promptModelMetadata() {
         return new Promise(resolve => {
             const popupHost = document.getElementById("save-metadata-popup");

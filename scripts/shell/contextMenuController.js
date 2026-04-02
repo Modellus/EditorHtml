@@ -24,6 +24,13 @@ class ContextMenuController {
                 action: _ => this.shell.saveToApi()
             },
             {
+                text: this.shell.board.translations.get("Duplicate") + "...",
+                icon: "fa-light fa-clone",
+                shortcut: `${mod}D`,
+                name: "Duplicate",
+                action: _ => this.shell.duplicateModel()
+            },
+            {
                 text: this.shell.board.translations.get("Import"),
                 icon: "fa-light fa-arrow-up-from-square",
                 shortcut: "",

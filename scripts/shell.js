@@ -408,6 +408,36 @@ class Shell  {
         }
     }
 
+    async duplicateModel() {
+        if (this.isAnonymous()) {
+            this.saveToSessionStorage();
+            window.location.href = "/login.html";
+            return;
+        }
+        const metadata = await this.saveFormController.promptDuplicateMetadata();
+        if (!metadata)
+            return;
+        try {
+            const definition = this.serialize();
+            definition.properties.name = metadata.name;
+            definition.properties.description = metadata.description;
+            const payload = {
+                title: metadata.name || "Untitled model",
+                description: metadata.description || "",
+                definition: JSON.stringify(definition),
+                lastModified: new Date().toISOString(),
+                user_id: this.getCurrentUserId()
+            };
+            if (this.properties.thumbnailUrl)
+                payload.thumbnail = this.properties.thumbnailUrl;
+            const newModel = await this.modelsApiClient.createModel(payload);
+            if (newModel?.id)
+                window.location.href = `/editor.html?model_id=${newModel.id}`;
+        } catch (error) {
+            alert("Failed to duplicate model.");
+        }
+    }
+
     isModelNameUndefined() {
         const name = this.properties.name;
         return !name || name === "Model";
@@ -632,9 +662,12 @@ class Shell  {
                 BaseShape.pasteFromClipboard(this.board, shape?.parent);
                 return;
             }
-            if (e.key === "d" && shape) {
+            if (e.key === "d") {
                 e.preventDefault();
-                shape.duplicate();
+                if (shape)
+                    shape.duplicate();
+                else
+                    this.duplicateModel();
                 return;
             }
         }
