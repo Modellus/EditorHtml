@@ -507,6 +507,51 @@ class ChartControl {
         }
     }
 
+    renderValueTitleLegend(targetLayer, layout, fontSize) {
+        const series = this.options.series;
+        if (!series || series.length === 0)
+            return;
+        const foregroundColor = this.options.foregroundColor;
+        const separatorText = ", ";
+        let totalWidth = 0;
+        const entries = [];
+        for (let index = 0; index < series.length; index++) {
+            if (index > 0) {
+                const separatorWidth = this.estimateTextWidth(separatorText, fontSize);
+                entries.push({ type: "separator", width: separatorWidth });
+                totalWidth += separatorWidth;
+            }
+            const segments = this.parseCaseIconSegments(series[index].name ?? "");
+            const segmentsWidth = this.estimateTitleSegmentsWidth(segments, fontSize);
+            entries.push({ type: "series", segments: segments, color: series[index].color || foregroundColor, width: segmentsWidth });
+            totalWidth += segmentsWidth;
+        }
+        const centerX = layout.axisTitleLeft;
+        const centerY = layout.axisTitleY;
+        const hostGroup = this.createSvgElement("g");
+        hostGroup.setAttribute("transform", `rotate(-90 ${centerX} ${centerY})`);
+        targetLayer.appendChild(hostGroup);
+        let cursorX = centerX - totalWidth / 2;
+        for (let index = 0; index < entries.length; index++) {
+            const entry = entries[index];
+            if (entry.type === "separator") {
+                this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, foregroundColor, separatorText);
+                cursorX += entry.width;
+                continue;
+            }
+            for (let segmentIndex = 0; segmentIndex < entry.segments.length; segmentIndex++) {
+                const segment = entry.segments[segmentIndex];
+                if (segment.type === "icon") {
+                    this.renderTitleIconSegment(hostGroup, cursorX, centerY, fontSize, entry.color, segment.caseNumber, segment.rawValue);
+                    cursorX += this.getCaseIconSize(segment.caseNumber, fontSize).width;
+                    continue;
+                }
+                this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, entry.color, segment.value);
+                cursorX += this.estimateTextWidth(segment.value, fontSize);
+            }
+        }
+    }
+
     getScales(layout, domain) {
         const xScale = value => {
             const ratio = (value - domain.xMin) / (domain.xMax - domain.xMin);
@@ -829,11 +874,7 @@ class ChartControl {
     renderTitles(layout, width) {
         const titleFontSize = Number(this.options.titleFontSize) || 16;
         this.renderTitleWithCaseIcons(this.axisLayer, this.options.argumentTitle ?? "", layout.plotLeft + layout.plotWidth / 2, layout.axisTitleX, titleFontSize, this.options.foregroundColor);
-        this.renderTitleWithCaseIcons(this.axisLayer, this.options.valueTitle ?? "", layout.axisTitleLeft, layout.axisTitleY, titleFontSize, this.options.foregroundColor, {
-            angle: -90,
-            cx: layout.axisTitleLeft,
-            cy: layout.axisTitleY
-        });
+        this.renderValueTitleLegend(this.axisLayer, layout, titleFontSize);
         const clippingRectangle = this.createSvgElement("rect");
         clippingRectangle.setAttribute("x", "0");
         clippingRectangle.setAttribute("y", "0");
