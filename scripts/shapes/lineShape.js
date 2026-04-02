@@ -162,8 +162,8 @@ class LineShape extends ChildShape {
 
     populateTermsMenuSections(listItems) {
         listItems.push(
-            { text: "Point X", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
-            { text: "Point Y", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) },
+            { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
+            { text: "Vertical", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) },
             { text: "Angle", stacked: true, buildControl: $p => $p.append(this._angleDescriptor.control) },
             {
                 text: "Attached To",
@@ -335,8 +335,8 @@ class LineShape extends ChildShape {
         this.termsMapping.push({ termProperty: "xTerm", termValue: 0, property: "x", isInverted: false, scaleProperty: "x", caseProperty: "xTermCase" });
         this.termsMapping.push({ termProperty: "yTerm", termValue: 0, property: "y", isInverted: true, scaleProperty: "y", caseProperty: "yTermCase" });
         this.termsMapping.push({ termProperty: "angleTerm", termValue: 0, property: "angle", isInverted: false, scaleProperty: "x", caseProperty: "angleTermCase" });
-        this.termDisplayEntries.push({ term: "xTerm", caseProperty: "xTermCase", title: "Point X" });
-        this.termDisplayEntries.push({ term: "yTerm", caseProperty: "yTermCase", title: "Point Y" });
+        this.termDisplayEntries.push({ term: "xTerm", caseProperty: "xTermCase", title: "Horizontal" });
+        this.termDisplayEntries.push({ term: "yTerm", caseProperty: "yTermCase", title: "Vertical" });
         this.termDisplayEntries.push({ term: "angleTerm", caseProperty: "angleTermCase", title: "Angle" });
     }
 

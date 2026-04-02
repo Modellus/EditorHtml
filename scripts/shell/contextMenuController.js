@@ -113,11 +113,11 @@ class ContextMenuController {
                 items: []
             },
             {
-                text: this.shell.board.translations.get("Exit"),
+                text: this.shell.board.translations.get("More Models"),
                 icon: "fa-light fa-chevrons-left",
                 shortcut: "",
                 beginGroup: true,
-                name: "Exit",
+                name: "More Models",
                 action: _ => this.shell.exitEditor()
             }
         ];

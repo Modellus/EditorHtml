@@ -140,7 +140,9 @@ class Shell  {
         if (name === "educationLevel")
             this.applyEducationLevel();
         if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit")
-            this.calculator.setProperty(name, value);    
+            this.calculator.setProperty(name, value);
+        if (name === "independent.start" || name === "independent.end")
+            this.adjustChartDomainsForIndependentChange();
         if (name === "casesCount" && this.board?.selection?.selectedShape)
             this.board.selection.selectedShape.showContextToolbar?.();
         if (this.isAnonymous())
@@ -157,6 +159,30 @@ class Shell  {
             undo: () => this.setProperties(previousProperties)
         };
         this.commands.invoker.record(command);
+    }
+
+    adjustChartDomainsForIndependentChange() {
+        const independent = this.properties.independent;
+        let xMin = independent.start;
+        let xMax = independent.end;
+        if (xMin === xMax) {
+            xMin -= 1;
+            xMax += 1;
+        }
+        const xMargin = (xMax - xMin) * 0.04;
+        this.board.shapes.shapes.forEach(shape => {
+            if (shape.constructor.name !== "ChartShape")
+                return;
+            if (shape.getXTermName() !== independent.name)
+                return;
+            if (!shape.properties.domainOverride)
+                return;
+            shape.properties.domainOverride.xMin = xMin - xMargin;
+            if (!independent.noLimit)
+                shape.properties.domainOverride.xMax = xMax + xMargin;
+            if (shape.chart)
+                shape.chart.setDomainOverride(shape.properties.domainOverride);
+        });
     }
 
     undoPressed() {
