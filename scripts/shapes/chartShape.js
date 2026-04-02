@@ -184,6 +184,29 @@ class ChartShape extends BaseShape {
                 });
             }
         }));
+        listItems.push({
+            text: "Auto Scale",
+            buildControl: $container => {
+                $('<div>').appendTo($container).dxSwitch({
+                    value: this.properties.autoScale === true,
+                    onInitialized: e => { this._autoScaleSwitchInstance = e.component; },
+                    onValueChanged: e => {
+                        this.properties.autoScale = e.value;
+                        if (e.value) {
+                            this.properties.domainOverride = null;
+                            this.chart.resetDomainOverride();
+                        } else {
+                            const currentDomain = this.chart.renderState?.domain;
+                            if (currentDomain) {
+                                this.properties.domainOverride = { ...currentDomain };
+                                this.chart.setDomainOverride(this.properties.domainOverride);
+                            }
+                        }
+                        this.board.markDirty(this);
+                    }
+                });
+            }
+        });
         $(contentElement).empty();
         $(contentElement).dxScrollView({ height: 300, width: "100%" });
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
@@ -232,6 +255,7 @@ class ChartShape extends BaseShape {
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.refreshYTermsControl();
         this.refreshTermsToolbarControl();
+        this._autoScaleSwitchInstance?.option("value", this.properties.autoScale === true);
         super.showContextToolbar();
     }
 
@@ -244,6 +268,7 @@ class ChartShape extends BaseShape {
         this.properties.width = 400;
         this.properties.height = 200;
         this.properties.chartType = ["line"];
+        this.properties.autoScale = true;
         this.properties.xTerm = this.board.calculator.properties.independent.name;
         this.properties.yTerms = [{ term: this.board.calculator.getDefaultTerm(), case: 1, color: "", showLabel: false }];
         this.properties.domainOverride = this.getDefaultDomainOverride();
@@ -285,7 +310,9 @@ class ChartShape extends BaseShape {
     }
 
     onDomainChanged(domain) {
+        this.properties.autoScale = false;
         this.properties.domainOverride = domain;
+        this._autoScaleSwitchInstance?.option("value", false);
     }
 
     onTickDragStarted() {
@@ -304,7 +331,7 @@ class ChartShape extends BaseShape {
         this.lastSyncedIteration = 0;
         this.chartDataConfig = null;
         this.chart = new ChartControl(element, this.getChartControlOptions());
-        if (this.properties.domainOverride)
+        if (this.properties.domainOverride && this.properties.autoScale !== true)
             this.chart.setDomainOverride(this.properties.domainOverride);
         this._appliedConfig = {};
         return element;
