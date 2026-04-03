@@ -146,7 +146,10 @@ class ChildShape extends BaseShape {
         const maxX = (referential.properties.width - originX) * scaleX;
         const maxY = originY * scaleY;
         const axisMax = Math.max(maxX, maxY);
-        return { size: axisMax * 0.1, centerX: maxX / 2, centerY: maxY / 2, scaleX, scaleY };
+        const size = axisMax * 0.1;
+        const centerX = Math.round(maxX / 2 + (Math.random() - 0.5) * size * 4);
+        const centerY = Math.round(maxY / 2 + (Math.random() - 0.5) * size * 4);
+        return { size, centerX, centerY, scaleX, scaleY };
     }
 
     getReferential() {

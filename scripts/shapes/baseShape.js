@@ -4,6 +4,7 @@ class BaseShape {
     static embeddedMathStyles = "";
     static shapeIcons = {
         BodyShape: "fa-light fa-circle",
+        PointShape: "fa-solid fa-dot",
         VectorShape: "fa-light fa-arrow-right-long",
         LineShape: "fa-light fa-slash-forward",
         ArcShape: "fa-light fa-circle-half-stroke",

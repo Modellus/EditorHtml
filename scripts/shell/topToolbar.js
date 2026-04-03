@@ -261,6 +261,6 @@ class TopToolbar {
     }
 
     update() {
-        const disabled = this.shell.board.selection.selectedShape == null || !["BodyShape", "VectorShape", "ImageShape", "ReferentialShape"].includes(this.shell.board.selection.selectedShape.constructor.name);
+        const disabled = this.shell.board.selection.selectedShape == null || !["BodyShape", "PointShape", "VectorShape", "ImageShape", "ReferentialShape"].includes(this.shell.board.selection.selectedShape.constructor.name);
     }
 }

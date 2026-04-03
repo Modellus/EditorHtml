@@ -4,6 +4,7 @@ var modellus = {
     redo: _ => shell.commands.redo(),
     shape: {
         addBody: (name, parentName) => shell.commands.addShape("BodyShape", name, parentName),
+        addPoint: (name, parentName) => shell.commands.addShape("PointShape", name, parentName),
         addReferential: name => shell.commands.addShape("ReferentialShape", name),
         addVector: (name, parentName) => shell.commands.addShape("VectorShape", name, parentName),
         addArc: (name, parentName) => shell.commands.addShape("ArcShape", name, parentName),
