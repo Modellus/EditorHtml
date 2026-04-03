@@ -24,6 +24,13 @@ class ContextMenuController {
                 action: _ => this.shell.saveToApi()
             },
             {
+                text: this.shell.board.translations.get("Save As") + "...",
+                icon: "fa-light fa-cloud-arrow-down",
+                shortcut: `${mod}⇧S`,
+                name: "SaveAs",
+                action: _ => this.shell.saveAsModel()
+            },
+            {
                 text: this.shell.board.translations.get("Duplicate") + "...",
                 icon: "fa-light fa-clone",
                 shortcut: `${mod}D`,

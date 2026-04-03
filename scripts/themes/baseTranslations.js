@@ -6,7 +6,9 @@ class BaseTranslations {
             {
                 "Clear": "Limpar",
                 "Save": "Guardar",
+                "Save As": "Guardar como",
                 "Save Model": "Guardar modelo",
+                "Save Model As": "Guardar modelo como",
                 "Duplicate": "Duplicar",
                 "Duplicate Model": "Duplicar modelo",
                 "Unsaved Changes": "Alterações não guardadas",
@@ -96,7 +98,9 @@ class BaseTranslations {
             {
                 "Clear": "Clear",
                 "Save": "Save",
+                "Save As": "Save As",
                 "Save Model": "Save Model",
+                "Save Model As": "Save Model As",
                 "Duplicate": "Duplicate",
                 "Duplicate Model": "Duplicate Model",
                 "Unsaved Changes": "Unsaved Changes",

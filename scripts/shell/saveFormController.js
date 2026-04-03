@@ -310,14 +310,23 @@ class SaveFormController {
     }
 
     promptModelMetadata() {
+        return this._promptMetadata(this.shell.board.translations.get("Save Model"), this.shell.board.translations.get("Save"));
+    }
+
+    promptSaveAsMetadata() {
+        return this._promptMetadata(this.shell.board.translations.get("Save Model As"), this.shell.board.translations.get("Save"));
+    }
+
+    _promptMetadata(title, saveButtonText) {
         return new Promise(resolve => {
             const popupHost = document.getElementById("save-metadata-popup");
             if (!popupHost) {
-                resolve(true);
+                resolve(null);
                 return;
             }
+            const currentName = this.shell.properties.name || "";
             const formData = {
-                name: this.shell.properties.name === "Model" ? "" : this.shell.properties.name || "",
+                name: currentName === "Model" ? "" : currentName,
                 description: this.shell.properties.description || ""
             };
             let formInstance = null;
@@ -327,7 +336,7 @@ class SaveFormController {
                 dragEnabled: false,
                 shading: false,
                 showTitle: true,
-                title: this.shell.board.translations.get("Save Model"),
+                title,
                 hideOnOutsideClick: false,
                 visible: true,
                 toolbarItems: [
@@ -336,7 +345,7 @@ class SaveFormController {
                         location: "after",
                         toolbar: "bottom",
                         options: {
-                            text: this.shell.board.translations.get("Save"),
+                            text: saveButtonText,
                             type: "default",
                             stylingMode: "contained",
                             onClick: () => {
@@ -346,7 +355,7 @@ class SaveFormController {
                                 this.shell.properties.name = formData.name;
                                 this.shell.properties.description = formData.description;
                                 popup.dxPopup("hide");
-                                resolve(true);
+                                resolve({ name: formData.name, description: formData.description });
                             }
                         }
                     },
@@ -359,7 +368,7 @@ class SaveFormController {
                             stylingMode: "text",
                             onClick: () => {
                                 popup.dxPopup("hide");
-                                resolve(false);
+                                resolve(null);
                             }
                         }
                     }

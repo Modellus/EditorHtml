@@ -467,6 +467,51 @@ class Shell  {
         }
     }
 
+    async saveAsModel() {
+        if (this.isAnonymous()) {
+            this.saveToSessionStorage();
+            window.location.href = "/login.html";
+            return;
+        }
+        const metadata = await this.saveFormController.promptSaveAsMetadata();
+        if (!metadata)
+            return;
+        try {
+            const now = new Date().toISOString();
+            const newModel = await this.modelsApiClient.createModel({
+                title: metadata.name || "Untitled model",
+                description: metadata.description || "",
+                type: "model",
+                status: "draft",
+                createdAt: now
+            });
+            if (!newModel?.id)
+                return;
+            const definition = this.serialize();
+            definition.properties.name = metadata.name;
+            definition.properties.description = metadata.description;
+            const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
+            const headers = { "Content-Type": "application/json" };
+            if (session?.token) headers.Authorization = `Bearer ${session.token}`;
+            const savePayload = {
+                title: metadata.name || "Untitled model",
+                description: metadata.description || "",
+                definition: JSON.stringify(definition)
+            };
+            if (this.properties.thumbnailUrl)
+                savePayload.thumbnail = this.properties.thumbnailUrl;
+            await fetch(`${apiBase}/models/${newModel.id}`, {
+                method: "PUT",
+                headers,
+                body: JSON.stringify(savePayload)
+            });
+            this._hasChanges = false;
+            window.location.href = `/editor.html?model_id=${newModel.id}`;
+        } catch (error) {
+            alert("Failed to save model.");
+        }
+    }
+
     isModelNameUndefined() {
         const name = this.properties.name;
         return !name || name === "Model";
