@@ -195,6 +195,18 @@ class BottomToolbar {
                     location: "after"
                 },
                 {
+                    widget: "dxButton",
+                    options: {
+                        icon: "fa-solid fa-grid",
+                        elementAttr: {
+                            id: "snap-grid-button"
+                        },
+                        onClick: () => this.shell.snapToGridPressed(),
+                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Snap Grid Tooltip", 280)
+                    },
+                    location: "after"
+                },
+                {
                     location: "after",
                     widget: "dxButton",
                     options: {
@@ -390,6 +402,14 @@ class BottomToolbar {
             this.$playHeadMax.text(this.shell.calculator.getEnd().toFixed(Utils.getPrecision(this.shell.calculator.properties.independent.step)));
         if (this._independentNameLabel)
             this._independentNameLabel.textContent = this.shell.calculator.properties.independent.name;
+    }
+
+    updateSnapToGridButton() {
+        const button = $("#snap-grid-button").dxButton("instance");
+        if (!button)
+            return;
+        const active = this.shell.properties.snapToGrid;
+        button.option("icon", active ? "fa-solid fa-grid" : "fa-light fa-grid");
     }
 
 }

@@ -376,7 +376,20 @@ class BaseShape {
     }
 
     snapDragPoint(point) {
-        return point;
+        if (!this.board.snapToGrid)
+            return point;
+        const gridSize = this.board.gridSize;
+        if (!gridSize)
+            return point;
+        if (!this._gridSnapGrabOffset) {
+            const boardPosition = this.getBoardPosition();
+            this._gridSnapGrabOffset = { x: point.x - boardPosition.x, y: point.y - boardPosition.y };
+        }
+        const desiredX = point.x - this._gridSnapGrabOffset.x;
+        const desiredY = point.y - this._gridSnapGrabOffset.y;
+        const snappedX = Math.round(desiredX / gridSize) * gridSize;
+        const snappedY = Math.round(desiredY / gridSize) * gridSize;
+        return { x: point.x, y: point.y, dx: snappedX - this.properties.x, dy: snappedY - this.properties.y };
     }
 
     getHandleRotationCenter() {
@@ -1379,6 +1392,7 @@ class BaseShape {
     }
 
     dragEnd() {
+        this._gridSnapGrabOffset = null;
         this.dispatchEvent("shapeDragEnd", {});
         if (!this._dragStartSnapshot)
             return;

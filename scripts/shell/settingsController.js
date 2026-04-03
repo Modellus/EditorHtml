@@ -87,6 +87,21 @@ class SettingsController {
                     template: (data, itemElement) => this.createColorPickerEditor(itemElement, "backgroundColor")
                 },
                 {
+                    colSpan: 1,
+                    dataField: "gridSize",
+                    label: {
+                        text: this.shell.board.translations.get("Grid Size")
+                    },
+                    editorType: "dxNumberBox",
+                    editorOptions: {
+                        min: 5,
+                        max: 100,
+                        step: 5,
+                        showSpinButtons: true,
+                        stylingMode: "filled"
+                    }
+                },
+                {
                     itemType: "group",
                     colSpan: 2,
                     colCount: 4,

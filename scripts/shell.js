@@ -54,8 +54,11 @@ class Shell  {
         this.properties.thumbnailUrl = "";
         this.properties.instructions = "";
         this.properties.educationLevel = "university";
+        this.properties.gridSize = 20;
+        this.properties.snapToGrid = true;
         this.applySvgBackgroundColor();
         this.applyEducationLevel();
+        this.applyGrid();
     }
 
     applySvgBackgroundColor() {
@@ -66,6 +69,10 @@ class Shell  {
 
     applyEducationLevel() {
         document.body.classList.toggle("mid-school", this.properties.educationLevel === "midSchool");
+    }
+
+    applyGrid() {
+        this.board?.updateGrid(this.properties.gridSize, this.properties.snapToGrid);
     }
 
     createTooltip(e, html, width, canShow) {
@@ -125,6 +132,7 @@ class Shell  {
         this.calculator.setProperties(this.properties);
         this.applySvgBackgroundColor();
         this.applyEducationLevel();
+        this.applyGrid();
     }
     
     setProperty(name, value) {
@@ -139,6 +147,8 @@ class Shell  {
             this.applySvgBackgroundColor();
         if (name === "educationLevel")
             this.applyEducationLevel();
+        if (name === "gridSize" || name === "snapToGrid")
+            this.applyGrid();
         if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit")
             this.calculator.setProperty(name, value);
         if (name === "independent.start" || name === "independent.end")
@@ -235,6 +245,11 @@ class Shell  {
 
     miniMapPressed() {
         this.miniMap.toggle();
+    }
+
+    snapToGridPressed() {
+        this.setPropertyCommand("snapToGrid", !this.properties.snapToGrid);
+        this.bottomToolbar.updateSnapToGridButton();
     }
 
     chatPressed() {
@@ -359,6 +374,7 @@ class Shell  {
         this.pendingInitialValuesByCase = model?.properties?.initialValuesByCase ?? model?.properties?.initialValues ?? null;
         this.setProperties(model.properties);
         this.board.deserialize(model.board);
+        this.applyGrid();
         if (model.preloadedData)
             this.calculator.loadTerms(model.preloadedData.names, model.preloadedData.values);
         else

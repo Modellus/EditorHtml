@@ -26,6 +26,9 @@ class Board {
         while (this.svg.firstChild)
             this.svg.removeChild(this.svg.firstChild);
         this.shapes.clear();
+        this._gridDefs = null;
+        this._gridRect = null;
+        this._gridPattern = null;
     }
 
     deserialize(model) {
@@ -197,5 +200,41 @@ class Board {
 
     enableSelection(enable) {
         this.selection.enabled = enable;
+    }
+
+    updateGrid(gridSize, visible) {
+        this.gridSize = gridSize;
+        this.snapToGrid = visible;
+        if (!visible || !gridSize) {
+            if (this._gridRect)
+                this._gridRect.setAttribute("visibility", "hidden");
+            return;
+        }
+        if (!this._gridDefs) {
+            this._gridDefs = this.createSvgElement("defs");
+            this._gridPattern = this.createSvgElement("pattern");
+            this._gridPattern.id = "board-grid-pattern";
+            this._gridPattern.setAttribute("patternUnits", "userSpaceOnUse");
+            const dot = this.createSvgElement("circle");
+            dot.setAttribute("cx", "0");
+            dot.setAttribute("cy", "0");
+            dot.setAttribute("r", "0.6");
+            dot.setAttribute("fill", "rgba(0,0,0,0.15)");
+            this._gridDot = dot;
+            this._gridPattern.appendChild(dot);
+            this._gridDefs.appendChild(this._gridPattern);
+            this._gridRect = this.createSvgElement("rect");
+            this._gridRect.setAttribute("fill", "url(#board-grid-pattern)");
+            this._gridRect.setAttribute("pointer-events", "none");
+            this.svg.insertBefore(this._gridRect, this.svg.firstChild);
+            this.svg.insertBefore(this._gridDefs, this.svg.firstChild);
+        }
+        this._gridPattern.setAttribute("width", gridSize);
+        this._gridPattern.setAttribute("height", gridSize);
+        this._gridRect.setAttribute("x", "-1e6");
+        this._gridRect.setAttribute("y", "-1e6");
+        this._gridRect.setAttribute("width", "2e6");
+        this._gridRect.setAttribute("height", "2e6");
+        this._gridRect.setAttribute("visibility", "visible");
     }
 }
