@@ -216,6 +216,7 @@ class Shell  {
             this.calculator.pause();
         else {
             this.deselectShape();
+            this.applyUserPermissions();
             this.calculator.play();
         }
         this.bottomToolbar.updatePlayer();
@@ -239,6 +240,7 @@ class Shell  {
     
     replayPressed() {
         this.deselectShape();
+        this.applyUserPermissions();
         this.calculator.replay();
         this.bottomToolbar.updatePlayer();
     }
@@ -282,6 +284,7 @@ class Shell  {
     }
     
     reset() {
+        this.restoreUserPermissions();
         const initialValuesByCase = this.pendingInitialValuesByCase ?? this.calculator.getInitialValuesByCase();
         this.pendingInitialValuesByCase = null;
         this.calculator.reset();
@@ -563,6 +566,14 @@ class Shell  {
 
     getValues() {
         return this.calculator.getValues();
+    }
+
+    applyUserPermissions() {
+        this.board.shapes.shapes.forEach(shape => shape.applyUserPermissions());
+    }
+
+    restoreUserPermissions() {
+        this.board.shapes.shapes.forEach(shape => shape.restoreUserPermissions());
     }
 
     deselectShape(options) {

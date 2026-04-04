@@ -118,6 +118,8 @@ class BaseShape {
         this.properties.rotation = 0;
         this.properties.showName = false;
         this.properties.nameColor = null;
+        this.properties.visibleToUsers = true;
+        this.properties.lockedForUsers = false;
         var name = this.constructor.name.split(/(?=[A-Z])/)[0];
         this.properties.name = name;
     }
@@ -674,7 +676,82 @@ class BaseShape {
     }
 
     createToolbar() {
-        return [];
+        return [
+            this.createPermissionsToolbarItem(),
+            { location: "center", template: () => $('<div class="toolbar-separator">|</div>') }
+        ];
+    }
+
+    createPermissionsToolbarItem() {
+        return {
+            location: "center",
+            template: () => {
+                const container = $('<div></div>');
+                this.createPermissionsDropDownButton(container);
+                return container;
+            }
+        };
+    }
+
+    createPermissionsDropDownButton(itemElement) {
+        this._permissionsDropdownElement = $('<div class="mdl-permissions-selector">');
+        this._permissionsDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            hint: "Permissions",
+            template: (data, element) => this.renderPermissionsButtonTemplate(element[0]),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:20000" },
+                width: "auto",
+                contentTemplate: contentElement => this.buildPermissionsMenuContent(contentElement)
+            }
+        });
+        this._permissionsDropdownElement.appendTo(itemElement);
+    }
+
+    getPermissionsIconClass() {
+        const hidden = !this.properties.visibleToUsers;
+        const locked = this.properties.lockedForUsers;
+        if (hidden && locked)
+            return "fa-solid fa-shield";
+        if (hidden || locked)
+            return "fa-solid fa-shield-halved";
+        return "fa-regular fa-shield";
+    }
+
+    renderPermissionsButtonTemplate(element) {
+        element.innerHTML = `<i class="${this.getPermissionsIconClass()} mdl-permissions-icon"></i>`;
+    }
+
+    refreshPermissionsButtonIcon() {
+        const icon = this._permissionsDropdownElement?.find(".mdl-permissions-icon")[0];
+        if (!icon)
+            return;
+        const newClass = this.getPermissionsIconClass();
+        if (icon.classList.contains(newClass.split(" ")[0]) && icon.classList.contains(newClass.split(" ")[1]))
+            return;
+        icon.classList.add("mdl-permissions-icon-animate");
+        icon.className = `${newClass} mdl-permissions-icon mdl-permissions-icon-animate`;
+        icon.addEventListener("animationend", () => icon.classList.remove("mdl-permissions-icon-animate"), { once: true });
+    }
+
+    buildPermissionsMenuContent(contentElement) {
+        const $content = $(contentElement);
+        $content.empty();
+        $content[0].innerHTML = `<div class="mdl-permissions-menu">
+            <div class="mdl-permissions-menu-row"><div class="mdl-permissions-visibility-host"></div><span class="mdl-permissions-menu-label">Visible</span></div>
+            <div class="mdl-permissions-menu-row"><div class="mdl-permissions-lock-host"></div><span class="mdl-permissions-menu-label">Locked</span></div>
+        </div>`;
+        TermControl.createVisibilityCheckbox($content.find(".mdl-permissions-visibility-host"), this.properties.visibleToUsers, value => {
+            this.setPropertyCommand("visibleToUsers", value);
+            this.refreshPermissionsButtonIcon();
+        });
+        TermControl.createLockCheckbox($content.find(".mdl-permissions-lock-host"), this.properties.lockedForUsers, value => {
+            this.setPropertyCommand("lockedForUsers", value);
+            this.refreshPermissionsButtonIcon();
+        });
     }
 
     createTermSelectorToolbarItem(termProperty, title, showVisibilityToggle = true) {
@@ -1156,6 +1233,20 @@ class BaseShape {
     setPropertyCommand(name, value) {
         const command = new SetShapePropertiesCommand(this.board, this, { [name]: value });
         this.board.invoker.execute(command);
+    }
+
+    applyUserPermissions() {
+        if (!this.properties.visibleToUsers)
+            this.element.style.display = "none";
+        if (this.properties.lockedForUsers)
+            this.element.style.pointerEvents = "none";
+        this.children.forEach(child => child.applyUserPermissions());
+    }
+
+    restoreUserPermissions() {
+        this.element.style.display = "";
+        this.element.style.pointerEvents = "";
+        this.children.forEach(child => child.restoreUserPermissions());
     }
 
     update() {
