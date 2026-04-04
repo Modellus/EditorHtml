@@ -73,12 +73,14 @@ class TableControl {
     bindEvents() {
         this.onWheelHandler = event => this.onWheel(event);
         this.onWindowWheelHandler = event => this.onWindowWheel(event);
+        this.onPointerDownHandler = event => this.onPointerDown(event);
         this.onMouseDownHandler = event => this.onMouseDown(event);
         this.onKeyDownHandler = event => this.onKeyDown(event);
-        this.onWindowMouseMoveHandler = event => this.onWindowMouseMove(event);
-        this.onWindowMouseUpHandler = _ => this.onWindowMouseUp();
+        this.onWindowPointerMoveHandler = event => this.onWindowPointerMove(event);
+        this.onWindowPointerUpHandler = _ => this.onWindowPointerUp();
         this.rootElement.addEventListener("wheel", this.onWheelHandler, { passive: false });
         window.addEventListener("wheel", this.onWindowWheelHandler, { passive: false });
+        this.rootElement.addEventListener("pointerdown", this.onPointerDownHandler);
         this.rootElement.addEventListener("mousedown", this.onMouseDownHandler);
         this.rootElement.addEventListener("keydown", this.onKeyDownHandler);
     }
@@ -86,10 +88,11 @@ class TableControl {
     dispose() {
         this.rootElement.removeEventListener("wheel", this.onWheelHandler);
         window.removeEventListener("wheel", this.onWindowWheelHandler);
+        this.rootElement.removeEventListener("pointerdown", this.onPointerDownHandler);
         this.rootElement.removeEventListener("mousedown", this.onMouseDownHandler);
         this.rootElement.removeEventListener("keydown", this.onKeyDownHandler);
-        window.removeEventListener("mousemove", this.onWindowMouseMoveHandler);
-        window.removeEventListener("mouseup", this.onWindowMouseUpHandler);
+        window.removeEventListener("pointermove", this.onWindowPointerMoveHandler);
+        window.removeEventListener("pointerup", this.onWindowPointerUpHandler);
         if (!this.rootElement || !this.hostElement)
             return;
         if (this.rootElement.parentNode === this.hostElement)
@@ -757,7 +760,19 @@ class TableControl {
         return delta;
     }
 
+    onPointerDown(event) {
+        const point = this.convertClientPoint(event);
+        if (!point)
+            return;
+        if (this.isPointInScrollbar(point)) {
+            event.preventDefault();
+            this.startScrollbarDrag(point);
+        }
+    }
+
     onMouseDown(event) {
+        if (this.scrollbarDrag)
+            return;
         this.focus();
         const point = this.convertClientPoint(event);
         if (!point)
@@ -852,8 +867,8 @@ class TableControl {
                 startY: point.y,
                 startScrollTop: this.scrollTop
             };
-            window.addEventListener("mousemove", this.onWindowMouseMoveHandler);
-            window.addEventListener("mouseup", this.onWindowMouseUpHandler);
+            window.addEventListener("pointermove", this.onWindowPointerMoveHandler);
+            window.addEventListener("pointerup", this.onWindowPointerUpHandler);
             return;
         }
         const maxScrollTop = this.getMaxScrollTop();
@@ -863,7 +878,7 @@ class TableControl {
         this.setScrollTop(ratio * maxScrollTop);
     }
 
-    onWindowMouseMove(event) {
+    onWindowPointerMove(event) {
         if (!this.scrollbarDrag)
             return;
         const point = this.convertClientPoint(event);
@@ -879,10 +894,10 @@ class TableControl {
         this.setScrollTop(this.scrollbarDrag.startScrollTop + (deltaY / travel) * maxScrollTop);
     }
 
-    onWindowMouseUp() {
+    onWindowPointerUp() {
         this.scrollbarDrag = null;
-        window.removeEventListener("mousemove", this.onWindowMouseMoveHandler);
-        window.removeEventListener("mouseup", this.onWindowMouseUpHandler);
+        window.removeEventListener("pointermove", this.onWindowPointerMoveHandler);
+        window.removeEventListener("pointerup", this.onWindowPointerUpHandler);
     }
 
     pointInRect(point, rect) {
