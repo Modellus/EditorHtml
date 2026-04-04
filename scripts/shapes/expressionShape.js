@@ -103,6 +103,16 @@ class ExpressionShape extends BaseShape {
         await navigator.clipboard.writeText(mathml);
     }
 
+    populateShapeColorMenuSections(sections) {
+        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        sections[0].items.push({
+            text: bgLabel,
+            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
+            buildControl: $p => $p.append(this._bgColorPicker)
+        });
+    }
+
     setDefaults() {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Expression Name");
@@ -588,6 +598,7 @@ class ExpressionShape extends BaseShape {
         this.element.style.backgroundColor = this.properties.backgroundColor;
         this.applyBorderStyle(this.container, 1);
         this.mathfield.style.color = this.properties.foregroundColor;
+        this.mathfield.style.backgroundColor = this.properties.backgroundColor ?? "transparent";
         this.syncHandwrittenStyle();
     }
 

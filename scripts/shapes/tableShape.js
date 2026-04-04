@@ -85,6 +85,16 @@ class TableShape extends BaseShape {
         super.showContextToolbar();
     }
 
+    populateShapeColorMenuSections(sections) {
+        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        sections[0].items.push({
+            text: bgLabel,
+            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
+            buildControl: $p => $p.append(this._bgColorPicker)
+        });
+    }
+
     createColumnsControl() {
         this.normalizeColumns();
         this._columnsControl = TermControl.createShapeTermsCollectionControl(this, "columns", {
@@ -131,10 +141,24 @@ class TableShape extends BaseShape {
             columns: this.buildControlColumns(columns),
             foregroundColor: this.properties.foregroundColor,
             backgroundColor: this.properties.backgroundColor,
+            headerBackgroundColor: this.deriveHeaderColor(this.properties.backgroundColor),
             borderColor: this.getBorderColor(),
             precision: this.board.calculator.getPrecision(),
             onCellValueChanged: payload => this.onTableCellValueChanged(payload)
         };
+    }
+
+    deriveHeaderColor(backgroundColor) {
+        if (!backgroundColor || backgroundColor === "transparent" || backgroundColor === "#00000000")
+            return "#f7f7f7";
+        const r = parseInt(backgroundColor.slice(1, 3), 16);
+        const g = parseInt(backgroundColor.slice(3, 5), 16);
+        const b = parseInt(backgroundColor.slice(5, 7), 16);
+        const factor = 0.93;
+        const dr = Math.round(r * factor);
+        const dg = Math.round(g * factor);
+        const db = Math.round(b * factor);
+        return `#${dr.toString(16).padStart(2, "0")}${dg.toString(16).padStart(2, "0")}${db.toString(16).padStart(2, "0")}`;
     }
 
     getTableStyleKey() {

@@ -79,7 +79,7 @@ class SettingsController {
                     }
                 },
                 {
-                    colSpan: 2,
+                    colSpan: 1,
                     dataField: "backgroundColor",
                     label: {
                         text: this.shell.board.translations.get("Background Color")
