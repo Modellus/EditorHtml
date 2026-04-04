@@ -35,6 +35,7 @@ class ChartControl {
             termFontStyle: "italic",
             termFontWeight: 400,
             iconFontFamily: "Font Awesome 7 Pro",
+            equalScales: false,
             fontSize: 13,
             titleFontSize: 16,
             fontWeight: 900
@@ -564,6 +565,23 @@ class ChartControl {
         return { xScale: xScale, yScale: yScale };
     }
 
+    equalizeDomain(domain, plotWidth, plotHeight) {
+        const xRange = domain.xMax - domain.xMin;
+        const yRange = domain.yMax - domain.yMin;
+        if (xRange <= 0 || yRange <= 0 || plotWidth <= 0 || plotHeight <= 0)
+            return domain;
+        const xPixelsPerUnit = plotWidth / xRange;
+        const yPixelsPerUnit = plotHeight / yRange;
+        if (xPixelsPerUnit > yPixelsPerUnit) {
+            const targetXRange = plotWidth / yPixelsPerUnit;
+            const xCenter = (domain.xMin + domain.xMax) / 2;
+            return { xMin: xCenter - targetXRange / 2, xMax: xCenter + targetXRange / 2, yMin: domain.yMin, yMax: domain.yMax };
+        }
+        const targetYRange = plotHeight / xPixelsPerUnit;
+        const yCenter = (domain.yMin + domain.yMax) / 2;
+        return { xMin: domain.xMin, xMax: domain.xMax, yMin: yCenter - targetYRange / 2, yMax: yCenter + targetYRange / 2 };
+    }
+
     render() {
         const size = this.getChartSize();
         const width = size.width;
@@ -580,7 +598,13 @@ class ChartControl {
         if (width <= 2 || height <= 2)
             return;
         this.renderBackground(width, height);
-        const domain = this.getDomain(this.options.argumentField, this.options.series, this.options.chartType);
+        const rawDomain = this.getDomain(this.options.argumentField, this.options.series, this.options.chartType);
+        const preliminaryTicks = this.buildTicks(rawDomain.xMin, rawDomain.xMax, 5);
+        const preliminaryYTicks = this.buildTicks(rawDomain.yMin, rawDomain.yMax, 5);
+        const preliminaryLayout = this.getLayout(width, height, preliminaryTicks, preliminaryYTicks);
+        const domain = this.options.equalScales
+            ? this.equalizeDomain(rawDomain, preliminaryLayout.plotWidth, preliminaryLayout.plotHeight)
+            : rawDomain;
         const xTicks = this.buildTicks(domain.xMin, domain.xMax, 5);
         const yTicks = this.buildTicks(domain.yMin, domain.yMax, 5);
         const layout = this.getLayout(width, height, xTicks, yTicks);

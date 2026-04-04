@@ -207,6 +207,19 @@ class ChartShape extends BaseShape {
                 });
             }
         });
+        listItems.push({
+            text: "Equal Scales",
+            buildControl: $container => {
+                $('<div>').appendTo($container).dxSwitch({
+                    value: this.properties.equalScales === true,
+                    onInitialized: e => { this._equalScalesSwitchInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setPropertyCommand("equalScales", e.value);
+                        this.chart.setOptions({ equalScales: e.value });
+                    }
+                });
+            }
+        });
         $(contentElement).empty();
         $(contentElement).dxScrollView({ height: 300, width: "100%" });
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
@@ -256,6 +269,7 @@ class ChartShape extends BaseShape {
         this.refreshYTermsControl();
         this.refreshTermsToolbarControl();
         this._autoScaleSwitchInstance?.option("value", this.properties.autoScale === true);
+        this._equalScalesSwitchInstance?.option("value", this.properties.equalScales === true);
         super.showContextToolbar();
     }
 
@@ -269,6 +283,7 @@ class ChartShape extends BaseShape {
         this.properties.height = 200;
         this.properties.chartType = ["line"];
         this.properties.autoScale = true;
+        this.properties.equalScales = false;
         this.properties.xTerm = this.board.calculator.properties.independent.name;
         this.properties.yTerms = [{ term: this.board.calculator.getDefaultTerm(), case: 1, color: "", showLabel: false }];
         this.properties.domainOverride = this.getDefaultDomainOverride();
@@ -303,6 +318,7 @@ class ChartShape extends BaseShape {
             foregroundColor: this.properties.foregroundColor,
             backgroundColor: this.properties.backgroundColor,
             borderColor: this.getBorderColor(),
+            equalScales: this.properties.equalScales === true,
             onDomainChanged: domain => this.onDomainChanged(domain),
             onTickDragStarted: () => this.onTickDragStarted(),
             onTickDragEnded: () => this.onTickDragEnded()
@@ -439,6 +455,7 @@ class ChartShape extends BaseShape {
         this.chartDataConfig = chartDataConfig;
         const config = {
             chartType: this.properties.chartType,
+            equalScales: this.properties.equalScales === true,
             argField: argumentField,
             series: ySeries.map(series => ({
                 valueField: series.valueField,
@@ -461,6 +478,7 @@ class ChartShape extends BaseShape {
         if (changed) {
             this.chart.setOptions({
                 chartType: config.chartType,
+                equalScales: config.equalScales,
                 argumentField: config.argField,
                 series: config.series,
                 foregroundColor: config.color,

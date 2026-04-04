@@ -532,6 +532,30 @@ body.read-only #context-menu {
     cursor: inherit;
 }
 
+.dx-htmleditor .dx-htmleditor-content .ql-formula {
+    padding: 2px 4px;
+    vertical-align: middle;
+}
+
+.mdl-formula-shortcut {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 36px;
+    padding: 4px 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #fafafa;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.mdl-formula-shortcut:hover {
+    background: #e8f0fe;
+    border-color: #0f6cbd;
+}
+
 .dx-button .trash {
     font-weight: 300;
     color: red;
