@@ -197,6 +197,11 @@ class ExpressionShape extends BaseShape {
     }
 
     onKeyDown(keydownEvent) {
+        if (keydownEvent.key === "'") {
+            keydownEvent.preventDefault();
+            keydownEvent.stopImmediatePropagation();
+            return;
+        }
         if (this.handleEnterKeydown(keydownEvent))
             return;
         if (this.handleSpaceKeydown(keydownEvent))
