@@ -195,37 +195,37 @@ class ReferentialShape extends BaseShape {
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: { style: "z-index:20000" },
-                width: "auto",
+                width: 280,
                 contentTemplate: contentElement => {
                     $(contentElement).empty();
-                    $(contentElement).dxScrollView({ height: 350, width: "100%" });
+                    $(contentElement).dxScrollView({ height: 450, width: "100%" });
                     const scrollContent = $(contentElement).dxScrollView("instance").content();
                     const listItems = [
                         {
                             text: "Display",
-                            stacked: true,
                             buildControl: $p => {
-                                $('<div>').dxButtonGroup({
-                                    stylingMode: "outlined",
-                                    keyExpr: "key",
-                                    selectionMode: "multiple",
-                                    selectedItemKeys: this.getDisplayOptionKeys(),
-                                    items: this._displayOptionsItems,
-                                    buttonTemplate: (data, container) => {
-                                        container.html(`<i class="dx-icon fa-light ${data.iconClass}" title="${data.hint}"></i>`);
-                                    },
-                                    onInitialized: e => { this._displayButtonGroupInstance = e.component; },
-                                    onSelectionChanged: e => {
-                                        const selectedKeys = e.component.option("selectedItemKeys") ?? [];
-                                        this.properties.showHorizontalAxis = selectedKeys.includes("showHorizontalAxis");
-                                        this.properties.showVerticalAxis = selectedKeys.includes("showVerticalAxis");
-                                        this.properties.showTicksWithValues = selectedKeys.includes("showTicksWithValues");
-                                        this.properties.showHorizontalGrid = selectedKeys.includes("showHorizontalGrid");
-                                        this.properties.showVerticalGrid = selectedKeys.includes("showVerticalGrid");
-                                        this.tick();
-                                        this.board.markDirty(this);
-                                    }
-                                }).appendTo($p);
+                                const wrapper = $('<div style="display: flex; gap: 6px;">');
+                                this._displayButtonInstances = {};
+                                const selectedKeys = this.getDisplayOptionKeys();
+                                for (const item of this._displayOptionsItems) {
+                                    const selected = selectedKeys.includes(item.key);
+                                    $('<div>').appendTo(wrapper).dxButton({
+                                        stylingMode: selected ? "outlined" : "text",
+                                        elementAttr: { class: "mdl-display-group mdl-small-icon" },
+                                        hint: item.hint,
+                                        template: (data, container) => {
+                                            $(container).html(`<i class="dx-icon fa-light ${item.iconClass}"></i>`);
+                                        },
+                                        onInitialized: e => { this._displayButtonInstances[item.key] = e.component; },
+                                        onClick: () => {
+                                            this.properties[item.key] = !this.properties[item.key];
+                                            this._displayButtonInstances[item.key]?.option("stylingMode", this.properties[item.key] ? "outlined" : "text");
+                                            this.tick();
+                                            this.board.markDirty(this);
+                                        }
+                                    });
+                                }
+                                wrapper.appendTo($p);
                             }
                         },
                         {
@@ -236,6 +236,7 @@ class ReferentialShape extends BaseShape {
                                     onInitialized: e => { this._autoScaleSwitchInstance = e.component; },
                                     onValueChanged: e => {
                                         this.properties.autoScale = e.value;
+                                        this.refreshDomainBoxes();
                                         this.tick();
                                         this.board.markDirty(this);
                                     }
@@ -249,8 +250,9 @@ class ReferentialShape extends BaseShape {
                                     value: this.properties.scaleX,
                                     onInitialized: e => { this._scaleXBoxInstance = e.component; },
                                     onValueChanged: e => {
+                                        if (this.properties.autoScale !== false)
+                                            return;
                                         this.properties.scaleX = e.value;
-                                        this.properties.autoScale = false;
                                         this.tick();
                                         this.board.markDirty(this);
                                     }
@@ -264,8 +266,9 @@ class ReferentialShape extends BaseShape {
                                     value: this.properties.scaleY,
                                     onInitialized: e => { this._scaleYBoxInstance = e.component; },
                                     onValueChanged: e => {
+                                        if (this.properties.autoScale !== false)
+                                            return;
                                         this.properties.scaleY = e.value;
-                                        this.properties.autoScale = false;
                                         this.tick();
                                         this.board.markDirty(this);
                                     }
@@ -280,10 +283,82 @@ class ReferentialShape extends BaseShape {
                                     onInitialized: e => { this._equalScalesSwitchInstance = e.component; },
                                     onValueChanged: e => {
                                         this.properties.equalAxisScales = e.value;
+                                        this.refreshDomainBoxes();
                                         this.tick();
                                         this.board.markDirty(this);
                                     }
                                 }).appendTo($p);
+                            }
+                        },
+                        {
+                            text: "Horizontal",
+                            buildControl: $p => {
+                                const wrapper = $('<div style="display: flex; gap: 6px;">');
+                                const domain = this.getVisibleDomain();
+                                const disabled = this.properties.autoScale !== false;
+                                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                                    value: domain.xMin,
+                                    placeholder: "Min",
+                                    disabled: disabled,
+                                    onInitialized: e => { this._xMinBoxInstance = e.component; },
+                                    onValueChanged: e => {
+                                        if (this.properties.autoScale !== false)
+                                            return;
+                                        const d = this.getVisibleDomain();
+                                        d.xMin = e.value;
+                                        this.applyVisibleDomainX(d);
+                                    }
+                                }));
+                                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                                    value: domain.xMax,
+                                    placeholder: "Max",
+                                    disabled: disabled,
+                                    onInitialized: e => { this._xMaxBoxInstance = e.component; },
+                                    onValueChanged: e => {
+                                        if (this.properties.autoScale !== false)
+                                            return;
+                                        const d = this.getVisibleDomain();
+                                        d.xMax = e.value;
+                                        this.applyVisibleDomainX(d);
+                                    }
+                                }));
+                                wrapper.appendTo($p);
+                            }
+                        },
+                        {
+                            text: "Vertical",
+                            buildControl: $p => {
+                                const wrapper = $('<div style="display: flex; gap: 6px;">');
+                                const domain = this.getVisibleDomain();
+                                const autoScale = this.properties.autoScale !== false;
+                                const equalScales = this.properties.equalAxisScales === true;
+                                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                                    value: domain.yMin,
+                                    placeholder: "Min",
+                                    disabled: autoScale || equalScales,
+                                    onInitialized: e => { this._yMinBoxInstance = e.component; },
+                                    onValueChanged: e => {
+                                        if (this.properties.autoScale !== false)
+                                            return;
+                                        const d = this.getVisibleDomain();
+                                        d.yMin = e.value;
+                                        this.applyVisibleDomainY(d);
+                                    }
+                                }));
+                                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                                    value: domain.yMax,
+                                    placeholder: "Max",
+                                    disabled: autoScale || equalScales,
+                                    onInitialized: e => { this._yMaxBoxInstance = e.component; },
+                                    onValueChanged: e => {
+                                        if (this.properties.autoScale !== false)
+                                            return;
+                                        const d = this.getVisibleDomain();
+                                        d.yMax = e.value;
+                                        this.applyVisibleDomainY(d);
+                                    }
+                                }));
+                                wrapper.appendTo($p);
                             }
                         },
                         {
@@ -300,19 +375,14 @@ class ReferentialShape extends BaseShape {
                             }
                         }
                     ];
-                    $('<div>').appendTo(scrollContent).dxList({
-                        dataSource: listItems,
-                        scrollingEnabled: false,
-                        itemTemplate: (data, _, el) => {
-                            if (data.stacked) {
-                                el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
-                                data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
-                            } else {
-                                el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
-                                data.buildControl($(el).find(".mdl-dropdown-list-control"));
-                            }
-                        }
-                    });
+                    const grid = $('<div class="mdl-dropdown-grid">');
+                    for (const item of listItems) {
+                        grid.append(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
+                        const control = $('<div class="mdl-dropdown-grid-control">');
+                        item.buildControl(control);
+                        grid.append(control);
+                    }
+                    grid.appendTo(scrollContent);
                 }
             }
         });
@@ -320,12 +390,15 @@ class ReferentialShape extends BaseShape {
     }
 
     refreshSettingsToolbarControl() {
-        this._displayButtonGroupInstance?.option("selectedItemKeys", this.getDisplayOptionKeys());
+        const selectedKeys = this.getDisplayOptionKeys();
+        for (const [key, instance] of Object.entries(this._displayButtonInstances ?? {}))
+            instance?.option("stylingMode", selectedKeys.includes(key) ? "outlined" : "text");
         this._equalScalesSwitchInstance?.option("value", this.properties.equalAxisScales === true);
         this._autoScaleSwitchInstance?.option("value", this.properties.autoScale !== false);
         this._scaleXBoxInstance?.option("value", this.properties.scaleX);
         this._scaleYBoxInstance?.option("value", this.properties.scaleY);
         this._snapToTicksSwitchInstance?.option("value", this.properties.snapToTicks === true);
+        this.refreshDomainBoxes();
     }
 
     populateShapeColorMenuSections(sections) {
@@ -604,6 +677,48 @@ class ReferentialShape extends BaseShape {
             scaleY = equalScale;
         }
         return { scaleX: scaleX, scaleY: scaleY };
+    }
+
+    getVisibleDomain() {
+        const originX = this.properties.originX ?? this.properties.width / 2;
+        const originY = this.properties.originY ?? this.properties.height / 2;
+        const { scaleX, scaleY } = this.getAxisScales();
+        return {
+            xMin: -originX * scaleX,
+            xMax: (this.properties.width - originX) * scaleX,
+            yMin: (originY - this.properties.height) * scaleY,
+            yMax: originY * scaleY
+        };
+    }
+
+    applyVisibleDomainX(domain) {
+        this.properties.scaleX = (domain.xMax - domain.xMin) / this.properties.width;
+        this.properties.originX = -domain.xMin / this.properties.scaleX;
+        this.properties.autoScale = false;
+        this._autoScaleSwitchInstance?.option("value", false);
+        this._scaleXBoxInstance?.option("value", this.properties.scaleX);
+        this.tick();
+        this.board.markDirty(this);
+    }
+
+    applyVisibleDomainY(domain) {
+        this.properties.scaleY = (domain.yMax - domain.yMin) / this.properties.height;
+        this.properties.originY = domain.yMax / this.properties.scaleY;
+        this.properties.autoScale = false;
+        this._autoScaleSwitchInstance?.option("value", false);
+        this._scaleYBoxInstance?.option("value", this.properties.scaleY);
+        this.tick();
+        this.board.markDirty(this);
+    }
+
+    refreshDomainBoxes() {
+        const autoScale = this.properties.autoScale !== false;
+        const equalScales = this.properties.equalAxisScales === true;
+        const domain = this.getVisibleDomain();
+        this._xMinBoxInstance?.option({ value: domain.xMin, disabled: autoScale });
+        this._xMaxBoxInstance?.option({ value: domain.xMax, disabled: autoScale });
+        this._yMinBoxInstance?.option({ value: domain.yMin, disabled: autoScale || equalScales });
+        this._yMaxBoxInstance?.option({ value: domain.yMax, disabled: autoScale || equalScales });
     }
 
     updateTickInteractionHandles({ horizontalTicks, verticalTicks, axisX, axisY, position }) {

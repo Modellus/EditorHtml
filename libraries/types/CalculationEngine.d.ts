@@ -1693,6 +1693,7 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
     visitDeltaName: (context: DeltaNameContext) => Branch;
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
+    visitDerivative: (context: DerivativeContext) => Branch;
 }
 
 declare class Engine extends EventEmitter {

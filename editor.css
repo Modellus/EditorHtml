@@ -662,6 +662,11 @@ math-field {
 
 .mdl-small-icon .dx-icon {
     font-size: 10px !important;
+    transition: font-size 0.2s ease, font-weight 0.2s ease;
+}
+
+.mdl-small-icon.dx-button-mode-outlined .dx-icon {
+    font-size: 12px !important;
 }
 
 .mdl-small-icon .dx-button-content {
@@ -704,8 +709,9 @@ math-field {
 }
 
 .mdl-pill-group .dx-item-selected .dx-icon,
-.mdl-display-group .dx-item-selected .dx-icon {
-    font-weight: 400;
+.mdl-display-group .dx-item-selected .dx-icon,
+.mdl-display-group.dx-button-mode-outlined .dx-icon {
+    font-weight: 900;
 }
 
 .mdl-parent-btn-character {
@@ -778,6 +784,25 @@ math-field {
 
 .mdl-dropdown-list-stacked-control {
     width: 100%;
+}
+
+.mdl-dropdown-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 8px 12px;
+}
+
+.mdl-dropdown-grid-label {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.mdl-dropdown-grid-control {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
 }
 
 .mdl-parent-selector .dx-button-content i,

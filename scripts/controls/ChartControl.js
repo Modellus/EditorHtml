@@ -923,17 +923,48 @@ class ChartControl {
             return;
         if (focusX < layout.plotLeft || focusX > layout.plotRight)
             return;
+        const focusPoints = this.collectFocusPoints(xScale, yScale);
+        const topY = focusPoints.length > 0
+            ? Math.min(...focusPoints.map(p => p.yPosition))
+            : layout.plotBottom;
         const focusLine = this.createSvgElement("line");
         focusLine.setAttribute("x1", `${focusX}`);
-        focusLine.setAttribute("y1", `${layout.plotTop}`);
+        focusLine.setAttribute("y1", `${topY}`);
         focusLine.setAttribute("x2", `${focusX}`);
         focusLine.setAttribute("y2", `${layout.plotBottom}`);
         focusLine.setAttribute("stroke", "#949494");
         focusLine.setAttribute("stroke-width", "1.4");
         focusLine.setAttribute("stroke-dasharray", "4 3");
         this.focusLayer.appendChild(focusLine);
+        for (const point of focusPoints) {
+            const horizontalLine = this.createSvgElement("line");
+            horizontalLine.setAttribute("x1", `${layout.plotLeft}`);
+            horizontalLine.setAttribute("y1", `${point.yPosition}`);
+            horizontalLine.setAttribute("x2", `${point.xPosition}`);
+            horizontalLine.setAttribute("y2", `${point.yPosition}`);
+            horizontalLine.setAttribute("stroke", "#949494");
+            horizontalLine.setAttribute("stroke-width", "1.4");
+            horizontalLine.setAttribute("stroke-dasharray", "4 3");
+            this.focusLayer.appendChild(horizontalLine);
+        }
         for (let seriesIndex = 0; seriesIndex < this.renderState.series.length; seriesIndex++)
             this.renderFocusMarker(seriesIndex, xScale, yScale);
+    }
+
+    collectFocusPoints(xScale, yScale) {
+        const points = [];
+        for (let seriesIndex = 0; seriesIndex < this.renderState.series.length; seriesIndex++) {
+            const series = this.renderState.series[seriesIndex];
+            const nearestPoint = this.getNearestSeriesPoint(series, this.focusArgumentValue);
+            if (!nearestPoint)
+                continue;
+            const xPosition = xScale(nearestPoint.xValue);
+            const yPosition = yScale(nearestPoint.yValue);
+            if (!Number.isFinite(xPosition) || !Number.isFinite(yPosition))
+                continue;
+            points.push({ xPosition, yPosition });
+        }
+        return points;
     }
 
     renderFocusMarker(seriesIndex, xScale, yScale) {
@@ -1111,8 +1142,6 @@ class ChartControl {
     resetDomainOverride() {
         this.domainOverride = { xMin: null, xMax: null, yMin: null, yMax: null };
         this.render();
-        if (typeof this.options.onDomainChanged === "function")
-            this.options.onDomainChanged({ ...this.domainOverride });
     }
 
     renderCrosshairHitArea(layout) {

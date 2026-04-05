@@ -143,7 +143,7 @@ class ChartShape extends BaseShape {
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: { style: "z-index:20000" },
-                width: "auto",
+                width: 280,
                 contentTemplate: contentElement => this.buildChartTypeMenuContent(contentElement)
             }
         });
@@ -152,38 +152,41 @@ class ChartShape extends BaseShape {
 
     buildChartTypeMenuContent(contentElement) {
         const chartTypes = [
-            { type: "scatter", iconName: "fa-chart-scatter", text: "Scatter" },
-            { type: "line", iconName: "fa-chart-line", text: "Line" },
-            { type: "area", iconName: "fa-chart-area", text: "Area" },
-            { type: "bar", iconName: "fa-chart-column", text: "Bar" }
+            { type: "scatter", iconName: "fa-chart-scatter" },
+            { type: "line", iconName: "fa-chart-line" },
+            { type: "area", iconName: "fa-chart-area" },
+            { type: "bar", iconName: "fa-chart-column" }
         ];
-        const selectedKeys = new Set(this.properties.chartType ?? []);
-        const listItems = chartTypes.map(chartType => ({
-            text: chartType.text,
+        const listItems = [{
+            text: "Display",
             buildControl: $container => {
-                $('<div>').appendTo($container).dxButtonGroup({
-                    stylingMode: "outlined",
-                    elementAttr: { class: "mdl-display-group mdl-small-icon" },
-                    keyExpr: "key",
-                    selectionMode: "multiple",
-                    selectedItemKeys: selectedKeys.has(chartType.type) ? [chartType.type] : [],
-                    items: [{ key: chartType.type, iconName: chartType.iconName }],
-                    buttonTemplate: (data, buttonContainer) => {
-                        buttonContainer.html(`<i class="dx-icon fa-light ${data.iconName}"></i>`);
-                    },
-                    onSelectionChanged: e => {
-                        const current = new Set(this.properties.chartType ?? []);
-                        if (e.addedItems.length > 0)
-                            current.add(chartType.type);
-                        else if (current.size > 1)
-                            current.delete(chartType.type);
-                        this.setPropertyCommand("chartType", [...current]);
-                        e.component.option("selectedItemKeys", current.has(chartType.type) ? [chartType.type] : []);
-                        e.component.repaint();
-                    }
-                });
+                const wrapper = $('<div style="display: flex; gap: 6px;">');
+                this._chartTypeButtonInstances = {};
+                for (const chartType of chartTypes) {
+                    const selected = (this.properties.chartType ?? []).includes(chartType.type);
+                    $('<div>').appendTo(wrapper).dxButton({
+                        stylingMode: selected ? "outlined" : "text",
+                        elementAttr: { class: "mdl-display-group mdl-small-icon" },
+                        template: (data, container) => {
+                            $(container).html(`<i class="dx-icon fa-light ${chartType.iconName}"></i>`);
+                        },
+                        onInitialized: e => { this._chartTypeButtonInstances[chartType.type] = e.component; },
+                        onClick: () => {
+                            const current = new Set(this.properties.chartType ?? []);
+                            if (current.has(chartType.type)) {
+                                if (current.size > 1)
+                                    current.delete(chartType.type);
+                            } else {
+                                current.add(chartType.type);
+                            }
+                            this.setPropertyCommand("chartType", [...current]);
+                            this.refreshChartTypeButtons();
+                        }
+                    });
+                }
+                wrapper.appendTo($container);
             }
-        }));
+        }];
         listItems.push({
             text: "Auto Scale",
             buildControl: $container => {
@@ -202,6 +205,7 @@ class ChartShape extends BaseShape {
                                 this.chart.setDomainOverride(this.properties.domainOverride);
                             }
                         }
+                        this.refreshDomainBoxes();
                         this.board.markDirty(this);
                     }
                 });
@@ -214,22 +218,101 @@ class ChartShape extends BaseShape {
                     value: this.properties.equalScales === true,
                     onInitialized: e => { this._equalScalesSwitchInstance = e.component; },
                     onValueChanged: e => {
-                        this.setPropertyCommand("equalScales", e.value);
+                        this.properties.equalScales = e.value;
                         this.chart.setOptions({ equalScales: e.value });
+                        this.refreshDomainBoxes();
+                        this.board.markDirty(this);
                     }
                 });
             }
         });
-        $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 300, width: "100%" });
-        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
-            dataSource: listItems,
-            scrollingEnabled: false,
-            itemTemplate: (data, _, el) => {
-                el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
-                data.buildControl($(el).find(".mdl-dropdown-list-control"));
+        listItems.push({
+            text: "Horizontal",
+            buildControl: $container => {
+                const wrapper = $('<div style="display: flex; gap: 6px;">');
+                const disabled = this.properties.autoScale === true;
+                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    value: this.properties.domainOverride?.xMin ?? null,
+                    placeholder: "Min",
+                    disabled: disabled,
+                    onInitialized: e => { this._xMinBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        if (this.properties.autoScale === true)
+                            return;
+                        if (!this.properties.domainOverride)
+                            this.properties.domainOverride = this.getDefaultDomainOverride();
+                        this.properties.domainOverride.xMin = e.value;
+                        this.chart.setDomainOverride(this.properties.domainOverride);
+                        this.board.markDirty(this);
+                    }
+                }));
+                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    value: this.properties.domainOverride?.xMax ?? null,
+                    placeholder: "Max",
+                    disabled: disabled,
+                    onInitialized: e => { this._xMaxBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        if (this.properties.autoScale === true)
+                            return;
+                        if (!this.properties.domainOverride)
+                            this.properties.domainOverride = this.getDefaultDomainOverride();
+                        this.properties.domainOverride.xMax = e.value;
+                        this.chart.setDomainOverride(this.properties.domainOverride);
+                        this.board.markDirty(this);
+                    }
+                }));
+                wrapper.appendTo($container);
             }
         });
+        listItems.push({
+            text: "Vertical",
+            buildControl: $container => {
+                const wrapper = $('<div style="display: flex; gap: 6px;">');
+                const autoScale = this.properties.autoScale === true;
+                const equalScales = this.properties.equalScales === true;
+                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    value: this.properties.domainOverride?.yMin ?? null,
+                    placeholder: "Min",
+                    disabled: autoScale || equalScales,
+                    onInitialized: e => { this._yMinBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        if (this.properties.autoScale === true)
+                            return;
+                        if (!this.properties.domainOverride)
+                            this.properties.domainOverride = this.getDefaultDomainOverride();
+                        this.properties.domainOverride.yMin = e.value;
+                        this.chart.setDomainOverride(this.properties.domainOverride);
+                        this.board.markDirty(this);
+                    }
+                }));
+                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    value: this.properties.domainOverride?.yMax ?? null,
+                    placeholder: "Max",
+                    disabled: autoScale || equalScales,
+                    onInitialized: e => { this._yMaxBoxInstance = e.component; },
+                    onValueChanged: e => {
+                        if (this.properties.autoScale === true)
+                            return;
+                        if (!this.properties.domainOverride)
+                            this.properties.domainOverride = this.getDefaultDomainOverride();
+                        this.properties.domainOverride.yMax = e.value;
+                        this.chart.setDomainOverride(this.properties.domainOverride);
+                        this.board.markDirty(this);
+                    }
+                }));
+                wrapper.appendTo($container);
+            }
+        });
+        $(contentElement).empty();
+        $(contentElement).dxScrollView({ height: 400, width: "100%" });
+        const grid = $('<div class="mdl-dropdown-grid">');
+        for (const item of listItems) {
+            grid.append(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
+            const control = $('<div class="mdl-dropdown-grid-control">');
+            item.buildControl(control);
+            grid.append(control);
+        }
+        grid.appendTo($(contentElement).dxScrollView("instance").content());
     }
 
     populateTermsMenuSections(listItems) {
@@ -264,10 +347,28 @@ class ChartShape extends BaseShape {
         });
     }
 
+    refreshChartTypeButtons() {
+        const selected = new Set(this.properties.chartType ?? []);
+        for (const [type, instance] of Object.entries(this._chartTypeButtonInstances ?? {}))
+            instance?.option("stylingMode", selected.has(type) ? "outlined" : "text");
+    }
+
+    refreshDomainBoxes() {
+        const autoScale = this.properties.autoScale === true;
+        const equalScales = this.properties.equalScales === true;
+        const domain = autoScale ? this.chart.renderState?.domain : this.properties.domainOverride;
+        this._xMinBoxInstance?.option({ value: domain?.xMin ?? null, disabled: autoScale });
+        this._xMaxBoxInstance?.option({ value: domain?.xMax ?? null, disabled: autoScale });
+        this._yMinBoxInstance?.option({ value: domain?.yMin ?? null, disabled: autoScale || equalScales });
+        this._yMaxBoxInstance?.option({ value: domain?.yMax ?? null, disabled: autoScale || equalScales });
+    }
+
     showContextToolbar() {
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.refreshYTermsControl();
         this.refreshTermsToolbarControl();
+        this.refreshChartTypeButtons();
+        this.refreshDomainBoxes();
         this._autoScaleSwitchInstance?.option("value", this.properties.autoScale === true);
         this._equalScalesSwitchInstance?.option("value", this.properties.equalScales === true);
         super.showContextToolbar();
@@ -329,6 +430,7 @@ class ChartShape extends BaseShape {
         this.properties.autoScale = false;
         this.properties.domainOverride = domain;
         this._autoScaleSwitchInstance?.option("value", false);
+        this.refreshDomainBoxes();
     }
 
     onTickDragStarted() {
