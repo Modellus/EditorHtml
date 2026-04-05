@@ -55,7 +55,7 @@ class Shell  {
         this.properties.instructions = "";
         this.properties.educationLevel = "university";
         this.properties.gridSize = 20;
-        this.properties.snapToGrid = true;
+        this.properties.snapToGrid = false;
         this.applySvgBackgroundColor();
         this.applyEducationLevel();
         this.applyGrid();

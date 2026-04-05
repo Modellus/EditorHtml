@@ -30,7 +30,7 @@ class ChildShape extends BaseShape {
     snapDragPoint(point) {
         const referential = this.getReferential();
         if (!referential?.properties?.snapToTicks)
-            return super.snapDragPoint(point);
+            return point;
         const spacing = referential.getTickPixelSpacing();
         if (!spacing.x || !spacing.y)
             return point;
