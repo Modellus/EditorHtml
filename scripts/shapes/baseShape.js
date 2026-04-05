@@ -1358,9 +1358,8 @@ class BaseShape {
 
     resetToDefaults() {
         const previousProperties = Utils.cloneProperties(this.properties);
-        const defaultProperties = { x: previousProperties.x, y: previousProperties.y, width: previousProperties.width, height: previousProperties.height };
         this.setDefaults();
-        Object.assign(defaultProperties, this.properties);
+        const defaultProperties = { ...this.properties, x: previousProperties.x, y: previousProperties.y, width: previousProperties.width, height: previousProperties.height };
         this.setProperties(previousProperties);
         const command = new SetShapePropertiesCommand(this.board, this, defaultProperties);
         this.board.invoker.execute(command);
