@@ -1689,6 +1689,7 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitInt: (context: IntContext) => Branch;
     visitRound: (context: RoundContext) => Branch;
     visitParenthesis: (context: ParenthesisContext) => Branch;
+    visitBraces: (context: BracesContext) => Branch;
     visitSubscript: (context: SubscriptContext) => Branch;
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
     visitDeltaName: (context: DeltaNameContext) => Branch;
