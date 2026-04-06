@@ -8,9 +8,11 @@ declare class Branch {
     calculate: (values: {
         [name: string]: number;
     }) => number;
+    op?: string;
     constructor(text: string, calculate: (values: {
         [name: string]: number;
     }) => number, ...children: Branch[]);
+    withOp(op: string): this;
 }
 
 /**
@@ -1650,6 +1652,17 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     private readonly expander;
     constructor(system: System, variable: string);
     private eval;
+    private constant;
+    private addB;
+    private subB;
+    private mulB;
+    private divB;
+    private negB;
+    private powB;
+    private sinB;
+    private cosB;
+    private lnB;
+    private sqrtB;
     visitVariable: (context: VariableContext) => Branch;
     visitName: (context: NameContext) => Branch;
     visitNumber: (context: NumberContext) => Branch;

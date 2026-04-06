@@ -900,7 +900,7 @@ class TermControl {
             onItemClick: e => this.onSecondaryDropDownItemClick(e, index),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:20000" }
+                wrapperAttr: { style: "z-index:199999", class: "mdl-nested-dropdown-popup" }
             }
         };
     }
@@ -979,6 +979,10 @@ class TermControl {
             elementAttr: { class: "mdl-variable-selector" },
             itemTemplate: itemTemplate,
             onValueChanged: e => this.onTermChanged(index, e.value),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:199999", class: "mdl-nested-dropdown-popup" }
+            },
             ...providedOptions
         };
     }
@@ -1026,7 +1030,11 @@ class TermControl {
             stylingMode: "filled",
             fieldAddons: fieldAddons,
             itemTemplate: secondary.itemTemplate,
-            onValueChanged: e => this.onSecondaryValueChanged(index, e.value)
+            onValueChanged: e => this.onSecondaryValueChanged(index, e.value),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:199999", class: "mdl-nested-dropdown-popup" }
+            }
         };
     }
 

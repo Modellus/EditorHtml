@@ -205,7 +205,7 @@ class TopToolbar {
                             stylingMode: "text",
                             dropDownOptions: {
                                 container: document.body,
-                                wrapperAttr: { style: "z-index:20000" },
+                                wrapperAttr: { style: "z-index:99999" },
                                 width: "auto",
                                 onShowing: () => {
                                     if (this._shapesTreeView)

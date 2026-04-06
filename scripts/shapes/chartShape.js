@@ -142,7 +142,7 @@ class ChartShape extends BaseShape {
             icon: "fa-light fa-chart-mixed",
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:20000" },
+                wrapperAttr: { style: "z-index:99999" },
                 width: 280,
                 contentTemplate: contentElement => this.buildChartTypeMenuContent(contentElement)
             }

@@ -150,7 +150,7 @@ class ReferentialShape extends BaseShape {
             template: (data, element) => this.renderAddShapeButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:20000" },
+                wrapperAttr: { style: "z-index:99999" },
                 width: "auto",
                 contentTemplate: contentElement => {
                     $(contentElement).empty();
@@ -194,7 +194,7 @@ class ReferentialShape extends BaseShape {
             template: (data, element) => this.renderSettingsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:20000" },
+                wrapperAttr: { style: "z-index:99999" },
                 width: 280,
                 contentTemplate: contentElement => {
                     $(contentElement).empty();

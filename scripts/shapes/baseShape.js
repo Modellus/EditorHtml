@@ -702,7 +702,7 @@ class BaseShape {
             template: (data, element) => this.renderPermissionsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:20000" },
+                wrapperAttr: { style: "z-index:99999" },
                 width: "auto",
                 contentTemplate: contentElement => this.buildPermissionsMenuContent(contentElement)
             }
@@ -933,7 +933,7 @@ class BaseShape {
             buttonTemplate: (data, element) => this.renderShapeColorButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:20000" },
+                wrapperAttr: { style: "z-index:99999" },
                 width: "auto",
                 contentTemplate: contentElement => this.buildShapeMenuContent(contentElement)
             }
@@ -1131,7 +1131,7 @@ class BaseShape {
             buttonTemplate: (data, element) => this.renderTermsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:20000" },
+                wrapperAttr: { style: "z-index:99999" },
                 width: "auto",
                 contentTemplate: contentElement => this.buildTermsMenuContent(contentElement)
             }

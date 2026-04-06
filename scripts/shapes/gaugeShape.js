@@ -156,7 +156,7 @@ class GaugeShape extends BaseShape {
             buttonTemplate: (data, element) => this.renderGaugeSettingsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:20000" },
+                wrapperAttr: { style: "z-index:99999" },
                 width: "auto",
                 contentTemplate: contentElement => this.buildGaugeSettingsMenuContent(contentElement)
             }

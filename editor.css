@@ -43,7 +43,11 @@ svg {
 }
 
 .dx-dropdownbutton-popup-wrapper {
-    z-index: 20000 !important;
+    z-index: 99999 !important;
+}
+
+.mdl-nested-dropdown-popup {
+    z-index: 199999 !important;
 }
 
 #chat-popup {
@@ -325,11 +329,11 @@ body.read-only #context-menu {
 }
 
 .mdl-actions-context-menu {
-    z-index: 20000 !important;
+    z-index: 99999 !important;
 }
 
 .mdl-actions-context-menu .dx-submenu {
-    z-index: 20001 !important;
+    z-index: 100000 !important;
 }
 
 .mdl-permissions-menu {
