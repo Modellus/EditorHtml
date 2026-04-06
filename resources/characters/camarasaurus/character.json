@@ -1,0 +1,14 @@
+{
+    "name": "Maria",
+    "description": "The camarasaurus.",
+    "image": "walk/Camarasaurus_Walk1.png",
+    "animations": [
+        {
+            "name": "Walk",
+            "folder": "walk",
+            "frames": 36,
+            "startIndex": 1,
+            "filePrefix": "Camarasaurus_Walk"
+        }
+    ]
+}

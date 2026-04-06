@@ -167,7 +167,7 @@ class ReferentialShape extends BaseShape {
                             el[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${data.icon}"></i><span class="mdl-dropdown-list-label">${data.text}</span></div>`;
                         },
                         onItemClick: e => {
-                            window.shell?.commands?.addShape(e.itemData.key, e.itemData.type);
+                            window.shell?.commands?.addShape(e.itemData.key, e.itemData.type, this);
                             this._addShapeElement.dxDropDownButton("instance").close();
                         }
                     });

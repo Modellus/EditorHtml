@@ -1321,8 +1321,8 @@ class BaseShape {
                 y: this.properties.y
             };
         const parentPosition = parent.getBoardPosition?.() ?? { x: 0, y: 0 };
-        let x = this.properties.x + parentPosition.x + (parent?.properties?.originX ?? 0);
-        let y = this.properties.y + parentPosition.y + (parent?.properties?.originY ?? 0);
+        let x = this.properties.x + parentPosition.x + (parent.properties?.originX ?? 0);
+        let y = this.properties.y + parentPosition.y + (parent.properties?.originY ?? 0);
         const parentRotation = typeof parent.getAbsoluteRotation == "function" ? parent.getAbsoluteRotation() : Number(parent?.properties?.rotation ?? 0);
         if (!Number.isFinite(parentRotation) || Math.abs(parentRotation) < 0.00001)
             return { x: x, y: y };
