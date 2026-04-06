@@ -2009,7 +2009,11 @@ class BaseShape {
     }
 
     isTermLocked(termProperty) {
-        return this.properties[`${termProperty}Locked`] === true;
+        if (this.properties[`${termProperty}Locked`] !== true)
+            return false;
+        if (this.board.calculator.getIteration() > 1)
+            return true;
+        return !this.board.isModelCreator();
     }
 
     getCasesCount() {

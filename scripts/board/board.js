@@ -11,6 +11,13 @@ class Board {
         this.suppressNextFocusSelect = false;
         this.pointerLocked = false;
         this.invoker = null;
+        this._isModelCreator = null;
+    }
+
+    isModelCreator() {
+        if (typeof this._isModelCreator === "function")
+            return this._isModelCreator();
+        return true;
     }
 
     createSvgElement(name) {

@@ -49,8 +49,11 @@ function extractModelPayload(model) {
 }
 
 function applyModelMetadata(shell, model) {
-    if (!shell || !model || typeof model.thumbnail !== "string" || !model.thumbnail.trim()) return;
-    shell.properties.thumbnailUrl = model.thumbnail.trim();
+    if (!shell || !model) return;
+    if (typeof model.thumbnail === "string" && model.thumbnail.trim())
+        shell.properties.thumbnailUrl = model.thumbnail.trim();
+    if (model.user_id)
+        shell.modelCreatorId = model.user_id;
 }
 
 function enableReadOnlyMode() {

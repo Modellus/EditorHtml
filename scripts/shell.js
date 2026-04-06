@@ -2,6 +2,8 @@ class Shell  {
     constructor(model, modelsApiClient = null) {
         this.calculator = new Calculator();
         this.board = new Board(document.getElementById("svg"), this.calculator);
+        this.board.shell = this;
+        this.board._isModelCreator = () => this.isModelCreator();
         this.commands = new Commands(this);
         this.modelsApiClient = modelsApiClient;
         this.board.assetManager = new AssetManager(modelsApiClient);
@@ -12,6 +14,7 @@ class Shell  {
             getSession: () => window.modellus?.auth?.getSession?.(),
             getUserId: () => this.aiSdk.getCurrentUserId()
         });
+        this.modelCreatorId = null;
         this.properties = {};
         this.setDefaults();
         this.panAndZoom = new PanAndZoom(this.board);
@@ -117,6 +120,13 @@ class Shell  {
 
     getCurrentUserId() {
         return this.aiSdk.getCurrentUserId();
+    }
+
+    isModelCreator() {
+        const currentUserId = this.getCurrentUserId();
+        if (!currentUserId || !this.modelCreatorId)
+            return true;
+        return String(currentUserId) === String(this.modelCreatorId);
     }
 
     async uploadModelAsset(file, assetId) {
