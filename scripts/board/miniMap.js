@@ -5,12 +5,14 @@ class MiniMap {
         this.minimapViewport = minimapViewport;
         this._rafId = null;
         this._minimapUrl = null;
+        this._imageCache = new Map();
+        this.minimapImage.style.display = "none";
+        this.minimapViewport.style.display = "none";
         this.board.svg.addEventListener("pan", e => this.onPan(e));
         this.board.svg.addEventListener("zoom", e => this.onZoom(e));
         this.board.svg.addEventListener("shapeAdded", e => this.onShapeAdded(e));
         this.board.svg.addEventListener("shapeRemoved", e => this.onShapeRemoved(e));
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
-        this.refresh();
     }
 
     onPan(event) {
@@ -38,15 +40,17 @@ class MiniMap {
     requestRefresh() {
         if (this._rafId != null)
             return;
+        if (this.minimapImage.style.display === "none")
+            return;
         this._rafId = requestAnimationFrame(() => {
             this._rafId = null;
             this.refresh();
         });
     }
 
-    refresh() {
+    async refresh() {
         this.updateMinimapViewport();
-        this.createMinimap();
+        await this.createMinimap();
     }
 
     updateMinimapViewport() {
@@ -65,7 +69,7 @@ class MiniMap {
         this.minimapViewport.style.top = normalizedViewBox.y * zoomY + "px";
     }
 
-    createMinimap() {
+    async createMinimap() {
         const viewBox = this.board.svg.viewBox.baseVal;
         const boundingBox = this.board.svg.getBBox();
         const x1 = Math.min(boundingBox.x, viewBox.x);
@@ -76,6 +80,25 @@ class MiniMap {
         const document = new DOMParser().parseFromString(xml, "image/svg+xml");
         document.querySelectorAll(".handle, .bounding-box, .hover-outline, .selected-outline")
            .forEach(el => el.remove());
+        const canvasFrames = this.captureCanvasFrames();
+        document.querySelectorAll("foreignObject").forEach(el => {
+            const group = el.parentNode;
+            const shapeId = group?.getAttribute("id");
+            const dataUrl = shapeId ? canvasFrames.get(shapeId) : null;
+            if (dataUrl) {
+                const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+                img.setAttribute("href", dataUrl);
+                img.setAttribute("x", el.getAttribute("x") || "0");
+                img.setAttribute("y", el.getAttribute("y") || "0");
+                img.setAttribute("width", el.getAttribute("width") || "0");
+                img.setAttribute("height", el.getAttribute("height") || "0");
+                img.setAttribute("preserveAspectRatio", "xMidYMid slice");
+                el.parentNode.replaceChild(img, el);
+                return;
+            }
+            el.remove();
+        });
+        await this.inlineExternalImages(document);
         const svg = document.documentElement;
         svg.setAttribute("viewBox", `${x1} ${y1} ${x2 - x1} ${y2 - y1}`);
         svg.setAttribute("width",  x2 - x1);
@@ -97,6 +120,55 @@ class MiniMap {
         this.minimapImage.onerror = revokeUrl;
         this.minimapImage.src = url;
       }
+
+    async inlineExternalImages(document) {
+        const images = [...document.querySelectorAll("image")];
+        const promises = images.map(async imageEl => {
+            const href = imageEl.getAttribute("href") || imageEl.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+            if (!href || href.startsWith("data:"))
+                return;
+            const dataUrl = await this.fetchAsDataUrl(href);
+            if (dataUrl)
+                imageEl.setAttribute("href", dataUrl);
+            else
+                imageEl.remove();
+        });
+        await Promise.all(promises);
+    }
+
+    async fetchAsDataUrl(url) {
+        if (this._imageCache.has(url))
+            return this._imageCache.get(url);
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const dataUrl = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+            this._imageCache.set(url, dataUrl);
+            return dataUrl;
+        } catch {
+            this._imageCache.set(url, null);
+            return null;
+        }
+    }
+
+    captureCanvasFrames() {
+        const frames = new Map();
+        for (const shape of this.board.shapes.shapes) {
+            if (!shape.canvas || !shape.videoForeignObject)
+                continue;
+            if (shape.videoForeignObject.getAttribute("display") === "none")
+                continue;
+            try {
+                frames.set(shape.id, shape.canvas.toDataURL("image/png"));
+            } catch {
+            }
+        }
+        return frames;
+    }
 
     toggle() {
         const shouldDisplay = this.minimapImage.style.display === "none";

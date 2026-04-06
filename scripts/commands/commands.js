@@ -42,7 +42,7 @@ class Commands {
     }
 
     addShape(type, name, parent) {
-        var parentShape = typeof parent === "string" ? this.shapes.getByName(parent) : parent ?? this.shell.board.selection.selectedShape;
+        var parentShape = typeof parent === "string" ? this.shapes.getByName(parent) : parent ?? null;
         var shape = this.shapes.createShape(type, parentShape);
         var position = this.getFreePosition(shape);
         shape.setProperties({ name: this.uniquifyShapeName(name), x: position.x, y: position.y });
