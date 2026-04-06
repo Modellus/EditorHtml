@@ -48,8 +48,9 @@ class ExpressionShape extends BaseShape {
             hint: "Shortcuts",
             icon: "fa-light fa-sigma",
             dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-shortcuts-picker-menu", style: "z-index:20000" },
                 width: columns * step + popupPadding * 2,
-                wrapperAttr: { class: "mdl-shortcuts-picker-menu" },
                 contentTemplate: contentElement => this.createShortcutsPickerGrid(contentElement)
             }
         });

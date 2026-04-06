@@ -154,9 +154,10 @@ class ColorControl {
             useSelectMode: false,
             template: (data, element) => this.renderColorPickerButtonTemplate(selectedColorState.value, element),
             dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: menuClassName, style: "z-index:20000" },
                 width: metrics.popupWidth,
                 height: metrics.popupHeight,
-                wrapperAttr: { class: menuClassName },
                 contentTemplate: contentElement => this.createColorPickerTileView(contentElement, picker, items, selectedColorState, onValueChanged, metrics)
             }
         });

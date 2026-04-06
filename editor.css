@@ -42,8 +42,8 @@ svg {
     z-index: 10;
 }
 
-.mdl-independent-dropdown {
-    z-index: 9 !important;
+.dx-dropdownbutton-popup-wrapper {
+    z-index: 20000 !important;
 }
 
 #chat-popup {

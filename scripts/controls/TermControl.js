@@ -897,7 +897,11 @@ class TermControl {
             elementAttr: { class: "shape-term-secondary-dropdown" },
             template: (_, element) => this.renderSecondaryDropDownButtonTemplate(element, item, index, selectedValue),
             itemTemplate: (itemData, itemIndex, element) => this.renderSecondaryDropDownItemTemplate(itemData, itemIndex, element, item, index),
-            onItemClick: e => this.onSecondaryDropDownItemClick(e, index)
+            onItemClick: e => this.onSecondaryDropDownItemClick(e, index),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:20000" }
+            }
         };
     }
 
