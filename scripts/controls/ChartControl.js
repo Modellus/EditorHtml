@@ -36,7 +36,7 @@ class ChartControl {
             termFontWeight: 400,
             iconFontFamily: "Font Awesome 7 Pro",
             equalScales: false,
-            showTangent: false,
+            tangentColor: "#00000000",
             fontSize: 13,
             titleFontSize: 16,
             fontWeight: 900
@@ -1071,7 +1071,8 @@ class ChartControl {
     }
 
     renderTangent(xScale, yScale) {
-        if (!this.options.showTangent)
+        const tangentColor = this.options.tangentColor;
+        if (!tangentColor || tangentColor === "" || tangentColor === "transparent" || tangentColor === "#00000000")
             return;
         const domain = this.renderState.domain;
         const deltaX = (domain.xMax - domain.xMin) * 0.12;
@@ -1081,24 +1082,30 @@ class ChartControl {
             if (!tangent)
                 continue;
             const deltaY = tangent.slope * deltaX;
+            const pointX = xScale(tangent.xValue);
+            const pointY = yScale(tangent.yValue);
+            const endX = xScale(tangent.xValue + deltaX);
+            const endY = yScale(tangent.yValue + deltaY);
+            const triangle = this.createSvgElement("polygon");
+            triangle.setAttribute("points", `${pointX},${pointY} ${endX},${pointY} ${endX},${endY}`);
+            triangle.setAttribute("fill", tangentColor);
+            triangle.setAttribute("fill-opacity", "0.25");
+            triangle.setAttribute("stroke", "none");
+            this.focusLayer.appendChild(triangle);
             const tangentLine = this.createSvgElement("line");
             tangentLine.setAttribute("x1", `${xScale(tangent.xValue - deltaX)}`);
             tangentLine.setAttribute("y1", `${yScale(tangent.yValue - deltaY)}`);
             tangentLine.setAttribute("x2", `${xScale(tangent.xValue + deltaX)}`);
             tangentLine.setAttribute("y2", `${yScale(tangent.yValue + deltaY)}`);
-            tangentLine.setAttribute("stroke", series.color);
+            tangentLine.setAttribute("stroke", tangentColor);
             tangentLine.setAttribute("stroke-width", "1.5");
             this.focusLayer.appendChild(tangentLine);
-            const pointX = xScale(tangent.xValue);
-            const pointY = yScale(tangent.yValue);
-            const endX = xScale(tangent.xValue + deltaX);
-            const endY = yScale(tangent.yValue + deltaY);
             const horizontalLine = this.createSvgElement("line");
             horizontalLine.setAttribute("x1", `${pointX}`);
             horizontalLine.setAttribute("y1", `${pointY}`);
             horizontalLine.setAttribute("x2", `${endX}`);
             horizontalLine.setAttribute("y2", `${pointY}`);
-            horizontalLine.setAttribute("stroke", series.color);
+            horizontalLine.setAttribute("stroke", tangentColor);
             horizontalLine.setAttribute("stroke-width", "1.2");
             horizontalLine.setAttribute("stroke-dasharray", "4 3");
             this.focusLayer.appendChild(horizontalLine);
@@ -1107,7 +1114,7 @@ class ChartControl {
             verticalLine.setAttribute("y1", `${pointY}`);
             verticalLine.setAttribute("x2", `${endX}`);
             verticalLine.setAttribute("y2", `${endY}`);
-            verticalLine.setAttribute("stroke", series.color);
+            verticalLine.setAttribute("stroke", tangentColor);
             verticalLine.setAttribute("stroke-width", "1.2");
             verticalLine.setAttribute("stroke-dasharray", "4 3");
             this.focusLayer.appendChild(verticalLine);
