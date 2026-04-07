@@ -102,7 +102,7 @@ svg {
 
 line.handle.move {
     stroke: transparent;
-    stroke-width: 12px;
+    stroke-width: 20px;
     fill: none;
 }
 

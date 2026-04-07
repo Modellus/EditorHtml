@@ -4,7 +4,7 @@ class VectorShape extends ChildShape {
     }
 
     getHandles() {
-        const tipRadius = 5;
+        const tipRadius = 10;
         return [
             {
                 tag: "line",
@@ -12,6 +12,18 @@ class VectorShape extends ChildShape {
                 getAttributes: () => {
                     const position = this.getBoardPosition();
                     return { x1: position.x, y1: position.y, x2: position.x + this.properties.width, y2: position.y + this.properties.height };
+                },
+                getTransform: e => ({
+                    x: this.delta("x", e.dx),
+                    y: this.delta("y", e.dy)
+                })
+            },
+            {
+                tag: "circle",
+                className: "handle tip",
+                getAttributes: () => {
+                    const position = this.getBoardPosition();
+                    return { cx: position.x, cy: position.y, r: tipRadius };
                 },
                 getTransform: e => ({
                     x: this.delta("x", e.dx),
@@ -277,13 +289,14 @@ class VectorShape extends ChildShape {
                                     items: [
                                         { key: "arrow", icon: "fa-light fa-arrow-left" },
                                         { key: "closed", icon: "fa-light fa-left-long" },
+                                        { key: "point", icon: "fa-solid fa-circle-small" },
                                         { key: "none", icon: "fa-light fa-dash" }
                                     ],
                                     keyExpr: "key",
                                     selectedItemKeys: [this.properties.startTipType],
                                     stylingMode: "outlined",
                                     buttonTemplate: (data, btnContainer) => {
-                                        btnContainer[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
+                                        btnContainer[0].innerHTML = `<i class="dx-icon ${data.icon}" style="font-size: 14px"></i>`;
                                     },
                                     onSelectionChanged: e => {
                                         if (e.addedItems.length > 0) {
@@ -301,13 +314,14 @@ class VectorShape extends ChildShape {
                                     items: [
                                         { key: "arrow", icon: "fa-light fa-arrow-right" },
                                         { key: "closed", icon: "fa-light fa-right-long" },
+                                        { key: "point", icon: "fa-solid fa-circle-small fa-2xs" },
                                         { key: "none", icon: "fa-light fa-dash" }
                                     ],
                                     keyExpr: "key",
                                     selectedItemKeys: [this.properties.endTipType],
                                     stylingMode: "outlined",
                                     buttonTemplate: (data, btnContainer) => {
-                                        btnContainer[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
+                                        btnContainer[0].innerHTML = `<i class="dx-icon ${data.icon}" style="font-size: 14px"></i>`;
                                     },
                                     onSelectionChanged: e => {
                                         if (e.addedItems.length > 0) {
@@ -383,8 +397,8 @@ class VectorShape extends ChildShape {
         this.properties.startTipType = "none";
         this.properties.endTipType = "arrow";
         this.properties.showComponents = false;
-        this.properties.xOriginTerm = "";
-        this.properties.yOriginTerm = "";
+        this.properties.xOriginTerm = metrics ? String(Math.round((Math.random() - 0.5) * metrics.size * 4)) : "0";
+        this.properties.yOriginTerm = metrics ? String(Math.round((Math.random() - 0.5) * metrics.size * 4)) : "0";
         this.termsMapping.push({ termProperty: "xTerm", termValue: 0, property: "width", isInverted: false, scaleProperty: "x", caseProperty: "xTermCase" });
         this.termsMapping.push({ termProperty: "yTerm", termValue: 0, property: "height", isInverted: true, scaleProperty: "y", caseProperty: "yTermCase" });
         this.termsMapping.push({ termProperty: "xOriginTerm", termValue: 0, property: "x", isInverted: false, scaleProperty: "x", caseProperty: "xOriginTermCase" });
@@ -451,6 +465,12 @@ class VectorShape extends ChildShape {
         const orient = end === "start" ? "auto-start-reverse" : "auto";
         if (tipType === "none")
             return "";
+        if (tipType === "point") {
+            const radius = Math.max(3, lineWidth * 1.5);
+            const markerSize = radius * 2 + lineWidth;
+            const center = markerSize / 2;
+            return `<marker id="${borderMarkerId}" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${center}" refY="${center}" orient="${orient}" markerUnits="userSpaceOnUse"><circle cx="${center}" cy="${center}" r="${radius}" fill="${borderColor}" stroke="${borderColor}" stroke-width="${lineWidth}"/></marker><marker id="${markerId}" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${center}" refY="${center}" orient="${orient}" markerUnits="userSpaceOnUse"><circle cx="${center}" cy="${center}" r="${radius}" fill="${color}" stroke="none"/></marker>`;
+        }
         const size = Math.max(8, lineWidth * 3);
         const spread = tipType === "arrow" ? size * 0.7 : size * 0.5;
         const half = spread;
@@ -580,6 +600,12 @@ class VectorShape extends ChildShape {
         const orient = end === "start" ? "auto-start-reverse" : "auto";
         if (tipType === "none")
             return "";
+        if (tipType === "point") {
+            const radius = Math.max(3, lineWidth * 1.5);
+            const markerSize = radius * 2 + lineWidth;
+            const center = markerSize / 2;
+            return `<marker id="${markerId}" markerWidth="${markerSize}" markerHeight="${markerSize}" refX="${center}" refY="${center}" orient="${orient}" markerUnits="userSpaceOnUse"><circle cx="${center}" cy="${center}" r="${radius}" fill="${color}" stroke="none"/></marker>`;
+        }
         const size = Math.max(8, lineWidth * 3);
         const spread = tipType === "arrow" ? size * 0.7 : size * 0.5;
         const half = spread;
