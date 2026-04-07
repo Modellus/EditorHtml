@@ -54,6 +54,11 @@ function applyModelMetadata(shell, model) {
         shell.properties.thumbnailUrl = model.thumbnail.trim();
     if (model.user_id)
         shell.modelCreatorId = model.user_id;
+    if (model.creator_name)
+        shell.modelCreatorName = model.creator_name;
+    if (model.creator_avatar)
+        shell.modelCreatorAvatar = model.creator_avatar;
+    shell.topToolbar?.updateModelInfo();
 }
 
 function enableReadOnlyMode() {

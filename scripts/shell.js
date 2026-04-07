@@ -143,6 +143,7 @@ class Shell  {
         this.applySvgBackgroundColor();
         this.applyEducationLevel();
         this.applyGrid();
+        this.topToolbar?.updateModelName();
     }
     
     setProperty(name, value) {
@@ -153,12 +154,16 @@ class Shell  {
         for (let i = 0; i < keys.length - 1; i++)
             current = current[keys[i]];
         current[keys[keys.length - 1]] = value;
-        if (name === "backgroundColor")
+        if (name === "backgroundColor") {
             this.applySvgBackgroundColor();
+            this.topToolbar?.updateModelNameColor();
+        }
         if (name === "educationLevel")
             this.applyEducationLevel();
         if (name === "gridSize" || name === "snapToGrid")
             this.applyGrid();
+        if (name === "name")
+            this.topToolbar?.updateModelName();
         if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit")
             this.calculator.setProperty(name, value);
         if (name === "independent.start" || name === "independent.end")

@@ -34,6 +34,45 @@ svg {
     cursor: default;
 }
 
+#model-info-label {
+    position: fixed;
+    top: 20px;
+    left: 72px;
+    height: 36px;
+    white-space: nowrap;
+    user-select: none;
+    z-index: 10;
+    pointer-events: none;
+    paint-order: stroke fill;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+#model-name-label {
+    font-size: 12px;
+    line-height: 16px;
+}
+
+.model-creator {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    line-height: 14px;
+}
+
+.model-creator-avatar {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    -webkit-text-stroke: 0;
+}
+
+body.read-only #model-info-label {
+    display: none;
+}
+
 #bottom-toolbar {
     position: fixed;
     bottom: 20px;

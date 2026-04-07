@@ -671,7 +671,20 @@ class ModelsApp {
               host.innerHTML = `<span style="display:block;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default" title="${this.escapeHtml(plainText)}">${this.escapeHtml(plainText)}</span>`;
             }
           },
-          { dataField: "user_id", caption: "Creator", width: 110 },
+          {
+            dataField: "creator_name",
+            caption: "Creator",
+            width: 160,
+            cellTemplate: (cellElement, cellInfo) => {
+              const name = this.escapeHtml(cellInfo.data.creator_name || "");
+              const avatar = cellInfo.data.creator_avatar || "";
+              const host = cellElement.get(0);
+              host.innerHTML = `<div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+                ${avatar ? `<img src="${avatar}" alt="" style="width:20px;height:20px;border-radius:50%;flex-shrink:0">` : ""}
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+              </div>`;
+            }
+          },
           { dataField: "education_level", caption: "Level", width: 130 },
           { dataField: "science", caption: "Science", width: 130 },
           {

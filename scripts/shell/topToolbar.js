@@ -242,6 +242,7 @@ class TopToolbar {
             ]
         });
         this.instance = $("#toolbar").dxToolbar("instance");
+        document.getElementById("svg-container").insertAdjacentHTML("afterend", `<div id="model-info-label"><span id="model-name-label">${this.shell.properties.name}</span></div>`);
         this.expressionButton = $("#expression-button").dxButton("instance");
         this.valueButton = $("#value-button").dxButton("instance");
         this.referentialButton = $("#referential-button").dxButton("instance");
@@ -258,6 +259,54 @@ class TopToolbar {
         const allShapes = this.shell.board.shapes.shapes;
         const rootShapes = allShapes.filter(shape => !shape.parent);
         return rootShapes.map(shape => BaseShape.buildShapeTreeItem(shape));
+    }
+
+    updateModelName() {
+        const label = document.getElementById("model-name-label");
+        if (!label)
+            return;
+        label.textContent = this.shell.properties.name;
+        this.updateModelNameColor();
+    }
+
+    updateModelInfo() {
+        this.updateModelName();
+        const container = document.getElementById("model-info-label");
+        if (!container)
+            return;
+        const existingCreator = container.querySelector(".model-creator");
+        if (existingCreator)
+            existingCreator.remove();
+        const creatorName = this.shell.modelCreatorName;
+        const creatorAvatar = this.shell.modelCreatorAvatar;
+        if (!creatorName)
+            return;
+        const avatarHtml = creatorAvatar ? `<img class="model-creator-avatar" src="${creatorAvatar}" alt="">` : "";
+        container.insertAdjacentHTML("beforeend", `<span class="model-creator">${avatarHtml}<span class="model-creator-name">by ${creatorName}</span></span>`);
+    }
+
+    updateModelNameColor() {
+        const container = document.getElementById("model-info-label");
+        if (!container)
+            return;
+        const backgroundColor = this.shell.properties.backgroundColor;
+        const isTransparent = !backgroundColor || backgroundColor === "transparent" || (backgroundColor.length === 9 && backgroundColor.slice(7) === "00");
+        const hex = isTransparent ? "#FFFFFF" : backgroundColor;
+        const red = parseInt(hex.slice(1, 3), 16);
+        const green = parseInt(hex.slice(3, 5), 16);
+        const blue = parseInt(hex.slice(5, 7), 16);
+        const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+        const isLight = luminance > 0.5;
+        const nameLabel = document.getElementById("model-name-label");
+        if (nameLabel) {
+            nameLabel.style.color = isLight ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)";
+            nameLabel.style.webkitTextStroke = `2px ${hex}`;
+        }
+        const creatorLabel = container.querySelector(".model-creator");
+        if (creatorLabel) {
+            creatorLabel.style.color = isLight ? "rgba(0, 0, 0, 0.5)" : "rgba(255, 255, 255, 0.5)";
+            creatorLabel.style.webkitTextStroke = `1.5px ${hex}`;
+        }
     }
 
     update() {
