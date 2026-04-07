@@ -36,6 +36,7 @@ class ChartControl {
             termFontWeight: 400,
             iconFontFamily: "Font Awesome 7 Pro",
             equalScales: false,
+            showTangent: false,
             fontSize: 13,
             titleFontSize: 16,
             fontWeight: 900
@@ -949,6 +950,7 @@ class ChartControl {
         }
         for (let seriesIndex = 0; seriesIndex < this.renderState.series.length; seriesIndex++)
             this.renderFocusMarker(seriesIndex, xScale, yScale);
+        this.renderTangent(xScale, yScale);
     }
 
     collectFocusPoints(xScale, yScale) {
@@ -1013,6 +1015,103 @@ class ChartControl {
             nearestPoint = { xValue: xValue, yValue: yValue };
         }
         return nearestPoint;
+    }
+
+    getTangentAtFocusPoint(series) {
+        const argumentField = this.renderState.argumentField;
+        let nearestIndex = -1;
+        let nearestDistance = Infinity;
+        for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
+            const xValue = this.getNumericValue(this.dataRows[rowIndex], argumentField);
+            const yValue = this.getNumericValue(this.dataRows[rowIndex], series.valueField);
+            if (xValue == null || yValue == null)
+                continue;
+            const distance = Math.abs(xValue - this.focusArgumentValue);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestIndex = rowIndex;
+            }
+        }
+        if (nearestIndex < 0)
+            return null;
+        const currentRow = this.dataRows[nearestIndex];
+        const currentX = this.getNumericValue(currentRow, argumentField);
+        const currentY = this.getNumericValue(currentRow, series.valueField);
+        let prevX = null, prevY = null, nextX = null, nextY = null;
+        for (let i = nearestIndex - 1; i >= 0; i--) {
+            const x = this.getNumericValue(this.dataRows[i], argumentField);
+            const y = this.getNumericValue(this.dataRows[i], series.valueField);
+            if (x != null && y != null) {
+                prevX = x;
+                prevY = y;
+                break;
+            }
+        }
+        for (let i = nearestIndex + 1; i < this.dataRows.length; i++) {
+            const x = this.getNumericValue(this.dataRows[i], argumentField);
+            const y = this.getNumericValue(this.dataRows[i], series.valueField);
+            if (x != null && y != null) {
+                nextX = x;
+                nextY = y;
+                break;
+            }
+        }
+        let slope;
+        if (prevX != null && nextX != null)
+            slope = (nextY - prevY) / (nextX - prevX);
+        else if (nextX != null)
+            slope = (nextY - currentY) / (nextX - currentX);
+        else if (prevX != null)
+            slope = (currentY - prevY) / (currentX - prevX);
+        else
+            return null;
+        if (!Number.isFinite(slope))
+            return null;
+        return { xValue: currentX, yValue: currentY, slope: slope };
+    }
+
+    renderTangent(xScale, yScale) {
+        if (!this.options.showTangent)
+            return;
+        const domain = this.renderState.domain;
+        const deltaX = (domain.xMax - domain.xMin) * 0.12;
+        for (let seriesIndex = 0; seriesIndex < this.renderState.series.length; seriesIndex++) {
+            const series = this.renderState.series[seriesIndex];
+            const tangent = this.getTangentAtFocusPoint(series);
+            if (!tangent)
+                continue;
+            const deltaY = tangent.slope * deltaX;
+            const tangentLine = this.createSvgElement("line");
+            tangentLine.setAttribute("x1", `${xScale(tangent.xValue - deltaX)}`);
+            tangentLine.setAttribute("y1", `${yScale(tangent.yValue - deltaY)}`);
+            tangentLine.setAttribute("x2", `${xScale(tangent.xValue + deltaX)}`);
+            tangentLine.setAttribute("y2", `${yScale(tangent.yValue + deltaY)}`);
+            tangentLine.setAttribute("stroke", series.color);
+            tangentLine.setAttribute("stroke-width", "1.5");
+            this.focusLayer.appendChild(tangentLine);
+            const pointX = xScale(tangent.xValue);
+            const pointY = yScale(tangent.yValue);
+            const endX = xScale(tangent.xValue + deltaX);
+            const endY = yScale(tangent.yValue + deltaY);
+            const horizontalLine = this.createSvgElement("line");
+            horizontalLine.setAttribute("x1", `${pointX}`);
+            horizontalLine.setAttribute("y1", `${pointY}`);
+            horizontalLine.setAttribute("x2", `${endX}`);
+            horizontalLine.setAttribute("y2", `${pointY}`);
+            horizontalLine.setAttribute("stroke", series.color);
+            horizontalLine.setAttribute("stroke-width", "1.2");
+            horizontalLine.setAttribute("stroke-dasharray", "4 3");
+            this.focusLayer.appendChild(horizontalLine);
+            const verticalLine = this.createSvgElement("line");
+            verticalLine.setAttribute("x1", `${endX}`);
+            verticalLine.setAttribute("y1", `${pointY}`);
+            verticalLine.setAttribute("x2", `${endX}`);
+            verticalLine.setAttribute("y2", `${endY}`);
+            verticalLine.setAttribute("stroke", series.color);
+            verticalLine.setAttribute("stroke-width", "1.2");
+            verticalLine.setAttribute("stroke-dasharray", "4 3");
+            this.focusLayer.appendChild(verticalLine);
+        }
     }
 
     renderTickHitAreas(layout, xScale, yScale, xTicks, yTicks) {

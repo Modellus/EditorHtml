@@ -227,6 +227,18 @@ class ChartShape extends BaseShape {
             }
         });
         listItems.push({
+            text: "Tangent",
+            buildControl: $container => {
+                $('<div>').appendTo($container).dxSwitch({
+                    value: this.properties.showTangent === true,
+                    onInitialized: e => { this._showTangentSwitchInstance = e.component; },
+                    onValueChanged: e => {
+                        this.setPropertyCommand("showTangent", e.value);
+                    }
+                });
+            }
+        });
+        listItems.push({
             text: "Horizontal",
             buildControl: $container => {
                 const wrapper = $('<div style="display: flex; gap: 6px;">');
@@ -371,6 +383,7 @@ class ChartShape extends BaseShape {
         this.refreshDomainBoxes();
         this._autoScaleSwitchInstance?.option("value", this.properties.autoScale === true);
         this._equalScalesSwitchInstance?.option("value", this.properties.equalScales === true);
+        this._showTangentSwitchInstance?.option("value", this.properties.showTangent === true);
         super.showContextToolbar();
     }
 
@@ -385,6 +398,7 @@ class ChartShape extends BaseShape {
         this.properties.chartType = ["line"];
         this.properties.autoScale = true;
         this.properties.equalScales = false;
+        this.properties.showTangent = false;
         this.properties.xTerm = this.board.calculator.properties.independent.name;
         this.properties.yTerms = [{ term: this.board.calculator.getDefaultTerm(), case: 1, color: "", showLabel: false }];
         this.properties.domainOverride = this.getDefaultDomainOverride();
@@ -420,6 +434,7 @@ class ChartShape extends BaseShape {
             backgroundColor: this.properties.backgroundColor,
             borderColor: this.getBorderColor(),
             equalScales: this.properties.equalScales === true,
+            showTangent: this.properties.showTangent === true,
             onDomainChanged: domain => this.onDomainChanged(domain),
             onTickDragStarted: () => this.onTickDragStarted(),
             onTickDragEnded: () => this.onTickDragEnded()
@@ -558,6 +573,7 @@ class ChartShape extends BaseShape {
         const config = {
             chartType: this.properties.chartType,
             equalScales: this.properties.equalScales === true,
+            showTangent: this.properties.showTangent === true,
             argField: argumentField,
             series: ySeries.map(series => ({
                 valueField: series.valueField,
@@ -581,6 +597,7 @@ class ChartShape extends BaseShape {
             this.chart.setOptions({
                 chartType: config.chartType,
                 equalScales: config.equalScales,
+                showTangent: config.showTangent,
                 argumentField: config.argField,
                 series: config.series,
                 foregroundColor: config.color,
