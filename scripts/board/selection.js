@@ -198,14 +198,55 @@ class Selection {
     }
 
     applyHighlight(shape) {
-        const color = shape.properties?.foregroundColor ?? "#000000";
+        const foreground = shape.properties?.foregroundColor;
+        const color = this.isTransparentColor(foreground) ? "#000000" : foreground;
         shape.element?.style.setProperty("--highlight-filter", `drop-shadow(0 0 2px ${color})`);
         shape.element?.classList.add("highlighted");
+        this.addHighlightProxy(shape, color);
+    }
+
+    isTransparentColor(color) {
+        if (!color || color === "transparent")
+            return true;
+        if (color.length === 9 && color.startsWith("#") && color.endsWith("00"))
+            return true;
+        if (color.length === 5 && color.startsWith("#") && color.endsWith("0"))
+            return true;
+        return false;
     }
 
     removeHighlight(shape) {
         shape.element?.classList.remove("highlighted");
         shape.element?.style.removeProperty("--highlight-filter");
+        this.removeHighlightProxy(shape);
+    }
+
+    addHighlightProxy(shape, color) {
+        if (!shape.element)
+            return;
+        const bounds = this.getOutlineBounds(shape);
+        if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height))
+            return;
+        const proxy = this.board.createSvgElement("rect");
+        proxy.setAttribute("class", "highlight-proxy");
+        proxy.setAttribute("x", bounds.x);
+        proxy.setAttribute("y", bounds.y);
+        proxy.setAttribute("width", bounds.width);
+        proxy.setAttribute("height", bounds.height);
+        proxy.setAttribute("fill", "none");
+        proxy.setAttribute("stroke", color);
+        proxy.setAttribute("stroke-width", "0.5");
+        proxy.setAttribute("pointer-events", "none");
+        this.applyOutlineRotation(proxy, shape, bounds);
+        shape.element.appendChild(proxy);
+        shape._highlightProxy = proxy;
+    }
+
+    removeHighlightProxy(shape) {
+        if (shape._highlightProxy) {
+            shape._highlightProxy.remove();
+            shape._highlightProxy = null;
+        }
     }
 
     setDragging(isDragging, shape = null) {

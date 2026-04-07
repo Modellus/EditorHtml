@@ -100,7 +100,7 @@ class Board {
     setShapeProperties(shape, properties) {
         shape.setProperties(properties);
         shape.tick();
-        this.refresh();
+        this.markDirty(shape);
         this.dispatchShapeEvent("shapeChanged", shape);
         if (this.selection.selectedShape === shape)
             shape.showContextToolbar();
