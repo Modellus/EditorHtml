@@ -379,7 +379,7 @@ class VectorShape extends ChildShape {
         this.properties.foregroundColor = this.board.theme.getRandomStrokeColor();
         this.properties.borderColor = "transparent";
         this.properties.trajectoryColor = this.board.theme.getBackgroundColors()[0].color;
-        this.properties.lineWidth = 1;
+        this.properties.lineWidth = 3;
         this.properties.startTipType = "none";
         this.properties.endTipType = "arrow";
         this.properties.showComponents = false;

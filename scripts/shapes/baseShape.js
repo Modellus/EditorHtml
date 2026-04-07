@@ -1655,10 +1655,10 @@ class BaseShape {
     formatTermForDisplay(term) {
         if (term == null || term === "")
             return "";
-        const str = String(term);
-        const numeric = Number(str);
+        const termText = String(term);
+        const numeric = Number(termText);
         if (!Number.isFinite(numeric))
-            return str;
+            return Utils.convertGreekLetters(termText);
         return this.formatModelValue(numeric);
     }
 
