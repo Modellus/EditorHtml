@@ -898,10 +898,9 @@ class ModelsApp {
     const buildContent = async (contentElement) => {
       const host = contentElement.get ? contentElement.get(0) : contentElement;
       host.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:2rem"><i class="fa-light fa-spinner fa-spin" style="font-size:1.5rem;color:#6b7280"></i></div>`;
-      const [featureFlags, allFeatureFlags] = await Promise.all([
-        this.apiClient.fetchUserFeatureFlags(user.id),
-        this.apiClient.fetchFeatureFlags()
-      ]);
+      const allFlags = await this.apiClient.fetchUserFeatureFlags(user.id);
+      const enabledFlags = allFlags.filter(flag => flag.is_enabled === 1 || flag.is_enabled === true);
+      const disabledFlags = allFlags.filter(flag => flag.is_enabled !== 1 && flag.is_enabled !== true);
       host.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:1rem;padding:0.5rem">
           <div id="user-features-list"></div>
@@ -915,7 +914,7 @@ class ModelsApp {
       const inputHost = host.querySelector("#user-feature-input");
       const addButtonHost = host.querySelector("#user-feature-add-button");
       const featureListInstance = new DevExpress.ui.dxList(listHost, {
-        dataSource: featureFlags,
+        dataSource: enabledFlags,
         keyExpr: "key",
         displayExpr: "key",
         noDataText: "No features assigned",
@@ -936,16 +935,13 @@ class ModelsApp {
             event.stopPropagation();
             await this.apiClient.removeUserFeatureFlag(user.id, itemData.key);
             const updatedFlags = await this.apiClient.fetchUserFeatureFlags(user.id);
-            featureListInstance.option("dataSource", updatedFlags);
-            const updatedAssignedKeys = new Set(updatedFlags.map(flag => flag.key));
-            selectBoxInstance.option("dataSource", allFeatureFlags.filter(flag => !updatedAssignedKeys.has(flag.key)));
+            featureListInstance.option("dataSource", updatedFlags.filter(flag => flag.is_enabled === 1 || flag.is_enabled === true));
+            selectBoxInstance.option("dataSource", updatedFlags.filter(flag => flag.is_enabled !== 1 && flag.is_enabled !== true));
           });
         }
       });
-      const assignedKeys = new Set(featureFlags.map(flag => flag.key));
-      const availableFlags = allFeatureFlags.filter(flag => !assignedKeys.has(flag.key));
       const selectBoxInstance = new DevExpress.ui.dxSelectBox(inputHost, {
-        dataSource: availableFlags,
+        dataSource: disabledFlags,
         valueExpr: "key",
         displayExpr: "key",
         placeholder: "Select feature flag",
@@ -964,9 +960,8 @@ class ModelsApp {
           await this.apiClient.addUserFeatureFlag(user.id, featureKey);
           selectBoxInstance.option("value", null);
           const updatedFlags = await this.apiClient.fetchUserFeatureFlags(user.id);
-          featureListInstance.option("dataSource", updatedFlags);
-          const updatedAssignedKeys = new Set(updatedFlags.map(flag => flag.key));
-          selectBoxInstance.option("dataSource", allFeatureFlags.filter(flag => !updatedAssignedKeys.has(flag.key)));
+          featureListInstance.option("dataSource", updatedFlags.filter(flag => flag.is_enabled === 1 || flag.is_enabled === true));
+          selectBoxInstance.option("dataSource", updatedFlags.filter(flag => flag.is_enabled !== 1 && flag.is_enabled !== true));
         }
       });
     };
