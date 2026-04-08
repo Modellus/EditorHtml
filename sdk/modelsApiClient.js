@@ -284,4 +284,32 @@ export class ModelsApiClient {
     const text = await response.text();
     return text ? JSON.parse(text) : null;
   }
+
+  async fetchNotifications() {
+    const headers = this.buildAuthHeaders();
+    const userId = this.getUserId();
+    const url = new URL(`${this.apiBaseUrl}/notifications`);
+    if (userId) url.searchParams.set("user_id", userId);
+    const response = await fetch(url.toString(), { headers });
+    if (!response.ok) throw new Error(`Fetch notifications failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async fetchNotificationById(notificationId) {
+    const headers = this.buildAuthHeaders();
+    const response = await fetch(`${this.apiBaseUrl}/notifications/${encodeURIComponent(notificationId)}`, { headers });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Fetch notification failed (${response.status})`);
+    return await response.json();
+  }
+
+  async markNotificationAsRead(notificationId) {
+    const response = await fetch(`${this.apiBaseUrl}/notifications/${encodeURIComponent(notificationId)}`, {
+      method: "PATCH",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify({ is_read: true })
+    });
+    if (!response.ok) throw new Error(`Mark notification read failed (${response.status})`);
+  }
 }

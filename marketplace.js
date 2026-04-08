@@ -16,7 +16,8 @@ const treeNodeIds = {
   maintenance: "maintenance",
   maintenanceModels: "maintenance-models",
   maintenanceEducation: "maintenance-education",
-  maintenanceSciences: "maintenance-sciences"
+  maintenanceSciences: "maintenance-sciences",
+  maintenanceNotifications: "maintenance-notifications"
 };
 const fontAwesomeIcons = [
   { value: "", label: "No icon" },
@@ -94,6 +95,8 @@ class ModelsApp {
     this.scienceLookupIconById = new Map();
     this.favoriteModelIdSet = new Set();
     this.pickedModelIdSet = new Set();
+    this.unreadNotificationCount = 0;
+    this.notificationsGridInstance = null;
     this.initNavToolbar();
     this.cacheNavElements();
     this.bindNav();
@@ -102,6 +105,7 @@ class ModelsApp {
     this.userSdk.refreshState(this.state);
     this.userSdk.startSessionRefresh(apiBase);
     this.loadModels();
+    this.loadUnreadNotificationCount();
   }
   initDeletePopup() {
     if (this.deletePopupInstance || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxPopup) return;
@@ -148,6 +152,19 @@ class ModelsApp {
             stylingMode: "text",
             text: "Create",
             icon: "fa-light fa-plus"
+          }
+        },
+        {
+          location: "after",
+          widget: "dxButton",
+          options: {
+            elementAttr: { id: "nav-notifications", title: "Notifications" },
+            stylingMode: "text",
+            onClick: () => this.navigateToNotifications(),
+            template: (_, contentElement) => {
+              const host = contentElement.get(0);
+              host.innerHTML = `<span class="notification-bell"><i class="fa-light fa-bell" style="font-size:16px"></i></span>`;
+            }
           }
         },
         {
@@ -531,6 +548,7 @@ class ModelsApp {
     if (!this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxDataGrid) return;
     this.disposeCardView();
     this.disposeMaintenanceModelsGrid();
+    this.disposeNotificationsGrid();
     const maintenanceStore = this.buildMaintenanceStore(maintenanceType);
     if (!this.maintenanceGridInstance) {
       this.elements.cardView.innerHTML = "";
@@ -589,6 +607,7 @@ class ModelsApp {
   showModelsCardView() {
     this.disposeMaintenanceGrid();
     this.disposeMaintenanceModelsGrid();
+    this.disposeNotificationsGrid();
     this.ensureCardView();
   }
 
@@ -602,6 +621,7 @@ class ModelsApp {
     if (!this.elements.cardView) return;
     this.disposeCardView();
     this.disposeMaintenanceGrid();
+    this.disposeNotificationsGrid();
     const allModelsStore = new DevExpress.data.CustomStore({
       key: "id",
       load: async () => {
@@ -792,6 +812,11 @@ class ModelsApp {
   renderCurrentTreeNode() {
     if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceModels) {
       this.showMaintenanceModelsGrid();
+      this.setStatus("");
+      return;
+    }
+    if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceNotifications) {
+      this.showNotificationsGrid();
       this.setStatus("");
       return;
     }
@@ -1097,6 +1122,13 @@ class ModelsApp {
             nodeType: "maintenance-sciences",
             iconClass: "fa-light fa-flask",
             iconColor: "#0ea5e9"
+          },
+          {
+            id: treeNodeIds.maintenanceNotifications,
+            text: "Notifications",
+            nodeType: "maintenance-notifications",
+            iconClass: "fa-light fa-bell",
+            iconColor: "#f59e0b"
           }
         ]
       });
@@ -1403,6 +1435,151 @@ class ModelsApp {
     const url = new URL("/editor.html", window.location.origin);
     url.searchParams.set("model_id", model.id);
     window.location.href = url.toString();
+  }
+  async loadUnreadNotificationCount() {
+    try {
+      const notifications = await this.apiClient.fetchNotifications();
+      this.unreadNotificationCount = notifications.filter(notification => !notification.is_read).length;
+      this.updateBellBadge();
+    } catch (_) {
+      this.unreadNotificationCount = 0;
+      this.updateBellBadge();
+    }
+  }
+  updateBellBadge() {
+    const bellHost = document.querySelector("#nav-notifications .notification-bell");
+    if (!bellHost)
+      return;
+    const existingBadge = bellHost.querySelector(".bell-badge");
+    if (existingBadge)
+      existingBadge.remove();
+    if (this.unreadNotificationCount > 0)
+      bellHost.insertAdjacentHTML("beforeend", `<span class="bell-badge">${this.unreadNotificationCount}</span>`);
+  }
+  async navigateToNotifications() {
+    if (!this.canAccessMaintenance())
+      return;
+    try {
+      const notifications = await this.apiClient.fetchNotifications();
+      const unreadCount = notifications.filter(notification => !notification.is_read).length;
+      this.unreadNotificationCount = unreadCount;
+      this.updateBellBadge();
+      if (unreadCount === 0)
+        return;
+    } catch (_) {
+      return;
+    }
+    this.state.selectedTreeNodeId = treeNodeIds.maintenanceNotifications;
+    this.renderCurrentTreeNode();
+    this.refreshTreeSelection();
+  }
+  disposeNotificationsGrid() {
+    if (!this.notificationsGridInstance)
+      return;
+    this.notificationsGridInstance.dispose();
+    this.notificationsGridInstance = null;
+  }
+  async showNotificationsGrid() {
+    if (!this.elements.cardView)
+      return;
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    const notificationsStore = new DevExpress.data.CustomStore({
+      key: "id",
+      load: () => this.apiClient.fetchNotifications(),
+      byKey: notificationId => this.apiClient.fetchNotificationById(notificationId)
+    });
+    if (!this.notificationsGridInstance) {
+      this.elements.cardView.innerHTML = "";
+      this.notificationsGridInstance = new DevExpress.ui.dxDataGrid(this.elements.cardView, {
+        dataSource: notificationsStore,
+        keyExpr: "id",
+        height: "100%",
+        showBorders: false,
+        columnAutoWidth: true,
+        selection: { mode: "single" },
+        paging: { enabled: true, pageSize: 20 },
+        pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
+        searchPanel: { visible: true, width: 280, placeholder: "Search..." },
+        sorting: { mode: "multiple" },
+        filterRow: { visible: true },
+        columns: [
+          { dataField: "id", caption: "ID", visible: false },
+          {
+            dataField: "is_read",
+            caption: "",
+            width: 40,
+            allowFiltering: false,
+            allowSorting: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              const isRead = cellInfo.value === true || cellInfo.value === 1;
+              cellElement.get(0).innerHTML = `<i class="${isRead ? "fa-light fa-envelope-open" : "fa-solid fa-envelope"}" style="color:${isRead ? "#9ca3af" : "#2563eb"};font-size:13px;"></i>`;
+            }
+          },
+          { dataField: "title", caption: "Title" },
+          {
+            dataField: "message",
+            caption: "Message",
+            width: 300,
+            cellTemplate: (cellElement, cellInfo) => {
+              const plainText = this.getModelDescriptionText(cellInfo.value);
+              cellElement.get(0).innerHTML = `<span style="display:block;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${this.escapeHtml(plainText)}">${this.escapeHtml(plainText)}</span>`;
+            }
+          },
+          { dataField: "created_at", caption: "Date", width: 160, dataType: "date" }
+        ],
+        onRowClick: event => this.readNotification(event.data)
+      });
+      return;
+    }
+    this.notificationsGridInstance.option("dataSource", notificationsStore);
+    this.notificationsGridInstance.refresh();
+  }
+  async readNotification(notification) {
+    if (!notification)
+      return;
+    const isRead = notification.is_read === true || notification.is_read === 1;
+    if (!isRead) {
+      try {
+        await this.apiClient.markNotificationAsRead(notification.id);
+        notification.is_read = true;
+        this.unreadNotificationCount = Math.max(0, this.unreadNotificationCount - 1);
+        this.updateBellBadge();
+        if (this.notificationsGridInstance)
+          this.notificationsGridInstance.refresh();
+      } catch (_) {}
+    }
+    this.showNotificationDetail(notification);
+  }
+  showNotificationDetail(notification) {
+    let popupHost = document.getElementById("notification-detail-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="notification-detail-popup"></div>`);
+      popupHost = document.getElementById("notification-detail-popup");
+    }
+    if (this.notificationDetailPopupInstance) {
+      this.notificationDetailPopupInstance.option("title", notification.title || "Notification");
+      this.notificationDetailPopupInstance.option("contentTemplate", contentElement => {
+        contentElement.get(0).innerHTML = `<div style="padding:0.5rem;line-height:1.5">${notification.message || ""}</div>`;
+      });
+      this.notificationDetailPopupInstance.show();
+      return;
+    }
+    this.notificationDetailPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: notification.title || "Notification",
+      width: 480,
+      height: "auto",
+      maxHeight: "70vh",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => {
+        contentElement.get(0).innerHTML = `<div style="padding:0.5rem;line-height:1.5">${notification.message || ""}</div>`;
+      }
+    });
   }
 }
 
