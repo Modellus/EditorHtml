@@ -17,7 +17,8 @@ const treeNodeIds = {
   maintenanceModels: "maintenance-models",
   maintenanceEducation: "maintenance-education",
   maintenanceSciences: "maintenance-sciences",
-  maintenanceNotifications: "maintenance-notifications"
+  maintenanceNotifications: "maintenance-notifications",
+  maintenanceUsers: "maintenance-users"
 };
 const fontAwesomeIcons = [
   { value: "", label: "No icon" },
@@ -81,6 +82,8 @@ class ModelsApp {
     this.toolbarInstance = null;
     this.maintenanceGridInstance = null;
     this.maintenanceModelsGridInstance = null;
+    this.usersGridInstance = null;
+    this.userFeaturesPopupInstance = null;
     this.personalModels = [];
     this.favoriteModels = [];
     this.libraryModels = [];
@@ -549,6 +552,7 @@ class ModelsApp {
     this.disposeCardView();
     this.disposeMaintenanceModelsGrid();
     this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
     const maintenanceStore = this.buildMaintenanceStore(maintenanceType);
     if (!this.maintenanceGridInstance) {
       this.elements.cardView.innerHTML = "";
@@ -608,6 +612,7 @@ class ModelsApp {
     this.disposeMaintenanceGrid();
     this.disposeMaintenanceModelsGrid();
     this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
     this.ensureCardView();
   }
 
@@ -622,6 +627,7 @@ class ModelsApp {
     this.disposeCardView();
     this.disposeMaintenanceGrid();
     this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
     const allModelsStore = new DevExpress.data.CustomStore({
       key: "id",
       load: async () => {
@@ -803,6 +809,170 @@ class ModelsApp {
     this.maintenanceModelsGridInstance.refresh();
   }
 
+  disposeUsersGrid() {
+    if (!this.usersGridInstance)
+      return;
+    this.usersGridInstance.dispose();
+    this.usersGridInstance = null;
+  }
+
+  async showUsersGrid() {
+    if (!this.elements.cardView)
+      return;
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeNotificationsGrid();
+    const usersStore = new DevExpress.data.CustomStore({
+      key: "id",
+      load: () => this.apiClient.fetchUsers(),
+      byKey: userId => this.apiClient.fetchUserById(userId)
+    });
+    if (!this.usersGridInstance) {
+      this.elements.cardView.innerHTML = "";
+      this.usersGridInstance = new DevExpress.ui.dxDataGrid(this.elements.cardView, {
+        dataSource: usersStore,
+        keyExpr: "id",
+        height: "100%",
+        showBorders: false,
+        columnAutoWidth: true,
+        selection: { mode: "single" },
+        paging: { enabled: true, pageSize: 20 },
+        pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
+        searchPanel: { visible: true, width: 280, placeholder: "Search..." },
+        sorting: { mode: "multiple" },
+        filterRow: { visible: true },
+        columns: [
+          { dataField: "id", caption: "ID", visible: false },
+          {
+            dataField: "avatar",
+            caption: "",
+            width: 40,
+            allowFiltering: false,
+            allowSorting: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              const avatar = cellInfo.value || "";
+              cellElement.get(0).innerHTML = avatar
+                ? `<img src="${this.escapeHtml(avatar)}" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--c-border)">`
+                : `<i class="fa-light fa-user-circle" style="font-size:24px;color:#9ca3af"></i>`;
+            }
+          },
+          { dataField: "name", caption: "Name" },
+          { dataField: "email", caption: "Email" },
+          { dataField: "lastLogin", caption: "Last Login", width: 160, dataType: "date" },
+          { dataField: "createdAt", caption: "Created", width: 160, dataType: "date" }
+        ],
+        onRowClick: event => this.showUserFeaturesPopup(event.data)
+      });
+      return;
+    }
+    this.usersGridInstance.option("dataSource", usersStore);
+    this.usersGridInstance.refresh();
+  }
+
+  async showUserFeaturesPopup(user) {
+    let popupHost = document.getElementById("user-features-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="user-features-popup"></div>`);
+      popupHost = document.getElementById("user-features-popup");
+    }
+    const userName = user.name || user.email || user.id;
+    const buildContent = async (contentElement) => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      host.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:2rem"><i class="fa-light fa-spinner fa-spin" style="font-size:1.5rem;color:#6b7280"></i></div>`;
+      const [featureFlags, allFeatureFlags] = await Promise.all([
+        this.apiClient.fetchUserFeatureFlags(user.id),
+        this.apiClient.fetchFeatureFlags()
+      ]);
+      host.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:1rem;padding:0.5rem">
+          <div id="user-features-list"></div>
+          <div style="display:flex;gap:0.5rem;align-items:flex-end">
+            <div id="user-feature-input" style="flex:1"></div>
+            <div id="user-feature-add-button"></div>
+          </div>
+        </div>
+      `;
+      const listHost = host.querySelector("#user-features-list");
+      const inputHost = host.querySelector("#user-feature-input");
+      const addButtonHost = host.querySelector("#user-feature-add-button");
+      const featureListInstance = new DevExpress.ui.dxList(listHost, {
+        dataSource: featureFlags,
+        keyExpr: "key",
+        displayExpr: "key",
+        noDataText: "No features assigned",
+        itemTemplate: (itemData, itemIndex, itemElement) => {
+          const itemHost = itemElement.get(0);
+          itemHost.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
+              <span style="display:flex;align-items:center;gap:0.5rem">
+                <i class="fa-light fa-key" style="font-size:12px;color:#6b7280"></i>
+                <span>${this.escapeHtml(itemData.key)}</span>
+              </span>
+              <span class="remove-feature-btn" style="cursor:pointer;padding:2px 6px;border-radius:4px;color:#dc2626;font-size:12px">
+                <i class="fa-light fa-trash-can"></i>
+              </span>
+            </div>
+          `;
+          itemHost.querySelector(".remove-feature-btn").addEventListener("click", async (event) => {
+            event.stopPropagation();
+            await this.apiClient.removeUserFeatureFlag(user.id, itemData.key);
+            const updatedFlags = await this.apiClient.fetchUserFeatureFlags(user.id);
+            featureListInstance.option("dataSource", updatedFlags);
+            const updatedAssignedKeys = new Set(updatedFlags.map(flag => flag.key));
+            selectBoxInstance.option("dataSource", allFeatureFlags.filter(flag => !updatedAssignedKeys.has(flag.key)));
+          });
+        }
+      });
+      const assignedKeys = new Set(featureFlags.map(flag => flag.key));
+      const availableFlags = allFeatureFlags.filter(flag => !assignedKeys.has(flag.key));
+      const selectBoxInstance = new DevExpress.ui.dxSelectBox(inputHost, {
+        dataSource: availableFlags,
+        valueExpr: "key",
+        displayExpr: "key",
+        placeholder: "Select feature flag",
+        searchEnabled: true,
+        showClearButton: true
+      });
+      new DevExpress.ui.dxButton(addButtonHost, {
+        text: "Add",
+        icon: "fa-light fa-plus",
+        type: "default",
+        stylingMode: "contained",
+        onClick: async () => {
+          const featureKey = selectBoxInstance.option("value");
+          if (!featureKey)
+            return;
+          await this.apiClient.addUserFeatureFlag(user.id, featureKey);
+          selectBoxInstance.option("value", null);
+          const updatedFlags = await this.apiClient.fetchUserFeatureFlags(user.id);
+          featureListInstance.option("dataSource", updatedFlags);
+          const updatedAssignedKeys = new Set(updatedFlags.map(flag => flag.key));
+          selectBoxInstance.option("dataSource", allFeatureFlags.filter(flag => !updatedAssignedKeys.has(flag.key)));
+        }
+      });
+    };
+    if (this.userFeaturesPopupInstance) {
+      this.userFeaturesPopupInstance.option("title", `Features — ${userName}`);
+      this.userFeaturesPopupInstance.option("contentTemplate", contentElement => buildContent(contentElement));
+      this.userFeaturesPopupInstance.repaint();
+      this.userFeaturesPopupInstance.show();
+      return;
+    }
+    this.userFeaturesPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: `Features — ${userName}`,
+      width: 480,
+      height: "auto",
+      maxHeight: "70vh",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
+  }
+
   getMaintenanceTypeByTreeNodeId(nodeId) {
     if (nodeId === treeNodeIds.maintenanceEducation) return "education";
     if (nodeId === treeNodeIds.maintenanceSciences) return "sciences";
@@ -817,6 +987,11 @@ class ModelsApp {
     }
     if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceNotifications) {
       this.showNotificationsGrid();
+      this.setStatus("");
+      return;
+    }
+    if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceUsers) {
+      this.showUsersGrid();
       this.setStatus("");
       return;
     }
@@ -1129,6 +1304,13 @@ class ModelsApp {
             nodeType: "maintenance-notifications",
             iconClass: "fa-light fa-bell",
             iconColor: "#f59e0b"
+          },
+          {
+            id: treeNodeIds.maintenanceUsers,
+            text: "Users",
+            nodeType: "maintenance-users",
+            iconClass: "fa-light fa-users",
+            iconColor: "#2563eb"
           }
         ]
       });
@@ -1485,6 +1667,7 @@ class ModelsApp {
     this.disposeCardView();
     this.disposeMaintenanceGrid();
     this.disposeMaintenanceModelsGrid();
+    this.disposeUsersGrid();
     const notificationsStore = new DevExpress.data.CustomStore({
       key: "id",
       load: () => this.apiClient.fetchNotifications(),

@@ -312,4 +312,55 @@ export class ModelsApiClient {
     });
     if (!response.ok) throw new Error(`Mark notification read failed (${response.status})`);
   }
+
+  async fetchUsers() {
+    const headers = this.buildAuthHeaders();
+    const response = await fetch(`${this.apiBaseUrl}/users`, { headers });
+    if (!response.ok) throw new Error(`Fetch users failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async fetchUserById(userId) {
+    const headers = this.buildAuthHeaders();
+    const response = await fetch(`${this.apiBaseUrl}/users/${encodeURIComponent(userId)}`, { headers });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Fetch user failed (${response.status})`);
+    return await response.json();
+  }
+
+  async fetchFeatureFlags() {
+    const headers = this.buildAuthHeaders();
+    const response = await fetch(`${this.apiBaseUrl}/feature-flags`, { headers });
+    if (!response.ok) throw new Error(`Fetch feature flags failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async fetchUserFeatureFlags(userId) {
+    const headers = this.buildAuthHeaders();
+    const response = await fetch(`${this.apiBaseUrl}/users/${encodeURIComponent(userId)}/feature-flags`, { headers });
+    if (!response.ok) throw new Error(`Fetch feature flags failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async addUserFeatureFlag(userId, featureFlagKey) {
+    const response = await fetch(`${this.apiBaseUrl}/users/${encodeURIComponent(userId)}/feature-flags`, {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify({ key: featureFlagKey, is_enabled: 1 })
+    });
+    if (!response.ok) throw new Error(`Add feature flag failed (${response.status})`);
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  async removeUserFeatureFlag(userId, featureFlagKey) {
+    const response = await fetch(`${this.apiBaseUrl}/users/${encodeURIComponent(userId)}/feature-flags/${encodeURIComponent(featureFlagKey)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Remove feature flag failed (${response.status})`);
+  }
 }
