@@ -167,6 +167,7 @@ class ModelsApp {
             template: (_, contentElement) => {
               const host = contentElement.get(0);
               host.innerHTML = `<span class="notification-bell"><i class="fa-light fa-bell" style="font-size:16px"></i></span>`;
+              this.bellElement = host.querySelector(".notification-bell");
             }
           }
         },
@@ -1620,30 +1621,33 @@ class ModelsApp {
   }
   async loadUnreadNotificationCount() {
     try {
-      const notifications = await this.apiClient.fetchNotifications();
-      this.unreadNotificationCount = notifications.filter(notification => !notification.is_read).length;
+      this.unreadNotificationCount = await this.apiClient.fetchUnreadCount();
+      console.log("[notifications] unreadNotificationCount:", this.unreadNotificationCount);
       this.updateBellBadge();
-    } catch (_) {
+    } catch (error) {
+      console.error("[notifications] loadUnreadNotificationCount failed:", error);
       this.unreadNotificationCount = 0;
       this.updateBellBadge();
     }
   }
   updateBellBadge() {
-    const bellHost = document.querySelector("#nav-notifications .notification-bell");
+    const bellHost = this.bellElement || document.querySelector(".notification-bell");
+    console.log("[notifications] updateBellBadge - bellElement:", this.bellElement, "querySelector:", document.querySelector(".notification-bell"), "bellHost:", bellHost, "count:", this.unreadNotificationCount);
     if (!bellHost)
       return;
     const existingBadge = bellHost.querySelector(".bell-badge");
     if (existingBadge)
       existingBadge.remove();
-    if (this.unreadNotificationCount > 0)
+    if (this.unreadNotificationCount > 0) {
       bellHost.insertAdjacentHTML("beforeend", `<span class="bell-badge">${this.unreadNotificationCount}</span>`);
+      console.log("[notifications] badge inserted, bellHost.innerHTML:", bellHost.innerHTML);
+    }
   }
   async navigateToNotifications() {
     if (!this.canAccessMaintenance())
       return;
     try {
-      const notifications = await this.apiClient.fetchNotifications();
-      const unreadCount = notifications.filter(notification => !notification.is_read).length;
+      const unreadCount = await this.apiClient.fetchUnreadCount();
       this.unreadNotificationCount = unreadCount;
       this.updateBellBadge();
       if (unreadCount === 0)
@@ -1690,14 +1694,14 @@ class ModelsApp {
         columns: [
           { dataField: "id", caption: "ID", visible: false },
           {
-            dataField: "is_read",
+            dataField: "status",
             caption: "",
             width: 40,
             allowFiltering: false,
             allowSorting: false,
             cellTemplate: (cellElement, cellInfo) => {
-              const isRead = cellInfo.value === true || cellInfo.value === 1;
-              cellElement.get(0).innerHTML = `<i class="${isRead ? "fa-light fa-envelope-open" : "fa-solid fa-envelope"}" style="color:${isRead ? "#9ca3af" : "#2563eb"};font-size:13px;"></i>`;
+              const isRead = cellInfo.value === "read";
+              cellElement.get(0).innerHTML = `<i class="${isRead ? "fa-regular fa-envelope-open" : "fa-solid fa-envelope"}" style="color:${isRead ? "#9ca3af" : "#2563eb"};font-size:13px;"></i>`;
             }
           },
           { dataField: "title", caption: "Title" },
@@ -1722,17 +1726,15 @@ class ModelsApp {
   async readNotification(notification) {
     if (!notification)
       return;
-    const isRead = notification.is_read === true || notification.is_read === 1;
-    if (!isRead) {
-      try {
-        await this.apiClient.markNotificationAsRead(notification.id);
-        notification.is_read = true;
-        this.unreadNotificationCount = Math.max(0, this.unreadNotificationCount - 1);
-        this.updateBellBadge();
-        if (this.notificationsGridInstance)
-          this.notificationsGridInstance.refresh();
-      } catch (_) {}
-    }
+    try {
+      const fullNotification = await this.apiClient.fetchNotificationById(notification.id);
+      if (fullNotification)
+        notification = fullNotification;
+    } catch (_) {}
+    this.unreadNotificationCount = Math.max(0, this.unreadNotificationCount - 1);
+    this.updateBellBadge();
+    if (this.notificationsGridInstance)
+      this.notificationsGridInstance.refresh();
     this.showNotificationDetail(notification);
   }
   showNotificationDetail(notification) {
