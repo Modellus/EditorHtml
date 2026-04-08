@@ -78,7 +78,8 @@ class Board {
     }
 
     removeShape(shape) {
-        shape.children.forEach(c => this.removeShape(c));
+        while (shape.children.length > 0)
+            this.removeShape(shape.children[0]);
         if (shape.parent) {
             var index = shape.parent.children.indexOf(shape);
             shape.parent.children.splice(index, 1);

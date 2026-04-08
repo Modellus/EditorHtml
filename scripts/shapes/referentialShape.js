@@ -132,49 +132,8 @@ class ReferentialShape extends BaseShape {
         return items;
     }
 
-    renderAddShapeButtonTemplate(element) {
-        element.innerHTML = `<span class="mdl-shape-color-btn"><i class="fa-light fa-circle-plus"></i></span>`;
-    }
-
     renderSettingsButtonTemplate(element) {
         element.innerHTML = `<span class="mdl-shape-color-btn"><i class="fa-light fa-ruler-combined"></i></span>`;
-    }
-
-    createAddShapeDropDownButton(itemElement) {
-        this._addShapeElement = $('<div class="mdl-add-shape-selector">');
-        this._addShapeElement.dxDropDownButton({
-            showArrowIcon: false,
-            stylingMode: "text",
-            useSelectMode: false,
-            hint: "Add shape",
-            template: (data, element) => this.renderAddShapeButtonTemplate(element[0]),
-            dropDownOptions: {
-                container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
-                width: "auto",
-                contentTemplate: contentElement => {
-                    $(contentElement).empty();
-                    $('<div>').appendTo(contentElement).dxList({
-                        dataSource: [
-                            { key: "BodyShape", type: "Body", icon: "fa-light fa-circle", text: this.board.translations.get("Body Name") },
-                            { key: "PointShape", type: "Point", icon: "fa-solid fa-dot", text: this.board.translations.get("Point Name") },
-                            { key: "VectorShape", type: "Vector", icon: "fa-light fa-arrow-right-long fa-rotate-by", text: this.board.translations.get("Vector Name") },
-                            { key: "LineShape", type: "Line", icon: "fa-light fa-slash-forward", text: this.board.translations.get("Line Name") },
-                            { key: "ArcShape", type: "Arc", icon: "fa-light fa-circle-half-stroke", text: this.board.translations.get("Arc Name") }
-                        ],
-                        scrollingEnabled: false,
-                        itemTemplate: (data, _, el) => {
-                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${data.icon}"></i><span class="mdl-dropdown-list-label">${data.text}</span></div>`;
-                        },
-                        onItemClick: e => {
-                            window.shell?.commands?.addShape(e.itemData.key, e.itemData.type, this);
-                            this._addShapeElement.dxDropDownButton("instance").close();
-                        }
-                    });
-                }
-            }
-        });
-        this._addShapeElement.appendTo(itemElement);
     }
 
     createSettingsDropDownButton(itemElement) {

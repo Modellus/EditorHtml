@@ -1,4 +1,23 @@
 class ChildShape extends BaseShape {
+    createToolbar() {
+        const items = super.createToolbar();
+        items.push(
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createAddShapeDropDownButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            }
+        );
+        return items;
+    }
+
     setDefaults() {
         super.setDefaults();
         this.properties.parentId = this.parent?.id ?? null;
