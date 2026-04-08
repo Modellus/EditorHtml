@@ -20,11 +20,17 @@ class ChildShape extends BaseShape {
 
     setDefaults() {
         super.setDefaults();
-        this.properties.parentId = this.parent?.id ?? null;
+        this.properties.parentId = this.parent.id;
         this.properties.trajectoryColor = "transparent";
         this.properties.stroboscopyColor = "transparent";
         this.properties.stroboscopyInterval = 10;
         this.properties.stroboscopyOpacity = 0.5;
+    }
+
+    setProperties(properties) {
+        if ("parentId" in properties)
+            this.reparent(properties.parentId);
+        super.setProperties(properties);
     }
 
     tick() {
@@ -212,25 +218,22 @@ class ChildShape extends BaseShape {
     }
 
     reparent(newParentId) {
-        const newParent = newParentId ? this.board.shapes.getById(newParentId) : null;
-        if (this.parent)
-            this.parent.children = this.parent.children.filter(c => c !== this);
+        const newParent = this.board.shapes.getById(newParentId);
+        if (this.parent === newParent) {
+            this.properties.parentId = newParentId;
+            return;
+        }
+        this.parent.children = this.parent.children.filter(c => c !== this);
         this.parent = newParent;
-        if (newParent)
-            newParent.children.push(this);
+        newParent.children.push(this);
         this.properties.parentId = newParentId;
-        const clipId = newParent?.getClipId();
-        if (clipId)
-            this.element.setAttribute("clip-path", `url(#${clipId})`);
-        else
-            this.element.removeAttribute("clip-path");
+        this.element.setAttribute("clip-path", `url(#${newParent.getClipId()})`);
         this.board.markDirty(this);
     }
 
     renderParentButtonTemplate(element) {
-        const parentShape = this.parent ?? this.getReferential();
-        const name = parentShape?.properties?.name ?? "";
-        const icon = BaseShape.shapeIcons[parentShape?.constructor?.name] ?? "fa-light fa-shapes";
+        const name = this.parent.properties.name ?? "";
+        const icon = BaseShape.shapeIcons[this.parent.constructor.name] ?? "fa-light fa-shapes";
         element.innerHTML = `<i class="${icon}" title="${name}"></i>`;
     }
 

@@ -496,6 +496,6 @@ class LineShape extends ChildShape {
     }
 
     getScreenAnchorPoint() {
-        return this.parent?.getScreenAnchorPoint?.() ?? super.getScreenAnchorPoint();
+        return this.parent.getScreenAnchorPoint?.() ?? super.getScreenAnchorPoint();
     }
 }
