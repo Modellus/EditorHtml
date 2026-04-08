@@ -456,6 +456,16 @@ class ModelsApp {
     this.maintenanceGridInstance = null;
   }
 
+  exportGridToExcel(event, fileName) {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(fileName);
+    DevExpress.excelExporter.exportDataGrid({ component: event.component, worksheet }).then(() => {
+      workbook.xlsx.writeBuffer().then(buffer => {
+        saveAs(new Blob([buffer], { type: "application/octet-stream" }), `${fileName}.xlsx`);
+      });
+    });
+  }
+
   buildMaintenanceStore(maintenanceType) {
     if (maintenanceType === "education") {
       return new DevExpress.data.CustomStore({
@@ -567,6 +577,8 @@ class ModelsApp {
         paging: { enabled: true, pageSize: 12 },
         pager: { showPageSizeSelector: true, allowedPageSizes: [12, 24, 48], showInfo: true },
         searchPanel: { visible: true, width: 280, placeholder: "Search..." },
+        export: { enabled: true },
+        onExporting: event => this.exportGridToExcel(event, maintenanceType === "education" ? "Education Levels" : "Sciences"),
         editing: {
           mode: "cell",
           allowAdding: true,
@@ -576,6 +588,7 @@ class ModelsApp {
         toolbar: {
           items: [
             "addRowButton",
+            "exportButton",
             "searchPanel",
             {
               location: "after",
@@ -655,6 +668,8 @@ class ModelsApp {
         sorting: { mode: "multiple" },
         filterRow: { visible: true },
         columnChooser: { enabled: true, mode: "select" },
+        export: { enabled: true },
+        onExporting: event => this.exportGridToExcel(event, "Models"),
         columns: [
           { dataField: "id", caption: "ID", visible: false },
           {
@@ -843,6 +858,8 @@ class ModelsApp {
         searchPanel: { visible: true, width: 280, placeholder: "Search..." },
         sorting: { mode: "multiple" },
         filterRow: { visible: true },
+        export: { enabled: true },
+        onExporting: event => this.exportGridToExcel(event, "Users"),
         columns: [
           { dataField: "id", caption: "ID", visible: false },
           {
@@ -1691,6 +1708,8 @@ class ModelsApp {
         searchPanel: { visible: true, width: 280, placeholder: "Search..." },
         sorting: { mode: "multiple" },
         filterRow: { visible: true },
+        export: { enabled: true },
+        onExporting: event => this.exportGridToExcel(event, "Notifications"),
         columns: [
           { dataField: "id", caption: "ID", visible: false },
           {
