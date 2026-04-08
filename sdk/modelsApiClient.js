@@ -273,4 +273,15 @@ export class ModelsApiClient {
     });
     if (!response.ok) throw new Error(`Delete failed (${response.status})`);
   }
+
+  async sendNotification(payload) {
+    const response = await fetch(`${this.apiBaseUrl}/notifications`, {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Send notification failed (${response.status})`);
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  }
 }

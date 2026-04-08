@@ -17,6 +17,7 @@ class TopToolbar {
 
     _create() {
         $("#toolbar").dxToolbar({
+            onItemClick: () => this.shell.deselectShape(),
             items: [
                 {
                     location: "before",
@@ -238,11 +239,92 @@ class TopToolbar {
                         this._selectDropdownInstance = container.dxDropDownButton("instance");
                         return container;
                     }
+                },
+                {
+                    location: "after",
+                    widget: "dxButton",
+                    options: {
+                        icon: "fa-light fa-circle-question",
+                        elementAttr: { id: "help-button" },
+                        onClick: () => this._helpMenu.show()
+                    }
                 }
             ]
         });
         this.instance = $("#toolbar").dxToolbar("instance");
         document.getElementById("svg-container").insertAdjacentHTML("afterend", `<div id="model-info-label"><span id="model-name-label">${this.shell.properties.name}</span></div>`);
+        document.body.insertAdjacentHTML("beforeend", `<div id="help-context-menu"></div><div id="about-popup"></div><div id="feedback-popup"></div>`);
+        this._helpMenu = $("#help-context-menu").dxContextMenu({
+            items: [
+                { text: "About", icon: "fa-light fa-circle-info" },
+                { text: "Send Feedback", icon: "fa-light fa-envelope" }
+            ],
+            itemTemplate: itemData => {
+                return `<div style="display: flex; justify-content: space-between; align-items: center; width: 100%">
+                            <span class="${itemData.icon}" style="width: 15px; margin-right: 10px; text-align: left; display: inline-block"></span>
+                            <span style="text-align: left; padding-right: 5px; flex-grow: 1">${itemData.text}</span>
+                        </div>`;
+            },
+            target: "#help-button",
+            position: {
+                my: "top right",
+                at: "bottom right",
+                of: "#help-button",
+                offset: "0 10"
+            },
+            onItemClick: event => {
+                if (event.itemData.text === "About")
+                    $("#about-popup").dxPopup("instance").show();
+                else if (event.itemData.text === "Send Feedback")
+                    $("#feedback-popup").dxPopup("instance").show();
+            }
+        }).dxContextMenu("instance");
+        $("#about-popup").dxPopup({
+            title: "About Modellus",
+            visible: false,
+            width: 460,
+            height: "auto",
+            showCloseButton: true,
+            dragEnabled: false,
+            shading: true,
+            contentTemplate: contentElement => {
+                $(contentElement).html(`
+                    <div style="text-align: center; margin-bottom: 16px">
+                        <img src="scripts/themes/modellus.svg" alt="Modellus" style="height: 48px">
+                    </div>
+                    <p style="text-align: justify">This version of Modellus is still in <strong>beta</strong> and is continuously evolving.</p>
+                    <p style="text-align: justify">Modellus is an interactive modelling tool that allows students and teachers to create, explore and share mathematical models of physical and natural phenomena. It bridges the gap between equations and visual understanding, making science and mathematics more accessible and engaging.</p>
+                    <p style="text-align: center">Designed with <span class="about-heart">&hearts;</span> for education</p>`);
+            }
+        });
+        $("#feedback-popup").dxPopup({
+            title: "Send Feedback",
+            visible: false,
+            width: 420,
+            height: "auto",
+            showCloseButton: true,
+            dragEnabled: false,
+            shading: true,
+            contentTemplate: contentElement => {
+                $(contentElement).html(`<div id="feedback-form"></div>`);
+                $("#feedback-form").dxForm({
+                    items: [
+                        { dataField: "title", label: { text: "Title" }, editorOptions: { placeholder: "Brief summary" }, validationRules: [{ type: "required" }] },
+                        { dataField: "description", editorType: "dxTextArea", label: { text: "Description" }, editorOptions: { placeholder: "Describe your feedback", height: 120 } },
+                        {
+                            itemType: "button",
+                            horizontalAlignment: "right",
+                            buttonOptions: {
+                                text: "Send",
+                                icon: "fa-light fa-envelope",
+                                type: "default",
+                                onClick: () => this._submitFeedback()
+                            }
+                        }
+                    ]
+                });
+            }
+        });
         this.expressionButton = $("#expression-button").dxButton("instance");
         this.valueButton = $("#value-button").dxButton("instance");
         this.referentialButton = $("#referential-button").dxButton("instance");
@@ -307,9 +389,31 @@ class TopToolbar {
             creatorLabel.style.color = isLight ? "rgba(0, 0, 0, 0.5)" : "rgba(255, 255, 255, 0.5)";
             creatorLabel.style.webkitTextStroke = `1.5px ${hex}`;
         }
+
     }
 
     update() {
         const disabled = this.shell.board.selection.selectedShape == null || !["BodyShape", "PointShape", "VectorShape", "ImageShape", "ReferentialShape"].includes(this.shell.board.selection.selectedShape.constructor.name);
+    }
+
+    async _submitFeedback() {
+        const formInstance = $("#feedback-form").dxForm("instance");
+        const validationResult = formInstance.validate();
+        if (!validationResult.isValid)
+            return;
+        const formData = formInstance.option("formData");
+        const popup = $("#feedback-popup").dxPopup("instance");
+        try {
+            await this.shell.modelsApiClient.sendNotification({
+                title: formData.title,
+                message: formData.description,
+                type: "Feedback"
+            });
+            popup.hide();
+            formInstance.option("formData", {});
+            window.DevExpress.ui.notify("Thank you for your feedback!", "success", 3000);
+        } catch (error) {
+            window.DevExpress.ui.notify("Failed to send feedback", "error", 3000);
+        }
     }
 }

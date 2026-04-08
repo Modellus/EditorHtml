@@ -16,6 +16,7 @@ class BottomToolbar {
 
     _create() {
         $("#bottom-toolbar").dxToolbar({
+            onItemClick: () => this.shell.deselectShape(),
             items: [
                 {
                     widget: "dxButton",
