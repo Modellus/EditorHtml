@@ -9,6 +9,8 @@ class Calculator extends EventTarget {
         this.system = new Modellus.System("t", "n");
         this.parser = new Modellus.Parser(this.system);
         this.engine = new Modellus.Engine(this.system);
+        this.physicalEngine = new Modellus.PhysicalEngine(this.system);
+        this.physicalEngine.connectToEngine(this.engine);
         this.status = STATUS.STOPPED;
         this.properties = this.createDefaultProperties();
         this.setDefaults();
@@ -146,8 +148,18 @@ class Calculator extends EventTarget {
         this.system.casesCount = this.properties.casesCount;
         this.engine.reset();
         this.system.reset();
+        this.physicalEngine.bodies = [];
+        this.physicalEngine.physicsConstantsRegistered = false;
         this.status = STATUS.STOPPED;
         this.clearHook();
+    }
+
+    addPhysicalBody(name, mass = 1) {
+        this.physicalEngine.addBody(new Modellus.PhysicalBody(name, mass));
+    }
+
+    removePhysicalBody(name) {
+        this.physicalEngine.bodies = this.physicalEngine.bodies.filter(body => body.name !== name);
     }
 
     setHook(hookFunctionBody) {

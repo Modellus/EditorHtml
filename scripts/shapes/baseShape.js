@@ -1173,7 +1173,7 @@ class BaseShape {
             stylingMode: "text",
             useSelectMode: false,
             hint: "Terms",
-            buttonTemplate: (data, element) => this.renderTermsButtonTemplate(element[0]),
+            template: (data, element) => this.renderTermsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: { style: "z-index:99999" },
@@ -1185,8 +1185,12 @@ class BaseShape {
     }
 
     buildTermsMenuContent(contentElement) {
+        console.log('[terms] buildTermsMenuContent called');
+        this._termsMenuContentElement = contentElement;
         const listItems = [];
         this.populateTermsMenuSections(listItems);
+        if ($(contentElement).data("dxScrollView"))
+            $(contentElement).dxScrollView("instance").dispose();
         $(contentElement).empty();
         $(contentElement).dxScrollView({ height: 300, width: "100%" });
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({

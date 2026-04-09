@@ -306,6 +306,8 @@ class Shell  {
         this.board.shapes.shapes.forEach(shape => {
             if (shape.constructor.name == "ExpressionShape" && shape.properties.expression != undefined)
                 this.calculator.parse(shape.properties.expression);
+            else if (shape.constructor.name == "BodyShape" && shape.properties.isPhysical)
+                this.calculator.addPhysicalBody(shape.properties.name, shape.properties.mass ?? 1);
         });
         this.calculator.applyPreloadedData();
         this.calculator.applyInitialValuesByCase(initialValuesByCase);

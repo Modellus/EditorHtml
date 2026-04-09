@@ -89,12 +89,77 @@ class BodyShape extends ChildShape {
         this.synchronizeIdleAnimationTicker();
     }
 
+    setProperties(properties) {
+        if ("isPhysical" in properties) {
+            const isPhysical = properties.isPhysical;
+            const rest = Object.fromEntries(Object.entries(properties).filter(([key]) => key !== "isPhysical"));
+            super.setProperties(rest);
+            this.setProperty("isPhysical", isPhysical);
+        } else {
+            super.setProperties(properties);
+            if ("name" in properties && this.properties.isPhysical) {
+                const prefix = String(properties.name ?? "").replace(/\s+/g, "");
+                this.properties.xTerm = `${prefix}.x`;
+                this.properties.yTerm = `${prefix}.y`;
+                this._termsDropdownElement?.dxDropDownButton("instance")?.close();
+                this.refreshTermsToolbarControl();
+                this.dispatchEvent("changed", {});
+            }
+        }
+    }
+
     setProperty(name, value) {
         if (name === "name")
             this.properties.nameIsDefault = false;
         if (name === "characterKey")
             this.character = BodyShape.getCharacterByKey(value);
+        if (name === "isPhysical") {
+            if (value === true) {
+                const prefix = (this.properties.name ?? "").replace(/\s+/g, "");
+                this.properties.xTerm = `${prefix}.x`;
+                this.properties.yTerm = `${prefix}.y`;
+                this.properties.xTermLocked = true;
+                this.properties.yTermLocked = true;
+            } else {
+                const scale = this.getScale();
+                const referentialX = Utils.roundToPrecision(this.properties.x * (scale.x ?? 1), this.board.calculator.getPrecision());
+                const referentialY = Utils.roundToPrecision(-this.properties.y * (scale.y ?? 1), this.board.calculator.getPrecision());
+                this.properties.xTerm = String(referentialX);
+                this.properties.yTerm = String(referentialY);
+                this.properties.xTermLocked = false;
+                this.properties.yTermLocked = false;
+            }
+        }
+        if (name === "name" && this.properties.isPhysical) {
+            const prefix = String(value ?? "").replace(/\s+/g, "");
+            this.properties.xTerm = `${prefix}.x`;
+            this.properties.yTerm = `${prefix}.y`;
+        }
         super.setProperty(name, value);
+        if (name === "isPhysical" && value === false) {
+            const prefix = (this.properties.name ?? "").replace(/\s+/g, "");
+            const physicalTermNames = new Set([`${prefix}.x`, `${prefix}.y`, `${prefix}.vx`, `${prefix}.vy`, `${prefix}.ax`, `${prefix}.ay`, `${prefix}.mass`]);
+            this.board.shapes.shapes.forEach(shape => {
+                if (shape === this)
+                    return;
+                let hadStaleTerms = false;
+                shape.termDisplayEntries.forEach(entry => {
+                    if (physicalTermNames.has(shape.properties[entry.term])) {
+                        shape.properties[entry.term] = "";
+                        hadStaleTerms = true;
+                    }
+                });
+                if (hadStaleTerms)
+                    Object.values(shape.termFormControls).forEach(({ termControl }) => termControl?.refresh());
+            });
+        }
+        if (name === "isPhysical" || (name === "name" && this.properties.isPhysical)) {
+            this._termsDropdownElement?.dxDropDownButton("instance")?.close();
+            this.refreshTermsToolbarControl();
+            if (this._termsMenuContentElement)
+                this.buildTermsMenuContent(this._termsMenuContentElement);
+            this.dispatchEvent("changed", {});
+        }
         if (name === "characterKey") {
             this.synchronizeIdleAnimationTicker();
             if (this.properties.nameIsDefault) {
@@ -176,6 +241,33 @@ class BodyShape extends ChildShape {
 
     getScreenAnchorPoint() {
         return this.parent.getScreenAnchorPoint?.() ?? super.getScreenAnchorPoint();
+    }
+
+    createPhysicalTermVisibilityControl(formAdapter, termProperty, displayModeProperty) {
+        const termValue = this.properties[termProperty] ?? "";
+        const displayModeValue = this.properties[displayModeProperty] ?? "none";
+        const isVisible = displayModeValue !== false && displayModeValue !== "none";
+        const control = $('<div class="term-packed-control">');
+        const buttonHost = $('<div class="term-packed-control__button">');
+        TermControl.createVisibilityCheckbox(buttonHost, isVisible, value => {
+            formAdapter.updateData(displayModeProperty, value ? "nameValue" : "none");
+            this.board.markDirty(this);
+        });
+        control.append(buttonHost);
+        const selectHost = $('<div class="term-packed-control__select">');
+        selectHost.dxSelectBox({
+            value: termValue || null,
+            items: termValue ? [{ term: termValue, text: termValue }] : [],
+            disabled: true,
+            stylingMode: "filled",
+            displayExpr: "text",
+            valueExpr: "term",
+            placeholder: "",
+            inputAttr: { class: "mdl-variable-selector" },
+            elementAttr: { class: "mdl-variable-selector" }
+        });
+        control.append(selectHost);
+        return { control };
     }
 
     createToolbar() {
@@ -359,10 +451,33 @@ class BodyShape extends ChildShape {
     }
 
     populateTermsMenuSections(listItems) {
+        console.log('[terms] populateTermsMenuSections, isPhysical:', this.properties.isPhysical);
+        if (this.properties.isPhysical) {
+            const formAdapter = { updateData: (field, value) => this.setPropertyCommand(field, value) };
+            const xPhysicalControl = this.createPhysicalTermVisibilityControl(formAdapter, "xTerm", this.getTermDisplayModeProperty("xTerm"));
+            const yPhysicalControl = this.createPhysicalTermVisibilityControl(formAdapter, "yTerm", this.getTermDisplayModeProperty("yTerm"));
+            listItems.push(
+                { text: "Horizontal", stacked: true, buildControl: $p => $p.append(xPhysicalControl.control) },
+                { text: "Vertical", stacked: true, buildControl: $p => $p.append(yPhysicalControl.control) }
+            );
+        } else {
+            listItems.push(
+                { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
+                { text: "Vertical", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) }
+            );
+        }
         listItems.push(
-            { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
-            { text: "Vertical", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) },
             { text: "Size", stacked: true, buildControl: $p => $p.append(this._sizeDescriptor.control) },
+            {
+                text: "Physical body",
+                buildControl: $p => {
+                    $('<div>').dxSwitch({
+                        value: this.properties.isPhysical === true,
+                        onInitialized: e => { this._physicalSwitchInstance = e.component; },
+                        onValueChanged: e => this.setPropertyCommand("isPhysical", e.value)
+                    }).appendTo($p);
+                }
+            },
             {
                 text: "Attached To",
                 parentSelector: true,
@@ -461,8 +576,10 @@ class BodyShape extends ChildShape {
     showContextToolbar() {
         this.refreshParentToolbarControl();
         this.refreshMotionToolbarControl();
-        this.termFormControls["xTerm"]?.termControl?.refresh();
-        this.termFormControls["yTerm"]?.termControl?.refresh();
+        if (!this.properties.isPhysical) {
+            this.termFormControls["xTerm"]?.termControl?.refresh();
+            this.termFormControls["yTerm"]?.termControl?.refresh();
+        }
         this.termFormControls["sizeTerm"]?.termControl?.refresh();
         super.showContextToolbar();
     }
@@ -585,6 +702,7 @@ class BodyShape extends ChildShape {
         this.properties.imageBase64 = "";
         this.properties.characterKey = "";
         this.properties.nameIsDefault = true;
+        this.properties.isPhysical = false;
         this.character = null;
         this.lastBoardHorizontalPosition = null;
         this.flipImageHorizontally = false;

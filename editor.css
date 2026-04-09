@@ -1300,6 +1300,21 @@ math-field {
     border-bottom-left-radius: 4px;
 }
 
+.term-packed-control--physical {
+    align-items: center;
+    gap: 0;
+}
+
+.mdl-physical-term-label {
+    font-family: KaTeX_Math, serif;
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1;
+    padding-left: 6px;
+    color: inherit;
+    opacity: 0.8;
+}
+
 .term-packed-control__select .dx-field-item-content {
     padding: 0;
     margin: 0;
