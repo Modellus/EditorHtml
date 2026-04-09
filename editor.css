@@ -918,7 +918,7 @@ math-field {
 .mdl-name-btn-term-text {
     font-family: KaTeX_Math, serif;
     font-style: italic;
-    font-size: 16px;
+    font-size: 13px;
     line-height: 1;
 }
 
@@ -1020,7 +1020,7 @@ math-field {
 
 .mdl-variable-selector {
     font-family: "Katex_Math" !important;
-    font-size: 16px;   
+    font-size: 13px;   
     font-weight: 400;
     font-style: italic;
 }
@@ -1699,4 +1699,29 @@ math-field {
 
 .mid-school #svg {
     filter: url(#sketchy-line);
+}
+
+.mdl-term-tree-popup {
+    min-width: 160px;
+}
+
+.mdl-term-tree-custom-input {
+    padding: 4px 4px 0 4px;
+}
+
+.mdl-term-tree-custom-input .dx-texteditor {
+    width: 100%;
+}
+
+.mdl-term-tree-view .dx-treeview-item-content {
+    font-family: "Katex_Math";
+    font-size: 13px;
+    font-style: italic;
+}
+
+.mdl-term-tree-view .dx-treeview-item {
+    padding-top: 3px !important;
+    padding-right: 0 !important;
+    padding-bottom: 3px !important;
+    padding-left: 0 !important;
 }

@@ -257,6 +257,7 @@ class TermControl {
             getItems: () => [{ term: TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1), locked: baseShape.properties[lockedProperty] === true }],
             getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term),
+            getBoard: () => baseShape.board,
             normalizeTermValue: value => TermControl.normalizeBaseShapeTermValue(value),
             onTermChanged: (_, value) => {
                 formInstance.updateData(term, value);
@@ -473,6 +474,34 @@ class TermControl {
         return items;
     }
 
+    static buildTermTreeItems(board, flatItems) {
+        const bodies = board?.calculator?.physicalEngine?.bodies ?? [];
+        if (bodies.length === 0)
+            return flatItems.map(item => ({ id: item.term || `__empty_${item.text}`, text: item.text, term: item.term }));
+        const physicalTermNames = new Set();
+        const physicalTermsByBody = new Map();
+        const suffixes = ["x", "y", "vx", "vy", "ax", "ay", "mass"];
+        for (const body of bodies) {
+            const bodyTerms = suffixes.map(suffix => `${body.name}.${suffix}`);
+            physicalTermsByBody.set(body.name, bodyTerms);
+            bodyTerms.forEach(t => physicalTermNames.add(t));
+        }
+        const treeItems = [];
+        for (const [bodyName, bodyTerms] of physicalTermsByBody) {
+            const groupId = `__body__${bodyName}`;
+            treeItems.push({ id: groupId, text: bodyName, expanded: false });
+            for (const termName of bodyTerms) {
+                if (flatItems.some(f => f.term === termName))
+                    treeItems.push({ id: termName, text: termName.substring(bodyName.length + 1), term: termName, parentId: groupId });
+            }
+        }
+        for (const item of flatItems) {
+            if (!physicalTermNames.has(item.term))
+                treeItems.push({ id: item.term || `__custom_${item.text}`, text: item.text, term: item.term });
+        }
+        return treeItems;
+    }
+
     static applyShapeTermsCollectionMutation(shape, propertyName, options, mutateItems) {
         const items = TermControl.getShapeTermsCollectionControlItems(shape, propertyName, options);
         mutateItems(items);
@@ -504,6 +533,7 @@ class TermControl {
             getItems: () => TermControl.getShapeTermsCollectionControlItems(shape, propertyName, mutationOptions),
             getStateKey: () => TermControl.getShapeTermsCollectionStateKey(shape, propertyName),
             getTermItems: item => TermControl.buildShapeTermsCollectionTermItems(shape, item?.term, normalizeTermValue),
+            getBoard: () => shape.board,
             normalizeTermValue: value => normalizeTermValue(value),
             onItemDeleting: index => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                 if (index < 0 || index >= items.length)
@@ -839,13 +869,13 @@ class TermControl {
                     this.options.visibility.onValueChanged(index, value);
                 });
                 const selectHost = $("<div>").addClass("term-packed-control__select");
-                selectHost.dxSelectBox(this.getTermEditorOptions(item, index));
+                selectHost.dxDropDownBox(this.getTermEditorOptions(item, index));
                 termWrapper.append(selectHost);
                 row.append(termWrapper);
             } else {
                 const termHost = $("<div>").addClass("shape-term-term");
                 row.append(termHost);
-                termHost.dxSelectBox(this.getTermEditorOptions(item, index));
+                termHost.dxDropDownBox(this.getTermEditorOptions(item, index));
             }
         }
         if (showSecondary) {
@@ -964,26 +994,71 @@ class TermControl {
         this.renderColorSecondaryEditor(host, item, index);
     }
 
+    renderTermDropdownContent(contentElement, item, index, treeItems, acceptCustomValue, currentTermValue, providedOptions, closeDropdown) {
+        if (acceptCustomValue) {
+            const customInputHost = $('<div class="mdl-term-tree-custom-input">');
+            $('<div>').dxTextBox({
+                value: currentTermValue || "",
+                placeholder: "Custom value",
+                stylingMode: "filled",
+                onEnterKey: e => {
+                    const customValue = e.component.option("value");
+                    if (providedOptions.onCustomItemCreating)
+                        providedOptions.onCustomItemCreating({ text: customValue, customItem: null });
+                    else
+                        this.onTermChanged(index, customValue);
+                    closeDropdown?.();
+                }
+            }).appendTo(customInputHost);
+            contentElement.append(customInputHost);
+        }
+        $('<div class="mdl-term-tree-view">').dxTreeView({
+            items: treeItems,
+            dataStructure: "plain",
+            keyExpr: "id",
+            parentIdExpr: "parentId",
+            displayExpr: "text",
+            selectionMode: "single",
+            selectByClick: true,
+            height: 220,
+            onItemClick: e => {
+                if (e.itemData.term !== undefined) {
+                    this.onTermChanged(index, e.itemData.term);
+                    closeDropdown?.();
+                }
+            },
+            onContentReady: e => {
+                if (currentTermValue) {
+                    const selectedItem = treeItems.find(t => t.term === currentTermValue);
+                    if (selectedItem?.parentId)
+                        e.component.expandItem(selectedItem.parentId);
+                }
+            }
+        }).appendTo(contentElement);
+    }
+
     getTermEditorOptions(item, index) {
         const providedOptions = this.options.termEditor ?? {};
-        const itemTemplate = providedOptions.itemTemplate ?? this.createDefaultTermItemTemplate();
+        const acceptCustomValue = providedOptions.acceptCustomValue === true;
+        const termValue = this.getTermValue(item, index);
+        const board = this.options.getBoard?.();
+        const flatItems = this.getTermItems(item, index);
+        const treeItems = TermControl.buildTermTreeItems(board, flatItems);
+        let dropDownBoxInstance = null;
+        const leafTerms = treeItems.filter(t => t.term !== undefined).map(t => t.term);
         return {
-            value: this.getTermValue(item, index),
-            items: this.getTermItems(item, index),
-            stylingMode: "filled",
-            displayExpr: "text",
-            valueExpr: "term",
-            placeholder: "",
-            acceptCustomValue: false,
+            value: termValue || null,
+            dataSource: leafTerms,
             inputAttr: { class: "mdl-variable-selector" },
+            stylingMode: "filled",
             elementAttr: { class: "mdl-variable-selector" },
-            itemTemplate: itemTemplate,
-            onValueChanged: e => this.onTermChanged(index, e.value),
+            onInitialized: e => { dropDownBoxInstance = e.component; },
+            contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), item, index, treeItems, acceptCustomValue, termValue, providedOptions, () => dropDownBoxInstance?.close()),
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: { style: "z-index:199999", class: "mdl-nested-dropdown-popup" }
             },
-            ...providedOptions
+            ...(providedOptions.onOpened ? { onOpened: providedOptions.onOpened } : {})
         };
     }
 
