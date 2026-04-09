@@ -151,6 +151,7 @@ class BodyShape extends ChildShape {
                 });
                 if (hadStaleTerms)
                     Object.values(shape.termFormControls).forEach(({ termControl }) => termControl?.refresh());
+                shape.clearStaleTermCollectionReferences(physicalTermNames);
             });
         }
         if (name === "isPhysical" || (name === "name" && this.properties.isPhysical)) {
@@ -451,7 +452,6 @@ class BodyShape extends ChildShape {
     }
 
     populateTermsMenuSections(listItems) {
-        console.log('[terms] populateTermsMenuSections, isPhysical:', this.properties.isPhysical);
         if (this.properties.isPhysical) {
             const formAdapter = { updateData: (field, value) => this.setPropertyCommand(field, value) };
             const xPhysicalControl = this.createPhysicalTermVisibilityControl(formAdapter, "xTerm", this.getTermDisplayModeProperty("xTerm"));

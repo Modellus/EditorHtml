@@ -223,6 +223,20 @@ class TableShape extends BaseShape {
         this.refreshColumnsControl();
     }
 
+    clearStaleTermCollectionReferences(staleTermNames) {
+        if (!Array.isArray(this.properties.columns))
+            return;
+        let hadStale = false;
+        for (let i = 0; i < this.properties.columns.length; i++) {
+            if (staleTermNames.has(this.properties.columns[i].term)) {
+                this.properties.columns[i] = { ...this.properties.columns[i], term: "" };
+                hadStale = true;
+            }
+        }
+        if (hadStale)
+            this.update();
+    }
+
     draw() {
         super.draw();
         const x = this.properties.x;

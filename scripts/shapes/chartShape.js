@@ -37,6 +37,22 @@ class ChartShape extends BaseShape {
         this._yTermsControl.refresh();
     }
 
+    clearStaleTermCollectionReferences(staleTermNames) {
+        if (!Array.isArray(this.properties.yTerms))
+            return;
+        let hadStale = false;
+        for (let i = 0; i < this.properties.yTerms.length; i++) {
+            if (staleTermNames.has(this.properties.yTerms[i].term)) {
+                this.properties.yTerms[i] = { ...this.properties.yTerms[i], term: "" };
+                hadStale = true;
+            }
+        }
+        if (hadStale) {
+            this.resetChartValues();
+            this.update();
+        }
+    }
+
     normalizeYTerms() {
         TermControl.normalizeShapeTermsCollection(this, "yTerms", {
             includeColor: true,

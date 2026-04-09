@@ -1187,7 +1187,6 @@ class BaseShape {
     }
 
     buildTermsMenuContent(contentElement) {
-        console.log('[terms] buildTermsMenuContent called');
         this._termsMenuContentElement = contentElement;
         const listItems = [];
         this.populateTermsMenuSections(listItems);
@@ -1216,6 +1215,9 @@ class BaseShape {
     }
 
     renderTermsButtonTemplate(element) {
+    }
+
+    clearStaleTermCollectionReferences(staleTermNames) {
     }
 
     refreshTermsToolbarControl() {
