@@ -149,6 +149,8 @@ class BaseShape {
         var parent = board.getShape(data.parent);
         var shape = board.createShape(data.type, parent, data.id);
         shape.setProperties(data.properties);
+        shape.draw();
+        shape.update();
         return shape;
     }
 
