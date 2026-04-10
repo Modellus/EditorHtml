@@ -26,6 +26,14 @@ class ValueShape extends BaseShape {
     createToolbar() {
         const items = super.createToolbar();
         this._termControl = this.createTermControl("term", "Term", true);
+        const fontSizeCaseProperty = "fontSizeTermCase";
+        const fontSizeDisplayModeProperty = this.getTermDisplayModeProperty("fontSizeTerm");
+        if (this.properties[fontSizeCaseProperty] == null)
+            this.properties[fontSizeCaseProperty] = 1;
+        if (this.properties[fontSizeDisplayModeProperty] == null)
+            this.properties[fontSizeDisplayModeProperty] = "none";
+        const fontSizeFormAdapter = { updateData: (field, value) => this.setPropertyCommand(field, value) };
+        this._fontSizeTermControl = this.createTermSelectorControl(fontSizeFormAdapter, "fontSizeTerm", fontSizeCaseProperty, true, fontSizeDisplayModeProperty, false);
         items.push(
             {
                 location: "center",
@@ -78,6 +86,10 @@ class ValueShape extends BaseShape {
         return super.buildTermDisplayLabel(entry);
     }
 
+    getClipId() {
+        return `clip-value-${this.id}`;
+    }
+
     renderTermsButtonTemplate(element) {
         const term = this.formatTermForDisplay(this.properties.term);
         element.innerHTML = term
@@ -106,24 +118,11 @@ class ValueShape extends BaseShape {
     }
 
     buildFontMenuContent(contentElement) {
-        const fontSizes = [10, 12, 14, 16, 18, 20, 24, 28, 32];
         const listItems = [
             {
                 text: "Size",
                 stacked: true,
-                buildControl: $parent => {
-                    const host = $('<div>').appendTo($parent);
-                    host.dxSelectBox({
-                        items: fontSizes,
-                        value: this.properties.fontSize ?? 14,
-                        stylingMode: "filled",
-                        width: 80,
-                        onValueChanged: event => {
-                            if (event.event)
-                                this.setPropertyCommand("fontSize", event.value);
-                        }
-                    });
-                }
+                buildControl: $parent => $parent.append(this._fontSizeTermControl)
             },
             {
                 text: "Style",
@@ -169,6 +168,7 @@ class ValueShape extends BaseShape {
 
     showContextToolbar() {
         this.termFormControls["term"]?.termControl?.refresh();
+        this.termFormControls["fontSizeTerm"]?.termControl?.refresh();
         this.refreshTermsToolbarControl();
         this.refreshFontToolbarControl();
         super.showContextToolbar();
@@ -195,7 +195,7 @@ class ValueShape extends BaseShape {
         this.properties.backgroundColor = "#FFFFFF";
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[2].color;
         this.properties.borderColor = this.properties.foregroundColor;
-        this.properties.fontSize = 14;
+        this.properties.fontSizeTerm = "14";
         this.properties.fontBold = false;
         this.properties.fontItalic = false;
         this.properties.termDisplayMode = "nameValue";
@@ -216,15 +216,26 @@ class ValueShape extends BaseShape {
         iconContainer.appendChild(icon);
         this.caseIconHost.appendChild(iconContainer);
         this.caseIconElement = icon;
+        const defs = this.board.createSvgElement("defs");
+        const clipPath = this.board.createSvgElement("clipPath");
+        clipPath.setAttribute("id", this.getClipId());
+        clipPath.setAttribute("clipPathUnits", "userSpaceOnUse");
+        this.contentClipRect = this.board.createSvgElement("rect");
+        clipPath.appendChild(this.contentClipRect);
+        defs.appendChild(clipPath);
+        const clippedContent = this.board.createSvgElement("g");
+        clippedContent.setAttribute("clip-path", `url(#${this.getClipId()})`);
+        clippedContent.appendChild(this.valueText);
+        clippedContent.appendChild(this.caseIconHost);
         this.valueEditorHost = this.board.createSvgElement("foreignObject");
         this.valueEditorHost.setAttribute("display", "none");
         this.valueEditorHost.setAttribute("class", "value-shape-editor-host");
         this.valueEditorContainer = this.board.createElement("div");
         this.valueEditorContainer.setAttribute("class", "value-shape-editor");
         this.valueEditorHost.appendChild(this.valueEditorContainer);
+        element.appendChild(defs);
         element.appendChild(this.container);
-        element.appendChild(this.valueText);
-        element.appendChild(this.caseIconHost);
+        element.appendChild(clippedContent);
         element.appendChild(this.valueEditorHost);
         return element;
     }
@@ -475,6 +486,10 @@ class ValueShape extends BaseShape {
         this.container.setAttribute("rx", 4);
         this.container.setAttribute("fill", this.properties.backgroundColor);
         this.applyBorderStroke(this.container, 1);
+        this.contentClipRect.setAttribute("x", position.x);
+        this.contentClipRect.setAttribute("y", position.y);
+        this.contentClipRect.setAttribute("width", width);
+        this.contentClipRect.setAttribute("height", height);
         const termText = this.getSelectedTerm();
         const caseNumber = this.getSelectedCaseNumber(termText);
         const valueText = this.resolveDisplayedValue(termText, caseNumber);
@@ -483,7 +498,8 @@ class ValueShape extends BaseShape {
         this.valueText.setAttribute("x", `${position.x + width / 2}`);
         this.valueText.setAttribute("y", `${position.y + height / 2 + textVerticalOffset}`);
         this.valueText.setAttribute("fill", this.properties.foregroundColor);
-        this.valueText.setAttribute("font-size", this.properties.fontSize ?? 14);
+        const resolvedFontSize = this.resolveTermNumeric(this.properties.fontSizeTerm, this.properties.fontSizeTermCase ?? 1);
+        this.valueText.setAttribute("font-size", Number.isFinite(resolvedFontSize) ? Math.max(1, resolvedFontSize) : 14);
         this.valueText.setAttribute("font-weight", this.properties.fontBold ? "bold" : "normal");
         this.valueText.setAttribute("font-style", this.properties.fontItalic ? "italic" : "normal");
         this.setValueTextContent(this.properties.termDisplayMode === "nameValue" ? termText : "", valueText);
