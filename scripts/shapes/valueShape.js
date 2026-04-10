@@ -25,13 +25,25 @@ class ValueShape extends BaseShape {
 
     createToolbar() {
         const items = super.createToolbar();
-        this._termControl = this.createTermControl("term", "Term", false);
+        this._termControl = this.createTermControl("term", "Term", true);
         items.push(
             {
                 location: "center",
                 template: () => {
                     const container = $('<div></div>');
                     this.createShapeColorDropDownButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createFontDropDownButton(container);
                     return container;
                 }
             },
@@ -60,6 +72,12 @@ class ValueShape extends BaseShape {
         listItems.push({ text: "Term", stacked: true, buildControl: $p => $p.append(this._termControl) });
     }
 
+    buildTermDisplayLabel(entry) {
+        if (this.properties.termDisplayMode === "nameValue")
+            return null;
+        return super.buildTermDisplayLabel(entry);
+    }
+
     renderTermsButtonTemplate(element) {
         const term = this.formatTermForDisplay(this.properties.term);
         element.innerHTML = term
@@ -67,10 +85,101 @@ class ValueShape extends BaseShape {
             : `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Term</span></span>`;
     }
 
+    createFontDropDownButton(itemElement) {
+        this._fontDropdownElement = $('<div class="mdl-font-selector">');
+        this._fontDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            hint: "Font",
+            buttonTemplate: (data, element) => {
+                element[0].innerHTML = `<i class="fa-light fa-text"></i>`;
+            },
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { style: "z-index:99999" },
+                width: "auto",
+                contentTemplate: contentElement => this.buildFontMenuContent(contentElement)
+            }
+        });
+        this._fontDropdownElement.appendTo(itemElement);
+    }
+
+    buildFontMenuContent(contentElement) {
+        const fontSizes = [10, 12, 14, 16, 18, 20, 24, 28, 32];
+        const listItems = [
+            {
+                text: "Size",
+                stacked: true,
+                buildControl: $parent => {
+                    const host = $('<div>').appendTo($parent);
+                    host.dxSelectBox({
+                        items: fontSizes,
+                        value: this.properties.fontSize ?? 14,
+                        stylingMode: "filled",
+                        width: 80,
+                        onValueChanged: event => {
+                            if (event.event)
+                                this.setPropertyCommand("fontSize", event.value);
+                        }
+                    });
+                }
+            },
+            {
+                text: "Style",
+                stacked: true,
+                buildControl: $parent => {
+                    const boldButtonId = `font-bold-btn-${this.id}`;
+                    const italicButtonId = `font-italic-btn-${this.id}`;
+                    $parent[0].innerHTML = `<div style="display:flex;gap:4px"><div id="${boldButtonId}"></div><div id="${italicButtonId}"></div></div>`;
+                    $(`#${boldButtonId}`, $parent).dxButton({
+                        text: "B",
+                        stylingMode: this.properties.fontBold ? "contained" : "outlined",
+                        hint: "Bold",
+                        onClick: () => {
+                            const newValue = !this.properties.fontBold;
+                            this.setPropertyCommand("fontBold", newValue);
+                            $(`#${boldButtonId}`, $parent).dxButton("instance").option("stylingMode", newValue ? "contained" : "outlined");
+                        }
+                    });
+                    $(`#${italicButtonId}`, $parent).dxButton({
+                        text: "I",
+                        stylingMode: this.properties.fontItalic ? "contained" : "outlined",
+                        hint: "Italic",
+                        onClick: () => {
+                            const newValue = !this.properties.fontItalic;
+                            this.setPropertyCommand("fontItalic", newValue);
+                            $(`#${italicButtonId}`, $parent).dxButton("instance").option("stylingMode", newValue ? "contained" : "outlined");
+                        }
+                    });
+                }
+            }
+        ];
+        $(contentElement).empty();
+        $(contentElement).dxScrollView({ height: "auto", width: "auto" });
+        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
+                data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
+            }
+        });
+    }
+
     showContextToolbar() {
         this.termFormControls["term"]?.termControl?.refresh();
         this.refreshTermsToolbarControl();
+        this.refreshFontToolbarControl();
         super.showContextToolbar();
+    }
+
+    refreshFontToolbarControl() {
+        if (!this._fontDropdownElement)
+            return;
+        const buttonContentElement = this._fontDropdownElement.find(".dx-button-content")[0];
+        if (buttonContentElement)
+            buttonContentElement.innerHTML = `<i class="fa-light fa-text"></i>`;
     }
 
     setDefaults() {
@@ -86,6 +195,10 @@ class ValueShape extends BaseShape {
         this.properties.backgroundColor = "#FFFFFF";
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[2].color;
         this.properties.borderColor = this.properties.foregroundColor;
+        this.properties.fontSize = 14;
+        this.properties.fontBold = false;
+        this.properties.fontItalic = false;
+        this.properties.termDisplayMode = "nameValue";
     }
 
     createElement() {
@@ -94,7 +207,6 @@ class ValueShape extends BaseShape {
         this.valueText = this.board.createSvgElement("text");
         this.valueText.setAttribute("text-anchor", "middle");
         this.valueText.setAttribute("dominant-baseline", "middle");
-        this.valueText.setAttribute("font-size", "14");
         this.caseIconHost = this.board.createSvgElement("foreignObject");
         this.caseIconHost.setAttribute("class", "shape-term-case-icon-host");
         const iconContainer = this.board.createElement("div");
@@ -371,7 +483,10 @@ class ValueShape extends BaseShape {
         this.valueText.setAttribute("x", `${position.x + width / 2}`);
         this.valueText.setAttribute("y", `${position.y + height / 2 + textVerticalOffset}`);
         this.valueText.setAttribute("fill", this.properties.foregroundColor);
-        this.setValueTextContent(termText, valueText);
+        this.valueText.setAttribute("font-size", this.properties.fontSize ?? 14);
+        this.valueText.setAttribute("font-weight", this.properties.fontBold ? "bold" : "normal");
+        this.valueText.setAttribute("font-style", this.properties.fontItalic ? "italic" : "normal");
+        this.setValueTextContent(this.properties.termDisplayMode === "nameValue" ? termText : "", valueText);
         const valueTextBounds = isEditingCurrentTerm ? this.getValueTextBounds() : null;
         if (isEditingCurrentTerm && this.valueText.lastChild)
             this.valueText.lastChild.setAttribute("fill-opacity", "0");
