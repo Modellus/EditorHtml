@@ -249,11 +249,10 @@ class Selection {
         }
     }
 
-    setDragging(isDragging, shape = null) {
+    setDragging(isDragging) {
         this.isDragging = isDragging;
         if (isDragging) {
-            if (shape && shape !== this.hoveredShape)
-                this.clearHover();
+            this.clearHover();
             if (this.selectedShape)
                 this.removeHighlight(this.selectedShape);
             this.selectedShape?.hideHandles();

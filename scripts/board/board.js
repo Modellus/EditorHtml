@@ -125,7 +125,7 @@ class Board {
     }
 
     onShapeDragStart(e) {
-        this.selection.setDragging(true, e.detail.shape);
+        this.selection.setDragging(true);
     }
 
     onShapeDragEnd(e) {

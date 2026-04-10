@@ -20,7 +20,7 @@ class ChildShape extends BaseShape {
 
     setDefaults() {
         super.setDefaults();
-        this.properties.parentId = this.parent.id;
+        this.properties.parentId = this.parent?.id;
         this.properties.trajectoryColor = "transparent";
         this.properties.stroboscopyColor = "transparent";
         this.properties.stroboscopyInterval = 10;
