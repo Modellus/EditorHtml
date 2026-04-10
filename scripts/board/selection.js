@@ -238,7 +238,7 @@ class Selection {
         proxy.setAttribute("stroke-width", "0.5");
         proxy.setAttribute("pointer-events", "none");
         this.applyOutlineRotation(proxy, shape, bounds);
-        shape.element.appendChild(proxy);
+        this.board.svg.appendChild(proxy);
         shape._highlightProxy = proxy;
     }
 

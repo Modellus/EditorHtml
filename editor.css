@@ -10,7 +10,7 @@ svg {
     display: block;
     width: 100vw;
     height: 100vh;
-    
+    user-select: none;
 }
 
 #menu-container {
@@ -700,6 +700,7 @@ math-field::part(placeholder) {
 
 math-field:focus-within {
     outline: none;
+    user-select: text;
 }
 
 math-field {
