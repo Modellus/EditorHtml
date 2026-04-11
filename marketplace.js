@@ -1684,10 +1684,18 @@ class ModelsApp {
     this.disposeMaintenanceGrid();
     this.disposeMaintenanceModelsGrid();
     this.disposeUsersGrid();
+    const statusColors = {
+      "new": { background: "#dbeafe", color: "#1d4ed8" },
+      "todo": { background: "#fef3c7", color: "#b45309" },
+      "in progress": { background: "#ede9fe", color: "#6d28d9" },
+      "done": { background: "#dcfce7", color: "#15803d" }
+    };
     const notificationsStore = new DevExpress.data.CustomStore({
       key: "id",
       load: () => this.apiClient.fetchNotifications(),
-      byKey: notificationId => this.apiClient.fetchNotificationById(notificationId)
+      byKey: notificationId => this.apiClient.fetchNotificationById(notificationId),
+      update: (notificationId, values) => this.apiClient.updateNotification(notificationId, values),
+      remove: notificationId => this.apiClient.deleteNotification(notificationId)
     });
     if (!this.notificationsGridInstance) {
       this.elements.cardView.innerHTML = "";
@@ -1698,6 +1706,7 @@ class ModelsApp {
         showBorders: false,
         columnAutoWidth: true,
         selection: { mode: "single" },
+        editing: { mode: "cell", allowUpdating: true, allowDeleting: true, confirmDelete: true },
         paging: { enabled: true, pageSize: 20 },
         pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
         searchPanel: { visible: true, width: 280, placeholder: "Search..." },
@@ -1708,29 +1717,59 @@ class ModelsApp {
         columns: [
           { dataField: "id", caption: "ID", visible: false },
           {
-            dataField: "status",
+            dataField: "is_read",
             caption: "",
             width: 40,
             allowFiltering: false,
             allowSorting: false,
+            allowEditing: false,
             cellTemplate: (cellElement, cellInfo) => {
-              const isRead = cellInfo.value === "read";
+              const isRead = cellInfo.value === 1;
               cellElement.get(0).innerHTML = `<i class="${isRead ? "fa-regular fa-envelope-open" : "fa-solid fa-envelope"}" style="color:${isRead ? "#9ca3af" : "#2563eb"};font-size:13px;"></i>`;
             }
           },
-          { dataField: "title", caption: "Title" },
+          {
+            dataField: "status",
+            caption: "Status",
+            width: 140,
+            allowEditing: true,
+            cellTemplate: (cellElement, cellInfo) => {
+              const palette = statusColors[cellInfo.value] || { background: "#f3f4f6", color: "#6b7280" };
+              cellElement.get(0).innerHTML = `<span style="display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:0.75rem;font-weight:600;background:${palette.background};color:${palette.color}">${cellInfo.value || ""}</span>`;
+            },
+            editCellTemplate: (cellElement, cellInfo) => {
+              const selectHost = document.createElement("div");
+              cellElement.get(0).appendChild(selectHost);
+              new DevExpress.ui.dxSelectBox(selectHost, {
+                dataSource: ["new", "todo", "in progress", "done"],
+                value: cellInfo.value,
+                acceptCustomValue: false,
+                showClearButton: false,
+                onValueChanged: event => {
+                  cellInfo.setValue(event.value);
+                  cellInfo.component.saveEditData();
+                }
+              });
+            }
+          },
+          { dataField: "title", caption: "Title", allowEditing: false },
           {
             dataField: "message",
             caption: "Message",
             width: 300,
+            allowEditing: false,
             cellTemplate: (cellElement, cellInfo) => {
               const plainText = this.getModelDescriptionText(cellInfo.value);
               cellElement.get(0).innerHTML = `<span style="display:block;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${this.escapeHtml(plainText)}">${this.escapeHtml(plainText)}</span>`;
             }
           },
-          { dataField: "created_at", caption: "Date", width: 160, dataType: "date" }
+          { dataField: "created_at", caption: "Date", width: 160, dataType: "date", allowEditing: false },
+          { type: "buttons", width: 50, buttons: [{ name: "delete", icon: "trash" }] }
         ],
-        onRowClick: event => this.readNotification(event.data)
+        onCellClick: event => {
+          if (event.column?.dataField === "status" || event.column?.type === "buttons") return;
+          this.readNotification(event.data);
+        }
       });
       return;
     }

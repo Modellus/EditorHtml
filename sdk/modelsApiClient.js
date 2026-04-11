@@ -310,6 +310,25 @@ export class ModelsApiClient {
     return await response.json();
   }
 
+  async updateNotification(notificationId, updates) {
+    const response = await fetch(`${this.apiBaseUrl}/notifications/${encodeURIComponent(notificationId)}`, {
+      method: "PATCH",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(updates)
+    });
+    if (!response.ok) throw new Error(`Update notification failed (${response.status})`);
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  async deleteNotification(notificationId) {
+    const response = await fetch(`${this.apiBaseUrl}/notifications/${encodeURIComponent(notificationId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete notification failed (${response.status})`);
+  }
+
   async fetchUsers() {
     const headers = this.buildAuthHeaders();
     const response = await fetch(`${this.apiBaseUrl}/users`, { headers });
