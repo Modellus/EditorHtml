@@ -775,8 +775,8 @@ class ModelsApp {
               });
             }
           },
-          { dataField: "created_at", caption: "Created", width: 130, dataType: "date" },
-          { dataField: "updated_at", caption: "Modified", width: 130, dataType: "date" },
+          { dataField: "createdAt", caption: "Created", width: 130, dataType: "date" },
+          { dataField: "lastModified", caption: "Modified", width: 130, dataType: "date" },
           {
             caption: "",
             width: 40,
