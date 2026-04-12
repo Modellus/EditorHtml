@@ -40,6 +40,7 @@ class Shell  {
         window.addEventListener("popstate", e => this.onPopState(e));
         history.pushState(null, "");
         this.reset();
+        this.calculator.calculate();
     }
 
     setDefaults() {
@@ -350,6 +351,7 @@ class Shell  {
         this.deserialise(JSON.parse(model));
         this.reset();
         this.calculator.stop();
+        this.calculator.calculate();
         this.board.refresh();
         this.chatController.reset();
     }
