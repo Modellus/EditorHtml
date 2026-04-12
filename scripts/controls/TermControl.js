@@ -230,10 +230,11 @@ class TermControl {
         const selectHost = $("<div>").addClass("term-packed-control__select");
         const displayModeValue = baseShape.properties[displayModeProperty] ?? "none";
         const isVisible = displayModeValue !== false && displayModeValue !== "none";
+        let visibilityCheckbox = null;
         if (showVisibilityToggle) {
             const buttonHost = $("<div>").addClass("term-packed-control__button");
             control.append(buttonHost);
-            TermControl.createVisibilityCheckbox(buttonHost, isVisible, value => {
+            visibilityCheckbox = TermControl.createVisibilityCheckbox(buttonHost, isVisible, value => {
                 baseShape.setPropertyCommand(displayModeProperty, value ? "nameValue" : "none");
                 baseShape.board.markDirty(baseShape);
             });
@@ -308,7 +309,7 @@ class TermControl {
         });
         const termControlHost = termControl.createHost();
         selectHost.append(termControlHost);
-        return { control: control, termControl: termControl };
+        return { control: control, termControl: termControl, visibilityCheckbox: visibilityCheckbox };
     }
 
     static getShapeCaseVisibilityConfig(shape, normalizeTermValue = value => TermControl.normalizeTermValue(value)) {
