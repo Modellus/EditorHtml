@@ -102,7 +102,7 @@ class ValueShape extends BaseShape {
         return super.buildTermDisplayLabel(entry);
     }
 
-    getClipId() {
+    getContentClipId() {
         return `clip-value-${this.id}`;
     }
 
@@ -234,13 +234,13 @@ class ValueShape extends BaseShape {
         this.caseIconElement = icon;
         const defs = this.board.createSvgElement("defs");
         const clipPath = this.board.createSvgElement("clipPath");
-        clipPath.setAttribute("id", this.getClipId());
+        clipPath.setAttribute("id", this.getContentClipId());
         clipPath.setAttribute("clipPathUnits", "userSpaceOnUse");
         this.contentClipRect = this.board.createSvgElement("rect");
         clipPath.appendChild(this.contentClipRect);
         defs.appendChild(clipPath);
         const clippedContent = this.board.createSvgElement("g");
-        clippedContent.setAttribute("clip-path", `url(#${this.getClipId()})`);
+        clippedContent.setAttribute("clip-path", `url(#${this.getContentClipId()})`);
         clippedContent.appendChild(this.valueText);
         clippedContent.appendChild(this.caseIconHost);
         this.valueEditorHost = this.board.createSvgElement("foreignObject");
