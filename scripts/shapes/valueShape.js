@@ -76,6 +76,22 @@ class ValueShape extends BaseShape {
         return items;
     }
 
+    populateShapeColorMenuSections(sections) {
+        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        sections[0].items.push({
+            text: bgLabel,
+            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
+            buildControl: $p => $p.append(this._bgColorPicker)
+        });
+    }
+
+    refreshShapeColorToolbarControl() {
+        super.refreshShapeColorToolbarControl();
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+    }
+
     populateTermsMenuSections(listItems) {
         listItems.push({ text: "Term", stacked: true, buildControl: $p => $p.append(this._termControl) });
     }
