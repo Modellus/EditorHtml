@@ -350,6 +350,7 @@ class Shell  {
     openModel(model) {
         this.deserialise(JSON.parse(model));
         this.reset();
+        this.topToolbar.showAboutPopupIfNeeded();
         this.calculator.stop();
         this.calculator.calculate();
         this.board.refresh();

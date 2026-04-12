@@ -12,6 +12,7 @@ class TopToolbar {
         this.rulerButton = null;
         this.protractorButton = null;
         this.gaugeButton = null;
+        this._aboutAnimationIntervalId = null;
         this._create();
     }
 
@@ -279,22 +280,35 @@ class TopToolbar {
                     $("#feedback-popup").dxPopup("instance").show();
             }
         }).dxContextMenu("instance");
+        const translations = this.shell.board.translations;
         $("#about-popup").dxPopup({
-            title: "About Modellus",
+            title: translations.get("About Title"),
             visible: false,
             width: 460,
             height: "auto",
             showCloseButton: true,
             dragEnabled: false,
             shading: true,
+            onShowing: () => this._startAboutAnimation(),
+            onHiding: () => this._stopAboutAnimation(),
             contentTemplate: contentElement => {
                 $(contentElement).html(`
-                    <div style="text-align: center; margin-bottom: 16px">
-                        <img src="scripts/themes/modellus.svg" alt="Modellus" style="height: 48px">
+                    <div style="overflow: hidden; margin-bottom: 12px">
+                        <img src="scripts/themes/modellus.svg" alt="Modellus" style="float: left; height: 48px; margin: 0 12px 4px 0">
+                        <p style="text-align: justify; margin: 0">${translations.get("About Description")}</p>
                     </div>
-                    <p style="text-align: justify">This version of Modellus is still in <strong>beta</strong> and is continuously evolving.</p>
-                    <p style="text-align: justify">Modellus is an interactive modelling tool that allows students and teachers to create, explore and share mathematical models of physical and natural phenomena. It bridges the gap between equations and visual understanding, making science and mathematics more accessible and engaging.</p>
-                    <p style="text-align: center">Designed with <span class="about-heart">&hearts;</span> for education</p>`);
+                    <div style="overflow: hidden; margin-bottom: 12px; margin-top: 20px">
+                        <img id="about-character-img" src="" alt="" style="float: right; height: 80px; margin: 0 0 4px 12px">
+                        <p style="text-align: justify; margin: 0">${translations.get("About Beta")}</p>
+                    </div>
+                    <div id="about-understand-button" style="display: flex; justify-content: center; margin-top: 16px"></div>
+                    <p style="text-align: center; margin-top: 16px">${translations.get("About Tagline")}</p>`);
+                $("#about-understand-button").dxButton({
+                    text: translations.get("About Understand"),
+                    icon: "fa-light fa-check",
+                    type: "default",
+                    onClick: () => $("#about-popup").dxPopup("instance").hide()
+                });
             }
         });
         $("#feedback-popup").dxPopup({
@@ -335,6 +349,50 @@ class TopToolbar {
         this.rulerButton = $("#ruler-button").dxButton("instance");
         this.protractorButton = $("#protractor-button").dxButton("instance");
         this.gaugeButton = $("#gauge-button").dxButton("instance");
+    }
+
+    showAboutPopup() {
+        $("#about-popup").dxPopup("instance").show();
+    }
+
+    _startAboutAnimation() {
+        const idleCharacters = [
+            { name: "giraffe", animation: { folder: "idle", frames: 40, startIndex: 1, filePrefix: "giraffe_idle" } },
+            { name: "bird", animation: { folder: "idle", frames: 40, startIndex: 1, filePrefix: "bird_idle" } }
+        ];
+        const character = idleCharacters[Math.floor(Math.random() * idleCharacters.length)];
+        const img = document.getElementById("about-character-img");
+        if (!img)
+            return;
+        let frameIndex = character.animation.startIndex;
+        img.src = `resources/characters/${character.name}/${character.animation.folder}/${character.animation.filePrefix}${frameIndex}.png`;
+        this._aboutAnimationIntervalId = setInterval(() => {
+            frameIndex++;
+            if (frameIndex > character.animation.startIndex + character.animation.frames - 1)
+                frameIndex = character.animation.startIndex;
+            img.src = `resources/characters/${character.name}/${character.animation.folder}/${character.animation.filePrefix}${frameIndex}.png`;
+        }, 80);
+    }
+
+    _stopAboutAnimation() {
+        if (this._aboutAnimationIntervalId === null)
+            return;
+        clearInterval(this._aboutAnimationIntervalId);
+        this._aboutAnimationIntervalId = null;
+    }
+
+    showAboutPopupIfNeeded() {
+        const modelId = this.shell.getCurrentModelId();
+        const storageKey = modelId ? `mp.about_seen.${modelId}` : null;
+        if (storageKey && localStorage.getItem(storageKey))
+            return;
+        if (!storageKey && sessionStorage.getItem("mp.about_seen"))
+            return;
+        $("#about-popup").dxPopup("instance").show();
+        if (storageKey)
+            localStorage.setItem(storageKey, "1");
+        else
+            sessionStorage.setItem("mp.about_seen", "1");
     }
 
     _buildShapeTreeItems() {

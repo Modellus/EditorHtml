@@ -92,7 +92,12 @@ class BaseTranslations {
                 "Clear Data": "Limpar dados",
                 "Education Level": "Nível de ensino",
                 "Mid School": "Básico",
-                "University": "Universitário"
+                "University": "Universitário",
+                "About Title": "Sobre o Modellus",
+                "About Beta": "Esta versão do Modellus ainda está na fase <span style=\"background:#e84c3d;color:white;font-size:0.75em;font-weight:bold;padding:1px 6px;border-radius:3px;vertical-align:middle;text-transform:uppercase\">beta</span> e está em constante evolução, o que significa que novas funcionalidades são adicionadas e erros são corrigidos&hellip; e às vezes novos erros aparecem como convidados indesejados. Tentamos manter tudo o mais estável possível, mas se algo se comportar de forma estranha (ou começar a ter personalidade própria), diz-nos usando o ícone <span class=\"fa-light fa-circle-question\" style=\"font-size:0.9em\"></span> na barra de ferramentas no canto superior direito.",
+                "About Description": "O Modellus é uma ferramenta de modelação interativa que te permite construir, explorar e partilhar modelos matemáticos de fenómenos do mundo real. Transforma equações em visuais dinâmicos, para que em vez de apenas olhares para fórmulas, possas vê-las em ação, tornando a ciência e a matemática mais intuitivas, envolventes e até um bocadinho divertidas.",
+                "About Tagline": "Feito com <span class=\"about-heart\">&hearts;</span> para a educação",
+                "About Understand": "Compreendo"
             };
         this.languages["en-US"] =
             {
@@ -185,7 +190,12 @@ class BaseTranslations {
                 "Education Level": "Education Level",
                 "Mid School": "Mid School",
                 "University": "University",
-                "Select": "Select"
+                "Select": "Select",
+                "About Title": "About Modellus",
+                "About Beta": "This version of Modellus is still in <span style=\"background:#e84c3d;color:white;font-size:0.75em;font-weight:bold;padding:1px 6px;border-radius:3px;vertical-align:middle;text-transform:uppercase\">beta</span> and constantly evolving, which means new features are added and bugs are fixed&hellip; and sometimes new bugs sneak in like uninvited guests. We try to keep everything as stable as possible, but if something behaves strangely, let us know using the <span class=\"fa-light fa-circle-question\" style=\"font-size:0.9em\"></span> toolbar icon on the top right.",
+                "About Description": "Modellus is an interactive modelling tool that lets you build, explore and share mathematical models of real-world phenomena. It turns equations into dynamic visuals, so instead of just staring at formulas, you can actually see them in action, making science and mathematics more intuitive and engaging.",
+                "About Tagline": "Designed with <span class=\"about-heart\">&hearts;</span> for education",
+                "About Understand": "I understand"
             };
     }
 
