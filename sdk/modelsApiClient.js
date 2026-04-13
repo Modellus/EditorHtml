@@ -298,7 +298,6 @@ export class ModelsApiClient {
     const response = await fetch(`${this.apiBaseUrl}/notifications/unread_count`, { headers });
     if (!response.ok) throw new Error(`Fetch unread count failed (${response.status})`);
     const data = await response.json();
-    console.log("[notifications] fetchUnreadCount raw response:", data);
     return data?.count || 0;
   }
 
@@ -342,6 +341,16 @@ export class ModelsApiClient {
     const response = await fetch(`${this.apiBaseUrl}/users/${encodeURIComponent(userId)}`, { headers });
     if (response.status === 404) return null;
     if (!response.ok) throw new Error(`Fetch user failed (${response.status})`);
+    return await response.json();
+  }
+
+  async updateUser(userId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/users/${encodeURIComponent(userId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update user failed (${response.status})`);
     return await response.json();
   }
 

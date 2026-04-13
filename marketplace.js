@@ -1,5 +1,8 @@
 import { ModelsApiClient } from "./sdk/modelsApiClient.js";
 import { UserSdk } from "./sdk/userSdk.js";
+import { ProfileController } from "./scripts/marketplace/profileController.js";
+import { countryItems } from "./scripts/marketplace/profile.js";
+import { MarketplaceTranslations } from "./scripts/marketplace/translations.js";
 
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
 const sessionKey = window.modellus?.auth?.sessionKey || "mp.session";
@@ -76,6 +79,12 @@ class ModelsApp {
     }
     if (!this.userSdk.ensureAuthenticated(this.state))
       return;
+    this.translations = new MarketplaceTranslations(this.state.user?.preferredLanguage);
+    if (this.translations.language !== "en-US" && window.DevExpress?.localization) {
+      DevExpress.localization.loadMessages(MarketplaceTranslations.buildDevExtremeMessages());
+      DevExpress.localization.locale(MarketplaceTranslations.dxMessagesLocale);
+    }
+    this.profileController = new ProfileController(this.apiClient, this.userSdk, this.state, this.translations);
     this.cardViewInstance = null;
     this.drawerInstance = null;
     this.treeViewInstance = null;
@@ -107,7 +116,7 @@ class ModelsApp {
     this.initDeletePopup();
     this.userSdk.refreshState(this.state);
     this.userSdk.startSessionRefresh(apiBase);
-    this.loadModels();
+    this.loadModels().then(() => this.checkProfileComplete());
     this.loadUnreadNotificationCount();
   }
   initDeletePopup() {
@@ -121,7 +130,7 @@ class ModelsApp {
     this.deletePopupInstance = new DevExpress.ui.dxPopup(popupHost, {
       visible: false,
       showTitle: true,
-      title: "Delete model?",
+      title: this.translations.get("Delete model?"),
       width: 360,
       height: "auto",
       dragEnabled: false,
@@ -151,9 +160,9 @@ class ModelsApp {
           location: "after",
           widget: "dxButton",
           options: {
-            elementAttr: { id: "nav-new-model", title: "Create model" },
+            elementAttr: { id: "nav-new-model", title: this.translations.get("Create model") },
             stylingMode: "text",
-            text: "Create",
+            text: this.translations.get("Create"),
             icon: "fa-light fa-plus"
           }
         },
@@ -177,11 +186,24 @@ class ModelsApp {
           options: {
             stylingMode: "text",
             elementAttr: { id: "user-menu", class: "user-menu" },
-            items: [{ id: "logout", text: "Logout", icon: "fa-light fa-arrow-left-to-bracket" }],
+            items: [
+              { id: "profile", text: this.translations.get("My Profile"), icon: "fa-light fa-user" },
+              { id: "logout", text: this.translations.get("Logout"), icon: "fa-light fa-arrow-left-to-bracket" }
+            ],
             keyExpr: "id",
             displayExpr: "text",
-            onItemClick: () => this.userSdk.logout(),
-            dropDownOptions: { width: "auto", minWidth: 140 },
+            onItemClick: event => {
+              if (event.itemData.id === "profile")
+                this.profileController.show();
+              else
+                this.userSdk.logout();
+            },
+            dropDownOptions: { width: "auto", minWidth: 140, wrapperAttr: { style: "font-size:12px" } },
+            itemTemplate: (itemData, itemIndex, itemElement) => {
+              const host = itemElement.get(0);
+              const iconMarkup = itemData.icon ? `<i class="${itemData.icon}" style="font-size:12px;width:14px;text-align:center"></i>` : "";
+              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:0.5rem;font-size:12px">${iconMarkup}${itemData.text}</span>`;
+            },
             template: (_, contentElement) => {
               const host = contentElement.get(0);
               host.innerHTML = `<img class="user-menu-avatar" alt="User avatar">`;
@@ -272,8 +294,8 @@ class ModelsApp {
       cardsPerRow: 4,
       cardMinWidth: 125,
       columns: [
-        { dataField: "title", caption: "Title" },
-        { dataField: "description", caption: "Description" }
+        { dataField: "title", caption: this.translations.get("Title") },
+        { dataField: "description", caption: this.translations.get("Description") }
       ],
       cardTemplate: (cardData, cardElement) => {
         const host = cardElement.get(0);
@@ -284,11 +306,11 @@ class ModelsApp {
         const thumbnailSrc = this.getModelThumbnailSource(data.thumbnail);
         const educationLookupId = data.education_level_id;
         const scienceLookupId = data.science_id;
-        const educationLabel = data.education_level || "Uncategorized";
-        const scienceLabel = data.science || "Uncategorized";
+        const educationLabel = data.education_level || this.translations.get("Uncategorized");
+        const scienceLabel = data.science || this.translations.get("Uncategorized");
         const educationColor = data.education_level_color || "#8b5cf6";
         const scienceColor = data.science_color || "#0ea5e9";
-        const descriptionLabel = this.getModelDescriptionText(data.description) || "No description provided.";
+        const descriptionLabel = this.getModelDescriptionText(data.description) || this.translations.get("No description provided.");
         const escapedEducationLabel = this.escapeHtml(educationLabel);
         const escapedScienceLabel = this.escapeHtml(scienceLabel);
         const escapedDescriptionLabel = this.escapeHtml(descriptionLabel);
@@ -302,18 +324,18 @@ class ModelsApp {
             <div class="card-thumb-dropdown science-dropdown-host" data-lookup-id="${scienceLookupId}">${escapedScienceLabel}</div>
           </div>
         `;
-        const thumbnailMarkup = thumbnailSrc ? `<div class="card-thumb-wrap"><img class="card-thumb" src="${thumbnailSrc}" alt="${data.title || "Model thumbnail"}">${taxonomyDropDownMarkup}</div>` : "";
+        const thumbnailMarkup = thumbnailSrc ? `<div class="card-thumb-wrap"><img class="card-thumb" src="${thumbnailSrc}" alt="${this.escapeHtml(data.title || "")}">${taxonomyDropDownMarkup}</div>` : "";
         const cardMarkup = `
           <div class="card-tile" data-model-id="${data.id || ""}">
             ${thumbnailMarkup}
             <div class="card-actions">
-              <button class="delete-button" aria-label="Delete model">
+              <button class="delete-button" aria-label="${this.translations.get("Delete model")}">
                 <i class="fa-light fa-trash-can trash" aria-hidden="true"></i>
                 <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
               </button>
             </div>
             <div class="card-body">
-              <h3 class="card-title">${data.title || "Untitled model"}</h3>
+              <h3 class="card-title">${this.escapeHtml(data.title) || this.translations.get("Untitled model")}</h3>
               <p class="card-desc">${escapedDescriptionLabel}</p>
               <div class="card-meta">
                 ${creatorName ? `<div class="card-creator">${creatorAvatar ? `<img class="card-creator-avatar" src="${creatorAvatar}" alt="">` : ""}<span class="card-creator-name">${creatorName}</span></div>` : ""}
@@ -323,15 +345,15 @@ class ModelsApp {
                 </div>
               </div>
               <div class="card-meta-actions">
-                <button class="favorite-button${isFavorite ? " is-favorite" : ""}" aria-label="${isFavorite ? "Unfavorite" : "Favorite"}">
+                <button class="favorite-button${isFavorite ? " is-favorite" : ""}" aria-label="${isFavorite ? this.translations.get("Unfavorite action") : this.translations.get("Favorite action")}">
                   <i class="${isFavorite ? "fa-solid fa-star favorite-icon" : "fa-regular fa-star favorite-icon"}" aria-hidden="true"></i>
                 </button>
-                <button class="pick-button${isPicked ? " is-picked" : ""}" aria-label="${isPicked ? "Remove from library" : "Add to library"}" title="${isPicked ? "In library" : "Add to library"}">
+                <button class="pick-button${isPicked ? " is-picked" : ""}" aria-label="${isPicked ? this.translations.get("Remove from library") : this.translations.get("Add to library")}" title="${isPicked ? this.translations.get("In library") : this.translations.get("Add to library")}">
                   <i class="${isPicked ? "fa-solid fa-bookmark pick-icon" : "fa-regular fa-bookmark pick-icon"}" aria-hidden="true"></i>
                 </button>
               </div>
             </div>
-            <button class="visibility-button${isPublic ? " is-public" : ""}" aria-label="${isPublic ? "Set private" : "Set public"}" title="${isPublic ? "Public" : "Private"}">
+            <button class="visibility-button${isPublic ? " is-public" : ""}" aria-label="${isPublic ? this.translations.get("Set private") : this.translations.get("Set public")}" title="${isPublic ? this.translations.get("Public") : this.translations.get("Private")}">
               <i class="${isPublic ? "fa-light fa-lock-open" : "fa-light fa-lock"} visibility-icon" aria-hidden="true"></i>
             </button>
           </div>
@@ -384,7 +406,7 @@ class ModelsApp {
                 data.education_level_color = event.itemData.color || data.education_level_color;
                 this.loadModels(this.state.selectedTreeNodeId);
               } catch (error) {
-                this.setStatus(error && error.message ? error.message : "Failed to update model metadata.", true);
+                this.setStatus(error && error.message ? error.message : this.translations.get("Failed to update model metadata."), true);
               }
             }
           });
@@ -417,7 +439,7 @@ class ModelsApp {
                 data.science_color = event.itemData.color || data.science_color;
                 this.loadModels(this.state.selectedTreeNodeId);
               } catch (error) {
-                this.setStatus(error && error.message ? error.message : "Failed to update model metadata.", true);
+                this.setStatus(error && error.message ? error.message : this.translations.get("Failed to update model metadata."), true);
               }
             }
           });
@@ -545,16 +567,16 @@ class ModelsApp {
     if (!confirmed) return;
     const dataSource = this.maintenanceGridInstance.getDataSource();
     const store = dataSource.store();
-    this.setStatus("Deleting selected items…");
+    this.setStatus(this.translations.get("Deleting selected items…"));
     try {
       for (let selectedRowIndex = 0; selectedRowIndex < selectedRowKeys.length; selectedRowIndex++) {
         await store.remove(selectedRowKeys[selectedRowIndex]);
       }
       await dataSource.reload();
       this.maintenanceGridInstance.clearSelection();
-      this.setStatus("Selected items deleted.");
+      this.setStatus(this.translations.get("Selected items deleted."));
     } catch (error) {
-      this.setStatus(error?.message || "Failed to delete selected items.", true);
+      this.setStatus(error?.message || this.translations.get("Failed to delete selected items."), true);
     }
   }
 
@@ -576,9 +598,9 @@ class ModelsApp {
         selection: { mode: "multiple", showCheckBoxesMode: "always" },
         paging: { enabled: true, pageSize: 12 },
         pager: { showPageSizeSelector: true, allowedPageSizes: [12, 24, 48], showInfo: true },
-        searchPanel: { visible: true, width: 280, placeholder: "Search..." },
+        searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search...") },
         export: { enabled: true },
-        onExporting: event => this.exportGridToExcel(event, maintenanceType === "education" ? "Education Levels" : "Sciences"),
+        onExporting: event => this.exportGridToExcel(event, maintenanceType === "education" ? this.translations.get("Education Levels") : this.translations.get("Sciences")),
         editing: {
           mode: "cell",
           allowAdding: true,
@@ -595,7 +617,7 @@ class ModelsApp {
               locateInMenu: "always",
               widget: "dxButton",
               options: {
-                text: "Delete selected",
+                text: this.translations.get("Delete selected"),
                 type: "danger",
                 stylingMode: "contained",
                 icon: "fa-light fa-trash-can",
@@ -606,14 +628,14 @@ class ModelsApp {
         },
         columns: [
           { dataField: "id", caption: "ID", allowEditing: false, width: 110 },
-          { dataField: "name", caption: "Name", validationRules: [{ type: "required" }] },
+          { dataField: "name", caption: this.translations.get("Name"), validationRules: [{ type: "required" }] },
           {
             dataField: "icon",
-            caption: "Icon",
+            caption: this.translations.get("Icon"),
             cellTemplate: (cellElement, cellInfo) => this.renderFontAwesomeIconCell(cellElement, cellInfo.value),
             editCellTemplate: (cellElement, cellInfo) => this.renderFontAwesomeIconEditor(cellElement, cellInfo)
           },
-          { dataField: "color", caption: "Color" }
+          { dataField: "color", caption: this.translations.get("Color") }
         ]
       });
       return;
@@ -664,12 +686,12 @@ class ModelsApp {
         selection: { mode: "single" },
         paging: { enabled: true, pageSize: 20 },
         pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
-        searchPanel: { visible: true, width: 280, placeholder: "Search..." },
+        searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search...") },
         sorting: { mode: "multiple" },
         filterRow: { visible: true },
         columnChooser: { enabled: true, mode: "select" },
         export: { enabled: true },
-        onExporting: event => this.exportGridToExcel(event, "Models"),
+        onExporting: event => this.exportGridToExcel(event, this.translations.get("Models")),
         columns: [
           { dataField: "id", caption: "ID", visible: false },
           {
@@ -702,10 +724,10 @@ class ModelsApp {
               });
             }
           },
-          { dataField: "title", caption: "Title" },
+          { dataField: "title", caption: this.translations.get("Title") },
           {
             dataField: "description",
-            caption: "Description",
+            caption: this.translations.get("Description"),
             width: 220,
             cellTemplate: (cellElement, cellInfo) => {
               const plainText = this.getModelDescriptionText(cellInfo.value);
@@ -715,7 +737,7 @@ class ModelsApp {
           },
           {
             dataField: "creator_name",
-            caption: "Creator",
+            caption: this.translations.get("Creator"),
             width: 160,
             cellTemplate: (cellElement, cellInfo) => {
               const name = this.escapeHtml(cellInfo.data.creator_name || "");
@@ -727,10 +749,10 @@ class ModelsApp {
               </div>`;
             }
           },
-          { dataField: "education_level", caption: "Level", width: 130 },
-          { dataField: "science", caption: "Science", width: 130 },
+          { dataField: "education_level", caption: this.translations.get("Level"), width: 130 },
+          { dataField: "science", caption: this.translations.get("Science"), width: 130 },
           {
-            caption: "Fav",
+            caption: this.translations.get("Fav"),
             width: 50,
             allowFiltering: false,
             allowSorting: false,
@@ -748,7 +770,7 @@ class ModelsApp {
             }
           },
           {
-            caption: "Library",
+            caption: this.translations.get("Library column"),
             width: 60,
             allowFiltering: false,
             allowSorting: false,
@@ -759,7 +781,7 @@ class ModelsApp {
           },
           {
             dataField: "is_public",
-            caption: "Public",
+            caption: this.translations.get("Public"),
             width: 70,
             allowFiltering: false,
             cellTemplate: (cellElement, cellInfo) => {
@@ -775,8 +797,8 @@ class ModelsApp {
               });
             }
           },
-          { dataField: "createdAt", caption: "Created", width: 130, dataType: "date" },
-          { dataField: "lastModified", caption: "Modified", width: 130, dataType: "date" },
+          { dataField: "createdAt", caption: this.translations.get("Created"), width: 130, dataType: "date" },
+          { dataField: "lastModified", caption: this.translations.get("Modified"), width: 130, dataType: "date" },
           {
             caption: "",
             width: 40,
@@ -802,17 +824,17 @@ class ModelsApp {
           const link = modelUrl.toString();
           event.items = [
             {
-              text: "Open",
+              text: this.translations.get("Open"),
               icon: "fa-light fa-arrow-up-right-from-square",
               onItemClick: () => this.openModel(model)
             },
             {
-              text: "Open in new tab",
+              text: this.translations.get("Open in new tab"),
               icon: "fa-light fa-up-right-from-square",
               onItemClick: () => window.open(link, "_blank")
             },
             {
-              text: "Copy link",
+              text: this.translations.get("Copy link"),
               icon: "fa-light fa-link",
               onItemClick: () => navigator.clipboard.writeText(link)
             }
@@ -855,11 +877,11 @@ class ModelsApp {
         selection: { mode: "single" },
         paging: { enabled: true, pageSize: 20 },
         pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
-        searchPanel: { visible: true, width: 280, placeholder: "Search..." },
+        searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search...") },
         sorting: { mode: "multiple" },
         filterRow: { visible: true },
         export: { enabled: true },
-        onExporting: event => this.exportGridToExcel(event, "Users"),
+        onExporting: event => this.exportGridToExcel(event, this.translations.get("Users")),
         columns: [
           { dataField: "id", caption: "ID", visible: false },
           {
@@ -875,10 +897,35 @@ class ModelsApp {
                 : `<i class="fa-light fa-user-circle" style="font-size:24px;color:#9ca3af"></i>`;
             }
           },
-          { dataField: "name", caption: "Name" },
-          { dataField: "email", caption: "Email" },
-          { dataField: "lastLogin", caption: "Last Login", width: 160, dataType: "date" },
-          { dataField: "createdAt", caption: "Created", width: 160, dataType: "date" }
+          { dataField: "name", caption: this.translations.get("Name") },
+          { dataField: "email", caption: this.translations.get("Email") },
+          {
+            dataField: "role",
+            caption: this.translations.get("Role"),
+            width: 100,
+            cellTemplate: (cellElement, cellInfo) => {
+              const role = cellInfo.value;
+              if (!role) return;
+              const isTeacher = role === "teacher";
+              const icon = isTeacher ? "fa-light fa-chalkboard-user" : "fa-light fa-user-graduate";
+              const label = isTeacher ? this.translations.get("Teacher") : this.translations.get("Student");
+              cellElement.get(0).innerHTML = `<span style="display:inline-flex;align-items:center;gap:0.35rem"><i class="${icon}" style="font-size:12px"></i>${label}</span>`;
+            }
+          },
+          {
+            dataField: "country",
+            caption: this.translations.get("Country"),
+            width: 160,
+            cellTemplate: (cellElement, cellInfo) => {
+              const code = cellInfo.value;
+              if (!code) return;
+              const countryItem = countryItems.find(item => item.value === code);
+              const displayText = countryItem ? countryItem.text : code;
+              cellElement.get(0).innerHTML = `<span>${displayText}</span>`;
+            }
+          },
+          { dataField: "lastLogin", caption: this.translations.get("Last Login"), width: 160, dataType: "date" },
+          { dataField: "createdAt", caption: this.translations.get("Created"), width: 160, dataType: "date" }
         ],
         onRowClick: event => this.showUserFeaturesPopup(event.data)
       });
@@ -917,7 +964,7 @@ class ModelsApp {
         dataSource: enabledFlags,
         keyExpr: "key",
         displayExpr: "key",
-        noDataText: "No features assigned",
+        noDataText: this.translations.get("No features assigned"),
         itemTemplate: (itemData, itemIndex, itemElement) => {
           const itemHost = itemElement.get(0);
           itemHost.innerHTML = `
@@ -944,12 +991,12 @@ class ModelsApp {
         dataSource: disabledFlags,
         valueExpr: "key",
         displayExpr: "key",
-        placeholder: "Select feature flag",
+        placeholder: this.translations.get("Select feature flag"),
         searchEnabled: true,
         showClearButton: true
       });
       new DevExpress.ui.dxButton(addButtonHost, {
-        text: "Add",
+        text: this.translations.get("Add"),
         icon: "fa-light fa-plus",
         type: "default",
         stylingMode: "contained",
@@ -966,7 +1013,7 @@ class ModelsApp {
       });
     };
     if (this.userFeaturesPopupInstance) {
-      this.userFeaturesPopupInstance.option("title", `Features — ${userName}`);
+      this.userFeaturesPopupInstance.option("title", `${this.translations.get("Features")} — ${userName}`);
       this.userFeaturesPopupInstance.option("contentTemplate", contentElement => buildContent(contentElement));
       this.userFeaturesPopupInstance.repaint();
       this.userFeaturesPopupInstance.show();
@@ -975,7 +1022,7 @@ class ModelsApp {
     this.userFeaturesPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
       visible: true,
       showTitle: true,
-      title: `Features — ${userName}`,
+      title: `${this.translations.get("Features")} — ${userName}`,
       width: 480,
       height: "auto",
       maxHeight: "70vh",
@@ -1016,7 +1063,7 @@ class ModelsApp {
     }
     const models = this.getModelsByTreeNodeId(this.state.selectedTreeNodeId);
     this.renderModels(models);
-    this.setStatus(models.length ? "" : "No models found.");
+    this.setStatus(models.length ? "" : this.translations.get("No models found."));
   }
 
   renderModels(items) {
@@ -1024,10 +1071,16 @@ class ModelsApp {
     if (this.cardViewInstance) this.cardViewInstance.option("dataSource", items);
   }
 
+  checkProfileComplete() {
+    const user = this.state.user || {};
+    if (!user.role || !user.country || !user.preferredLanguage)
+      this.profileController.show();
+  }
+
   async loadModels(selectedTreeNodeId = this.state.selectedTreeNodeId) {
     if (!this.userSdk.ensureAuthenticated(this.state))
       return;
-    this.setStatus("Loading models…");
+    this.setStatus(this.translations.get("Loading models…"));
     try {
       this.userSdk.refreshState(this.state);
       this.state.selectedTreeNodeId = selectedTreeNodeId || treeNodeIds.myPersonal;
@@ -1042,7 +1095,7 @@ class ModelsApp {
         this.userSdk.logout();
         return;
       }
-      this.setStatus(error && error.message ? error.message : "Failed to load models.", true);
+      this.setStatus(error && error.message ? error.message : this.translations.get("Failed to load models."), true);
       this.showModelsCardView();
       this.renderModels([]);
     }
@@ -1163,7 +1216,7 @@ class ModelsApp {
       return educationLabel;
     if (model.education_level)
       return model.education_level;
-    return "Uncategorized";
+    return this.translations.get("Uncategorized");
   }
 
   getScienceLabel(model) {
@@ -1172,7 +1225,7 @@ class ModelsApp {
       return scienceLabel;
     if (model.science)
       return model.science;
-    return "Uncategorized";
+    return this.translations.get("Uncategorized");
   }
 
   canAccessMaintenance() {
@@ -1223,7 +1276,7 @@ class ModelsApp {
     const treeData = [
       {
         id: treeNodeIds.myModels,
-        text: "My Models",
+        text: this.translations.get("My Models"),
         iconClass: "fa-light fa-folder-user",
         iconColor: "#2563eb",
         expanded: true,
@@ -1231,21 +1284,21 @@ class ModelsApp {
         items: [
           {
             id: treeNodeIds.myPersonal,
-            text: `Personal (${this.personalModels.length})`,
+            text: `${this.translations.get("Personal")} (${this.personalModels.length})`,
             nodeType: "my-personal",
             iconClass: "fa-light fa-user",
             iconColor: "#2563eb"
           },
           {
             id: treeNodeIds.myFavorite,
-            text: `Favorite (${this.favoriteModels.length})`,
+            text: `${this.translations.get("Favorite")} (${this.favoriteModels.length})`,
             nodeType: "my-favorite",
             iconClass: "fa-light fa-star",
             iconColor: "#f59e0b"
           },
           {
             id: treeNodeIds.myLibrary,
-            text: `Library (${this.libraryModels.length})`,
+            text: `${this.translations.get("Library")} (${this.libraryModels.length})`,
             nodeType: "my-library",
             iconClass: "fa-light fa-bookmark",
             iconColor: "#dc2626"
@@ -1254,7 +1307,7 @@ class ModelsApp {
       },
       {
         id: treeNodeIds.marketplace,
-        text: "Marketplace",
+        text: this.translations.get("Marketplace"),
         iconClass: "fa-light fa-store",
         iconColor: "#16a34a",
         expanded: true,
@@ -1262,7 +1315,7 @@ class ModelsApp {
         items: [
           {
             id: treeNodeIds.marketplaceEducation,
-            text: "Education Levels",
+            text: this.translations.get("Education Levels"),
             iconClass: "fa-light fa-graduation-cap",
             iconColor: "#8b5cf6",
             expanded: true,
@@ -1271,7 +1324,7 @@ class ModelsApp {
           },
           {
             id: treeNodeIds.marketplaceSciences,
-            text: "Sciences",
+            text: this.translations.get("Sciences"),
             iconClass: "fa-light fa-flask",
             iconColor: "#0ea5e9",
             expanded: true,
@@ -1284,7 +1337,7 @@ class ModelsApp {
     if (this.canAccessMaintenance())
       treeData.push({
         id: treeNodeIds.maintenance,
-        text: "Maintenance",
+        text: this.translations.get("Maintenance"),
         iconClass: "fa-light fa-screwdriver-wrench",
         iconColor: "#475569",
         expanded: true,
@@ -1292,35 +1345,35 @@ class ModelsApp {
         items: [
           {
             id: treeNodeIds.maintenanceModels,
-            text: "Models",
+            text: this.translations.get("Models"),
             nodeType: "maintenance-models",
             iconClass: "fa-light fa-cube",
             iconColor: "#475569"
           },
           {
             id: treeNodeIds.maintenanceEducation,
-            text: "Education Levels",
+            text: this.translations.get("Education Levels"),
             nodeType: "maintenance-education",
             iconClass: "fa-light fa-graduation-cap",
             iconColor: "#8b5cf6"
           },
           {
             id: treeNodeIds.maintenanceSciences,
-            text: "Sciences",
+            text: this.translations.get("Sciences"),
             nodeType: "maintenance-sciences",
             iconClass: "fa-light fa-flask",
             iconColor: "#0ea5e9"
           },
           {
             id: treeNodeIds.maintenanceNotifications,
-            text: "Notifications",
+            text: this.translations.get("Notifications"),
             nodeType: "maintenance-notifications",
             iconClass: "fa-light fa-bell",
             iconColor: "#f59e0b"
           },
           {
             id: treeNodeIds.maintenanceUsers,
-            text: "Users",
+            text: this.translations.get("Users"),
             nodeType: "maintenance-users",
             iconClass: "fa-light fa-users",
             iconColor: "#2563eb"
@@ -1433,7 +1486,7 @@ class ModelsApp {
       });
       this.loadModels();
     } catch (error) {
-      this.setStatus(error && error.message ? error.message : "Failed to mark favorite.", true);
+      this.setStatus(error && error.message ? error.message : this.translations.get("Failed to mark favorite."), true);
     }
   }
 
@@ -1449,7 +1502,7 @@ class ModelsApp {
       });
       this.loadModels();
     } catch (error) {
-      this.setStatus(error && error.message ? error.message : "Failed to update library.", true);
+      this.setStatus(error && error.message ? error.message : this.translations.get("Failed to update library."), true);
     }
   }
 
@@ -1457,21 +1510,21 @@ class ModelsApp {
     if (!modelData || !modelData.id) return;
     this.userSdk.refreshState(this.state);
     if (!this.state.session || !this.state.session.token) {
-      this.setStatus("Sign-in required to update visibility.", true);
+      this.setStatus(this.translations.get("Sign-in required to update visibility."), true);
       return;
     }
     if (!this.state.session.userId) {
-      this.setStatus("Missing user id for visibility update.", true);
+      this.setStatus(this.translations.get("Missing user id for visibility update."), true);
       return;
     }
     const nextValue = !(modelData.is_public === true || modelData.is_public === 1);
-    this.setStatus(nextValue ? "Setting public…" : "Setting private…");
+    this.setStatus(nextValue ? this.translations.get("Setting public…") : this.translations.get("Setting private…"));
     try {
       await this.apiClient.updateModelVisibility(modelData.id, nextValue);
-      this.setStatus(nextValue ? "Model is public." : "Model is private.");
+      this.setStatus(nextValue ? this.translations.get("Model is public.") : this.translations.get("Model is private."));
       this.loadModels();
     } catch (error) {
-      this.setStatus(error && error.message ? error.message : "Failed to update visibility.", true);
+      this.setStatus(error && error.message ? error.message : this.translations.get("Failed to update visibility."), true);
     }
   }
 
@@ -1543,30 +1596,30 @@ class ModelsApp {
   async createModel() {
     this.userSdk.refreshState(this.state);
     if (!this.state.session || !this.state.session.token) {
-      this.setStatus("Sign-in required to create a model.", true);
+      this.setStatus(this.translations.get("Sign-in required to create a model."), true);
       return;
     }
     const userId = this.userSdk.getUserId(this.state.session);
     if (!userId) {
-      this.setStatus("Missing user id for model creation.", true);
+      this.setStatus(this.translations.get("Missing user id for model creation."), true);
       return;
     }
-    this.setStatus("Creating model…");
+    this.setStatus(this.translations.get("Creating model…"));
     try {
       const created = await this.apiClient.createModel({
-        title: "Untitled model",
+        title: this.translations.get("Untitled model"),
         description: "",
         type: "model",
         status: "draft",
         createdAt: new Date().toISOString()
       });
-      this.setStatus("Model created.");
+      this.setStatus(this.translations.get("Model created."));
       this.loadModels();
       if (created && created.id) {
         this.openModel(created);
       }
     } catch (error) {
-      this.setStatus(error && error.message ? error.message : "Failed to create model.", true);
+      this.setStatus(error && error.message ? error.message : this.translations.get("Failed to create model."), true);
     }
   }
   async deleteModel(modelData) {
@@ -1575,28 +1628,28 @@ class ModelsApp {
       return;
     this.userSdk.refreshState(this.state);
     if (!this.state.session || !this.state.session.token) {
-      this.setStatus("Sign-in required to delete a model.", true);
+      this.setStatus(this.translations.get("Sign-in required to delete a model."), true);
       return;
     }
     const confirmed = await this.confirmDelete();
     if (!confirmed) return;
-    this.setStatus("Deleting model…");
+    this.setStatus(this.translations.get("Deleting model…"));
     try {
       await this.apiClient.deleteModel(modelId);
-      this.setStatus("Model deleted.");
+      this.setStatus(this.translations.get("Model deleted."));
       this.loadModels();
     } catch (error) {
-      this.setStatus(error && error.message ? error.message : "Failed to delete model.", true);
+      this.setStatus(error && error.message ? error.message : this.translations.get("Failed to delete model."), true);
     }
   }
   confirmDelete() {
-    if (!this.deletePopupInstance) return Promise.resolve(window.confirm("Delete this model?"));
+    if (!this.deletePopupInstance) return Promise.resolve(window.confirm(this.translations.get("Delete model?")));
     return new Promise(resolve => {
       this.deletePopupInstance.option("contentTemplate", contentElement => {
         const host = contentElement.get(0);
         host.innerHTML = `
           <div class="delete-popup-content">
-            <p style="margin:0 0 1rem">This action cannot be undone.</p>
+            <p style="margin:0 0 1rem">${this.translations.get("This action cannot be undone.")}</p>
             <div class="delete-popup-buttons" style="display:flex;justify-content:center;gap:0.5rem">
               <div class="delete-popup-cancel"></div>
               <div class="delete-popup-confirm"></div>
@@ -1607,14 +1660,14 @@ class ModelsApp {
         const confirmButtonHost = host.querySelector(".delete-popup-confirm");
         if (!cancelButtonHost || !confirmButtonHost) return;
         $(cancelButtonHost).dxButton({
-          text: "Cancel",
+          text: this.translations.get("Cancel"),
           onClick: () => {
             this.deletePopupInstance.hide();
             resolve(false);
           }
         });
         $(confirmButtonHost).dxButton({
-          text: "Delete",
+          text: this.translations.get("Delete"),
           type: "danger",
           onClick: () => {
             this.deletePopupInstance.hide();
@@ -1634,7 +1687,6 @@ class ModelsApp {
   async loadUnreadNotificationCount() {
     try {
       this.unreadNotificationCount = await this.apiClient.fetchUnreadCount();
-      console.log("[notifications] unreadNotificationCount:", this.unreadNotificationCount);
       this.updateBellBadge();
     } catch (error) {
       console.error("[notifications] loadUnreadNotificationCount failed:", error);
@@ -1644,16 +1696,13 @@ class ModelsApp {
   }
   updateBellBadge() {
     const bellHost = this.bellElement || document.querySelector(".notification-bell");
-    console.log("[notifications] updateBellBadge - bellElement:", this.bellElement, "querySelector:", document.querySelector(".notification-bell"), "bellHost:", bellHost, "count:", this.unreadNotificationCount);
     if (!bellHost)
       return;
     const existingBadge = bellHost.querySelector(".bell-badge");
     if (existingBadge)
       existingBadge.remove();
-    if (this.unreadNotificationCount > 0) {
+    if (this.unreadNotificationCount > 0)
       bellHost.insertAdjacentHTML("beforeend", `<span class="bell-badge">${this.unreadNotificationCount}</span>`);
-      console.log("[notifications] badge inserted, bellHost.innerHTML:", bellHost.innerHTML);
-    }
   }
   async navigateToNotifications() {
     if (!this.canAccessMaintenance())
@@ -1709,11 +1758,11 @@ class ModelsApp {
         editing: { mode: "cell", allowUpdating: true, allowDeleting: true, confirmDelete: true },
         paging: { enabled: true, pageSize: 20 },
         pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
-        searchPanel: { visible: true, width: 280, placeholder: "Search..." },
+        searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search...") },
         sorting: { mode: "multiple" },
         filterRow: { visible: true },
         export: { enabled: true },
-        onExporting: event => this.exportGridToExcel(event, "Notifications"),
+        onExporting: event => this.exportGridToExcel(event, this.translations.get("Notifications")),
         columns: [
           { dataField: "id", caption: "ID", visible: false },
           {
@@ -1730,7 +1779,7 @@ class ModelsApp {
           },
           {
             dataField: "status",
-            caption: "Status",
+            caption: this.translations.get("Status"),
             width: 140,
             allowEditing: true,
             cellTemplate: (cellElement, cellInfo) => {
@@ -1752,10 +1801,10 @@ class ModelsApp {
               });
             }
           },
-          { dataField: "title", caption: "Title", allowEditing: false },
+          { dataField: "title", caption: this.translations.get("Title"), allowEditing: false },
           {
             dataField: "message",
-            caption: "Message",
+            caption: this.translations.get("Message"),
             width: 300,
             allowEditing: false,
             cellTemplate: (cellElement, cellInfo) => {
@@ -1763,7 +1812,7 @@ class ModelsApp {
               cellElement.get(0).innerHTML = `<span style="display:block;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${this.escapeHtml(plainText)}">${this.escapeHtml(plainText)}</span>`;
             }
           },
-          { dataField: "created_at", caption: "Date", width: 160, dataType: "date", allowEditing: false },
+          { dataField: "created_at", caption: this.translations.get("Date"), width: 160, dataType: "date", allowEditing: false },
           { type: "buttons", width: 50, buttons: [{ name: "delete", icon: "trash" }] }
         ],
         onCellClick: event => {

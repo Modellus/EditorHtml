@@ -44,7 +44,12 @@ class Shell  {
     }
 
     setDefaults() {
-        this.properties.language = "en-US";
+        try {
+            const storedUser = JSON.parse(localStorage.getItem("mp.user") || "null");
+            const preferredLanguage = storedUser?.preferredLanguage;
+            if (preferredLanguage && preferredLanguage in this.board.translations.languages)
+                this.board.translations.language = preferredLanguage;
+        } catch (_) {}
         this.properties.name = "Model";
         this.properties.description = "";
         this.properties.backgroundColor = "#FFFFFF";

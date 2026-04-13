@@ -70,15 +70,6 @@ class SettingsController {
                     }
                 },
                 {
-                    colSpan: 2,
-                    dataField: "language",
-                    editorType: "dxSelectBox",
-                    editorOptions: {
-                        items: ["en-US", "pt-BR"],
-                        value: this.shell.properties.language
-                    }
-                },
-                {
                     colSpan: 1,
                     dataField: "backgroundColor",
                     label: {
