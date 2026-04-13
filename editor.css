@@ -887,6 +887,10 @@ math-field {
     justify-content: flex-end;
 }
 
+.mdl-dropdown-grid-full {
+    grid-column: 1 / -1;
+}
+
 .mdl-parent-selector .dx-button-content i,
 .mdl-shape-color-selector .dx-button-content i,
 .mdl-motion-selector .dx-button-content i,

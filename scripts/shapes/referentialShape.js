@@ -336,10 +336,19 @@ class ReferentialShape extends BaseShape {
                     ];
                     const grid = $('<div class="mdl-dropdown-grid">');
                     for (const item of listItems) {
-                        grid.append(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
-                        const control = $('<div class="mdl-dropdown-grid-control">');
-                        item.buildControl(control);
-                        grid.append(control);
+                        if (item.fullWidth) {
+                            const label = $(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
+                            label.css("grid-column", "1 / -1");
+                            grid.append(label);
+                            const fullWidthControl = $('<div class="mdl-dropdown-grid-full">');
+                            item.buildControl(fullWidthControl);
+                            grid.append(fullWidthControl);
+                        } else {
+                            grid.append(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
+                            const control = $('<div class="mdl-dropdown-grid-control">');
+                            item.buildControl(control);
+                            grid.append(control);
+                        }
                     }
                     grid.appendTo(scrollContent);
                 }
@@ -360,6 +369,22 @@ class ReferentialShape extends BaseShape {
         this.refreshDomainBoxes();
     }
 
+    createBackgroundImageDropZoneEditor() {
+        this._backgroundImageDropZoneControl = new ImageControl({
+            imageSource: this.properties.backgroundImageUrl ?? "",
+            accept: "image/*",
+            dropHint: "Drop an image or click to select",
+            onUploadFile: (file, onProgress) => this.board.assetManager.uploadAsset(this.id + "-background", file, file.name, onProgress),
+            onImageChanged: (url) => {
+                this._backgroundImageVersion = Date.now();
+                this._backgroundImageDropZoneControl.setImageSource(`${url}?_v=${this._backgroundImageVersion}`);
+                this.setPropertyCommand("backgroundImageUrl", url);
+            },
+            onImageCleared: () => this.setPropertyCommand("backgroundImageUrl", "")
+        });
+        return this._backgroundImageDropZoneControl.createHost();
+    }
+
     populateShapeColorMenuSections(sections) {
         const bgLabel = this.board.translations.get("Background Color") ?? "Background";
         this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
@@ -367,6 +392,11 @@ class ReferentialShape extends BaseShape {
             text: bgLabel,
             iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
             buildControl: $p => $p.append(this._bgColorPicker)
+        });
+        sections[0].items.push({
+            text: "Background Image",
+            stacked: true,
+            buildControl: $p => $p.append(this.createBackgroundImageDropZoneEditor())
         });
     }
 
@@ -399,6 +429,7 @@ class ReferentialShape extends BaseShape {
         this.properties.showVerticalGrid = true;
         this.properties.equalAxisScales = true;
         this.properties.snapToTicks = false;
+        this.properties.backgroundImageUrl = "";
     }
 
     createElement() {
@@ -406,6 +437,10 @@ class ReferentialShape extends BaseShape {
         this.container = this.board.createSvgElement("rect");
         this.container.setAttribute("stroke-width", 1);
         g.appendChild(this.container);
+        this.backgroundImage = this.board.createSvgElement("image");
+        this.backgroundImage.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        this.backgroundImage.setAttribute("display", "none");
+        g.appendChild(this.backgroundImage);
         this.horizontalAxis = this.board.createSvgElement("line");
         this.horizontalAxis.setAttribute("stroke-width", 1);
         this.horizontalAxis.setAttribute("class", "referential-axis-line");
@@ -492,6 +527,17 @@ class ReferentialShape extends BaseShape {
         this.containerClip.setAttribute("transform", rotationTransform);
         this.container.setAttribute("fill", this.properties.backgroundColor);
         this.applyBorderStroke(this.container, 1);
+        const backgroundImageUrl = this.properties.backgroundImageUrl ?? "";
+        const backgroundImageSrc = backgroundImageUrl && this._backgroundImageVersion
+            ? `${backgroundImageUrl}?_v=${this._backgroundImageVersion}`
+            : backgroundImageUrl;
+        this.backgroundImage.setAttribute("x", position.x);
+        this.backgroundImage.setAttribute("y", position.y);
+        this.backgroundImage.setAttribute("width", this.properties.width);
+        this.backgroundImage.setAttribute("height", this.properties.height);
+        this.backgroundImage.setAttribute("transform", rotationTransform);
+        this.backgroundImage.setAttribute("href", backgroundImageSrc);
+        this.backgroundImage.setAttribute("display", backgroundImageUrl ? "inline" : "none");
         const axisColor = this.properties.axisColor ?? this.properties.foregroundColor;
         this.horizontalAxis.setAttribute("x1", position.x);
         this.horizontalAxis.setAttribute("y1", position.y + this.properties.originY);
