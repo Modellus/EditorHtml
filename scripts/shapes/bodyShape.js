@@ -424,6 +424,15 @@ class BodyShape extends ChildShape {
     }
 
     populateShapeColorMenuSections(sections) {
+        sections[0].items.push({
+            text: "Drop Shadow",
+            buildControl: $p => {
+                $('<div>').dxSwitch({
+                    value: this.properties.dropShadow === true,
+                    onValueChanged: e => this.setPropertyCommand("dropShadow", e.value)
+                }).appendTo($p);
+            }
+        });
         sections.push(
             {
                 text: "Character",
@@ -701,6 +710,7 @@ class BodyShape extends ChildShape {
         this.properties.imageUrl = "";
         this.properties.imageBase64 = "";
         this.properties.characterKey = "";
+        this.properties.dropShadow = false;
         this.properties.nameIsDefault = true;
         this.properties.isPhysical = false;
         this.character = null;
@@ -781,6 +791,9 @@ class BodyShape extends ChildShape {
         this.hitArea.setAttribute("y", position.y - radius);
         this.hitArea.setAttribute("width", diameter);
         this.hitArea.setAttribute("height", diameter);
+        const shadowFilter = this.properties.dropShadow ? "drop-shadow(3px 3px 5px rgba(0,0,0,0.7))" : "";
+        this.image.style.filter = shadowFilter;
+        this.circle.style.filter = shadowFilter;
         const character = this.getSelectedCharacter();
         if (character) {
             this.drawCharacter(position, radius, diameter, character);
