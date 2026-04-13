@@ -152,7 +152,7 @@ class ModelsApp {
             onContentReady: event => $(event.element).removeAttr("title"),
             template: (_, contentElement) => {
               const host = contentElement.get(0);
-              host.innerHTML = `<i class="fa-solid fa-sidebar" style="font-size:16px"></i>`;
+              host.innerHTML = `<i class="fa-solid fa-sidebar mdl-nav-icon"></i>`;
             }
           }
         },
@@ -175,7 +175,7 @@ class ModelsApp {
             onClick: () => this.navigateToNotifications(),
             template: (_, contentElement) => {
               const host = contentElement.get(0);
-              host.innerHTML = `<span class="notification-bell"><i class="fa-light fa-bell" style="font-size:16px"></i></span>`;
+              host.innerHTML = `<span class="notification-bell"><i class="fa-light fa-bell mdl-nav-icon"></i></span>`;
               this.bellElement = host.querySelector(".notification-bell");
             }
           }
@@ -198,11 +198,11 @@ class ModelsApp {
               else
                 this.userSdk.logout();
             },
-            dropDownOptions: { width: "auto", minWidth: 140, wrapperAttr: { style: "font-size:12px" } },
+            dropDownOptions: { width: "auto", minWidth: 140, wrapperAttr: { class: "mdl-user-menu-dropdown" } },
             itemTemplate: (itemData, itemIndex, itemElement) => {
               const host = itemElement.get(0);
-              const iconMarkup = itemData.icon ? `<i class="${itemData.icon}" style="font-size:12px;width:14px;text-align:center"></i>` : "";
-              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:0.5rem;font-size:12px">${iconMarkup}${itemData.text}</span>`;
+              const iconMarkup = itemData.icon ? `<i class="${itemData.icon} mdl-menu-icon"></i>` : "";
+              host.innerHTML = `<span class="mdl-menu-item-content">${iconMarkup}${itemData.text}</span>`;
             },
             template: (_, contentElement) => {
               const host = contentElement.get(0);
@@ -759,7 +759,7 @@ class ModelsApp {
             cellTemplate: (cellElement, cellInfo) => {
               const isFavorite = this.isFavoriteValue(cellInfo.data);
               const host = cellElement.get(0);
-              host.innerHTML = `<i class="${isFavorite ? "fa-solid fa-star" : "fa-regular fa-star"}" style="color:${isFavorite ? "#f59e0b" : "#9ca3af"};font-size:12px;cursor:pointer;"></i>`;
+              host.innerHTML = `<i class="${isFavorite ? "fa-solid fa-star" : "fa-regular fa-star"} mdl-grid-icon" style="color:${isFavorite ? "#f59e0b" : "#9ca3af"};cursor:pointer;"></i>`;
               host.querySelector("i").addEventListener("click", event => {
                 event.stopPropagation();
                 this.toggleFavorite(cellInfo.data, !isFavorite).then(() => {
@@ -776,7 +776,7 @@ class ModelsApp {
             allowSorting: false,
             cellTemplate: (cellElement, cellInfo) => {
               const isPicked = this.isPickedValue(cellInfo.data);
-              cellElement.get(0).innerHTML = `<i class="${isPicked ? "fa-solid fa-bookmark" : "fa-regular fa-bookmark"}" style="color:${isPicked ? "#dc2626" : "#9ca3af"};font-size:12px;"></i>`;
+              cellElement.get(0).innerHTML = `<i class="${isPicked ? "fa-solid fa-bookmark" : "fa-regular fa-bookmark"} mdl-grid-icon" style="color:${isPicked ? "#dc2626" : "#9ca3af"};"></i>`;
             }
           },
           {
@@ -787,7 +787,7 @@ class ModelsApp {
             cellTemplate: (cellElement, cellInfo) => {
               const isPublic = cellInfo.data.is_public === true || cellInfo.data.is_public === 1;
               const host = cellElement.get(0);
-              host.innerHTML = `<i class="${isPublic ? "fa-light fa-lock-open" : "fa-light fa-lock"}" style="color:${isPublic ? "#16a34a" : "#9ca3af"};font-size:12px;cursor:pointer;"></i>`;
+              host.innerHTML = `<i class="${isPublic ? "fa-light fa-lock-open" : "fa-light fa-lock"} mdl-grid-icon" style="color:${isPublic ? "#16a34a" : "#9ca3af"};cursor:pointer;"></i>`;
               host.querySelector("i").addEventListener("click", event => {
                 event.stopPropagation();
                 this.toggleVisibility(cellInfo.data).then(() => {
@@ -806,7 +806,7 @@ class ModelsApp {
             allowSorting: false,
             showInColumnChooser: false,
             cellTemplate: (cellElement, cellInfo) => {
-              cellElement.get(0).innerHTML = `<button class="maintenance-delete-btn" style="border:none;background:none;cursor:pointer;padding:4px;"><i class="fa-light fa-trash-can" style="color:red;font-size:12px;"></i></button>`;
+              cellElement.get(0).innerHTML = `<button class="maintenance-delete-btn" style="border:none;background:none;cursor:pointer;padding:4px;"><i class="fa-light fa-trash-can mdl-grid-icon" style="color:red;"></i></button>`;
               cellElement.get(0).querySelector(".maintenance-delete-btn").addEventListener("click", event => {
                 event.stopPropagation();
                 this.deleteModel(cellInfo.data);
@@ -894,7 +894,7 @@ class ModelsApp {
               const avatar = cellInfo.value || "";
               cellElement.get(0).innerHTML = avatar
                 ? `<img src="${this.escapeHtml(avatar)}" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--c-border)">`
-                : `<i class="fa-light fa-user-circle" style="font-size:24px;color:#9ca3af"></i>`;
+                : `<i class="fa-light fa-user-circle mdl-user-avatar-icon"></i>`;
             }
           },
           { dataField: "name", caption: this.translations.get("Name") },
@@ -909,7 +909,7 @@ class ModelsApp {
               const isTeacher = role === "teacher";
               const icon = isTeacher ? "fa-light fa-chalkboard-user" : "fa-light fa-user-graduate";
               const label = isTeacher ? this.translations.get("Teacher") : this.translations.get("Student");
-              cellElement.get(0).innerHTML = `<span style="display:inline-flex;align-items:center;gap:0.35rem"><i class="${icon}" style="font-size:12px"></i>${label}</span>`;
+              cellElement.get(0).innerHTML = `<span style="display:inline-flex;align-items:center;gap:0.35rem"><i class="${icon} mdl-grid-icon"></i>${label}</span>`;
             }
           },
           {
@@ -944,7 +944,7 @@ class ModelsApp {
     const userName = user.name || user.email || user.id;
     const buildContent = async (contentElement) => {
       const host = contentElement.get ? contentElement.get(0) : contentElement;
-      host.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:2rem"><i class="fa-light fa-spinner fa-spin" style="font-size:1.5rem;color:#6b7280"></i></div>`;
+      host.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:2rem"><i class="fa-light fa-spinner fa-spin mdl-loading-spinner"></i></div>`;
       const allFlags = await this.apiClient.fetchUserFeatureFlags(user.id);
       const enabledFlags = allFlags.filter(flag => flag.is_enabled === 1 || flag.is_enabled === true);
       const disabledFlags = allFlags.filter(flag => flag.is_enabled !== 1 && flag.is_enabled !== true);
@@ -970,10 +970,10 @@ class ModelsApp {
           itemHost.innerHTML = `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem">
               <span style="display:flex;align-items:center;gap:0.5rem">
-                <i class="fa-light fa-key" style="font-size:12px;color:#6b7280"></i>
+                <i class="fa-light fa-key mdl-grid-icon" style="color:#6b7280"></i>
                 <span>${this.escapeHtml(itemData.key)}</span>
               </span>
-              <span class="remove-feature-btn" style="cursor:pointer;padding:2px 6px;border-radius:4px;color:#dc2626;font-size:12px">
+              <span class="remove-feature-btn" style="cursor:pointer;padding:2px 6px;border-radius:4px;color:#dc2626">
                 <i class="fa-light fa-trash-can"></i>
               </span>
             </div>
@@ -1774,7 +1774,7 @@ class ModelsApp {
             allowEditing: false,
             cellTemplate: (cellElement, cellInfo) => {
               const isRead = cellInfo.value === 1;
-              cellElement.get(0).innerHTML = `<i class="${isRead ? "fa-regular fa-envelope-open" : "fa-solid fa-envelope"}" style="color:${isRead ? "#9ca3af" : "#2563eb"};font-size:13px;"></i>`;
+              cellElement.get(0).innerHTML = `<i class="${isRead ? "fa-regular fa-envelope-open" : "fa-solid fa-envelope"} mdl-notification-icon" style="color:${isRead ? "#9ca3af" : "#2563eb"};"></i>`;
             }
           },
           {
@@ -1784,7 +1784,7 @@ class ModelsApp {
             allowEditing: true,
             cellTemplate: (cellElement, cellInfo) => {
               const palette = statusColors[cellInfo.value] || { background: "#f3f4f6", color: "#6b7280" };
-              cellElement.get(0).innerHTML = `<span style="display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:0.75rem;font-weight:600;background:${palette.background};color:${palette.color}">${cellInfo.value || ""}</span>`;
+              cellElement.get(0).innerHTML = `<span class="mdl-status-badge" style="background:${palette.background};color:${palette.color}">${cellInfo.value || ""}</span>`;
             },
             editCellTemplate: (cellElement, cellInfo) => {
               const selectHost = document.createElement("div");

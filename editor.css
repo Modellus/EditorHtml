@@ -95,6 +95,30 @@ body.read-only #model-info-label {
     z-index: 10;
 }
 
+.dx-widget {
+    font-family: "Atma","Assistant", sans-serif;
+    font-size: 15px;
+}
+
+.dx-widget:not(.dx-icon):not(i), .dx-overlay-content, .dx-popup-content,
+      .dx-button-text, .dx-texteditor-input, .dx-list-item-content,
+      .dx-treeview-item-content, .dx-toolbar-item-content,
+      .dx-datagrid-text-content, .dx-selectbox-container,
+      .dx-dropdowneditor-input-wrapper, .dx-tag-content,
+      .dx-dropdowneditor-overlay { 
+        font-family: "Atma", "Inter", sans-serif; 
+        font-size: 15px;
+}
+
+.dx-layout-manager .dx-field-item {
+    font-family: "Atma", "Nunito", sans-serif;
+    font-size: 15px;
+}
+
+.dx-overlay-wrapper {
+    font-size: 15px;
+}
+
 .dx-dropdownbutton-popup-wrapper {
     z-index: 99999 !important;
 }
@@ -1660,42 +1684,42 @@ math-field {
 }
 
 .mid-school math-field {
-    --text-font-family: "Caveat", cursive;
+    --text-font-family: "Indie Flower", cursive;
     font-size: 20px;
 }
 
 .mid-school .ML__latex {
-    font-family: "Caveat", cursive !important;
+    font-family: "Indie Flower", cursive !important;
 }
 
 .mid-school .referential-tick-label {
-    font-family: "Caveat", cursive;
+    font-family: "Indie Flower", cursive;
     font-size: 15px;
 }
 
 .mid-school .mdl-math-input .dx-texteditor-input {
-    font-family: "Caveat", cursive;
+    font-family: "Indie Flower", cursive;
     font-size: 22px;
 }
 
 .mid-school .mdl-preloaded-data-grid .dx-header-row .dx-datagrid-text-content {
-    font-family: "Caveat", cursive;
+    font-family: "Indie Flower", cursive;
     font-size: 22px;
     font-style: normal;
 }
 
 .mid-school .mdl-preloaded-data-grid .dx-data-row td {
-    font-family: "Caveat", cursive;
+    font-family: "Indie Flower", cursive;
     font-size: 18px;
 }
 
 .mid-school .shape-tick-label {
-    font-family: "Caveat", cursive;
+    font-family: "Indie Flower", cursive;
 }
 
 .mid-school #svg text,
 .mid-school #svg tspan {
-    font-family: "Caveat", cursive !important;
+    font-family: "Indie Flower", cursive !important;
 }
 
 .mid-school #svg {
