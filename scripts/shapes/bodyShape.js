@@ -78,18 +78,6 @@ class BodyShape extends ChildShape {
     }
 
     setProperties(properties) {
-        super.setProperties(properties);
-        this.character = this.getSelectedCharacter();
-        if (!this.character && this.properties.characterKey)
-            BodyShape.loadCharactersPromise?.then(() => {
-                this.character = this.getSelectedCharacter();
-                this.synchronizeIdleAnimationTicker();
-                this.board.markDirty(this);
-            });
-        this.synchronizeIdleAnimationTicker();
-    }
-
-    setProperties(properties) {
         if ("isPhysical" in properties) {
             const isPhysical = properties.isPhysical;
             const rest = Object.fromEntries(Object.entries(properties).filter(([key]) => key !== "isPhysical"));
@@ -106,6 +94,13 @@ class BodyShape extends ChildShape {
                 this.dispatchEvent("changed", {});
             }
         }
+        if (!this.character && this.properties.characterKey)
+            BodyShape.loadCharactersPromise?.then(() => {
+                this.character = this.getSelectedCharacter();
+                this.synchronizeIdleAnimationTicker();
+                this.board.markDirty(this);
+            });
+        this.synchronizeIdleAnimationTicker();
     }
 
     setProperty(name, value) {
