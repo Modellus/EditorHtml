@@ -619,6 +619,8 @@ class ChartShape extends BaseShape {
             this._appliedConfig = config;
             this._appliedDataConfig = dataConfig;
         }
+        this.updateValues();
+        this.updateFocus();
     }
 
     draw() {

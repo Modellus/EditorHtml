@@ -1435,6 +1435,7 @@ class BaseShape {
     getClipboardData() {
         const data = this.serialize();
         data.id = undefined;
+        data.properties = Utils.cloneProperties(data.properties);
         data.children = this.children.map(child => {
             const childData = child.getClipboardData();
             childData.parent = undefined;
