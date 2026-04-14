@@ -21,7 +21,8 @@ const treeNodeIds = {
   maintenanceEducation: "maintenance-education",
   maintenanceSciences: "maintenance-sciences",
   maintenanceNotifications: "maintenance-notifications",
-  maintenanceUsers: "maintenance-users"
+  maintenanceUsers: "maintenance-users",
+  maintenanceSystemTemplates: "maintenance-system-templates"
 };
 const fontAwesomeIcons = [
   { value: "", label: "No icon" },
@@ -91,6 +92,8 @@ class ModelsApp {
     this.toolbarInstance = null;
     this.maintenanceGridInstance = null;
     this.maintenanceModelsGridInstance = null;
+    this.systemTemplatesGridInstance = null;
+    this.templatePickerPopupInstance = null;
     this.usersGridInstance = null;
     this.userFeaturesPopupInstance = null;
     this.personalModels = [];
@@ -584,6 +587,7 @@ class ModelsApp {
     if (!this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxDataGrid) return;
     this.disposeCardView();
     this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     const maintenanceStore = this.buildMaintenanceStore(maintenanceType);
@@ -647,6 +651,7 @@ class ModelsApp {
   showModelsCardView() {
     this.disposeMaintenanceGrid();
     this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.ensureCardView();
@@ -658,10 +663,114 @@ class ModelsApp {
     this.maintenanceModelsGridInstance = null;
   }
 
+  disposeSystemTemplatesGrid() {
+    if (!this.systemTemplatesGridInstance) return;
+    this.systemTemplatesGridInstance.dispose();
+    this.systemTemplatesGridInstance = null;
+  }
+
+  async showSystemTemplatesGrid() {
+    if (!this.elements.cardView) return;
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
+    const systemTemplatesStore = new DevExpress.data.CustomStore({
+      key: "id",
+      load: async () => {
+        const models = await this.apiClient.fetchSystemTemplateModels();
+        return this.applyModelLookupLabels(models);
+      }
+    });
+    if (!this.systemTemplatesGridInstance) {
+      this.elements.cardView.innerHTML = "";
+      this.systemTemplatesGridInstance = new DevExpress.ui.dxDataGrid(this.elements.cardView, {
+        dataSource: systemTemplatesStore,
+        keyExpr: "id",
+        height: "100%",
+        showBorders: false,
+        scrolling: { mode: "standard", useNative: true, columnRenderingMode: "standard" },
+        columnAutoWidth: false,
+        allowColumnResizing: true,
+        columnResizingMode: "widget",
+        columnMinWidth: 50,
+        selection: { mode: "single" },
+        paging: { enabled: true, pageSize: 20 },
+        pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
+        searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search...") },
+        sorting: { mode: "multiple" },
+        filterRow: { visible: true },
+        export: { enabled: true },
+        onExporting: event => this.exportGridToExcel(event, this.translations.get("System Templates")),
+        columns: [
+          { dataField: "id", caption: "ID", visible: false },
+          {
+            dataField: "thumbnail",
+            caption: "",
+            width: 60,
+            allowFiltering: false,
+            allowSorting: false,
+            showInColumnChooser: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              const src = this.getModelThumbnailSource(cellInfo.value);
+              if (!src) return;
+              const host = cellElement.get(0);
+              host.innerHTML = `<img src="${src}" style="width:40px;height:24px;object-fit:cover;border-radius:4px;">`;
+            }
+          },
+          { dataField: "title", caption: this.translations.get("Title") },
+          {
+            dataField: "creator_name",
+            caption: this.translations.get("Creator"),
+            width: 160,
+            cellTemplate: (cellElement, cellInfo) => {
+              const name = this.escapeHtml(cellInfo.data.creator_name || "");
+              const avatar = cellInfo.data.creator_avatar || "";
+              const host = cellElement.get(0);
+              host.innerHTML = `<div style="display:flex;align-items:center;gap:6px;overflow:hidden">
+                ${avatar ? `<img src="${avatar}" alt="" style="width:20px;height:20px;border-radius:50%;flex-shrink:0">` : ""}
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+              </div>`;
+            }
+          },
+          { dataField: "education_level", caption: this.translations.get("Level"), width: 130 },
+          { dataField: "science", caption: this.translations.get("Science"), width: 130 },
+          { dataField: "createdAt", caption: this.translations.get("Created"), width: 130, dataType: "date" },
+          { dataField: "lastModified", caption: this.translations.get("Modified"), width: 130, dataType: "date" },
+          {
+            caption: "",
+            width: 50,
+            allowFiltering: false,
+            allowSorting: false,
+            showInColumnChooser: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              const host = cellElement.get(0);
+              host.innerHTML = `<button class="maintenance-delete-btn" title="${this.translations.get("Remove from system templates")}" style="border:none;background:none;cursor:pointer;padding:4px;"><i class="fa-solid fa-layer-group mdl-grid-icon" style="color:#9333ea;"></i></button>`;
+              host.querySelector(".maintenance-delete-btn").addEventListener("click", async event => {
+                event.stopPropagation();
+                try {
+                  await this.apiClient.patchModelSystemTemplate(cellInfo.data.id, false);
+                  this.systemTemplatesGridInstance.refresh();
+                } catch (error) {
+                  this.setStatus(error?.message || this.translations.get("Failed to update system template."), true);
+                }
+              });
+            }
+          }
+        ]
+      });
+      return;
+    }
+    this.systemTemplatesGridInstance.option("dataSource", systemTemplatesStore);
+    this.systemTemplatesGridInstance.refresh();
+  }
+
   async showMaintenanceModelsGrid() {
     if (!this.elements.cardView) return;
     this.disposeCardView();
     this.disposeMaintenanceGrid();
+    this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     const allModelsStore = new DevExpress.data.CustomStore({
@@ -797,6 +906,27 @@ class ModelsApp {
               });
             }
           },
+          {
+            dataField: "is_system_template",
+            caption: this.translations.get("Template"),
+            width: 80,
+            allowFiltering: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              const isSystemTemplate = cellInfo.data.is_system_template === true || cellInfo.data.is_system_template === 1;
+              const host = cellElement.get(0);
+              host.innerHTML = `<i class="${isSystemTemplate ? "fa-solid fa-layer-group" : "fa-light fa-layer-group"} mdl-grid-icon" style="color:${isSystemTemplate ? "#9333ea" : "#9ca3af"};cursor:pointer;" title="${isSystemTemplate ? this.translations.get("Remove from system templates") : this.translations.get("Set as system template")}"></i>`;
+              host.querySelector("i").addEventListener("click", async event => {
+                event.stopPropagation();
+                try {
+                  await this.apiClient.patchModelSystemTemplate(cellInfo.data.id, !isSystemTemplate);
+                  if (this.maintenanceModelsGridInstance)
+                    this.maintenanceModelsGridInstance.refresh();
+                } catch (error) {
+                  this.setStatus(error?.message || this.translations.get("Failed to update system template."), true);
+                }
+              });
+            }
+          },
           { dataField: "createdAt", caption: this.translations.get("Created"), width: 130, dataType: "date" },
           { dataField: "lastModified", caption: this.translations.get("Modified"), width: 130, dataType: "date" },
           {
@@ -860,6 +990,7 @@ class ModelsApp {
     this.disposeCardView();
     this.disposeMaintenanceGrid();
     this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     const usersStore = new DevExpress.data.CustomStore({
       key: "id",
@@ -1042,6 +1173,11 @@ class ModelsApp {
   renderCurrentTreeNode() {
     if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceModels) {
       this.showMaintenanceModelsGrid();
+      this.setStatus("");
+      return;
+    }
+    if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceSystemTemplates) {
+      this.showSystemTemplatesGrid();
       this.setStatus("");
       return;
     }
@@ -1351,6 +1487,13 @@ class ModelsApp {
             iconColor: "#475569"
           },
           {
+            id: treeNodeIds.maintenanceSystemTemplates,
+            text: this.translations.get("System Templates"),
+            nodeType: "maintenance-system-templates",
+            iconClass: "fa-light fa-layer-group",
+            iconColor: "#9333ea"
+          },
+          {
             id: treeNodeIds.maintenanceEducation,
             text: this.translations.get("Education Levels"),
             nodeType: "maintenance-education",
@@ -1604,20 +1747,129 @@ class ModelsApp {
       this.setStatus(this.translations.get("Missing user id for model creation."), true);
       return;
     }
+    this.showTemplatePickerPopup();
+  }
+
+  showTemplatePickerPopup() {
+    let popupHost = document.getElementById("template-picker-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="template-picker-popup"></div>`);
+      popupHost = document.getElementById("template-picker-popup");
+    }
+    if (this.templatePickerPopupInstance) {
+      this.templatePickerPopupInstance.option("contentTemplate", contentElement => this._buildTemplatePickerContent(contentElement));
+      this.templatePickerPopupInstance.repaint();
+      this.templatePickerPopupInstance.show();
+      return;
+    }
+    this.templatePickerPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: this.translations.get("Choose a starting point"),
+      width: 760,
+      height: "auto",
+      maxHeight: "80vh",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => this._buildTemplatePickerContent(contentElement)
+    });
+  }
+
+  async _buildTemplatePickerContent(contentElement) {
+    const host = contentElement.get ? contentElement.get(0) : contentElement;
+    host.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;padding:2rem"><i class="fa-light fa-spinner fa-spin" style="font-size:1.5rem;color:#6b7280"></i></div>`;
+    let templates = [];
+    try {
+      const fetchedTemplates = await this.apiClient.fetchSystemTemplateModels();
+      templates = this.applyModelLookupLabels(fetchedTemplates);
+    } catch (_) {
+      templates = [];
+    }
+    let selectedTemplateId = null;
+    const blankCardMarkup = `
+      <div class="template-picker-card template-picker-card--selected" data-template-id="">
+        <div class="template-picker-card-thumb template-picker-card-thumb--blank">
+          <i class="fa-light fa-file-plus" aria-hidden="true"></i>
+        </div>
+        <div class="template-picker-card-body">
+          <div class="template-picker-card-title">${this.translations.get("Blank model")}</div>
+        </div>
+      </div>
+    `;
+    const templateCardMarkups = templates.map(template => {
+      const src = this.getModelThumbnailSource(template.thumbnail);
+      const thumbContent = src
+        ? `<img src="${src}" alt="${this.escapeHtml(template.title || "")}">`
+        : `<i class="fa-light fa-cube" aria-hidden="true"></i>`;
+      const educationLabel = template.education_level ? `<span class="template-picker-card-tag">${this.escapeHtml(template.education_level)}</span>` : "";
+      const scienceLabel = template.science ? `<span class="template-picker-card-tag">${this.escapeHtml(template.science)}</span>` : "";
+      return `
+        <div class="template-picker-card" data-template-id="${this.escapeHtml(template.id)}">
+          <div class="template-picker-card-thumb">${thumbContent}</div>
+          <div class="template-picker-card-body">
+            <div class="template-picker-card-title">${this.escapeHtml(template.title || this.translations.get("Untitled model"))}</div>
+            ${educationLabel || scienceLabel ? `<div class="template-picker-card-tags">${educationLabel}${scienceLabel}</div>` : ""}
+          </div>
+        </div>
+      `;
+    });
+    host.innerHTML = `
+      <div class="template-picker-shell">
+        <div class="template-picker-grid">
+          ${blankCardMarkup}
+          ${templateCardMarkups.join("")}
+        </div>
+        <div class="template-picker-footer">
+          <div id="template-picker-cancel-btn"></div>
+          <div id="template-picker-create-btn"></div>
+        </div>
+      </div>
+    `;
+    const allCards = host.querySelectorAll(".template-picker-card");
+    const selectCard = card => {
+      allCards.forEach(c => c.classList.remove("template-picker-card--selected"));
+      card.classList.add("template-picker-card--selected");
+      const rawId = card.dataset.templateId;
+      selectedTemplateId = rawId === "" ? null : rawId;
+    };
+    allCards.forEach(card => {
+      card.addEventListener("click", () => selectCard(card));
+      card.addEventListener("dblclick", () => {
+        selectCard(card);
+        this.templatePickerPopupInstance.hide();
+        this._doCreateModel(selectedTemplateId);
+      });
+    });
+    new DevExpress.ui.dxButton(host.querySelector("#template-picker-cancel-btn"), {
+      text: this.translations.get("Cancel"),
+      stylingMode: "outlined",
+      onClick: () => this.templatePickerPopupInstance.hide()
+    });
+    new DevExpress.ui.dxButton(host.querySelector("#template-picker-create-btn"), {
+      text: this.translations.get("Create"),
+      type: "default",
+      stylingMode: "contained",
+      onClick: () => {
+        this.templatePickerPopupInstance.hide();
+        this._doCreateModel(selectedTemplateId);
+      }
+    });
+  }
+
+  async _doCreateModel(fromModelId) {
     this.setStatus(this.translations.get("Creating model…"));
     try {
       const created = await this.apiClient.createModel({
         title: this.translations.get("Untitled model"),
         description: "",
         type: "model",
-        status: "draft",
-        createdAt: new Date().toISOString()
-      });
+        status: "draft"
+      }, fromModelId);
       this.setStatus(this.translations.get("Model created."));
       this.loadModels();
-      if (created && created.id) {
+      if (created && created.id)
         this.openModel(created);
-      }
     } catch (error) {
       this.setStatus(error && error.message ? error.message : this.translations.get("Failed to create model."), true);
     }
@@ -1732,6 +1984,7 @@ class ModelsApp {
     this.disposeCardView();
     this.disposeMaintenanceGrid();
     this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
     this.disposeUsersGrid();
     const statusColors = {
       "new": { background: "#dbeafe", color: "#1d4ed8" },

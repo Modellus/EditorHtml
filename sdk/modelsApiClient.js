@@ -219,8 +219,11 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Visibility update failed (${response.status})`);
   }
 
-  async createModel(payload) {
-    const response = await fetch(`${this.apiBaseUrl}/models`, {
+  async createModel(payload, fromModelId = null) {
+    const url = new URL(`${this.apiBaseUrl}/models`);
+    debugger;
+    if (fromModelId) url.searchParams.set("source_model_id", fromModelId);
+    const response = await fetch(url.toString(), {
       method: "POST",
       headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
       body: JSON.stringify(payload)
@@ -387,5 +390,24 @@ export class ModelsApiClient {
       headers: this.buildAuthHeaders()
     });
     if (!response.ok) throw new Error(`Remove feature flag failed (${response.status})`);
+  }
+
+  async fetchSystemTemplateModels() {
+    const headers = this.buildAuthHeaders();
+    const url = new URL(`${this.apiBaseUrl}/models`);
+    url.searchParams.set("is_system_template", "1");
+    const response = await fetch(url.toString(), { headers });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async patchModelSystemTemplate(modelId, isSystemTemplate) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}`, {
+      method: "PATCH",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify({ is_system_template: isSystemTemplate })
+    });
+    if (!response.ok) throw new Error(`System template update failed (${response.status})`);
   }
 }

@@ -224,7 +224,14 @@ MarketplaceTranslations._strings = {
     "Delete model?": "Delete model?",
     "This action cannot be undone.": "This action cannot be undone.",
     "Cancel": "Cancel",
-    "Delete": "Delete"
+    "Delete": "Delete",
+    "System Templates": "System Templates",
+    "Template": "Template",
+    "Set as system template": "Set as system template",
+    "Remove from system templates": "Remove from system templates",
+    "Failed to update system template.": "Failed to update system template.",
+    "Choose a starting point": "Choose a starting point",
+    "Blank model": "Blank model"
   },
   "pt-PT": {
     "My Models": "Os meus Modelos",
@@ -322,6 +329,13 @@ MarketplaceTranslations._strings = {
     "Delete model?": "Eliminar modelo?",
     "This action cannot be undone.": "Esta ação não pode ser desfeita.",
     "Cancel": "Cancelar",
-    "Delete": "Eliminar"
+    "Delete": "Eliminar",
+    "System Templates": "Modelos de Sistema",
+    "Template": "Modelo de sistema",
+    "Set as system template": "Definir como modelo de sistema",
+    "Remove from system templates": "Remover dos modelos de sistema",
+    "Failed to update system template.": "Erro ao atualizar modelo de sistema.",
+    "Choose a starting point": "Escolher um ponto de partida",
+    "Blank model": "Modelo em branco"
   }
 };
