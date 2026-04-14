@@ -297,9 +297,9 @@ class TopToolbar {
                         <img src="scripts/themes/modellus.svg" alt="Modellus" style="float: left; height: 48px; margin: 0 12px 4px 0">
                         <p style="text-align: justify; margin: 0">${translations.get("About Description")}</p>
                     </div>
-                    <div style="overflow: hidden; margin-bottom: 12px; margin-top: 20px">
-                        <img id="about-character-img" src="" alt="" style="float: right; height: 80px; margin: 0 0 4px 12px">
-                        <p style="text-align: justify; margin: 0">${translations.get("About Beta")}</p>
+                    <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; margin-top: 36px">
+                        <p style="text-align: justify; margin: 0; flex: 1">${translations.get("About Beta")}</p>
+                        <img id="about-character-img" src="" alt="" style="height: 80px; flex-shrink: 0">
                     </div>
                     <div id="about-understand-button" style="display: flex; justify-content: center; margin-top: 16px"></div>
                     <p style="text-align: center; margin-top: 16px">${translations.get("About Tagline")}</p>`);

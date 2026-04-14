@@ -1517,6 +1517,8 @@ class BaseShape {
         const command = new AddShapeCommand(board, shape);
         board.invoker.execute(command);
         BaseShape.pasteChildren(board, shape, data.children);
+        shape.draw();
+        shape.update();
     }
 
     duplicate() {
@@ -1528,6 +1530,8 @@ class BaseShape {
         const command = new AddShapeCommand(this.board, shape);
         this.board.invoker.execute(command);
         BaseShape.pasteChildren(this.board, shape, data.children);
+        shape.draw();
+        shape.update();
     }
 
     static pasteChildren(board, parentShape, children) {
@@ -1535,9 +1539,11 @@ class BaseShape {
             return;
         for (const childData of children) {
             const child = board.createShape(childData.type, parentShape);
+            childData.properties.parentId = parentShape.id;
             child.setProperties(childData.properties);
             board.addShape(child);
             child.draw();
+            child.update();
             BaseShape.pasteChildren(board, child, childData.children);
         }
     }
