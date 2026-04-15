@@ -2066,6 +2066,18 @@ class ModelsApp {
             }
           },
           { dataField: "created_at", caption: this.translations.get("Date"), width: 160, dataType: "date", allowEditing: false },
+          {
+            dataField: "image_url",
+            caption: "",
+            width: 52,
+            allowFiltering: false,
+            allowSorting: false,
+            allowEditing: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              if (cellInfo.value)
+                cellElement.get(0).innerHTML = `<img src="${this.escapeHtml(cellInfo.value)}" style="width:36px;height:36px;object-fit:cover;border-radius:4px;display:block">`;
+            }
+          },
           { type: "buttons", width: 50, buttons: [{ name: "delete", icon: "trash" }] }
         ],
         onCellClick: event => {
@@ -2090,19 +2102,54 @@ class ModelsApp {
     this.updateBellBadge();
     if (this.notificationsGridInstance)
       this.notificationsGridInstance.refresh();
-    this.showNotificationDetail(notification);
+    const [fromUser, model] = await Promise.all([
+      notification.from_user_id ? this.apiClient.fetchUserById(notification.from_user_id).catch(() => null) : Promise.resolve(null),
+      notification.model_id ? this.apiClient.fetchModelById(notification.model_id).catch(() => null) : Promise.resolve(null)
+    ]);
+    this.showNotificationDetail(notification, fromUser, model);
   }
-  showNotificationDetail(notification) {
+
+  showNotificationDetail(notification, fromUser, model) {
     let popupHost = document.getElementById("notification-detail-popup");
     if (!popupHost) {
       document.body.insertAdjacentHTML("beforeend", `<div id="notification-detail-popup"></div>`);
       popupHost = document.getElementById("notification-detail-popup");
     }
+    const renderContent = contentElement => {
+      const avatarHtml = fromUser?.avatar
+        ? `<img src="${this.escapeHtml(fromUser.avatar)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+        : `<span class="fa-light fa-circle-user" style="font-size:40px;color:#9ca3af;flex-shrink:0"></span>`;
+      const userHtml = `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          ${avatarHtml}
+          <div style="min-width:0">
+            <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${this.escapeHtml(fromUser?.name || "")}</div>
+            <div style="font-size:0.85em;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${this.escapeHtml(fromUser?.email || "")}</div>
+          </div>
+        </div>`;
+      const modelHtml = model
+        ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:8px 12px;background:#f3f4f6;border-radius:6px">
+            <span class="fa-light fa-file-lines" style="color:#6b7280"></span>
+            <span style="font-size:0.9em;color:#374151">${this.escapeHtml(model.title || "")}</span>
+           </div>`
+        : "";
+      const imageHtml = notification.image_url
+        ? `<div style="position:relative;margin-bottom:16px">
+            <img src="${this.escapeHtml(notification.image_url)}" data-notification-image="${this.escapeHtml(notification.image_url)}" style="width:100%;max-height:300px;object-fit:contain;border-radius:6px;display:block;cursor:zoom-in">
+            <a href="${this.escapeHtml(notification.image_url)}" download style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.5);color:#fff;border-radius:4px;padding:4px 8px;font-size:0.8em;text-decoration:none;display:flex;align-items:center;gap:5px"><span class="fa-light fa-download"></span></a>
+           </div>`
+        : "";
+      const messageHtml = notification.message
+        ? `<div style="line-height:1.6;color:#374151">${notification.message}</div>`
+        : "";
+      contentElement.get(0).innerHTML = `<div style="padding:4px 2px">${userHtml}${modelHtml}${imageHtml}${messageHtml}</div>`;
+      const imageElement = contentElement.get(0).querySelector("[data-notification-image]");
+      if (imageElement)
+        imageElement.addEventListener("click", () => this.showImageFullscreen(imageElement.src));
+    };
     if (this.notificationDetailPopupInstance) {
       this.notificationDetailPopupInstance.option("title", notification.title || "Notification");
-      this.notificationDetailPopupInstance.option("contentTemplate", contentElement => {
-        contentElement.get(0).innerHTML = `<div style="padding:0.5rem;line-height:1.5">${notification.message || ""}</div>`;
-      });
+      this.notificationDetailPopupInstance.option("contentTemplate", renderContent);
       this.notificationDetailPopupInstance.show();
       return;
     }
@@ -2112,14 +2159,32 @@ class ModelsApp {
       title: notification.title || "Notification",
       width: 480,
       height: "auto",
-      maxHeight: "70vh",
+      maxHeight: "80vh",
       dragEnabled: true,
       closeOnOutsideClick: true,
       showCloseButton: true,
-      contentTemplate: contentElement => {
-        contentElement.get(0).innerHTML = `<div style="padding:0.5rem;line-height:1.5">${notification.message || ""}</div>`;
-      }
+      contentTemplate: renderContent
     });
+  }
+
+  showImageFullscreen(imageUrl) {
+    let overlay = document.getElementById("notification-image-fullscreen");
+    if (!overlay) {
+      document.body.insertAdjacentHTML("beforeend", `
+        <div id="notification-image-fullscreen" style="position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out">
+          <img id="notification-image-fullscreen-img" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:4px">
+          <a id="notification-image-fullscreen-download" download style="position:fixed;top:20px;right:64px;background:rgba(255,255,255,0.15);color:#fff;border-radius:6px;padding:8px 14px;font-size:0.9em;text-decoration:none;display:flex;align-items:center;gap:6px"><span class="fa-light fa-download"></span> Download</a>
+          <button id="notification-image-fullscreen-close" style="position:fixed;top:20px;right:20px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:1em;cursor:pointer"><span class="fa-light fa-xmark"></span></button>
+        </div>`);
+      overlay = document.getElementById("notification-image-fullscreen");
+      overlay.addEventListener("click", event => {
+        if (event.target === overlay || event.target.id === "notification-image-fullscreen-close" || event.target.closest("#notification-image-fullscreen-close"))
+          overlay.style.display = "none";
+      });
+    }
+    document.getElementById("notification-image-fullscreen-img").src = imageUrl;
+    document.getElementById("notification-image-fullscreen-download").href = imageUrl;
+    overlay.style.display = "flex";
   }
 }
 

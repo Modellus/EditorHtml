@@ -1754,3 +1754,10 @@ math-field {
     padding-bottom: 3px !important;
     padding-left: 0 !important;
 }
+
+.feedback-toast .dx-toast-content {
+    background-color: #86efac;
+    font-family: "Atma", sans-serif;
+    color: #166534;
+    text-align: center;
+}

@@ -97,7 +97,19 @@ class BaseTranslations {
                 "About Beta": "Esta versão do Modellus ainda está na fase <span style=\"background:#e84c3d;color:white;font-size:0.75em;font-weight:bold;padding:1px 6px;border-radius:3px;vertical-align:middle;text-transform:uppercase\">beta</span> e em constante evolução — novas funcionalidades são adicionadas e erros são corrigidos&hellip; mas às vezes novos erros surgem. Se algo se comportar de forma estranha, diz-nos usando o ícone <span class=\"fa-light fa-circle-question\" style=\"font-size:0.9em\"></span> na barra de ferramentas.",
                 "About Description": "O Modellus é uma ferramenta de modelação interativa para construires, explorares e partilhares modelos matemáticos de fenómenos reais. Transforma equações em visuais dinâmicos — vê-as em ação e torna a ciência e a matemática mais intuitivas e envolventes.",
                 "About Tagline": "Feito com <span class=\"about-heart\">&hearts;</span> para a educação",
-                "About Understand": "Compreendo"
+                "About Understand": "Compreendo",
+                "Help Menu About": "Sobre",
+                "Help Menu Feedback": "Enviar Feedback",
+                "Feedback Title": "Enviar Feedback",
+                "Feedback Field Title": "Título",
+                "Feedback Field Title Placeholder": "Breve resumo",
+                "Feedback Field Description": "Descrição",
+                "Feedback Field Description Placeholder": "Descreve o teu feedback",
+                "Feedback Field Image": "Imagem",
+                "Feedback Field Image Hint": "Arrasta uma imagem ou clica para selecionar",
+                "Feedback Send Button": "Enviar",
+                "Feedback Success": "Obrigado pelo teu feedback!",
+                "Feedback Error": "Falha ao enviar feedback"
             };
         this.languages["en-US"] =
             {
@@ -195,7 +207,19 @@ class BaseTranslations {
                 "About Beta": "This version of Modellus is still in <span style=\"background:#e84c3d;color:white;font-size:0.75em;font-weight:bold;padding:1px 6px;border-radius:3px;vertical-align:middle;text-transform:uppercase\">beta</span> and constantly evolving, which means new features are added and bugs are fixed&hellip; and sometimes new bugs sneak in like uninvited guests. We try to keep everything as stable as possible, but if something behaves strangely, let us know using the <span class=\"fa-light fa-circle-question\" style=\"font-size:0.9em\"></span> toolbar icon on the top right.",
                 "About Description": "Modellus is an interactive modelling tool that lets you build, explore and share mathematical models of real-world phenomena. It turns equations into dynamic visuals, so instead of just staring at formulas, you can actually see them in action, making science and mathematics more intuitive and engaging.",
                 "About Tagline": "Designed with <span class=\"about-heart\">&hearts;</span> for education",
-                "About Understand": "I understand"
+                "About Understand": "I understand",
+                "Help Menu About": "About",
+                "Help Menu Feedback": "Send Feedback",
+                "Feedback Title": "Send Feedback",
+                "Feedback Field Title": "Title",
+                "Feedback Field Title Placeholder": "Brief summary",
+                "Feedback Field Description": "Description",
+                "Feedback Field Description Placeholder": "Describe your feedback",
+                "Feedback Field Image": "Image",
+                "Feedback Field Image Hint": "Drop an image or click to select",
+                "Feedback Send Button": "Send",
+                "Feedback Success": "Thank you for your feedback!",
+                "Feedback Error": "Failed to send feedback"
             };
     }
 

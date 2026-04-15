@@ -255,10 +255,11 @@ class TopToolbar {
         this.instance = $("#toolbar").dxToolbar("instance");
         document.getElementById("svg-container").insertAdjacentHTML("afterend", `<div id="model-info-label"><span id="model-name-label">${this.shell.properties.name}</span></div>`);
         document.body.insertAdjacentHTML("beforeend", `<div id="help-context-menu"></div><div id="about-popup"></div><div id="feedback-popup"></div>`);
+        const translations = this.shell.board.translations;
         this._helpMenu = $("#help-context-menu").dxContextMenu({
             items: [
-                { text: "About", icon: "fa-light fa-circle-info" },
-                { text: "Send Feedback", icon: "fa-light fa-envelope" }
+                { text: translations.get("Help Menu About"), icon: "fa-light fa-circle-info" },
+                { text: translations.get("Help Menu Feedback"), icon: "fa-light fa-envelope" }
             ],
             itemTemplate: itemData => {
                 return `<div style="display: flex; justify-content: space-between; align-items: center; width: 100%">
@@ -274,13 +275,12 @@ class TopToolbar {
                 offset: "0 10"
             },
             onItemClick: event => {
-                if (event.itemData.text === "About")
+                if (event.itemData.text === translations.get("Help Menu About"))
                     $("#about-popup").dxPopup("instance").show();
-                else if (event.itemData.text === "Send Feedback")
+                else if (event.itemData.text === translations.get("Help Menu Feedback"))
                     $("#feedback-popup").dxPopup("instance").show();
             }
         }).dxContextMenu("instance");
-        const translations = this.shell.board.translations;
         $("#about-popup").dxPopup({
             title: translations.get("About Title"),
             visible: false,
@@ -312,7 +312,7 @@ class TopToolbar {
             }
         });
         $("#feedback-popup").dxPopup({
-            title: "Send Feedback",
+            title: translations.get("Feedback Title"),
             visible: false,
             width: 420,
             height: "auto",
@@ -323,13 +323,24 @@ class TopToolbar {
                 $(contentElement).html(`<div id="feedback-form"></div>`);
                 $("#feedback-form").dxForm({
                     items: [
-                        { dataField: "title", label: { text: "Title" }, editorOptions: { placeholder: "Brief summary" }, validationRules: [{ type: "required" }] },
-                        { dataField: "description", editorType: "dxTextArea", label: { text: "Description" }, editorOptions: { placeholder: "Describe your feedback", height: 120 } },
+                        { dataField: "title", label: { text: translations.get("Feedback Field Title") }, editorOptions: { placeholder: translations.get("Feedback Field Title Placeholder"), inputAttr: { style: "font-family: 'Atma', sans-serif" } }, validationRules: [{ type: "required" }] },
+                        { dataField: "description", editorType: "dxTextArea", label: { text: translations.get("Feedback Field Description") }, editorOptions: { placeholder: translations.get("Feedback Field Description Placeholder"), height: 120, inputAttr: { style: "font-family: 'Atma', sans-serif" } } },
+                        { label: { text: translations.get("Feedback Field Image") }, template: () => {
+                            this._feedbackImageControl = new ImageControl({
+                                dropHint: translations.get("Feedback Field Image Hint"),
+                                onUploadFile: file => {
+                                    this._feedbackImageFile = file;
+                                    return Promise.resolve(URL.createObjectURL(file));
+                                },
+                                onImageCleared: () => { this._feedbackImageFile = null; }
+                            });
+                            return this._feedbackImageControl.createHost();
+                        } },
                         {
                             itemType: "button",
                             horizontalAlignment: "right",
                             buttonOptions: {
-                                text: "Send",
+                                text: translations.get("Feedback Send Button"),
                                 icon: "fa-light fa-envelope",
                                 type: "default",
                                 onClick: () => this._submitFeedback()
@@ -460,18 +471,22 @@ class TopToolbar {
         if (!validationResult.isValid)
             return;
         const formData = formInstance.option("formData");
+        const modelId = this.shell.getCurrentModelId();
         const popup = $("#feedback-popup").dxPopup("instance");
         try {
             await this.shell.modelsApiClient.sendNotification({
                 title: formData.title,
                 message: formData.description,
-                type: "Feedback"
-            });
+                type: "Feedback",
+                model_id: modelId
+            }, this._feedbackImageFile ?? null);
             popup.hide();
             formInstance.option("formData", {});
-            window.DevExpress.ui.notify("Thank you for your feedback!", "success", 3000);
+            this._feedbackImageFile = null;
+            this._feedbackImageControl?.setImageSource("");
+            window.DevExpress.ui.notify({ message: this.shell.board.translations.get("Feedback Success"), type: "success", displayTime: 3000, position: { at: "center", my: "center" }, elementAttr: { class: "feedback-toast" } });
         } catch (error) {
-            window.DevExpress.ui.notify("Failed to send feedback", "error", 3000);
+            window.DevExpress.ui.notify({ message: this.shell.board.translations.get("Feedback Error"), type: "error", displayTime: 3000, position: { at: "center", my: "center" }, elementAttr: { class: "feedback-toast" } });
         }
     }
 }

@@ -277,11 +277,17 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Delete failed (${response.status})`);
   }
 
-  async sendNotification(payload) {
+  async sendNotification(payload, imageFile) {
+    const formData = new FormData();
+    formData.append("title", payload.title);
+    formData.append("message", payload.message);
+    if (payload.type) formData.append("type", payload.type);
+    if (payload.model_id) formData.append("model_id", payload.model_id);
+    if (imageFile) formData.append("image", imageFile);
     const response = await fetch(`${this.apiBaseUrl}/notifications`, {
       method: "POST",
-      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
-      body: JSON.stringify(payload)
+      headers: this.buildAuthHeaders(),
+      body: formData
     });
     if (!response.ok) throw new Error(`Send notification failed (${response.status})`);
     const text = await response.text();
@@ -409,5 +415,13 @@ export class ModelsApiClient {
       body: JSON.stringify({ is_system_template: isSystemTemplate })
     });
     if (!response.ok) throw new Error(`System template update failed (${response.status})`);
+  }
+
+  async fetchModelById(modelId) {
+    const headers = this.buildAuthHeaders();
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}`, { headers });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Fetch model failed (${response.status})`);
+    return await response.json();
   }
 }
