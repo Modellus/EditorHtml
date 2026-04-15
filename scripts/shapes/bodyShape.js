@@ -81,8 +81,8 @@ class BodyShape extends ChildShape {
         if ("isPhysical" in properties) {
             const isPhysical = properties.isPhysical;
             const rest = Object.fromEntries(Object.entries(properties).filter(([key]) => key !== "isPhysical"));
-            super.setProperties(rest);
             this.setProperty("isPhysical", isPhysical);
+            super.setProperties(rest);
         } else {
             super.setProperties(properties);
             if ("name" in properties && this.properties.isPhysical) {
