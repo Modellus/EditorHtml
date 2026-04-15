@@ -419,15 +419,26 @@ class BodyShape extends ChildShape {
     }
 
     populateShapeColorMenuSections(sections) {
-        sections[0].items.push({
-            text: "Drop Shadow",
-            buildControl: $p => {
-                $('<div>').dxSwitch({
-                    value: this.properties.dropShadow === true,
-                    onValueChanged: e => this.setPropertyCommand("dropShadow", e.value)
-                }).appendTo($p);
+        sections[0].items.push(
+            {
+                text: "Show Center",
+                buildControl: $p => {
+                    $('<div>').dxSwitch({
+                        value: this.properties.showCenter === true,
+                        onValueChanged: e => this.setPropertyCommand("showCenter", e.value)
+                    }).appendTo($p);
+                }
+            },
+            {
+                text: "Drop Shadow",
+                buildControl: $p => {
+                    $('<div>').dxSwitch({
+                        value: this.properties.dropShadow === true,
+                        onValueChanged: e => this.setPropertyCommand("dropShadow", e.value)
+                    }).appendTo($p);
+                }
             }
-        });
+        );
         sections.push(
             {
                 text: "Character",
@@ -674,6 +685,9 @@ class BodyShape extends ChildShape {
         this.image = this.board.createSvgElement("image");
         this.image.setAttribute("pointer-events", "none");
         element.appendChild(this.image);
+        this.centerDot = this.board.createSvgElement("circle");
+        this.centerDot.setAttribute("pointer-events", "none");
+        element.appendChild(this.centerDot);
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
         this.trajectory.element.setAttribute("fill", "none");
         this.trajectory.element.setAttribute("pointer-events", "none");
@@ -706,6 +720,7 @@ class BodyShape extends ChildShape {
         this.properties.imageBase64 = "";
         this.properties.characterKey = "";
         this.properties.dropShadow = false;
+        this.properties.showCenter = false;
         this.properties.nameIsDefault = true;
         this.properties.isPhysical = false;
         this.character = null;
@@ -793,6 +808,7 @@ class BodyShape extends ChildShape {
         if (character) {
             this.drawCharacter(position, radius, diameter, character);
             this.applyImageFlipTransform(position, true);
+            this.drawCenterDot(position);
             return;
         }
         this.circle.setAttribute("cx", position.x);
@@ -806,6 +822,21 @@ class BodyShape extends ChildShape {
         this.image.setAttribute("height", diameter);
         this.image.setAttribute("preserveAspectRatio", "xMidYMid slice");
         this.applyImageFlipTransform(position, this.image.hasAttribute("href"));
+        this.drawCenterDot(position);
+    }
+
+    drawCenterDot(position) {
+        if (!this.properties.showCenter) {
+            this.centerDot.setAttribute("r", 0);
+            return;
+        }
+        const dotRadius = 4;
+        this.centerDot.setAttribute("cx", position.x);
+        this.centerDot.setAttribute("cy", position.y);
+        this.centerDot.setAttribute("r", dotRadius);
+        this.centerDot.setAttribute("fill", this.properties.foregroundColor);
+        this.centerDot.setAttribute("stroke", this.board.theme.getContrastColor?.(this.properties.foregroundColor) ?? "white");
+        this.centerDot.setAttribute("stroke-width", 1);
     }
 
     applyImageFlipTransform(position, hasImage) {
