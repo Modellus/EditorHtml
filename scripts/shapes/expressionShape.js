@@ -159,7 +159,8 @@ class ExpressionShape extends BaseShape {
         this.lockCaret(this.mathfield);
         this.mathfield.addEventListener("keydown", keydownEvent => this.onKeyDown(keydownEvent), true);
         this.interceptDeadKeySuperscript();
-        this.mathfield.focus();
+        if (this.board.selection.selectedShape === this)
+            this.mathfield.focus();
         this.ensureCaretIsClamped();
         this.syncHandwrittenStyle();
     }

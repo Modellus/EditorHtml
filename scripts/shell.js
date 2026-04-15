@@ -353,6 +353,7 @@ class Shell  {
     }
 
     openModel(model) {
+        this.board.enableSelection(true);
         this.deserialise(JSON.parse(model));
         this.reset();
         this.topToolbar.showAboutPopupIfNeeded();
