@@ -59,6 +59,7 @@ function applyModelMetadata(shell, model) {
     if (model.creator_avatar)
         shell.modelCreatorAvatar = model.creator_avatar;
     shell.topToolbar?.updateModelInfo();
+    shell.topToolbar?.updateCollabButtonVisibility();
 }
 
 function enableReadOnlyMode() {
@@ -125,6 +126,7 @@ function redirectToLogin() {
                         const payload = extractModelPayload(model);
                         shell = payload ? new Shell(payload, modelsApiClient) : new Shell(null, modelsApiClient);
                         applyModelMetadata(shell, model);
+                        shell.setupCollab(modelId);
                         return;
                     } catch (error) {
                         if (!isUnauthorizedError(error))

@@ -243,6 +243,14 @@ class TopToolbar {
                 },
                 {
                     location: "after",
+                    template: () => {
+                        const collabContainer = $('<div id="collab-button-host"></div>');
+                        this._createCollabDropDownButton(collabContainer);
+                        return collabContainer;
+                    }
+                },
+                {
+                    location: "after",
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-circle-question",
@@ -465,8 +473,135 @@ class TopToolbar {
         const disabled = this.shell.board.selection.selectedShape == null || !["BodyShape", "PointShape", "VectorShape", "ImageShape", "ReferentialShape"].includes(this.shell.board.selection.selectedShape.constructor.name);
     }
 
-    async _submitFeedback() {
-        const formInstance = $("#feedback-form").dxForm("instance");
+    _createCollabDropDownButton(container) {
+        container.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            hint: "Collaboration",
+            icon: "fa-light fa-users",
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-collab-dropdown" },
+                width: 300,
+                position: {
+                    my: "top right",
+                    at: "bottom right",
+                    of: "#collab-button-host",
+                    offset: "0 5"
+                },
+                onShowing: () => this._collabSearchInstance?.option("value", null),
+                contentTemplate: contentElement => this._buildCollabDropdownContent(contentElement)
+            }
+        });
+        this._collabButtonContainer = container[0];
+        this._collabDropdownInstance = container.dxDropDownButton("instance");
+    }
+
+    _buildCollabDropdownContent(contentElement) {
+        $(contentElement).html(`
+            <div class="mdl-collab-panel">
+                <div class="mdl-collab-list-host"></div>
+                <div class="mdl-collab-add-row">
+                    <div class="mdl-collab-search-host"></div>
+                    <div class="mdl-collab-add-btn-host"></div>
+                </div>
+            </div>`);
+        const listHost = $(contentElement).find(".mdl-collab-list-host");
+        const searchHost = $(contentElement).find(".mdl-collab-search-host");
+        const addBtnHost = $(contentElement).find(".mdl-collab-add-btn-host");
+        $(listHost).dxList({
+            dataSource: [],
+            noDataText: "No collaborators",
+            itemTemplate: data => `
+                <div class="mdl-collab-list-item">
+                    <img class="mdl-collab-avatar" src="${data.avatar ?? ""}" alt="">
+                    <span class="mdl-collab-name">${data.name ?? data.email ?? ""}</span>
+                    <div class="mdl-collab-remove-host"></div>
+                </div>`,
+            onItemRendered: e => {
+                const removeHost = e.itemElement[0].querySelector(".mdl-collab-remove-host");
+                if (removeHost)
+                    $(removeHost).dxButton({
+                        icon: "fa-light fa-xmark",
+                        stylingMode: "text",
+                        hint: "Remove",
+                        onClick: () => this._removeCollaborator(e.itemData.id)
+                    });
+            }
+        });
+        this._collabListInstance = $(listHost).dxList("instance");
+        this._loadCollabData();
+        $(searchHost).dxSelectBox({
+            placeholder: "Add user...",
+            searchEnabled: true,
+            displayExpr: "name",
+            valueExpr: "id",
+            searchExpr: ["name", "email"],
+            dataSource: this._collabUsers ?? [],
+            onFocusIn: () => {
+                if (this._collabUsersLoaded)
+                    return;
+                this._collabUsersLoaded = true;
+                this.shell.modelsApiClient.fetchUsers().then(users => {
+                    this._collabUsers = Array.isArray(users) ? users : [];
+                    this._collabSearchInstance?.option("dataSource", this._collabUsers);
+                }).catch(() => {});
+            }
+        });
+        this._collabSearchInstance = $(searchHost).dxSelectBox("instance");
+        $(addBtnHost).dxButton({
+            icon: "fa-light fa-circle-plus",
+            stylingMode: "text",
+            onClick: () => this._addCollaborator()
+        });
+    }
+
+    async _loadCollabData() {
+        const modelId = this.shell.getCurrentModelId();
+        if (!modelId || !this._collabListInstance)
+            return;
+        try {
+            const collaborators = await this.shell.modelsApiClient.fetchCollaborators(modelId);
+            this._collabListInstance.option("dataSource", Array.isArray(collaborators) ? collaborators : []);
+        } catch (_) {
+            this._collabListInstance.option("dataSource", []);
+        }
+    }
+
+    async _removeCollaborator(userId) {
+        const modelId = this.shell.getCurrentModelId();
+        if (!modelId)
+            return;
+        try {
+            await this.shell.modelsApiClient.removeCollaborator(modelId, userId);
+            await this._loadCollabData();
+        } catch (_) {}
+    }
+
+    async _addCollaborator() {
+        const modelId = this.shell.getCurrentModelId();
+        if (!modelId || !this._collabSearchInstance)
+            return;
+        const selectedUserId = this._collabSearchInstance.option("value");
+        if (!selectedUserId)
+            return;
+        try {
+            await this.shell.modelsApiClient.addCollaborator(modelId, selectedUserId);
+            this._collabSearchInstance.option("value", null);
+            await this._loadCollabData();
+        } catch (_) {}
+    }
+
+    updateCollabButtonVisibility() {
+        if (!this._collabButtonContainer)
+            return;
+        const modelId = this.shell.getCurrentModelId();
+        const visible = !!modelId && this.shell.isModelCreator();
+        this._collabButtonContainer.style.display = visible ? "" : "none";
+    }
+
+    async _submitFeedback() {        const formInstance = $("#feedback-form").dxForm("instance");
         const validationResult = formInstance.validate();
         if (!validationResult.isValid)
             return;

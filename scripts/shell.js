@@ -548,9 +548,117 @@ class Shell  {
 
     onBeforeUnload(event) {
         this.chatController.disposeAdapter();
+        this.collabChannel?.destroy();
         if (!this._hasChanges)
             return;
         event.preventDefault();
+    }
+
+    setupCollab(modelId) {
+        if (!modelId)
+            return;
+        if (this.collabChannel)
+            this.collabChannel.destroy();
+        this.collabChannel = new CollabChannel({
+            apiBase: "https://modellus-api.interactivebook.workers.dev",
+            modelId,
+            getToken: () => window.modellus?.auth?.getSession?.()?.token ?? "",
+            onOp: op => this.applyRemoteOp(op),
+            onSnapshot: model => this.applyRemoteSnapshot(model)
+        });
+        this.commands.invoker.onExecute = command => this.broadcastCommand(command);
+        this.board.svg.addEventListener("shapeDragEnd", e => {
+            if (this.collabChannel?._applyingRemote)
+                return;
+            const shape = e.detail.shape;
+            if (!shape)
+                return;
+            this.collabChannel?.sendOp({
+                type: "setShapeProperties",
+                shapeId: shape.id,
+                properties: Utils.cloneProperties(shape.properties)
+            });
+        });
+        this.collabChannel.connect();
+    }
+
+    broadcastCommand(command) {
+        if (!this.collabChannel || this.collabChannel._applyingRemote)
+            return;
+        if (command instanceof AddShapeCommand) {
+            this.collabChannel.sendOp({ type: "addShape", shapeData: command.shape.serialize() });
+            this.collabChannel.sendSnapshot(this.serialize());
+            return;
+        }
+        if (command instanceof RemoveShapeCommand) {
+            this.collabChannel.sendOp({ type: "removeShape", shapeId: command.shape.id });
+            this.collabChannel.sendSnapshot(this.serialize());
+            return;
+        }
+        if (command instanceof SetShapePropertiesCommand) {
+            this.collabChannel.sendOp({
+                type: "setShapeProperties",
+                shapeId: command.shape.id,
+                properties: Utils.cloneProperties(command.shape.properties)
+            });
+            return;
+        }
+        if (command instanceof SetPropertiesCommand) {
+            this.collabChannel.sendOp({ type: "setModelProperties", properties: Utils.cloneProperties(this.properties) });
+            this.collabChannel.sendSnapshot(this.serialize());
+        }
+    }
+
+    applyRemoteOp(op) {
+        if (!this.collabChannel)
+            return;
+        this.collabChannel._applyingRemote = true;
+        try {
+            if (op.type === "addShape") {
+                const existingShape = this.board.shapes.getById(op.shapeData.id);
+                if (existingShape)
+                    return;
+                const parentShape = op.shapeData.parent ? this.board.shapes.getById(op.shapeData.parent) : null;
+                const newShape = this.board.createShape(op.shapeData.type, parentShape, op.shapeData.id);
+                newShape.setProperties(op.shapeData.properties);
+                this.board.addShape(newShape, false);
+                newShape.draw();
+                newShape.update();
+                return;
+            }
+            if (op.type === "removeShape") {
+                const targetShape = this.board.shapes.getById(op.shapeId);
+                if (targetShape)
+                    this.board.removeShape(targetShape);
+                return;
+            }
+            if (op.type === "setShapeProperties") {
+                const targetShape = this.board.shapes.getById(op.shapeId);
+                if (targetShape)
+                    this.board.setShapeProperties(targetShape, op.properties);
+                return;
+            }
+            if (op.type === "setModelProperties")
+                this.setProperties(op.properties);
+        } finally {
+            this.collabChannel._applyingRemote = false;
+        }
+    }
+
+    applyRemoteSnapshot(model) {
+        if (!model || !this.collabChannel)
+            return;
+        this.collabChannel._applyingRemote = true;
+        try {
+            this.board.enableSelection(true);
+            this.deserialise(model);
+            this.reset();
+            this.calculator.stop();
+            this.calculator.calculate();
+            this.board.refresh();
+        } finally {
+            this.collabChannel._applyingRemote = false;
+        }
     }
 
     async onPopState(event) {

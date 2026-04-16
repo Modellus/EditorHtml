@@ -9,6 +9,7 @@ class CommandsInvoker {
         command.execute();
         this.history.push(command);
         this.redoStack = [];
+        this.onExecute?.(command);
     }
     
     undo() {

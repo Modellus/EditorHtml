@@ -424,4 +424,35 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Fetch model failed (${response.status})`);
     return await response.json();
   }
+
+  async fetchUsers() {
+    const response = await fetch(`${this.apiBaseUrl}/users`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch users failed (${response.status})`);
+    return await response.json();
+  }
+
+  async fetchCollaborators(modelId) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}/collaborators`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch collaborators failed (${response.status})`);
+    return await response.json();
+  }
+
+  async addCollaborator(modelId, userId) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}/collaborators`, {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify({ user_id: userId })
+    });
+    if (!response.ok) throw new Error(`Add collaborator failed (${response.status})`);
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  async removeCollaborator(modelId, userId) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}/collaborators/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Remove collaborator failed (${response.status})`);
+  }
 }

@@ -887,6 +887,63 @@ math-field {
     justify-content: flex-end;
 }
 
+.mdl-collab-panel {
+    padding: 4px 0;
+}
+
+.mdl-collab-list-host .dx-list-item-content {
+    padding: 4px 8px;
+}
+
+.mdl-collab-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.mdl-collab-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #e0e0e0;
+}
+
+.mdl-collab-name {
+    flex-grow: 1;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mdl-collab-remove-host .dx-button {
+    min-width: unset;
+}
+
+.mdl-collab-add-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px 4px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.mdl-collab-search-host {
+    flex-grow: 1;
+}
+
+.mdl-collab-add-btn-host .dx-button {
+    min-width: unset;
+}
+
+.mdl-collab-dropdown .dx-overlay-content {
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
 .mdl-dropdown-grid-full {
     grid-column: 1 / -1;
 }
