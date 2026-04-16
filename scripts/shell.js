@@ -559,6 +559,7 @@ class Shell  {
             return;
         if (this.collabChannel)
             this.collabChannel.destroy();
+        this._pendingCollabSnapshot = true;
         this.collabChannel = new CollabChannel({
             apiBase: "https://modellus-api.interactivebook.workers.dev",
             modelId,
@@ -648,6 +649,11 @@ class Shell  {
     applyRemoteSnapshot(model) {
         if (!model || !this.collabChannel)
             return;
+        if (this._pendingCollabSnapshot) {
+            this._pendingCollabSnapshot = false;
+            this.collabChannel.sendSnapshot(this.serialize());
+            return;
+        }
         this.collabChannel._applyingRemote = true;
         try {
             this.board.enableSelection(true);

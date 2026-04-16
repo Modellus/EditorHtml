@@ -472,9 +472,8 @@ class ChartShape extends BaseShape {
         this.lastSyncedIteration = 0;
         this.chartDataConfig = null;
         this.chart = new ChartControl(element, this.getChartControlOptions());
-        if (this.properties.domainOverride && this.properties.autoScale !== true)
-            this.chart.setDomainOverride(this.properties.domainOverride);
         this._appliedConfig = {};
+        this._appliedDomainConfig = null;
         return element;
     }
 
@@ -618,6 +617,18 @@ class ChartShape extends BaseShape {
                 this.resetChartValues();
             this._appliedConfig = config;
             this._appliedDataConfig = dataConfig;
+        }
+        const domainConfig = {
+            autoScale: this.properties.autoScale === true,
+            domainOverride: this.properties.domainOverride ? { ...this.properties.domainOverride } : null
+        };
+        const domainChanged = JSON.stringify(domainConfig) !== JSON.stringify(this._appliedDomainConfig);
+        if (domainChanged) {
+            if (domainConfig.domainOverride)
+                this.chart.setDomainOverride(domainConfig.domainOverride);
+            else if (domainConfig.autoScale)
+                this.chart.resetDomainOverride();
+            this._appliedDomainConfig = domainConfig;
         }
         this.updateValues();
         this.updateFocus();
