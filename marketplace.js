@@ -22,7 +22,8 @@ const treeNodeIds = {
   maintenanceSciences: "maintenance-sciences",
   maintenanceNotifications: "maintenance-notifications",
   maintenanceUsers: "maintenance-users",
-  maintenanceSystemTemplates: "maintenance-system-templates"
+  maintenanceSystemTemplates: "maintenance-system-templates",
+  maintenanceWhatsNew: "maintenance-whats-new"
 };
 const fontAwesomeIcons = [
   { value: "", label: "No icon" },
@@ -590,6 +591,7 @@ class ModelsApp {
     this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
     const maintenanceStore = this.buildMaintenanceStore(maintenanceType);
     if (!this.maintenanceGridInstance) {
       this.elements.cardView.innerHTML = "";
@@ -654,6 +656,7 @@ class ModelsApp {
     this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
     this.ensureCardView();
   }
 
@@ -676,6 +679,7 @@ class ModelsApp {
     this.disposeMaintenanceModelsGrid();
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
     const systemTemplatesStore = new DevExpress.data.CustomStore({
       key: "id",
       load: async () => {
@@ -773,6 +777,7 @@ class ModelsApp {
     this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
     const allModelsStore = new DevExpress.data.CustomStore({
       key: "id",
       load: async () => {
@@ -992,6 +997,7 @@ class ModelsApp {
     this.disposeMaintenanceModelsGrid();
     this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
+    this.disposeWhatsNewGrid();
     const usersStore = new DevExpress.data.CustomStore({
       key: "id",
       load: () => this.apiClient.fetchUsers(),
@@ -1183,6 +1189,11 @@ class ModelsApp {
     }
     if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceNotifications) {
       this.showNotificationsGrid();
+      this.setStatus("");
+      return;
+    }
+    if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceWhatsNew) {
+      this.showWhatsNewGrid();
       this.setStatus("");
       return;
     }
@@ -1520,6 +1531,13 @@ class ModelsApp {
             nodeType: "maintenance-users",
             iconClass: "fa-light fa-users",
             iconColor: "#2563eb"
+          },
+          {
+            id: treeNodeIds.maintenanceWhatsNew,
+            text: this.translations.get("What's New"),
+            nodeType: "maintenance-whats-new",
+            iconClass: "fa-light fa-sparkles",
+            iconColor: "#10b981"
           }
         ]
       });
@@ -1986,6 +2004,7 @@ class ModelsApp {
     this.disposeMaintenanceModelsGrid();
     this.disposeSystemTemplatesGrid();
     this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
     const statusColors = {
       "new": { background: "#dbeafe", color: "#1d4ed8" },
       "todo": { background: "#fef3c7", color: "#b45309" },
@@ -2089,6 +2108,189 @@ class ModelsApp {
     }
     this.notificationsGridInstance.option("dataSource", notificationsStore);
     this.notificationsGridInstance.refresh();
+  }
+  disposeWhatsNewGrid() {
+    if (!this.whatsNewGridInstance)
+      return;
+    this.whatsNewGridInstance.dispose();
+    this.whatsNewGridInstance = null;
+  }
+  showWhatsNewGrid() {
+    if (!this.elements.cardView)
+      return;
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
+    this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
+    const whatsNewStore = new DevExpress.data.CustomStore({
+      key: "id",
+      load: () => this.apiClient.fetchWhatsNew(),
+      remove: entryId => this.apiClient.deleteWhatsNewEntry(entryId),
+      update: (entryId, values) => this.apiClient.updateWhatsNewEntry(entryId, values)
+    });
+    if (!this.whatsNewGridInstance) {
+      this.elements.cardView.innerHTML = "";
+      this.whatsNewGridInstance = new DevExpress.ui.dxDataGrid(this.elements.cardView, {
+        dataSource: whatsNewStore,
+        keyExpr: "id",
+        height: "100%",
+        showBorders: false,
+        columnAutoWidth: true,
+        selection: { mode: "single" },
+        editing: { mode: "row", allowUpdating: true, allowDeleting: true, confirmDelete: true },
+        paging: { enabled: true, pageSize: 20 },
+        pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
+        searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search...") },
+        sorting: { mode: "multiple" },
+        export: { enabled: true },
+        onExporting: event => this.exportGridToExcel(event, this.translations.get("What's New")),
+        toolbar: {
+          items: [
+            {
+              location: "before",
+              widget: "dxButton",
+              options: {
+                text: this.translations.get("Whats New Add Entry"),
+                icon: "fa-light fa-plus",
+                type: "default",
+                onClick: () => this.showWhatsNewAddPopup(whatsNewStore)
+              }
+            },
+            "exportButton",
+            "searchPanel"
+          ]
+        },
+        columns: [
+          { dataField: "id", caption: "ID", visible: false, allowEditing: false },
+          { dataField: "title", caption: this.translations.get("Whats New Title field"), validationRules: [{ type: "required" }] },
+          { dataField: "date", caption: this.translations.get("Whats New Date field"), dataType: "date", width: 130 },
+          {
+            dataField: "description",
+            caption: this.translations.get("Whats New Description field"),
+            cellTemplate: (cellElement, cellInfo) => {
+              const text = cellInfo.value || "";
+              cellElement.get(0).innerHTML = `<span style="display:block;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${this.escapeHtml(text)}">${this.escapeHtml(text)}</span>`;
+            }
+          },
+          {
+            dataField: "image_url",
+            caption: this.translations.get("Whats New Image field"),
+            width: 72,
+            allowFiltering: false,
+            allowSorting: false,
+            allowEditing: false,
+            cellTemplate: (cellElement, cellInfo) => {
+              if (cellInfo.value)
+                cellElement.get(0).innerHTML = `<img src="${this.escapeHtml(cellInfo.value)}" style="width:48px;height:36px;object-fit:cover;border-radius:4px;display:block">`;
+            }
+          },
+          { type: "buttons", width: 90, buttons: ["edit", "delete"] }
+        ]
+      });
+      return;
+    }
+    this.whatsNewGridInstance.option("dataSource", whatsNewStore);
+    this.whatsNewGridInstance.refresh();
+  }
+  showWhatsNewAddPopup(store) {
+    let popupHost = document.getElementById("whats-new-add-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="whats-new-add-popup"></div>`);
+      popupHost = document.getElementById("whats-new-add-popup");
+    }
+    this._whatsNewImageFile = null;
+    this._whatsNewImageControl = null;
+    const formData = {};
+    const buildContent = contentElement => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      host.innerHTML = `<div id="whats-new-add-form"></div>`;
+      const formHost = document.getElementById("whats-new-add-form");
+      this._whatsNewFormInstance = new DevExpress.ui.dxForm(formHost, {
+        formData,
+        colCount: 1,
+        items: [
+          {
+            dataField: "title",
+            label: { text: this.translations.get("Whats New Title field") },
+            validationRules: [{ type: "required" }],
+            editorOptions: { placeholder: this.translations.get("Whats New Title field"), inputAttr: { style: "font-family: 'Atma', sans-serif" } }
+          },
+          {
+            dataField: "date",
+            label: { text: this.translations.get("Whats New Date field") },
+            editorType: "dxDateBox",
+            validationRules: [{ type: "required" }],
+            editorOptions: { displayFormat: "yyyy-MM-dd", type: "date", value: new Date(), inputAttr: { style: "font-family: 'Atma', sans-serif" } }
+          },
+          {
+            dataField: "description",
+            label: { text: this.translations.get("Whats New Description field") },
+            editorType: "dxTextArea",
+            editorOptions: { height: 100, placeholder: this.translations.get("Whats New Description field"), inputAttr: { style: "font-family: 'Atma', sans-serif" } }
+          },
+          {
+            label: { text: this.translations.get("Whats New Image field") },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              this._whatsNewImageControl = new ImageControl({
+                dropHint: this.translations.get("Whats New Image field"),
+                onUploadFile: file => {
+                  this._whatsNewImageFile = file;
+                  return Promise.resolve(URL.createObjectURL(file));
+                },
+                onImageCleared: () => { this._whatsNewImageFile = null; }
+              });
+              itemHost.appendChild(this._whatsNewImageControl.createHost().get(0));
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "right",
+            buttonOptions: {
+              text: this.translations.get("Whats New Save Entry"),
+              icon: "fa-light fa-check",
+              type: "default",
+              onClick: async () => {
+                const result = this._whatsNewFormInstance.validate();
+                if (!result.isValid) return;
+                const values = this._whatsNewFormInstance.option("formData");
+                const dateValue = values.date instanceof Date
+                  ? values.date.toISOString().split("T")[0]
+                  : values.date;
+                const payload = { title: values.title, description: values.description || "", date: dateValue };
+                try {
+                  await this.apiClient.createWhatsNewEntry(payload, this._whatsNewImageFile || null);
+                  this.setStatus(this.translations.get("Whats New Entry saved."));
+                  this.whatsNewAddPopupInstance.hide();
+                  if (this.whatsNewGridInstance)
+                    this.whatsNewGridInstance.refresh();
+                } catch (error) {
+                  this.setStatus(this.translations.get("Whats New Failed to save entry."), true);
+                }
+              }
+            }
+          }
+        ]
+      });
+    };
+    if (this.whatsNewAddPopupInstance) {
+      buildContent(this.whatsNewAddPopupInstance.content());
+      this.whatsNewAddPopupInstance.show();
+      return;
+    }
+    this.whatsNewAddPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: this.translations.get("Whats New Add Entry"),
+      width: 460,
+      height: "auto",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
   }
   async readNotification(notification) {
     if (!notification)

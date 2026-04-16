@@ -231,7 +231,17 @@ MarketplaceTranslations._strings = {
     "Remove from system templates": "Remove from system templates",
     "Failed to update system template.": "Failed to update system template.",
     "Choose a starting point": "Choose a starting point",
-    "Blank model": "Blank model"
+    "Blank model": "Blank model",
+    "What's New": "What's New",
+    "Whats New Title field": "Title",
+    "Whats New Date field": "Date",
+    "Whats New Description field": "Description",
+    "Whats New Image field": "Image",
+    "Whats New Add Entry": "Add Entry",
+    "Whats New Save Entry": "Save",
+    "Whats New Entry saved.": "Entry saved.",
+    "Whats New Failed to save entry.": "Failed to save entry.",
+    "Whats New Failed to delete entry.": "Failed to delete entry."
   },
   "pt-PT": {
     "My Models": "Os meus Modelos",
@@ -336,6 +346,16 @@ MarketplaceTranslations._strings = {
     "Remove from system templates": "Remover dos modelos de sistema",
     "Failed to update system template.": "Erro ao atualizar modelo de sistema.",
     "Choose a starting point": "Escolher um ponto de partida",
-    "Blank model": "Modelo em branco"
+    "Blank model": "Modelo em branco",
+    "What's New": "O que há de novo",
+    "Whats New Title field": "Título",
+    "Whats New Date field": "Data",
+    "Whats New Description field": "Descrição",
+    "Whats New Image field": "Imagem",
+    "Whats New Add Entry": "Adicionar entrada",
+    "Whats New Save Entry": "Guardar",
+    "Whats New Entry saved.": "Entrada guardada.",
+    "Whats New Failed to save entry.": "Erro ao guardar entrada.",
+    "Whats New Failed to delete entry.": "Erro ao eliminar entrada."
   }
 };

@@ -643,3 +643,67 @@ body {
   text-overflow: ellipsis;
   max-width: 100%;
 }
+
+.shape-image-dropzone {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px dashed var(--c-border);
+  border-radius: 12px;
+  background: var(--c-card);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  position: relative;
+}
+.shape-image-dropzone.drag-over {
+  border-color: #4039d7;
+  background: #eef0ff;
+}
+.shape-image-dropzone__hint {
+  font-size: 0.9rem;
+  color: #6b7280;
+  text-align: center;
+}
+.shape-image-dropzone__preview {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid var(--c-border);
+  background: #fff;
+}
+.shape-image-dropzone__preview:not([src]),
+.shape-image-dropzone__preview[src=""] {
+  display: none;
+}
+.shape-image-dropzone__uploader {
+  display: none;
+}
+.shape-image-dropzone__remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+.shape-image-dropzone__remove .trash {
+  font-weight: 300;
+  color: red;
+}
+.shape-image-dropzone__remove:hover .trash {
+  display: none;
+}
+.shape-image-dropzone__remove:hover .trash-hover {
+  display: inline-block;
+  font-weight: 900;
+  color: red;
+}

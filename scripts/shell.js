@@ -356,7 +356,7 @@ class Shell  {
         this.board.enableSelection(true);
         this.deserialise(JSON.parse(model));
         this.reset();
-        this.topToolbar.showAboutPopupIfNeeded();
+        this.topToolbar.showWhatsNewIfNeeded();
         this.calculator.stop();
         this.calculator.calculate();
         this.board.refresh();

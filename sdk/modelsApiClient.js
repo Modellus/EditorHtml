@@ -455,4 +455,54 @@ export class ModelsApiClient {
     });
     if (!response.ok) throw new Error(`Remove collaborator failed (${response.status})`);
   }
+
+  async fetchWhatsNew() {
+    const response = await fetch(`${this.apiBaseUrl}/whats-new`);
+    if (!response.ok) throw new Error(`Fetch whats-new failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createWhatsNewEntry(payload, imageFile) {
+    if (imageFile) {
+      const formData = new FormData();
+      if (payload.title) formData.append("title", payload.title);
+      if (payload.description) formData.append("description", payload.description);
+      if (payload.date) formData.append("date", payload.date);
+      formData.append("image", imageFile);
+      const response = await fetch(`${this.apiBaseUrl}/whats-new`, {
+        method: "POST",
+        headers: this.buildAuthHeaders(),
+        body: formData
+      });
+      if (!response.ok) throw new Error(`Create whats-new failed (${response.status})`);
+      return await response.json();
+    }
+    const response = await fetch(`${this.apiBaseUrl}/whats-new`, {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Create whats-new failed (${response.status})`);
+    return await response.json();
+  }
+
+  async updateWhatsNewEntry(entryId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/whats-new/${encodeURIComponent(entryId)}`, {
+      method: "PATCH",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update whats-new failed (${response.status})`);
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  async deleteWhatsNewEntry(entryId) {
+    const response = await fetch(`${this.apiBaseUrl}/whats-new/${encodeURIComponent(entryId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete whats-new failed (${response.status})`);
+  }
 }
