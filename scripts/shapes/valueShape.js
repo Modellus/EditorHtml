@@ -119,7 +119,7 @@ class ValueShape extends BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Font",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Font Tooltip", this.board.translations, 280),
             buttonTemplate: (data, element) => {
                 element[0].innerHTML = `<i class="fa-light fa-text"></i>`;
             },
@@ -150,7 +150,6 @@ class ValueShape extends BaseShape {
                     $(`#${boldButtonId}`, $parent).dxButton({
                         text: "B",
                         stylingMode: this.properties.fontBold ? "contained" : "outlined",
-                        hint: "Bold",
                         onClick: () => {
                             const newValue = !this.properties.fontBold;
                             this.setPropertyCommand("fontBold", newValue);
@@ -160,7 +159,6 @@ class ValueShape extends BaseShape {
                     $(`#${italicButtonId}`, $parent).dxButton({
                         text: "I",
                         stylingMode: this.properties.fontItalic ? "contained" : "outlined",
-                        hint: "Italic",
                         onClick: () => {
                             const newValue = !this.properties.fontItalic;
                             this.setPropertyCommand("fontItalic", newValue);

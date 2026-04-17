@@ -275,6 +275,7 @@ class VectorShape extends ChildShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Tip Type Tooltip", this.board.translations, 280),
             template: (data, element) => this.renderTipTypeButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,

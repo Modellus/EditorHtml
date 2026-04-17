@@ -700,7 +700,7 @@ class BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Permissions",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Permissions Tooltip", this.board.translations, 280),
             template: (data, element) => this.renderPermissionsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
@@ -957,7 +957,7 @@ class BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Add shape",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Add Shape Tooltip", this.board.translations, 280),
             template: (data, element) => this.renderAddShapeButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
@@ -990,7 +990,7 @@ class BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Name",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Name Tooltip", this.board.translations, 280),
             buttonTemplate: (data, element) => this.renderShapeColorButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
@@ -1089,7 +1089,7 @@ class BaseShape {
         $(`#${buttonId}`, this._removeDropdownElement).dxButton({
             template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
             stylingMode: "text",
-            hint: "Remove",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Remove Tooltip", this.board.translations, 280),
             onClick: e => {
                 this._removeMenuInstance.option("target", e.component.element());
                 this._removeMenuInstance.show();
@@ -1145,7 +1145,7 @@ class BaseShape {
         $(`#${buttonId}`, this._actionsDropdownElement).dxButton({
             icon: "fa-light fa-ellipsis-vertical",
             stylingMode: "text",
-            hint: "Actions",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Actions Tooltip", this.board.translations, 280),
             onClick: e => {
                 this._actionsMenuInstance.option("target", e.component.element());
                 this._actionsMenuInstance.show();
@@ -1188,7 +1188,7 @@ class BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Terms",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Terms Tooltip", this.board.translations, 280),
             template: (data, element) => this.renderTermsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,

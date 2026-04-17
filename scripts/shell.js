@@ -84,33 +84,8 @@ class Shell  {
         this.board?.updateGrid(this.properties.gridSize, this.properties.snapToGrid);
     }
 
-    createTooltip(e, html, width, canShow) {
-        return $("<div>")
-            .appendTo("body")
-            .dxTooltip({
-                target: e.component.element(),
-                contentTemplate: function (contentElement) {
-                    contentElement.append(
-                        $("<div class='tooltip'/>").html(html)
-                    )
-                },
-                onShowing: tooltipEvent => {
-                    if (typeof canShow === "function" && !canShow())
-                        tooltipEvent.cancel = true;
-                },
-                showEvent: {
-                    delay: 1000,
-                    name: "mouseenter" 
-                },
-                hideEvent: "mouseleave",
-                position: "top",
-                width: width ?? 200
-            })
-            .dxTooltip("instance");
-    }
-
     createTranslatedTooltip(e, key, width, canShow) {
-        return this.createTooltip(e, this.board.translations.get(key), width, canShow);
+        return Utils.createTranslatedTooltip(e, key, this.board.translations, width, canShow);
     }
 
     getCurrentModelId() {

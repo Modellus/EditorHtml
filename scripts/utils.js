@@ -80,6 +80,35 @@ class Utils {
         const factor = 10 ** precision;
         return Math.round(value * factor) / factor;
     }
+
+    static createTooltip(e, html, width, canShow) {
+        return $('<div>')
+            .appendTo('body')
+            .dxTooltip({
+                target: e.component.element(),
+                contentTemplate: function (contentElement) {
+                    contentElement.append(
+                        $('<div class="tooltip"/>').html(html)
+                    );
+                },
+                onShowing: tooltipEvent => {
+                    if (typeof canShow === 'function' && !canShow())
+                        tooltipEvent.cancel = true;
+                },
+                showEvent: {
+                    delay: 1000,
+                    name: 'mouseenter'
+                },
+                hideEvent: 'mouseleave',
+                position: 'top',
+                width: width ?? 200
+            })
+            .dxTooltip('instance');
+    }
+
+    static createTranslatedTooltip(e, key, translations, width, canShow) {
+        return Utils.createTooltip(e, translations.get(key), width, canShow);
+    }
 }
 
 if (typeof module !== "undefined" && module.exports)

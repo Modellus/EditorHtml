@@ -252,7 +252,7 @@ class ChildShape extends BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Attached To",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Attached To Tooltip", this.board.translations, 280),
             buttonTemplate: (data, element) => this.renderParentButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
@@ -306,7 +306,7 @@ class ChildShape extends BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Trajectory",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Trajectory Tooltip", this.board.translations, 280),
             buttonTemplate: (data, element) => this.renderMotionButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,

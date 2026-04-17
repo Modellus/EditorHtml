@@ -155,6 +155,7 @@ class ChartShape extends BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Chart Type Tooltip", this.board.translations, 280),
             icon: "fa-light fa-chart-mixed",
             dropDownOptions: {
                 container: document.body,

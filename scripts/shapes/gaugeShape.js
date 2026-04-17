@@ -152,7 +152,7 @@ class GaugeShape extends BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Gauge settings",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Gauge Settings Tooltip", this.board.translations, 280),
             buttonTemplate: (data, element) => this.renderGaugeSettingsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,

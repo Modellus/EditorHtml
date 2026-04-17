@@ -111,7 +111,26 @@ class BaseTranslations {
                 "Feedback Field Image Hint": "Arrasta uma imagem ou clica para selecionar",
                 "Feedback Send Button": "Enviar",
                 "Feedback Success": "Obrigado pelo teu feedback!",
-                "Feedback Error": "Falha ao enviar feedback"
+                "Feedback Error": "Falha ao enviar feedback",
+                "Permissions Tooltip": "<div style=\"text-align: center\"><b>Permissões</b></div><br /><div style=\"text-align: center\">Define a visibilidade e o estado de bloqueio deste elemento para os utilizadores.<br /><br />Clique para mostrar ou ocultar e para permitir ou bloquear interações.</div>",
+                "Add Shape Tooltip": "<div style=\"text-align: center\"><b>Adicionar Objeto</b></div><br /><div style=\"text-align: center\">Adiciona um novo objeto no interior deste espaço de simulação.<br /><br />Clique para escolher o tipo de objeto a adicionar.</div>",
+                "Name Tooltip": "<div style=\"text-align: center\"><b>Aparência</b></div><br /><div style=\"text-align: center\">Define o nome e as cores deste objeto.<br /><br />Clique para editar o nome, a cor principal e a cor do contorno.</div>",
+                "Remove Tooltip": "<div style=\"text-align: center\"><b>Remover</b></div><br /><div style=\"text-align: center\">Remove ou repõe este objeto.<br /><br />Clique para eliminar ou restaurar as definições predefinidas.</div>",
+                "Actions Tooltip": "<div style=\"text-align: center\"><b>Ações</b></div><br /><div style=\"text-align: center\">Opções de ordenação de camadas, cópia e duplicação para este objeto.<br /><br />Clique para trazer para a frente, enviar para trás, copiar, colar ou duplicar.</div>",
+                "Terms Tooltip": "<div style=\"text-align: center\"><b>Termos</b></div><br /><div style=\"text-align: center\">Liga termos do modelo para controlar as propriedades deste objeto.<br /><br />Clique para associar variáveis a posição, tamanho e outros atributos.</div>",
+                "Attached To Tooltip": "<div style=\"text-align: center\"><b>Espaço de Simulação</b></div><br /><div style=\"text-align: center\">Define o espaço de simulação ao qual este objeto pertence.<br /><br />Clique para escolher um referencial diferente onde colocar este objeto.</div>",
+                "Trajectory Tooltip": "<div style=\"text-align: center\"><b>Rastro de Movimento</b></div><br /><div style=\"text-align: center\">Controla a trajetória e o efeito de estroboscopia deste objeto.<br /><br />Clique para definir a cor do rastro, da estroboscopia, o intervalo e a opacidade.</div>",
+                "Character Tooltip": "<div style=\"text-align: center\"><b>Personagem</b></div><br /><div style=\"text-align: center\">Seleciona o personagem visual que representa esta partícula.<br /><br />Clique para navegar e escolher uma imagem ou animação.</div>",
+                "Shortcuts Tooltip": "<div style=\"text-align: center\"><b>Atalhos</b></div><br /><div style=\"text-align: center\">Insere modelos matemáticos comuns na expressão.<br /><br />Clique para escolher um atalho como fração, potência ou raiz quadrada.</div>",
+                "Font Tooltip": "<div style=\"text-align: center\"><b>Tipo de letra</b></div><br /><div style=\"text-align: center\">Ajusta o tamanho e o estilo do texto neste valor.<br /><br />Clique para definir o tamanho, negrito ou itálico.</div>",
+                "Display Settings Tooltip": "<div style=\"text-align: center\"><b>Visualização</b></div><br /><div style=\"text-align: center\">Controla as opções de visualização deste espaço de simulação.<br /><br />Clique para mostrar ou ocultar eixos, marcas e linhas de grelha.</div>",
+                "Gauge Settings Tooltip": "<div style=\"text-align: center\"><b>Definições do Medidor</b></div><br /><div style=\"text-align: center\">Configura o intervalo angular e a precisão de encaixe deste medidor.<br /><br />Clique para definir os limites de rotação e o passo de encaixe.</div>",
+                "Scale Tooltip": "<div style=\"text-align: center\"><b>Escala</b></div><br /><div style=\"text-align: center\">Define o fator de escala de medição desta ferramenta.<br /><br />Introduza um valor para converter distâncias em píxeis em unidades reais.</div>",
+                "Line Width Tooltip": "<div style=\"text-align: center\"><b>Espessura</b></div><br /><div style=\"text-align: center\">Define a espessura do traço desta linha ou arco.<br /><br />Clique para ajustar a espessura em píxeis.</div>",
+                "Tip Type Tooltip": "<div style=\"text-align: center\"><b>Tipo de Ponta</b></div><br /><div style=\"text-align: center\">Controla o estilo das pontas em cada extremidade deste vetor.<br /><br />Clique para definir o formato das pontas de início e fim.</div>",
+                "Chart Type Tooltip": "<div style=\"text-align: center\"><b>Tipo de Gráfico</b></div><br /><div style=\"text-align: center\">Seleciona como os dados são apresentados neste gráfico.<br /><br />Clique para alternar entre dispersão, linha, área e barras.</div>",
+                "Image Settings Tooltip": "<div style=\"text-align: center\"><b>Imagem</b></div><br /><div style=\"text-align: center\">Configura a imagem apresentada por este objeto.<br /><br />Clique para carregar ou alterar a imagem e definir as proporções.</div>",
+                "Slider Scale Tooltip": "<div style=\"text-align: center\"><b>Escala</b></div><br /><div style=\"text-align: center\">Configura o intervalo de valores e a precisão deste slider.<br /><br />Clique para definir escala automática, mínimo, máximo e precisão.</div>"
             };
         this.languages["en-US"] =
             {
@@ -223,7 +242,26 @@ class BaseTranslations {
                 "Feedback Field Image Hint": "Drop an image or click to select",
                 "Feedback Send Button": "Send",
                 "Feedback Success": "Thank you for your feedback!",
-                "Feedback Error": "Failed to send feedback"
+                "Feedback Error": "Failed to send feedback",
+                "Permissions Tooltip": "<div style=\"text-align: center\"><b>Permissions</b></div><br /><div style=\"text-align: center\">Sets the visibility and lock state of this element for users.<br /><br />Click to show or hide it, and to allow or prevent interactions.</div>",
+                "Add Shape Tooltip": "<div style=\"text-align: center\"><b>Add Object</b></div><br /><div style=\"text-align: center\">Adds a new object inside this simulation space.<br /><br />Click to choose the type of object to add.</div>",
+                "Name Tooltip": "<div style=\"text-align: center\"><b>Appearance</b></div><br /><div style=\"text-align: center\">Sets the name and colors of this object.<br /><br />Click to edit the name, foreground color, and border color.</div>",
+                "Remove Tooltip": "<div style=\"text-align: center\"><b>Remove</b></div><br /><div style=\"text-align: center\">Removes or resets this object.<br /><br />Click to delete it or restore its default settings.</div>",
+                "Actions Tooltip": "<div style=\"text-align: center\"><b>Actions</b></div><br /><div style=\"text-align: center\">Layer ordering, copy and duplication options for this object.<br /><br />Click to bring to front, send to back, copy, paste, or duplicate.</div>",
+                "Terms Tooltip": "<div style=\"text-align: center\"><b>Terms</b></div><br /><div style=\"text-align: center\">Binds model terms to control this object's properties.<br /><br />Click to assign variables to position, size, and other attributes.</div>",
+                "Attached To Tooltip": "<div style=\"text-align: center\"><b>Attached To</b></div><br /><div style=\"text-align: center\">Sets the simulation space this object belongs to.<br /><br />Click to choose a different referential to place this object in.</div>",
+                "Trajectory Tooltip": "<div style=\"text-align: center\"><b>Motion Trace</b></div><br /><div style=\"text-align: center\">Controls the trajectory and stroboscopy effect of this object.<br /><br />Click to set trace color, stroboscopy color, interval, and opacity.</div>",
+                "Character Tooltip": "<div style=\"text-align: center\"><b>Character</b></div><br /><div style=\"text-align: center\">Selects the visual character representing this body.<br /><br />Click to browse and pick an image or animation.</div>",
+                "Shortcuts Tooltip": "<div style=\"text-align: center\"><b>Shortcuts</b></div><br /><div style=\"text-align: center\">Inserts common mathematical templates into the expression.<br /><br />Click to choose a shortcut such as a fraction, power, or square root.</div>",
+                "Font Tooltip": "<div style=\"text-align: center\"><b>Font</b></div><br /><div style=\"text-align: center\">Adjusts text size and style for this value display.<br /><br />Click to set font size, bold, or italic.</div>",
+                "Display Settings Tooltip": "<div style=\"text-align: center\"><b>Display</b></div><br /><div style=\"text-align: center\">Controls the visual display options of this simulation space.<br /><br />Click to show or hide axes, ticks, and grid lines.</div>",
+                "Gauge Settings Tooltip": "<div style=\"text-align: center\"><b>Gauge Settings</b></div><br /><div style=\"text-align: center\">Configures the angular range and snap precision of this gauge.<br /><br />Click to set the rotation limits and snapping step.</div>",
+                "Scale Tooltip": "<div style=\"text-align: center\"><b>Scale</b></div><br /><div style=\"text-align: center\">Sets the measurement scale factor for this tool.<br /><br />Enter a value to convert pixel distances into real-world units.</div>",
+                "Line Width Tooltip": "<div style=\"text-align: center\"><b>Line Width</b></div><br /><div style=\"text-align: center\">Sets the stroke width of this line or arc.<br /><br />Click to adjust the thickness in pixels.</div>",
+                "Tip Type Tooltip": "<div style=\"text-align: center\"><b>Tip Type</b></div><br /><div style=\"text-align: center\">Controls the arrowhead style at each end of this vector.<br /><br />Click to set tip shapes for the start and end points.</div>",
+                "Chart Type Tooltip": "<div style=\"text-align: center\"><b>Chart Type</b></div><br /><div style=\"text-align: center\">Selects how data is displayed in this chart.<br /><br />Click to toggle between scatter, line, area, and bar styles.</div>",
+                "Image Settings Tooltip": "<div style=\"text-align: center\"><b>Image</b></div><br /><div style=\"text-align: center\">Configures the image displayed by this object.<br /><br />Click to upload or change the image and set proportion settings.</div>",
+                "Slider Scale Tooltip": "<div style=\"text-align: center\"><b>Scale</b></div><br /><div style=\"text-align: center\">Configures the value range and precision of this slider.<br /><br />Click to set auto scale, minimum, maximum, and step precision.</div>"
             };
     }
 

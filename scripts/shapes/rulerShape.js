@@ -27,8 +27,10 @@ class RulerShape extends BaseShape {
                 widget: "dxNumberBox",
                 options: Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false, min: 0.000001 }), {
                     value: this.properties.scale,
-                    hint: "Scale",
-                    onInitialized: e => { this._scaleBoxInstance = e.component; },
+                    onInitialized: e => {
+                        this._scaleBoxInstance = e.component;
+                        Utils.createTranslatedTooltip(e, "Scale Tooltip", this.board.translations, 280);
+                    },
                     onValueChanged: e => {
                         this.setPropertyCommand("scale", e.value);
                     }

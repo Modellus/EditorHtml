@@ -149,7 +149,7 @@ class ReferentialShape extends BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Settings",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Display Settings Tooltip", this.board.translations, 280),
             template: (data, element) => this.renderSettingsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,

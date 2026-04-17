@@ -45,7 +45,7 @@ class ExpressionShape extends BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Shortcuts",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Shortcuts Tooltip", this.board.translations, 280),
             icon: "fa-light fa-sigma",
             dropDownOptions: {
                 container: document.body,

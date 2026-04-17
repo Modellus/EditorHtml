@@ -329,7 +329,7 @@ class BodyShape extends ChildShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            hint: "Character",
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Character Tooltip", this.board.translations, 280),
             buttonTemplate: (data, element) => this.renderCharacterPickerButtonTemplate(element),
             dropDownOptions: {
                 container: document.body,
@@ -456,7 +456,6 @@ class BodyShape extends ChildShape {
                         text: "Upload",
                         buildControl: $p => $('<div>').dxButton({
                             icon: "fa-light fa-image",
-                            hint: "Image",
                             stylingMode: "text",
                             onClick: _ => this.openImageFileDialog()
                         }).appendTo($p)

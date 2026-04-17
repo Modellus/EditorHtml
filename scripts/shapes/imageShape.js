@@ -57,6 +57,7 @@ class ImageShape extends ChildShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Image Settings Tooltip", this.board.translations, 280),
             icon: "fa-light fa-image",
             dropDownOptions: {
                 container: document.body,

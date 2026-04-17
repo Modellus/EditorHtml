@@ -100,6 +100,7 @@ class SliderShape extends BaseShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Slider Scale Tooltip", this.board.translations, 280),
             icon: "fa-light fa-ruler-vertical",
             dropDownOptions: {
                 container: document.body,

@@ -239,6 +239,7 @@ class LineShape extends ChildShape {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Line Width Tooltip", this.board.translations, 280),
             template: (data, element) => this.renderLineWidthButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
