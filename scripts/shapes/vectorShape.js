@@ -81,6 +81,12 @@ class VectorShape extends ChildShape {
         this.updateHandles();
     }
 
+    getScale() {
+        if (this.properties.scaleX != null && this.properties.scaleY != null)
+            return { x: this.properties.scaleX, y: this.properties.scaleY };
+        return super.getScale();
+    }
+
     enterEditMode() {
         return false;
     }
@@ -267,6 +273,8 @@ class VectorShape extends ChildShape {
         const buttonContent = this._tipTypeDropdownElement.find(".dx-button-content")[0];
         if (buttonContent)
             this.renderTipTypeButtonTemplate(buttonContent);
+        this._vectorScaleXBoxInstance?.option("value", this.properties.scaleX ?? super.getScale().x);
+        this._vectorScaleYBoxInstance?.option("value", this.properties.scaleY ?? super.getScale().y);
     }
 
     createTipTypeDropDownButton(container) {
@@ -355,6 +363,34 @@ class VectorShape extends ChildShape {
                                     value: this.properties.showComponents === true,
                                     onValueChanged: e => this.setPropertyCommand("showComponents", e.value)
                                 }).appendTo($container);
+                            }
+                        },
+                        {
+                            text: "Horizontal Scale",
+                            buildControl: $container => {
+                                $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                                    value: this.properties.scaleX ?? super.getScale().x,
+                                    onInitialized: e => { this._vectorScaleXBoxInstance = e.component; },
+                                    onValueChanged: e => {
+                                        this.properties.scaleX = e.value;
+                                        this.tick();
+                                        this.board.markDirty(this);
+                                    }
+                                })).appendTo($container);
+                            }
+                        },
+                        {
+                            text: "Vertical Scale",
+                            buildControl: $container => {
+                                $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                                    value: this.properties.scaleY ?? super.getScale().y,
+                                    onInitialized: e => { this._vectorScaleYBoxInstance = e.component; },
+                                    onValueChanged: e => {
+                                        this.properties.scaleY = e.value;
+                                        this.tick();
+                                        this.board.markDirty(this);
+                                    }
+                                })).appendTo($container);
                             }
                         }
                     ];
