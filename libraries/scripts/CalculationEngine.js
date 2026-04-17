@@ -21709,14 +21709,14 @@ class PhysicalBody extends Body {
         this.addTermInitialValue(this.name + ".y", this.initialPositionY);
         this.addTermInitialValue(this.name + ".vx", this.initialVelocityX, TermType.DIFFERENTIAL);
         this.addTermInitialValue(this.name + ".vy", this.initialVelocityY, TermType.DIFFERENTIAL);
-        this.addTermInitialValue(this.name + ".ax", 0);
-        this.addTermInitialValue(this.name + ".ay", 0);
+        this.addTermInitialValue(this.name + ".ax", 0, TermType.DIFFERENTIAL);
+        this.addTermInitialValue(this.name + ".ay", 0, TermType.DIFFERENTIAL);
     }
     buildExpressions() {
         const bodyName = this.name;
-        // Acceleration functions: computed from gravity and drag
-        this.addExpression(new Expression(bodyName + ".ax", (values) => -(values["drag"] / values[bodyName + ".mass"]) * values[bodyName + ".vx"], TermType.FUNCTION));
-        this.addExpression(new Expression(bodyName + ".ay", (values) => -values["gravity"] - (values["drag"] / values[bodyName + ".mass"]) * values[bodyName + ".vy"], TermType.FUNCTION));
+        // Acceleration differentials: computed from gravity and drag
+        this.addExpression(new Expression(bodyName + ".ax", (values) => -(values["drag"] / values[bodyName + ".mass"]) * values[bodyName + ".vx"], TermType.DIFFERENTIAL));
+        this.addExpression(new Expression(bodyName + ".ay", (values) => -values["gravity"] - (values["drag"] / values[bodyName + ".mass"]) * values[bodyName + ".vy"], TermType.DIFFERENTIAL));
         // Velocity differentials: d(vx)/dt = ax, d(vy)/dt = ay
         this.addExpression(new Expression(bodyName + ".vx", (values) => values[bodyName + ".ax"], TermType.DIFFERENTIAL));
         this.addExpression(new Expression(bodyName + ".vy", (values) => values[bodyName + ".ay"], TermType.DIFFERENTIAL));

@@ -80,7 +80,8 @@ class BodyShape extends ChildShape {
     setProperties(properties) {
         if ("isPhysical" in properties) {
             const isPhysical = properties.isPhysical;
-            const rest = Object.fromEntries(Object.entries(properties).filter(([key]) => key !== "isPhysical"));
+            const excludedKeys = isPhysical ? ["isPhysical", "xTermLocked", "yTermLocked"] : ["isPhysical"];
+            const rest = Object.fromEntries(Object.entries(properties).filter(([key]) => !excludedKeys.includes(key)));
             this.setProperty("isPhysical", isPhysical);
             super.setProperties(rest);
         } else {
@@ -113,16 +114,14 @@ class BodyShape extends ChildShape {
                 const prefix = (this.properties.name ?? "").replace(/\s+/g, "");
                 this.properties.xTerm = `${prefix}.x`;
                 this.properties.yTerm = `${prefix}.y`;
-                this.properties.xTermLocked = true;
-                this.properties.yTermLocked = true;
+                this.properties.xTermLocked = false;
+                this.properties.yTermLocked = false;
             } else {
                 const scale = this.getScale();
                 const referentialX = Utils.roundToPrecision(this.properties.x * (scale.x ?? 1), this.board.calculator.getPrecision());
                 const referentialY = Utils.roundToPrecision(-this.properties.y * (scale.y ?? 1), this.board.calculator.getPrecision());
                 this.properties.xTerm = String(referentialX);
                 this.properties.yTerm = String(referentialY);
-                this.properties.xTermLocked = false;
-                this.properties.yTermLocked = false;
             }
         }
         if (name === "name" && this.properties.isPhysical) {
