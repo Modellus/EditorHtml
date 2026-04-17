@@ -1266,12 +1266,12 @@ class BaseShape {
             const caseNumber = Number.isFinite(rawCaseNumber) ? rawCaseNumber : (parseInt(rawCaseNumber, 10) || 1);
             const calculator = this.board.calculator;
             var isTerm = calculator.isTerm(term);
-            delta = delta * axisScale * (termMapping.isInverted ? -1 : 1);
+            delta = axisScale !== 0 ? delta / axisScale * (termMapping.isInverted ? -1 : 1) : 0;
             if (isTerm) {
                 value = calculator.getByName(term, caseNumber);
                 if (!Number.isFinite(value)) {
                     const fallback = Number.isFinite(this.properties[property]) ? this.properties[property] : 0;
-                    value = (termMapping.isInverted ? -fallback : fallback) * axisScale;
+                    value = axisScale !== 0 ? (termMapping.isInverted ? -fallback : fallback) / axisScale : 0;
                 }
                 calculator.setTermValue(term, value + delta, calculator.system.iteration, caseNumber);
                 calculator.calculate();
