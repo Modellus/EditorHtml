@@ -2330,7 +2330,7 @@ class ModelsApp {
           </div>
         </div>`;
       const modelHtml = model
-        ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:8px 12px;background:#f3f4f6;border-radius:6px">
+        ? `<div data-model-navigate style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:8px 12px;background:#f3f4f6;border-radius:6px;cursor:pointer">
             <span class="fa-light fa-file-lines" style="color:#6b7280"></span>
             <span style="font-size:0.9em;color:#374151">${this.escapeHtml(model.title || "")}</span>
            </div>`
@@ -2345,6 +2345,9 @@ class ModelsApp {
         ? `<div style="line-height:1.6;color:#374151">${notification.message}</div>`
         : "";
       contentElement.get(0).innerHTML = `<div style="padding:4px 2px">${userHtml}${modelHtml}${imageHtml}${messageHtml}</div>`;
+      const modelElement = contentElement.get(0).querySelector("[data-model-navigate]");
+      if (modelElement)
+        modelElement.addEventListener("click", () => this.openModel(model));
       const imageElement = contentElement.get(0).querySelector("[data-notification-image]");
       if (imageElement)
         imageElement.addEventListener("click", () => this.showImageFullscreen(imageElement.src));
