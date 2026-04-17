@@ -10,7 +10,6 @@ class Calculator extends EventTarget {
         this.parser = new Modellus.Parser(this.system);
         this.engine = new Modellus.Engine(this.system);
         this.physicalEngine = new Modellus.PhysicalEngine(this.system);
-        this.physicalEngine.connectToEngine(this.engine);
         this.status = STATUS.STOPPED;
         this.properties = this.createDefaultProperties();
         this.setDefaults();

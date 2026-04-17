@@ -177,13 +177,15 @@ class PointShape extends ChildShape {
         this.circle = this.board.createSvgElement("circle");
         this.circle.setAttribute("pointer-events", "all");
         element.appendChild(this.circle);
+        this.motionGroup = this.board.createSvgElement("g");
+        this.motionGroup.setAttribute("pointer-events", "none");
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
         this.trajectory.element.setAttribute("fill", "none");
         this.trajectory.element.setAttribute("pointer-events", "none");
-        element.appendChild(this.trajectory.element);
+        this.motionGroup.appendChild(this.trajectory.element);
         this.stroboscopy = this.board.createSvgElement("g");
         this.stroboscopy.setAttribute("pointer-events", "none");
-        element.appendChild(this.stroboscopy);
+        this.motionGroup.appendChild(this.stroboscopy);
         this._stroboscopyPositions = [];
         return element;
     }

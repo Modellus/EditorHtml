@@ -270,13 +270,15 @@ class ImageShape extends ChildShape {
             this.board.markDirty(this);
         });
         element.appendChild(this.videoForeignObject);
+        this.motionGroup = this.board.createSvgElement("g");
+        this.motionGroup.setAttribute("pointer-events", "none");
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
         this.trajectory.element.setAttribute("fill", "none");
         this.trajectory.element.setAttribute("pointer-events", "none");
-        element.appendChild(this.trajectory.element);
+        this.motionGroup.appendChild(this.trajectory.element);
         this.stroboscopy = this.board.createSvgElement("g");
         this.stroboscopy.setAttribute("pointer-events", "none");
-        element.appendChild(this.stroboscopy);
+        this.motionGroup.appendChild(this.stroboscopy);
         this._stroboscopyPositions = [];
         this.border = this.board.createSvgElement("rect");
         this.border.setAttribute("fill", "none");
@@ -385,5 +387,33 @@ class ImageShape extends ChildShape {
             this._videoReady = true;
             this.board.markDirty(this);
         }, { once: true });
+    }
+
+    drawStroboscopy() {
+        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+            while (this.stroboscopy.firstChild)
+                this.stroboscopy.removeChild(this.stroboscopy.firstChild);
+            return;
+        }
+        const positions = this._stroboscopyPositions ?? [];
+        const desiredLength = positions.length;
+        while (this.stroboscopy.children.length > desiredLength)
+            this.stroboscopy.removeChild(this.stroboscopy.lastChild);
+        const imageSource = this.getImageSource();
+        for (let i = 0; i < desiredLength; i++) {
+            const pos = positions[i];
+            let imageClone = this.stroboscopy.children[i];
+            if (!imageClone) {
+                imageClone = this.board.createSvgElement("image");
+                this.stroboscopy.appendChild(imageClone);
+            }
+            imageClone.setAttribute("href", imageSource);
+            imageClone.setAttribute("x", pos.x);
+            imageClone.setAttribute("y", pos.y);
+            imageClone.setAttribute("width", this.properties.width);
+            imageClone.setAttribute("height", this.properties.height);
+            imageClone.setAttribute("preserveAspectRatio", "xMidYMid slice");
+            imageClone.setAttribute("opacity", this.properties.stroboscopyOpacity * 0.2);
+        }
     }
 }

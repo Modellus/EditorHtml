@@ -569,6 +569,7 @@ __webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
+  Body: () => (/* reexport */ Body),
   Branch: () => (/* reexport */ Branch),
   Deriver: () => (/* reexport */ Deriver),
   Engine: () => (/* reexport */ Engine),
@@ -583,6 +584,35 @@ __webpack_require__.d(__webpack_exports__, {
   TermType: () => (/* reexport */ TermType),
   Visitor: () => (/* reexport */ Visitor)
 });
+
+;// ./CalculationEngine/TermType.ts
+var TermType;
+(function (TermType) {
+    TermType[TermType["DIFFERENTIAL"] = 0] = "DIFFERENTIAL";
+    TermType[TermType["FUNCTION"] = 1] = "FUNCTION";
+    TermType[TermType["INDEPENDENT"] = 2] = "INDEPENDENT";
+    TermType[TermType["PARAMETER"] = 3] = "PARAMETER";
+})(TermType || (TermType = {}));
+
+;// ./CalculationEngine/Body.ts
+
+class Body {
+    constructor(name, type) {
+        this.expressions = [];
+        this.termInitialValues = [];
+        this.name = name;
+        this.type = type;
+    }
+    addExpression(expression) {
+        this.expressions.push(expression);
+    }
+    addTermInitialValue(name, value, type = TermType.PARAMETER) {
+        this.termInitialValues.push({ name, value, type });
+    }
+    afterIterate(values) {
+        // Override in subclasses for post-iteration corrections
+    }
+}
 
 ;// ./CalculationEngine/Branch.ts
 class Branch {
@@ -17946,15 +17976,6 @@ var UnbufferedTokenStream = class {
 class LatexMathVisitor extends AbstractParseTreeVisitor {
 }
 
-;// ./CalculationEngine/TermType.ts
-var TermType;
-(function (TermType) {
-    TermType[TermType["DIFFERENTIAL"] = 0] = "DIFFERENTIAL";
-    TermType[TermType["FUNCTION"] = 1] = "FUNCTION";
-    TermType[TermType["INDEPENDENT"] = 2] = "INDEPENDENT";
-    TermType[TermType["PARAMETER"] = 3] = "PARAMETER";
-})(TermType || (TermType = {}));
-
 ;// ./CalculationEngine/Expression.ts
 
 class Expression {
@@ -18813,7 +18834,20 @@ class Engine extends events.EventEmitter {
             this.system.addValues(current);
         }
         this.system.calculateFunctions();
+        this.applyBodyCorrections();
         this.emit("iterate", this);
+    }
+    applyBodyCorrections() {
+        const lastIteration = this.system.lastIteration;
+        const bodies = this.system.getBodies();
+        for (let caseNumber = 1; caseNumber <= this.system.casesCount; caseNumber++) {
+            const values = this.system.getIteration(lastIteration, caseNumber);
+            if (!values)
+                continue;
+            for (const body of bodies) {
+                body.afterIterate(values);
+            }
+        }
     }
     reset() {
         this.system.reset();
@@ -21655,14 +21689,52 @@ class Parser_Parser {
 }
 
 ;// ./CalculationEngine/PhysicalBody.ts
-class PhysicalBody {
+
+
+
+class PhysicalBody extends Body {
     constructor(name, mass, initialPositionX = 0, initialPositionY = 0, initialVelocityX = 0, initialVelocityY = 0) {
-        this.name = name;
+        super(name, "physical");
         this.mass = mass;
         this.initialPositionX = initialPositionX;
         this.initialPositionY = initialPositionY;
         this.initialVelocityX = initialVelocityX;
         this.initialVelocityY = initialVelocityY;
+        this.buildTerms();
+        this.buildExpressions();
+    }
+    buildTerms() {
+        this.addTermInitialValue(this.name + ".mass", this.mass);
+        this.addTermInitialValue(this.name + ".x", this.initialPositionX);
+        this.addTermInitialValue(this.name + ".y", this.initialPositionY);
+        this.addTermInitialValue(this.name + ".vx", this.initialVelocityX, TermType.DIFFERENTIAL);
+        this.addTermInitialValue(this.name + ".vy", this.initialVelocityY, TermType.DIFFERENTIAL);
+        this.addTermInitialValue(this.name + ".ax", 0);
+        this.addTermInitialValue(this.name + ".ay", 0);
+    }
+    buildExpressions() {
+        const bodyName = this.name;
+        // Acceleration functions: computed from gravity and drag
+        this.addExpression(new Expression(bodyName + ".ax", (values) => -(values["drag"] / values[bodyName + ".mass"]) * values[bodyName + ".vx"], TermType.FUNCTION));
+        this.addExpression(new Expression(bodyName + ".ay", (values) => -values["gravity"] - (values["drag"] / values[bodyName + ".mass"]) * values[bodyName + ".vy"], TermType.FUNCTION));
+        // Velocity differentials: d(vx)/dt = ax, d(vy)/dt = ay
+        this.addExpression(new Expression(bodyName + ".vx", (values) => values[bodyName + ".ax"], TermType.DIFFERENTIAL));
+        this.addExpression(new Expression(bodyName + ".vy", (values) => values[bodyName + ".ay"], TermType.DIFFERENTIAL));
+        // Position differentials: d(x)/dt = vx, d(y)/dt = vy
+        this.addExpression(new Expression(bodyName + ".x", (values) => values[bodyName + ".vx"], TermType.DIFFERENTIAL));
+        this.addExpression(new Expression(bodyName + ".y", (values) => values[bodyName + ".vy"], TermType.DIFFERENTIAL));
+    }
+    afterIterate(values) {
+        var _a;
+        const positionY = values[this.name + ".y"];
+        if (positionY < 0) {
+            values[this.name + ".y"] = 0;
+            const velocityY = values[this.name + ".vy"];
+            if (velocityY < 0) {
+                const elasticity = (_a = values["elasticity"]) !== null && _a !== void 0 ? _a : 1.0;
+                values[this.name + ".vy"] = -velocityY * elasticity;
+            }
+        }
     }
 }
 
@@ -21670,17 +21742,15 @@ class PhysicalBody {
 
 class PhysicalEngine {
     constructor(system) {
-        this.bodies = [];
         this.physicsConstantsRegistered = false;
         this.system = system;
     }
     addBody(body) {
-        this.bodies.push(body);
         this.registerPhysicsConstants();
-        this.registerBodyTerms(body);
+        this.system.addBody(body);
     }
     getBodies() {
-        return this.bodies.slice();
+        return this.system.getBodies().filter((body) => body.type === "physical");
     }
     registerPhysicsConstants() {
         if (this.physicsConstantsRegistered)
@@ -21692,68 +21762,6 @@ class PhysicalEngine {
         this.system.setInitialByName("drag", 0);
         this.system.addTermByName("elasticity", TermType.PARAMETER);
         this.system.setInitialByName("elasticity", 1.0);
-    }
-    registerBodyTerms(body) {
-        const termDefinitions = [
-            { suffix: ".x", initialValue: body.initialPositionX },
-            { suffix: ".y", initialValue: body.initialPositionY },
-            { suffix: ".vx", initialValue: body.initialVelocityX },
-            { suffix: ".vy", initialValue: body.initialVelocityY },
-            { suffix: ".ax", initialValue: 0 },
-            { suffix: ".ay", initialValue: 0 },
-            { suffix: ".mass", initialValue: body.mass },
-        ];
-        for (const { suffix, initialValue } of termDefinitions) {
-            const termName = body.name + suffix;
-            this.system.addTermByName(termName, TermType.PARAMETER);
-            this.system.setInitialByName(termName, initialValue);
-        }
-    }
-    iterate() {
-        var _a, _b, _c, _d;
-        const lastIteration = this.system.lastIteration;
-        if (lastIteration <= 1)
-            return;
-        const timeStep = this.system.step;
-        for (let caseNumber = 1; caseNumber <= this.system.casesCount; caseNumber++) {
-            const currentValues = this.system.getIteration(lastIteration, caseNumber);
-            const previousValues = this.system.getIteration(lastIteration - 1, caseNumber);
-            if (!currentValues || !previousValues)
-                continue;
-            const gravity = (_a = previousValues["gravity"]) !== null && _a !== void 0 ? _a : 9.81;
-            const drag = (_b = previousValues["drag"]) !== null && _b !== void 0 ? _b : 0;
-            const elasticity = (_c = previousValues["elasticity"]) !== null && _c !== void 0 ? _c : 1.0;
-            for (const body of this.bodies) {
-                const mass = (_d = previousValues[body.name + ".mass"]) !== null && _d !== void 0 ? _d : body.mass;
-                const previousPositionX = previousValues[body.name + ".x"];
-                const previousPositionY = previousValues[body.name + ".y"];
-                const previousVelocityX = previousValues[body.name + ".vx"];
-                const previousVelocityY = previousValues[body.name + ".vy"];
-                const accelerationX = -(drag / mass) * previousVelocityX;
-                const accelerationY = -gravity - (drag / mass) * previousVelocityY;
-                let velocityX = previousVelocityX + accelerationX * timeStep;
-                let velocityY = previousVelocityY + accelerationY * timeStep;
-                let positionX = previousPositionX + velocityX * timeStep;
-                let positionY = previousPositionY + velocityY * timeStep;
-                if (positionY < 0) {
-                    positionY = 0;
-                    if (velocityY < 0) {
-                        velocityY = -velocityY * elasticity;
-                    }
-                }
-                currentValues[body.name + ".x"] = positionX;
-                currentValues[body.name + ".y"] = positionY;
-                currentValues[body.name + ".vx"] = velocityX;
-                currentValues[body.name + ".vy"] = velocityY;
-                currentValues[body.name + ".ax"] = accelerationX;
-                currentValues[body.name + ".ay"] = accelerationY;
-                currentValues[body.name + ".mass"] = mass;
-            }
-        }
-        this.system.calculateFunctions();
-    }
-    connectToEngine(engine) {
-        engine.onIterate(() => this.iterate());
     }
     reset() {
         this.system.reset();
@@ -21882,6 +21890,7 @@ class System {
         this._lastIteration = 1;
         this.useRadians = true;
         this.preloadedData = new PreloadedData();
+        this.bodies = [];
         this.independent = independent;
         this.iterationTerm = iterationTerm;
         this.reset();
@@ -21988,6 +21997,22 @@ class System {
     addTermByName(term, type) {
         this.addTerm(new Term(term, type));
     }
+    addBody(body) {
+        this.bodies.push(body);
+        for (const { name, value, type } of body.termInitialValues) {
+            this.addTermByName(name, type);
+            this.setInitialByName(name, value);
+        }
+        for (const expression of body.expressions) {
+            this.addExpression(expression, expression.type);
+        }
+    }
+    getBodies() {
+        return this.bodies.slice();
+    }
+    getBody(name) {
+        return this.bodies.find(body => body.name === name);
+    }
     loadTerms(names, values) {
         this.preloadedData.load(names, values, this._iterationTerm.name, this._independent.name);
         for (const name of this.preloadedData.getDataTermNames(this._iterationTerm.name, this._independent.name)) {
@@ -22025,6 +22050,7 @@ class System {
         this.termNames = [];
         this.differentialNames = [];
         this.caseInitialValues = {};
+        this.bodies.length = 0;
         this.preloadedData.clear();
         this.values.length = 1;
         this.independent = this._independent.name;
@@ -22231,6 +22257,7 @@ class System {
 }
 
 ;// ./index.ts
+
 
 
 

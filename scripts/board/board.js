@@ -3,6 +3,7 @@ class Board {
         this.shapes = new Shapes(this, calculator);
         this.calculator = calculator;
         this.svg = svgElement;
+        this.motionLayer = this.createSvgElement("g");
         this.theme = new BaseTheme();
         this.translations = new BaseTranslations("en-US");
         this.selection = new Selection(this);
@@ -33,6 +34,9 @@ class Board {
         this.shapes.shapes.forEach(shape => shape.hideContextToolbar?.());
         while (this.svg.firstChild)
             this.svg.removeChild(this.svg.firstChild);
+        while (this.motionLayer.firstChild)
+            this.motionLayer.removeChild(this.motionLayer.firstChild);
+        this.svg.appendChild(this.motionLayer);
         this.shapes.clear();
         this._gridDefs = null;
         this._gridRect = null;
@@ -66,7 +70,14 @@ class Board {
     }
 
     addShape(shape, select = true) {
-        this.svg.appendChild(shape.element);
+        if (!this.svg.contains(this.motionLayer))
+            this.svg.appendChild(this.motionLayer);
+        if (shape.motionGroup)
+            this.motionLayer.appendChild(shape.motionGroup);
+        if (shape.isReferential)
+            this.svg.insertBefore(shape.element, this.motionLayer);
+        else
+            this.svg.appendChild(shape.element);
         this.shapes.add(shape);
         shape.element.addEventListener("focused", e => this.onShapeFocused(e));
         shape.element.addEventListener("changed", e => this.onExpressionChanged(e));
@@ -85,6 +96,8 @@ class Board {
             var index = shape.parent.children.indexOf(shape);
             shape.parent.children.splice(index, 1);
         }
+        if (shape.motionGroup)
+            this.motionLayer.removeChild(shape.motionGroup);
         this.svg.removeChild(shape.element);
         this.shapes.remove(shape);
         this.selection.deselect(shape);

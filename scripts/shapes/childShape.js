@@ -33,6 +33,12 @@ class ChildShape extends BaseShape {
         super.setProperties(properties);
     }
 
+    initializeElement() {
+        super.initializeElement();
+        if (this.motionGroup)
+            this.motionGroup.setAttribute("clip-path", this.element.getAttribute("clip-path"));
+    }
+
     tick() {
         super.tick();
         this.tickShape();
@@ -100,10 +106,10 @@ class ChildShape extends BaseShape {
             return;
         }
         const interval = Math.max(1, this.properties.stroboscopyInterval);
-        const desired = Math.floor(lastIteration / interval);
+        const intervalCount = Math.floor(lastIteration / interval);
         const positions = [];
-        for (let i = 0; i < desired; i++) {
-            const idx = i * interval;
+        for (let i = 0; i <= intervalCount; i++) {
+            const idx = i === 0 ? 0 : i * interval - 1;
             const pos = this.trajectory.values[idx];
             if (pos)
                 positions.push(pos);
@@ -228,6 +234,8 @@ class ChildShape extends BaseShape {
         newParent.children.push(this);
         this.properties.parentId = newParentId;
         this.element.setAttribute("clip-path", `url(#${newParent.getClipId()})`);
+        if (this.motionGroup)
+            this.motionGroup.setAttribute("clip-path", `url(#${newParent.getClipId()})`);
         this.board.markDirty(this);
     }
 

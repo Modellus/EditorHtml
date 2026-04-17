@@ -688,15 +688,96 @@ class BodyShape extends ChildShape {
         this.centerDot = this.board.createSvgElement("circle");
         this.centerDot.setAttribute("pointer-events", "none");
         element.appendChild(this.centerDot);
+        this.motionGroup = this.board.createSvgElement("g");
+        this.motionGroup.setAttribute("pointer-events", "none");
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
         this.trajectory.element.setAttribute("fill", "none");
         this.trajectory.element.setAttribute("pointer-events", "none");
-        element.appendChild(this.trajectory.element);
+        this.motionGroup.appendChild(this.trajectory.element);
         this.stroboscopy = this.board.createSvgElement("g");
         this.stroboscopy.setAttribute("pointer-events", "none");
-        element.appendChild(this.stroboscopy);
+        this.motionGroup.appendChild(this.stroboscopy);
         this._stroboscopyPositions = [];
         return element;
+    }
+
+    tickStroboscopy() {
+        super.tickStroboscopy();
+        const character = this.getSelectedCharacter();
+        const imageSource = this.getImageSource();
+        if (!character && !imageSource)
+            return;
+        if (!character) {
+            this._stroboscopyPositions = this._stroboscopyPositions.map(pos => ({ ...pos, href: imageSource }));
+            return;
+        }
+        const animation = this.getCharacterAnimation(character);
+        const frameCount = animation.frames;
+        const startIndex = animation.startIndex ?? 0;
+        const padLength = animation.padLength ?? 0;
+        const filePrefix = animation.filePrefix ?? `${character.name} ${animation.name} `;
+        const interval = Math.max(1, this.properties.stroboscopyInterval);
+        this._stroboscopyPositions = this._stroboscopyPositions.map((pos, i) => {
+            const iteration = i === 0 ? 1 : i * interval;
+            const rawFrameIndex = this.getAnimationFrameIndex(animation, frameCount, iteration, startIndex);
+            const frameIndex = padLength > 0 ? String(rawFrameIndex).padStart(padLength, "0") : String(rawFrameIndex);
+            const frameName = `${filePrefix}${frameIndex}.png`;
+            const href = `resources/characters/${character.folder}/${animation.folder}/${frameName}`;
+            return { ...pos, href };
+        });
+    }
+
+    drawStroboscopy() {
+        const hasCharacterOrImage = !!(this.getSelectedCharacter() || this.getImageSource());
+        if (!hasCharacterOrImage && (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000")) {
+            while (this.stroboscopy.firstChild)
+                this.stroboscopy.removeChild(this.stroboscopy.firstChild);
+            return;
+        }
+        const positions = this._stroboscopyPositions ?? [];
+        const desiredLength = positions.length;
+        while (this.stroboscopy.children.length > desiredLength)
+            this.stroboscopy.removeChild(this.stroboscopy.lastChild);
+        const radius = this.getStroboscopyRadius();
+        for (let i = 0; i < desiredLength; i++) {
+            const pos = positions[i];
+            if (hasCharacterOrImage) {
+                let imageClone = this.stroboscopy.children[i];
+                if (!imageClone || imageClone.tagName !== "image") {
+                    imageClone = this.board.createSvgElement("image");
+                    if (this.stroboscopy.children[i])
+                        this.stroboscopy.replaceChild(imageClone, this.stroboscopy.children[i]);
+                    else
+                        this.stroboscopy.appendChild(imageClone);
+                }
+                const character = this.getSelectedCharacter();
+                const href = pos.href ?? (character ? this.image.getAttribute("href") : this.getImageSource());
+                imageClone.setAttribute("href", href ?? "");
+                const diameter = radius * 2;
+                const pivotX = character?.centerPoint?.x ?? 0.5;
+                const pivotY = character?.centerPoint?.y ?? 0.5;
+                imageClone.setAttribute("x", pos.x - pivotX * diameter);
+                imageClone.setAttribute("y", pos.y - pivotY * diameter);
+                imageClone.setAttribute("width", diameter);
+                imageClone.setAttribute("height", diameter);
+                imageClone.setAttribute("preserveAspectRatio", "xMidYMid meet");
+                imageClone.setAttribute("opacity", this.properties.stroboscopyOpacity);
+            } else {
+                let circle = this.stroboscopy.children[i];
+                if (!circle || circle.tagName !== "circle") {
+                    circle = this.board.createSvgElement("circle");
+                    if (this.stroboscopy.children[i])
+                        this.stroboscopy.replaceChild(circle, this.stroboscopy.children[i]);
+                    else
+                        this.stroboscopy.appendChild(circle);
+                }
+                circle.setAttribute("cx", pos.x);
+                circle.setAttribute("cy", pos.y);
+                circle.setAttribute("r", radius);
+                circle.setAttribute("fill", this.properties.stroboscopyColor);
+                circle.setAttribute("opacity", this.properties.stroboscopyOpacity);
+            }
+        }
     }    
 
     setDefaults() {

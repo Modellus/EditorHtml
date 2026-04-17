@@ -89,7 +89,9 @@ class Shapes {
     sendToBack(shape) {
         this.remove(shape);
         this.shapes.unshift(shape);
-        this.board.svg.insertBefore(shape.element, this.board.svg.firstChild);
+        const motionLayer = this.board.motionLayer;
+        const insertAfter = motionLayer?.parentNode === this.board.svg ? motionLayer.nextSibling : this.board.svg.firstChild;
+        this.board.svg.insertBefore(shape.element, insertAfter);
     }
 
     bringForward(shape) {

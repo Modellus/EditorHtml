@@ -436,12 +436,14 @@ class VectorShape extends ChildShape {
         element.appendChild(this.borderLine);
         this.line = this.board.createSvgElement("line");
         element.appendChild(this.line);
+        this.motionGroup = this.board.createSvgElement("g");
+        this.motionGroup.setAttribute("pointer-events", "none");
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
         this.trajectory.element.setAttribute("fill", "none");
-        element.appendChild(this.trajectory.element);
+        this.motionGroup.appendChild(this.trajectory.element);
         this.stroboscopy = this.board.createSvgElement("g");
         this.stroboscopy.setAttribute("pointer-events", "none");
-        element.appendChild(this.stroboscopy);
+        this.motionGroup.appendChild(this.stroboscopy);
         this._stroboscopyPositions = [];
         return element;
     }    
