@@ -54,7 +54,7 @@ class ChildShape extends BaseShape {
             const rawValue = this.resolveTermNumeric(this.properties[mapping.termProperty], caseNumber);
             const axisScale = scale[mapping.scaleProperty] ?? 1;
             const value = mapping.isInverted ? -rawValue : rawValue;
-            this.properties[mapping.property] = Number.isFinite(value) ? value * axisScale : 0;
+            this.properties[mapping.property] = Number.isFinite(value) ? (axisScale !== 0 ? value / axisScale : 0) : 0;
         }
     }
 
