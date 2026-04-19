@@ -81,12 +81,6 @@ class VectorShape extends ChildShape {
         this.updateHandles();
     }
 
-    getScale() {
-        if (this.properties.scaleX != null && this.properties.scaleY != null)
-            return { x: this.properties.scaleX, y: this.properties.scaleY };
-        return super.getScale();
-    }
-
     enterEditMode() {
         return false;
     }
@@ -273,8 +267,8 @@ class VectorShape extends ChildShape {
         const buttonContent = this._tipTypeDropdownElement.find(".dx-button-content")[0];
         if (buttonContent)
             this.renderTipTypeButtonTemplate(buttonContent);
-        this._vectorScaleXBoxInstance?.option("value", this.properties.scaleX ?? super.getScale().x);
-        this._vectorScaleYBoxInstance?.option("value", this.properties.scaleY ?? super.getScale().y);
+        this._vectorScaleXBoxInstance?.option("value", this.properties.scaleX ?? 1);
+        this._vectorScaleYBoxInstance?.option("value", this.properties.scaleY ?? 1);
     }
 
     createTipTypeDropDownButton(container) {
@@ -369,7 +363,7 @@ class VectorShape extends ChildShape {
                             text: "Horizontal Scale",
                             buildControl: $container => {
                                 $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                                    value: this.properties.scaleX ?? super.getScale().x,
+                                    value: this.properties.scaleX ?? 1,
                                     onInitialized: e => { this._vectorScaleXBoxInstance = e.component; },
                                     onValueChanged: e => {
                                         this.properties.scaleX = e.value;
@@ -383,7 +377,7 @@ class VectorShape extends ChildShape {
                             text: "Vertical Scale",
                             buildControl: $container => {
                                 $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                                    value: this.properties.scaleY ?? super.getScale().y,
+                                    value: this.properties.scaleY ?? 1,
                                     onInitialized: e => { this._vectorScaleYBoxInstance = e.component; },
                                     onValueChanged: e => {
                                         this.properties.scaleY = e.value;
@@ -417,8 +411,10 @@ class VectorShape extends ChildShape {
         super.setDefaults();
         const metrics = this.getReferentialDefaultMetrics();
         this.properties.name = this.board.translations.get("Vector Name");
-        this.properties.x = metrics ? Math.round((Math.random() - 0.5) * metrics.size * 4) / metrics.scaleX : 0;
-        this.properties.y = metrics ? Math.round((Math.random() - 0.5) * metrics.size * 4) / metrics.scaleY : 0;
+        const originModelX = metrics ? Math.round((Math.random() - 0.5) * metrics.size * 4) : 0;
+        const originModelY = metrics ? Math.round((Math.random() - 0.5) * metrics.size * 4) : 0;
+        this.properties.x = metrics ? originModelX / metrics.scaleX : 0;
+        this.properties.y = metrics ? -originModelY / metrics.scaleY : 0;
         this.properties.width = metrics ? metrics.size / metrics.scaleX : 30;
         this.properties.height = metrics ? -metrics.size / metrics.scaleY : -30;
         this.properties.xTerm = metrics ? String(metrics.size) : "30";
@@ -434,8 +430,8 @@ class VectorShape extends ChildShape {
         this.properties.startTipType = "none";
         this.properties.endTipType = "arrow";
         this.properties.showComponents = false;
-        this.properties.xOriginTerm = metrics ? String(Math.round((Math.random() - 0.5) * metrics.size * 4)) : "0";
-        this.properties.yOriginTerm = metrics ? String(Math.round((Math.random() - 0.5) * metrics.size * 4)) : "0";
+        this.properties.xOriginTerm = String(originModelX);
+        this.properties.yOriginTerm = String(originModelY);
         this.termsMapping.push({ termProperty: "xTerm", termValue: 0, property: "width", isInverted: false, scaleProperty: "x", caseProperty: "xTermCase" });
         this.termsMapping.push({ termProperty: "yTerm", termValue: 0, property: "height", isInverted: true, scaleProperty: "y", caseProperty: "yTermCase" });
         this.termsMapping.push({ termProperty: "xOriginTerm", termValue: 0, property: "x", isInverted: false, scaleProperty: "x", caseProperty: "xOriginTermCase" });
@@ -445,17 +441,59 @@ class VectorShape extends ChildShape {
     }
 
     tickShape() {
-        const scale = this.getScale();
+        const referentialAxisScales = this.getScale();
         for (const mapping of this.termsMapping) {
             const termValue = this.properties[mapping.termProperty];
             if ((mapping.termProperty === "xOriginTerm" || mapping.termProperty === "yOriginTerm") && (termValue == null || String(termValue).trim() === ""))
                 continue;
             const caseNumber = this.properties[mapping.caseProperty] ?? 1;
             const rawValue = this.resolveTermNumeric(termValue, caseNumber);
-            const axisScale = scale[mapping.scaleProperty] ?? 1;
             const value = mapping.isInverted ? -rawValue : rawValue;
-            this.properties[mapping.property] = Number.isFinite(value) ? (axisScale !== 0 ? value / axisScale : 0) : 0;
+            const referentialAxisScale = referentialAxisScales[mapping.scaleProperty] ?? 1;
+            if ((mapping.property === "width" || mapping.property === "height") && this.properties.scaleX != null) {
+                const vectorAxisScale = mapping.scaleProperty === "x" ? this.properties.scaleX : this.properties.scaleY;
+                this.properties[mapping.property] = Number.isFinite(value) ? (referentialAxisScale !== 0 ? value / referentialAxisScale * vectorAxisScale : 0) : 0;
+            } else {
+                this.properties[mapping.property] = Number.isFinite(value) ? (referentialAxisScale !== 0 ? value / referentialAxisScale : 0) : 0;
+            }
         }
+    }
+
+    delta(property, pixelDelta) {
+        if ((property !== "width" && property !== "height") || this.properties.scaleX == null)
+            return super.delta(property, pixelDelta);
+        const termMapping = this.termsMapping.find(t => t.property === property);
+        if (termMapping == null)
+            return super.delta(property, pixelDelta);
+        if (this.isTermLocked(termMapping.termProperty))
+            return this.properties[property];
+        const vectorAxisScale = termMapping.scaleProperty === "x" ? this.properties.scaleX : this.properties.scaleY;
+        if (vectorAxisScale === 0)
+            return this.properties[property];
+        const referentialAxisScales = this.getScale();
+        const referentialAxisScale = referentialAxisScales[termMapping.scaleProperty] ?? 1;
+        const termDelta = referentialAxisScale !== 0 ? pixelDelta * referentialAxisScale / vectorAxisScale * (termMapping.isInverted ? -1 : 1) : 0;
+        const term = this.properties[termMapping.termProperty];
+        const caseNumber = this.properties[termMapping.caseProperty] ?? 1;
+        const calculator = this.board.calculator;
+        if (calculator.isTerm(term)) {
+            let value = calculator.getByName(term, caseNumber);
+            if (!Number.isFinite(value)) {
+                const fallback = Number.isFinite(this.properties[property]) ? this.properties[property] : 0;
+                value = referentialAxisScale !== 0 ? (termMapping.isInverted ? -fallback : fallback) * referentialAxisScale / vectorAxisScale : 0;
+            }
+            calculator.setTermValue(term, value + termDelta, calculator.system.iteration, caseNumber);
+            calculator.calculate();
+        } else {
+            const currentTermValue = parseFloat(this.properties[termMapping.termProperty]);
+            const baseValue = Number.isFinite(currentTermValue) ? currentTermValue : 0;
+            this.properties[termMapping.termProperty] = Utils.roundToPrecision(baseValue + termDelta, calculator.getPrecision());
+        }
+        this.tick();
+        this.board.markDirty(this);
+        const updatedValue = this.properties[property];
+        this.dispatchEvent("shapeChanged", { property, value: updatedValue });
+        return updatedValue;
     }
 
     createElement() {
