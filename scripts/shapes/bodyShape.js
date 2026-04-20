@@ -212,11 +212,13 @@ class BodyShape extends ChildShape {
         const sizeValue = axisScale !== 0 ? radius * axisScale : radius;
         const calculator = this.board.calculator;
         const termValue = this.properties.sizeTerm;
-        if (calculator.isTerm(termValue) && !this.isTermLocked("sizeTerm")) {
+        if (this.isTermLocked("sizeTerm"))
+            return { radius, width: radius * 2, height: radius * 2 };
+        if (calculator.isTerm(termValue)) {
             const caseNumber = this.properties.sizeTermCase ?? 1;
             calculator.setTermValue(termValue, sizeValue, calculator.system.iteration, caseNumber);
             calculator.calculate();
-        } else if (!calculator.isTerm(termValue))
+        } else
             this.properties.sizeTerm = String(Utils.roundToPrecision(sizeValue, calculator.getPrecision()));
         return {
             radius: radius,

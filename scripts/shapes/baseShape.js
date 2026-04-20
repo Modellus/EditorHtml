@@ -2083,11 +2083,7 @@ class BaseShape {
     }
 
     isTermLocked(termProperty) {
-        if (this.properties[`${termProperty}Locked`] !== true)
-            return false;
-        if (this.board.calculator.getIteration() > 1)
-            return true;
-        return !this.board.isModelCreator();
+        return this.properties[`${termProperty}Locked`] === true;
     }
 
     getCasesCount() {
