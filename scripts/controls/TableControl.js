@@ -12,6 +12,7 @@ class TableControl {
         this.cellBoxes = [];
         this.scrollbarThumbRect = null;
         this.scrollbarDrag = null;
+        this.columnClipPaths = null;
         this.caseIconData = {};
         this.caseIconsLoadingPromise = null;
         this.rowsClipId = `shape-svg-table-clip-${crypto.randomUUID()}`;
@@ -177,10 +178,11 @@ class TableControl {
         };
     }
 
-    renderHeaderCaseIcon(caseNumber, xPosition, yPosition) {
+    renderHeaderCaseIcon(caseNumber, xPosition, yPosition, columnIndex) {
         const size = this.getHeaderCaseIconSize(caseNumber);
         const iconData = this.caseIconData[caseNumber];
         const caseIconColor = TermControl.getCaseIconColor(caseNumber);
+        const clipPathRef = `url(#${this.rowsClipId}-col-${columnIndex})`;
         if (!iconData?.pathData) {
             const fallbackText = this.createSvgElement("text");
             fallbackText.setAttribute("x", `${xPosition}`);
@@ -188,6 +190,7 @@ class TableControl {
             fallbackText.setAttribute("fill", caseIconColor);
             fallbackText.setAttribute("font-family", this.options.numberFontFamily);
             fallbackText.setAttribute("font-size", `${Math.max(8, Number(this.options.headerFontSize) - 3)}`);
+            fallbackText.setAttribute("clip-path", clipPathRef);
             fallbackText.textContent = `${caseNumber}`;
             this.headerLayer.appendChild(fallbackText);
             return;
@@ -197,6 +200,7 @@ class TableControl {
         const topY = yPosition - size.height * 0.82;
         const iconGroup = this.createSvgElement("g");
         iconGroup.setAttribute("transform", `translate(${xPosition} ${topY}) scale(${scaleX} ${scaleY})`);
+        iconGroup.setAttribute("clip-path", clipPathRef);
         const iconPath = this.createSvgElement("path");
         iconPath.setAttribute("d", iconData.pathData);
         iconPath.setAttribute("fill", caseIconColor);
@@ -321,6 +325,28 @@ class TableControl {
         this.rowsClipRect.setAttribute("height", `${layout.bodyHeight}`);
     }
 
+    updateColumnClipPaths(geometry) {
+        if (this.columnClipPaths) {
+            for (const clipPath of this.columnClipPaths)
+                this.defsElement.removeChild(clipPath);
+        }
+        this.columnClipPaths = [];
+        const margin = 4;
+        for (let index = 0; index < geometry.length; index++) {
+            const columnGeometry = geometry[index];
+            const clipPath = this.createSvgElement("clipPath");
+            clipPath.setAttribute("id", `${this.rowsClipId}-col-${index}`);
+            const clipRect = this.createSvgElement("rect");
+            clipRect.setAttribute("x", `${columnGeometry.x + margin}`);
+            clipRect.setAttribute("y", "0");
+            clipRect.setAttribute("width", `${Math.max(0, columnGeometry.width - 2 * margin)}`);
+            clipRect.setAttribute("height", `${this.height}`);
+            clipPath.appendChild(clipRect);
+            this.defsElement.appendChild(clipPath);
+            this.columnClipPaths.push(clipPath);
+        }
+    }
+
     getTotalRowsHeight() {
         const rowHeight = Math.max(16, Number(this.options.rowHeight) || 24);
         return this.rows.length * rowHeight;
@@ -389,6 +415,7 @@ class TableControl {
         const geometry = this.getColumnGeometry(layout, columns);
         const columnValueRanges = this.getColumnValueRanges(columns);
         this.updateClipRect(layout);
+        this.updateColumnClipPaths(geometry);
         this.renderBackground(layout);
         this.renderHeader(layout, columns, geometry);
         this.renderBody(layout, columns, geometry, columnValueRanges);
@@ -448,10 +475,10 @@ class TableControl {
         borderLine.setAttribute("stroke-width", "1");
         this.headerLayer.appendChild(borderLine);
         for (let index = 0; index < columns.length; index++)
-            this.renderHeaderCell(layout, columns[index], geometry[index], index === columns.length - 1);
+            this.renderHeaderCell(layout, columns[index], geometry[index], index, index === columns.length - 1);
     }
 
-    renderHeaderCell(layout, column, cellGeometry, isLastColumn) {
+    renderHeaderCell(layout, column, cellGeometry, columnIndex, isLastColumn) {
         const centerX = cellGeometry.x + cellGeometry.width / 2;
         const centerY = layout.headerHeight / 2 + 4;
         const titleText = column.title ?? "";
@@ -462,6 +489,7 @@ class TableControl {
         text.setAttribute("font-family", this.options.termFontFamily);
         text.setAttribute("font-size", `${this.options.headerFontSize}`);
         text.setAttribute("fill", this.options.foregroundColor);
+        text.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
         text.textContent = Utils.convertGreekLetters(titleText);
         this.headerLayer.appendChild(text);
         if (column.showCase === true) {
@@ -472,7 +500,7 @@ class TableControl {
                 titleWidth = this.estimateTextWidth(titleText, Number(this.options.headerFontSize) || 16);
             const iconX = centerX + titleWidth / 2 + 2;
             const iconY = centerY - 1;
-            this.renderHeaderCaseIcon(column.caseNumber, iconX, iconY);
+            this.renderHeaderCaseIcon(column.caseNumber, iconX, iconY, columnIndex);
         }
         if (isLastColumn)
             return;
@@ -540,7 +568,7 @@ class TableControl {
                 this.rowsLayer.appendChild(line);
             }
             const textValue = this.getCellText(row, columns[columnIndex]);
-            this.renderCellText(cell, y, rowHeight, textValue);
+            this.renderCellText(cell, y, rowHeight, textValue, columnIndex);
             this.cellBoxes.push({
                 x: cell.x,
                 y: y,
@@ -600,7 +628,7 @@ class TableControl {
         this.rowsLayer.appendChild(bar);
     }
 
-    renderCellText(cellGeometry, y, rowHeight, textValue) {
+    renderCellText(cellGeometry, y, rowHeight, textValue, columnIndex) {
         const text = this.createSvgElement("text");
         text.setAttribute("x", `${cellGeometry.x + cellGeometry.width - 6}`);
         text.setAttribute("y", `${y + rowHeight / 2 + 4}`);
@@ -608,6 +636,7 @@ class TableControl {
         text.setAttribute("font-family", this.options.numberFontFamily);
         text.setAttribute("font-size", `${this.options.fontSize}`);
         text.setAttribute("fill", this.options.foregroundColor);
+        text.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
         text.textContent = textValue;
         this.rowsLayer.appendChild(text);
     }

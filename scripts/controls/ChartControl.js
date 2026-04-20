@@ -52,6 +52,18 @@ class ChartControl {
         this.plotClipRect = this.createSvgElement("rect");
         clipPath.appendChild(this.plotClipRect);
         this.rootElement.appendChild(clipPath);
+        this.xTitleClipId = `chart-xtitle-clip-${crypto.randomUUID()}`;
+        const xTitleClipPath = this.createSvgElement("clipPath");
+        xTitleClipPath.setAttribute("id", this.xTitleClipId);
+        this.xTitleClipRect = this.createSvgElement("rect");
+        xTitleClipPath.appendChild(this.xTitleClipRect);
+        this.rootElement.appendChild(xTitleClipPath);
+        this.yTitleClipId = `chart-ytitle-clip-${crypto.randomUUID()}`;
+        const yTitleClipPath = this.createSvgElement("clipPath");
+        yTitleClipPath.setAttribute("id", this.yTitleClipId);
+        this.yTitleClipRect = this.createSvgElement("rect");
+        yTitleClipPath.appendChild(this.yTitleClipRect);
+        this.rootElement.appendChild(yTitleClipPath);
         this.backgroundLayer = this.createSvgElement("g");
         this.gridLayer = this.createSvgElement("g");
         this.gridLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
@@ -487,13 +499,15 @@ class ChartControl {
         layer.appendChild(iconGroup);
     }
 
-    renderTitleWithCaseIcons(targetLayer, textValue, centerX, centerY, fontSize, fill, rotation = null) {
+    renderTitleWithCaseIcons(targetLayer, textValue, centerX, centerY, fontSize, fill, rotation = null, clipId = null) {
         const segments = this.parseCaseIconSegments(textValue);
         if (segments.length === 0)
             return;
         const hostGroup = this.createSvgElement("g");
         if (rotation)
             hostGroup.setAttribute("transform", `rotate(${rotation.angle} ${rotation.cx} ${rotation.cy})`);
+        if (clipId)
+            hostGroup.setAttribute("clip-path", `url(#${clipId})`);
         targetLayer.appendChild(hostGroup);
         const totalWidth = this.estimateTitleSegmentsWidth(segments, fontSize);
         let cursorX = centerX - totalWidth / 2;
@@ -509,7 +523,7 @@ class ChartControl {
         }
     }
 
-    renderValueTitleLegend(targetLayer, layout, fontSize) {
+    renderValueTitleLegend(targetLayer, layout, fontSize, clipId = null) {
         const series = this.options.series;
         if (!series || series.length === 0)
             return;
@@ -530,9 +544,13 @@ class ChartControl {
         }
         const centerX = layout.axisTitleLeft;
         const centerY = layout.axisTitleY;
+        const outerGroup = this.createSvgElement("g");
+        if (clipId)
+            outerGroup.setAttribute("clip-path", `url(#${clipId})`);
+        targetLayer.appendChild(outerGroup);
         const hostGroup = this.createSvgElement("g");
         hostGroup.setAttribute("transform", `rotate(-90 ${centerX} ${centerY})`);
-        targetLayer.appendChild(hostGroup);
+        outerGroup.appendChild(hostGroup);
         let cursorX = centerX - totalWidth / 2;
         for (let index = 0; index < entries.length; index++) {
             const entry = entries[index];
@@ -617,7 +635,7 @@ class ChartControl {
         this.renderGrid(layout, scales.xScale, scales.yScale, xTicks, yTicks);
         this.renderAxes(layout, scales.xScale, scales.yScale, xTicks, yTicks);
         this.renderSeries(layout, scales.xScale, scales.yScale);
-        this.renderTitles(layout, width);
+        this.renderTitles(layout, width, height);
         this.renderState = {
             layout: layout,
             domain: domain,
@@ -896,10 +914,22 @@ class ChartControl {
         return pathValue;
     }
 
-    renderTitles(layout, width) {
+    updateTitleClipRects(layout, height) {
+        this.xTitleClipRect.setAttribute("x", `${layout.plotLeft}`);
+        this.xTitleClipRect.setAttribute("y", `${layout.plotBottom}`);
+        this.xTitleClipRect.setAttribute("width", `${layout.plotWidth}`);
+        this.xTitleClipRect.setAttribute("height", `${height - layout.plotBottom}`);
+        this.yTitleClipRect.setAttribute("x", "0");
+        this.yTitleClipRect.setAttribute("y", `${layout.plotTop}`);
+        this.yTitleClipRect.setAttribute("width", `${layout.plotLeft}`);
+        this.yTitleClipRect.setAttribute("height", `${layout.plotHeight}`);
+    }
+
+    renderTitles(layout, width, height) {
+        this.updateTitleClipRects(layout, height);
         const titleFontSize = Number(this.options.titleFontSize) || 16;
-        this.renderTitleWithCaseIcons(this.axisLayer, this.options.argumentTitle ?? "", layout.plotLeft + layout.plotWidth / 2, layout.axisTitleX, titleFontSize, this.options.foregroundColor);
-        this.renderValueTitleLegend(this.axisLayer, layout, titleFontSize);
+        this.renderTitleWithCaseIcons(this.axisLayer, this.options.argumentTitle ?? "", layout.plotLeft + layout.plotWidth / 2, layout.axisTitleX, titleFontSize, this.options.foregroundColor, null, this.xTitleClipId);
+        this.renderValueTitleLegend(this.axisLayer, layout, titleFontSize, this.yTitleClipId);
         const clippingRectangle = this.createSvgElement("rect");
         clippingRectangle.setAttribute("x", "0");
         clippingRectangle.setAttribute("y", "0");
