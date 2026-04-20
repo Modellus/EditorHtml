@@ -686,6 +686,10 @@ body.read-only #context-menu {
     display: none !important;
 }
 
+.mdl-preloaded-data-grid .dx-header-row td {
+    background-color: #ededed;
+}
+
 .mdl-preloaded-data-grid .dx-header-row .dx-datagrid-text-content {
     font-family: "KaTeX_Math";
     font-size: 16px;

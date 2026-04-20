@@ -765,17 +765,21 @@ class Shell  {
         const preloaded = this.calculator.getPreloadedData();
         if (!preloaded)
             return;
-        const dataSource = preloaded.values.map(row => {
+        const iterationTermName = this.calculator.properties.iterationTerm;
+        const hasIterationColumn = preloaded.names.includes(iterationTermName);
+        const dataSource = preloaded.values.map((row, index) => {
             const obj = {};
+            if (!hasIterationColumn)
+                obj[iterationTermName] = index + 1;
             for (let i = 0; i < preloaded.names.length; i++)
                 obj[preloaded.names[i]] = row[i];
             return obj;
         });
-        const columns = preloaded.names.map(name => ({
-            dataField: name,
-            caption: name,
-            dataType: "number"
-        }));
+        const columns = [];
+        if (!hasIterationColumn)
+            columns.push({ dataField: iterationTermName, caption: iterationTermName, dataType: "number" });
+        for (const name of preloaded.names)
+            columns.push({ dataField: name, caption: name, dataType: "number" });
         const $popup = $("#data-popup");
         if ($popup.data("dxPopup"))
             $popup.dxPopup("instance").dispose();
@@ -791,14 +795,24 @@ class Shell  {
             contentTemplate: (contentElement) => {
                 $('<div>').appendTo(contentElement).dxDataGrid({
                     dataSource,
+                    keyExpr: iterationTermName,
                     columns,
+                    allowColumnResizing: true,
+                    columnResizingMode: "widget",
+                    columnMinWidth: 50,
+                    columnAutoWidth: true,
+                    focusedRowEnabled: true,
                     editing: {
                         mode: "cell",
                         allowUpdating: true
                     },
                     paging: { enabled: false },
                     height: "100%",
-                    elementAttr: { class: "mdl-preloaded-data-grid" }
+                    elementAttr: { class: "mdl-preloaded-data-grid" },
+                    showColumnLines: true,
+                    showRowLines: false,
+                    showBorders: true,
+                    scrolling: { mode: "virtual" }
                 });
             }
         });
