@@ -706,6 +706,12 @@ body.read-only #context-menu {
     padding-top: 0 !important;
 }
 
+.dx-slider-tooltip-position-top .dx-popup-content {
+    font-family: KaTeX_Math, serif !important;
+    font-style: italic !important;
+    font-size: 17px !important;
+}
+
 .tooltip {
     text-wrap-mode: wrap; 
 }

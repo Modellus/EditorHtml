@@ -396,11 +396,13 @@ class BottomToolbar {
         this.stepForward.option("disabled", isRunning || iteration >= lastIteration);
         this.playHead.option("max", finalIteration);
         this.playHead.option("value", iteration);
-        this.$playHeadMin.text(this.shell.calculator.getStart().toFixed(Utils.getPrecision(this.shell.calculator.properties.independent.step)));
+        const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
+        const valueStyle = 'font-family: KaTeX_Math, serif; font-style: italic; font-size: 17px;';
+        this.$playHeadMin.html(`<span style="${valueStyle}">${this.shell.calculator.getStart().toFixed(precision)}</span>`);
         if (this.shell.calculator.properties.independent.noLimit)
             this.$playHeadMax.html('<i class="fa-light fa-infinity" style="font-size:14px; font-weight:400; padding-top:3px"></i>');
         else
-            this.$playHeadMax.text(this.shell.calculator.getEnd().toFixed(Utils.getPrecision(this.shell.calculator.properties.independent.step)));
+            this.$playHeadMax.html(`<span style="${valueStyle}">${this.shell.calculator.getEnd().toFixed(precision)}</span>`);
         if (this._independentNameLabel)
             this._independentNameLabel.textContent = this.shell.calculator.properties.independent.name;
     }
