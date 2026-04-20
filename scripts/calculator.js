@@ -101,12 +101,12 @@ class Calculator extends EventTarget {
     }
 
     stepBackward() {
-        this.system.iteration--;
+        this.system.iteration = Math.max(1, this.system.iteration - 1);
         this.emit("iterate", { calculator: this });
     }
 
     stepForward() {
-        this.system.iteration++;
+        this.system.iteration = Math.min(this.system.lastIteration, this.system.iteration + 1);
         this.emit("iterate", { calculator: this });
     }
 
@@ -214,8 +214,9 @@ class Calculator extends EventTarget {
     }
 
     setIteration(iteration = 1) {
-        this.system.iteration = iteration;
+        this.system.iteration = Math.max(1, Math.min(iteration, this.system.lastIteration));
         this.emit("iterate", { calculator: this });
+        return this.system.iteration;
     }
 
     getIteration() {
@@ -227,7 +228,7 @@ class Calculator extends EventTarget {
     }
 
     getIndependentValue(iteration = this.system.iteration) {
-        return this.system.getIndependentOnIteration(iteration);
+        return this.system.getIndependentOnIteration(Math.max(1, Math.min(iteration, this.system.lastIteration)));
     }
 
     get() {
