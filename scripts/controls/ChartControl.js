@@ -11,8 +11,11 @@ class ChartControl {
         this.caseIconData = {};
         this.caseIconsLoadingPromise = null;
         this._tickDragState = null;
+        this._zoomDragState = null;
         this._onPointerMove = e => this.onTickPointerMove(e);
         this._onPointerUp = e => this.onTickPointerUp(e);
+        this._onZoomPointerMove = e => this.onZoomPointerMove(e);
+        this._onZoomPointerUp = e => this.onZoomPointerUp(e);
         this.initializeRoot();
         this.ensureCaseIconsLoaded();
         this.setOptions(options);
@@ -72,6 +75,8 @@ class ChartControl {
         this.axisLayer = this.createSvgElement("g");
         this.focusLayer = this.createSvgElement("g");
         this.focusLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
+        this.zoomLayer = this.createSvgElement("g");
+        this.zoomLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
         this.crosshairLayer = this.createSvgElement("g");
         this.tickInteractionLayer = this.createSvgElement("g");
         this.crosshairInteractionLayer = this.createSvgElement("g");
@@ -80,6 +85,7 @@ class ChartControl {
         this.rootElement.appendChild(this.seriesLayer);
         this.rootElement.appendChild(this.axisLayer);
         this.rootElement.appendChild(this.focusLayer);
+        this.rootElement.appendChild(this.zoomLayer);
         this.rootElement.appendChild(this.crosshairLayer);
         this.rootElement.appendChild(this.tickInteractionLayer);
         this.rootElement.appendChild(this.crosshairInteractionLayer);
@@ -613,6 +619,7 @@ class ChartControl {
         this.clearLayer(this.seriesLayer);
         this.clearLayer(this.axisLayer);
         this.clearLayer(this.focusLayer);
+        this.clearLayer(this.zoomLayer);
         this.clearLayer(this.crosshairLayer);
         this.clearLayer(this.tickInteractionLayer);
         this.clearLayer(this.crosshairInteractionLayer);
@@ -1279,6 +1286,137 @@ class ChartControl {
             this.options.onDomainChanged({ ...this.domainOverride });
     }
 
+    getLocalPointerPoint(event) {
+        const svgRoot = this.rootElement.closest("svg");
+        if (!svgRoot)
+            return null;
+        const screenTransformMatrix = this.rootElement.getScreenCTM();
+        if (!screenTransformMatrix)
+            return null;
+        const point = svgRoot.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        return point.matrixTransform(screenTransformMatrix.inverse());
+    }
+
+    clampToPlotBounds(value, minimum, maximum) {
+        if (!Number.isFinite(value))
+            return minimum;
+        if (value < minimum)
+            return minimum;
+        if (value > maximum)
+            return maximum;
+        return value;
+    }
+
+    renderZoomSelectionRectangle(zoomDragState) {
+        this.clearLayer(this.zoomLayer);
+        const left = Math.min(zoomDragState.startX, zoomDragState.currentX);
+        const right = Math.max(zoomDragState.startX, zoomDragState.currentX);
+        const top = Math.min(zoomDragState.startY, zoomDragState.currentY);
+        const bottom = Math.max(zoomDragState.startY, zoomDragState.currentY);
+        const rectangle = this.createSvgElement("rect");
+        rectangle.setAttribute("x", `${left}`);
+        rectangle.setAttribute("y", `${top}`);
+        rectangle.setAttribute("width", `${Math.max(0, right - left)}`);
+        rectangle.setAttribute("height", `${Math.max(0, bottom - top)}`);
+        rectangle.setAttribute("fill", this.options.foregroundColor);
+        rectangle.setAttribute("fill-opacity", "0.12");
+        rectangle.setAttribute("stroke", this.options.foregroundColor);
+        rectangle.setAttribute("stroke-width", "1.2");
+        rectangle.setAttribute("stroke-dasharray", "5 4");
+        this.zoomLayer.appendChild(rectangle);
+    }
+
+    onZoomPointerDown(event) {
+        if (event.button !== 0)
+            return;
+        event.stopPropagation();
+        event.preventDefault();
+        if (this._tickDragState)
+            return;
+        const state = this.renderState;
+        if (!state)
+            return;
+        const localPoint = this.getLocalPointerPoint(event);
+        if (!localPoint)
+            return;
+        const layout = state.layout;
+        if (localPoint.x < layout.plotLeft || localPoint.x > layout.plotRight || localPoint.y < layout.plotTop || localPoint.y > layout.plotBottom)
+            return;
+        const startX = this.clampToPlotBounds(localPoint.x, layout.plotLeft, layout.plotRight);
+        const startY = this.clampToPlotBounds(localPoint.y, layout.plotTop, layout.plotBottom);
+        this._zoomDragState = {
+            pointerId: event.pointerId,
+            layout: layout,
+            domain: state.domain,
+            startX: startX,
+            startY: startY,
+            currentX: startX,
+            currentY: startY
+        };
+        this.clearCrosshair();
+        this.renderZoomSelectionRectangle(this._zoomDragState);
+        if (typeof this.options.onTickDragStarted === "function")
+            this.options.onTickDragStarted();
+        window.addEventListener("pointermove", this._onZoomPointerMove);
+        window.addEventListener("pointerup", this._onZoomPointerUp);
+        window.addEventListener("pointercancel", this._onZoomPointerUp);
+    }
+
+    onZoomPointerMove(event) {
+        const zoomDragState = this._zoomDragState;
+        if (!zoomDragState)
+            return;
+        if (event.pointerId !== zoomDragState.pointerId)
+            return;
+        event.preventDefault();
+        const localPoint = this.getLocalPointerPoint(event);
+        if (!localPoint)
+            return;
+        zoomDragState.currentX = this.clampToPlotBounds(localPoint.x, zoomDragState.layout.plotLeft, zoomDragState.layout.plotRight);
+        zoomDragState.currentY = this.clampToPlotBounds(localPoint.y, zoomDragState.layout.plotTop, zoomDragState.layout.plotBottom);
+        this.renderZoomSelectionRectangle(zoomDragState);
+    }
+
+    onZoomPointerUp(event) {
+        const zoomDragState = this._zoomDragState;
+        if (!zoomDragState)
+            return;
+        if (event.pointerId !== zoomDragState.pointerId)
+            return;
+        window.removeEventListener("pointermove", this._onZoomPointerMove);
+        window.removeEventListener("pointerup", this._onZoomPointerUp);
+        window.removeEventListener("pointercancel", this._onZoomPointerUp);
+        this._zoomDragState = null;
+        this.clearLayer(this.zoomLayer);
+        if (typeof this.options.onTickDragEnded === "function")
+            this.options.onTickDragEnded();
+        const left = Math.min(zoomDragState.startX, zoomDragState.currentX);
+        const right = Math.max(zoomDragState.startX, zoomDragState.currentX);
+        const top = Math.min(zoomDragState.startY, zoomDragState.currentY);
+        const bottom = Math.max(zoomDragState.startY, zoomDragState.currentY);
+        if (right - left < 8 || bottom - top < 8)
+            return;
+        const domain = zoomDragState.domain;
+        const layout = zoomDragState.layout;
+        const horizontalRange = domain.xMax - domain.xMin;
+        const verticalRange = domain.yMax - domain.yMin;
+        const xMin = domain.xMin + (left - layout.plotLeft) / layout.plotWidth * horizontalRange;
+        const xMax = domain.xMin + (right - layout.plotLeft) / layout.plotWidth * horizontalRange;
+        const yMin = domain.yMin + (layout.plotBottom - bottom) / layout.plotHeight * verticalRange;
+        const yMax = domain.yMin + (layout.plotBottom - top) / layout.plotHeight * verticalRange;
+        if (!Number.isFinite(xMin) || !Number.isFinite(xMax) || !Number.isFinite(yMin) || !Number.isFinite(yMax))
+            return;
+        this.domainOverride.xMin = Math.min(xMin, xMax);
+        this.domainOverride.xMax = Math.max(xMin, xMax);
+        this.domainOverride.yMin = Math.min(yMin, yMax);
+        this.domainOverride.yMax = Math.max(yMin, yMax);
+        this.render();
+        if (typeof this.options.onDomainChanged === "function")
+            this.options.onDomainChanged({ ...this.domainOverride });
+    }
+
     resetDomainOverride() {
         this.domainOverride = { xMin: null, xMax: null, yMin: null, yMax: null };
         this.render();
@@ -1292,6 +1430,7 @@ class ChartControl {
         hitArea.setAttribute("height", `${layout.plotHeight}`);
         hitArea.setAttribute("fill", "transparent");
         hitArea.setAttribute("style", "pointer-events: all");
+        hitArea.addEventListener("pointerdown", e => this.onZoomPointerDown(e));
         hitArea.addEventListener("pointermove", e => this.onCrosshairPointerMove(e));
         hitArea.addEventListener("pointerleave", () => this.clearCrosshair());
         this.crosshairInteractionLayer.appendChild(hitArea);
@@ -1300,16 +1439,14 @@ class ChartControl {
     onCrosshairPointerMove(event) {
         if (this._tickDragState)
             return;
+        if (this._zoomDragState)
+            return;
         const state = this.renderState;
         if (!state)
             return;
-        const svgRoot = this.rootElement.closest("svg");
-        if (!svgRoot)
+        const localPoint = this.getLocalPointerPoint(event);
+        if (!localPoint)
             return;
-        const point = svgRoot.createSVGPoint();
-        point.x = event.clientX;
-        point.y = event.clientY;
-        const localPoint = point.matrixTransform(this.rootElement.getScreenCTM().inverse());
         const mouseX = localPoint.x;
         if (mouseX < state.layout.plotLeft || mouseX > state.layout.plotRight) {
             this.clearCrosshair();

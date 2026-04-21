@@ -455,6 +455,7 @@ class ChartShape extends BaseShape {
         this.properties.domainOverride = domain;
         this._autoScaleSwitchInstance?.option("value", false);
         this.refreshDomainBoxes();
+        this.board.markDirty(this);
     }
 
     onTickDragStarted() {
