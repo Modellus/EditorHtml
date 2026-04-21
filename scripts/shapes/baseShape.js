@@ -1716,6 +1716,10 @@ class BaseShape {
 
     formatModelValue(value) {
         const numericValue = Number(value);
+        if (numericValue === Infinity)
+            return "∞";
+        if (numericValue === -Infinity)
+            return "-∞";
         if (!Number.isFinite(numericValue))
             return "-";
         const precision = this.getModelPrecision();
@@ -1731,6 +1735,10 @@ class BaseShape {
             return "";
         const termText = String(term);
         const numeric = Number(termText);
+        if (numeric === Infinity)
+            return "∞";
+        if (numeric === -Infinity)
+            return "-∞";
         if (!Number.isFinite(numeric))
             return Utils.convertGreekLetters(termText);
         return this.formatModelValue(numeric);
@@ -1748,7 +1756,7 @@ class BaseShape {
         const caseNumber = this.getTermCaseNumber(entry.caseProperty);
         const isTerm = calculator.isTerm(termName);
         const value = isTerm ? calculator.getByName(termName, caseNumber) : Number(termName);
-        const valueText = Number.isFinite(value) ? this.formatModelValue(value) : termName;
+        const valueText = isTerm ? this.formatModelValue(value) : this.formatTermForDisplay(termName);
         if (!isTerm)
             return {
                 termText: "",

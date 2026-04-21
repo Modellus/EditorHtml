@@ -229,7 +229,10 @@ class ChartControl {
     getNumericValue(row, fieldName) {
         if (!row)
             return null;
-        const numericValue = Number(row[fieldName]);
+        const rawValue = row[fieldName];
+        if (rawValue == null || rawValue === "")
+            return null;
+        const numericValue = Number(rawValue);
         if (!Number.isFinite(numericValue))
             return null;
         return numericValue;
@@ -776,6 +779,7 @@ class ChartControl {
             if (xValue == null || yValue == null)
                 continue;
             points.push({
+                rowIndex: rowIndex,
                 xValue: xValue,
                 yValue: yValue,
                 x: xScale(xValue),
@@ -900,7 +904,7 @@ class ChartControl {
             return "";
         let pathValue = `M ${points[0].x} ${points[0].y}`;
         for (let index = 1; index < points.length; index++)
-            pathValue += ` L ${points[index].x} ${points[index].y}`;
+            pathValue += points[index].rowIndex !== points[index - 1].rowIndex + 1 ? ` M ${points[index].x} ${points[index].y}` : ` L ${points[index].x} ${points[index].y}`;
         return pathValue;
     }
 

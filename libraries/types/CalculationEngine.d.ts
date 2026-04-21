@@ -2,6 +2,46 @@ import * as antlr from 'antlr4ng';
 import { ParseTreeListener, TerminalNode, ErrorNode, ParserRuleContext, AbstractParseTreeVisitor } from 'antlr4ng';
 import { EventEmitter } from 'events';
 
+declare enum TermType {
+    DIFFERENTIAL = 0,
+    FUNCTION = 1,
+    INDEPENDENT = 2,
+    PARAMETER = 3
+}
+
+declare class Expression {
+    name: string;
+    calculate: (input: {
+        [name: string]: number;
+    }) => number;
+    condition: ((input: {
+        [name: string]: number;
+    }) => boolean) | null;
+    type: TermType;
+    constructor(name: string, calculate: (input: {
+        [name: string]: number;
+    }) => number, type?: TermType, condition?: ((input: {
+        [name: string]: number;
+    }) => boolean) | null);
+}
+
+declare class Body {
+    readonly name: string;
+    readonly type: string;
+    readonly expressions: Expression[];
+    readonly termInitialValues: {
+        name: string;
+        value: number;
+        type: TermType;
+    }[];
+    constructor(name: string, type: string);
+    addExpression(expression: Expression): void;
+    addTermInitialValue(name: string, value: number, type?: TermType): void;
+    afterIterate(values: {
+        [name: string]: number;
+    }): void;
+}
+
 declare class Branch {
     readonly text: string;
     readonly children: Branch[];
@@ -1107,7 +1147,10 @@ declare class DecimalContext extends antlr.ParserRuleContext {
 }
 declare class NameContext extends antlr.ParserRuleContext {
     constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
-    ID(): antlr.TerminalNode | null;
+    ID(): antlr.TerminalNode[];
+    ID(i: number): antlr.TerminalNode | null;
+    DOT(): antlr.TerminalNode[];
+    DOT(i: number): antlr.TerminalNode | null;
     SPECIAL(): antlr.TerminalNode | null;
     get ruleIndex(): number;
     enterRule(listener: LatexMathListener): void;
@@ -1503,13 +1546,6 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
     visitName?: (ctx: NameContext) => Result;
 }
 
-declare enum TermType {
-    DIFFERENTIAL = 0,
-    FUNCTION = 1,
-    INDEPENDENT = 2,
-    PARAMETER = 3
-}
-
 declare class Term {
     name: string;
     type: TermType;
@@ -1522,22 +1558,6 @@ declare class Term {
     get initialValues(): number[];
     set initialValues(values: number[]);
     hasInitialValue(iteration: number): boolean;
-}
-
-declare class Expression {
-    name: string;
-    calculate: (input: {
-        [name: string]: number;
-    }) => number;
-    condition: ((input: {
-        [name: string]: number;
-    }) => boolean) | null;
-    type: TermType;
-    constructor(name: string, calculate: (input: {
-        [name: string]: number;
-    }) => number, type?: TermType, condition?: ((input: {
-        [name: string]: number;
-    }) => boolean) | null);
 }
 
 declare class PreloadedData {
@@ -1582,6 +1602,7 @@ declare class System {
     private _lastIteration;
     useRadians: boolean;
     readonly preloadedData: PreloadedData;
+    private readonly bodies;
     constructor(independent?: string, iterationTerm?: string);
     get independent(): Term;
     set independent(name: string);
@@ -1604,6 +1625,9 @@ declare class System {
     addExpression(expression: Expression, termType?: TermType): void;
     addTerm(term: Term): void;
     addTermByName(term: string, type: TermType): void;
+    addBody(body: Body): void;
+    getBodies(): Body[];
+    getBody(name: string): Body | undefined;
     loadTerms(names: string[], values: number[][]): void;
     reset(): void;
     clear(): void;
@@ -1715,6 +1739,7 @@ declare class Engine extends EventEmitter {
     constructor(system: System);
     private iterateInternal;
     iterate(): void;
+    private applyBodyCorrections;
     reset(): void;
     onIterate(listener: any): void;
 }
@@ -1733,6 +1758,30 @@ declare class Parser {
     errors: string[];
     constructor(system: System);
     parse(expressions: string): Branch | null;
+}
+
+declare class PhysicalBody extends Body {
+    readonly mass: number;
+    readonly initialPositionX: number;
+    readonly initialPositionY: number;
+    readonly initialVelocityX: number;
+    readonly initialVelocityY: number;
+    constructor(name: string, mass: number, initialPositionX?: number, initialPositionY?: number, initialVelocityX?: number, initialVelocityY?: number);
+    private buildTerms;
+    private buildExpressions;
+    afterIterate(values: {
+        [name: string]: number;
+    }): void;
+}
+
+declare class PhysicalEngine {
+    readonly system: System;
+    private physicsConstantsRegistered;
+    constructor(system: System);
+    addBody(body: PhysicalBody): void;
+    getBodies(): PhysicalBody[];
+    private registerPhysicsConstants;
+    reset(): void;
 }
 
 declare class Visitor extends LatexMathVisitor<Branch> {
@@ -1763,6 +1812,8 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     private toRadians;
     visitSine: (context: SineContext) => Branch;
     visitCosine: (context: CosineContext) => Branch;
+    private normalizeInfinity;
+    private normalizeDivision;
     visitTangent: (context: TangentContext) => Branch;
     visitArcSine: (context: ArcSineContext) => Branch;
     visitArcCosine: (context: ArcCosineContext) => Branch;
@@ -1794,4 +1845,4 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
 
-export { Branch, Deriver, Engine, Expression, ExpressionExpander, Parser, PreloadedData, System, Term, TermType, Visitor };
+export { Body, Branch, Deriver, Engine, Expression, ExpressionExpander, Parser, PhysicalBody, PhysicalEngine, PreloadedData, System, Term, TermType, Visitor };

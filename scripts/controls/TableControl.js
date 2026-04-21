@@ -648,6 +648,10 @@ class TableControl {
         if (rawValue == null || rawValue === "")
             return "";
         const numericValue = Number(rawValue);
+        if (numericValue === Infinity)
+            return "∞";
+        if (numericValue === -Infinity)
+            return "-∞";
         if (!Number.isFinite(numericValue))
             return String(rawValue);
         const precision = Number.isFinite(column.precision) ? column.precision : this.options.precision;
