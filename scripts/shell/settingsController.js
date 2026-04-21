@@ -45,7 +45,7 @@ class SettingsController {
                     colSpan: 2,
                     dataField: "educationLevel",
                     label: {
-                        text: this.shell.board.translations.get("Education Level")
+                        text: "Theme"
                     },
                     editorType: "dxButtonGroup",
                     editorOptions: {
@@ -89,7 +89,8 @@ class SettingsController {
                         max: 100,
                         step: 5,
                         showSpinButtons: true,
-                        stylingMode: "filled"
+                        stylingMode: "filled",
+                        inputAttr: { style: "font-family: Atma, sans-serif" }
                     }
                 },
                 {
@@ -104,21 +105,6 @@ class SettingsController {
                             },
                             editorType: "dxTextBox",
                             editorOptions: {
-                                stylingMode: "filled",
-                                elementAttr: { class: "mdl-math-input" }
-                            }
-                        },
-                        {
-                            dataField: "precision",
-                            label: {
-                                text: this.shell.board.translations.get("Precision")
-                            },
-                            editorType: "dxNumberBox",
-                            editorOptions: {
-                                min: 0,
-                                max: 10,
-                                step: 1,
-                                showSpinButtons: true,
                                 stylingMode: "filled",
                                 elementAttr: { class: "mdl-math-input" }
                             }
@@ -139,125 +125,18 @@ class SettingsController {
                             }
                         },
                         {
-                            dataField: "angleUnit",
-                            label: {
-                                text: this.shell.board.translations.get("AngleUnit")
-                            },
-                            editorType: "dxButtonGroup",
-                            editorOptions: {
-                                items: [
-                                    { key: "radians", icon: "fa-light fa-pi",    hint: "Radians" },
-                                    { key: "degrees", icon: "fa-light fa-angle", hint: "Degrees" }
-                                ],
-                                keyExpr: "key",
-                                selectedItemKeys: [this.shell.properties.angleUnit],
-                                stylingMode: "outlined",
-                                elementAttr: { class: "mdl-pill-group mdl-small-icon" },
-                                buttonTemplate: (data, container) => {
-                                    container[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
-                                },
-                                onContentReady: e => this._initPillButtonGroup(e.element[0]),
-                                onSelectionChanged: e => {
-                                    if (e.addedItems.length > 0)
-                                        this.shell.setPropertyCommand("angleUnit", e.addedItems[0].key);
-                                    this._movePill(e.component.element()[0]);
-                                    e.component.repaint();
-                                }
-                            }
-                        }
-                    ]
-                },
-                {
-                    colSpan: 1,
-                    dataField: "independent.name",
-                    label: {
-                        text: this.shell.board.translations.get("Independent.Name")
-                    },
-                    editorType: "dxTextBox",
-                    editorOptions: {
-                        stylingMode: "filled",
-                        elementAttr: { class: "mdl-math-input" }
-                    }
-                },
-                {
-                    itemType: "group",
-                    colSpan: 1,
-                    colCount: 2,
-                    items: [
-                        {
-                            dataField: "independent.step",
-                            label: {
-                                text: this.shell.board.translations.get("Independent.Step")
-                            },
+                            colSpan: 2,
+                            dataField: "iterationDuration",
+                            label: { text: "Iteration Duration (seconds)" },
                             editorType: "dxNumberBox",
                             editorOptions: {
                                 stylingMode: "filled",
-                                elementAttr: { class: "mdl-math-input" }
-                            }
-                        },
-                        {
-                            dataField: "independent.noLimit",
-                            label: { text: "Type" },
-                            editorType: "dxButtonGroup",
-                            editorOptions: {
-                                items: [
-                                    { key: false, icon: "fa-light fa-bracket-square-right", hint: "Limited" },
-                                    { key: true,  icon: "fa-light fa-infinity",             hint: "Unlimited" }
-                                ],
-                                keyExpr: "key",
-                                selectedItemKeys: [this.shell.properties.independent.noLimit],
-                                stylingMode: "outlined",
-                                elementAttr: { class: "mdl-pill-group mdl-small-icon" },
-                                buttonTemplate: (data, container) => {
-                                    container[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
-                                },
-                                onContentReady: e => this._initPillButtonGroup(e.element[0]),
-                                onSelectionChanged: e => {
-                                    if (e.addedItems.length > 0) {
-                                        const noLimit = e.addedItems[0].key;
-                                        this.shell.setPropertyCommand("independent.noLimit", noLimit);
-                                        this.form.getEditor("independent.end").option("disabled", noLimit);
-                                    }
-                                    this._movePill(e.component.element()[0]);
-                                    e.component.repaint();
-                                }
+                                min: 0,
+                                showClearButton: true,
+                                inputAttr: { style: "font-family: Atma, sans-serif" }
                             }
                         }
                     ]
-                },
-                {
-                    colSpan: 1,
-                    dataField: "independent.start",
-                    label: {
-                        text: this.shell.board.translations.get("Independent.Start")
-                    },
-                    editorType: "dxNumberBox",
-                    editorOptions: {
-                        stylingMode: "filled",
-                        elementAttr: { class: "mdl-math-input" }
-                    }
-                },
-                {
-                    colSpan: 1,
-                    dataField: "independent.end",
-                    label: { text: this.shell.board.translations.get("Independent.End") },
-                    editorType: "dxNumberBox",
-                    editorOptions: {
-                        stylingMode: "filled",
-                        disabled: this.shell.properties.independent.noLimit,
-                        elementAttr: { class: "mdl-math-input" }
-                    }
-                },
-                {
-                    colSpan: 2,
-                    dataField: "iterationDuration",
-                    label: { text: "Iteration Duration (seconds)" },
-                    editorType: "dxNumberBox",
-                    editorOptions: {
-                        stylingMode: "filled",
-                        min: 0,
-                        showClearButton: true
-                    }
                 },
                 {
                     colSpan: 2,
@@ -301,7 +180,6 @@ class SettingsController {
         if (this.form) {
             this.form.formData = null;
             this.form.updateData(this.shell.properties);
-            this.form.getEditor("independent.end")?.option("disabled", this.shell.properties.independent.noLimit);
         }
         this.popup.show();
     }

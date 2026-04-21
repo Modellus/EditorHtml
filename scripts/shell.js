@@ -130,6 +130,7 @@ class Shell  {
     setProperty(name, value) {
         if (name === "casesCount")
             value = this.calculator.normalizeCasesCount(value);
+        const previousAngleUnit = this.properties.angleUnit;
         const keys = name.split('.');
         let current = this.properties;
         for (let i = 0; i < keys.length - 1; i++)
@@ -147,6 +148,8 @@ class Shell  {
             this.topToolbar?.updateModelName();
         if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit")
             this.calculator.setProperty(name, value);
+        if (name === "angleUnit")
+            this.board.shapes.shapes.forEach(shape => shape.onAngleUnitChanged?.(previousAngleUnit));
         if (name === "independent.start" || name === "independent.end")
             this.adjustChartDomainsForIndependentChange();
         if (name === "casesCount" && this.board?.selection?.selectedShape)

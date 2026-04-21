@@ -341,10 +341,52 @@ class BottomToolbar {
                         }
                     }).appendTo($container);
                 }
+            },
+            {
+                text: this.shell.board.translations.get("Precision"),
+                buildControl: $container => {
+                    $('<div>').dxNumberBox({
+                        value: this.shell.properties.precision,
+                        min: 0,
+                        max: 10,
+                        step: 1,
+                        showSpinButtons: true,
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" },
+                        inputAttr: { style: "font-family: Atma, sans-serif" },
+                        onValueChanged: e => this.shell.setPropertyCommand("precision", e.value)
+                    }).appendTo($container);
+                }
+            },
+            {
+                text: this.shell.board.translations.get("AngleUnit"),
+                buildControl: $container => {
+                    $('<div>').dxButtonGroup({
+                        items: [
+                            { key: "radians", icon: "fa-light fa-pi",  hint: "Radians" },
+                            { key: "degrees", icon: "fa-light fa-dot", hint: "Degrees" }
+                        ],
+                        keyExpr: "key",
+                        selectedItemKeys: [this.shell.properties.angleUnit],
+                        stylingMode: "outlined",
+                        elementAttr: { class: "mdl-pill-group mdl-small-icon" },
+                        buttonTemplate: (data, buttonContainer) => {
+                            const style = data.key === "degrees" ? "font-size:20px; position:relative; top:-4px" : "";
+                            buttonContainer[0].innerHTML = `<i class="dx-icon ${data.icon}" style="${style}"></i>`;
+                        },
+                        onContentReady: e => this._initPillButtonGroup(e.element[0]),
+                        onSelectionChanged: e => {
+                            if (e.addedItems.length > 0)
+                                this.shell.setPropertyCommand("angleUnit", e.addedItems[0].key);
+                            this._movePill(e.component.element()[0]);
+                            e.component.repaint();
+                        }
+                    }).appendTo($container);
+                }
             }
         ];
         $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 350, width: "100%" });
+        $(contentElement).dxScrollView({ height: 470, width: "100%" });
         const scrollContent = $(contentElement).dxScrollView("instance").content();
         $('<div>').appendTo(scrollContent).dxList({
             dataSource: listItems,
