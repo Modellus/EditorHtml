@@ -119,6 +119,10 @@ body.read-only #model-info-label {
     font-size: 15px;
 }
 
+.mdl-save-metadata-popup .dx-texteditor-input {
+    font-family: "Atma", "Assistant", sans-serif !important;
+}
+
 .dx-dropdownbutton-popup-wrapper {
     z-index: 99999 !important;
 }

@@ -158,6 +158,7 @@ class SaveFormController {
                 title: this.shell.board.translations.get("Unsaved Changes"),
                 hideOnOutsideClick: false,
                 visible: true,
+                wrapperAttr: { class: "mdl-save-metadata-popup" },
                 toolbarItems: [
                     {
                         widget: "dxButton",
@@ -252,6 +253,7 @@ class SaveFormController {
                 title: this.shell.board.translations.get("Duplicate Model"),
                 hideOnOutsideClick: false,
                 visible: true,
+                wrapperAttr: { class: "mdl-save-metadata-popup" },
                 toolbarItems: [
                     {
                         widget: "dxButton",
@@ -339,6 +341,7 @@ class SaveFormController {
                 title,
                 hideOnOutsideClick: false,
                 visible: true,
+                wrapperAttr: { class: "mdl-save-metadata-popup" },
                 toolbarItems: [
                     {
                         widget: "dxButton",
