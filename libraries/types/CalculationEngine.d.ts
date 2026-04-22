@@ -1579,6 +1579,8 @@ declare class PreloadedData {
 }
 
 declare class System {
+    static readonly ZERO: number;
+    static readonly INFINITY: number;
     private _independent;
     private _iterationTerm;
     terms: {
@@ -1601,6 +1603,7 @@ declare class System {
     private readonly iterationValuesByKey;
     private _lastIteration;
     useRadians: boolean;
+    isCalculatingFunctions: boolean;
     readonly preloadedData: PreloadedData;
     private readonly bodies;
     constructor(independent?: string, iterationTerm?: string);
@@ -1812,8 +1815,6 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     private toRadians;
     visitSine: (context: SineContext) => Branch;
     visitCosine: (context: CosineContext) => Branch;
-    private normalizeInfinity;
-    private normalizeDivision;
     visitTangent: (context: TangentContext) => Branch;
     visitArcSine: (context: ArcSineContext) => Branch;
     visitArcCosine: (context: ArcCosineContext) => Branch;
