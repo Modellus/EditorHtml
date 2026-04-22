@@ -58,20 +58,36 @@ class ProtractorShape extends BaseShape {
         this._scaleDropdownElement.appendTo(container);
     }
 
+    applyAngleSuffix(numberBoxElement, angleSuffix) {
+        const host = $(numberBoxElement);
+        host.find(".mdl-numberbox-angle-suffix").remove();
+        const input = host.find(".dx-texteditor-input");
+        input.css("padding-right", "20px");
+        const inputContainer = host.find(".dx-texteditor-input-container");
+        if (!inputContainer.length)
+            return;
+        inputContainer.css("position", "relative");
+        const suffix = $("<span class='mdl-numberbox-angle-suffix'></span>");
+        suffix.text(angleSuffix);
+        suffix.css({ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: angleSuffix === "\u00ba" ? "20px" : "14px", lineHeight: "1", opacity: "0.8" });
+        inputContainer.append(suffix);
+    }
+
+    getAngleNumberEditorOptions(useRadians, angleMax, value, propertyName) {
+        const angleSuffix = useRadians ? "\u03c0" : "\u00ba";
+        return Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: true, min: 0, max: angleMax }), {
+            value: value,
+            step: 0.01,
+            format: { type: "fixedPoint", precision: 2 },
+            onInitialized: e => this.applyAngleSuffix(e.element, angleSuffix),
+            onContentReady: e => this.applyAngleSuffix(e.element, angleSuffix),
+            onValueChanged: e => this.setPropertyCommand(propertyName, e.value)
+        });
+    }
+
     buildScaleMenuContent(contentElement) {
         const useRadians = this.board.calculator.properties.angleUnit === "radians";
         const angleMax = useRadians ? 2 : 360;
-        const angleSuffix = useRadians ? "\u03c0" : "\u00ba";
-        const angleFormat = {
-            formatter: value => {
-                const num = Number(value) || 0;
-                const str = useRadians
-                    ? String(Math.round(num * 100) / 100).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "")
-                    : String(Math.round(num));
-                return `${str} ${angleSuffix}`;
-            },
-            parser: text => parseFloat(text) || 0
-        };
         const listItems = [
             {
                 text: "Scale",
@@ -85,21 +101,13 @@ class ProtractorShape extends BaseShape {
             {
                 text: "Start angle",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: true, min: 0, max: angleMax }), {
-                        value: this.properties.startAngle,
-                        format: angleFormat,
-                        onValueChanged: e => this.setPropertyCommand("startAngle", e.value)
-                    })).appendTo($container);
+                    $('<div>').dxNumberBox(this.getAngleNumberEditorOptions(useRadians, angleMax, this.properties.startAngle, "startAngle")).appendTo($container);
                 }
             },
             {
                 text: "End angle",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: true, min: 0, max: angleMax }), {
-                        value: this.properties.endAngle,
-                        format: angleFormat,
-                        onValueChanged: e => this.setPropertyCommand("endAngle", e.value)
-                    })).appendTo($container);
+                    $('<div>').dxNumberBox(this.getAngleNumberEditorOptions(useRadians, angleMax, this.properties.endAngle, "endAngle")).appendTo($container);
                 }
             }
         ];
@@ -184,6 +192,7 @@ class ProtractorShape extends BaseShape {
         this.clipDefs.appendChild(this.clipPath);
         this.ringPath = this.board.createSvgElement("path");
         this.baseLine = this.board.createSvgElement("line");
+        this.centerLinesLayer = this.board.createSvgElement("g");
         this.minorTicksLayer = this.board.createSvgElement("g");
         this.majorTicksLayer = this.board.createSvgElement("g");
         this.labelsLayer = this.board.createSvgElement("g");
@@ -193,6 +202,7 @@ class ProtractorShape extends BaseShape {
         element.appendChild(this.clipDefs);
         element.appendChild(this.ringPath);
         element.appendChild(this.baseLine);
+        element.appendChild(this.centerLinesLayer);
         element.appendChild(this.minorTicksLayer);
         element.appendChild(this.majorTicksLayer);
         element.appendChild(this.labelsLayer);
@@ -221,6 +231,12 @@ class ProtractorShape extends BaseShape {
         if (endDeg > startDeg)
             return endDeg - startDeg;
         return 180;
+    }
+
+    getVisualStartDegrees() {
+        const startDeg = this.getStartAngleDegrees();
+        const normalized = startDeg % 360;
+        return normalized < 0 ? normalized + 360 : normalized;
     }
 
     getProtractorGeometry() {
@@ -275,10 +291,12 @@ class ProtractorShape extends BaseShape {
         } else {
             this.ringPath.removeAttribute("fill-rule");
             const largeArc = visualSpanDeg > 180 ? 1 : 0;
-            const outerArcStart = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius, 0);
-            const outerArcEnd = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius, visualSpanDeg);
-            const innerArcStart = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.innerRadius, 0);
-            const innerArcEnd = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.innerRadius, visualSpanDeg);
+            const visualStartDeg = this.getVisualStartDegrees();
+            const visualEndDeg = visualStartDeg + visualSpanDeg;
+            const outerArcStart = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius, visualStartDeg);
+            const outerArcEnd = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius, visualEndDeg);
+            const innerArcStart = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.innerRadius, visualStartDeg);
+            const innerArcEnd = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.innerRadius, visualEndDeg);
             const path = [
                 `M ${outerArcStart.x} ${outerArcStart.y}`,
                 `A ${geometry.outerRadius} ${geometry.outerRadius} 0 ${largeArc} 0 ${outerArcEnd.x} ${outerArcEnd.y}`,
@@ -291,13 +309,7 @@ class ProtractorShape extends BaseShape {
             this.clipShape.setAttribute("d", path);
             this.clipShape.removeAttribute("fill-rule");
             this.applyBorderStroke(this.ringPath, 1);
-            this.baseLine.removeAttribute("visibility");
-            this.baseLine.setAttribute("x1", outerArcStart.x);
-            this.baseLine.setAttribute("y1", outerArcStart.y);
-            this.baseLine.setAttribute("x2", outerArcEnd.x);
-            this.baseLine.setAttribute("y2", outerArcEnd.y);
-            this.baseLine.setAttribute("stroke", this.properties.foregroundColor);
-            this.baseLine.setAttribute("stroke-width", "1");
+            this.baseLine.setAttribute("visibility", "hidden");
         }
     }
 
@@ -310,6 +322,43 @@ class ProtractorShape extends BaseShape {
         line.setAttribute("stroke", this.properties.foregroundColor);
         line.setAttribute("stroke-width", strokeWidth);
         layer.appendChild(line);
+    }
+
+    containsVisualAngle(visualSpanDeg, targetAngleDeg) {
+        if (visualSpanDeg >= 360)
+            return true;
+        return targetAngleDeg >= 0 && targetAngleDeg <= visualSpanDeg;
+    }
+
+    getRelativeAngleDegrees(visualStartDeg, absoluteAngleDeg) {
+        const relative = (absoluteAngleDeg - visualStartDeg) % 360;
+        return relative < 0 ? relative + 360 : relative;
+    }
+
+    pushUniqueAngle(angles, value) {
+        if (angles.some(angle => Math.abs(angle - value) < 0.0001))
+            return;
+        angles.push(value);
+    }
+
+    drawCenterLines(geometry) {
+        this.clearLayerChildren(this.centerLinesLayer);
+        const visualSpanDeg = this.getVisualSpanDegrees();
+        const visualStartDeg = this.getVisualStartDegrees();
+        const visualEndDeg = visualStartDeg + visualSpanDeg;
+        const lineAngles = [];
+        this.pushUniqueAngle(lineAngles, visualStartDeg);
+        this.pushUniqueAngle(lineAngles, visualEndDeg);
+        for (const cardinalAngle of [0, 90, 180, 270]) {
+            const relative = this.getRelativeAngleDegrees(visualStartDeg, cardinalAngle);
+            if (!this.containsVisualAngle(visualSpanDeg, relative))
+                continue;
+            this.pushUniqueAngle(lineAngles, cardinalAngle);
+        }
+        for (const angle of lineAngles) {
+            const innerPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.innerRadius, angle);
+            this.addTickLine(this.centerLinesLayer, geometry.centerX, geometry.centerY, innerPoint.x, innerPoint.y, 1);
+        }
     }
 
     addAngleLabel(x, y, textValue) {
@@ -351,16 +400,18 @@ class ProtractorShape extends BaseShape {
         const totalStored = storedEnd > storedStart ? storedEnd - storedStart : (useRadians ? 1 : 180);
         const labelDecimalPlaces = useRadians ? 2 : 0;
         const isFullCircle = visualSpanDeg >= 360;
+        const visualStartDeg = this.getVisualStartDegrees();
         const tickUpperBound = isFullCircle ? 359 : Math.round(visualSpanDeg);
         for (let angle = 0; angle <= tickUpperBound; angle++) {
             const isMajorTick = angle % 10 == 0;
             const isMiddleTick = !isMajorTick && angle % 5 == 0;
             const tickLength = isMajorTick ? 12 : (isMiddleTick ? 8 : 5);
-            const outerPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius, angle);
-            const innerPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius - tickLength, angle);
+            const visualAngle = visualStartDeg + angle;
+            const outerPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius, visualAngle);
+            const innerPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius - tickLength, visualAngle);
             this.addTickLine(isMajorTick ? this.majorTicksLayer : this.minorTicksLayer, outerPoint.x, outerPoint.y, innerPoint.x, innerPoint.y, isMajorTick ? 1.2 : 1);
             if (isMajorTick) {
-                const labelPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius - tickLength - 10, angle);
+                const labelPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius - tickLength - 10, visualAngle);
                 const mappedAngleValue = storedStart + (angle / visualSpanDeg) * totalStored;
                 const displayValue = useRadians ? mappedAngleValue * Math.PI : mappedAngleValue;
                 this.addAngleLabel(labelPoint.x, labelPoint.y, this.formatAngleValue(displayValue * scaleValue, labelDecimalPlaces) + degreeSymbol);
@@ -372,6 +423,7 @@ class ProtractorShape extends BaseShape {
         super.draw();
         const geometry = this.getProtractorGeometry();
         this.drawProtractorBody(geometry);
+        this.drawCenterLines(geometry);
         this.drawTicksAndLabels(geometry);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${geometry.x + geometry.width / 2}, ${geometry.y + geometry.height / 2})`);
     }
