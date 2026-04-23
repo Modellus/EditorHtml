@@ -104,6 +104,21 @@ class ChartControl {
         return document.createElementNS("http://www.w3.org/2000/svg", name);
     }
 
+    appendSvgMarkup(layerElement, markup) {
+        if (!layerElement || !markup)
+            return;
+        layerElement.insertAdjacentHTML("beforeend", markup);
+    }
+
+    escapeMarkupText(textValue) {
+        return String(textValue ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
     clearLayer(layerElement) {
         if (!layerElement)
             return;
@@ -332,6 +347,26 @@ class ChartControl {
         const firstTick = Math.ceil(minValue / step) * step;
         for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
             ticks.push(Math.round(value * 1e10) / 1e10);
+        return ticks;
+    }
+
+    buildMinorTicks(majorTicks, minValue, maxValue, subdivisions = 5) {
+        const ticks = [];
+        if (!Array.isArray(majorTicks) || majorTicks.length < 2)
+            return this.buildTicks(minValue, maxValue, Math.max(6, subdivisions * 4 + 1));
+        const step = majorTicks[1] - majorTicks[0];
+        if (!Number.isFinite(step) || step <= 0 || subdivisions <= 1)
+            return ticks;
+        const minorStep = step / subdivisions;
+        for (let majorIndex = 0; majorIndex < majorTicks.length - 1; majorIndex++) {
+            const startValue = majorTicks[majorIndex];
+            for (let minorIndex = 1; minorIndex < subdivisions; minorIndex++) {
+                const tickValue = startValue + minorStep * minorIndex;
+                if (tickValue <= minValue || tickValue >= maxValue)
+                    continue;
+                ticks.push(Math.round(tickValue * 1e10) / 1e10);
+            }
+        }
         return ticks;
     }
 
@@ -636,14 +671,16 @@ class ChartControl {
             : rawDomain;
         const xTicks = this.buildTicks(domain.xMin, domain.xMax, 5);
         const yTicks = this.buildTicks(domain.yMin, domain.yMax, 5);
+        const xMinorTicks = this.buildMinorTicks(xTicks, domain.xMin, domain.xMax, 5);
+        const yMinorTicks = this.buildMinorTicks(yTicks, domain.yMin, domain.yMax, 5);
         const layout = this.getLayout(width, height, xTicks, yTicks);
         this.plotClipRect.setAttribute("x", `${layout.plotLeft}`);
         this.plotClipRect.setAttribute("y", `${layout.plotTop}`);
         this.plotClipRect.setAttribute("width", `${layout.plotWidth}`);
         this.plotClipRect.setAttribute("height", `${layout.plotHeight}`);
         const scales = this.getScales(layout, domain);
-        this.renderGrid(layout, scales.xScale, scales.yScale, xTicks, yTicks);
-        this.renderAxes(layout, scales.xScale, scales.yScale, xTicks, yTicks);
+        this.renderGrid(layout, scales.xScale, scales.yScale, xTicks, yTicks, xMinorTicks, yMinorTicks);
+        this.renderAxes(layout, scales.xScale, scales.yScale, xTicks, yTicks, xMinorTicks, yMinorTicks);
         this.renderSeries(layout, scales.xScale, scales.yScale);
         this.renderTitles(layout, width, height);
         this.renderState = {
@@ -662,78 +699,68 @@ class ChartControl {
     }
 
     renderBackground(width, height) {
-        const rectangle = this.createSvgElement("rect");
-        rectangle.setAttribute("x", "0");
-        rectangle.setAttribute("y", "0");
-        rectangle.setAttribute("width", `${width}`);
-        rectangle.setAttribute("height", `${height}`);
-        rectangle.setAttribute("fill", this.options.backgroundColor);
-        rectangle.setAttribute("stroke", this.options.borderColor);
-        rectangle.setAttribute("stroke-width", "1");
-        this.backgroundLayer.appendChild(rectangle);
+        this.appendSvgMarkup(this.backgroundLayer, `
+            <rect x="0" y="0" width="${width}" height="${height}" fill="${this.options.backgroundColor}" stroke="${this.options.borderColor}" stroke-width="1" />
+        `);
     }
 
-    renderGrid(layout, xScale, yScale, xTicks, yTicks) {
+    renderGrid(layout, xScale, yScale, xTicks, yTicks, xMinorTicks = [], yMinorTicks = []) {
+        let gridMarkup = "";
+        for (let index = 0; index < xMinorTicks.length; index++) {
+            const xValue = xMinorTicks[index];
+            const xPosition = xScale(xValue);
+            gridMarkup += `
+                <line x1="${xPosition}" y1="${layout.plotTop}" x2="${xPosition}" y2="${layout.plotBottom}" stroke="${this.options.gridColor}" stroke-opacity="0.4" stroke-width="1" />
+            `;
+        }
+        for (let index = 0; index < yMinorTicks.length; index++) {
+            const yValue = yMinorTicks[index];
+            const yPosition = yScale(yValue);
+            gridMarkup += `
+                <line x1="${layout.plotLeft}" y1="${yPosition}" x2="${layout.plotRight}" y2="${yPosition}" stroke="${this.options.gridColor}" stroke-opacity="0.4" stroke-width="1" />
+            `;
+        }
         for (let index = 0; index < xTicks.length; index++) {
             const xValue = xTicks[index];
             const xPosition = xScale(xValue);
-            const line = this.createSvgElement("line");
-            line.setAttribute("x1", `${xPosition}`);
-            line.setAttribute("y1", `${layout.plotTop}`);
-            line.setAttribute("x2", `${xPosition}`);
-            line.setAttribute("y2", `${layout.plotBottom}`);
-            line.setAttribute("stroke", this.options.gridColor);
-            line.setAttribute("stroke-width", "1");
-            this.gridLayer.appendChild(line);
+            gridMarkup += `
+                <line x1="${xPosition}" y1="${layout.plotTop}" x2="${xPosition}" y2="${layout.plotBottom}" stroke="${this.options.gridColor}" stroke-opacity="0.75" stroke-width="1" />
+            `;
         }
         for (let index = 0; index < yTicks.length; index++) {
             const yValue = yTicks[index];
             const yPosition = yScale(yValue);
-            const line = this.createSvgElement("line");
-            line.setAttribute("x1", `${layout.plotLeft}`);
-            line.setAttribute("y1", `${yPosition}`);
-            line.setAttribute("x2", `${layout.plotRight}`);
-            line.setAttribute("y2", `${yPosition}`);
-            line.setAttribute("stroke", this.options.gridColor);
-            line.setAttribute("stroke-width", "1");
-            this.gridLayer.appendChild(line);
+            gridMarkup += `
+                <line x1="${layout.plotLeft}" y1="${yPosition}" x2="${layout.plotRight}" y2="${yPosition}" stroke="${this.options.gridColor}" stroke-opacity="0.75" stroke-width="1" />
+            `;
         }
+        this.appendSvgMarkup(this.gridLayer, gridMarkup);
     }
 
-    renderAxes(layout, xScale, yScale, xTicks, yTicks) {
-        const verticalAxis = this.createSvgElement("line");
-        verticalAxis.setAttribute("x1", `${layout.plotLeft}`);
-        verticalAxis.setAttribute("y1", `${layout.plotTop}`);
-        verticalAxis.setAttribute("x2", `${layout.plotLeft}`);
-        verticalAxis.setAttribute("y2", `${layout.plotBottom}`);
-        verticalAxis.setAttribute("stroke", this.options.axisColor);
-        verticalAxis.setAttribute("stroke-width", "1.2");
-        this.axisLayer.appendChild(verticalAxis);
-        const horizontalAxis = this.createSvgElement("line");
-        horizontalAxis.setAttribute("x1", `${layout.plotLeft}`);
-        horizontalAxis.setAttribute("y1", `${layout.plotBottom}`);
-        horizontalAxis.setAttribute("x2", `${layout.plotRight}`);
-        horizontalAxis.setAttribute("y2", `${layout.plotBottom}`);
-        horizontalAxis.setAttribute("stroke", this.options.axisColor);
-        horizontalAxis.setAttribute("stroke-width", "1.2");
-        this.axisLayer.appendChild(horizontalAxis);
+    renderAxes(layout, xScale, yScale, xTicks, yTicks, xMinorTicks = [], yMinorTicks = []) {
+        this.appendSvgMarkup(this.axisLayer, `
+            <line x1="${layout.plotLeft}" y1="${layout.plotTop}" x2="${layout.plotLeft}" y2="${layout.plotBottom}" stroke="${this.options.axisColor}" stroke-width="1.2" />
+            <line x1="${layout.plotLeft}" y1="${layout.plotBottom}" x2="${layout.plotRight}" y2="${layout.plotBottom}" stroke="${this.options.axisColor}" stroke-width="1.2" />
+        `);
+        for (let index = 0; index < xMinorTicks.length; index++)
+            this.renderXAxisMinorTick(layout, xScale, xMinorTicks[index]);
+        for (let index = 0; index < yMinorTicks.length; index++)
+            this.renderYAxisMinorTick(layout, yScale, yMinorTicks[index]);
         for (let index = 0; index < xTicks.length; index++)
             this.renderXAxisTick(layout, xScale, xTicks[index], index, xTicks.length);
         for (let index = 0; index < yTicks.length; index++)
             this.renderYAxisTick(layout, yScale, yTicks[index]);
     }
 
+    renderXAxisMinorTick(layout, xScale, xValue) {
+        const xPosition = xScale(xValue);
+        this.appendSvgMarkup(this.axisLayer, `
+            <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 2.5}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
+        `);
+    }
+
     renderXAxisTick(layout, xScale, xValue, tickIndex, totalTicks) {
         const xPosition = xScale(xValue);
-        const tick = this.createSvgElement("line");
-        tick.setAttribute("x1", `${xPosition}`);
-        tick.setAttribute("y1", `${layout.plotBottom}`);
-        tick.setAttribute("x2", `${xPosition}`);
-        tick.setAttribute("y2", `${layout.plotBottom + 4}`);
-        tick.setAttribute("stroke", this.options.axisColor);
-        tick.setAttribute("stroke-width", "1");
-        this.axisLayer.appendChild(tick);
-        const label = this.createSvgElement("text");
         let anchor = "middle";
         let labelX = xPosition;
         if (tickIndex === 0) {
@@ -744,37 +771,27 @@ class ChartControl {
             anchor = "end";
             labelX = xPosition - 2;
         }
-        label.setAttribute("class", "shape-tick-label");
-        label.setAttribute("x", `${labelX}`);
-        label.setAttribute("y", `${layout.plotBottom + 18}`);
-        label.setAttribute("text-anchor", anchor);
-        label.setAttribute("fill", this.options.foregroundColor);
-        label.setAttribute("font-family", this.options.fontFamily);
-        label.setAttribute("font-size", "10");
-        label.textContent = this.formatAxisValue(xValue);
-        this.axisLayer.appendChild(label);
+        const labelText = this.escapeMarkupText(this.formatAxisValue(xValue));
+        this.appendSvgMarkup(this.axisLayer, `
+            <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 4}" stroke="${this.options.axisColor}" stroke-width="1" />
+            <text class="shape-tick-label" x="${labelX}" y="${layout.plotBottom + 18}" text-anchor="${anchor}" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
+        `);
     }
 
     renderYAxisTick(layout, yScale, yValue) {
         const yPosition = yScale(yValue);
-        const tick = this.createSvgElement("line");
-        tick.setAttribute("x1", `${layout.plotLeft - 4}`);
-        tick.setAttribute("y1", `${yPosition}`);
-        tick.setAttribute("x2", `${layout.plotLeft}`);
-        tick.setAttribute("y2", `${yPosition}`);
-        tick.setAttribute("stroke", this.options.axisColor);
-        tick.setAttribute("stroke-width", "1");
-        this.axisLayer.appendChild(tick);
-        const label = this.createSvgElement("text");
-        label.setAttribute("class", "shape-tick-label");
-        label.setAttribute("x", `${layout.plotLeft - 7}`);
-        label.setAttribute("y", `${yPosition + 3}`);
-        label.setAttribute("text-anchor", "end");
-        label.setAttribute("fill", this.options.foregroundColor);
-        label.setAttribute("font-family", this.options.fontFamily);
-        label.setAttribute("font-size", "10");
-        label.textContent = this.formatAxisValue(yValue);
-        this.axisLayer.appendChild(label);
+        const labelText = this.escapeMarkupText(this.formatAxisValue(yValue));
+        this.appendSvgMarkup(this.axisLayer, `
+            <line x1="${layout.plotLeft - 4}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
+            <text class="shape-tick-label" x="${layout.plotLeft - 7}" y="${yPosition + 3}" text-anchor="end" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
+        `);
+    }
+
+    renderYAxisMinorTick(layout, yScale, yValue) {
+        const yPosition = yScale(yValue);
+        this.appendSvgMarkup(this.axisLayer, `
+            <line x1="${layout.plotLeft - 2.5}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
+        `);
     }
 
     getSeriesPoints(series, xScale, yScale) {
@@ -825,12 +842,9 @@ class ChartControl {
     }
 
     renderLineSeries(points, color) {
-        const path = this.createSvgElement("path");
-        path.setAttribute("fill", "none");
-        path.setAttribute("stroke", color);
-        path.setAttribute("stroke-width", "2");
-        path.setAttribute("d", this.getPolylinePath(points));
-        this.seriesLayer.appendChild(path);
+        this.appendSvgMarkup(this.seriesLayer, `
+            <path fill="none" stroke="${color}" stroke-width="2" d="${this.getPolylinePath(points)}" />
+        `);
     }
 
     renderAreaSeries(points, color, baseY) {
@@ -838,25 +852,21 @@ class ChartControl {
             this.renderPointMarkers(points, color);
             return;
         }
-        const areaPath = this.createSvgElement("path");
-        areaPath.setAttribute("fill", color);
-        areaPath.setAttribute("fill-opacity", "0.22");
-        areaPath.setAttribute("stroke", "none");
-        areaPath.setAttribute("d", this.getAreaPath(points, baseY));
-        this.seriesLayer.appendChild(areaPath);
+        this.appendSvgMarkup(this.seriesLayer, `
+            <path fill="${color}" fill-opacity="0.22" stroke="none" d="${this.getAreaPath(points, baseY)}" />
+        `);
         this.renderLineSeries(points, color);
     }
 
     renderPointMarkers(points, color) {
+        let markersMarkup = "";
         for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
             const point = points[pointIndex];
-            const circle = this.createSvgElement("circle");
-            circle.setAttribute("cx", `${point.x}`);
-            circle.setAttribute("cy", `${point.y}`);
-            circle.setAttribute("r", "3");
-            circle.setAttribute("fill", color);
-            this.seriesLayer.appendChild(circle);
+            markersMarkup += `
+                <circle cx="${point.x}" cy="${point.y}" r="3" fill="${color}" />
+            `;
         }
+        this.appendSvgMarkup(this.seriesLayer, markersMarkup);
     }
 
     renderScatterSeries(points, color) {
@@ -883,6 +893,7 @@ class ChartControl {
         }
         const barWidth = Math.max(2, Math.min(24, stepPixels / Math.max(1, barSeries.length + 1)));
         const baselineY = yScale(0);
+        let barsMarkup = "";
         for (let seriesIndex = 0; seriesIndex < barSeries.length; seriesIndex++) {
             const series = barSeries[seriesIndex];
             const offset = (seriesIndex - (barSeries.length - 1) / 2) * barWidth;
@@ -894,16 +905,12 @@ class ChartControl {
                     continue;
                 const xPosition = xScale(xValue) + offset - barWidth * 0.45;
                 const yPosition = yScale(yValue);
-                const rectangle = this.createSvgElement("rect");
-                rectangle.setAttribute("x", `${xPosition}`);
-                rectangle.setAttribute("y", `${Math.min(yPosition, baselineY)}`);
-                rectangle.setAttribute("width", `${barWidth * 0.9}`);
-                rectangle.setAttribute("height", `${Math.max(1, Math.abs(yPosition - baselineY))}`);
-                rectangle.setAttribute("fill", series.color);
-                rectangle.setAttribute("fill-opacity", "0.8");
-                this.seriesLayer.appendChild(rectangle);
+                barsMarkup += `
+                    <rect x="${xPosition}" y="${Math.min(yPosition, baselineY)}" width="${barWidth * 0.9}" height="${Math.max(1, Math.abs(yPosition - baselineY))}" fill="${series.color}" fill-opacity="0.8" />
+                `;
             }
         }
+        this.appendSvgMarkup(this.seriesLayer, barsMarkup);
     }
 
     getPolylinePath(points) {
@@ -941,14 +948,9 @@ class ChartControl {
         const titleFontSize = Number(this.options.titleFontSize) || 16;
         this.renderTitleWithCaseIcons(this.axisLayer, this.options.argumentTitle ?? "", layout.plotLeft + layout.plotWidth / 2, layout.axisTitleX, titleFontSize, this.options.foregroundColor, null, this.xTitleClipId);
         this.renderValueTitleLegend(this.axisLayer, layout, titleFontSize, this.yTitleClipId);
-        const clippingRectangle = this.createSvgElement("rect");
-        clippingRectangle.setAttribute("x", "0");
-        clippingRectangle.setAttribute("y", "0");
-        clippingRectangle.setAttribute("width", `${width}`);
-        clippingRectangle.setAttribute("height", `${layout.plotBottom + 22}`);
-        clippingRectangle.setAttribute("fill", "none");
-        clippingRectangle.setAttribute("stroke", "none");
-        this.axisLayer.appendChild(clippingRectangle);
+        this.appendSvgMarkup(this.axisLayer, `
+            <rect x="0" y="0" width="${width}" height="${layout.plotBottom + 22}" fill="none" stroke="none" />
+        `);
     }
 
     renderFocus() {
@@ -969,26 +971,15 @@ class ChartControl {
         const topY = focusPoints.length > 0
             ? Math.min(...focusPoints.map(p => p.yPosition))
             : layout.plotBottom;
-        const focusLine = this.createSvgElement("line");
-        focusLine.setAttribute("x1", `${focusX}`);
-        focusLine.setAttribute("y1", `${topY}`);
-        focusLine.setAttribute("x2", `${focusX}`);
-        focusLine.setAttribute("y2", `${layout.plotBottom}`);
-        focusLine.setAttribute("stroke", "#949494");
-        focusLine.setAttribute("stroke-width", "1.4");
-        focusLine.setAttribute("stroke-dasharray", "4 3");
-        this.focusLayer.appendChild(focusLine);
+        let focusMarkup = `
+            <line x1="${focusX}" y1="${topY}" x2="${focusX}" y2="${layout.plotBottom}" stroke="#949494" stroke-width="1.4" stroke-dasharray="4 3" />
+        `;
         for (const point of focusPoints) {
-            const horizontalLine = this.createSvgElement("line");
-            horizontalLine.setAttribute("x1", `${layout.plotLeft}`);
-            horizontalLine.setAttribute("y1", `${point.yPosition}`);
-            horizontalLine.setAttribute("x2", `${point.xPosition}`);
-            horizontalLine.setAttribute("y2", `${point.yPosition}`);
-            horizontalLine.setAttribute("stroke", "#949494");
-            horizontalLine.setAttribute("stroke-width", "1.4");
-            horizontalLine.setAttribute("stroke-dasharray", "4 3");
-            this.focusLayer.appendChild(horizontalLine);
+            focusMarkup += `
+                <line x1="${layout.plotLeft}" y1="${point.yPosition}" x2="${point.xPosition}" y2="${point.yPosition}" stroke="#949494" stroke-width="1.4" stroke-dasharray="4 3" />
+            `;
         }
+        this.appendSvgMarkup(this.focusLayer, focusMarkup);
         for (let seriesIndex = 0; seriesIndex < this.renderState.series.length; seriesIndex++)
             this.renderFocusMarker(seriesIndex, xScale, yScale);
         this.renderTangent(xScale, yScale);
@@ -1019,25 +1010,16 @@ class ChartControl {
         const yPosition = yScale(nearestPoint.yValue);
         if (!Number.isFinite(xPosition) || !Number.isFinite(yPosition))
             return;
-        const marker = this.createSvgElement("circle");
-        marker.setAttribute("cx", `${xPosition}`);
-        marker.setAttribute("cy", `${yPosition}`);
-        marker.setAttribute("r", "3.5");
-        marker.setAttribute("fill", series.color);
-        marker.setAttribute("stroke", "#ffffff");
-        marker.setAttribute("stroke-width", "1");
-        this.focusLayer.appendChild(marker);
+        let markerMarkup = `
+            <circle cx="${xPosition}" cy="${yPosition}" r="3.5" fill="${series.color}" stroke="#ffffff" stroke-width="1" />
+        `;
         if (series.showLabel) {
-            const label = this.createSvgElement("text");
-            label.setAttribute("x", `${xPosition}`);
-            label.setAttribute("y", `${yPosition - 8}`);
-            label.setAttribute("text-anchor", "middle");
-            label.setAttribute("font-family", "Katex_Main");
-            label.setAttribute("font-size", `${this.options.fontSize}`);
-            label.setAttribute("fill", series.color);
-            label.textContent = `${series.name} = ${this.formatAxisValue(nearestPoint.yValue)}`;
-            this.focusLayer.appendChild(label);
+            const labelText = this.escapeMarkupText(`${series.name} = ${this.formatAxisValue(nearestPoint.yValue)}`);
+            markerMarkup += `
+                <text x="${xPosition}" y="${yPosition - 8}" text-anchor="middle" font-family="Katex_Main" font-size="${this.options.fontSize}" fill="${series.color}">${labelText}</text>
+            `;
         }
+        this.appendSvgMarkup(this.focusLayer, markerMarkup);
     }
 
     getNearestSeriesPoint(series, focusArgumentValue) {
@@ -1117,6 +1099,7 @@ class ChartControl {
             return;
         const domain = this.renderState.domain;
         const deltaX = (domain.xMax - domain.xMin) * 0.12;
+        let tangentMarkup = "";
         for (let seriesIndex = 0; seriesIndex < this.renderState.series.length; seriesIndex++) {
             const series = this.renderState.series[seriesIndex];
             const tangent = this.getTangentAtFocusPoint(series);
@@ -1127,39 +1110,14 @@ class ChartControl {
             const pointY = yScale(tangent.yValue);
             const endX = xScale(tangent.xValue + deltaX);
             const endY = yScale(tangent.yValue + deltaY);
-            const triangle = this.createSvgElement("polygon");
-            triangle.setAttribute("points", `${pointX},${pointY} ${endX},${pointY} ${endX},${endY}`);
-            triangle.setAttribute("fill", tangentColor);
-            triangle.setAttribute("fill-opacity", "0.25");
-            triangle.setAttribute("stroke", "none");
-            this.focusLayer.appendChild(triangle);
-            const tangentLine = this.createSvgElement("line");
-            tangentLine.setAttribute("x1", `${xScale(tangent.xValue - deltaX)}`);
-            tangentLine.setAttribute("y1", `${yScale(tangent.yValue - deltaY)}`);
-            tangentLine.setAttribute("x2", `${xScale(tangent.xValue + deltaX)}`);
-            tangentLine.setAttribute("y2", `${yScale(tangent.yValue + deltaY)}`);
-            tangentLine.setAttribute("stroke", tangentColor);
-            tangentLine.setAttribute("stroke-width", "1.5");
-            this.focusLayer.appendChild(tangentLine);
-            const horizontalLine = this.createSvgElement("line");
-            horizontalLine.setAttribute("x1", `${pointX}`);
-            horizontalLine.setAttribute("y1", `${pointY}`);
-            horizontalLine.setAttribute("x2", `${endX}`);
-            horizontalLine.setAttribute("y2", `${pointY}`);
-            horizontalLine.setAttribute("stroke", tangentColor);
-            horizontalLine.setAttribute("stroke-width", "1.2");
-            horizontalLine.setAttribute("stroke-dasharray", "4 3");
-            this.focusLayer.appendChild(horizontalLine);
-            const verticalLine = this.createSvgElement("line");
-            verticalLine.setAttribute("x1", `${endX}`);
-            verticalLine.setAttribute("y1", `${pointY}`);
-            verticalLine.setAttribute("x2", `${endX}`);
-            verticalLine.setAttribute("y2", `${endY}`);
-            verticalLine.setAttribute("stroke", tangentColor);
-            verticalLine.setAttribute("stroke-width", "1.2");
-            verticalLine.setAttribute("stroke-dasharray", "4 3");
-            this.focusLayer.appendChild(verticalLine);
+            tangentMarkup += `
+                <polygon points="${pointX},${pointY} ${endX},${pointY} ${endX},${endY}" fill="${tangentColor}" fill-opacity="0.25" stroke="none" />
+                <line x1="${xScale(tangent.xValue - deltaX)}" y1="${yScale(tangent.yValue - deltaY)}" x2="${xScale(tangent.xValue + deltaX)}" y2="${yScale(tangent.yValue + deltaY)}" stroke="${tangentColor}" stroke-width="1.5" />
+                <line x1="${pointX}" y1="${pointY}" x2="${endX}" y2="${pointY}" stroke="${tangentColor}" stroke-width="1.2" stroke-dasharray="4 3" />
+                <line x1="${endX}" y1="${pointY}" x2="${endX}" y2="${endY}" stroke="${tangentColor}" stroke-width="1.2" stroke-dasharray="4 3" />
+            `;
         }
+        this.appendSvgMarkup(this.focusLayer, tangentMarkup);
     }
 
     renderTickHitAreas(layout, xScale, yScale, xTicks, yTicks) {
@@ -1315,17 +1273,9 @@ class ChartControl {
         const right = Math.max(zoomDragState.startX, zoomDragState.currentX);
         const top = Math.min(zoomDragState.startY, zoomDragState.currentY);
         const bottom = Math.max(zoomDragState.startY, zoomDragState.currentY);
-        const rectangle = this.createSvgElement("rect");
-        rectangle.setAttribute("x", `${left}`);
-        rectangle.setAttribute("y", `${top}`);
-        rectangle.setAttribute("width", `${Math.max(0, right - left)}`);
-        rectangle.setAttribute("height", `${Math.max(0, bottom - top)}`);
-        rectangle.setAttribute("fill", this.options.foregroundColor);
-        rectangle.setAttribute("fill-opacity", "0.12");
-        rectangle.setAttribute("stroke", this.options.foregroundColor);
-        rectangle.setAttribute("stroke-width", "1.2");
-        rectangle.setAttribute("stroke-dasharray", "5 4");
-        this.zoomLayer.appendChild(rectangle);
+        this.appendSvgMarkup(this.zoomLayer, `
+            <rect x="${left}" y="${top}" width="${Math.max(0, right - left)}" height="${Math.max(0, bottom - top)}" fill="${this.options.foregroundColor}" fill-opacity="0.12" stroke="${this.options.foregroundColor}" stroke-width="1.2" stroke-dasharray="5 4" />
+        `);
     }
 
     onZoomPointerDown(event) {
@@ -1475,38 +1425,16 @@ class ChartControl {
             return;
         if (crosshairX < layout.plotLeft || crosshairX > layout.plotRight)
             return;
-        const verticalLine = this.createSvgElement("line");
-        verticalLine.setAttribute("x1", `${crosshairX}`);
-        verticalLine.setAttribute("y1", `${layout.plotTop}`);
-        verticalLine.setAttribute("x2", `${crosshairX}`);
-        verticalLine.setAttribute("y2", `${layout.plotBottom}`);
-        verticalLine.setAttribute("stroke", this.options.foregroundColor);
-        verticalLine.setAttribute("stroke-width", "1");
-        verticalLine.setAttribute("stroke-opacity", "0.5");
-        this.crosshairLayer.appendChild(verticalLine);
         const firstSeries = state.series.length > 0 ? this.getNearestSeriesPoint(state.series[0], argumentValue) : null;
         const snappedX = firstSeries ? firstSeries.xValue : argumentValue;
         const axisLabelX = xScale(snappedX);
-        const axisBackground = this.createSvgElement("rect");
         const axisLabelText = this.formatAxisValue(snappedX);
         const axisLabelWidth = this.estimateTextWidth(axisLabelText, 10) + 8;
-        axisBackground.setAttribute("x", `${axisLabelX - axisLabelWidth / 2}`);
-        axisBackground.setAttribute("y", `${layout.plotBottom + 4}`);
-        axisBackground.setAttribute("width", `${axisLabelWidth}`);
-        axisBackground.setAttribute("height", "16");
-        axisBackground.setAttribute("rx", "3");
-        axisBackground.setAttribute("fill", this.options.foregroundColor);
-        axisBackground.setAttribute("fill-opacity", "0.85");
-        this.crosshairLayer.appendChild(axisBackground);
-        const axisLabel = this.createSvgElement("text");
-        axisLabel.setAttribute("x", `${axisLabelX}`);
-        axisLabel.setAttribute("y", `${layout.plotBottom + 16}`);
-        axisLabel.setAttribute("text-anchor", "middle");
-        axisLabel.setAttribute("font-family", this.options.fontFamily);
-        axisLabel.setAttribute("font-size", "10");
-        axisLabel.setAttribute("fill", this.options.backgroundColor || "#ffffff");
-        axisLabel.textContent = axisLabelText;
-        this.crosshairLayer.appendChild(axisLabel);
+        let crosshairMarkup = `
+            <line x1="${crosshairX}" y1="${layout.plotTop}" x2="${crosshairX}" y2="${layout.plotBottom}" stroke="${this.options.foregroundColor}" stroke-width="1" stroke-opacity="0.5" />
+            <rect x="${axisLabelX - axisLabelWidth / 2}" y="${layout.plotBottom + 4}" width="${axisLabelWidth}" height="16" rx="3" fill="${this.options.foregroundColor}" fill-opacity="0.85" />
+            <text x="${axisLabelX}" y="${layout.plotBottom + 16}" text-anchor="middle" font-family="${this.options.fontFamily}" font-size="10" fill="${this.options.backgroundColor || "#ffffff"}">${this.escapeMarkupText(axisLabelText)}</text>
+        `;
         for (let seriesIndex = 0; seriesIndex < state.series.length; seriesIndex++) {
             const series = state.series[seriesIndex];
             const nearestPoint = this.getNearestSeriesPoint(series, argumentValue);
@@ -1516,22 +1444,11 @@ class ChartControl {
             const pointY = yScale(nearestPoint.yValue);
             if (!Number.isFinite(pointX) || !Number.isFinite(pointY))
                 continue;
-            const marker = this.createSvgElement("circle");
-            marker.setAttribute("cx", `${pointX}`);
-            marker.setAttribute("cy", `${pointY}`);
-            marker.setAttribute("r", "4");
-            marker.setAttribute("fill", series.color);
-            marker.setAttribute("stroke", "#ffffff");
-            marker.setAttribute("stroke-width", "1.5");
-            this.crosshairLayer.appendChild(marker);
-            const label = this.createSvgElement("text");
-            label.setAttribute("x", `${pointX + 6}`);
-            label.setAttribute("y", `${pointY - 6}`);
-            label.setAttribute("font-family", this.options.fontFamily);
-            label.setAttribute("font-size", "11");
-            label.setAttribute("fill", series.color);
-            label.textContent = this.formatAxisValue(nearestPoint.yValue);
-            this.crosshairLayer.appendChild(label);
+            crosshairMarkup += `
+                <circle cx="${pointX}" cy="${pointY}" r="4" fill="${series.color}" stroke="#ffffff" stroke-width="1.5" />
+                <text x="${pointX + 6}" y="${pointY - 6}" font-family="${this.options.fontFamily}" font-size="11" fill="${series.color}">${this.escapeMarkupText(this.formatAxisValue(nearestPoint.yValue))}</text>
+            `;
         }
+        this.appendSvgMarkup(this.crosshairLayer, crosshairMarkup);
     }
 }
