@@ -1565,13 +1565,13 @@ declare class PreloadedData {
     private values;
     private iterationCol;
     private independentCol;
-    private cursor;
     get names(): string[];
     get isEmpty(): boolean;
     load(names: string[], values: number[][], iterationTermName: string, independentTermName: string): void;
     reset(): void;
     clear(): void;
     getDataTermNames(iterationTermName: string, independentTermName: string): string[];
+    getMaxCoveredIteration(initialIndependent: number, step: number): number;
     apply(iteration: number, target: {
         [name: string]: number;
     }, independentTermName: string): void;
@@ -1602,6 +1602,8 @@ declare class System {
     private functionExpressionsWithoutCondition;
     private readonly iterationValuesByKey;
     private _lastIteration;
+    private _lastCalculatedIteration;
+    private readonly calculatedIterationKeys;
     useRadians: boolean;
     isCalculatingFunctions: boolean;
     readonly preloadedData: PreloadedData;
@@ -1613,6 +1615,7 @@ declare class System {
     set iterationTerm(name: string);
     setCaseCount(count: number): void;
     get lastIteration(): number;
+    get lastCalculatedIteration(): number;
     get(caseNumber?: number): {
         [name: string]: number;
     };
@@ -1635,6 +1638,8 @@ declare class System {
     reset(): void;
     clear(): void;
     calculateFunctions(): void;
+    private calculateFunctionsForVisibleIterations;
+    private calculateFunctionsOnIteration;
     private applyInitialValues;
     addValues(values: {
         [name: string]: number;
@@ -1644,6 +1649,7 @@ declare class System {
     }, applyInitialValuesToCurrentIteration?: boolean): {
         [name: string]: number;
     };
+    isIterationCalculated(iteration: number, caseNumber?: number): boolean;
     getIndependent(caseNumber?: number): number;
     setInitialIndependent(value: number): void;
     isEditable(term: Term): boolean;
@@ -1670,6 +1676,7 @@ declare class System {
     private indexIterationValue;
     private getIterationValue;
     private assertValidCase;
+    private populatePreloadedIterations;
 }
 
 declare class Deriver extends LatexMathVisitor<Branch> {
