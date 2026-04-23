@@ -1,4 +1,14 @@
 class TermControl {
+    static getShapeOverlayWrapperAttr(extraClass = "") {
+        const wrapperClassName = extraClass ? `mdl-shape-overlay-popup ${extraClass}` : "mdl-shape-overlay-popup";
+        return { class: wrapperClassName };
+    }
+
+    static getShapeNestedOverlayWrapperAttr(extraClass = "") {
+        const wrapperClassName = extraClass ? `mdl-shape-overlay-popup mdl-shape-overlay-popup-nested ${extraClass}` : "mdl-shape-overlay-popup mdl-shape-overlay-popup-nested";
+        return { class: wrapperClassName };
+    }
+
     static normalizeTermValue(value) {
         if (value == null)
             return "";
@@ -931,7 +941,7 @@ class TermControl {
             onItemClick: e => this.onSecondaryDropDownItemClick(e, index),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:199999", class: "mdl-nested-dropdown-popup" }
+                wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup")
             }
         };
     }
@@ -1057,7 +1067,7 @@ class TermControl {
             contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), item, index, treeItems, acceptCustomValue, termValue, providedOptions, () => dropDownBoxInstance?.close()),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:199999", class: "mdl-nested-dropdown-popup" }
+                wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup")
             },
             ...(providedOptions.onOpened ? { onOpened: providedOptions.onOpened } : {})
         };
@@ -1109,7 +1119,7 @@ class TermControl {
             onValueChanged: e => this.onSecondaryValueChanged(index, e.value),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:199999", class: "mdl-nested-dropdown-popup" }
+                wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup")
             }
         };
     }

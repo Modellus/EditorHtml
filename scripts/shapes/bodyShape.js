@@ -334,7 +334,7 @@ class BodyShape extends ChildShape {
             buttonTemplate: (data, element) => this.renderCharacterPickerButtonTemplate(element),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { class: "mdl-character-picker-menu", style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr("mdl-character-picker-menu"),
                 width: "auto",
                 contentTemplate: contentElement => this.createCharacterPickerGrid(contentElement)
             }

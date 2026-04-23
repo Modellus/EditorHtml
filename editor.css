@@ -6,6 +6,12 @@ html, body, .dx-theme-compact {
     background-color: white;
 }
 
+:root {
+    --mdl-shape-toolbar-z-index: 90000;
+    --mdl-shape-overlay-z-index: 91000;
+    --mdl-shape-overlay-nested-z-index: 92000;
+}
+
 svg {
     display: block;
     width: 100vw;
@@ -123,12 +129,16 @@ body.read-only #model-info-label {
     font-family: "Atma", "Assistant", sans-serif !important;
 }
 
-.dx-dropdownbutton-popup-wrapper {
-    z-index: 99999 !important;
+.mdl-shape-overlay-popup {
+    z-index: var(--mdl-shape-overlay-z-index) !important;
+}
+
+.mdl-shape-overlay-popup.mdl-shape-overlay-popup-nested {
+    z-index: var(--mdl-shape-overlay-nested-z-index) !important;
 }
 
 .mdl-nested-dropdown-popup {
-    z-index: 199999 !important;
+    z-index: var(--mdl-shape-overlay-nested-z-index) !important;
 }
 
 #chat-popup {
@@ -384,7 +394,7 @@ body.read-only #context-menu {
 
 .shape-context-toolbar {
     position: fixed;
-    z-index: 9999;
+    z-index: var(--mdl-shape-toolbar-z-index);
     display: none;
     padding: 4px 6px;
     border-radius: 8px;
@@ -1128,6 +1138,19 @@ math-field {
     font-size: 13px;   
     font-weight: 400;
     font-style: italic;
+}
+
+.mdl-value-sound-selectbox .dx-texteditor-input,
+.mdl-value-sound-selectbox .dx-dropdowneditor-input-wrapper,
+.mdl-value-sound-popup .dx-list-item-content,
+.mdl-value-sound-popup .mdl-dropdown-list-label {
+    font-family: "Atma", "Assistant", sans-serif !important;
+    font-style: normal;
+}
+
+.mdl-value-sound-icon {
+    margin-right: 8px;
+    font-size: 14px;
 }
 
 .case-select {

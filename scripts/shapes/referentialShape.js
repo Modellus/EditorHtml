@@ -153,7 +153,7 @@ class ReferentialShape extends BaseShape {
             template: (data, element) => this.renderSettingsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: 280,
                 contentTemplate: contentElement => {
                     $(contentElement).empty();

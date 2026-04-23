@@ -704,7 +704,7 @@ class BaseShape {
             template: (data, element) => this.renderPermissionsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => this.buildPermissionsMenuContent(contentElement)
             }
@@ -789,6 +789,16 @@ class BaseShape {
             this.termDisplayEntries.push({ term: termProperty, caseProperty, title });
         const mockFormInstance = { updateData: (field, value) => this.setPropertyCommand(field, value) };
         return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, false, displayModeProperty, showVisibilityToggle);
+    }
+
+    getShapeOverlayWrapperAttr(extraClass = "") {
+        const wrapperClassName = extraClass ? `mdl-shape-overlay-popup ${extraClass}` : "mdl-shape-overlay-popup";
+        return { class: wrapperClassName };
+    }
+
+    getShapeNestedOverlayWrapperAttr(extraClass = "") {
+        const wrapperClassName = extraClass ? `mdl-shape-overlay-popup mdl-shape-overlay-popup-nested ${extraClass}` : "mdl-shape-overlay-popup mdl-shape-overlay-popup-nested";
+        return { class: wrapperClassName };
     }
 
     enterEditMode() {
@@ -961,7 +971,7 @@ class BaseShape {
             template: (data, element) => this.renderAddShapeButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => {
                     $(contentElement).empty();
@@ -994,7 +1004,7 @@ class BaseShape {
             buttonTemplate: (data, element) => this.renderShapeColorButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => this.buildShapeMenuContent(contentElement)
             }
@@ -1192,7 +1202,7 @@ class BaseShape {
             template: (data, element) => this.renderTermsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => this.buildTermsMenuContent(contentElement)
             }

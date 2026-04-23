@@ -49,7 +49,7 @@ class ExpressionShape extends BaseShape {
             icon: "fa-light fa-sigma",
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { class: "mdl-shortcuts-picker-menu", style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr("mdl-shortcuts-picker-menu"),
                 width: columns * step + popupPadding * 2,
                 contentTemplate: contentElement => this.createShortcutsPickerGrid(contentElement)
             }

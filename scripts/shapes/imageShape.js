@@ -61,7 +61,7 @@ class ImageShape extends ChildShape {
             icon: "fa-light fa-image",
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => this.buildImageSettingsMenuContent(contentElement)
             }

@@ -256,7 +256,7 @@ class ChildShape extends BaseShape {
             buttonTemplate: (data, element) => this.renderParentButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => {
                     $(contentElement).empty();
@@ -310,7 +310,7 @@ class ChildShape extends BaseShape {
             buttonTemplate: (data, element) => this.renderMotionButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => {
                     const sections = [

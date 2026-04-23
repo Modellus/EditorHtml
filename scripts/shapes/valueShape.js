@@ -1,4 +1,15 @@
 class ValueShape extends BaseShape {
+    static soundOptions = [
+        { value: "none", text: "No sound", icon: "fa-light fa-volume-slash" },
+        { value: "triangle", text: "Piano", icon: "fa-light fa-piano-keyboard" },
+        { value: "sine", text: "Flute", icon: "fa-light fa-flute" },
+        { value: "square", text: "Clarinet", icon: "fa-light fa-clarinet" },
+        { value: "sawtooth", text: "Synth", icon: "fa-light fa-waveform-lines" }
+    ];
+
+    static soundContext = null;
+    static soundGainNode = null;
+
     constructor(board, parent, id) {
         super(board, null, id);
         this.isEditingValue = this.isEditingValue ?? false;
@@ -9,6 +20,10 @@ class ValueShape extends BaseShape {
         this.valueEditorContainer = this.valueEditorContainer ?? null;
         this.pendingEditorValue = this.pendingEditorValue ?? null;
         this.pendingEditorFocus = this.pendingEditorFocus ?? false;
+        this.previousSoundValue = this.previousSoundValue ?? null;
+        this.previousSoundTerm = this.previousSoundTerm ?? "";
+        this.previousSoundCaseNumber = this.previousSoundCaseNumber ?? 1;
+        this.soundSelectBoxInstance = this.soundSelectBoxInstance ?? null;
     }
 
     enterEditMode() {
@@ -93,7 +108,66 @@ class ValueShape extends BaseShape {
     }
 
     populateTermsMenuSections(listItems) {
-        listItems.push({ text: "Term", stacked: true, buildControl: $p => $p.append(this._termControl) });
+        listItems.push(
+            { text: "Term", stacked: true, buildControl: $p => $p.append(this._termControl) },
+            {
+                text: "Sound",
+                stacked: true,
+                buildControl: $p => {
+                    const selectHost = $('<div class="value-sound-selector"></div>');
+                    selectHost.dxSelectBox({
+                        dataSource: ValueShape.soundOptions,
+                        valueExpr: "value",
+                        displayExpr: "text",
+                        value: this.getSoundInstrument(),
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-value-sound-selectbox" },
+                        inputAttr: { class: "mdl-value-sound-input" },
+                        fieldAddons: {
+                            before: data => this.renderSoundOptionFieldAddon(data),
+                            beforeTemplate: (data, container) => this.renderSoundOptionFieldAddonTemplate(data, container)
+                        },
+                        dropDownOptions: {
+                            container: document.body,
+                            wrapperAttr: this.getShapeNestedOverlayWrapperAttr("mdl-value-sound-popup")
+                        },
+                        itemTemplate: itemData => this.renderSoundOptionTemplate(itemData),
+                        onInitialized: event => {
+                            this.soundSelectBoxInstance = event.component;
+                        },
+                        onValueChanged: event => {
+                            if (event.event)
+                                this.setPropertyCommand("soundInstrument", event.value);
+                        }
+                    });
+                    $p.append(selectHost);
+                }
+            }
+        );
+    }
+
+    renderSoundOptionTemplate(itemData) {
+        if (!itemData)
+            return "";
+        return `<div class="mdl-dropdown-list-item mdl-value-sound-option"><i class="${itemData.icon} mdl-value-sound-icon"></i><span class="mdl-dropdown-list-label">${itemData.text}</span></div>`;
+    }
+
+    renderSoundOptionFieldAddon(data) {
+        const soundValue = data?.value ?? data?.selectedItem?.value ?? this.getSoundInstrument();
+        const soundOption = ValueShape.soundOptions.find(option => option.value === soundValue) ?? ValueShape.soundOptions[0];
+        return $(`<i class="${soundOption.icon} mdl-value-sound-icon"></i>`);
+    }
+
+    renderSoundOptionFieldAddonTemplate(data, container) {
+        const iconElement = this.renderSoundOptionFieldAddon(data);
+        $(container).empty().append(iconElement);
+    }
+
+    getSoundInstrument() {
+        const soundInstrument = this.properties.soundInstrument;
+        if (!ValueShape.soundOptions.some(option => option.value === soundInstrument))
+            return "none";
+        return soundInstrument;
     }
 
     buildTermDisplayLabel(entry) {
@@ -125,7 +199,7 @@ class ValueShape extends BaseShape {
             },
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => this.buildFontMenuContent(contentElement)
             }
@@ -183,6 +257,7 @@ class ValueShape extends BaseShape {
     showContextToolbar() {
         this.termFormControls["term"]?.termControl?.refresh();
         this.termFormControls["fontSizeTerm"]?.termControl?.refresh();
+        this.soundSelectBoxInstance?.option("value", this.getSoundInstrument());
         this.refreshTermsToolbarControl();
         this.refreshFontToolbarControl();
         super.showContextToolbar();
@@ -213,6 +288,96 @@ class ValueShape extends BaseShape {
         this.properties.fontBold = false;
         this.properties.fontItalic = false;
         this.properties.termDisplayMode = "nameValue";
+        this.properties.soundInstrument = "none";
+    }
+
+    getNumericDisplayedValue(term, caseNumber) {
+        if (term === "")
+            return null;
+        const calculator = this.board.calculator;
+        if (calculator.isTerm(term)) {
+            const termValue = calculator.getByName(term, caseNumber);
+            if (Number.isFinite(termValue))
+                return termValue;
+            return null;
+        }
+        const numericValue = Number(term);
+        if (!Number.isFinite(numericValue))
+            return null;
+        return numericValue;
+    }
+
+    getSoundFrequencyFromValue(value) {
+        const clampedValue = Math.max(-200, Math.min(200, value));
+        const normalizedValue = (clampedValue + 200) / 400;
+        return 180 + normalizedValue * 900;
+    }
+
+    ensureSoundContext() {
+        const AudioContextClass = window.AudioContext ?? window.webkitAudioContext;
+        if (!AudioContextClass)
+            return null;
+        if (!ValueShape.soundContext)
+            ValueShape.soundContext = new AudioContextClass();
+        if (!ValueShape.soundGainNode) {
+            ValueShape.soundGainNode = ValueShape.soundContext.createGain();
+            ValueShape.soundGainNode.gain.value = 0.05;
+            ValueShape.soundGainNode.connect(ValueShape.soundContext.destination);
+        }
+        return ValueShape.soundContext;
+    }
+
+    playSoundForValue(value) {
+        const instrument = this.getSoundInstrument();
+        if (instrument === "none")
+            return;
+        const context = this.ensureSoundContext();
+        if (!context)
+            return;
+        if (context.state === "suspended")
+            context.resume().catch(() => {});
+        const oscillator = context.createOscillator();
+        const gainNode = context.createGain();
+        const currentTime = context.currentTime;
+        const frequency = this.getSoundFrequencyFromValue(value);
+        oscillator.type = instrument;
+        oscillator.frequency.setValueAtTime(frequency, currentTime);
+        gainNode.gain.setValueAtTime(0.001, currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.08, currentTime + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.26);
+        oscillator.connect(gainNode);
+        gainNode.connect(ValueShape.soundGainNode);
+        oscillator.start(currentTime);
+        oscillator.stop(currentTime + 0.28);
+    }
+
+    updateValueSoundState(value, term, caseNumber) {
+        const instrument = this.getSoundInstrument();
+        if (instrument === "none") {
+            this.previousSoundValue = null;
+            this.previousSoundTerm = term;
+            this.previousSoundCaseNumber = caseNumber;
+            return;
+        }
+        if (!Number.isFinite(value)) {
+            this.previousSoundValue = null;
+            this.previousSoundTerm = term;
+            this.previousSoundCaseNumber = caseNumber;
+            return;
+        }
+        const hasSameTarget = this.previousSoundTerm === term && this.previousSoundCaseNumber === caseNumber;
+        if (this.previousSoundValue == null || !hasSameTarget) {
+            this.previousSoundValue = value;
+            this.previousSoundTerm = term;
+            this.previousSoundCaseNumber = caseNumber;
+            return;
+        }
+        if (this.previousSoundValue === value)
+            return;
+        this.previousSoundValue = value;
+        this.previousSoundTerm = term;
+        this.previousSoundCaseNumber = caseNumber;
+        this.playSoundForValue(value);
     }
 
     createElement() {
@@ -504,6 +669,7 @@ class ValueShape extends BaseShape {
         this.contentClipRect.setAttribute("height", height);
         const termText = this.getSelectedTerm();
         const caseNumber = this.getSelectedCaseNumber(termText);
+        const numericDisplayedValue = this.getNumericDisplayedValue(termText, caseNumber);
         const valueText = this.resolveDisplayedValue(termText, caseNumber);
         const isEditingCurrentTerm = this.isEditingValue && this.editingTerm === termText && termText !== "";
         const textVerticalOffset = isEditingCurrentTerm ? this.getEditingTextVerticalOffset() : 0;
@@ -539,6 +705,7 @@ class ValueShape extends BaseShape {
             }
         } else
             this.hideValueEditor();
+        this.updateValueSoundState(numericDisplayedValue, termText, caseNumber);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${position.x + width / 2}, ${position.y + height / 2})`);
     }
 

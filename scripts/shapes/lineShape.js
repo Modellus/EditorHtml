@@ -243,7 +243,7 @@ class LineShape extends ChildShape {
             template: (data, element) => this.renderLineWidthButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => {
                     const listItems = [

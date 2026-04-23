@@ -104,7 +104,7 @@ class SliderShape extends BaseShape {
             icon: "fa-light fa-ruler-vertical",
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { style: "z-index:99999" },
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => this.buildScaleMenuContent(contentElement)
             }
