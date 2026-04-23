@@ -1455,14 +1455,15 @@ class BaseShape {
     }
 
     toSvgString() {
-        const bbox = this.element.getBBox();
+        const elements = this.collectSvgElements();
+        const bbox = this.getExportBoundingBox(elements);
         const padding = 4;
         const x = bbox.x - padding;
         const y = bbox.y - padding;
-        const width = bbox.width + padding * 2;
-        const height = bbox.height + padding * 2;
+        const width = Math.max(1, bbox.width + padding * 2);
+        const height = Math.max(1, bbox.height + padding * 2);
         let content = "";
-        for (const element of this.collectSvgElements()) {
+        for (const element of elements) {
             const clone = element.cloneNode(true);
             clone.removeAttribute("id");
             clone.removeAttribute("clip-path");
@@ -1470,6 +1471,63 @@ class BaseShape {
         }
         const styleBlock = BaseShape.embeddedFontStyles ? `<defs><style>${BaseShape.embeddedFontStyles}</style></defs>` : "";
         return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${x} ${y} ${width} ${height}">${styleBlock}${content}</svg>`;
+    }
+
+    getExportBoundingBox(elements) {
+        let minimumX = Infinity;
+        let minimumY = Infinity;
+        let maximumX = -Infinity;
+        let maximumY = -Infinity;
+        for (const element of elements) {
+            const elementBoundingBox = this.getExportElementBoundingBox(element);
+            if (!elementBoundingBox)
+                continue;
+            minimumX = Math.min(minimumX, elementBoundingBox.x);
+            minimumY = Math.min(minimumY, elementBoundingBox.y);
+            maximumX = Math.max(maximumX, elementBoundingBox.x + elementBoundingBox.width);
+            maximumY = Math.max(maximumY, elementBoundingBox.y + elementBoundingBox.height);
+        }
+        if (!Number.isFinite(minimumX) || !Number.isFinite(minimumY) || !Number.isFinite(maximumX) || !Number.isFinite(maximumY))
+            return { x: 0, y: 0, width: 1, height: 1 };
+        return {
+            x: minimumX,
+            y: minimumY,
+            width: Math.max(1, maximumX - minimumX),
+            height: Math.max(1, maximumY - minimumY)
+        };
+    }
+
+    getExportElementBoundingBox(element) {
+        let localBoundingBox;
+        try {
+            localBoundingBox = element.getBBox();
+        } catch (_) {
+            return null;
+        }
+        const transformMatrix = element.getCTM();
+        if (!transformMatrix)
+            return localBoundingBox;
+        const firstPoint = this.transformPointWithMatrix(transformMatrix, localBoundingBox.x, localBoundingBox.y);
+        const secondPoint = this.transformPointWithMatrix(transformMatrix, localBoundingBox.x + localBoundingBox.width, localBoundingBox.y);
+        const thirdPoint = this.transformPointWithMatrix(transformMatrix, localBoundingBox.x + localBoundingBox.width, localBoundingBox.y + localBoundingBox.height);
+        const fourthPoint = this.transformPointWithMatrix(transformMatrix, localBoundingBox.x, localBoundingBox.y + localBoundingBox.height);
+        const minimumX = Math.min(firstPoint.x, secondPoint.x, thirdPoint.x, fourthPoint.x);
+        const minimumY = Math.min(firstPoint.y, secondPoint.y, thirdPoint.y, fourthPoint.y);
+        const maximumX = Math.max(firstPoint.x, secondPoint.x, thirdPoint.x, fourthPoint.x);
+        const maximumY = Math.max(firstPoint.y, secondPoint.y, thirdPoint.y, fourthPoint.y);
+        return {
+            x: minimumX,
+            y: minimumY,
+            width: maximumX - minimumX,
+            height: maximumY - minimumY
+        };
+    }
+
+    transformPointWithMatrix(matrix, x, y) {
+        return {
+            x: matrix.a * x + matrix.c * y + matrix.e,
+            y: matrix.b * x + matrix.d * y + matrix.f
+        };
     }
 
     collectSvgElements() {
