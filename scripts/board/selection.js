@@ -113,7 +113,7 @@ class Selection {
         if (!shape)
             return;
         this.board.suppressNextFocusSelect = true;
-        const entered = shape.enterEditMode?.();
+        const entered = shape.enterEditMode?.(event);
         if (!entered) {
             this.board.suppressNextFocusSelect = false;
             return;

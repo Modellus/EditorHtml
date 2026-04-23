@@ -82,8 +82,14 @@ class ReferentialShape extends BaseShape {
         super.setProperty(name, value);
     }
 
-    enterEditMode() {
-        return false;
+    enterEditMode(event) {
+        const svgPoint = this.board.getMouseToSvgPoint(event);
+        const position = this.getBoardPosition();
+        const newOriginX = svgPoint.x - position.x;
+        const newOriginY = svgPoint.y - position.y;
+        const command = new SetShapePropertiesCommand(this.board, this, { originX: newOriginX, originY: newOriginY });
+        this.board.invoker.execute(command);
+        return true;
     }
 
     createToolbar() {
@@ -444,12 +450,15 @@ class ReferentialShape extends BaseShape {
         this.horizontalAxis = this.board.createSvgElement("line");
         this.horizontalAxis.setAttribute("stroke-width", 1);
         this.horizontalAxis.setAttribute("class", "referential-axis-line");
+        this.horizontalAxis.setAttribute("clip-path", `url(#${this.getClipId()})`);
         g.appendChild(this.horizontalAxis);
         this.verticalAxis = this.board.createSvgElement("line");
         this.verticalAxis.setAttribute("stroke-width", 1);
         this.verticalAxis.setAttribute("class", "referential-axis-line");
+        this.verticalAxis.setAttribute("clip-path", `url(#${this.getClipId()})`);
         g.appendChild(this.verticalAxis);
         this.ticksLayer = this.board.createSvgElement("g");
+        this.ticksLayer.setAttribute("clip-path", `url(#${this.getClipId()})`);
         g.appendChild(this.ticksLayer);
         this.gridGroups = {
             horizontal: this.board.createSvgElement("g"),
