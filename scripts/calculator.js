@@ -70,7 +70,9 @@ class Calculator extends EventTarget {
         }
         if (this.status != STATUS.PLAYING)
             return;
-        if (!this.properties.independent.noLimit && Math.abs(this.system.getIndependent() - this.properties.independent.end) < this.properties.independent.step / 10.0)
+        if (this.system.iteration < this.system.lastIteration)
+            this.system.iteration++;
+        else if (!this.properties.independent.noLimit && Math.abs(this.getIndependentValue(this.system.iteration) - this.properties.independent.end) < this.properties.independent.step / 10.0)
             this.pause();
         else
             this.engine.iterate();
@@ -116,10 +118,11 @@ class Calculator extends EventTarget {
             clearTimeout(this.frameId);
         }
         this.emit("iterate", { calculator: this }); 
-        if (this.system.iteration > this.system.lastIteration)
-            this.system.iteration = 1;
         if (this.status == STATUS.PLAYING) {
-            this.system.iteration++;
+            if (this.system.iteration >= this.system.lastIteration)
+                this.system.iteration = 1;
+            else
+                this.system.iteration++;
             const delayMs = this.properties.iterationDuration > 0 ? this.properties.iterationDuration * 1000 : 0;
             this.frameId = delayMs > 0 ? setTimeout(this._replay, delayMs) : requestAnimationFrame(this._replay);
         }
