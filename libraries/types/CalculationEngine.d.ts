@@ -5,8 +5,10 @@ import { EventEmitter } from 'events';
 declare enum TermType {
     DIFFERENTIAL = 0,
     FUNCTION = 1,
-    INDEPENDENT = 2,
-    PARAMETER = 3
+    REGRESSION = 2,
+    INDEPENDENT = 3,
+    PRELOADED = 4,
+    PARAMETER = 5
 }
 
 declare class Expression {
@@ -1578,6 +1580,29 @@ declare class PreloadedData {
     private applyRow;
 }
 
+declare enum DataRegressionType {
+    LINEAR = "Linear",
+    QUADRATIC = "Quadratic"
+}
+interface DataRegressionPoint {
+    caseNumber: number;
+    iteration: number;
+    independent: number;
+    source: number;
+    value: number;
+}
+interface DataRegressionResult {
+    sourceTermName: string;
+    targetTermName: string;
+    regressionType: DataRegressionType;
+    expression: string;
+    quadratic: number;
+    linear: number;
+    constant: number;
+    slope: number;
+    intercept: number;
+    data: DataRegressionPoint[];
+}
 declare class System {
     static readonly ZERO: number;
     static readonly INFINITY: number;
@@ -1660,6 +1685,7 @@ declare class System {
     getExpressionTree(name: string): unknown | undefined;
     getTerm(name: string): Term | undefined;
     isTerm(name: string): boolean;
+    renameRegressionTerm(currentName: string, newName: string): void;
     setInitialByTerm(term: Term, value: number, iteration?: number, caseNumber?: number): void;
     setInitialByName(name: string, value: number, iteration?: number, caseNumber?: number): void;
     getValue(values: {
@@ -1670,7 +1696,16 @@ declare class System {
     getInitialByExpression(expression: Expression, iteration?: number): number;
     getTermsNames(): string[];
     getDifferentialTermsNames(): string[];
+    calculateDataRegression(sourceTermName: string, regressionType: DataRegressionType | string, targetTermName: string, caseNumber?: number): DataRegressionResult;
     private hasInitialValueForCase;
+    private normalizeRegressionType;
+    private getRegressionSamples;
+    private calculateLinearRegressionCoefficients;
+    private calculateQuadraticRegressionCoefficients;
+    private solveLinearSystem3x3;
+    private buildRegressionExpression;
+    private buildPolynomialTerm;
+    private formatRegressionNumber;
     private getInitialValueForCase;
     private getIterationKey;
     private indexIterationValue;
@@ -1853,4 +1888,5 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
 
-export { Body, Branch, Deriver, Engine, Expression, ExpressionExpander, Parser, PhysicalBody, PhysicalEngine, PreloadedData, System, Term, TermType, Visitor };
+export { Body, Branch, DataRegressionType, Deriver, Engine, Expression, ExpressionExpander, Parser, PhysicalBody, PhysicalEngine, PreloadedData, System, Term, TermType, Visitor };
+export type { DataRegressionPoint, DataRegressionResult };

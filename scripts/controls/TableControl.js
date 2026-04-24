@@ -6,16 +6,21 @@ class TableControl {
         this.width = 0;
         this.height = 0;
         this.scrollTop = 0;
+        this.scrollLeft = 0;
         this.focusedRowKey = null;
         this.selectedCell = null;
         this.editingCell = null;
         this.cellBoxes = [];
-        this.scrollbarThumbRect = null;
-        this.scrollbarDrag = null;
+        this.verticalScrollbarThumbRect = null;
+        this.horizontalScrollbarThumbRect = null;
+        this.verticalScrollbarDrag = null;
+        this.horizontalScrollbarDrag = null;
+        this.columnResizeDrag = null;
         this.columnClipPaths = null;
         this.caseIconData = {};
         this.caseIconsLoadingPromise = null;
         this.rowsClipId = `shape-svg-table-clip-${crypto.randomUUID()}`;
+        this.tableClipId = `shape-svg-table-header-clip-${crypto.randomUUID()}`;
         this.initializeRoot();
         this.bindEvents();
         this.ensureCaseIconsLoaded();
@@ -42,7 +47,9 @@ class TableControl {
             headerHeight: 28,
             scrollbarWidth: 10,
             precision: 2,
-            onCellValueChanged: null
+            minColumnWidth: 48,
+            onCellValueChanged: null,
+            onColumnWidthChanged: null
         };
     }
 
@@ -55,8 +62,14 @@ class TableControl {
         this.rowsClipRect = this.createSvgElement("rect");
         this.rowsClipPath.appendChild(this.rowsClipRect);
         this.defsElement.appendChild(this.rowsClipPath);
+        this.tableClipPath = this.createSvgElement("clipPath");
+        this.tableClipPath.setAttribute("id", this.tableClipId);
+        this.tableClipRect = this.createSvgElement("rect");
+        this.tableClipPath.appendChild(this.tableClipRect);
+        this.defsElement.appendChild(this.tableClipPath);
         this.backgroundLayer = this.createSvgElement("g");
         this.headerLayer = this.createSvgElement("g");
+        this.headerLayer.setAttribute("clip-path", `url(#${this.tableClipId})`);
         this.rowsLayer = this.createSvgElement("g");
         this.rowsLayer.setAttribute("clip-path", `url(#${this.rowsClipId})`);
         this.overlayLayer = this.createSvgElement("g");
@@ -75,6 +88,8 @@ class TableControl {
         this.onWheelHandler = event => this.onWheel(event);
         this.onWindowWheelHandler = event => this.onWindowWheel(event);
         this.onPointerDownHandler = event => this.onPointerDown(event);
+        this.onPointerMoveHandler = event => this.onPointerMove(event);
+        this.onPointerLeaveHandler = _ => this.onPointerLeave();
         this.onMouseDownHandler = event => this.onMouseDown(event);
         this.onKeyDownHandler = event => this.onKeyDown(event);
         this.onWindowPointerMoveHandler = event => this.onWindowPointerMove(event);
@@ -82,6 +97,8 @@ class TableControl {
         this.rootElement.addEventListener("wheel", this.onWheelHandler, { passive: false });
         window.addEventListener("wheel", this.onWindowWheelHandler, { passive: false });
         this.rootElement.addEventListener("pointerdown", this.onPointerDownHandler);
+        this.rootElement.addEventListener("pointermove", this.onPointerMoveHandler);
+        this.rootElement.addEventListener("pointerleave", this.onPointerLeaveHandler);
         this.rootElement.addEventListener("mousedown", this.onMouseDownHandler);
         this.rootElement.addEventListener("keydown", this.onKeyDownHandler);
     }
@@ -90,6 +107,8 @@ class TableControl {
         this.rootElement.removeEventListener("wheel", this.onWheelHandler);
         window.removeEventListener("wheel", this.onWindowWheelHandler);
         this.rootElement.removeEventListener("pointerdown", this.onPointerDownHandler);
+        this.rootElement.removeEventListener("pointermove", this.onPointerMoveHandler);
+        this.rootElement.removeEventListener("pointerleave", this.onPointerLeaveHandler);
         this.rootElement.removeEventListener("mousedown", this.onMouseDownHandler);
         this.rootElement.removeEventListener("keydown", this.onKeyDownHandler);
         window.removeEventListener("pointermove", this.onWindowPointerMoveHandler);
@@ -235,6 +254,7 @@ class TableControl {
             caseNumber: parseInt(column?.caseNumber ?? column?.case ?? 1, 10) || 1,
             showCase: column?.showCase === true,
             editable: column?.editable === true,
+            width: Number.isFinite(column?.width) ? Math.max(1, Number(column.width)) : null,
             precision: Number.isFinite(column?.precision) ? column.precision : null,
             barColor: this.normalizeBarColor(column?.barColor),
             sourceColumn: column?.sourceColumn ?? null
@@ -305,16 +325,31 @@ class TableControl {
         const width = this.width;
         const height = this.height;
         const headerHeight = Math.max(20, Number(this.options.headerHeight) || 28);
-        const scrollbarWidth = Math.max(8, Number(this.options.scrollbarWidth) || 10);
-        const bodyHeight = Math.max(0, height - headerHeight);
-        const bodyWidth = Math.max(0, width - scrollbarWidth);
+        const scrollbarSize = Math.max(8, Number(this.options.scrollbarWidth) || 10);
+        const totalRowsHeight = this.getTotalRowsHeight();
+        const totalColumnsWidth = this.getTotalColumnsWidth(this.options.columns);
+        let hasVerticalScrollbar = false;
+        let hasHorizontalScrollbar = false;
+        let bodyWidth = Math.max(0, width);
+        let bodyHeight = Math.max(0, height - headerHeight);
+        for (let iteration = 0; iteration < 3; iteration++) {
+            hasVerticalScrollbar = totalRowsHeight > bodyHeight;
+            bodyWidth = Math.max(0, width - (hasVerticalScrollbar ? scrollbarSize : 0));
+            hasHorizontalScrollbar = totalColumnsWidth > bodyWidth;
+            bodyHeight = Math.max(0, height - headerHeight - (hasHorizontalScrollbar ? scrollbarSize : 0));
+        }
         return {
             width: width,
             height: height,
             headerHeight: headerHeight,
             bodyHeight: bodyHeight,
             bodyWidth: bodyWidth,
-            scrollbarWidth: scrollbarWidth
+            scrollbarSize: scrollbarSize,
+            hasVerticalScrollbar: hasVerticalScrollbar,
+            hasHorizontalScrollbar: hasHorizontalScrollbar,
+            verticalScrollbarX: bodyWidth,
+            horizontalScrollbarY: headerHeight + bodyHeight,
+            totalColumnsWidth: totalColumnsWidth
         };
     }
 
@@ -323,6 +358,10 @@ class TableControl {
         this.rowsClipRect.setAttribute("y", `${layout.headerHeight}`);
         this.rowsClipRect.setAttribute("width", `${layout.bodyWidth}`);
         this.rowsClipRect.setAttribute("height", `${layout.bodyHeight}`);
+        this.tableClipRect.setAttribute("x", "0");
+        this.tableClipRect.setAttribute("y", "0");
+        this.tableClipRect.setAttribute("width", `${layout.bodyWidth}`);
+        this.tableClipRect.setAttribute("height", `${layout.height}`);
     }
 
     updateColumnClipPaths(geometry) {
@@ -357,6 +396,10 @@ class TableControl {
         return Math.max(0, this.getTotalRowsHeight() - layout.bodyHeight);
     }
 
+    getMaxScrollLeft(layout = this.getLayout()) {
+        return Math.max(0, this.getTotalColumnsWidth(this.options.columns) - layout.bodyWidth);
+    }
+
     setScrollTop(value) {
         const maxScrollTop = this.getMaxScrollTop();
         const normalizedScrollTop = Math.max(0, Math.min(maxScrollTop, Number(value) || 0));
@@ -366,27 +409,78 @@ class TableControl {
         this.render();
     }
 
+    setScrollLeft(value) {
+        const maxScrollLeft = this.getMaxScrollLeft();
+        const normalizedScrollLeft = Math.max(0, Math.min(maxScrollLeft, Number(value) || 0));
+        if (normalizedScrollLeft === this.scrollLeft)
+            return;
+        this.scrollLeft = normalizedScrollLeft;
+        this.render();
+    }
+
     ensureScrollBounds() {
         const maxScrollTop = this.getMaxScrollTop();
         if (this.scrollTop > maxScrollTop)
             this.scrollTop = maxScrollTop;
         if (this.scrollTop < 0)
             this.scrollTop = 0;
+        const maxScrollLeft = this.getMaxScrollLeft();
+        if (this.scrollLeft > maxScrollLeft)
+            this.scrollLeft = maxScrollLeft;
+        if (this.scrollLeft < 0)
+            this.scrollLeft = 0;
     }
 
     getColumnGeometry(layout, columns) {
         if (!columns.length)
             return [];
         const geometry = [];
-        const widthStep = layout.bodyWidth / columns.length;
-        let x = 0;
+        let absoluteX = 0;
         for (let index = 0; index < columns.length; index++) {
-            const nextX = index === columns.length - 1 ? layout.bodyWidth : Math.round((index + 1) * widthStep);
-            const columnWidth = Math.max(1, nextX - x);
-            geometry.push({ x: x, width: columnWidth });
-            x = nextX;
+            const columnWidth = this.getColumnWidth(columns[index]);
+            geometry.push({
+                x: absoluteX - this.scrollLeft,
+                absoluteX: absoluteX,
+                width: columnWidth,
+                right: absoluteX + columnWidth,
+                absoluteRight: absoluteX + columnWidth
+            });
+            absoluteX += columnWidth;
         }
         return geometry;
+    }
+
+    getTotalColumnsWidth(columns) {
+        if (!Array.isArray(columns) || columns.length === 0)
+            return 0;
+        let totalWidth = 0;
+        for (let index = 0; index < columns.length; index++)
+            totalWidth += this.getColumnWidth(columns[index]);
+        return totalWidth;
+    }
+
+    getColumnWidth(column) {
+        const configuredWidth = Number(column?.width);
+        if (Number.isFinite(configuredWidth) && configuredWidth > 0)
+            return Math.max(this.getMinColumnWidth(), Math.round(configuredWidth));
+        return this.getAutoColumnWidth(column);
+    }
+
+    getAutoColumnWidth(column) {
+        const title = String(column?.title ?? "");
+        const titleWidth = this.estimateTextWidth(title, Number(this.options.headerFontSize) || 16);
+        let caseIconWidth = 0;
+        if (column?.showCase === true)
+            caseIconWidth = this.getHeaderCaseIconSize(column.caseNumber).width + 8;
+        const paddingWidth = 18;
+        return Math.max(this.getMinColumnWidth(), Math.ceil(titleWidth + caseIconWidth + paddingWidth));
+    }
+
+    getMinColumnWidth() {
+        const configuredMinimum = Number(this.options.minColumnWidth);
+        if (Number.isFinite(configuredMinimum) && configuredMinimum > 0)
+            return Math.round(configuredMinimum);
+        return 48;
     }
 
     getVisibleRange(layout) {
@@ -407,7 +501,8 @@ class TableControl {
         this.clearLayer(this.overlayLayer);
         this.clearLayer(this.scrollbarLayer);
         this.cellBoxes = [];
-        this.scrollbarThumbRect = null;
+        this.verticalScrollbarThumbRect = null;
+        this.horizontalScrollbarThumbRect = null;
         if (this.width <= 2 || this.height <= 2)
             return;
         const layout = this.getLayout();
@@ -419,7 +514,7 @@ class TableControl {
         this.renderBackground(layout);
         this.renderHeader(layout, columns, geometry);
         this.renderBody(layout, columns, geometry, columnValueRanges);
-        this.renderScrollbar(layout);
+        this.renderScrollbars(layout);
         this.renderEditingValue(layout, geometry);
     }
 
@@ -476,6 +571,7 @@ class TableControl {
         this.headerLayer.appendChild(borderLine);
         for (let index = 0; index < columns.length; index++)
             this.renderHeaderCell(layout, columns[index], geometry[index], index, index === columns.length - 1);
+        this.renderResizeHandles(layout, geometry);
     }
 
     renderHeaderCell(layout, column, cellGeometry, columnIndex, isLastColumn) {
@@ -667,16 +763,42 @@ class TableControl {
         return normalizedValue.toString();
     }
 
-    renderScrollbar(layout) {
+    renderResizeHandles(layout, geometry) {
+        if (!Array.isArray(geometry) || geometry.length === 0)
+            return;
+        for (let index = 0; index < geometry.length; index++) {
+            const columnGeometry = geometry[index];
+            const handleX = columnGeometry.x + columnGeometry.width;
+            if (handleX < 0 || handleX > layout.bodyWidth)
+                continue;
+            const handle = this.createSvgElement("rect");
+            handle.setAttribute("x", `${handleX - 2}`);
+            handle.setAttribute("y", "0");
+            handle.setAttribute("width", "4");
+            handle.setAttribute("height", `${layout.headerHeight}`);
+            handle.setAttribute("fill", "transparent");
+            handle.setAttribute("pointer-events", "all");
+            this.headerLayer.appendChild(handle);
+        }
+    }
+
+    renderScrollbars(layout) {
+        this.renderVerticalScrollbar(layout);
+        this.renderHorizontalScrollbar(layout);
+    }
+
+    renderVerticalScrollbar(layout) {
+        if (!layout.hasVerticalScrollbar)
+            return;
         const track = this.createSvgElement("rect");
-        track.setAttribute("x", `${layout.bodyWidth}`);
+        track.setAttribute("x", `${layout.verticalScrollbarX}`);
         track.setAttribute("y", `${layout.headerHeight}`);
-        track.setAttribute("width", `${layout.scrollbarWidth}`);
+        track.setAttribute("width", `${layout.scrollbarSize}`);
         track.setAttribute("height", `${layout.bodyHeight}`);
         track.setAttribute("fill", this.options.scrollbarTrackColor);
         this.scrollbarLayer.appendChild(track);
-        const thumbRect = this.getThumbRect(layout);
-        this.scrollbarThumbRect = thumbRect;
+        const thumbRect = this.getVerticalThumbRect(layout);
+        this.verticalScrollbarThumbRect = thumbRect;
         if (!thumbRect)
             return;
         const thumb = this.createSvgElement("rect");
@@ -690,7 +812,41 @@ class TableControl {
         this.scrollbarLayer.appendChild(thumb);
     }
 
-    getThumbRect(layout) {
+    renderHorizontalScrollbar(layout) {
+        if (!layout.hasHorizontalScrollbar)
+            return;
+        const track = this.createSvgElement("rect");
+        track.setAttribute("x", "0");
+        track.setAttribute("y", `${layout.horizontalScrollbarY}`);
+        track.setAttribute("width", `${layout.bodyWidth}`);
+        track.setAttribute("height", `${layout.scrollbarSize}`);
+        track.setAttribute("fill", this.options.scrollbarTrackColor);
+        this.scrollbarLayer.appendChild(track);
+        const thumbRect = this.getHorizontalThumbRect(layout);
+        this.horizontalScrollbarThumbRect = thumbRect;
+        if (thumbRect) {
+            const thumb = this.createSvgElement("rect");
+            thumb.setAttribute("x", `${thumbRect.x}`);
+            thumb.setAttribute("y", `${thumbRect.y}`);
+            thumb.setAttribute("width", `${thumbRect.width}`);
+            thumb.setAttribute("height", `${thumbRect.height}`);
+            thumb.setAttribute("fill", this.options.scrollbarThumbColor);
+            thumb.setAttribute("rx", "4");
+            thumb.setAttribute("ry", "4");
+            this.scrollbarLayer.appendChild(thumb);
+        }
+        if (!layout.hasVerticalScrollbar)
+            return;
+        const corner = this.createSvgElement("rect");
+        corner.setAttribute("x", `${layout.verticalScrollbarX}`);
+        corner.setAttribute("y", `${layout.horizontalScrollbarY}`);
+        corner.setAttribute("width", `${layout.scrollbarSize}`);
+        corner.setAttribute("height", `${layout.scrollbarSize}`);
+        corner.setAttribute("fill", this.options.scrollbarTrackColor);
+        this.scrollbarLayer.appendChild(corner);
+    }
+
+    getVerticalThumbRect(layout) {
         const maxScrollTop = this.getMaxScrollTop();
         if (maxScrollTop <= 0)
             return null;
@@ -702,10 +858,28 @@ class TableControl {
         const ratio = maxScrollTop <= 0 ? 0 : this.scrollTop / maxScrollTop;
         const y = layout.headerHeight + travel * ratio;
         return {
-            x: layout.bodyWidth + 1,
+            x: layout.verticalScrollbarX + 1,
             y: y,
-            width: Math.max(2, layout.scrollbarWidth - 2),
+            width: Math.max(2, layout.scrollbarSize - 2),
             height: thumbHeight
+        };
+    }
+
+    getHorizontalThumbRect(layout) {
+        const maxScrollLeft = this.getMaxScrollLeft(layout);
+        if (maxScrollLeft <= 0)
+            return null;
+        if (layout.totalColumnsWidth <= 0 || layout.bodyWidth <= 0)
+            return null;
+        const thumbWidth = Math.max(20, Math.round(layout.bodyWidth * layout.bodyWidth / layout.totalColumnsWidth));
+        const travel = Math.max(0, layout.bodyWidth - thumbWidth);
+        const ratio = maxScrollLeft <= 0 ? 0 : this.scrollLeft / maxScrollLeft;
+        const x = travel * ratio;
+        return {
+            x: x,
+            y: layout.horizontalScrollbarY + 1,
+            width: thumbWidth,
+            height: Math.max(2, layout.scrollbarSize - 2)
         };
     }
 
@@ -757,10 +931,17 @@ class TableControl {
 
     onWheel(event) {
         const maxScrollTop = this.getMaxScrollTop();
-        if (maxScrollTop <= 0)
+        const maxScrollLeft = this.getMaxScrollLeft();
+        if (maxScrollTop <= 0 && maxScrollLeft <= 0)
             return;
         event.preventDefault();
-        this.setScrollTop(this.scrollTop + this.normalizeWheelDelta(event));
+        if (maxScrollLeft > 0 && (event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY))) {
+            const horizontalDelta = Math.abs(event.deltaX) > 0 ? event.deltaX : event.deltaY;
+            this.setScrollLeft(this.scrollLeft + this.normalizeWheelDeltaValue(horizontalDelta, event.deltaMode));
+            return;
+        }
+        if (maxScrollTop > 0)
+            this.setScrollTop(this.scrollTop + this.normalizeWheelDelta(event));
     }
 
     onWindowWheel(event) {
@@ -785,35 +966,67 @@ class TableControl {
     }
 
     normalizeWheelDelta(event) {
-        let delta = event.deltaY;
-        if (event.deltaMode === 1)
-            delta *= 20;
-        if (event.deltaMode === 2)
-            delta *= 80;
-        return delta;
+        return this.normalizeWheelDeltaValue(event.deltaY, event.deltaMode);
+    }
+
+    normalizeWheelDeltaValue(delta, deltaMode) {
+        let normalizedDelta = delta;
+        if (deltaMode === 1)
+            normalizedDelta *= 20;
+        if (deltaMode === 2)
+            normalizedDelta *= 80;
+        return normalizedDelta;
     }
 
     onPointerDown(event) {
         const point = this.convertClientPoint(event);
         if (!point)
             return;
-        if (this.isPointInScrollbar(point)) {
+        const resizeColumnIndex = this.getResizeColumnIndexAtPoint(point);
+        if (resizeColumnIndex >= 0) {
+            event.preventDefault();
+            this.startColumnResizeDrag(point, resizeColumnIndex);
+            return;
+        }
+        if (this.isPointInVerticalScrollbar(point) || this.isPointInHorizontalScrollbar(point)) {
             event.preventDefault();
             this.startScrollbarDrag(point);
         }
     }
 
+    onPointerMove(event) {
+        if (this.columnResizeDrag) {
+            this.rootElement.style.cursor = "col-resize";
+            return;
+        }
+        const point = this.convertClientPoint(event);
+        if (!point) {
+            this.rootElement.style.cursor = "";
+            return;
+        }
+        const resizeColumnIndex = this.getResizeColumnIndexAtPoint(point);
+        this.rootElement.style.cursor = resizeColumnIndex >= 0 ? "col-resize" : "";
+    }
+
+    onPointerLeave() {
+        if (this.columnResizeDrag)
+            return;
+        this.rootElement.style.cursor = "";
+    }
+
     onMouseDown(event) {
-        if (this.scrollbarDrag)
+        if (this.verticalScrollbarDrag || this.horizontalScrollbarDrag || this.columnResizeDrag)
             return;
         this.focus();
         const point = this.convertClientPoint(event);
         if (!point)
             return;
-        if (this.isPointInScrollbar(point)) {
+        if (this.isPointInVerticalScrollbar(point) || this.isPointInHorizontalScrollbar(point)) {
             this.startScrollbarDrag(point);
             return;
         }
+        if (this.isPointInHeader(point))
+            return;
         const cell = this.getCellFromPoint(point);
         if (!cell) {
             this.selectedCell = null;
@@ -892,43 +1105,98 @@ class TableControl {
 
     startScrollbarDrag(point) {
         const layout = this.getLayout();
-        const thumb = this.scrollbarThumbRect;
+        if (this.isPointInVerticalScrollbar(point)) {
+            const thumb = this.verticalScrollbarThumbRect;
+            if (!thumb)
+                return;
+            if (this.pointInRect(point, thumb)) {
+                this.verticalScrollbarDrag = {
+                    startY: point.y,
+                    startScrollTop: this.scrollTop
+                };
+                window.addEventListener("pointermove", this.onWindowPointerMoveHandler);
+                window.addEventListener("pointerup", this.onWindowPointerUpHandler);
+                return;
+            }
+            const maxScrollTop = this.getMaxScrollTop();
+            if (maxScrollTop <= 0)
+                return;
+            const ratio = (point.y - layout.headerHeight) / Math.max(1, layout.bodyHeight);
+            this.setScrollTop(ratio * maxScrollTop);
+            return;
+        }
+        const thumb = this.horizontalScrollbarThumbRect;
         if (!thumb)
             return;
         if (this.pointInRect(point, thumb)) {
-            this.scrollbarDrag = {
-                startY: point.y,
-                startScrollTop: this.scrollTop
+            this.horizontalScrollbarDrag = {
+                startX: point.x,
+                startScrollLeft: this.scrollLeft
             };
             window.addEventListener("pointermove", this.onWindowPointerMoveHandler);
             window.addEventListener("pointerup", this.onWindowPointerUpHandler);
             return;
         }
-        const maxScrollTop = this.getMaxScrollTop();
-        if (maxScrollTop <= 0)
+        const maxScrollLeft = this.getMaxScrollLeft(layout);
+        if (maxScrollLeft <= 0)
             return;
-        const ratio = (point.y - layout.headerHeight) / Math.max(1, layout.bodyHeight);
-        this.setScrollTop(ratio * maxScrollTop);
+        const ratio = point.x / Math.max(1, layout.bodyWidth);
+        this.setScrollLeft(ratio * maxScrollLeft);
+    }
+
+    startColumnResizeDrag(point, columnIndex) {
+        const column = this.options.columns[columnIndex];
+        if (!column)
+            return;
+        this.columnResizeDrag = {
+            startX: point.x,
+            columnIndex: columnIndex,
+            startWidth: this.getColumnWidth(column)
+        };
+        window.addEventListener("pointermove", this.onWindowPointerMoveHandler);
+        window.addEventListener("pointerup", this.onWindowPointerUpHandler);
     }
 
     onWindowPointerMove(event) {
-        if (!this.scrollbarDrag)
-            return;
         const point = this.convertClientPoint(event);
         if (!point)
             return;
+        if (this.columnResizeDrag) {
+            const deltaX = point.x - this.columnResizeDrag.startX;
+            const nextWidth = this.columnResizeDrag.startWidth + deltaX;
+            this.setColumnWidth(this.columnResizeDrag.columnIndex, nextWidth);
+            return;
+        }
+        if (this.verticalScrollbarDrag) {
+            const layout = this.getLayout();
+            const thumb = this.verticalScrollbarThumbRect;
+            if (!thumb)
+                return;
+            const travel = Math.max(1, layout.bodyHeight - thumb.height);
+            const maxScrollTop = this.getMaxScrollTop();
+            const deltaY = point.y - this.verticalScrollbarDrag.startY;
+            this.setScrollTop(this.verticalScrollbarDrag.startScrollTop + (deltaY / travel) * maxScrollTop);
+            return;
+        }
+        if (!this.horizontalScrollbarDrag)
+            return;
         const layout = this.getLayout();
-        const thumb = this.scrollbarThumbRect;
+        const thumb = this.horizontalScrollbarThumbRect;
         if (!thumb)
             return;
-        const travel = Math.max(1, layout.bodyHeight - thumb.height);
-        const maxScrollTop = this.getMaxScrollTop();
-        const deltaY = point.y - this.scrollbarDrag.startY;
-        this.setScrollTop(this.scrollbarDrag.startScrollTop + (deltaY / travel) * maxScrollTop);
+        const travel = Math.max(1, layout.bodyWidth - thumb.width);
+        const maxScrollLeft = this.getMaxScrollLeft(layout);
+        const deltaX = point.x - this.horizontalScrollbarDrag.startX;
+        this.setScrollLeft(this.horizontalScrollbarDrag.startScrollLeft + (deltaX / travel) * maxScrollLeft);
     }
 
     onWindowPointerUp() {
-        this.scrollbarDrag = null;
+        if (this.columnResizeDrag)
+            this.notifyColumnWidthChanged(this.columnResizeDrag.columnIndex);
+        this.verticalScrollbarDrag = null;
+        this.horizontalScrollbarDrag = null;
+        this.columnResizeDrag = null;
+        this.rootElement.style.cursor = "";
         window.removeEventListener("pointermove", this.onWindowPointerMoveHandler);
         window.removeEventListener("pointerup", this.onWindowPointerUpHandler);
     }
@@ -952,11 +1220,33 @@ class TableControl {
         return true;
     }
 
-    isPointInScrollbar(point) {
+    isPointInHeader(point) {
         const layout = this.getLayout();
-        if (point.x < layout.bodyWidth || point.x > layout.width)
+        if (point.x < 0 || point.x > layout.bodyWidth)
+            return false;
+        if (point.y < 0 || point.y > layout.headerHeight)
+            return false;
+        return true;
+    }
+
+    isPointInVerticalScrollbar(point) {
+        const layout = this.getLayout();
+        if (!layout.hasVerticalScrollbar)
+            return false;
+        if (point.x < layout.verticalScrollbarX || point.x > layout.width)
             return false;
         if (point.y < layout.headerHeight || point.y > layout.headerHeight + layout.bodyHeight)
+            return false;
+        return true;
+    }
+
+    isPointInHorizontalScrollbar(point) {
+        const layout = this.getLayout();
+        if (!layout.hasHorizontalScrollbar)
+            return false;
+        if (point.x < 0 || point.x > layout.bodyWidth)
+            return false;
+        if (point.y < layout.horizontalScrollbarY || point.y > layout.horizontalScrollbarY + layout.scrollbarSize)
             return false;
         return true;
     }
@@ -982,6 +1272,21 @@ class TableControl {
         return -1;
     }
 
+    getResizeColumnIndexAtPoint(point) {
+        if (!this.isPointInHeader(point))
+            return -1;
+        const layout = this.getLayout();
+        const geometry = this.getColumnGeometry(layout, this.options.columns);
+        for (let index = 0; index < geometry.length; index++) {
+            const handleX = geometry[index].x + geometry[index].width;
+            if (handleX < 0 || handleX > layout.bodyWidth)
+                continue;
+            if (Math.abs(point.x - handleX) <= 4)
+                return index;
+        }
+        return -1;
+    }
+
     getCellFromPoint(point) {
         if (!this.isPointInBody(point))
             return null;
@@ -995,6 +1300,7 @@ class TableControl {
     selectCell(rowIndex, columnIndex) {
         this.selectedCell = { rowIndex: rowIndex, columnIndex: columnIndex };
         this.ensureRowVisible(rowIndex);
+        this.ensureColumnVisible(columnIndex);
     }
 
     moveSelection(rowDelta, columnDelta) {
@@ -1135,6 +1441,23 @@ class TableControl {
         this.ensureScrollBounds();
     }
 
+    ensureColumnVisible(columnIndex) {
+        const layout = this.getLayout();
+        const geometry = this.getColumnGeometry(layout, this.options.columns);
+        const columnGeometry = geometry[columnIndex];
+        if (!columnGeometry)
+            return;
+        const columnLeft = columnGeometry.absoluteX;
+        const columnRight = columnGeometry.absoluteRight;
+        const viewportLeft = this.scrollLeft;
+        const viewportRight = this.scrollLeft + layout.bodyWidth;
+        if (columnLeft < viewportLeft)
+            this.scrollLeft = columnLeft;
+        if (columnRight > viewportRight)
+            this.scrollLeft = columnRight - layout.bodyWidth;
+        this.ensureScrollBounds();
+    }
+
     ensureFocusedRowVisible() {
         if (this.focusedRowKey == null)
             return;
@@ -1142,5 +1465,30 @@ class TableControl {
         if (rowIndex < 0)
             return;
         this.ensureRowVisible(rowIndex);
+    }
+
+    setColumnWidth(columnIndex, width) {
+        const column = this.options.columns[columnIndex];
+        if (!column)
+            return;
+        const normalizedWidth = Math.max(this.getMinColumnWidth(), Math.round(Number(width) || 0));
+        if (column.width === normalizedWidth)
+            return;
+        column.width = normalizedWidth;
+        this.ensureScrollBounds();
+        this.ensureColumnVisible(columnIndex);
+        this.render();
+    }
+
+    notifyColumnWidthChanged(columnIndex) {
+        const callback = this.options.onColumnWidthChanged;
+        const column = this.getColumnByIndex(columnIndex);
+        if (typeof callback !== "function" || !column)
+            return;
+        callback({
+            columnIndex: columnIndex,
+            column: column,
+            width: this.getColumnWidth(column)
+        });
     }
 }

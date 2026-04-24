@@ -31,9 +31,106 @@ class TableShape extends BaseShape {
                 location: "center",
                 template: () => $('<div class="toolbar-separator">|</div>')
             },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createDataDropDownButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
             this.createRemoveToolbarItem()
         );
         return items;
+    }
+
+    createDataDropDownButton(itemElement) {
+        this._dataDropdownElement = $('<div class="mdl-data-selector">');
+        this._dataDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            onInitialized: e => Utils.createTranslatedTooltip(e, "Table Data Tooltip", this.board.translations, 280),
+            template: (data, element) => this.renderDataButtonTemplate(element[0]),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: "auto",
+                contentTemplate: contentElement => this.buildDataMenuContent(contentElement)
+            }
+        });
+        this._dataDropdownElement.appendTo(itemElement);
+    }
+
+    renderDataButtonTemplate(element) {
+        const iconClass = this.getDataButtonIconClass();
+        element.innerHTML = `<span class="mdl-name-btn-term"><i class="${iconClass} fa-flask"></i></span>`;
+    }
+
+    getDataButtonIconClass() {
+        return this.board.calculator.hasPreloadedData() ? "fa-solid" : "fa-light";
+    }
+
+    buildDataMenuContent(contentElement) {
+        const dataItems = [
+            {
+                text: this.board.translations.get("Upload CSV"),
+                icon: "fa-light fa-file-csv",
+                action: () => this.importExternalDataFromFile()
+            },
+            {
+                text: this.board.translations.get("Set CSV URL"),
+                icon: "fa-light fa-link",
+                action: () => this.importExternalDataFromUrl()
+            }
+        ];
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: dataItems,
+            scrollingEnabled: false,
+            itemTemplate: (itemData, _, itemElement) => {
+                itemElement[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${itemData.icon}"></i><span class="mdl-dropdown-list-label">${itemData.text}</span></div>`;
+            },
+            onItemClick: event => {
+                this._dataDropdownElement.dxDropDownButton("instance").close();
+                event.itemData.action();
+            }
+        });
+    }
+
+    async importExternalDataFromFile() {
+        const result = await this.board.shell.importDataFromFile();
+        this.applyExternalDataColumns(result?.names);
+        this.refreshDataToolbarControl();
+    }
+
+    async importExternalDataFromUrl() {
+        const result = await this.board.shell.importDataFromUrl();
+        this.applyExternalDataColumns(result?.names);
+        this.refreshDataToolbarControl();
+    }
+
+    applyExternalDataColumns(termNames) {
+        if (!Array.isArray(termNames) || termNames.length === 0)
+            return;
+        const columns = [];
+        for (let index = 0; index < termNames.length; index++)
+            columns.push({ term: termNames[index], case: 1, color: "transparent" });
+        this.setExternalDataColumns(columns);
+    }
+
+    setExternalDataColumns(columns) {
+        const command = new SetShapePropertiesCommand(this.board, this, {
+            columns: columns,
+            columnWidths: [],
+            regressionSourceByTerm: {},
+            regressionTypeByTerm: {}
+        });
+        this.board.invoker.execute(command);
     }
 
     populateTermsMenuSections(listItems) {
@@ -82,7 +179,16 @@ class TableShape extends BaseShape {
         if (this._columnsControl)
             this._columnsControl.refresh();
         this.refreshTermsToolbarControl();
+        this.refreshDataToolbarControl();
         super.showContextToolbar();
+    }
+
+    refreshDataToolbarControl() {
+        if (!this._dataDropdownElement)
+            return;
+        const buttonContentElement = this._dataDropdownElement.find(".dx-button-content")[0];
+        if (buttonContentElement)
+            this.renderDataButtonTemplate(buttonContentElement);
     }
 
     populateShapeColorMenuSections(sections) {
@@ -106,9 +212,215 @@ class TableShape extends BaseShape {
             normalizeTermValue: value => this.normalizeColumnValue(value),
             normalizeColorValue: value => this.normalizeColumnColor(value),
             getFallbackItems: () => this.getLegacyColumns(),
+            termEditor: {
+                acceptCustomValue: (item, index) => this.shouldAllowCustomColumnName(item, index),
+                onCustomItemCreating: event => this.onColumnTermCustomItemCreating(event)
+            },
+            lock: {
+                width: "42px",
+                editorType: "dxDropDownButton",
+                show: item => this.board.calculator.hasPreloadedData() && this.normalizeColumnValue(item?.term) !== "",
+                getValue: item => this.getRegressionTypeFromTermName(item?.term),
+                getItems: () => this.getRegressionMethodItems(),
+                valueExpr: "value",
+                dropDownOptions: this.getRegressionMethodDropDownOptions(),
+                onValueChanged: (index, value) => this.onColumnRegressionTypeChanged(index, value)
+            },
             onChanged: () => this.refreshTableColumns()
         });
         return this._columnsControl.createHost();
+    }
+
+    getRegressionMethodItems() {
+        return [
+            { value: "none", text: this.board.translations.get("No Regression"), icon: "fa-light fa-chart-scatter" },
+            { value: "Linear", text: this.board.translations.get("Linear Regression"), icon: "fa-light fa-chart-line" },
+            { value: "Quadratic", text: this.board.translations.get("Quadratic Regression"), icon: "fa-light fa-chart-sine" }
+        ];
+    }
+
+    getRegressionMethodDropDownOptions() {
+        return { width: this.getRegressionMethodDropDownWidth() };
+    }
+
+    getRegressionMethodDropDownWidth() {
+        const items = this.getRegressionMethodItems();
+        let maximumLabelLength = 0;
+        for (let index = 0; index < items.length; index++) {
+            const itemText = String(items[index]?.text ?? "");
+            if (itemText.length > maximumLabelLength)
+                maximumLabelLength = itemText.length;
+        }
+        return Math.max(120, maximumLabelLength * 8 + 64);
+    }
+
+    getRegressionTypeFromTermName(termName) {
+        const normalizedTermName = this.normalizeColumnValue(termName);
+        const savedType = this.properties.regressionTypeByTerm?.[normalizedTermName];
+        if (savedType === "Linear")
+            return "Linear";
+        if (savedType === "Quadratic")
+            return "Quadratic";
+        if (normalizedTermName.endsWith("_Linear"))
+            return "Linear";
+        if (normalizedTermName.endsWith("_Quadratic"))
+            return "Quadratic";
+        return "none";
+    }
+
+    getRegressionSourceTermName(termName) {
+        const normalizedTermName = this.normalizeColumnValue(termName);
+        const savedSourceTermName = this.properties.regressionSourceByTerm?.[normalizedTermName];
+        if (savedSourceTermName)
+            return savedSourceTermName;
+        if (normalizedTermName.endsWith("_Linear"))
+            return normalizedTermName.slice(0, -7);
+        if (normalizedTermName.endsWith("_Quadratic"))
+            return normalizedTermName.slice(0, -10);
+        return normalizedTermName;
+    }
+
+    buildRegressionTermName(sourceTermName, currentTermName = "") {
+        const normalizedSourceTermName = this.normalizeColumnValue(sourceTermName);
+        const normalizedCurrentTermName = this.normalizeColumnValue(currentTermName);
+        if (normalizedCurrentTermName !== "" && normalizedCurrentTermName !== normalizedSourceTermName)
+            return normalizedCurrentTermName;
+        let ordinal = 1;
+        while (ordinal < 1000) {
+            const candidateName = `${normalizedSourceTermName}${ordinal}`;
+            if (!this.board.calculator.isTerm(candidateName) || candidateName === normalizedCurrentTermName)
+                return candidateName;
+            ordinal++;
+        }
+        return `${normalizedSourceTermName}${Date.now()}`;
+    }
+
+    normalizeRegressionType(regressionType) {
+        if (regressionType === "Linear")
+            return "Linear";
+        if (regressionType === "Quadratic")
+            return "Quadratic";
+        return null;
+    }
+
+    isRegressionTermName(termName) {
+        const normalizedTermName = this.normalizeColumnValue(termName);
+        if (normalizedTermName === "")
+            return false;
+        const term = this.board.calculator.system.getTerm(normalizedTermName);
+        return term?.type === Modellus.TermType.REGRESSION;
+    }
+
+    shouldAllowCustomColumnName(item, index) {
+        if (!item)
+            return false;
+        const termName = this.normalizeColumnValue(item.term);
+        return termName !== "";
+    }
+
+    updateRegressionMappings(previousTermName, nextTermName, sourceTermName, regressionType) {
+        const regressionSourceByTerm = { ...(this.properties.regressionSourceByTerm ?? {}) };
+        const regressionTypeByTerm = { ...(this.properties.regressionTypeByTerm ?? {}) };
+        const normalizedPreviousTermName = this.normalizeColumnValue(previousTermName);
+        const normalizedNextTermName = this.normalizeColumnValue(nextTermName);
+        if (normalizedPreviousTermName !== "" && normalizedPreviousTermName !== normalizedNextTermName) {
+            delete regressionSourceByTerm[normalizedPreviousTermName];
+            delete regressionTypeByTerm[normalizedPreviousTermName];
+        }
+        if (regressionType && sourceTermName) {
+            regressionSourceByTerm[normalizedNextTermName] = sourceTermName;
+            regressionTypeByTerm[normalizedNextTermName] = regressionType;
+        } else {
+            delete regressionSourceByTerm[normalizedNextTermName];
+            delete regressionTypeByTerm[normalizedNextTermName];
+        }
+        return {
+            regressionSourceByTerm: regressionSourceByTerm,
+            regressionTypeByTerm: regressionTypeByTerm
+        };
+    }
+
+    applyRegressionColumnUpdate(columns, previousTermName, nextTermName, sourceTermName, regressionType) {
+        const mappings = this.updateRegressionMappings(previousTermName, nextTermName, sourceTermName, regressionType);
+        const command = new SetShapePropertiesCommand(this.board, this, {
+            columns: columns,
+            regressionSourceByTerm: mappings.regressionSourceByTerm,
+            regressionTypeByTerm: mappings.regressionTypeByTerm
+        });
+        this.board.invoker.execute(command);
+    }
+
+    onColumnTermCustomItemCreating(event) {
+        if (!Array.isArray(this.properties.columns))
+            return;
+        const index = event?.index;
+        if (!Number.isInteger(index) || index < 0)
+            return;
+        const columns = this.properties.columns.map(column => ({ ...column }));
+        if (!columns[index])
+            return;
+        const previousTermName = this.normalizeColumnValue(columns[index].term);
+        if (previousTermName === "")
+            return;
+        const nextTermName = this.normalizeColumnValue(event?.text);
+        if (nextTermName === "" || nextTermName === previousTermName)
+            return;
+        if (this.board.calculator.isTerm(nextTermName))
+            return;
+        const regressionType = this.normalizeRegressionType(this.getRegressionTypeFromTermName(previousTermName));
+        const isRegressionTerm = regressionType != null || this.isRegressionTermName(previousTermName);
+        if (!isRegressionTerm) {
+            columns[index].term = nextTermName;
+            this.applyRegressionColumnUpdate(columns, previousTermName, nextTermName, null, null);
+            this.board.calculator.emit("iterate", { calculator: this.board.calculator });
+            return;
+        }
+        const sourceTermName = this.getRegressionSourceTermName(previousTermName);
+        if (!regressionType || !this.board.calculator.isTerm(sourceTermName))
+            return;
+        const caseNumber = this.getClampedCaseNumber(columns[index].case ?? 1);
+        try {
+            this.board.calculator.calculateDataRegression(sourceTermName, regressionType, nextTermName, caseNumber);
+        } catch (error) {
+            console.warn("Failed to rename regression term", error);
+            return;
+        }
+        columns[index].term = nextTermName;
+        this.applyRegressionColumnUpdate(columns, previousTermName, nextTermName, sourceTermName, regressionType);
+        this.board.calculator.emit("iterate", { calculator: this.board.calculator });
+    }
+
+    onColumnRegressionTypeChanged(index, regressionType) {
+        if (!Array.isArray(this.properties.columns))
+            return;
+        const columns = this.properties.columns.map(column => ({ ...column }));
+        if (!columns[index])
+            return;
+        const currentTermName = this.normalizeColumnValue(columns[index].term);
+        if (currentTermName === "")
+            return;
+        const isCurrentRegression = this.isRegressionTermName(currentTermName);
+        const sourceTermName = isCurrentRegression ? this.getRegressionSourceTermName(currentTermName) : currentTermName;
+        if (!this.board.calculator.isTerm(sourceTermName))
+            return;
+        const selectedRegressionType = this.normalizeRegressionType(regressionType);
+        if (!selectedRegressionType) {
+            columns[index].term = sourceTermName;
+            this.applyRegressionColumnUpdate(columns, currentTermName, sourceTermName, null, null);
+            this.board.calculator.emit("iterate", { calculator: this.board.calculator });
+            return;
+        }
+        const caseNumber = this.getClampedCaseNumber(columns[index].case ?? 1);
+        const targetTermName = this.buildRegressionTermName(sourceTermName, currentTermName);
+        try {
+            this.board.calculator.calculateDataRegression(sourceTermName, selectedRegressionType, targetTermName, caseNumber);
+        } catch (error) {
+            console.warn("Failed to calculate regression", error);
+            return;
+        }
+        columns[index].term = targetTermName;
+        this.applyRegressionColumnUpdate(columns, currentTermName, targetTermName, sourceTermName, selectedRegressionType);
+        this.board.calculator.emit("iterate", { calculator: this.board.calculator });
     }
 
     setDefaults() {
@@ -119,6 +431,9 @@ class TableShape extends BaseShape {
         this.properties.y = center.y - 100;
         this.properties.width = 200;
         this.properties.height = 200;
+        this.properties.columnWidths = [];
+        this.properties.regressionSourceByTerm = {};
+        this.properties.regressionTypeByTerm = {};
         const defaultTerm = this.board.calculator.getDefaultTerm();
         this.properties.columns = [
             { term: this.board.calculator.properties.independent.name, case: 1, color: "transparent" },
@@ -144,7 +459,8 @@ class TableShape extends BaseShape {
             headerBackgroundColor: this.deriveHeaderColor(this.properties.backgroundColor),
             borderColor: this.getBorderColor(),
             precision: this.board.calculator.getPrecision(),
-            onCellValueChanged: payload => this.onTableCellValueChanged(payload)
+            onCellValueChanged: payload => this.onTableCellValueChanged(payload),
+            onColumnWidthChanged: payload => this.onTableColumnWidthChanged(payload)
         };
     }
 
@@ -175,6 +491,7 @@ class TableShape extends BaseShape {
             caseNumber: column.case,
             showCase: TermControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value)),
             editable: this._canEditTerm(column.term),
+            width: Number.isFinite(column.width) ? column.width : null,
             precision: precision,
             barColor: this.normalizeColumnColor(column.color),
             sourceColumn: column
@@ -204,6 +521,18 @@ class TableShape extends BaseShape {
             system.setInitialByName(sourceColumn.term, roundedValue, 1, sourceColumn.case);
         this.board.calculator.emit("iterate", { calculator: this.board.calculator });
         return true;
+    }
+
+    onTableColumnWidthChanged(payload) {
+        const columnIndex = payload?.columnIndex;
+        const width = Number(payload?.width);
+        if (!Number.isInteger(columnIndex) || columnIndex < 0)
+            return;
+        if (!Number.isFinite(width) || width <= 0)
+            return;
+        const columnWidths = Array.isArray(this.properties.columnWidths) ? [...this.properties.columnWidths] : [];
+        columnWidths[columnIndex] = width;
+        this.setPropertyCommand("columnWidths", columnWidths);
     }
 
     updateFocus() {
@@ -296,6 +625,7 @@ class TableShape extends BaseShape {
     }
 
     getSelectedColumns() {
+        const columnWidths = Array.isArray(this.properties.columnWidths) ? this.properties.columnWidths : [];
         const selectedColumns = TermControl.getSelectedShapeTermsCollection(this, "columns", {
             includeColor: true,
             normalizeTermValue: value => this.normalizeColumnValue(value),
@@ -306,12 +636,13 @@ class TableShape extends BaseShape {
             key: `column${index}`,
             term: column.term,
             case: column.case,
-            color: this.normalizeColumnColor(column.color)
+            color: this.normalizeColumnColor(column.color),
+            width: Number.isFinite(columnWidths[index]) ? columnWidths[index] : null
         }));
     }
 
     getColumnsStateKey(columns = this.getSelectedColumns()) {
-        return JSON.stringify(columns.map(column => ({ term: column.term, case: column.case, color: this.normalizeColumnColor(column.color) })));
+        return JSON.stringify(columns.map(column => ({ term: column.term, case: column.case, color: this.normalizeColumnColor(column.color), width: Number.isFinite(column.width) ? column.width : null })));
     }
 
     refreshColumnsControl() {

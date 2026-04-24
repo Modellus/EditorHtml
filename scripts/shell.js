@@ -750,76 +750,18 @@ class Shell  {
         const text = await file.text();
         const { names, values } = this.parseCsv(text);
         this.loadPreloadedData(names, values);
-        this.showDataPopup();
+        return { names, values };
     }
 
     async importDataFromUrl() {
         const url = prompt(this.board.translations.get("Enter CSV URL"));
         if (!url)
-            return;
+            return null;
         const response = await fetch(url);
         const text = await response.text();
         const { names, values } = this.parseCsv(text);
         this.loadPreloadedData(names, values);
-        this.showDataPopup();
-    }
-
-    showDataPopup() {
-        const preloaded = this.calculator.getPreloadedData();
-        if (!preloaded)
-            return;
-        const iterationTermName = this.calculator.properties.iterationTerm;
-        const hasIterationColumn = preloaded.names.includes(iterationTermName);
-        const dataSource = preloaded.values.map((row, index) => {
-            const obj = {};
-            if (!hasIterationColumn)
-                obj[iterationTermName] = index + 1;
-            for (let i = 0; i < preloaded.names.length; i++)
-                obj[preloaded.names[i]] = row[i];
-            return obj;
-        });
-        const columns = [];
-        if (!hasIterationColumn)
-            columns.push({ dataField: iterationTermName, caption: iterationTermName, dataType: "number" });
-        for (const name of preloaded.names)
-            columns.push({ dataField: name, caption: name, dataType: "number" });
-        const $popup = $("#data-popup");
-        if ($popup.data("dxPopup"))
-            $popup.dxPopup("instance").dispose();
-        $popup.dxPopup({
-            width: 600,
-            height: 500,
-            title: this.board.translations.get("Preloaded Data"),
-            showTitle: true,
-            dragEnabled: true,
-            resizeEnabled: true,
-            hideOnOutsideClick: true,
-            shading: false,
-            contentTemplate: (contentElement) => {
-                $('<div>').appendTo(contentElement).dxDataGrid({
-                    dataSource,
-                    keyExpr: iterationTermName,
-                    columns,
-                    allowColumnResizing: true,
-                    columnResizingMode: "widget",
-                    columnMinWidth: 50,
-                    columnAutoWidth: true,
-                    focusedRowEnabled: true,
-                    editing: {
-                        mode: "cell",
-                        allowUpdating: true
-                    },
-                    paging: { enabled: false },
-                    height: "100%",
-                    elementAttr: { class: "mdl-preloaded-data-grid" },
-                    showColumnLines: true,
-                    showRowLines: false,
-                    showBorders: true,
-                    scrolling: { mode: "virtual" }
-                });
-            }
-        });
-        $popup.dxPopup("instance").show();
+        return { names, values };
     }
 
     isAnonymous() {

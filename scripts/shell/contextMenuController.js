@@ -54,42 +54,6 @@ class ContextMenuController {
                 ]
             },
             {
-                text: this.shell.board.translations.get("Data"),
-                icon: "fa-light fa-table",
-                shortcut: "",
-                name: "Data",
-                items: [
-                    {
-                        text: this.shell.board.translations.get("Data from file"),
-                        icon: "fa-light fa-file-csv",
-                        shortcut: "",
-                        name: "ImportDataFromFile",
-                        action: _ => this.shell.importDataFromFile()
-                    },
-                    {
-                        text: this.shell.board.translations.get("Data from URL"),
-                        icon: "fa-light fa-link",
-                        shortcut: "",
-                        name: "ImportDataFromUrl",
-                        action: _ => this.shell.importDataFromUrl()
-                    },
-                    {
-                        text: this.shell.board.translations.get("Preloaded Data"),
-                        icon: "fa-light fa-eye",
-                        shortcut: "",
-                        name: "ShowPreloadedData",
-                        action: _ => this.shell.showDataPopup()
-                    },
-                    {
-                        text: this.shell.board.translations.get("Clear Data"),
-                        icon: "fa-light fa-trash-can",
-                        shortcut: "",
-                        name: "ClearPreloadedData",
-                        action: _ => this.shell.clearPreloadedData()
-                    }
-                ]
-            },
-            {
                 text: this.shell.board.translations.get("Export"),
                 icon: "fa-light fa-arrow-down-to-square",
                 shortcut: "",

@@ -536,11 +536,21 @@ class TermControl {
             getFallbackItems: options.getFallbackItems,
             onChanged: options.onChanged
         };
+        const lockOptions = options.lock ?? {
+            width: "28px",
+            getValue: item => item?.locked === true,
+            onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
+                if (!items[index])
+                    return;
+                items[index].locked = value;
+            })
+        };
         return new TermControl({
             hostClassName: options.hostClassName,
             listClassName: options.listClassName,
             rowClassName: options.rowClassName,
             dragHandleClassName: options.dragHandleClassName,
+            termEditor: options.termEditor,
             getItems: () => TermControl.getShapeTermsCollectionControlItems(shape, propertyName, mutationOptions),
             getStateKey: () => TermControl.getShapeTermsCollectionStateKey(shape, propertyName),
             getTermItems: item => TermControl.buildShapeTermsCollectionTermItems(shape, item?.term, normalizeTermValue),
@@ -599,15 +609,7 @@ class TermControl {
                     items[index].showLabel = value;
                 })
             } : null,
-            lock: {
-                width: "28px",
-                getValue: item => item?.locked === true,
-                onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
-                    if (!items[index])
-                        return;
-                    items[index].locked = value;
-                })
-            }
+            lock: lockOptions
         });
     }
 
@@ -824,7 +826,94 @@ class TermControl {
     renderLockEditor(host, item, index) {
         if (!this.hasLock())
             return;
+        if (this.shouldUseLockDropDownButton())
+            return this.renderLockDropDownButton(host, item, index);
         TermControl.createLockCheckbox(host, this.getLockValue(item, index), value => this.onLockValueChanged(index, value));
+    }
+
+    shouldUseLockDropDownButton() {
+        const lock = this.options.lock;
+        if (!lock)
+            return false;
+        return lock.editorType === "dxDropDownButton";
+    }
+
+    renderLockDropDownButton(host, item, index) {
+        host.dxDropDownButton(this.getLockDropDownButtonOptions(item, index));
+    }
+
+    getLockDropDownButtonOptions(item, index) {
+        const lock = this.options.lock;
+        const selectedValue = this.getLockValue(item, index);
+        const items = typeof lock?.getItems === "function" ? lock.getItems(item, index) : [];
+        return {
+            items: items,
+            stylingMode: "text",
+            useSelectMode: false,
+            showArrowIcon: false,
+            elementAttr: { class: "shape-term-lock-dropdown" },
+            template: (_, element) => this.renderLockDropDownButtonTemplate(element, item, index, selectedValue, items),
+            itemTemplate: (itemData, itemIndex, element) => this.renderLockDropDownItemTemplate(itemData, itemIndex, element, item, index),
+            onItemClick: event => this.onLockDropDownItemClick(event, index),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup"),
+                ...(lock?.dropDownOptions ?? {})
+            }
+        };
+    }
+
+    renderLockDropDownButtonTemplate(element, item, index, selectedValue, items) {
+        const lock = this.options.lock;
+        if (lock?.buttonTemplate)
+            return lock.buttonTemplate(element, item, index, selectedValue, items);
+        const selectedItem = this.findLockSelectedItem(items, selectedValue);
+        const iconClassName = selectedItem?.icon ?? "fa-light fa-chart-line";
+        const content = `<div class="shape-term-secondary-button"><i class="${iconClassName} shape-term-secondary-icon"></i></div>`;
+        $(element).empty().append(content);
+    }
+
+    renderLockDropDownItemTemplate(itemData, itemIndex, element, item, index) {
+        const lock = this.options.lock;
+        if (lock?.itemTemplate)
+            return lock.itemTemplate(itemData, itemIndex, element, item, index);
+        const itemText = itemData?.text ?? String(itemData ?? "");
+        const iconClassName = itemData?.icon ?? "fa-light fa-chart-line";
+        const content = `<div class="shape-term-secondary-item" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%"><i class="${iconClassName} shape-term-secondary-icon"></i><span>${itemText}</span></div>`;
+        $(element).empty().append(content);
+    }
+
+    findLockSelectedItem(items, selectedValue) {
+        if (!Array.isArray(items))
+            return null;
+        for (let index = 0; index < items.length; index++) {
+            const item = items[index];
+            const itemValue = this.resolveLockItemValue(item);
+            if (itemValue === selectedValue)
+                return item;
+        }
+        return null;
+    }
+
+    onLockDropDownItemClick(event, index) {
+        const value = this.resolveLockItemValue(event?.itemData);
+        this.onLockValueChanged(index, value);
+        if (event?.component?.close)
+            event.component.close();
+    }
+
+    resolveLockItemValue(itemData) {
+        const lock = this.options.lock;
+        if (!lock)
+            return itemData;
+        const valueExpr = lock.valueExpr;
+        if (typeof valueExpr === "function")
+            return valueExpr(itemData);
+        if (typeof valueExpr === "string")
+            return itemData?.[valueExpr];
+        if (itemData && typeof itemData === "object" && Object.prototype.hasOwnProperty.call(itemData, "value"))
+            return itemData.value;
+        return itemData;
     }
 
     onLockValueChanged(index, value) {
@@ -1015,7 +1104,7 @@ class TermControl {
                 onEnterKey: e => {
                     const customValue = e.component.option("value");
                     if (providedOptions.onCustomItemCreating)
-                        providedOptions.onCustomItemCreating({ text: customValue, customItem: null });
+                        providedOptions.onCustomItemCreating({ text: customValue, customItem: null, item: item, index: index });
                     else
                         this.onTermChanged(index, customValue);
                     closeDropdown?.();
@@ -1050,7 +1139,9 @@ class TermControl {
 
     getTermEditorOptions(item, index) {
         const providedOptions = this.options.termEditor ?? {};
-        const acceptCustomValue = providedOptions.acceptCustomValue === true;
+        const acceptCustomValue = typeof providedOptions.acceptCustomValue === "function"
+            ? providedOptions.acceptCustomValue(item, index) === true
+            : providedOptions.acceptCustomValue === true;
         const termValue = this.getTermValue(item, index);
         const board = this.options.getBoard?.();
         const flatItems = this.getTermItems(item, index);

@@ -246,6 +246,11 @@ class Calculator extends EventTarget {
         return this.system.getTermsNames();
     }
 
+    /** @param {string} sourceTermName @param {string} regressionType @param {string} targetTermName @param {number} caseNumber */
+    calculateDataRegression(sourceTermName, regressionType, targetTermName, caseNumber = 1) {
+        return this.system.calculateDataRegression(sourceTermName, regressionType, targetTermName, caseNumber);
+    }
+
     getInitialValuesByCase() {
         const casesCount = this.normalizeCasesCount(this.properties.casesCount);
         const terms = this.getTermsNames();
