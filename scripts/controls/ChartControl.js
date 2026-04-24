@@ -344,7 +344,7 @@ class ChartControl {
             step = 5 * magnitude;
         else
             step = 10 * magnitude;
-        const firstTick = Math.ceil(minValue / step) * step;
+        const firstTick = Math.floor(minValue / step) * step;
         for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
             ticks.push(Math.round(value * 1e10) / 1e10);
         return ticks;
@@ -358,13 +358,16 @@ class ChartControl {
         if (!Number.isFinite(step) || step <= 0 || subdivisions <= 1)
             return ticks;
         const minorStep = step / subdivisions;
-        for (let majorIndex = 0; majorIndex < majorTicks.length - 1; majorIndex++) {
-            const startValue = majorTicks[majorIndex];
+        const firstMajor = majorTicks[0];
+        const extendedStart = firstMajor - step;
+        const lastMajor = majorTicks[majorTicks.length - 1];
+        for (let majorStart = extendedStart; majorStart <= lastMajor + step * 0.001; majorStart += step) {
+            const majorStartRounded = Math.round(majorStart * 1e10) / 1e10;
             for (let minorIndex = 1; minorIndex < subdivisions; minorIndex++) {
-                const tickValue = startValue + minorStep * minorIndex;
+                const tickValue = Math.round((majorStartRounded + minorStep * minorIndex) * 1e10) / 1e10;
                 if (tickValue <= minValue || tickValue >= maxValue)
                     continue;
-                ticks.push(Math.round(tickValue * 1e10) / 1e10);
+                ticks.push(tickValue);
             }
         }
         return ticks;
@@ -741,6 +744,8 @@ class ChartControl {
         this.appendSvgMarkup(this.axisLayer, `
             <line x1="${layout.plotLeft}" y1="${layout.plotTop}" x2="${layout.plotLeft}" y2="${layout.plotBottom}" stroke="${this.options.axisColor}" stroke-width="1.2" />
             <line x1="${layout.plotLeft}" y1="${layout.plotBottom}" x2="${layout.plotRight}" y2="${layout.plotBottom}" stroke="${this.options.axisColor}" stroke-width="1.2" />
+            <line x1="${layout.plotLeft}" y1="${layout.plotTop}" x2="${layout.plotRight}" y2="${layout.plotTop}" stroke="${this.options.axisColor}" stroke-width="1.2" />
+            <line x1="${layout.plotRight}" y1="${layout.plotTop}" x2="${layout.plotRight}" y2="${layout.plotBottom}" stroke="${this.options.axisColor}" stroke-width="1.2" />
         `);
         for (let index = 0; index < xMinorTicks.length; index++)
             this.renderXAxisMinorTick(layout, xScale, xMinorTicks[index]);
@@ -756,6 +761,7 @@ class ChartControl {
         const xPosition = xScale(xValue);
         this.appendSvgMarkup(this.axisLayer, `
             <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 2.5}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
+            <line x1="${xPosition}" y1="${layout.plotTop}" x2="${xPosition}" y2="${layout.plotTop - 2.5}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
         `);
     }
 
@@ -774,6 +780,7 @@ class ChartControl {
         const labelText = this.escapeMarkupText(this.formatAxisValue(xValue));
         this.appendSvgMarkup(this.axisLayer, `
             <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 4}" stroke="${this.options.axisColor}" stroke-width="1" />
+            <line x1="${xPosition}" y1="${layout.plotTop}" x2="${xPosition}" y2="${layout.plotTop - 4}" stroke="${this.options.axisColor}" stroke-width="1" />
             <text class="shape-tick-label" x="${labelX}" y="${layout.plotBottom + 18}" text-anchor="${anchor}" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
         `);
     }
@@ -783,6 +790,7 @@ class ChartControl {
         const labelText = this.escapeMarkupText(this.formatAxisValue(yValue));
         this.appendSvgMarkup(this.axisLayer, `
             <line x1="${layout.plotLeft - 4}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
+            <line x1="${layout.plotRight}" y1="${yPosition}" x2="${layout.plotRight + 4}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
             <text class="shape-tick-label" x="${layout.plotLeft - 7}" y="${yPosition + 3}" text-anchor="end" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
         `);
     }
@@ -791,6 +799,7 @@ class ChartControl {
         const yPosition = yScale(yValue);
         this.appendSvgMarkup(this.axisLayer, `
             <line x1="${layout.plotLeft - 2.5}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
+            <line x1="${layout.plotRight}" y1="${yPosition}" x2="${layout.plotRight + 2.5}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
         `);
     }
 
