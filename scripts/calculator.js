@@ -194,6 +194,45 @@ class Calculator extends EventTarget {
         return { names: this.preloadedTermNames, values: this.preloadedTermValues };
     }
 
+    refreshPreloadedData() {
+        if (!this.preloadedTermNames || !this.preloadedTermValues)
+            return false;
+        this.system.loadTerms(this.preloadedTermNames, this.preloadedTermValues);
+        this.engine.reset();
+        this.system.reset();
+        this.emit("iterate", { calculator: this });
+        return true;
+    }
+
+    getPreloadedColumnIndex(name = "") {
+        if (!this.preloadedTermNames)
+            return -1;
+        return this.preloadedTermNames.indexOf(name);
+    }
+
+    setPreloadedValue(rowIndex = -1, name = "", value = NaN) {
+        if (!this.preloadedTermValues || !this.preloadedTermNames)
+            return false;
+        if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= this.preloadedTermValues.length)
+            return false;
+        const columnIndex = this.getPreloadedColumnIndex(name);
+        if (columnIndex < 0)
+            return false;
+        if (!Number.isFinite(value))
+            return false;
+        this.preloadedTermValues[rowIndex][columnIndex] = value;
+        return this.refreshPreloadedData();
+    }
+
+    deletePreloadedRow(rowIndex = -1) {
+        if (!this.preloadedTermValues)
+            return false;
+        if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= this.preloadedTermValues.length)
+            return false;
+        this.preloadedTermValues.splice(rowIndex, 1);
+        return this.refreshPreloadedData();
+    }
+
     clearPreloadedData() {
         this.preloadedTermNames = null;
         this.preloadedTermValues = null;

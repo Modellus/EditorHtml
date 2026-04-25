@@ -49,7 +49,8 @@ class TableControl {
             precision: 2,
             minColumnWidth: 48,
             onCellValueChanged: null,
-            onColumnWidthChanged: null
+            onColumnWidthChanged: null,
+            onRowDeleteRequested: null
         };
     }
 
@@ -632,7 +633,9 @@ class TableControl {
         rowRect.setAttribute("y", `${y}`);
         rowRect.setAttribute("width", `${layout.bodyWidth}`);
         rowRect.setAttribute("height", `${rowHeight}`);
-        if (this.focusedRowKey != null && row.key === this.focusedRowKey)
+        if (this.selectedCell && this.selectedCell.rowIndex === rowIndex)
+            rowRect.setAttribute("fill", this.options.selectionColor);
+        else if (this.focusedRowKey != null && row.key === this.focusedRowKey)
             rowRect.setAttribute("fill", this.options.selectionColor);
         else
             rowRect.setAttribute("fill", this.options.backgroundColor);
@@ -1091,6 +1094,13 @@ class TableControl {
             this.render();
             return;
         }
+        if (key === "Delete" || key === "Backspace") {
+            if (this.deleteSelectedRow()) {
+                event.preventDefault();
+                this.render();
+                return;
+            }
+        }
         if (this.isAcceptedEditKey(key) && this.canEditCell(this.selectedCell.rowIndex, this.selectedCell.columnIndex)) {
             event.preventDefault();
             this.startEditing(this.selectedCell.rowIndex, this.selectedCell.columnIndex, key);
@@ -1372,6 +1382,36 @@ class TableControl {
             return false;
         row[column.key] = nextValue;
         this.editingCell = null;
+        return true;
+    }
+
+    deleteSelectedRow() {
+        if (!this.selectedCell)
+            return false;
+        const rowIndex = this.selectedCell.rowIndex;
+        const row = this.getRowByIndex(rowIndex);
+        if (!row)
+            return false;
+        const callback = this.options.onRowDeleteRequested;
+        let accepted = true;
+        if (typeof callback === "function") {
+            accepted = callback({
+                row: row,
+                rowKey: row.key,
+                rowIndex: rowIndex
+            }) !== false;
+        }
+        if (!accepted)
+            return false;
+        this.rows.splice(rowIndex, 1);
+        this.editingCell = null;
+        if (this.rows.length === 0)
+            this.selectedCell = null;
+        else {
+            const nextRowIndex = Math.min(rowIndex, this.rows.length - 1);
+            const nextColumnIndex = Math.min(this.selectedCell.columnIndex, Math.max(0, this.options.columns.length - 1));
+            this.selectCell(nextRowIndex, nextColumnIndex);
+        }
         return true;
     }
 

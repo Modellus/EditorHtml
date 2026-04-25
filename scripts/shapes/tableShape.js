@@ -460,7 +460,8 @@ class TableShape extends BaseShape {
             borderColor: this.getBorderColor(),
             precision: this.board.calculator.getPrecision(),
             onCellValueChanged: payload => this.onTableCellValueChanged(payload),
-            onColumnWidthChanged: payload => this.onTableColumnWidthChanged(payload)
+            onColumnWidthChanged: payload => this.onTableColumnWidthChanged(payload),
+            onRowDeleteRequested: payload => this.onTableRowDeleteRequested(payload)
         };
     }
 
@@ -490,7 +491,7 @@ class TableShape extends BaseShape {
             term: column.term,
             caseNumber: column.case,
             showCase: TermControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value)),
-            editable: this._canEditTerm(column.term),
+            editable: this.canEditTableColumn(column.term),
             width: Number.isFinite(column.width) ? column.width : null,
             precision: precision,
             barColor: this.normalizeColumnColor(column.color),
@@ -498,20 +499,32 @@ class TableShape extends BaseShape {
         }));
     }
 
+    canEditTableColumn(term) {
+        if (this.board.calculator.hasPreloadedData())
+            return this.board.calculator.getPreloadedColumnIndex(term) >= 0;
+        return this._canEditTerm(term);
+    }
+
     onTableCellValueChanged(payload) {
         const sourceColumn = payload?.column?.sourceColumn;
         if (!sourceColumn)
-            return false;
-        if (!this._canEditTerm(sourceColumn.term))
-            return false;
-        const iteration = payload?.rowKey ?? payload?.row?.key;
-        if (iteration == null)
             return false;
         const numericValue = Number(payload?.value);
         if (!Number.isFinite(numericValue))
             return false;
         const precision = this.board.calculator.getPrecision();
         const roundedValue = Utils.roundToPrecision(numericValue, precision);
+        if (this.board.calculator.hasPreloadedData()) {
+            const rowIndex = Number.isInteger(payload?.rowKey) ? payload.rowKey : payload?.rowIndex;
+            if (!Number.isInteger(rowIndex))
+                return false;
+            return this.board.calculator.setPreloadedValue(rowIndex, sourceColumn.term, roundedValue);
+        }
+        if (!this._canEditTerm(sourceColumn.term))
+            return false;
+        const iteration = payload?.rowKey ?? payload?.row?.key;
+        if (iteration == null)
+            return false;
         const system = this.board.calculator.system;
         const row = system.getIteration(iteration, sourceColumn.case);
         if (!row)
@@ -521,6 +534,15 @@ class TableShape extends BaseShape {
             system.setInitialByName(sourceColumn.term, roundedValue, 1, sourceColumn.case);
         this.board.calculator.emit("iterate", { calculator: this.board.calculator });
         return true;
+    }
+
+    onTableRowDeleteRequested(payload) {
+        if (!this.board.calculator.hasPreloadedData())
+            return false;
+        const rowIndex = Number.isInteger(payload?.rowKey) ? payload.rowKey : payload?.rowIndex;
+        if (!Number.isInteger(rowIndex))
+            return false;
+        return this.board.calculator.deletePreloadedRow(rowIndex);
     }
 
     onTableColumnWidthChanged(payload) {
@@ -539,6 +561,10 @@ class TableShape extends BaseShape {
         if (!this.table)
             return;
         if (!this._activeColumns || this._activeColumns.length === 0) {
+            this.table.setFocusedRowKey(null);
+            return;
+        }
+        if (this.board.calculator.hasPreloadedData()) {
             this.table.setFocusedRowKey(null);
             return;
         }
@@ -610,6 +636,10 @@ class TableShape extends BaseShape {
             this.table.setRows([]);
             return;
         }
+        if (this.board.calculator.hasPreloadedData()) {
+            this.table.setRows(this.buildPreloadedRows(columns));
+            return;
+        }
         const system = this.board.calculator.system;
         const lastIteration = this.board.calculator.getLastIteration();
         const rows = [];
@@ -622,6 +652,43 @@ class TableShape extends BaseShape {
             rows.push(row);
         }
         this.table.setRows(rows);
+    }
+
+    buildPreloadedRows(columns) {
+        const preloadedData = this.board.calculator.getPreloadedData();
+        if (!preloadedData)
+            return [];
+        const names = Array.isArray(preloadedData.names) ? preloadedData.names : [];
+        const values = Array.isArray(preloadedData.values) ? preloadedData.values : [];
+        const iterationTermName = this.board.calculator.properties.iterationTerm;
+        const independentTermName = this.board.calculator.properties.independent.name;
+        const iterationColumnIndex = names.indexOf(iterationTermName);
+        const independentColumnIndex = names.indexOf(independentTermName);
+        const rows = [];
+        for (let rowIndex = 0; rowIndex < values.length; rowIndex++) {
+            const sourceRow = values[rowIndex];
+            const row = { key: rowIndex };
+            const iteration = iterationColumnIndex >= 0 ? Number(sourceRow?.[iterationColumnIndex]) : rowIndex + 1;
+            const independentValue = independentColumnIndex >= 0 ? Number(sourceRow?.[independentColumnIndex]) : NaN;
+            for (let columnIndex = 0; columnIndex < columns.length; columnIndex++) {
+                const column = columns[columnIndex];
+                row[column.key] = this.getPreloadedRowValue(column, names, sourceRow, iteration, independentValue, rowIndex + 1);
+            }
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    getPreloadedRowValue(column, preloadedNames, sourceRow, iteration, independentValue, fallbackIteration) {
+        const preloadedColumnIndex = preloadedNames.indexOf(column.term);
+        if (preloadedColumnIndex >= 0)
+            return sourceRow?.[preloadedColumnIndex];
+        const system = this.board.calculator.system;
+        if (Number.isFinite(iteration))
+            return system.getByNameOnIteration(Math.round(iteration), column.term, column.case);
+        if (Number.isFinite(independentValue))
+            return system.getValueAtIndependent(independentValue, column.term, column.case);
+        return system.getByNameOnIteration(fallbackIteration, column.term, column.case);
     }
 
     getSelectedColumns() {
