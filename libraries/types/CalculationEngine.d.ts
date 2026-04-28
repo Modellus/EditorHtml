@@ -627,6 +627,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitTangent?: (ctx: TangentContext) => void;
     /**
+     * Enter a parse tree produced by the `MultiplicationImplicit`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterMultiplicationImplicit?: (ctx: MultiplicationImplicitContext) => void;
+    /**
+     * Exit a parse tree produced by the `MultiplicationImplicit`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitMultiplicationImplicit?: (ctx: MultiplicationImplicitContext) => void;
+    /**
      * Enter a parse tree produced by the `ArcTangent`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -746,6 +758,16 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitCosecant?: (ctx: CosecantContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.implicitMultiplicand`.
+     * @param ctx the parse tree
+     */
+    enterImplicitMultiplicand?: (ctx: ImplicitMultiplicandContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.implicitMultiplicand`.
+     * @param ctx the parse tree
+     */
+    exitImplicitMultiplicand?: (ctx: ImplicitMultiplicandContext) => void;
     /**
      * Enter a parse tree produced by `LatexMathParser.reserved`.
      * @param ctx the parse tree
@@ -1173,6 +1195,14 @@ declare class TangentContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class MultiplicationImplicitContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    decimal(): DecimalContext;
+    implicitMultiplicand(): ImplicitMultiplicandContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class ArcTangentContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
@@ -1244,6 +1274,16 @@ declare class CosineContext extends ExpressionContext {
 declare class CosecantContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class ImplicitMultiplicandContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    name(): NameContext | null;
+    expression(): ExpressionContext[];
+    expression(i: number): ExpressionContext | null;
+    get ruleIndex(): number;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1619,6 +1659,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitTangent?: (ctx: TangentContext) => Result;
     /**
+     * Visit a parse tree produced by the `MultiplicationImplicit`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitMultiplicationImplicit?: (ctx: MultiplicationImplicitContext) => Result;
+    /**
      * Visit a parse tree produced by the `ArcTangent`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -1688,6 +1735,12 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitCosecant?: (ctx: CosecantContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.implicitMultiplicand`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitImplicitMultiplicand?: (ctx: ImplicitMultiplicandContext) => Result;
     /**
      * Visit a parse tree produced by `LatexMathParser.reserved`.
      * @param ctx the parse tree
@@ -1903,6 +1956,8 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitSubtraction: (context: SubtractionContext) => Branch;
     visitMultiplication: (context: MultiplicationContext) => Branch;
     visitMultiplicationDigit: (context: MultiplicationDigitContext) => Branch;
+    private parseExpression;
+    visitMultiplicationImplicit: (context: MultiplicationImplicitContext) => Branch;
     visitDivision: (context: DivisionContext) => Branch;
     visitFraction: (context: FractionContext) => Branch;
     visitFractionDigits: (context: FractionDigitsContext) => Branch;
@@ -2014,6 +2069,8 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDivision: (context: DivisionContext) => Branch;
     visitMultiplication: (context: MultiplicationContext) => Branch;
     visitMultiplicationDigit: (context: MultiplicationDigitContext) => Branch;
+    private parseExpression;
+    visitMultiplicationImplicit: (context: MultiplicationImplicitContext) => Branch;
     visitSubtraction: (context: SubtractionContext) => Branch;
     visitAddition: (context: AdditionContext) => Branch;
     visitParenthesis: (context: ParenthesisContext) => Branch;

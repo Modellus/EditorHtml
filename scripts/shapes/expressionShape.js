@@ -142,6 +142,7 @@ class ExpressionShape extends BaseShape {
         this.mathfield.smartMode = false;
         this.mathfield.multiline = true;
         this.mathfield.returnKeyAction = "none";
+        this.installMathfieldValueNormalization();
         MathfieldElement.soundsDirectory = null;
         this.mathfield.addEventListener("input", inputEvent => this.onInput(inputEvent));
         this.mathfield.addEventListener("change", _ => this.onChange());
@@ -154,8 +155,21 @@ class ExpressionShape extends BaseShape {
             scrollByContent: true,
             scrollByThumb: true
         });
-        this.mathfield.value = this.properties.expression ?? "\\displaylines{}";
+        this.mathfield.value = this.normalizeExpression(this.properties.expression ?? "\\displaylines{}");
         return foreignObject;
+    }
+
+    installMathfieldValueNormalization() {
+        const mathfieldPrototype = Object.getPrototypeOf(this.mathfield);
+        const valueDescriptor = Object.getOwnPropertyDescriptor(mathfieldPrototype, "value");
+        if (!valueDescriptor?.get || !valueDescriptor?.set)
+            return;
+        Object.defineProperty(this.mathfield, "value", {
+            configurable: true,
+            enumerable: valueDescriptor.enumerable ?? false,
+            get: () => valueDescriptor.get.call(this.mathfield),
+            set: value => valueDescriptor.set.call(this.mathfield, this.normalizeExpression(value))
+        });
     }
 
     onMount() {
@@ -583,9 +597,11 @@ class ExpressionShape extends BaseShape {
     setProperties(properties) {
         super.setProperties(properties);
         if (properties.expression != undefined) {
-            this.mathfield.value = properties.expression;
+            const normalizedExpression = this.normalizeExpression(properties.expression);
+            this.mathfield.value = normalizedExpression;
             this.ensureCaretIsClamped();
-            this._committedExpression = properties.expression;
+            this.properties.expression = normalizedExpression;
+            this._committedExpression = normalizedExpression;
         }
         this.onChange();
     }
@@ -595,8 +611,27 @@ class ExpressionShape extends BaseShape {
         this._syncFrame = requestAnimationFrame(() => this.onChange());
     }
 
-    onChange() {
+    normalizeExpression(expression) {
+        return this.normalizeDerivativeFractions(expression);
+    }
+
+    normalizeDerivativeFractions(expression) {
+        return expression.replace(/\\frac\{d([^{}]+)\}\{d([^{}]+)\}/g, (_match, numeratorVariable, denominatorVariable) => `\\pdiff{${numeratorVariable}}{${denominatorVariable}}`);
+    }
+
+    applyNormalizedExpressionIfNeeded() {
         const expression = this.mathfield.getValue();
+        const normalizedExpression = this.normalizeExpression(expression);
+        if (normalizedExpression === expression)
+            return expression;
+        const savedPosition = this.mathfield.position;
+        this.mathfield.value = normalizedExpression;
+        this.mathfield.position = Math.min(savedPosition, this.mathfield.lastOffset);
+        return normalizedExpression;
+    }
+
+    onChange() {
+        const expression = this.applyNormalizedExpressionIfNeeded();
         if (expression === this.properties.expression)
             return;
         if (this._committedExpression === undefined)

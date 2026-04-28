@@ -335,7 +335,6 @@ class Calculator extends EventTarget {
         text = this.removeDisplaylinesWrappers(text);
         text = text.replace(/\\placeholder\{\}/g, '');
         const expressions = this.splitExpressions(text);
-
         expressions.forEach(e => this.parser.parse(e));
         this.engine.reset();
         this.system.reset();
