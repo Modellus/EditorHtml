@@ -193,12 +193,6 @@ class ExpressionShape extends BaseShape {
         delete inlineShortcutMap.dt;
         inlineShortcutMap["#"] = "\\sqrt{#0}";
         inlineShortcutMap["%"] = "\\Delta";
-        inlineShortcutMap[">="] = "\\geq";
-        inlineShortcutMap["=>"] = "\\geq";
-        inlineShortcutMap["<="] = "\\leq";
-        inlineShortcutMap["=<"] = "\\leq";
-        inlineShortcutMap["<>"] = "\\neq";
-        inlineShortcutMap["!="] = "\\neq";
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];
@@ -292,6 +286,8 @@ class ExpressionShape extends BaseShape {
         const typedLength = caretPosition - groupStart;
         if (typedLength < 2)
             return;
+        if (this.applyRelationalShortcuts(caretPosition, groupStart))
+            return;
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];
@@ -300,6 +296,33 @@ class ExpressionShape extends BaseShape {
             if (this.applyFunctionShortcut(functionShortcut.shortcutText, functionShortcut.functionLatex, caretPosition, groupStart))
                 return;
         }
+    }
+
+    applyRelationalShortcuts(caretPosition, groupStart) {
+        const relationalShortcuts = this.getRelationalShortcuts();
+        for (let index = 0; index < relationalShortcuts.length; index++) {
+            const shortcut = relationalShortcuts[index];
+            const shortcutStart = caretPosition - shortcut.shortcutText.length;
+            if (shortcutStart < groupStart)
+                continue;
+            const typedShortcut = this.getTextRange(shortcutStart, caretPosition);
+            if (typedShortcut !== shortcut.shortcutText)
+                continue;
+            this.mathfield.selection = { ranges: [[shortcutStart, caretPosition]], direction: "forward" };
+            this.mathfield.executeCommand("insert", shortcut.functionLatex);
+            return true;
+        }
+        return false;
+    }
+
+    getRelationalShortcuts() {
+        return [
+            { shortcutText: ">=", functionLatex: "\\geq" },
+            { shortcutText: "=>", functionLatex: "\\geq" },
+            { shortcutText: "<=", functionLatex: "\\leq" },
+            { shortcutText: "=<", functionLatex: "\\leq" },
+            { shortcutText: "<>", functionLatex: "\\neq" }
+        ];
     }
 
     applyFunctionShortcut(shortcutText, functionLatex, caretPosition, groupStart) {
