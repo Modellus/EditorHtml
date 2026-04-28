@@ -35,10 +35,11 @@ class ExpressionShape extends BaseShape {
     }
 
     createShortcutsPickerButton() {
-        const baseItemSize = 50;
+        const baseItemWidth = 88;
+        const baseItemHeight = 56;
         const columns = 4;
         const itemMargin = 2;
-        const step = baseItemSize + itemMargin * 2;
+        const horizontalStep = baseItemWidth + itemMargin * 2;
         const popupPadding = 6;
         this._shortcutsPicker = $('<div class="mdl-shortcuts-picker"></div>');
         this._shortcutsPicker.dxDropDownButton({
@@ -50,7 +51,7 @@ class ExpressionShape extends BaseShape {
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: this.getShapeOverlayWrapperAttr("mdl-shortcuts-picker-menu"),
-                width: columns * step + popupPadding * 2,
+                width: columns * horizontalStep + popupPadding * 2,
                 contentTemplate: contentElement => this.createShortcutsPickerGrid(contentElement)
             }
         });
@@ -58,15 +59,18 @@ class ExpressionShape extends BaseShape {
     }
 
     createShortcutsPickerGrid(contentElement) {
-        const baseItemSize = 50;
+        const baseItemWidth = 88;
+        const baseItemHeight = 56;
         const columns = 4;
         const itemMargin = 2;
-        const step = baseItemSize + itemMargin * 2;
+        const horizontalStep = baseItemWidth + itemMargin * 2;
+        const verticalStep = baseItemHeight + itemMargin * 2;
         const shortcutItems = [
             { name: "Differential", text: "\\frac{dx}{dt}" },
             { name: "Power", text: "x^2" },
             { name: "Squareroot", text: "\\sqrt{x}" },
-            { name: "Index", text: "x_{t-1}" }
+            { name: "Index", text: "x_{t-1}" },
+            { name: "Condition", text: "\\begin{cases}1 & t=0 \\\\ y & t\\ge2\\end{cases}" }
         ];
         const rows = Math.ceil(shortcutItems.length / columns);
         $(contentElement).empty();
@@ -74,14 +78,14 @@ class ExpressionShape extends BaseShape {
         $(contentElement).append(container);
         container.dxTileView({
             items: shortcutItems,
-            baseItemHeight: baseItemSize,
-            baseItemWidth: baseItemSize,
+            baseItemHeight: baseItemHeight,
+            baseItemWidth: baseItemWidth,
             itemMargin: itemMargin,
             direction: "vertical",
-            height: rows * step,
-            width: columns * step,
+            height: rows * verticalStep,
+            width: columns * horizontalStep,
             itemTemplate: (itemData, index, element) => {
-                const cell = $(`<div class="mdl-shortcuts-picker-item" title="${itemData.name}"></div>`);
+                const cell = $(`<div class="mdl-shortcuts-picker-item" title="${itemData.name}" style="display:flex;align-items:center;justify-content:center;height:100%;width:100%"></div>`);
                 cell.html(`<math-field read-only class="form-math-field" style="height:auto;width:auto">${itemData.text}</math-field>`);
                 $(element).append(cell);
             },
@@ -189,6 +193,12 @@ class ExpressionShape extends BaseShape {
         delete inlineShortcutMap.dt;
         inlineShortcutMap["#"] = "\\sqrt{#0}";
         inlineShortcutMap["%"] = "\\Delta";
+        inlineShortcutMap[">="] = "\\geq";
+        inlineShortcutMap["=>"] = "\\geq";
+        inlineShortcutMap["<="] = "\\leq";
+        inlineShortcutMap["=<"] = "\\leq";
+        inlineShortcutMap["<>"] = "\\neq";
+        inlineShortcutMap["!="] = "\\neq";
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];

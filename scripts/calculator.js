@@ -238,13 +238,104 @@ class Calculator extends EventTarget {
         this.preloadedTermValues = null;
     }
 
+    findMatchingBraceEnd(text = "", openBraceIndex = -1) {
+        if (openBraceIndex < 0 || openBraceIndex >= text.length)
+            return -1;
+        if (text[openBraceIndex] !== "{")
+            return -1;
+        let depth = 1;
+        for (let characterIndex = openBraceIndex + 1; characterIndex < text.length; characterIndex++) {
+            if (text[characterIndex] === "{")
+                depth++;
+            else if (text[characterIndex] === "}") {
+                depth--;
+                if (depth === 0)
+                    return characterIndex;
+            }
+        }
+        return -1;
+    }
+
+    unwrapDisplaylines(text = "") {
+        const displaylinesStart = "\\displaylines{";
+        let normalizedText = "";
+        for (let characterIndex = 0; characterIndex < text.length;) {
+            if (!text.startsWith(displaylinesStart, characterIndex)) {
+                normalizedText += text[characterIndex];
+                characterIndex++;
+                continue;
+            }
+            const openBraceIndex = characterIndex + displaylinesStart.length - 1;
+            const closeBraceIndex = this.findMatchingBraceEnd(text, openBraceIndex);
+            if (closeBraceIndex < 0) {
+                normalizedText += text.substring(characterIndex);
+                break;
+            }
+            normalizedText += text.substring(openBraceIndex + 1, closeBraceIndex);
+            characterIndex = closeBraceIndex + 1;
+        }
+        return normalizedText;
+    }
+
+    removeDisplaylinesWrappers(text = "") {
+        let normalizedText = text;
+        let previousText = null;
+        while (normalizedText !== previousText) {
+            previousText = normalizedText;
+            normalizedText = this.unwrapDisplaylines(normalizedText);
+        }
+        return normalizedText;
+    }
+
+    splitExpressions(text = "") {
+        const expressions = [];
+        let currentExpression = "";
+        let environmentDepth = 0;
+        for (let characterIndex = 0; characterIndex < text.length;) {
+            if (text.startsWith("\\begin{", characterIndex)) {
+                const endBraceIndex = text.indexOf("}", characterIndex + 7);
+                if (endBraceIndex < 0) {
+                    currentExpression += text.substring(characterIndex);
+                    break;
+                }
+                currentExpression += text.substring(characterIndex, endBraceIndex + 1);
+                environmentDepth++;
+                characterIndex = endBraceIndex + 1;
+                continue;
+            }
+            if (text.startsWith("\\end{", characterIndex)) {
+                const endBraceIndex = text.indexOf("}", characterIndex + 5);
+                if (endBraceIndex < 0) {
+                    currentExpression += text.substring(characterIndex);
+                    break;
+                }
+                currentExpression += text.substring(characterIndex, endBraceIndex + 1);
+                environmentDepth = Math.max(0, environmentDepth - 1);
+                characterIndex = endBraceIndex + 1;
+                continue;
+            }
+            if (text.startsWith("\\\\", characterIndex) && environmentDepth === 0) {
+                const expression = currentExpression.trim();
+                if (expression.length > 0)
+                    expressions.push(expression);
+                currentExpression = "";
+                characterIndex += 2;
+                continue;
+            }
+            currentExpression += text[characterIndex];
+            characterIndex++;
+        }
+        const expression = currentExpression.trim();
+        if (expression.length > 0)
+            expressions.push(expression);
+        return expressions;
+    }
+
     parse(text = "") {
-        var start = "\\displaylines{";
-        var end = "}";
-        if (text.startsWith(start) && text.endsWith(end))
-            text = text.substring(start.length, text.length - end.length);
+        text = this.removeDisplaylinesWrappers(text);
         text = text.replace(/\\placeholder\{\}/g, '');
-        const expressions = text.split('\\\\').map(line => line.trim());
+        const expressions = this.splitExpressions(text);
+
         expressions.forEach(e => this.parser.parse(e));
         this.engine.reset();
         this.system.reset();

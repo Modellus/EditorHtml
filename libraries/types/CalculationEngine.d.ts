@@ -141,6 +141,74 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitFunctionIndependent?: (ctx: FunctionIndependentContext) => void;
     /**
+     * Enter a parse tree produced by the `FunctionConditional`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     */
+    enterFunctionConditional?: (ctx: FunctionConditionalContext) => void;
+    /**
+     * Exit a parse tree produced by the `FunctionConditional`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     */
+    exitFunctionConditional?: (ctx: FunctionConditionalContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.caseRow`.
+     * @param ctx the parse tree
+     */
+    enterCaseRow?: (ctx: CaseRowContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.caseRow`.
+     * @param ctx the parse tree
+     */
+    exitCaseRow?: (ctx: CaseRowContext) => void;
+    /**
+     * Enter a parse tree produced by the `ConditionExpression`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    enterConditionExpression?: (ctx: ConditionExpressionContext) => void;
+    /**
+     * Exit a parse tree produced by the `ConditionExpression`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    exitConditionExpression?: (ctx: ConditionExpressionContext) => void;
+    /**
+     * Enter a parse tree produced by the `ConditionOtherwiseText`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    enterConditionOtherwiseText?: (ctx: ConditionOtherwiseTextContext) => void;
+    /**
+     * Exit a parse tree produced by the `ConditionOtherwiseText`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    exitConditionOtherwiseText?: (ctx: ConditionOtherwiseTextContext) => void;
+    /**
+     * Enter a parse tree produced by the `ConditionOtherwise`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    enterConditionOtherwise?: (ctx: ConditionOtherwiseContext) => void;
+    /**
+     * Exit a parse tree produced by the `ConditionOtherwise`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    exitConditionOtherwise?: (ctx: ConditionOtherwiseContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.conditionOperator`.
+     * @param ctx the parse tree
+     */
+    enterConditionOperator?: (ctx: ConditionOperatorContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.conditionOperator`.
+     * @param ctx the parse tree
+     */
+    exitConditionOperator?: (ctx: ConditionOperatorContext) => void;
+    /**
      * Enter a parse tree produced by `LatexMathParser.units`.
      * @param ctx the parse tree
      */
@@ -749,6 +817,16 @@ declare class AssignmentContext extends antlr.ParserRuleContext {
     get ruleIndex(): number;
     copyFrom(ctx: AssignmentContext): void;
 }
+declare class FunctionConditionalContext extends AssignmentContext {
+    constructor(ctx: AssignmentContext);
+    name(): NameContext;
+    caseRow(): CaseRowContext[];
+    caseRow(i: number): CaseRowContext | null;
+    units(): UnitsContext | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class FunctionContext extends AssignmentContext {
     constructor(ctx: AssignmentContext);
     name(): NameContext;
@@ -784,6 +862,48 @@ declare class FunctionSubscriptContext extends AssignmentContext {
     expression(): ExpressionContext[];
     expression(i: number): ExpressionContext | null;
     units(): UnitsContext | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class CaseRowContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    expression(): ExpressionContext;
+    condition(): ConditionContext;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class ConditionContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    copyFrom(ctx: ConditionContext): void;
+}
+declare class ConditionOtherwiseTextContext extends ConditionContext {
+    constructor(ctx: ConditionContext);
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class ConditionOtherwiseContext extends ConditionContext {
+    constructor(ctx: ConditionContext);
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class ConditionExpressionContext extends ConditionContext {
+    constructor(ctx: ConditionContext);
+    expression(): ExpressionContext[];
+    expression(i: number): ExpressionContext | null;
+    conditionOperator(): ConditionOperatorContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class ConditionOperatorContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1214,6 +1334,46 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitFunctionIndependent?: (ctx: FunctionIndependentContext) => Result;
+    /**
+     * Visit a parse tree produced by the `FunctionConditional`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitFunctionConditional?: (ctx: FunctionConditionalContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.caseRow`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitCaseRow?: (ctx: CaseRowContext) => Result;
+    /**
+     * Visit a parse tree produced by the `ConditionExpression`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitConditionExpression?: (ctx: ConditionExpressionContext) => Result;
+    /**
+     * Visit a parse tree produced by the `ConditionOtherwiseText`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitConditionOtherwiseText?: (ctx: ConditionOtherwiseTextContext) => Result;
+    /**
+     * Visit a parse tree produced by the `ConditionOtherwise`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitConditionOtherwise?: (ctx: ConditionOtherwiseContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.conditionOperator`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitConditionOperator?: (ctx: ConditionOperatorContext) => Result;
     /**
      * Visit a parse tree produced by `LatexMathParser.units`.
      * @param ctx the parse tree
@@ -1665,6 +1825,8 @@ declare class System {
     calculateFunctions(): void;
     private calculateFunctionsForVisibleIterations;
     private calculateFunctionsOnIteration;
+    private evaluateFunctionExpressions;
+    private areFunctionValuesEqual;
     private applyInitialValues;
     addValues(values: {
         [name: string]: number;
@@ -1833,6 +1995,8 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     private readonly system;
     private isParsingUnits;
     constructor(system: System);
+    visitStatement: (context: StatementContext) => Branch;
+    private getConditionEvaluator;
     private extractUnits;
     visitFractionDigits: (context: FractionDigitsContext) => Branch;
     visitFraction: (context: FractionContext) => Branch;
@@ -1842,6 +2006,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitNumber: (context: NumberContext) => Branch;
     visitConstant: (context: ConstantContext) => Branch;
     visitFunction: (context: FunctionContext) => Branch;
+    visitFunctionConditional: (context: FunctionConditionalContext) => Branch;
     visitFunctionSubscript: (context: FunctionSubscriptContext) => Branch;
     visitFunctionSubscriptDigit: (context: FunctionSubscriptDigitContext) => Branch;
     visitFunctionIndependent: (context: FunctionIndependentContext) => Branch;
