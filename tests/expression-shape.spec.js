@@ -241,14 +241,14 @@ test.describe('Content stays inside displaylines', () => {
 });
 
 test.describe('Inline shortcut handling', () => {
-    test('derivative fraction is normalized to \\pdiff', async ({ page }) => {
+    test('derivative fraction is normalized to upright differential fraction', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
         await setExpressionValue(page, 'Expr1', '\\displaylines{\\frac{dy}{dx}=x}');
         await page.waitForTimeout(300);
         const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toContain('\\pdiff{y}{x}');
-        expect(value).not.toContain('\\frac{dy}{dx}');
+        expect(value).toContain('\\frac{\\mathrm{d}y}{\\mathrm{d}x}');
+        expect(value).not.toContain('\\pdiff{y}{x}');
     });
 
     test('dead key x^2 produces correct atom count', async ({ page }) => {

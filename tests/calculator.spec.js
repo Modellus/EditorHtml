@@ -76,4 +76,41 @@ test.describe('Cases expression values in table', () => {
             expect(actualValue).toBeCloseTo(expectedValue, 8);
         });
     });
+
+    test('x2 is 9.9997994620399 at t=0.2 for two-body expression system', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Geometry and Forces');
+        await addExpression(page, 'Body 1. From F to motion');
+        await addExpression(page, 'Body 2: From F to motion');
+        await addExpression(page, 'Parameters and initial values');
+        await addExpression(page, 'Center of Mass');
+        await addTable(page, 'Table1');
+        await setExpressionValue(page, 'Geometry and Forces', '\\displaylines{r12=\\sqrt{\\left(\\left(x1-x2\\right)^2+\\left(y1-y2\\right)^2\\right)}\\\\ F12=G\\cdot\\frac{\\left(m1\\cdot m2\\right)}{r12^2}\\\\ F12x=-F12\\cdot\\frac{\\left(x1-x2\\right)}{r12}\\\\ F12y=-F12\\cdot\\frac{\\left(y1-y2\\right)}{r12}\\\\ F21x=-F12x\\\\ F21y=-F12y}');
+        await setExpressionValue(page, 'Body 1. From F to motion', '\\displaylines{a1x=\\frac{F12x}{m1}\\\\ a1y=\\frac{F12y}{m1}\\\\ \\frac{dv1x}{dt}=a1x\\\\ \\frac{dv1y}{dt}=a1y\\\\ \\frac{dx1}{dt}=v1x\\\\ \\frac{dy1}{dt}=v1y}');
+        await setExpressionValue(page, 'Body 2: From F to motion', '\\displaylines{a2x=\\frac{F21x}{m2}\\\\ a2y=\\frac{F21y}{m2}\\\\ \\frac{dv2x}{dt}=a2x\\\\ \\frac{dv2y}{dt}=a2y\\\\ \\frac{dx2}{dt}=v2x\\\\ \\frac{dy2}{dt}=v2y}');
+        await setExpressionValue(page, 'Parameters and initial values', '\\displaylines{G=1\\\\ m1=1\\\\ m2=5\\\\ v1y\\left(0\\right)=0.5\\\\ v1x\\left(0\\right)=0.2\\\\ x2\\left(0\\right)=10}');
+        await setExpressionValue(page, 'Center of Mass', '\\displaylines{xCM=\\frac{\\left(m1\\cdot x1+m2\\cdot x2\\right)}{\\left(m1+m2\\right)}\\\\ yCM=\\frac{\\left(m1\\cdot y1+m2\\cdot y2\\right)}{\\left(m1+m2\\right)}}');
+        await page.evaluate(() => {
+            modellus.shape.setProperties('Table1', {
+                columns: [
+                    { term: 't', case: 1, color: 'transparent' },
+                    { term: 'x2', case: 1, color: 'transparent' }
+                ]
+            });
+            shell.reset();
+            for (let iterationIndex = 0; iterationIndex < 40; iterationIndex++)
+                shell.calculator.engine.iterate();
+            const tableShape = shell.board.shapes.getByName('Table1');
+            tableShape?.refreshTableRows();
+        });
+        await page.waitForTimeout(600);
+        const tableRows = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Table1');
+            return tableShape?.table?.rows ?? [];
+        });
+        const tolerance = 1e-9;
+        const rowAtPointTwo = tableRows.find(row => Math.abs(Number(row.column0) - 0.2) < tolerance);
+        expect(rowAtPointTwo).toBeTruthy();
+        expect(Number(rowAtPointTwo.column1)).toBeCloseTo(9.9997994620399, 10);
+    });
 });

@@ -616,7 +616,7 @@ class ExpressionShape extends BaseShape {
     }
 
     normalizeDerivativeFractions(expression) {
-        return expression.replace(/\\frac\{d([^{}]+)\}\{d([^{}]+)\}/g, (_match, numeratorVariable, denominatorVariable) => `\\pdiff{${numeratorVariable}}{${denominatorVariable}}`);
+        return expression.replace(/\\frac\{d([^{}]+)\}\{d([^{}]+)\}/g, (_match, numeratorVariable, denominatorVariable) => `\\frac{\\mathrm{d}${numeratorVariable}}{\\mathrm{d}${denominatorVariable}}`);
     }
 
     applyNormalizedExpressionIfNeeded() {
