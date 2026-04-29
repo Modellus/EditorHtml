@@ -141,6 +141,7 @@ class TextShape extends BaseShape {
         this.$formulaPopup = $("<div>").appendTo(document.body);
         this.$formulaPopup.dxPopup({
             visible: true,
+            wrapperAttr: { class: "mdl-shape-overlay-popup" },
             title: "Insert Formula",
             width: 420,
             height: "auto",
