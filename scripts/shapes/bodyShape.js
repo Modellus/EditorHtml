@@ -71,7 +71,6 @@ class BodyShape extends ChildShape {
                 termValue: 0,
                 property: "radius",
                 isInverted: false,
-                scaleProperty: "x",
                 caseProperty: "sizeTermCase"
             });
         }
@@ -207,9 +206,7 @@ class BodyShape extends ChildShape {
         const horizontalRadius = Math.abs(eventPoint.x - position.x);
         const verticalRadius = Math.abs(eventPoint.y - position.y);
         const radius = Math.max(5, Math.max(horizontalRadius, verticalRadius));
-        const scale = this.getScale();
-        const axisScale = scale.x ?? 1;
-        const sizeValue = axisScale !== 0 ? radius * axisScale : radius;
+        const sizeValue = radius;
         const calculator = this.board.calculator;
         const termValue = this.properties.sizeTerm;
         if (this.isTermLocked("sizeTerm"))
@@ -790,7 +787,7 @@ class BodyShape extends ChildShape {
         this.properties.y = metrics ? -metrics.centerY / metrics.scaleY : 0;
         this.properties.angle = 0;
         const radius = metrics ? metrics.size / metrics.scaleX : 10;
-        this.properties.sizeTerm = String(metrics ? metrics.size : radius);
+        this.properties.sizeTerm = String(radius);
         this.properties.width = radius * 2;
         this.properties.height = radius * 2;
         this.properties.radius = radius;
@@ -1012,7 +1009,7 @@ class BodyShape extends ChildShape {
                 continue;
             const caseNumber = this.properties[mapping.caseProperty] ?? 1;
             const rawValue = this.resolveTermNumeric(termValue, caseNumber);
-            const axisScale = scale[mapping.scaleProperty] ?? 1;
+            const axisScale = mapping.termProperty === "sizeTerm" ? 1 : scale[mapping.scaleProperty] ?? 1;
             const value = mapping.isInverted ? -rawValue : rawValue;
             this.properties[mapping.property] = Number.isFinite(value) ? (axisScale !== 0 ? value / axisScale : 0) : 0;
         }
