@@ -88,7 +88,7 @@ class ContextMenuController {
                 icon: "fa-light fa-chevrons-left",
                 shortcut: "",
                 beginGroup: true,
-                name: "More Models",
+                name: "Models",
                 action: _ => this.shell.exitEditor()
             }
         ];
