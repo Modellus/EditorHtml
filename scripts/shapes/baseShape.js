@@ -368,6 +368,11 @@ class BaseShape {
     applyTransformSnapping(transform) {
         if (!transform || typeof transform !== "object")
             return transform;
+        const withRotationSnapping = this.applyRotationTransformSnapping(transform);
+        return this.applyResizeTransformSnapping(withRotationSnapping);
+    }
+
+    applyRotationTransformSnapping(transform) {
         if (!this.isRotationHandle(this.draggedHandle))
             return transform;
         const rotation = Number(transform.rotation);
@@ -377,6 +382,89 @@ class BaseShape {
         if (snappedRotation === rotation)
             return transform;
         return Object.assign({}, transform, { rotation: snappedRotation });
+    }
+
+    applyResizeTransformSnapping(transform) {
+        if (!this.board.snapToGrid)
+            return transform;
+        if (!this.draggedHandle || this.draggedHandle.classList.contains("move") || this.draggedHandle.classList.contains("rotation"))
+            return transform;
+        const gridSize = Number(this.board.gridSize);
+        if (!Number.isFinite(gridSize) || gridSize <= 0)
+            return transform;
+        if (!Object.prototype.hasOwnProperty.call(transform, "width") && !Object.prototype.hasOwnProperty.call(transform, "height") && !Object.prototype.hasOwnProperty.call(transform, "x") && !Object.prototype.hasOwnProperty.call(transform, "y") && !Object.prototype.hasOwnProperty.call(transform, "radius"))
+            return transform;
+        const handleClasses = this.draggedHandle.classList;
+        const usesCornerHandle = handleClasses.contains("top-left") || handleClasses.contains("top-right") || handleClasses.contains("bottom-left") || handleClasses.contains("bottom-right");
+        const snappedTransform = Object.assign({}, transform);
+        if (usesCornerHandle)
+            return snappedTransform;
+        if (Object.prototype.hasOwnProperty.call(transform, "width"))
+            snappedTransform.width = Math.max(10, Math.round(Number(transform.width) / gridSize) * gridSize);
+        if (Object.prototype.hasOwnProperty.call(transform, "height"))
+            snappedTransform.height = Math.max(10, Math.round(Number(transform.height) / gridSize) * gridSize);
+        if (Object.prototype.hasOwnProperty.call(transform, "radius")) {
+            if (Object.prototype.hasOwnProperty.call(snappedTransform, "width"))
+                snappedTransform.radius = snappedTransform.width / 2;
+            else
+                snappedTransform.radius = Math.max(5, Math.round(Number(transform.radius) / gridSize) * gridSize);
+        }
+        return snappedTransform;
+    }
+
+    captureResizeFixedCorner() {
+        if (!this.board.snapToGrid)
+            return;
+        if (!this.draggedHandle)
+            return;
+        const cls = this.draggedHandle.classList;
+        const isCorner = cls.contains("top-left") || cls.contains("top-right") || cls.contains("bottom-left") || cls.contains("bottom-right");
+        if (!isCorner)
+            return;
+        const boardPosition = this.getBoardPosition();
+        const shapeWidth = Number(this.properties.width) || 0;
+        const shapeHeight = Number(this.properties.height) || 0;
+        const fixedBoardX = (cls.contains("top-left") || cls.contains("bottom-left")) ? boardPosition.x + shapeWidth : boardPosition.x;
+        const fixedBoardY = (cls.contains("top-left") || cls.contains("top-right")) ? boardPosition.y + shapeHeight : boardPosition.y;
+        this._resizeFixedCorner = {
+            fixedBoardX: fixedBoardX,
+            fixedBoardY: fixedBoardY,
+            localX: Number(this.properties.x) || 0,
+            localY: Number(this.properties.y) || 0,
+            boardX: boardPosition.x,
+            boardY: boardPosition.y
+        };
+    }
+
+    getDirectionalResizeTransformFromAbsolutePoint(point) {
+        if (!this.board.snapToGrid)
+            return null;
+        if (!this.draggedHandle)
+            return null;
+        if (!this._resizeFixedCorner)
+            return null;
+        const cls = this.draggedHandle.classList;
+        const isCorner = cls.contains("top-left") || cls.contains("top-right") || cls.contains("bottom-left") || cls.contains("bottom-right");
+        if (!isCorner)
+            return null;
+        const gridSize = Number(this.board.gridSize);
+        if (!Number.isFinite(gridSize) || gridSize <= 0)
+            return null;
+        const fixedCorner = this._resizeFixedCorner;
+        const snappedMouseX = Math.round(point.x / gridSize) * gridSize;
+        const snappedMouseY = Math.round(point.y / gridSize) * gridSize;
+        const left = Math.min(snappedMouseX, fixedCorner.fixedBoardX);
+        const right = Math.max(snappedMouseX, fixedCorner.fixedBoardX);
+        const top = Math.min(snappedMouseY, fixedCorner.fixedBoardY);
+        const bottom = Math.max(snappedMouseY, fixedCorner.fixedBoardY);
+        const transform = {};
+        transform.x = fixedCorner.localX + (left - fixedCorner.boardX);
+        transform.y = fixedCorner.localY + (top - fixedCorner.boardY);
+        transform.width = Math.max(10, right - left);
+        transform.height = Math.max(10, bottom - top);
+        if (Object.prototype.hasOwnProperty.call(this.properties, "radius"))
+            transform.radius = transform.width / 2;
+        return transform;
     }
 
     snapDragPoint(point) {
@@ -516,6 +604,7 @@ class BaseShape {
             this.dragStart();
             event.preventDefault();
             this.draggedHandle = this._handlePending;
+            this.captureResizeFixedCorner();
             this.handleStartX = this._handlePendingStart.x;
             this.handleStartY = this._handlePendingStart.y;
         }
@@ -529,8 +618,9 @@ class BaseShape {
                     return;
                 const point = this._handlePendingPoint;
                 this._handlePendingPoint = null;
+                const directionalResizeTransform = this.getDirectionalResizeTransformFromAbsolutePoint(point);
                 const dragPoint = this.draggedHandle.classList.contains("move") ? this.snapDragPoint(point) : point;
-                const transform = this.applyTransformSnapping(this.draggedHandle.getTransform(dragPoint));
+                const transform = directionalResizeTransform ?? this.applyTransformSnapping(this.draggedHandle.getTransform(dragPoint));
                 this.transformShape(transform);
                 this.updateHandles();
                 this.handleStartX = point.x;
@@ -568,6 +658,7 @@ class BaseShape {
             this._handleDragRaf = null;
         }
         this._handlePendingPoint = null;
+        this._resizeFixedCorner = null;
         this.board.pointerLocked = false;
         this.dragEnd();
     }

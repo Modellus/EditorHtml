@@ -153,7 +153,7 @@ class TopToolbar {
                     location: "center",
                     widget: "dxButton",
                     options: {
-                        icon: "fa-light fa-quotes",
+                        icon: "fa-light fa-input-text",
                         elementAttr: {
                             id: "text-button",
                             "data-fa-transform": "shrink-8 up-6"

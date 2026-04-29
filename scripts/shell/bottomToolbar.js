@@ -198,7 +198,7 @@ class BottomToolbar {
                 {
                     widget: "dxButton",
                     options: {
-                        icon: "fa-solid fa-grid",
+                        icon: this.shell.properties.snapToGrid ? "fa-solid fa-grid" : "fa-light fa-grid",
                         elementAttr: {
                             id: "snap-grid-button"
                         },

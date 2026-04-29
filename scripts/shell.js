@@ -144,6 +144,8 @@ class Shell  {
             this.applyEducationLevel();
         if (name === "gridSize" || name === "snapToGrid")
             this.applyGrid();
+        if (name === "snapToGrid")
+            this.bottomToolbar?.updateSnapToGridButton();
         if (name === "name")
             this.topToolbar?.updateModelName();
         if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit")
