@@ -72,7 +72,14 @@ class ChartControl {
         this.gridLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
         this.seriesLayer = this.createSvgElement("g");
         this.seriesLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
+        this.shapeClipId = `chart-shape-clip-${crypto.randomUUID()}`;
+        const shapeClipPath = this.createSvgElement("clipPath");
+        shapeClipPath.setAttribute("id", this.shapeClipId);
+        this.shapeClipRect = this.createSvgElement("rect");
+        shapeClipPath.appendChild(this.shapeClipRect);
+        this.rootElement.appendChild(shapeClipPath);
         this.axisLayer = this.createSvgElement("g");
+        this.axisLayer.setAttribute("clip-path", `url(#${this.shapeClipId})`);
         this.focusLayer = this.createSvgElement("g");
         this.focusLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
         this.zoomLayer = this.createSvgElement("g");
@@ -681,6 +688,10 @@ class ChartControl {
         this.plotClipRect.setAttribute("y", `${layout.plotTop}`);
         this.plotClipRect.setAttribute("width", `${layout.plotWidth}`);
         this.plotClipRect.setAttribute("height", `${layout.plotHeight}`);
+        this.shapeClipRect.setAttribute("x", "0");
+        this.shapeClipRect.setAttribute("y", "0");
+        this.shapeClipRect.setAttribute("width", `${width}`);
+        this.shapeClipRect.setAttribute("height", `${height}`);
         const scales = this.getScales(layout, domain);
         this.renderGrid(layout, scales.xScale, scales.yScale, xTicks, yTicks, xMinorTicks, yMinorTicks);
         this.renderAxes(layout, scales.xScale, scales.yScale, xTicks, yTicks, xMinorTicks, yMinorTicks);
