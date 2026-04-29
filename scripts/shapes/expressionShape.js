@@ -250,14 +250,30 @@ class ExpressionShape extends BaseShape {
         this.mathfield.executeCommand("moveToSuperscript");
     }
 
-    onInput() {
+    onInput(inputEvent) {
         if (this._deadKeyComposition) {
             this._deadKeyComposition = false;
             this.fixDeadKeySuperscript();
         }
         this.deferFixContentOutsideDisplaylines();
-        this.applyExpressionFunctionShortcuts();
+        const shortcutApplied = this.applyExpressionFunctionShortcuts();
+        if (!shortcutApplied && this.shouldDeferRelationalShortcut(inputEvent))
+            this.deferRelationalShortcutHandling();
         this.syncExpression();
+    }
+
+    shouldDeferRelationalShortcut(inputEvent) {
+        const inputText = typeof inputEvent?.data === "string" ? inputEvent.data : "";
+        return inputText.length > 0 && /[=<>]/.test(inputText);
+    }
+
+    deferRelationalShortcutHandling() {
+        cancelAnimationFrame(this._relationalShortcutFrame);
+        this._relationalShortcutFrame = requestAnimationFrame(() => {
+            this._relationalShortcutFrame = null;
+            if (this.applyExpressionFunctionShortcuts())
+                this.syncExpression();
+        });
     }
 
     deferFixContentOutsideDisplaylines() {
@@ -294,22 +310,23 @@ class ExpressionShape extends BaseShape {
 
     applyExpressionFunctionShortcuts() {
         if (this.hasSelection())
-            return;
+            return false;
         const caretPosition = this.getCaretPosition();
         const groupStart = this.getCurrentGroupStartPosition();
         const typedLength = caretPosition - groupStart;
         if (typedLength < 2)
-            return;
+            return false;
         if (this.applyRelationalShortcuts(caretPosition, groupStart))
-            return;
+            return true;
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];
             if (functionShortcut.shortcutText.length > typedLength)
                 continue;
             if (this.applyFunctionShortcut(functionShortcut.shortcutText, functionShortcut.functionLatex, caretPosition, groupStart))
-                return;
+                return true;
         }
+        return false;
     }
 
     applyRelationalShortcuts(caretPosition, groupStart) {
@@ -332,10 +349,8 @@ class ExpressionShape extends BaseShape {
     getRelationalShortcuts() {
         return [
             { shortcutText: ">=", functionLatex: "\\geq" },
-            { shortcutText: "=>", functionLatex: "\\geq" },
             { shortcutText: "<=", functionLatex: "\\leq" },
-            { shortcutText: "=<", functionLatex: "\\leq" },
-            { shortcutText: "<>", functionLatex: "\\neq" }
+            { shortcutText: "<>", functionLatex: "\\ne" }
         ];
     }
 
@@ -612,11 +627,21 @@ class ExpressionShape extends BaseShape {
     }
 
     normalizeExpression(expression) {
-        return this.normalizeDerivativeFractions(expression);
+        const derivativeNormalizedExpression = this.normalizeDerivativeFractions(expression);
+        return this.normalizeRelationalAliases(derivativeNormalizedExpression);
     }
 
     normalizeDerivativeFractions(expression) {
         return expression.replace(/\\frac\{d([^{}]+)\}\{d([^{}]+)\}/g, (_match, numeratorVariable, denominatorVariable) => `\\frac{\\mathrm{d}${numeratorVariable}}{\\mathrm{d}${denominatorVariable}}`);
+    }
+
+    normalizeRelationalAliases(expression) {
+        return expression
+            .replaceAll(">=", "\\ge ")
+            .replaceAll("=>", "\\ge ")
+            .replaceAll("<=", "\\le ")
+            .replaceAll("=<", "\\le ")
+            .replaceAll("<>", "\\ne ");
     }
 
     applyNormalizedExpressionIfNeeded() {
