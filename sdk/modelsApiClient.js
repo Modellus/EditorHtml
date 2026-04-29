@@ -74,7 +74,15 @@ export class ModelsApiClient {
     const response = await fetch(`${this.apiBaseUrl}/models/public`, { headers });
     if (!response.ok) throw new Error(`API error ${response.status}`);
     const data = await response.json();
-    return Array.isArray(data) ? data : [];
+    if (Array.isArray(data))
+      return data;
+    if (Array.isArray(data?.items))
+      return data.items;
+    if (Array.isArray(data?.models))
+      return data.models;
+    if (Array.isArray(data?.data))
+      return data.data;
+    return [];
   }
 
   async fetchAllModels() {

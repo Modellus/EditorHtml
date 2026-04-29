@@ -68,19 +68,21 @@ class ModelsApp {
       user: this.userSdk.readUser(),
       selectedTreeNodeId: treeNodeIds.myPersonal
     };
+    this.personalModels = [];
+    this.favoriteModels = [];
+    this.libraryModels = [];
+    this.publicModels = [];
+    this.educationLookupOptions = [];
+    this.scienceLookupOptions = [];
+    this.educationLookupNameById = new Map();
+    this.scienceLookupNameById = new Map();
+    this.educationLookupColorById = new Map();
+    this.scienceLookupColorById = new Map();
+    this.educationLookupIconById = new Map();
+    this.scienceLookupIconById = new Map();
+    this.normalizeAuthenticationState();
     this.apiClient = new ModelsApiClient(apiBase, () => this.state.session, () => this.userSdk.getUserId(this.state.session));
-    if (!this.userSdk.isSessionValid(this.state.session)) {
-      this.userSdk.refreshSession(apiBase).then(refreshed => {
-        if (refreshed) {
-          window.location.reload();
-          return;
-        }
-        this.userSdk.logout();
-      });
-      return;
-    }
-    if (!this.userSdk.ensureAuthenticated(this.state))
-      return;
+    this.state.selectedTreeNodeId = this.getDefaultTreeNodeId();
     this.translations = new MarketplaceTranslations(this.state.user?.preferredLanguage);
     if (this.translations.language !== "en-US" && window.DevExpress?.localization) {
       DevExpress.localization.loadMessages(MarketplaceTranslations.buildDevExtremeMessages());
@@ -97,18 +99,6 @@ class ModelsApp {
     this.templatePickerPopupInstance = null;
     this.usersGridInstance = null;
     this.userFeaturesPopupInstance = null;
-    this.personalModels = [];
-    this.favoriteModels = [];
-    this.libraryModels = [];
-    this.publicModels = [];
-    this.educationLookupOptions = [];
-    this.scienceLookupOptions = [];
-    this.educationLookupNameById = new Map();
-    this.scienceLookupNameById = new Map();
-    this.educationLookupColorById = new Map();
-    this.scienceLookupColorById = new Map();
-    this.educationLookupIconById = new Map();
-    this.scienceLookupIconById = new Map();
     this.favoriteModelIdSet = new Set();
     this.pickedModelIdSet = new Set();
     this.unreadNotificationCount = 0;
@@ -119,10 +109,51 @@ class ModelsApp {
     this.initDrawer();
     this.initDeletePopup();
     this.userSdk.refreshState(this.state);
-    this.userSdk.startSessionRefresh(apiBase);
-    this.loadModels().then(() => this.checkProfileComplete());
-    this.loadUnreadNotificationCount();
+    this.normalizeAuthenticationState();
+    if (this.isAuthenticated())
+      this.userSdk.startSessionRefresh(apiBase);
+    this.loadModels().then(() => {
+      if (this.isAuthenticated())
+        this.checkProfileComplete();
+    });
+    if (this.isAuthenticated())
+      this.loadUnreadNotificationCount();
   }
+  isAuthenticated() {
+    return this.userSdk.isSessionValid(this.state.session);
+  }
+
+  normalizeAuthenticationState() {
+    if (this.userSdk.isSessionValid(this.state.session))
+      return;
+    this.userSdk.clearToken();
+    this.userSdk.clearRefreshToken();
+    this.userSdk.clearSession();
+    this.userSdk.clearUser();
+    this.state.session = null;
+    this.state.user = null;
+  }
+
+  getDefaultTreeNodeId() {
+    if (this.isAuthenticated())
+      return treeNodeIds.myPersonal;
+    const educationItems = this.buildGroupedPublicItems("education");
+    if (educationItems.length)
+      return educationItems[0].id;
+    const scienceItems = this.buildGroupedPublicItems("science");
+    if (scienceItems.length)
+      return scienceItems[0].id;
+    return treeNodeIds.marketplace;
+  }
+
+  isNonSelectableTreeNodeId(nodeId) {
+    return nodeId === treeNodeIds.myModels
+      || nodeId === treeNodeIds.marketplace
+      || nodeId === treeNodeIds.marketplaceEducation
+      || nodeId === treeNodeIds.marketplaceSciences
+      || nodeId === treeNodeIds.maintenance;
+  }
+
   initDeletePopup() {
     if (this.deletePopupInstance || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxPopup) return;
     let popupHost = document.getElementById("delete-popup");
@@ -143,6 +174,7 @@ class ModelsApp {
   }
   initNavToolbar() {
     if (!this.elements.navToolbar || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxToolbar) return;
+    const isAuthenticated = this.isAuthenticated();
     this.navToolbarInstance = new DevExpress.ui.dxToolbar(this.elements.navToolbar, {
       onContentReady: event => $(event.element).find('[title="Menu"]').removeAttr("title"),
       items: [
@@ -163,6 +195,7 @@ class ModelsApp {
         {
           location: "after",
           widget: "dxButton",
+          visible: isAuthenticated,
           options: {
             elementAttr: { id: "nav-new-model", title: this.translations.get("Create model") },
             stylingMode: "text",
@@ -173,6 +206,7 @@ class ModelsApp {
         {
           location: "after",
           widget: "dxButton",
+          visible: isAuthenticated,
           options: {
             elementAttr: { id: "nav-notifications", title: "Notifications" },
             stylingMode: "text",
@@ -186,6 +220,7 @@ class ModelsApp {
         },
         {
           location: "after",
+          visible: isAuthenticated,
           widget: "dxDropDownButton",
           options: {
             stylingMode: "text",
@@ -213,6 +248,19 @@ class ModelsApp {
               host.innerHTML = `<img class="user-menu-avatar" alt="User avatar">`;
             }
           }
+        },
+        {
+          location: "after",
+          visible: !isAuthenticated,
+          widget: "dxButton",
+          options: {
+            elementAttr: { id: "nav-login", title: this.translations.get("Login") },
+            stylingMode: "contained",
+            type: "default",
+            text: this.translations.get("Login"),
+            icon: "fa-light fa-arrow-right-to-bracket",
+            onClick: () => this.userSdk.redirectToLogin()
+          }
         }
       ]
     });
@@ -220,6 +268,7 @@ class ModelsApp {
   cacheNavElements() {
     this.elements.navNewModel = document.getElementById("nav-new-model");
     this.elements.userMenu = document.getElementById("user-menu");
+    this.elements.navLogin = document.getElementById("nav-login");
     this.userSdk.applyUserMenu(this.elements.userMenu, this.state.session);
   }
 
@@ -1225,20 +1274,21 @@ class ModelsApp {
   }
 
   async loadModels(selectedTreeNodeId = this.state.selectedTreeNodeId) {
-    if (!this.userSdk.ensureAuthenticated(this.state))
-      return;
     this.setStatus(this.translations.get("Loading models…"));
     try {
       this.userSdk.refreshState(this.state);
-      this.state.selectedTreeNodeId = selectedTreeNodeId || treeNodeIds.myPersonal;
+      this.normalizeAuthenticationState();
+      this.state.selectedTreeNodeId = selectedTreeNodeId || this.getDefaultTreeNodeId();
       await this.userSdk.loadFeatureFlags(apiBase, this.state.session);
       await this.loadDataSources();
+      if (!selectedTreeNodeId || this.isNonSelectableTreeNodeId(this.state.selectedTreeNodeId))
+        this.state.selectedTreeNodeId = this.getDefaultTreeNodeId();
       this.renderTree();
       this.ensureValidSelectedTreeNodeId();
       this.renderCurrentTreeNode();
       this.refreshTreeSelection();
     } catch (error) {
-      if (error?.message?.includes("401")) {
+      if (error?.message?.includes("401") && this.isAuthenticated()) {
         this.userSdk.logout();
         return;
       }
@@ -1249,14 +1299,22 @@ class ModelsApp {
   }
 
   async loadDataSources() {
+    const isAuthenticated = this.isAuthenticated();
     const requests = [
-      this.apiClient.fetchPersonalModels(),
-      this.apiClient.fetchFavoriteModels(),
+      isAuthenticated ? this.apiClient.fetchPersonalModels() : Promise.resolve([]),
+      isAuthenticated ? this.apiClient.fetchFavoriteModels() : Promise.resolve([]),
       this.apiClient.fetchPublicModels(),
       this.apiClient.fetchEducationLevelLookups(),
       this.apiClient.fetchScienceLookups()
     ];
-    const [personalModels, favoriteModels, publicModels, educationLookupOptions, scienceLookupOptions] = await Promise.all(requests);
+    const [personalModelsResult, favoriteModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult] = await Promise.allSettled(requests);
+    const personalModels = personalModelsResult.status === "fulfilled" ? personalModelsResult.value : [];
+    const favoriteModels = favoriteModelsResult.status === "fulfilled" ? favoriteModelsResult.value : [];
+    if (publicModelsResult.status !== "fulfilled")
+      throw publicModelsResult.reason;
+    const publicModels = publicModelsResult.value;
+    const educationLookupOptions = educationLookupOptionsResult.status === "fulfilled" ? educationLookupOptionsResult.value : [];
+    const scienceLookupOptions = scienceLookupOptionsResult.status === "fulfilled" ? scienceLookupOptionsResult.value : [];
     this.educationLookupOptions = educationLookupOptions;
     this.scienceLookupOptions = scienceLookupOptions;
     this.educationLookupNameById = this.createLookupNameByIdMap(educationLookupOptions);
@@ -1268,6 +1326,11 @@ class ModelsApp {
     this.personalModels = this.applyModelLookupLabels(personalModels);
     this.favoriteModels = this.applyModelLookupLabels(favoriteModels);
     this.publicModels = this.applyModelLookupLabels(publicModels);
+    if (!isAuthenticated) {
+      this.libraryModels = [];
+      this.rebuildInteractionModelIdSets();
+      return;
+    }
     try {
       const libraryModels = await this.apiClient.fetchLibraryModels();
       this.libraryModels = this.applyModelLookupLabels(libraryModels);
@@ -1328,6 +1391,12 @@ class ModelsApp {
       return this.favoriteModels;
     if (nodeId === treeNodeIds.myLibrary)
       return this.libraryModels;
+    if (nodeId === treeNodeIds.marketplace)
+      return this.publicModels;
+    if (nodeId === treeNodeIds.marketplaceEducation)
+      return this.publicModels;
+    if (nodeId === treeNodeIds.marketplaceSciences)
+      return this.publicModels;
     if (typeof nodeId === "string" && nodeId.startsWith("market-education-item:")) {
       const educationKey = nodeId.substring("market-education-item:".length);
       if (educationKey.startsWith("id:")) {
@@ -1381,8 +1450,9 @@ class ModelsApp {
 
   buildGroupedPublicItems(type) {
     const grouped = new Map();
-    for (let index = 0; index < this.publicModels.length; index++) {
-      const model = this.publicModels[index];
+    const publicModels = Array.isArray(this.publicModels) ? this.publicModels : [];
+    for (let index = 0; index < publicModels.length; index++) {
+      const model = publicModels[index];
       const lookupId = type === "education" ? model.education_level_id : model.science_id;
       const label = type === "education" ? this.getEducationLabel(model) : this.getScienceLabel(model);
       const groupKey = lookupId ? `id:${lookupId}` : `label:${label}`;
@@ -1420,8 +1490,9 @@ class ModelsApp {
   getTreeData() {
     const educationItems = this.buildGroupedPublicItems("education");
     const scienceItems = this.buildGroupedPublicItems("science");
-    const treeData = [
-      {
+    const treeData = [];
+    if (this.isAuthenticated())
+      treeData.push({
         id: treeNodeIds.myModels,
         text: this.translations.get("My Models"),
         iconClass: "fa-light fa-folder-user",
@@ -1451,8 +1522,8 @@ class ModelsApp {
             iconColor: "#dc2626"
           }
         ]
-      },
-      {
+      });
+    treeData.push({
         id: treeNodeIds.marketplace,
         text: this.translations.get("Marketplace"),
         iconClass: "fa-light fa-store",
@@ -1480,7 +1551,7 @@ class ModelsApp {
           }
         ]
       }
-    ];
+    );
     if (this.canAccessMaintenance())
       treeData.push({
         id: treeNodeIds.maintenance,
@@ -1563,7 +1634,7 @@ class ModelsApp {
     const nodeIds = new Set();
     this.collectTreeNodeIds(treeData, nodeIds);
     if (!nodeIds.has(this.state.selectedTreeNodeId))
-      this.state.selectedTreeNodeId = treeNodeIds.myPersonal;
+      this.state.selectedTreeNodeId = this.getDefaultTreeNodeId();
   }
 
   selectModelCard(cardTile) {
