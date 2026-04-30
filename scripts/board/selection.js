@@ -63,6 +63,8 @@ class Selection {
     }
 
     onPointerDown(event) {
+        if (event.defaultPrevented)
+            return;
         this.pointerDown = {
             x: event.clientX,
             y: event.clientY
@@ -70,6 +72,8 @@ class Selection {
     }
 
     onPointerUp(event) {
+        if (event.defaultPrevented)
+            return;
         if (this.board.pointerLocked)
             return;
         if (!this.pointerDown)
@@ -104,6 +108,8 @@ class Selection {
     }
 
     onDoubleClick(event) {
+        if (event.defaultPrevented)
+            return;
         if (!this.enabled)
             return;
         const targetShape = this.resolveSelectionTarget(event);

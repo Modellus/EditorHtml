@@ -445,15 +445,16 @@ class TableShape extends BaseShape {
         this.normalizeColumns();
         this._activeColumns = this.getSelectedColumns();
         this._appliedColumnsKey = this.getColumnsStateKey(this._activeColumns);
+        this._appliedControlColumnsKey = this.getControlColumnsStateKey(this.buildControlColumns(this._activeColumns));
         this._appliedStyleKey = "";
         const element = this.board.createSvgElement("g");
         this.table = new TableControl(element, this.getTableControlOptions(this._activeColumns));
         return element;
     }
 
-    getTableControlOptions(columns = this._activeColumns) {
+    getTableControlOptions(columns = this._activeColumns, controlColumns = this.buildControlColumns(columns)) {
         return {
-            columns: this.buildControlColumns(columns),
+            columns: controlColumns,
             foregroundColor: this.properties.foregroundColor,
             backgroundColor: this.properties.backgroundColor,
             headerBackgroundColor: this.deriveHeaderColor(this.properties.backgroundColor),
@@ -483,25 +484,50 @@ class TableShape extends BaseShape {
         return `${this.properties.foregroundColor}|${this.properties.backgroundColor}|${this.getBorderColor()}|${precision}`;
     }
 
-    buildControlColumns(columns = this._activeColumns) {
-        const precision = this.board.calculator.getPrecision();
-        return columns.map(column => ({
-            key: column.key,
-            title: column.term,
+    getControlColumnsStateKey(controlColumns = this.buildControlColumns(this._activeColumns ?? this.getSelectedColumns())) {
+        return JSON.stringify(controlColumns.map(column => ({
             term: column.term,
-            caseNumber: column.case,
-            showCase: TermControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value)),
-            editable: this.canEditTableColumn(column.term),
+            caseNumber: column.caseNumber,
+            editable: column.editable === true,
+            isPreloadedTerm: column.isPreloadedTerm === true,
             width: Number.isFinite(column.width) ? column.width : null,
-            precision: precision,
-            barColor: this.normalizeColumnColor(column.color),
-            sourceColumn: column
-        }));
+            precision: Number.isFinite(column.precision) ? column.precision : null,
+            barColor: this.normalizeColumnColor(column.barColor)
+        })));
     }
 
-    canEditTableColumn(term) {
+    buildControlColumns(columns = this._activeColumns) {
+        const precision = this.board.calculator.getPrecision();
+        const hasPreloadedData = this.board.calculator.hasPreloadedData();
+        const system = this.board.calculator.system;
+        const controlColumns = columns.map(column => {
+            const isPreloadedTerm = this.isPreloadedTableColumnTerm(column.term, hasPreloadedData, system);
+            return {
+                key: column.key,
+                title: column.term,
+                term: column.term,
+                caseNumber: column.case,
+                showCase: TermControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value)),
+                editable: this.canEditTableColumn(column.term, isPreloadedTerm),
+                width: Number.isFinite(column.width) ? column.width : null,
+                precision: precision,
+                barColor: this.normalizeColumnColor(column.color),
+                isPreloadedTerm: isPreloadedTerm,
+                sourceColumn: column
+            };
+        });
+        return controlColumns;
+    }
+
+    isPreloadedTableColumnTerm(term, hasPreloadedData = this.board.calculator.hasPreloadedData(), system = this.board.calculator.system) {
+        if (hasPreloadedData && this.board.calculator.getPreloadedColumnIndex(term) >= 0)
+            return true;
+        return system.getTerm(term)?.type === Modellus.TermType.PRELOADED;
+    }
+
+    canEditTableColumn(term, isPreloadedTerm = this.isPreloadedTableColumnTerm(term)) {
         if (this.board.calculator.hasPreloadedData())
-            return this.board.calculator.getPreloadedColumnIndex(term) >= 0;
+            return isPreloadedTerm;
         return this._canEditTerm(term);
     }
 
@@ -617,13 +643,16 @@ class TableShape extends BaseShape {
         if (!this.table)
             return;
         const columns = this.getSelectedColumns();
+        const controlColumns = this.buildControlColumns(columns);
         const nextKey = this.getColumnsStateKey(columns);
+        const nextControlColumnsKey = this.getControlColumnsStateKey(controlColumns);
         const nextStyleKey = this.getTableStyleKey();
-        if (this._appliedColumnsKey === nextKey && this._appliedStyleKey === nextStyleKey)
+        if (this._appliedColumnsKey === nextKey && this._appliedControlColumnsKey === nextControlColumnsKey && this._appliedStyleKey === nextStyleKey)
             return;
         this._activeColumns = columns;
-        this.table.setOptions(this.getTableControlOptions(columns));
+        this.table.setOptions(this.getTableControlOptions(columns, controlColumns));
         this._appliedColumnsKey = nextKey;
+        this._appliedControlColumnsKey = nextControlColumnsKey;
         this._appliedStyleKey = nextStyleKey;
         this.refreshTableRows();
     }
@@ -758,12 +787,16 @@ class TableShape extends BaseShape {
         return calculator.isTerm(term) && calculator.isEditable(term);
     }
 
-    enterEditMode() {
-        if (this.table && typeof this.table.focus === "function") {
-            this.table.focus();
-            return true;
+    enterEditMode(event) {
+        if (!this.table)
+            return super.enterEditMode();
+        this.table.focus();
+        const cell = this.table.getClickedCell(event);
+        if (cell && this.table.canEditCell(cell.rowIndex, cell.columnIndex)) {
+            this.table.startEditing(cell.rowIndex, cell.columnIndex, null);
+            this.table.render();
         }
-        return super.enterEditMode();
+        return true;
     }
 
     toHtmlTable() {

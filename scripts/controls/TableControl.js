@@ -9,6 +9,7 @@ class TableControl {
         this.scrollLeft = 0;
         this.focusedRowKey = null;
         this.selectedCell = null;
+        this.selectedCellRange = null;
         this.editingCell = null;
         this.cellBoxes = [];
         this.verticalScrollbarThumbRect = null;
@@ -56,6 +57,7 @@ class TableControl {
 
     initializeRoot() {
         this.rootElement = this.createSvgElement("g");
+        this.rootElement.setAttribute("class", "table-control-root");
         this.rootElement.setAttribute("tabindex", "0");
         this.defsElement = this.createSvgElement("defs");
         this.rowsClipPath = this.createSvgElement("clipPath");
@@ -92,6 +94,8 @@ class TableControl {
         this.onPointerMoveHandler = event => this.onPointerMove(event);
         this.onPointerLeaveHandler = _ => this.onPointerLeave();
         this.onMouseDownHandler = event => this.onMouseDown(event);
+        this.onMouseUpHandler = event => this.onMouseUp(event);
+        this.onDoubleClickHandler = event => this.onDoubleClick(event);
         this.onKeyDownHandler = event => this.onKeyDown(event);
         this.onWindowPointerMoveHandler = event => this.onWindowPointerMove(event);
         this.onWindowPointerUpHandler = _ => this.onWindowPointerUp();
@@ -101,6 +105,8 @@ class TableControl {
         this.rootElement.addEventListener("pointermove", this.onPointerMoveHandler);
         this.rootElement.addEventListener("pointerleave", this.onPointerLeaveHandler);
         this.rootElement.addEventListener("mousedown", this.onMouseDownHandler);
+        this.rootElement.addEventListener("mouseup", this.onMouseUpHandler);
+        this.rootElement.addEventListener("dblclick", this.onDoubleClickHandler);
         this.rootElement.addEventListener("keydown", this.onKeyDownHandler);
     }
 
@@ -111,6 +117,8 @@ class TableControl {
         this.rootElement.removeEventListener("pointermove", this.onPointerMoveHandler);
         this.rootElement.removeEventListener("pointerleave", this.onPointerLeaveHandler);
         this.rootElement.removeEventListener("mousedown", this.onMouseDownHandler);
+        this.rootElement.removeEventListener("mouseup", this.onMouseUpHandler);
+        this.rootElement.removeEventListener("dblclick", this.onDoubleClickHandler);
         this.rootElement.removeEventListener("keydown", this.onKeyDownHandler);
         window.removeEventListener("pointermove", this.onWindowPointerMoveHandler);
         window.removeEventListener("pointerup", this.onWindowPointerUpHandler);
@@ -258,6 +266,7 @@ class TableControl {
             width: Number.isFinite(column?.width) ? Math.max(1, Number(column.width)) : null,
             precision: Number.isFinite(column?.precision) ? column.precision : null,
             barColor: this.normalizeBarColor(column?.barColor),
+            isPreloadedTerm: column?.isPreloadedTerm === true,
             sourceColumn: column?.sourceColumn ?? null
         }));
     }
@@ -299,6 +308,10 @@ class TableControl {
         this.ensureScrollBounds();
         if (this.selectedCell && this.selectedCell.rowIndex >= this.rows.length)
             this.selectedCell = null;
+        if (this.selectedCellRange)
+            this.selectedCellRange = this.getNormalizedCellRange(this.selectedCellRange.startRowIndex, this.selectedCellRange.startColumnIndex, this.selectedCellRange.endRowIndex, this.selectedCellRange.endColumnIndex);
+        if (this.selectedCellRange && !this.isCellRangeWithinBounds(this.selectedCellRange))
+            this.selectedCellRange = null;
         if (this.editingCell && this.editingCell.rowIndex >= this.rows.length)
             this.editingCell = null;
         this.ensureFocusedRowVisible();
@@ -633,7 +646,7 @@ class TableControl {
         rowRect.setAttribute("y", `${y}`);
         rowRect.setAttribute("width", `${layout.bodyWidth}`);
         rowRect.setAttribute("height", `${rowHeight}`);
-        if (this.selectedCell && this.selectedCell.rowIndex === rowIndex)
+        if (this.isRowInSelection(rowIndex))
             rowRect.setAttribute("fill", this.options.selectionColor);
         else if (this.focusedRowKey != null && row.key === this.focusedRowKey)
             rowRect.setAttribute("fill", this.options.selectionColor);
@@ -642,7 +655,8 @@ class TableControl {
         this.rowsLayer.appendChild(rowRect);
         for (let columnIndex = 0; columnIndex < columns.length; columnIndex++) {
             const cell = geometry[columnIndex];
-            const selected = this.selectedCell && this.selectedCell.rowIndex === rowIndex && this.selectedCell.columnIndex === columnIndex;
+            const selected = this.isCellSelected(rowIndex, columnIndex);
+            const isEditingCell = this.editingCell && this.editingCell.rowIndex === rowIndex && this.editingCell.columnIndex === columnIndex;
             if (selected) {
                 const selectedRect = this.createSvgElement("rect");
                 selectedRect.setAttribute("x", `${cell.x}`);
@@ -655,7 +669,8 @@ class TableControl {
                 selectedRect.setAttribute("stroke-width", "1");
                 this.rowsLayer.appendChild(selectedRect);
             }
-            this.renderCellBar(cell, y, rowHeight, row, columns[columnIndex], columnValueRanges?.[columnIndex]);
+            if (!isEditingCell)
+                this.renderCellBar(cell, y, rowHeight, row, columns[columnIndex], columnValueRanges?.[columnIndex]);
             if (columnIndex < columns.length - 1) {
                 const line = this.createSvgElement("line");
                 line.setAttribute("x1", `${cell.x + cell.width}`);
@@ -666,8 +681,10 @@ class TableControl {
                 line.setAttribute("stroke-width", "1");
                 this.rowsLayer.appendChild(line);
             }
-            const textValue = this.getCellText(row, columns[columnIndex]);
-            this.renderCellText(cell, y, rowHeight, textValue, columnIndex);
+            if (!isEditingCell) {
+                const textValue = this.getCellText(row, columns[columnIndex]);
+                this.renderCellText(cell, y, rowHeight, textValue, columnIndex);
+            }
             this.cellBoxes.push({
                 x: cell.x,
                 y: y,
@@ -994,7 +1011,10 @@ class TableControl {
         if (this.isPointInVerticalScrollbar(point) || this.isPointInHorizontalScrollbar(point)) {
             event.preventDefault();
             this.startScrollbarDrag(point);
+            return;
         }
+        if (event.button === 0)
+            this.applyCellSelection(event, point);
     }
 
     onPointerMove(event) {
@@ -1031,8 +1051,36 @@ class TableControl {
         if (this.isPointInHeader(point))
             return;
         const cell = this.getCellFromPoint(point);
+        if (!cell)
+            return;
+        const isSameCell = this.selectedCell && this.selectedCell.rowIndex === cell.rowIndex && this.selectedCell.columnIndex === cell.columnIndex;
+        if (this.editingCell && (!isSameCell || event.detail >= 2))
+            this.commitEditing();
+        if (event.detail >= 2 && this.canEditCell(cell.rowIndex, cell.columnIndex))
+            this.startEditing(cell.rowIndex, cell.columnIndex, null);
+        this.render();
+    }
+
+    onMouseUp(event) {
+    }
+
+    onDoubleClick(event) {
+    }
+
+    getClickedCell(event) {
+        if (!event)
+            return null;
+        const point = this.convertClientPoint(event);
+        if (!point)
+            return null;
+        return this.getCellFromPoint(point);
+    }
+
+    applyCellSelection(event, point) {
+        const cell = this.getCellFromPoint(point);
         if (!cell) {
             this.selectedCell = null;
+            this.selectedCellRange = null;
             this.editingCell = null;
             this.render();
             return;
@@ -1040,9 +1088,10 @@ class TableControl {
         const isSameCell = this.selectedCell && this.selectedCell.rowIndex === cell.rowIndex && this.selectedCell.columnIndex === cell.columnIndex;
         if (this.editingCell && (!isSameCell || event.detail >= 2))
             this.commitEditing();
-        this.selectCell(cell.rowIndex, cell.columnIndex);
-        if (event.detail >= 2 && this.canEditCell(cell.rowIndex, cell.columnIndex))
-            this.startEditing(cell.rowIndex, cell.columnIndex, null);
+        if (event.shiftKey && this.selectedCell && this.canCreatePreloadedRangeSelection(this.selectedCell, cell))
+            this.selectCellRange(this.selectedCell.rowIndex, this.selectedCell.columnIndex, cell.rowIndex, cell.columnIndex);
+        else
+            this.selectCell(cell.rowIndex, cell.columnIndex);
         this.render();
     }
 
@@ -1309,8 +1358,67 @@ class TableControl {
 
     selectCell(rowIndex, columnIndex) {
         this.selectedCell = { rowIndex: rowIndex, columnIndex: columnIndex };
+        this.selectedCellRange = null;
         this.ensureRowVisible(rowIndex);
         this.ensureColumnVisible(columnIndex);
+    }
+
+    selectCellRange(startRowIndex, startColumnIndex, endRowIndex, endColumnIndex) {
+        this.selectedCellRange = this.getNormalizedCellRange(startRowIndex, startColumnIndex, endRowIndex, endColumnIndex);
+        this.selectedCell = { rowIndex: endRowIndex, columnIndex: endColumnIndex };
+        this.ensureRowVisible(endRowIndex);
+        this.ensureColumnVisible(endColumnIndex);
+    }
+
+    canCreatePreloadedRangeSelection(anchorCell, targetCell) {
+        if (!anchorCell || !targetCell)
+            return false;
+        if (!this.isPreloadedColumn(anchorCell.columnIndex))
+            return false;
+        if (!this.isPreloadedColumn(targetCell.columnIndex))
+            return false;
+        return true;
+    }
+
+    isPreloadedColumn(columnIndex) {
+        const column = this.getColumnByIndex(columnIndex);
+        return column?.isPreloadedTerm === true;
+    }
+
+    getNormalizedCellRange(startRowIndex, startColumnIndex, endRowIndex, endColumnIndex) {
+        return {
+            startRowIndex: Math.min(startRowIndex, endRowIndex),
+            endRowIndex: Math.max(startRowIndex, endRowIndex),
+            startColumnIndex: Math.min(startColumnIndex, endColumnIndex),
+            endColumnIndex: Math.max(startColumnIndex, endColumnIndex)
+        };
+    }
+
+    isCellRangeWithinBounds(cellRange) {
+        if (!cellRange)
+            return false;
+        if (cellRange.startRowIndex < 0 || cellRange.startColumnIndex < 0)
+            return false;
+        if (cellRange.endRowIndex >= this.rows.length)
+            return false;
+        if (cellRange.endColumnIndex >= this.options.columns.length)
+            return false;
+        return true;
+    }
+
+    isRowInSelection(rowIndex) {
+        if (this.selectedCellRange)
+            return rowIndex >= this.selectedCellRange.startRowIndex && rowIndex <= this.selectedCellRange.endRowIndex;
+        return this.selectedCell && this.selectedCell.rowIndex === rowIndex;
+    }
+
+    isCellSelected(rowIndex, columnIndex) {
+        if (this.selectedCellRange)
+            return rowIndex >= this.selectedCellRange.startRowIndex
+                && rowIndex <= this.selectedCellRange.endRowIndex
+                && columnIndex >= this.selectedCellRange.startColumnIndex
+                && columnIndex <= this.selectedCellRange.endColumnIndex;
+        return this.selectedCell && this.selectedCell.rowIndex === rowIndex && this.selectedCell.columnIndex === columnIndex;
     }
 
     moveSelection(rowDelta, columnDelta) {

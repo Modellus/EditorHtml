@@ -220,6 +220,14 @@ line.handle.move {
     cursor: move;
 }
 
+.table-control-root:focus {
+    outline: none;
+}
+
+.table-control-root:focus-visible {
+    outline: none;
+}
+
 .handle.splitter {
     rx: 4px;
     ry: 4px;
