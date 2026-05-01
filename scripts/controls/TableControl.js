@@ -10,6 +10,9 @@ class TableControl {
         this.focusedRowKey = null;
         this.selectedCell = null;
         this.selectedCellRange = null;
+        this.focusedCellRange = null;
+        this.selectedFocusedRanges = [];
+        this.nextFocusedRangeColorIndex = 0;
         this.editingCell = null;
         this.cellBoxes = [];
         this.verticalScrollbarThumbRect = null;
@@ -38,6 +41,9 @@ class TableControl {
             headerBackgroundColor: "#f7f7f7",
             selectionColor: "#eaf1fb",
             selectedCellColor: "#d6e7fd",
+            focusedCellColor: "#e5eef9",
+            focusedSelectedCellColor: "#c9def8",
+            focusedRangeColors: ["#2f80ed", "#27ae60", "#f2994a", "#eb5757", "#9b51e0", "#00a3a3"],
             scrollbarTrackColor: "#efefef",
             scrollbarThumbColor: "#b8b8b8",
             termFontFamily: "Katex_Math",
@@ -51,7 +57,9 @@ class TableControl {
             minColumnWidth: 48,
             onCellValueChanged: null,
             onColumnWidthChanged: null,
-            onRowDeleteRequested: null
+            onRowDeleteRequested: null,
+            onFocusedCellsChanged: null,
+            shouldKeepFocusedCellsOnPointerDown: null
         };
     }
 
@@ -99,8 +107,10 @@ class TableControl {
         this.onKeyDownHandler = event => this.onKeyDown(event);
         this.onWindowPointerMoveHandler = event => this.onWindowPointerMove(event);
         this.onWindowPointerUpHandler = _ => this.onWindowPointerUp();
+        this.onWindowPointerDownHandler = event => this.onWindowPointerDown(event);
         this.rootElement.addEventListener("wheel", this.onWheelHandler, { passive: false });
         window.addEventListener("wheel", this.onWindowWheelHandler, { passive: false });
+        window.addEventListener("pointerdown", this.onWindowPointerDownHandler, true);
         this.rootElement.addEventListener("pointerdown", this.onPointerDownHandler);
         this.rootElement.addEventListener("pointermove", this.onPointerMoveHandler);
         this.rootElement.addEventListener("pointerleave", this.onPointerLeaveHandler);
@@ -113,6 +123,7 @@ class TableControl {
     dispose() {
         this.rootElement.removeEventListener("wheel", this.onWheelHandler);
         window.removeEventListener("wheel", this.onWindowWheelHandler);
+        window.removeEventListener("pointerdown", this.onWindowPointerDownHandler, true);
         this.rootElement.removeEventListener("pointerdown", this.onPointerDownHandler);
         this.rootElement.removeEventListener("pointermove", this.onPointerMoveHandler);
         this.rootElement.removeEventListener("pointerleave", this.onPointerLeaveHandler);
@@ -308,6 +319,13 @@ class TableControl {
         this.ensureScrollBounds();
         if (this.selectedCell && this.selectedCell.rowIndex >= this.rows.length)
             this.selectedCell = null;
+        if (this.focusedCellRange)
+            this.focusedCellRange = this.getNormalizedCellRange(this.focusedCellRange.startRowIndex, this.focusedCellRange.startColumnIndex, this.focusedCellRange.endRowIndex, this.focusedCellRange.endColumnIndex);
+        this.selectedFocusedRanges = this.selectedFocusedRanges.filter(entry => this.isCellRangeWithinBounds(entry?.range));
+        if (this.focusedCellRange && !this.isCellRangeWithinBounds(this.focusedCellRange)) {
+            this.focusedCellRange = null;
+            this.emitFocusedCellsChanged();
+        }
         if (this.selectedCellRange)
             this.selectedCellRange = this.getNormalizedCellRange(this.selectedCellRange.startRowIndex, this.selectedCellRange.startColumnIndex, this.selectedCellRange.endRowIndex, this.selectedCellRange.endColumnIndex);
         if (this.selectedCellRange && !this.isCellRangeWithinBounds(this.selectedCellRange))
@@ -528,6 +546,7 @@ class TableControl {
         this.renderBackground(layout);
         this.renderHeader(layout, columns, geometry);
         this.renderBody(layout, columns, geometry, columnValueRanges);
+        this.renderSelectedFocusedRanges(layout, geometry);
         this.renderScrollbars(layout);
         this.renderEditingValue(layout, geometry);
     }
@@ -646,7 +665,9 @@ class TableControl {
         rowRect.setAttribute("y", `${y}`);
         rowRect.setAttribute("width", `${layout.bodyWidth}`);
         rowRect.setAttribute("height", `${rowHeight}`);
-        if (this.isRowInSelection(rowIndex))
+        if (this.isRowInFocus(rowIndex))
+            rowRect.setAttribute("fill", this.options.focusedCellColor);
+        else if (this.isRowInSelection(rowIndex))
             rowRect.setAttribute("fill", this.options.selectionColor);
         else if (this.focusedRowKey != null && row.key === this.focusedRowKey)
             rowRect.setAttribute("fill", this.options.selectionColor);
@@ -656,14 +677,18 @@ class TableControl {
         for (let columnIndex = 0; columnIndex < columns.length; columnIndex++) {
             const cell = geometry[columnIndex];
             const selected = this.isCellSelected(rowIndex, columnIndex);
+            const focused = this.isCellFocused(rowIndex, columnIndex);
             const isEditingCell = this.editingCell && this.editingCell.rowIndex === rowIndex && this.editingCell.columnIndex === columnIndex;
-            if (selected) {
+            if (focused || selected) {
                 const selectedRect = this.createSvgElement("rect");
                 selectedRect.setAttribute("x", `${cell.x}`);
                 selectedRect.setAttribute("y", `${y}`);
                 selectedRect.setAttribute("width", `${cell.width}`);
                 selectedRect.setAttribute("height", `${rowHeight}`);
-                selectedRect.setAttribute("fill", this.options.selectedCellColor);
+                if (focused)
+                    selectedRect.setAttribute("fill", this.options.focusedCellColor);
+                else
+                    selectedRect.setAttribute("fill", this.options.selectedCellColor);
                 selectedRect.setAttribute("fill-opacity", "0.8");
                 selectedRect.setAttribute("stroke", this.options.borderColor);
                 selectedRect.setAttribute("stroke-width", "1");
@@ -702,6 +727,51 @@ class TableControl {
         rowLine.setAttribute("stroke", this.options.gridColor);
         rowLine.setAttribute("stroke-width", "1");
         this.rowsLayer.appendChild(rowLine);
+    }
+
+    renderSelectedFocusedRanges(layout, geometry) {
+        if (!Array.isArray(this.selectedFocusedRanges) || this.selectedFocusedRanges.length === 0)
+            return;
+        const rowHeight = Math.max(16, Number(this.options.rowHeight) || 24);
+        const visible = this.getVisibleRange(layout);
+        for (let index = 0; index < this.selectedFocusedRanges.length; index++) {
+            const selectedRangeEntry = this.selectedFocusedRanges[index];
+            const selectedRange = selectedRangeEntry?.range;
+            const selectedRangeColor = selectedRangeEntry?.color;
+            if (!selectedRange || typeof selectedRangeColor !== "string")
+                continue;
+            const visibleStartRowIndex = Math.max(selectedRange.startRowIndex, visible.first);
+            const visibleEndRowIndex = Math.min(selectedRange.endRowIndex, visible.last);
+            if (visibleStartRowIndex > visibleEndRowIndex)
+                continue;
+            const startColumnGeometry = geometry[selectedRange.startColumnIndex];
+            const endColumnGeometry = geometry[selectedRange.endColumnIndex];
+            if (!startColumnGeometry || !endColumnGeometry)
+                continue;
+            const rangeX = startColumnGeometry.x;
+            const rangeWidth = (endColumnGeometry.x + endColumnGeometry.width) - rangeX;
+            const rangeY = layout.headerHeight + (visibleStartRowIndex - visible.first) * rowHeight - visible.offset;
+            const rangeHeight = (visibleEndRowIndex - visibleStartRowIndex + 1) * rowHeight;
+            const rangeFill = this.createSvgElement("rect");
+            rangeFill.setAttribute("x", `${rangeX}`);
+            rangeFill.setAttribute("y", `${rangeY}`);
+            rangeFill.setAttribute("width", `${rangeWidth}`);
+            rangeFill.setAttribute("height", `${rangeHeight}`);
+            rangeFill.setAttribute("fill", selectedRangeColor);
+            rangeFill.setAttribute("fill-opacity", "0.12");
+            rangeFill.setAttribute("pointer-events", "none");
+            this.overlayLayer.appendChild(rangeFill);
+            const rangeBorder = this.createSvgElement("rect");
+            rangeBorder.setAttribute("x", `${rangeX}`);
+            rangeBorder.setAttribute("y", `${rangeY}`);
+            rangeBorder.setAttribute("width", `${rangeWidth}`);
+            rangeBorder.setAttribute("height", `${rangeHeight}`);
+            rangeBorder.setAttribute("fill", "none");
+            rangeBorder.setAttribute("stroke", selectedRangeColor);
+            rangeBorder.setAttribute("stroke-width", "1.5");
+            rangeBorder.setAttribute("pointer-events", "none");
+            this.overlayLayer.appendChild(rangeBorder);
+        }
     }
 
     renderCellBar(cellGeometry, y, rowHeight, row, column, range) {
@@ -975,6 +1045,22 @@ class TableControl {
         this.onWheel(event);
     }
 
+    onWindowPointerDown(event) {
+        const target = event.target;
+        if (target instanceof Node && this.rootElement.contains(target))
+            return;
+        const shouldKeepFocusedCellsOnPointerDown = this.options.shouldKeepFocusedCellsOnPointerDown;
+        if (typeof shouldKeepFocusedCellsOnPointerDown === "function") {
+            const shouldKeepFocusedCells = shouldKeepFocusedCellsOnPointerDown({ event: event, target: target }) === true;
+            if (shouldKeepFocusedCells)
+                return;
+        }
+        if (this.hasFocusedCells()) {
+            this.clearFocusedCells();
+            this.render();
+        }
+    }
+
     isPointInTable(point) {
         if (!point)
             return false;
@@ -1082,16 +1168,20 @@ class TableControl {
             this.selectedCell = null;
             this.selectedCellRange = null;
             this.editingCell = null;
+            this.clearFocusedCells();
             this.render();
             return;
         }
         const isSameCell = this.selectedCell && this.selectedCell.rowIndex === cell.rowIndex && this.selectedCell.columnIndex === cell.columnIndex;
         if (this.editingCell && (!isSameCell || event.detail >= 2))
             this.commitEditing();
-        if (event.shiftKey && this.selectedCell && this.canCreatePreloadedRangeSelection(this.selectedCell, cell))
-            this.selectCellRange(this.selectedCell.rowIndex, this.selectedCell.columnIndex, cell.rowIndex, cell.columnIndex);
-        else
+        if (event.shiftKey && this.selectedCell && this.canCreatePreloadedRangeSelection(this.selectedCell, cell)) {
+            this.focusCellRange(this.selectedCell.rowIndex, this.selectedCell.columnIndex, cell.rowIndex, cell.columnIndex);
+            this.selectedCellRange = null;
+        } else {
             this.selectCell(cell.rowIndex, cell.columnIndex);
+            this.clearFocusedCells();
+        }
         this.render();
     }
 
@@ -1363,6 +1453,14 @@ class TableControl {
         this.ensureColumnVisible(columnIndex);
     }
 
+    focusCellRange(startRowIndex, startColumnIndex, endRowIndex, endColumnIndex) {
+        this.focusedCellRange = this.getNormalizedCellRange(startRowIndex, startColumnIndex, endRowIndex, endColumnIndex);
+        this.selectedCell = { rowIndex: endRowIndex, columnIndex: endColumnIndex };
+        this.ensureRowVisible(endRowIndex);
+        this.ensureColumnVisible(endColumnIndex);
+        this.emitFocusedCellsChanged();
+    }
+
     selectCellRange(startRowIndex, startColumnIndex, endRowIndex, endColumnIndex) {
         this.selectedCellRange = this.getNormalizedCellRange(startRowIndex, startColumnIndex, endRowIndex, endColumnIndex);
         this.selectedCell = { rowIndex: endRowIndex, columnIndex: endColumnIndex };
@@ -1412,7 +1510,138 @@ class TableControl {
         return this.selectedCell && this.selectedCell.rowIndex === rowIndex;
     }
 
+    isRowInFocus(rowIndex) {
+        if (!this.focusedCellRange)
+            return false;
+        return rowIndex >= this.focusedCellRange.startRowIndex && rowIndex <= this.focusedCellRange.endRowIndex;
+    }
+
+    isCellFocused(rowIndex, columnIndex) {
+        if (!this.focusedCellRange)
+            return false;
+        return rowIndex >= this.focusedCellRange.startRowIndex
+            && rowIndex <= this.focusedCellRange.endRowIndex
+            && columnIndex >= this.focusedCellRange.startColumnIndex
+            && columnIndex <= this.focusedCellRange.endColumnIndex;
+    }
+
+    getFocusedRangeColors() {
+        if (!Array.isArray(this.options.focusedRangeColors) || this.options.focusedRangeColors.length === 0)
+            return [this.options.focusedSelectedCellColor ?? "#c9def8"];
+        return this.options.focusedRangeColors;
+    }
+
+    getNextFocusedRangeColor() {
+        const focusedRangeColors = this.getFocusedRangeColors();
+        const focusedRangeColor = focusedRangeColors[this.nextFocusedRangeColorIndex % focusedRangeColors.length];
+        this.nextFocusedRangeColorIndex = (this.nextFocusedRangeColorIndex + 1) % focusedRangeColors.length;
+        return focusedRangeColor;
+    }
+
+    doesCellRangeOverlap(firstCellRange, secondCellRange) {
+        if (!firstCellRange || !secondCellRange)
+            return false;
+        if (firstCellRange.endRowIndex < secondCellRange.startRowIndex)
+            return false;
+        if (secondCellRange.endRowIndex < firstCellRange.startRowIndex)
+            return false;
+        if (firstCellRange.endColumnIndex < secondCellRange.startColumnIndex)
+            return false;
+        if (secondCellRange.endColumnIndex < firstCellRange.startColumnIndex)
+            return false;
+        return true;
+    }
+
+    areCellRangesEqual(firstCellRange, secondCellRange) {
+        if (!firstCellRange || !secondCellRange)
+            return false;
+        return firstCellRange.startRowIndex === secondCellRange.startRowIndex
+            && firstCellRange.endRowIndex === secondCellRange.endRowIndex
+            && firstCellRange.startColumnIndex === secondCellRange.startColumnIndex
+            && firstCellRange.endColumnIndex === secondCellRange.endColumnIndex;
+    }
+
+    markFocusedCellsAsSelected() {
+        if (!this.focusedCellRange)
+            return;
+        const normalizedFocusedRange = this.getNormalizedCellRange(
+            this.focusedCellRange.startRowIndex,
+            this.focusedCellRange.startColumnIndex,
+            this.focusedCellRange.endRowIndex,
+            this.focusedCellRange.endColumnIndex
+        );
+        if (!this.isCellRangeWithinBounds(normalizedFocusedRange))
+            return;
+        const alreadySelected = this.selectedFocusedRanges.some(selectedRangeEntry => this.areCellRangesEqual(selectedRangeEntry?.range, normalizedFocusedRange));
+        if (alreadySelected)
+            return;
+        this.selectedFocusedRanges.push({
+            range: normalizedFocusedRange,
+            color: this.getNextFocusedRangeColor()
+        });
+        this.render();
+    }
+
+    markFocusedCellsAsDeselected() {
+        if (!this.focusedCellRange)
+            return;
+        const normalizedFocusedRange = this.getNormalizedCellRange(
+            this.focusedCellRange.startRowIndex,
+            this.focusedCellRange.startColumnIndex,
+            this.focusedCellRange.endRowIndex,
+            this.focusedCellRange.endColumnIndex
+        );
+        this.selectedFocusedRanges = this.selectedFocusedRanges.filter(selectedRangeEntry => !this.doesCellRangeOverlap(selectedRangeEntry?.range, normalizedFocusedRange));
+        this.render();
+    }
+
+    clearFocusedCells() {
+        if (!this.focusedCellRange && this.selectedFocusedRanges.length === 0)
+            return;
+        this.focusedCellRange = null;
+        this.selectedFocusedRanges = [];
+        this.nextFocusedRangeColorIndex = 0;
+        this.emitFocusedCellsChanged();
+    }
+
+    hasFocusedCells() {
+        return this.focusedCellRange != null;
+    }
+
+    getFocusedRows() {
+        if (!this.focusedCellRange)
+            return [];
+        const focusedRows = [];
+        for (let rowIndex = this.focusedCellRange.startRowIndex; rowIndex <= this.focusedCellRange.endRowIndex; rowIndex++) {
+            if (rowIndex >= 0 && rowIndex < this.rows.length)
+                focusedRows.push({ row: this.rows[rowIndex], rowIndex: rowIndex });
+        }
+        return focusedRows;
+    }
+
+    getFocusedColumn() {
+        if (!this.focusedCellRange)
+            return null;
+        if (this.focusedCellRange.startColumnIndex !== this.focusedCellRange.endColumnIndex)
+            return null;
+        return this.getColumnByIndex(this.focusedCellRange.startColumnIndex);
+    }
+
+    emitFocusedCellsChanged() {
+        const callback = this.options.onFocusedCellsChanged;
+        if (typeof callback !== "function")
+            return;
+        callback({
+            hasFocusedCells: this.hasFocusedCells(),
+            focusedCellRange: this.focusedCellRange,
+            focusedRows: this.getFocusedRows(),
+            focusedColumn: this.getFocusedColumn()
+        });
+    }
+
     isCellSelected(rowIndex, columnIndex) {
+        if (this.focusedCellRange)
+            return false;
         if (this.selectedCellRange)
             return rowIndex >= this.selectedCellRange.startRowIndex
                 && rowIndex <= this.selectedCellRange.endRowIndex
@@ -1520,6 +1749,42 @@ class TableControl {
             const nextColumnIndex = Math.min(this.selectedCell.columnIndex, Math.max(0, this.options.columns.length - 1));
             this.selectCell(nextRowIndex, nextColumnIndex);
         }
+        return true;
+    }
+
+    deleteFocusedRows() {
+        const focusedRows = this.getFocusedRows();
+        if (focusedRows.length === 0)
+            return false;
+        const callback = this.options.onRowDeleteRequested;
+        let deletedCount = 0;
+        const rowIndexes = focusedRows.map(entry => entry.rowIndex).sort((a, b) => b - a);
+        for (let index = 0; index < rowIndexes.length; index++) {
+            const rowIndex = rowIndexes[index];
+            const row = this.getRowByIndex(rowIndex);
+            if (!row)
+                continue;
+            let accepted = true;
+            if (typeof callback === "function") {
+                accepted = callback({
+                    row: row,
+                    rowKey: row.key,
+                    rowIndex: rowIndex
+                }) !== false;
+            }
+            if (!accepted)
+                continue;
+            this.rows.splice(rowIndex, 1);
+            deletedCount++;
+        }
+        if (deletedCount === 0)
+            return false;
+        this.editingCell = null;
+        this.selectedCell = null;
+        this.selectedCellRange = null;
+        this.clearFocusedCells();
+        this.ensureScrollBounds();
+        this.render();
         return true;
     }
 

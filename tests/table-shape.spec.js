@@ -84,7 +84,118 @@ async function getCellClientPoint(page, rowIndex, columnIndex) {
     }, { rowIndex: rowIndex, columnIndex: columnIndex });
 }
 
+async function setupTenRowTable(page) {
+    await page.evaluate(() => {
+        shell.calculator.setProperties({ independent: { name: 't', start: 0, end: 9, step: 1 } });
+        modellus.shape.setProperties('Table1', {
+            columns: [
+                { term: 't', case: 1, color: 'transparent' },
+                { term: 'y', case: 1, color: 'transparent' }
+            ]
+        });
+        shell.loadPreloadedData(['y'], [
+            [2],
+            [5],
+            [9],
+            [14],
+            [20],
+            [27],
+            [35],
+            [44],
+            [54],
+            [65]
+        ]);
+        const tableShape = shell.board.shapes.getByName('Table1');
+        tableShape.refreshTableColumns();
+        tableShape.refreshTableRows();
+        tableShape.draw();
+    });
+    await page.waitForTimeout(300);
+}
+
 test.describe('Table shape editing', () => {
+    test('focused regression on center half passes iteration bounds and source term unchanged to calculator', async ({ page }) => {
+        await setupEditor(page);
+        await addTable(page, 'Table1');
+        await setupTenRowTable(page);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Table1');
+
+            const capturedCalls = [];
+            let regressionResult = null;
+            const originalApply = shell.calculator.applyDataRegression.bind(shell.calculator);
+            shell.calculator.applyDataRegression = (sourceTermName, regressionType, caseNumber, startIteration, endIteration) => {
+                capturedCalls.push({ sourceTermName, regressionType, caseNumber, startIteration, endIteration });
+                regressionResult = originalApply(sourceTermName, regressionType, caseNumber, startIteration, endIteration);
+                return regressionResult;
+            };
+
+            const totalRows = 10;
+            const halfCount = Math.floor(totalRows / 2);
+            const centerStart = Math.floor((totalRows - halfCount) / 2);
+            const centerEnd = centerStart + halfCount - 1;
+
+            const focusedRows = [];
+            for (let rowIndex = centerStart; rowIndex <= centerEnd; rowIndex++)
+                focusedRows.push({ rowIndex });
+
+            tableShape._focusedCellsPayload = {
+                focusedColumn: { term: 'y', caseNumber: 1 },
+                focusedRows: focusedRows,
+                hasFocusedCells: true
+            };
+            tableShape._focusedRegressionMethodValue = 'Linear';
+
+            tableShape.applyFocusedCellsRegression();
+
+            shell.calculator.applyDataRegression = originalApply;
+
+            const expectedStartIteration = centerStart + 1;
+            const expectedEndIteration = centerEnd + 1;
+
+            const call = capturedCalls[0] ?? null;
+            const targetTermName = regressionResult?.targetTermName ?? null;
+
+            const centerIterations = [];
+            const outerIterations = [];
+            if (targetTermName) {
+                for (let iteration = 1; iteration <= totalRows; iteration++) {
+                    const iterationValues = shell.calculator.system.getIteration(iteration, 1);
+                    const generatedValue = iterationValues?.[targetTermName];
+                    const isCenter = iteration >= expectedStartIteration && iteration <= expectedEndIteration;
+                    if (isCenter) {
+                        const tValue = iteration - 1;
+                        centerIterations.push({ iteration, tValue, generatedValue: Number.isFinite(generatedValue) ? generatedValue : null, expectedValue: 6.5 * tValue - 5 });
+                    } else {
+                        outerIterations.push({ iteration, generatedValue: generatedValue });
+                    }
+                }
+            }
+
+            return {
+                capturedCallCount: capturedCalls.length,
+                call,
+                expectedStartIteration,
+                expectedEndIteration,
+                targetTermName,
+                centerIterations,
+                outerIterations
+            };
+        });
+
+        expect(result.capturedCallCount).toBe(1);
+        expect(result.call.sourceTermName).toBe('y');
+        expect(result.call.regressionType).toBe('Linear');
+        expect(result.call.startIteration).toBe(result.expectedStartIteration);
+        expect(result.call.endIteration).toBe(result.expectedEndIteration);
+        expect(result.targetTermName).toBeTruthy();
+        for (const point of result.centerIterations)
+            expect(point.generatedValue).toBeCloseTo(point.expectedValue, 5);
+        for (const point of result.outerIterations)
+            expect(point.generatedValue).toBeNaN();
+    });
+
     test('double click on PRELOADED cell enters edit mode and clears table selection border', async ({ page }) => {
         await setupEditor(page);
         await addTable(page, 'Table1');
@@ -129,15 +240,15 @@ test.describe('Table shape editing', () => {
             const tableShape = shell.board.shapes.getByName('Table1');
             const table = tableShape?.table;
             const selectedCell = table?.selectedCell ?? null;
-            const selectedCellRange = table?.selectedCellRange ?? null;
+            const focusedCellRange = table?.focusedCellRange ?? null;
             return {
                 selectedCell: selectedCell ? { rowIndex: selectedCell.rowIndex, columnIndex: selectedCell.columnIndex } : null,
-                selectedCellRange: selectedCellRange
+                focusedCellRange: focusedCellRange
                     ? {
-                        startRowIndex: selectedCellRange.startRowIndex,
-                        endRowIndex: selectedCellRange.endRowIndex,
-                        startColumnIndex: selectedCellRange.startColumnIndex,
-                        endColumnIndex: selectedCellRange.endColumnIndex
+                        startRowIndex: focusedCellRange.startRowIndex,
+                        endRowIndex: focusedCellRange.endRowIndex,
+                        startColumnIndex: focusedCellRange.startColumnIndex,
+                        endColumnIndex: focusedCellRange.endColumnIndex
                     }
                     : null,
                 anchorColumnIsPreloaded: table?.isPreloadedColumn(1) === true,
@@ -146,7 +257,7 @@ test.describe('Table shape editing', () => {
         });
         expect(selectionState.anchorColumnIsPreloaded).toBeTruthy();
         expect(selectionState.selectedCell).toEqual({ rowIndex: 2, columnIndex: 1 });
-        expect(selectionState.selectedCellRange).toEqual({
+        expect(selectionState.focusedCellRange).toEqual({
             startRowIndex: 0,
             endRowIndex: 2,
             startColumnIndex: 1,

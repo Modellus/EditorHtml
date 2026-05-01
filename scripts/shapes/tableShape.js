@@ -126,9 +126,7 @@ class TableShape extends BaseShape {
     setExternalDataColumns(columns) {
         const command = new SetShapePropertiesCommand(this.board, this, {
             columns: columns,
-            columnWidths: [],
-            regressionSourceByTerm: {},
-            regressionTypeByTerm: {}
+            columnWidths: []
         });
         this.board.invoker.execute(command);
     }
@@ -175,14 +173,6 @@ class TableShape extends BaseShape {
         await navigator.clipboard.writeText(rows.join("\n"));
     }
 
-    showContextToolbar() {
-        if (this._columnsControl)
-            this._columnsControl.refresh();
-        this.refreshTermsToolbarControl();
-        this.refreshDataToolbarControl();
-        super.showContextToolbar();
-    }
-
     refreshDataToolbarControl() {
         if (!this._dataDropdownElement)
             return;
@@ -216,16 +206,6 @@ class TableShape extends BaseShape {
                 acceptCustomValue: (item, index) => this.shouldAllowCustomColumnName(item, index),
                 onCustomItemCreating: event => this.onColumnTermCustomItemCreating(event)
             },
-            lock: {
-                width: "42px",
-                editorType: "dxDropDownButton",
-                show: item => this.board.calculator.hasPreloadedData() && this.normalizeColumnValue(item?.term) !== "",
-                getValue: item => this.getRegressionTypeFromTermName(item?.term),
-                getItems: () => this.getRegressionMethodItems(),
-                valueExpr: "value",
-                dropDownOptions: this.getRegressionMethodDropDownOptions(),
-                onValueChanged: (index, value) => this.onColumnRegressionTypeChanged(index, value)
-            },
             onChanged: () => this.refreshTableColumns()
         });
         return this._columnsControl.createHost();
@@ -239,10 +219,6 @@ class TableShape extends BaseShape {
         ];
     }
 
-    getRegressionMethodDropDownOptions() {
-        return { width: this.getRegressionMethodDropDownWidth() };
-    }
-
     getRegressionMethodDropDownWidth() {
         const items = this.getRegressionMethodItems();
         let maximumLabelLength = 0;
@@ -254,45 +230,33 @@ class TableShape extends BaseShape {
         return Math.max(120, maximumLabelLength * 8 + 64);
     }
 
-    getRegressionTypeFromTermName(termName) {
+    getRegressionTypeFromTermName(termName, caseNumber = 1) {
         const normalizedTermName = this.normalizeColumnValue(termName);
-        const savedType = this.properties.regressionTypeByTerm?.[normalizedTermName];
-        if (savedType === "Linear")
+        if (normalizedTermName === "")
+            return "none";
+        const normalizedCaseNumber = this.getClampedCaseNumber(caseNumber ?? 1);
+        const term = this.board.calculator.system.getTerm(normalizedTermName);
+        if (!term || term.type !== Modellus.TermType.REGRESSION || !Array.isArray(term.ranges))
+            return "none";
+        const matchingRanges = term.ranges.filter(range => range?.caseNumber === normalizedCaseNumber);
+        const regressionRange = matchingRanges.length > 0 ? matchingRanges[matchingRanges.length - 1] : term.ranges[term.ranges.length - 1];
+        if (!regressionRange)
+            return "none";
+        if (regressionRange.regressionType === "Linear")
             return "Linear";
-        if (savedType === "Quadratic")
-            return "Quadratic";
-        if (normalizedTermName.endsWith("_Linear"))
-            return "Linear";
-        if (normalizedTermName.endsWith("_Quadratic"))
+        if (regressionRange.regressionType === "Quadratic")
             return "Quadratic";
         return "none";
     }
 
     getRegressionSourceTermName(termName) {
         const normalizedTermName = this.normalizeColumnValue(termName);
-        const savedSourceTermName = this.properties.regressionSourceByTerm?.[normalizedTermName];
-        if (savedSourceTermName)
-            return savedSourceTermName;
-        if (normalizedTermName.endsWith("_Linear"))
-            return normalizedTermName.slice(0, -7);
-        if (normalizedTermName.endsWith("_Quadratic"))
-            return normalizedTermName.slice(0, -10);
-        return normalizedTermName;
-    }
-
-    buildRegressionTermName(sourceTermName, currentTermName = "") {
-        const normalizedSourceTermName = this.normalizeColumnValue(sourceTermName);
-        const normalizedCurrentTermName = this.normalizeColumnValue(currentTermName);
-        if (normalizedCurrentTermName !== "" && normalizedCurrentTermName !== normalizedSourceTermName)
-            return normalizedCurrentTermName;
-        let ordinal = 1;
-        while (ordinal < 1000) {
-            const candidateName = `${normalizedSourceTermName}${ordinal}`;
-            if (!this.board.calculator.isTerm(candidateName) || candidateName === normalizedCurrentTermName)
-                return candidateName;
-            ordinal++;
-        }
-        return `${normalizedSourceTermName}${Date.now()}`;
+        if (normalizedTermName === "")
+            return "";
+        const term = this.board.calculator.system.getTerm(normalizedTermName);
+        if (!term || term.type !== Modellus.TermType.REGRESSION)
+            return normalizedTermName;
+        return term.sourceTermName;
     }
 
     normalizeRegressionType(regressionType) {
@@ -311,6 +275,31 @@ class TableShape extends BaseShape {
         return term?.type === Modellus.TermType.REGRESSION;
     }
 
+    resolveFocusedRowsIterationRange(focusedRows) {
+        if (!Array.isArray(focusedRows) || focusedRows.length === 0)
+            return null;
+        let startIteration = Infinity;
+        let endIteration = -Infinity;
+        let hasIteration = false;
+        for (let index = 0; index < focusedRows.length; index++) {
+            const focusedRow = focusedRows[index];
+            const rowIndex = Number(focusedRow?.rowIndex);
+            if (!Number.isFinite(rowIndex))
+                continue;
+            const iteration = Math.floor(rowIndex) + 1;
+            if (iteration < 1)
+                continue;
+            if (iteration < startIteration)
+                startIteration = iteration;
+            if (iteration > endIteration)
+                endIteration = iteration;
+            hasIteration = true;
+        }
+        if (!hasIteration)
+            return null;
+        return { startIteration: startIteration, endIteration: endIteration };
+    }
+
     shouldAllowCustomColumnName(item, index) {
         if (!item)
             return false;
@@ -318,35 +307,8 @@ class TableShape extends BaseShape {
         return termName !== "";
     }
 
-    updateRegressionMappings(previousTermName, nextTermName, sourceTermName, regressionType) {
-        const regressionSourceByTerm = { ...(this.properties.regressionSourceByTerm ?? {}) };
-        const regressionTypeByTerm = { ...(this.properties.regressionTypeByTerm ?? {}) };
-        const normalizedPreviousTermName = this.normalizeColumnValue(previousTermName);
-        const normalizedNextTermName = this.normalizeColumnValue(nextTermName);
-        if (normalizedPreviousTermName !== "" && normalizedPreviousTermName !== normalizedNextTermName) {
-            delete regressionSourceByTerm[normalizedPreviousTermName];
-            delete regressionTypeByTerm[normalizedPreviousTermName];
-        }
-        if (regressionType && sourceTermName) {
-            regressionSourceByTerm[normalizedNextTermName] = sourceTermName;
-            regressionTypeByTerm[normalizedNextTermName] = regressionType;
-        } else {
-            delete regressionSourceByTerm[normalizedNextTermName];
-            delete regressionTypeByTerm[normalizedNextTermName];
-        }
-        return {
-            regressionSourceByTerm: regressionSourceByTerm,
-            regressionTypeByTerm: regressionTypeByTerm
-        };
-    }
-
-    applyRegressionColumnUpdate(columns, previousTermName, nextTermName, sourceTermName, regressionType) {
-        const mappings = this.updateRegressionMappings(previousTermName, nextTermName, sourceTermName, regressionType);
-        const command = new SetShapePropertiesCommand(this.board, this, {
-            columns: columns,
-            regressionSourceByTerm: mappings.regressionSourceByTerm,
-            regressionTypeByTerm: mappings.regressionTypeByTerm
-        });
+    applyRegressionColumnUpdate(columns) {
+        const command = new SetShapePropertiesCommand(this.board, this, { columns: columns });
         this.board.invoker.execute(command);
     }
 
@@ -367,18 +329,18 @@ class TableShape extends BaseShape {
             return;
         if (this.board.calculator.isTerm(nextTermName))
             return;
-        const regressionType = this.normalizeRegressionType(this.getRegressionTypeFromTermName(previousTermName));
+        const caseNumber = this.getClampedCaseNumber(columns[index].case ?? 1);
+        const regressionType = this.normalizeRegressionType(this.getRegressionTypeFromTermName(previousTermName, caseNumber));
         const isRegressionTerm = regressionType != null || this.isRegressionTermName(previousTermName);
         if (!isRegressionTerm) {
             columns[index].term = nextTermName;
-            this.applyRegressionColumnUpdate(columns, previousTermName, nextTermName, null, null);
+            this.applyRegressionColumnUpdate(columns);
             this.board.calculator.emit("iterate", { calculator: this.board.calculator });
             return;
         }
-        const sourceTermName = this.getRegressionSourceTermName(previousTermName);
-        if (!regressionType || !this.board.calculator.isTerm(sourceTermName))
+        if (!regressionType)
             return;
-        const caseNumber = this.getClampedCaseNumber(columns[index].case ?? 1);
+        const sourceTermName = this.getRegressionSourceTermName(previousTermName);
         try {
             this.board.calculator.calculateDataRegression(sourceTermName, regressionType, nextTermName, caseNumber);
         } catch (error) {
@@ -386,7 +348,7 @@ class TableShape extends BaseShape {
             return;
         }
         columns[index].term = nextTermName;
-        this.applyRegressionColumnUpdate(columns, previousTermName, nextTermName, sourceTermName, regressionType);
+        this.applyRegressionColumnUpdate(columns);
         this.board.calculator.emit("iterate", { calculator: this.board.calculator });
     }
 
@@ -399,27 +361,34 @@ class TableShape extends BaseShape {
         const currentTermName = this.normalizeColumnValue(columns[index].term);
         if (currentTermName === "")
             return;
-        const isCurrentRegression = this.isRegressionTermName(currentTermName);
-        const sourceTermName = isCurrentRegression ? this.getRegressionSourceTermName(currentTermName) : currentTermName;
-        if (!this.board.calculator.isTerm(sourceTermName))
-            return;
+        const caseNumber = this.getClampedCaseNumber(columns[index].case ?? 1);
         const selectedRegressionType = this.normalizeRegressionType(regressionType);
         if (!selectedRegressionType) {
-            columns[index].term = sourceTermName;
-            this.applyRegressionColumnUpdate(columns, currentTermName, sourceTermName, null, null);
+            if (this.isRegressionTermName(currentTermName)) {
+                const sourceTermName = this.getRegressionSourceTermName(currentTermName);
+                try {
+                    this.board.calculator.removeDataRegression(currentTermName, caseNumber);
+                } catch (_) {
+                    return;
+                }
+                columns[index].term = sourceTermName;
+            }
+            this.applyRegressionColumnUpdate(columns);
             this.board.calculator.emit("iterate", { calculator: this.board.calculator });
             return;
         }
-        const caseNumber = this.getClampedCaseNumber(columns[index].case ?? 1);
-        const targetTermName = this.buildRegressionTermName(sourceTermName, currentTermName);
+        let regressionResult = null;
+        const sourceTermName = this.getRegressionSourceTermName(currentTermName);
         try {
-            this.board.calculator.calculateDataRegression(sourceTermName, selectedRegressionType, targetTermName, caseNumber);
+            regressionResult = this.board.calculator.applyDataRegression(sourceTermName, selectedRegressionType, caseNumber);
         } catch (error) {
             console.warn("Failed to calculate regression", error);
             return;
         }
-        columns[index].term = targetTermName;
-        this.applyRegressionColumnUpdate(columns, currentTermName, targetTermName, sourceTermName, selectedRegressionType);
+        if (!regressionResult)
+            return;
+        columns[index].term = regressionResult.targetTermName;
+        this.applyRegressionColumnUpdate(columns);
         this.board.calculator.emit("iterate", { calculator: this.board.calculator });
     }
 
@@ -432,8 +401,6 @@ class TableShape extends BaseShape {
         this.properties.width = 200;
         this.properties.height = 200;
         this.properties.columnWidths = [];
-        this.properties.regressionSourceByTerm = {};
-        this.properties.regressionTypeByTerm = {};
         const defaultTerm = this.board.calculator.getDefaultTerm();
         this.properties.columns = [
             { term: this.board.calculator.properties.independent.name, case: 1, color: "transparent" },
@@ -449,6 +416,7 @@ class TableShape extends BaseShape {
         this._appliedStyleKey = "";
         const element = this.board.createSvgElement("g");
         this.table = new TableControl(element, this.getTableControlOptions(this._activeColumns));
+        this.initializeCellsContextToolbar();
         return element;
     }
 
@@ -462,8 +430,310 @@ class TableShape extends BaseShape {
             precision: this.board.calculator.getPrecision(),
             onCellValueChanged: payload => this.onTableCellValueChanged(payload),
             onColumnWidthChanged: payload => this.onTableColumnWidthChanged(payload),
-            onRowDeleteRequested: payload => this.onTableRowDeleteRequested(payload)
+            onRowDeleteRequested: payload => this.onTableRowDeleteRequested(payload),
+            onFocusedCellsChanged: payload => this.onTableFocusedCellsChanged(payload),
+            shouldKeepFocusedCellsOnPointerDown: payload => this.shouldKeepFocusedCellsOnPointerDown(payload)
         };
+    }
+
+    shouldKeepFocusedCellsOnPointerDown(payload) {
+        const target = payload?.target;
+        if (!(target instanceof Node))
+            return false;
+        if (this.cellsContextToolbar?.contains(target))
+            return true;
+        if (!(target instanceof Element))
+            return false;
+        if (!this.isFocusedCellsToolbarOverlayOpen())
+            return false;
+        return target.closest(".dx-overlay-wrapper") != null;
+    }
+
+    getDropDownButtonInstance(element) {
+        const hostElement = element?.[0] ?? element;
+        if (!(hostElement instanceof Element))
+            return null;
+        return window.DevExpress?.ui?.dxDropDownButton?.getInstance(hostElement) ?? null;
+    }
+
+    isFocusedCellsToolbarOverlayOpen() {
+        const focusedRegressionMethodControl = this.getDropDownButtonInstance(this._focusedRegressionMethodElement);
+        const focusedRegressionTermControl = this.getDropDownButtonInstance(this._focusedRegressionTermElement);
+        return focusedRegressionMethodControl?.option("opened") === true || focusedRegressionTermControl?.option("opened") === true;
+    }
+
+    initializeCellsContextToolbar() {
+        if (this.cellsContextToolbar || !window.DevExpress?.ui?.dxToolbar)
+            return;
+        const toolbarHost = document.createElement("div");
+        toolbarHost.className = "shape-context-toolbar";
+        document.body.appendChild(toolbarHost);
+        const items = this.getCellsToolbarItems();
+        $(toolbarHost).dxToolbar({ items: items, width: "auto" });
+        this.cellsContextToolbar = toolbarHost;
+        this.cellsContextToolbarInstance = $(toolbarHost).dxToolbar("instance");
+    }
+
+    getCellsToolbarItems() {
+        return [
+            {
+                location: "before",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createFocusedDeleteButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div class="mdl-focused-regression-method"></div>');
+                    this.createFocusedRegressionMethodControl(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div class="mdl-focused-regression-term"></div>');
+                    this.createFocusedRegressionTermControl(container);
+                    return container;
+                }
+            }
+        ];
+    }
+
+    createFocusedDeleteButton(itemElement) {
+        this._focusedDeleteButtonElement = $('<div class="mdl-focused-delete-rows">');
+        this._focusedDeleteButtonElement.dxButton({
+            icon: "fa-light fa-trash-can",
+            stylingMode: "text",
+            onClick: () => this.table?.deleteFocusedRows()
+        });
+        this._focusedDeleteButtonElement.appendTo(itemElement);
+    }
+
+    createFocusedRegressionMethodControl(itemElement) {
+        this._focusedRegressionMethodElement = $('<div class="mdl-focused-regression-method-control">');
+        this._focusedRegressionMethodElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            template: (_, element) => this.renderFocusedRegressionMethodButtonTemplate(element[0]),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: this.getRegressionMethodDropDownWidth(),
+                contentTemplate: contentElement => this.buildFocusedRegressionMethodMenuContent(contentElement)
+            }
+        });
+        this._focusedRegressionMethodElement.appendTo(itemElement);
+    }
+
+    createFocusedRegressionTermControl(itemElement) {
+        this._focusedRegressionTermElement = $('<div class="mdl-focused-regression-term-control">');
+        this._focusedRegressionTermElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            template: (_, element) => this.renderFocusedRegressionTermButtonTemplate(element[0]),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: 260,
+                contentTemplate: contentElement => this.buildFocusedRegressionTermMenuContent(contentElement)
+            }
+        });
+        this._focusedRegressionTermElement.appendTo(itemElement);
+    }
+
+    getSelectedFocusedRegressionMethodItem() {
+        const selectedMethodValue = this._focusedRegressionMethodValue ?? "Linear";
+        const methods = this.getRegressionMethodItems();
+        return methods.find(item => item.value === selectedMethodValue) ?? methods[0] ?? null;
+    }
+
+    renderFocusedRegressionMethodButtonTemplate(element) {
+        element.innerHTML = `<span class="mdl-focused-toolbar-button mdl-focused-toolbar-button--method"><i class="fa-light fa-chart-scatter"></i></span>`;
+    }
+
+    buildFocusedRegressionMethodMenuContent(contentElement) {
+        const methods = this.getRegressionMethodItems();
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: methods,
+            scrollingEnabled: false,
+            itemTemplate: (itemData, _, itemElement) => {
+                itemElement[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${itemData.icon}"></i><span class="mdl-dropdown-list-label">${itemData.text}</span></div>`;
+            },
+            onItemClick: event => {
+                this._focusedRegressionMethodValue = event.itemData.value;
+                const focusedRegressionMethodControl = this.getDropDownButtonInstance(this._focusedRegressionMethodElement);
+                focusedRegressionMethodControl?.close();
+                if (event.itemData.value !== "none")
+                    this.applyFocusedCellsRegression();
+            }
+        });
+    }
+
+    renderFocusedRegressionTermButtonTemplate(element) {
+        const colorValue = this._focusedRegressionDraftColor || "transparent";
+        element.innerHTML = `<span class="mdl-focused-toolbar-button mdl-focused-toolbar-button--term"><i class="fa-light fa-chart-fft"></i><span class="mdl-focused-term-swatch" style="background:${colorValue}"></span></span>`;
+    }
+
+    buildColumnsWithInsertedRegressionTerm(columns, sourceColumnIndex, regressionResult, regressionColor) {
+        const nextColumns = columns.map(column => ({ ...column }));
+        if (sourceColumnIndex < 0 || sourceColumnIndex >= nextColumns.length)
+            return nextColumns;
+        const sourceColumn = nextColumns[sourceColumnIndex];
+        const normalizedTargetTermName = this.normalizeColumnValue(regressionResult?.targetTermName);
+        if (normalizedTargetTermName === "")
+            return nextColumns;
+        const existingTargetColumnIndex = nextColumns.findIndex((column, index) => index !== sourceColumnIndex && this.normalizeColumnValue(column?.term) === normalizedTargetTermName);
+        let regressionColumn = {
+            term: normalizedTargetTermName,
+            case: sourceColumn.case,
+            color: this.normalizeColumnColor(regressionColor)
+        };
+        if (existingTargetColumnIndex >= 0) {
+            regressionColumn = {
+                ...nextColumns[existingTargetColumnIndex],
+                term: normalizedTargetTermName,
+                case: sourceColumn.case,
+                color: this.normalizeColumnColor(regressionColor)
+            };
+            nextColumns.splice(existingTargetColumnIndex, 1);
+        }
+        const insertIndex = Math.min(sourceColumnIndex + 1, nextColumns.length);
+        nextColumns.splice(insertIndex, 0, regressionColumn);
+        return nextColumns;
+    }
+
+    buildFocusedRegressionTermMenuContent(contentElement) {
+        $(contentElement).empty();
+        const content = $('<div class="mdl-focused-regression-term-menu"></div>');
+        const colorRow = $('<div class="mdl-focused-regression-term-menu-row"></div>');
+        const colorLabel = $('<div class="mdl-focused-regression-term-menu-label"></div>').text(this.board.translations.get("Color") ?? "Color");
+        const colorControl = this.getColorControl().createEditor(this._focusedRegressionDraftColor, value => {
+            this._focusedRegressionDraftColor = this.normalizeColumnColor(value);
+            this.getDropDownButtonInstance(this._focusedRegressionTermElement)?.repaint();
+        });
+        colorRow.append(colorLabel, colorControl);
+        content.append(colorRow);
+        $(contentElement).append(content);
+    }
+
+    onTableFocusedCellsChanged(payload) {
+        this._focusedCellsPayload = payload ?? null;
+        this.refreshFocusedCellsToolbarControl();
+        if (this.board.selection.selectedShape !== this)
+            return;
+        if (payload?.hasFocusedCells === true) {
+            super.hideContextToolbar();
+            this.showCellsContextToolbar();
+            return;
+        }
+        this.hideCellsContextToolbar();
+        super.showContextToolbar();
+    }
+
+    refreshFocusedCellsToolbarControl() {
+        const focusedColumn = this._focusedCellsPayload?.focusedColumn;
+        const currentTermName = this.normalizeColumnValue(focusedColumn?.term);
+        const caseNumber = this.getClampedCaseNumber(focusedColumn?.caseNumber ?? focusedColumn?.sourceColumn?.case ?? 1);
+        const draftFocusKey = `${currentTermName}|${caseNumber}`;
+        if (this._focusedRegressionDraftFocusKey !== draftFocusKey) {
+            const regressionType = this.getRegressionTypeFromTermName(currentTermName, caseNumber);
+            this._focusedRegressionMethodValue = regressionType === "none" ? "Linear" : regressionType;
+            this._focusedRegressionDraftColor = this.normalizeColumnColor(focusedColumn?.sourceColumn?.color);
+            this._focusedRegressionDraftFocusKey = draftFocusKey;
+        }
+    }
+
+    showCellsContextToolbar() {
+        this.refreshFocusedCellsToolbarControl();
+        if (this.cellsContextToolbar)
+            this.cellsContextToolbar.classList.add("visible");
+        requestAnimationFrame(() => requestAnimationFrame(() => this.positionCellsContextToolbar()));
+    }
+
+    hideCellsContextToolbar() {
+        if (this.cellsContextToolbar)
+            this.cellsContextToolbar.classList.remove("visible");
+    }
+
+    positionCellsContextToolbar() {
+        if (!this.cellsContextToolbar)
+            return;
+        const anchor = this.getScreenAnchorPoint();
+        if (!anchor)
+            return;
+        const toolbarRect = this.cellsContextToolbar.getBoundingClientRect();
+        const toolbarWidth = toolbarRect.width || this.cellsContextToolbar.offsetWidth || 0;
+        const toolbarHeight = toolbarRect.height || this.cellsContextToolbar.offsetHeight || 0;
+        const padding = 8;
+        let left = anchor.centerX - toolbarWidth / 2;
+        let top = anchor.bottomY + padding;
+        const maxLeft = window.innerWidth - toolbarWidth - padding;
+        const maxTop = window.innerHeight - toolbarHeight - padding;
+        left = Math.max(padding, Math.min(left, maxLeft));
+        top = Math.max(padding, Math.min(top, maxTop));
+        this.cellsContextToolbar.style.left = `${left}px`;
+        this.cellsContextToolbar.style.top = `${top}px`;
+    }
+
+    applyFocusedCellsRegression() {
+        const focusedColumn = this._focusedCellsPayload?.focusedColumn;
+        const focusedRows = this._focusedCellsPayload?.focusedRows;
+        if (!focusedColumn)
+            return;
+        const currentTermName = this.normalizeColumnValue(focusedColumn.term);
+        if (currentTermName === "")
+            return;
+        const regressionMethod = this._focusedRegressionMethodValue;
+        const normalizedRegressionType = this.normalizeRegressionType(regressionMethod);
+        if (!normalizedRegressionType)
+            return;
+        const columnIndex = this.properties.columns.findIndex(column => this.normalizeColumnValue(column?.term) === currentTermName);
+        if (columnIndex < 0)
+            return;
+        const columns = this.properties.columns.map(column => ({ ...column }));
+        const caseNumber = this.getClampedCaseNumber(columns[columnIndex].case ?? 1);
+        const sourceTermName = this.getRegressionSourceTermName(currentTermName);
+        const focusedRowsIterationRange = this.resolveFocusedRowsIterationRange(focusedRows);
+        let regressionResult = null;
+        try {
+            if (focusedRowsIterationRange)
+                regressionResult = this.board.calculator.applyDataRegression(sourceTermName, normalizedRegressionType, caseNumber, focusedRowsIterationRange.startIteration, focusedRowsIterationRange.endIteration);
+            else
+                regressionResult = this.board.calculator.applyDataRegression(sourceTermName, normalizedRegressionType, caseNumber);
+        } catch (_) {
+            return;
+        }
+        if (!regressionResult)
+            return;
+        const nextColumns = this.buildColumnsWithInsertedRegressionTerm(columns, columnIndex, regressionResult, this._focusedRegressionDraftColor);
+        this.applyRegressionColumnUpdate(nextColumns);
+        this.board.calculator.emit("iterate", { calculator: this.board.calculator });
+    }
+
+    showContextToolbar() {
+        if (this.table?.hasFocusedCells?.()) {
+            this.showCellsContextToolbar();
+            super.hideContextToolbar();
+            return;
+        }
+        this.hideCellsContextToolbar();
+        if (this._columnsControl)
+            this._columnsControl.refresh();
+        this.refreshTermsToolbarControl();
+        this.refreshDataToolbarControl();
+        super.showContextToolbar();
+    }
+
+    hideContextToolbar() {
+        this.hideCellsContextToolbar();
+        super.hideContextToolbar();
     }
 
     deriveHeaderColor(backgroundColor) {

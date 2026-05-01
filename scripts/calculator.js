@@ -7,6 +7,7 @@ class Calculator extends EventTarget {
     constructor() {
         super();
         this.system = new Modellus.System("t", "n");
+        this.regressor = new Modellus.Regressor(this.system);
         this.parser = new Modellus.Parser(this.system);
         this.engine = new Modellus.Engine(this.system);
         this.physicalEngine = new Modellus.PhysicalEngine(this.system);
@@ -375,9 +376,20 @@ class Calculator extends EventTarget {
         return this.system.getTermsNames();
     }
 
+    applyDataRegression(sourceTermName = "", regressionType = "none", caseNumber = 1, startIteration = undefined, endIteration = undefined) {
+        const regressor = this.regressor;
+        return /** @type {any} */ (regressor).calculate(sourceTermName, regressionType, caseNumber, startIteration, endIteration);
+    }
+
+    removeDataRegression(targetTermName = "", caseNumber = 1, startIteration = undefined, endIteration = undefined) {
+        const regressor = this.regressor;
+        return /** @type {any} */ (regressor).remove(targetTermName, caseNumber, startIteration, endIteration);
+    }
+
     /** @param {string} sourceTermName @param {string} regressionType @param {string} targetTermName @param {number} caseNumber */
     calculateDataRegression(sourceTermName, regressionType, targetTermName, caseNumber = 1) {
-        return this.system.calculateDataRegression(sourceTermName, regressionType, targetTermName, caseNumber);
+        const regressor = this.regressor;
+        return /** @type {any} */ (regressor).calculate(sourceTermName, regressionType, caseNumber);
     }
 
     getInitialValuesByCase() {

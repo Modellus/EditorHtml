@@ -427,6 +427,79 @@ body.read-only #context-menu {
     overflow: visible;
 }
 
+.mdl-focused-delete-rows .dx-button {
+    min-width: 32px;
+}
+
+.mdl-focused-delete-rows .dx-icon {
+    color: #c62828;
+}
+
+.mdl-focused-toolbar-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #253047;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.mdl-focused-toolbar-button--method {
+    min-width: 32px;
+    justify-content: center;
+    padding: 4px 6px;
+}
+
+.mdl-focused-toolbar-button--term {
+    min-width: 180px;
+    justify-content: flex-start;
+}
+
+.mdl-focused-term-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(37, 48, 71, 0.18);
+    background: transparent;
+    flex: 0 0 auto;
+}
+
+.mdl-focused-term-name {
+    white-space: nowrap;
+}
+
+.mdl-focused-regression-term-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    min-width: 220px;
+}
+
+.mdl-focused-regression-term-menu-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mdl-focused-regression-term-menu-row--stacked {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.mdl-focused-regression-term-menu-label {
+    color: #4b5670;
+    font-size: 12px;
+    min-width: 40px;
+}
+
+.mdl-focused-regression-term-menu-input {
+    width: 100%;
+}
+
 .mdl-actions-context-menu {
     z-index: 99999 !important;
 }
