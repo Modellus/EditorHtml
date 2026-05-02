@@ -427,12 +427,49 @@ body.read-only #context-menu {
     overflow: visible;
 }
 
-.mdl-focused-delete-rows .dx-button {
-    min-width: 32px;
+.shape-context-toolbar .dx-toolbar-item,
+.shape-context-toolbar .dx-toolbar-item.dx-toolbar-button,
+.shape-context-toolbar .dx-toolbar-item-content,
+.shape-context-toolbar .dx-toolbar-item-auto-hide,
+.shape-context-toolbar .dx-toolbar-item .dx-button,
+.shape-context-toolbar .dx-toolbar-item .dx-button-content,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-hover,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-focused,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-active,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-selected {
+    box-shadow: none;
+    background: transparent;
+    border-color: transparent;
 }
 
-.mdl-focused-delete-rows .dx-icon {
-    color: #c62828;
+.mdl-focused-delete-rows .dx-button {
+    min-width: 32px;
+    box-shadow: none;
+    background: transparent;
+    border-color: transparent;
+}
+
+.mdl-focused-delete-rows .dx-dropdownbutton,
+.mdl-focused-delete-rows .dx-dropdownbutton .dx-dropdownbutton-action {
+    box-shadow: none;
+    background: transparent;
+    border-color: transparent;
+}
+
+.mdl-focused-delete-rows .dx-button-mode-text,
+.mdl-focused-delete-rows .dx-button-mode-text.dx-state-hover,
+.mdl-focused-delete-rows .dx-button-mode-text.dx-state-focused,
+.mdl-focused-delete-rows .dx-button-mode-text.dx-state-active,
+.mdl-focused-delete-rows .dx-button-mode-text.dx-state-selected {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.mdl-focused-delete-rows .dx-button-content {
+    box-shadow: none;
+    background: transparent;
 }
 
 .mdl-focused-toolbar-button {
@@ -440,8 +477,6 @@ body.read-only #context-menu {
     align-items: center;
     gap: 8px;
     padding: 4px 8px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.92);
     color: #253047;
     font-size: 13px;
     line-height: 1;

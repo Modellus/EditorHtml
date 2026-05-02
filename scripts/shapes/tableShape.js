@@ -459,7 +459,8 @@ class TableShape extends BaseShape {
     isFocusedCellsToolbarOverlayOpen() {
         const focusedRegressionMethodControl = this.getDropDownButtonInstance(this._focusedRegressionMethodElement);
         const focusedRegressionTermControl = this.getDropDownButtonInstance(this._focusedRegressionTermElement);
-        return focusedRegressionMethodControl?.option("opened") === true || focusedRegressionTermControl?.option("opened") === true;
+        const focusedDeleteMenuOpen = this._focusedDeleteMenuInstance?.option("visible") === true;
+        return focusedRegressionMethodControl?.option("opened") === true || focusedRegressionTermControl?.option("opened") === true || focusedDeleteMenuOpen;
     }
 
     initializeCellsContextToolbar() {
@@ -477,14 +478,6 @@ class TableShape extends BaseShape {
     getCellsToolbarItems() {
         return [
             {
-                location: "before",
-                template: () => {
-                    const container = $('<div></div>');
-                    this.createFocusedDeleteButton(container);
-                    return container;
-                }
-            },
-            {
                 location: "center",
                 template: () => {
                     const container = $('<div class="mdl-focused-regression-method"></div>');
@@ -499,18 +492,95 @@ class TableShape extends BaseShape {
                     this.createFocusedRegressionTermControl(container);
                     return container;
                 }
+            },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createFocusedDeleteButton(container);
+                    return container;
+                }
             }
         ];
     }
 
     createFocusedDeleteButton(itemElement) {
-        this._focusedDeleteButtonElement = $('<div class="mdl-focused-delete-rows">');
-        this._focusedDeleteButtonElement.dxButton({
-            icon: "fa-light fa-trash-can",
+        this._focusedDeleteButtonElement = $('<div class="mdl-remove-selector">');
+        const buttonId = `focused-delete-btn-${this.id}`;
+        this._focusedDeleteButtonElement.html(`<div id="${buttonId}"></div><div id="${buttonId}-menu"></div>`);
+        $(`#${buttonId}`, this._focusedDeleteButtonElement).dxButton({
+            template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
             stylingMode: "text",
-            onClick: () => this.table?.deleteFocusedRows()
+            onClick: e => {
+                this._focusedDeleteMenuInstance.option("target", e.component.element());
+                this._focusedDeleteMenuInstance.show();
+            }
         });
+        this._focusedDeleteMenuInstance = $(`#${buttonId}-menu`, this._focusedDeleteButtonElement).dxContextMenu({
+            dataSource: [
+                { value: "delete", text: "Delete", icon: "fa-light fa-trash-can" },
+                { value: "reset", text: "Reset", icon: "fa-light fa-arrow-rotate-left" }
+            ],
+            itemTemplate: itemData => {
+                return `<div style="display:flex;align-items:center;width:100%"><span class="${itemData.icon}" style="width:15px;margin-right:10px;text-align:left;display:inline-block"></span><span style="text-align:left;flex-grow:1">${itemData.text}</span></div>`;
+            },
+            onItemClick: event => {
+                if (event.itemData.value === "delete") {
+                    this.table?.deleteFocusedRows();
+                    return;
+                }
+                if (event.itemData.value === "reset")
+                    this.resetFocusedCellsFromPreloadedData();
+            },
+            showEvent: null,
+            position: { my: "top left", at: "bottom left" },
+            cssClass: "mdl-remove-context-menu"
+        }).dxContextMenu("instance");
         this._focusedDeleteButtonElement.appendTo(itemElement);
+    }
+
+    resetFocusedCellsFromPreloadedData() {
+        if (!this.board.calculator.hasPreloadedData())
+            return false;
+        const table = this.table;
+        const focusedCellRange = table?.focusedCellRange;
+        if (!table || !focusedCellRange)
+            return false;
+        const preloadedData = this.board.calculator.getPreloadedData();
+        const originalPreloadedData = this.board.calculator.getOriginalPreloadedData();
+        if (!preloadedData || !originalPreloadedData)
+            return false;
+        const names = preloadedData.names;
+        const values = preloadedData.values;
+        const originalValues = originalPreloadedData.values;
+        let hasChanges = false;
+        for (let rowIndex = focusedCellRange.startRowIndex; rowIndex <= focusedCellRange.endRowIndex; rowIndex++) {
+            const tableRow = table.rows[rowIndex];
+            const rowKey = tableRow?.key;
+            const sourceRowIndex = Number.isInteger(rowKey) ? rowKey : rowIndex;
+            if (sourceRowIndex < 0 || sourceRowIndex >= values.length || sourceRowIndex >= originalValues.length)
+                continue;
+            for (let columnIndex = focusedCellRange.startColumnIndex; columnIndex <= focusedCellRange.endColumnIndex; columnIndex++) {
+                const column = table.getColumnByIndex(columnIndex);
+                const sourceTermName = this.normalizeColumnValue(column?.sourceColumn?.term ?? column?.term);
+                if (sourceTermName === "")
+                    continue;
+                const preloadedColumnIndex = names.indexOf(sourceTermName);
+                if (preloadedColumnIndex < 0)
+                    continue;
+                const originalValue = Number(originalValues[sourceRowIndex]?.[preloadedColumnIndex]);
+                if (!Number.isFinite(originalValue))
+                    continue;
+                values[sourceRowIndex][preloadedColumnIndex] = originalValue;
+                hasChanges = true;
+            }
+        }
+        if (!hasChanges)
+            return false;
+        this.board.calculator.refreshPreloadedData();
+        this.refreshTableRows();
+        this.table.render();
+        return true;
     }
 
     createFocusedRegressionMethodControl(itemElement) {

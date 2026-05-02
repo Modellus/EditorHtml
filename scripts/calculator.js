@@ -24,6 +24,8 @@ class Calculator extends EventTarget {
         this.properties = this.createDefaultProperties();
         this.preloadedTermNames = null;
         this.preloadedTermValues = null;
+        this.preloadedOriginalTermNames = null;
+        this.preloadedOriginalTermValues = null;
     }
 
     normalizeCasesCount(value = 1) {
@@ -175,9 +177,11 @@ class Calculator extends EventTarget {
 
     /** @param {string[]} names @param {number[][]} values */
     loadTerms(names, values) {
-        this.preloadedTermNames = names;
-        this.preloadedTermValues = values;
-        this.system.loadTerms(names, values);
+        this.preloadedTermNames = Array.isArray(names) ? [...names] : [];
+        this.preloadedTermValues = Array.isArray(values) ? values.map(row => Array.isArray(row) ? [...row] : []) : [];
+        this.preloadedOriginalTermNames = Array.isArray(names) ? [...names] : [];
+        this.preloadedOriginalTermValues = Array.isArray(values) ? values.map(row => Array.isArray(row) ? [...row] : []) : [];
+        this.system.loadTerms(this.preloadedTermNames, this.preloadedTermValues);
     }
 
     applyPreloadedData() {
@@ -193,6 +197,12 @@ class Calculator extends EventTarget {
         if (!this.preloadedTermNames || !this.preloadedTermValues)
             return null;
         return { names: this.preloadedTermNames, values: this.preloadedTermValues };
+    }
+
+    getOriginalPreloadedData() {
+        if (!this.preloadedOriginalTermNames || !this.preloadedOriginalTermValues)
+            return null;
+        return { names: this.preloadedOriginalTermNames, values: this.preloadedOriginalTermValues };
     }
 
     refreshPreloadedData() {
@@ -237,6 +247,8 @@ class Calculator extends EventTarget {
     clearPreloadedData() {
         this.preloadedTermNames = null;
         this.preloadedTermValues = null;
+        this.preloadedOriginalTermNames = null;
+        this.preloadedOriginalTermValues = null;
     }
 
     findMatchingBraceEnd(text = "", openBraceIndex = -1) {

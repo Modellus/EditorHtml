@@ -196,6 +196,48 @@ test.describe('Table shape editing', () => {
             expect(point.generatedValue).toBeNaN();
     });
 
+    test('focused reset restores original preloaded values only for focused cells', async ({ page }) => {
+        await setupEditor(page);
+        await addTable(page, 'Table1');
+        await setupTenRowTable(page);
+
+        const state = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Table1');
+            const table = tableShape?.table;
+            if (!tableShape || !table)
+                return null;
+
+            shell.calculator.setPreloadedValue(1, 'y', 500);
+            shell.calculator.setPreloadedValue(2, 'y', 600);
+            shell.calculator.setPreloadedValue(7, 'y', 700);
+            tableShape.refreshTableRows();
+
+            table.focusCellRange(1, 1, 2, 1);
+            const resetApplied = tableShape.resetFocusedCellsFromPreloadedData();
+
+            const preloadedData = shell.calculator.getPreloadedData();
+            const yColumnIndex = preloadedData?.names?.indexOf('y') ?? -1;
+            if (!preloadedData || yColumnIndex < 0)
+                return null;
+
+            const focusedRow1 = preloadedData.values[1][yColumnIndex];
+            const focusedRow2 = preloadedData.values[2][yColumnIndex];
+            const outsideRow7 = preloadedData.values[7][yColumnIndex];
+            return {
+                resetApplied,
+                focusedRow1,
+                focusedRow2,
+                outsideRow7
+            };
+        });
+
+        expect(state).toBeTruthy();
+        expect(state.resetApplied).toBeTruthy();
+        expect(state.focusedRow1).toBe(5);
+        expect(state.focusedRow2).toBe(9);
+        expect(state.outsideRow7).toBe(700);
+    });
+
     test('double click on PRELOADED cell enters edit mode and clears table selection border', async ({ page }) => {
         await setupEditor(page);
         await addTable(page, 'Table1');
