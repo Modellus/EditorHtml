@@ -10,6 +10,11 @@ html, body, .dx-theme-compact {
     --mdl-shape-toolbar-z-index: 90000;
     --mdl-shape-overlay-z-index: 91000;
     --mdl-shape-overlay-nested-z-index: 92000;
+    --mdl-shape-toolbar-button-color: #253047;
+    --mdl-shape-toolbar-button-hover-color: #0f6cbd;
+    --mdl-shape-toolbar-button-hover-bg: rgba(15, 108, 189, 0.12);
+    --mdl-shape-toolbar-button-active-bg: rgba(15, 108, 189, 0.18);
+    --mdl-shape-toolbar-button-focus-ring: 0 0 0 2px rgba(15, 108, 189, 0.24);
 }
 
 svg {
@@ -433,43 +438,46 @@ body.read-only #context-menu {
 .shape-context-toolbar .dx-toolbar-item-auto-hide,
 .shape-context-toolbar .dx-toolbar-item .dx-button,
 .shape-context-toolbar .dx-toolbar-item .dx-button-content,
-.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text,
-.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-hover,
-.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-focused,
-.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-active,
-.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-selected {
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text {
     box-shadow: none;
     background: transparent;
     border-color: transparent;
+}
+
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text {
+    color: var(--mdl-shape-toolbar-button-color);
+    border-radius: 8px;
+    transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-hover,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-selected {
+    background: var(--mdl-shape-toolbar-button-hover-bg);
+    border-color: transparent;
+    color: var(--mdl-shape-toolbar-button-hover-color);
+}
+
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-focused {
+    background: var(--mdl-shape-toolbar-button-hover-bg);
+    border-color: transparent;
+    color: var(--mdl-shape-toolbar-button-hover-color);
+    box-shadow: var(--mdl-shape-toolbar-button-focus-ring);
+}
+
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-active {
+    background: var(--mdl-shape-toolbar-button-active-bg);
+    border-color: transparent;
+    color: var(--mdl-shape-toolbar-button-hover-color);
+}
+
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text .dx-icon,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text .dx-button-text,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text .mdl-focused-toolbar-button {
+    color: inherit;
 }
 
 .mdl-focused-delete-rows .dx-button {
     min-width: 32px;
-    box-shadow: none;
-    background: transparent;
-    border-color: transparent;
-}
-
-.mdl-focused-delete-rows .dx-dropdownbutton,
-.mdl-focused-delete-rows .dx-dropdownbutton .dx-dropdownbutton-action {
-    box-shadow: none;
-    background: transparent;
-    border-color: transparent;
-}
-
-.mdl-focused-delete-rows .dx-button-mode-text,
-.mdl-focused-delete-rows .dx-button-mode-text.dx-state-hover,
-.mdl-focused-delete-rows .dx-button-mode-text.dx-state-focused,
-.mdl-focused-delete-rows .dx-button-mode-text.dx-state-active,
-.mdl-focused-delete-rows .dx-button-mode-text.dx-state-selected {
-    background: transparent;
-    border-color: transparent;
-    box-shadow: none;
-}
-
-.mdl-focused-delete-rows .dx-button-content {
-    box-shadow: none;
-    background: transparent;
 }
 
 .mdl-focused-toolbar-button {
