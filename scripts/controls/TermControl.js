@@ -371,10 +371,15 @@ class TermControl {
         return items;
     }
 
-    static createEmptyShapeTermsCollectionItem(includeColor = false) {
+    static createEmptyShapeTermsCollectionItem(includeColor = false, options = {}) {
         const item = { term: "", case: 1 };
         if (includeColor)
             item.color = "";
+        if (typeof options.createEmptyItem === "function") {
+            const extraItem = options.createEmptyItem();
+            if (extraItem && typeof extraItem === "object")
+                Object.assign(item, extraItem);
+        }
         return item;
     }
 
@@ -393,6 +398,7 @@ class TermControl {
     static normalizeShapeTermsCollection(shape, propertyName, options = {}) {
         const normalizeTermValue = options.normalizeTermValue ?? (value => TermControl.normalizeTermValue(value));
         const normalizeColorValue = options.normalizeColorValue ?? (value => TermControl.normalizeColorValue(value));
+        const normalizeItem = options.normalizeItem;
         const includeColor = options.includeColor === true;
         const source = TermControl.getShapeTermsCollectionSource(shape, propertyName, options.getFallbackItems);
         const selectedItems = [];
@@ -411,22 +417,25 @@ class TermControl {
                 normalizedItem.showLabel = true;
             if (sourceItem?.locked === true)
                 normalizedItem.locked = true;
+            if (typeof normalizeItem === "function")
+                normalizeItem(sourceItem, normalizedItem, index);
             selectedItems.push(normalizedItem);
         }
         if (selectedItems.length === 0) {
-            shape.properties[propertyName] = [TermControl.createEmptyShapeTermsCollectionItem(includeColor)];
+            shape.properties[propertyName] = [TermControl.createEmptyShapeTermsCollectionItem(includeColor, options)];
             return shape.properties[propertyName];
         }
-        shape.properties[propertyName] = [...selectedItems, TermControl.createEmptyShapeTermsCollectionItem(includeColor)];
+        shape.properties[propertyName] = [...selectedItems, TermControl.createEmptyShapeTermsCollectionItem(includeColor, options)];
         return shape.properties[propertyName];
     }
 
     static getShapeTermsCollectionControlItems(shape, propertyName, options = {}) {
         const normalizeTermValue = options.normalizeTermValue ?? (value => TermControl.normalizeTermValue(value));
         const normalizeColorValue = options.normalizeColorValue ?? (value => TermControl.normalizeColorValue(value));
+        const normalizeItem = options.normalizeItem;
         const includeColor = options.includeColor === true;
         const source = TermControl.getShapeTermsCollectionSource(shape, propertyName, options.getFallbackItems);
-        return source.map(sourceItem => {
+        return source.map((sourceItem, index) => {
             const termValue = normalizeTermValue(sourceItem?.term);
             const item = {
                 term: termValue,
@@ -438,6 +447,8 @@ class TermControl {
                 item.showLabel = true;
             if (sourceItem?.locked === true)
                 item.locked = true;
+            if (typeof normalizeItem === "function")
+                normalizeItem(sourceItem, item, index);
             return item;
         });
     }
@@ -445,6 +456,7 @@ class TermControl {
     static getSelectedShapeTermsCollection(shape, propertyName, options = {}) {
         const normalizeTermValue = options.normalizeTermValue ?? (value => TermControl.normalizeTermValue(value));
         const normalizeColorValue = options.normalizeColorValue ?? (value => TermControl.normalizeColorValue(value));
+        const normalizeItem = options.normalizeItem;
         const includeColor = options.includeColor === true;
         const source = TermControl.getShapeTermsCollectionSource(shape, propertyName, options.getFallbackItems);
         const selectedItems = [];
@@ -463,6 +475,8 @@ class TermControl {
                 selectedItem.showLabel = true;
             if (sourceItem?.locked === true)
                 selectedItem.locked = true;
+            if (typeof normalizeItem === "function")
+                normalizeItem(sourceItem, selectedItem, index);
             selectedItems.push(selectedItem);
         }
         return selectedItems;
@@ -532,6 +546,8 @@ class TermControl {
         const mutationOptions = {
             normalizeTermValue: normalizeTermValue,
             normalizeColorValue: normalizeColorValue,
+            normalizeItem: options.normalizeItem,
+            createEmptyItem: options.createEmptyItem,
             includeColor: includeColor,
             getFallbackItems: options.getFallbackItems,
             onChanged: options.onChanged
@@ -569,7 +585,7 @@ class TermControl {
             }),
             onTermChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                 if (!items[index])
-                    items[index] = TermControl.createEmptyShapeTermsCollectionItem(includeColor);
+                    items[index] = TermControl.createEmptyShapeTermsCollectionItem(includeColor, mutationOptions);
                 items[index].term = normalizeTermValue(value);
                 items[index].case = TermControl.getShapeCaseNumber(shape, items[index].term, items[index].case ?? 1, normalizeTermValue);
                 if (includeColor)

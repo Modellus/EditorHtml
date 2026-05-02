@@ -277,9 +277,19 @@ class TableControl {
             width: Number.isFinite(column?.width) ? Math.max(1, Number(column.width)) : null,
             precision: Number.isFinite(column?.precision) ? column.precision : null,
             barColor: this.normalizeBarColor(column?.barColor),
+            valueDisplayMode: this.normalizeColumnValueDisplayMode(column?.valueDisplayMode),
             isPreloadedTerm: column?.isPreloadedTerm === true,
             sourceColumn: column?.sourceColumn ?? null
         }));
+    }
+
+    normalizeColumnValueDisplayMode(value) {
+        const normalizedValue = String(value ?? "").trim().toLowerCase();
+        if (normalizedValue === "lines")
+            return "lines";
+        if (normalizedValue === "none")
+            return "none";
+        return "bars";
     }
 
     normalizeBarColor(value) {
@@ -601,13 +611,112 @@ class TableControl {
         borderLine.setAttribute("y2", `${layout.headerHeight}`);
         borderLine.setAttribute("stroke", this.options.gridColor);
         borderLine.setAttribute("stroke-width", "1");
-        this.headerLayer.appendChild(borderLine);
         for (let index = 0; index < columns.length; index++)
             this.renderHeaderCell(layout, columns[index], geometry[index], index, index === columns.length - 1);
+        this.headerLayer.appendChild(borderLine);
         this.renderResizeHandles(layout, geometry);
     }
 
+    getColumnHeaderBackgroundColor(column) {
+        const normalizedColumnColor = this.normalizeBarColor(column?.barColor);
+        if (this.isTransparentColor(normalizedColumnColor))
+            return this.options.headerBackgroundColor;
+        return normalizedColumnColor;
+    }
+
+    getContrastTextColor(backgroundColor) {
+        const rgbColor = this.parseColorToRgb(backgroundColor);
+        if (!rgbColor)
+            return "#000000";
+        const luminance = this.getRelativeLuminance(rgbColor.red, rgbColor.green, rgbColor.blue);
+        const contrastWithBlack = (luminance + 0.05) / 0.05;
+        const contrastWithWhite = 1.05 / (luminance + 0.05);
+        if (contrastWithWhite > contrastWithBlack)
+            return "#ffffff";
+        return "#000000";
+    }
+
+    parseColorToRgb(colorValue) {
+        const normalizedValue = String(colorValue ?? "").trim();
+        if (normalizedValue === "")
+            return null;
+        if (normalizedValue.startsWith("#"))
+            return this.parseHexColor(normalizedValue);
+        if (normalizedValue.startsWith("rgb"))
+            return this.parseRgbColor(normalizedValue);
+        return null;
+    }
+
+    parseHexColor(colorValue) {
+        const hexValue = colorValue.slice(1);
+        if (hexValue.length === 3)
+            return {
+                red: parseInt(hexValue[0] + hexValue[0], 16),
+                green: parseInt(hexValue[1] + hexValue[1], 16),
+                blue: parseInt(hexValue[2] + hexValue[2], 16)
+            };
+        if (hexValue.length === 4)
+            return {
+                red: parseInt(hexValue[0] + hexValue[0], 16),
+                green: parseInt(hexValue[1] + hexValue[1], 16),
+                blue: parseInt(hexValue[2] + hexValue[2], 16)
+            };
+        if (hexValue.length === 6 || hexValue.length === 8)
+            return {
+                red: parseInt(hexValue.slice(0, 2), 16),
+                green: parseInt(hexValue.slice(2, 4), 16),
+                blue: parseInt(hexValue.slice(4, 6), 16)
+            };
+        return null;
+    }
+
+    parseRgbColor(colorValue) {
+        const match = colorValue.match(/^rgba?\(([^)]+)\)$/i);
+        if (!match)
+            return null;
+        const channelValues = match[1].split(",").map(value => Number(value.trim()));
+        if (channelValues.length < 3)
+            return null;
+        const red = this.clampColorChannel(channelValues[0]);
+        const green = this.clampColorChannel(channelValues[1]);
+        const blue = this.clampColorChannel(channelValues[2]);
+        if (red == null || green == null || blue == null)
+            return null;
+        return { red: red, green: green, blue: blue };
+    }
+
+    clampColorChannel(value) {
+        if (!Number.isFinite(value))
+            return null;
+        if (value < 0)
+            return 0;
+        if (value > 255)
+            return 255;
+        return Math.round(value);
+    }
+
+    getRelativeLuminance(red, green, blue) {
+        const linearRed = this.toLinearColorChannel(red / 255);
+        const linearGreen = this.toLinearColorChannel(green / 255);
+        const linearBlue = this.toLinearColorChannel(blue / 255);
+        return 0.2126 * linearRed + 0.7152 * linearGreen + 0.0722 * linearBlue;
+    }
+
+    toLinearColorChannel(channelValue) {
+        if (channelValue <= 0.03928)
+            return channelValue / 12.92;
+        return ((channelValue + 0.055) / 1.055) ** 2.4;
+    }
+
     renderHeaderCell(layout, column, cellGeometry, columnIndex, isLastColumn) {
+        const headerBackgroundColor = this.getColumnHeaderBackgroundColor(column);
+        const headerRect = this.createSvgElement("rect");
+        headerRect.setAttribute("x", `${cellGeometry.x}`);
+        headerRect.setAttribute("y", "0");
+        headerRect.setAttribute("width", `${cellGeometry.width}`);
+        headerRect.setAttribute("height", `${layout.headerHeight}`);
+        headerRect.setAttribute("fill", headerBackgroundColor);
+        this.headerLayer.appendChild(headerRect);
         const centerX = cellGeometry.x + cellGeometry.width / 2;
         const centerY = layout.headerHeight / 2 + 4;
         const titleText = column.title ?? "";
@@ -617,7 +726,7 @@ class TableControl {
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("font-family", this.options.termFontFamily);
         text.setAttribute("font-size", `${this.options.headerFontSize}`);
-        text.setAttribute("fill", this.options.foregroundColor);
+        text.setAttribute("fill", this.getContrastTextColor(headerBackgroundColor));
         text.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
         text.textContent = Utils.convertGreekLetters(titleText);
         this.headerLayer.appendChild(text);
@@ -695,7 +804,7 @@ class TableControl {
                 this.rowsLayer.appendChild(selectedRect);
             }
             if (!isEditingCell)
-                this.renderCellBar(cell, y, rowHeight, row, columns[columnIndex], columnValueRanges?.[columnIndex]);
+                this.renderCellValueIndicator(cell, y, rowHeight, row, columns[columnIndex], columnValueRanges?.[columnIndex]);
             if (columnIndex < columns.length - 1) {
                 const line = this.createSvgElement("line");
                 line.setAttribute("x1", `${cell.x + cell.width}`);
@@ -774,7 +883,14 @@ class TableControl {
         }
     }
 
-    renderCellBar(cellGeometry, y, rowHeight, row, column, range) {
+    getCellValueDisplayMode(column) {
+        return this.normalizeColumnValueDisplayMode(column?.valueDisplayMode);
+    }
+
+    renderCellValueIndicator(cellGeometry, y, rowHeight, row, column, range) {
+        const cellValueDisplayMode = this.getCellValueDisplayMode(column);
+        if (cellValueDisplayMode === "none")
+            return;
         if (!row || !column)
             return;
         const barColor = this.normalizeBarColor(column.barColor);
@@ -796,22 +912,43 @@ class TableControl {
         if (!Number.isFinite(ratio))
             return;
         const clampedRatio = Math.max(0, Math.min(1, ratio));
-        let barWidth = maxWidth * clampedRatio;
-        if (barWidth <= 0)
+        let indicatorWidth = maxWidth * clampedRatio;
+        if (indicatorWidth <= 0)
             return;
-        if (barWidth < 1)
-            barWidth = 1;
+        if (indicatorWidth < 1)
+            indicatorWidth = 1;
+        if (cellValueDisplayMode === "lines") {
+            this.renderCellLineIndicator(cellGeometry, y, rowHeight, indicatorWidth, barColor);
+            return;
+        }
+        this.renderCellBarIndicator(cellGeometry, y, rowHeight, indicatorWidth, barColor);
+    }
+
+    renderCellBarIndicator(cellGeometry, y, rowHeight, indicatorWidth, barColor) {
         const barHeight = Math.max(1, rowHeight - 6);
         const bar = this.createSvgElement("rect");
         bar.setAttribute("x", `${cellGeometry.x + 3}`);
         bar.setAttribute("y", `${y + 3}`);
-        bar.setAttribute("width", `${barWidth}`);
+        bar.setAttribute("width", `${indicatorWidth}`);
         bar.setAttribute("height", `${barHeight}`);
         bar.setAttribute("rx", "2");
         bar.setAttribute("ry", "2");
         bar.setAttribute("fill", barColor);
         bar.setAttribute("fill-opacity", "0.35");
         this.rowsLayer.appendChild(bar);
+    }
+
+    renderCellLineIndicator(cellGeometry, y, rowHeight, indicatorWidth, barColor) {
+        const line = this.createSvgElement("line");
+        line.setAttribute("x1", `${cellGeometry.x + 3}`);
+        line.setAttribute("y1", `${y + rowHeight / 2}`);
+        line.setAttribute("x2", `${cellGeometry.x + 3 + indicatorWidth}`);
+        line.setAttribute("y2", `${y + rowHeight / 2}`);
+        line.setAttribute("stroke", barColor);
+        line.setAttribute("stroke-width", "2");
+        line.setAttribute("stroke-linecap", "round");
+        line.setAttribute("stroke-opacity", "0.8");
+        this.rowsLayer.appendChild(line);
     }
 
     renderCellText(cellGeometry, y, rowHeight, textValue, columnIndex) {

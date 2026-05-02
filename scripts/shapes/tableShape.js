@@ -75,6 +75,48 @@ class TableShape extends BaseShape {
         return this.board.calculator.hasPreloadedData() ? "fa-solid" : "fa-light";
     }
 
+    getColumnValueDisplayModeItems() {
+        return [
+            { value: "bars", text: this.board.translations.get("Bars") ?? "Bars", icon: "fa-light fa-chart-simple" },
+            { value: "lines", text: this.board.translations.get("Lines") ?? "Lines", icon: "fa-light fa-chart-line" },
+            { value: "none", text: this.board.translations.get("None") ?? "None", icon: "fa-light fa-ban" }
+        ];
+    }
+
+    normalizeColumnValueDisplayMode(value) {
+        if (value === "lines")
+            return "lines";
+        if (value === "none")
+            return "none";
+        return "bars";
+    }
+
+    getColumnValueDisplayModeIcon(value) {
+        const normalizedValue = this.normalizeColumnValueDisplayMode(value);
+        const items = this.getColumnValueDisplayModeItems();
+        const selectedItem = items.find(item => item.value === normalizedValue);
+        return selectedItem?.icon ?? "fa-light fa-chart-simple";
+    }
+
+    normalizeColumnListItem(sourceItem, normalizedItem) {
+        normalizedItem.valueDisplayMode = this.normalizeColumnValueDisplayMode(sourceItem?.valueDisplayMode);
+    }
+
+    createEmptyColumnListItem() {
+        return { valueDisplayMode: "bars" };
+    }
+
+    setColumnValueDisplayModeByIndex(index, value) {
+        if (!Array.isArray(this.properties.columns))
+            return;
+        const normalizedValue = this.normalizeColumnValueDisplayMode(value);
+        const columns = this.properties.columns.map(column => ({ ...column }));
+        if (!columns[index])
+            return;
+        columns[index].valueDisplayMode = normalizedValue;
+        this.setPropertyCommand("columns", columns);
+    }
+
     buildDataMenuContent(contentElement) {
         const dataItems = [
             {
@@ -119,7 +161,7 @@ class TableShape extends BaseShape {
             return;
         const columns = [];
         for (let index = 0; index < termNames.length; index++)
-            columns.push({ term: termNames[index], case: 1, color: "transparent" });
+            columns.push({ term: termNames[index], case: 1, color: "transparent", valueDisplayMode: "bars" });
         this.setExternalDataColumns(columns);
     }
 
@@ -201,10 +243,31 @@ class TableShape extends BaseShape {
             includeColor: true,
             normalizeTermValue: value => this.normalizeColumnValue(value),
             normalizeColorValue: value => this.normalizeColumnColor(value),
+            normalizeItem: (sourceItem, normalizedItem) => this.normalizeColumnListItem(sourceItem, normalizedItem),
+            createEmptyItem: () => this.createEmptyColumnListItem(),
             getFallbackItems: () => this.getLegacyColumns(),
             termEditor: {
                 acceptCustomValue: (item, index) => this.shouldAllowCustomColumnName(item, index),
                 onCustomItemCreating: event => this.onColumnTermCustomItemCreating(event)
+            },
+            lock: {
+                width: "42px",
+                editorType: "dxDropDownButton",
+                getValue: item => this.normalizeColumnValueDisplayMode(item?.valueDisplayMode),
+                getItems: () => this.getColumnValueDisplayModeItems(),
+                valueExpr: "value",
+                displayExpr: "text",
+                buttonTemplate: (element, item, index, selectedValue) => {
+                    const iconClassName = this.getColumnValueDisplayModeIcon(selectedValue);
+                    $(element).empty().append(`<div class="shape-term-secondary-button"><i class="${iconClassName} shape-term-secondary-icon"></i></div>`);
+                },
+                itemTemplate: (itemData, itemIndex, element) => {
+                    $(element).empty().append(`<div class="shape-term-secondary-item" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%"><i class="${itemData.icon} shape-term-secondary-icon"></i><span>${itemData.text}</span></div>`);
+                },
+                dropDownOptions: {
+                    width: 180
+                },
+                onValueChanged: (index, value) => this.setColumnValueDisplayModeByIndex(index, value)
             },
             onChanged: () => this.refreshTableColumns()
         });
@@ -401,10 +464,11 @@ class TableShape extends BaseShape {
         this.properties.width = 200;
         this.properties.height = 200;
         this.properties.columnWidths = [];
+        this.properties.headerBackgroundColor = "#f7f7f7";
         const defaultTerm = this.board.calculator.getDefaultTerm();
         this.properties.columns = [
-            { term: this.board.calculator.properties.independent.name, case: 1, color: "transparent" },
-            { term: defaultTerm, case: 1, color: "transparent" }
+            { term: this.board.calculator.properties.independent.name, case: 1, color: "transparent", valueDisplayMode: "bars" },
+            { term: defaultTerm, case: 1, color: "transparent", valueDisplayMode: "bars" }
         ];
     }
 
@@ -425,7 +489,7 @@ class TableShape extends BaseShape {
             columns: controlColumns,
             foregroundColor: this.properties.foregroundColor,
             backgroundColor: this.properties.backgroundColor,
-            headerBackgroundColor: this.deriveHeaderColor(this.properties.backgroundColor),
+            headerBackgroundColor: this.getHeaderBackgroundColor(),
             borderColor: this.getBorderColor(),
             precision: this.board.calculator.getPrecision(),
             onCellValueChanged: payload => this.onTableCellValueChanged(payload),
@@ -663,14 +727,16 @@ class TableShape extends BaseShape {
         let regressionColumn = {
             term: normalizedTargetTermName,
             case: sourceColumn.case,
-            color: this.normalizeColumnColor(regressionColor)
+            color: this.normalizeColumnColor(regressionColor),
+            valueDisplayMode: this.normalizeColumnValueDisplayMode(sourceColumn.valueDisplayMode)
         };
         if (existingTargetColumnIndex >= 0) {
             regressionColumn = {
                 ...nextColumns[existingTargetColumnIndex],
                 term: normalizedTargetTermName,
                 case: sourceColumn.case,
-                color: this.normalizeColumnColor(regressionColor)
+                color: this.normalizeColumnColor(regressionColor),
+                valueDisplayMode: this.normalizeColumnValueDisplayMode(nextColumns[existingTargetColumnIndex].valueDisplayMode)
             };
             nextColumns.splice(existingTargetColumnIndex, 1);
         }
@@ -819,9 +885,15 @@ class TableShape extends BaseShape {
         return `#${dr.toString(16).padStart(2, "0")}${dg.toString(16).padStart(2, "0")}${db.toString(16).padStart(2, "0")}`;
     }
 
+    getHeaderBackgroundColor() {
+        if (this.properties.headerBackgroundColor)
+            return this.properties.headerBackgroundColor;
+        return this.deriveHeaderColor(this.properties.backgroundColor);
+    }
+
     getTableStyleKey() {
         const precision = this.board.calculator.getPrecision();
-        return `${this.properties.foregroundColor}|${this.properties.backgroundColor}|${this.getBorderColor()}|${precision}`;
+        return `${this.properties.foregroundColor}|${this.properties.backgroundColor}|${this.getHeaderBackgroundColor()}|${this.getBorderColor()}|${precision}`;
     }
 
     getControlColumnsStateKey(controlColumns = this.buildControlColumns(this._activeColumns ?? this.getSelectedColumns())) {
@@ -832,7 +904,8 @@ class TableShape extends BaseShape {
             isPreloadedTerm: column.isPreloadedTerm === true,
             width: Number.isFinite(column.width) ? column.width : null,
             precision: Number.isFinite(column.precision) ? column.precision : null,
-            barColor: this.normalizeColumnColor(column.barColor)
+            barColor: this.normalizeColumnColor(column.barColor),
+            valueDisplayMode: this.normalizeColumnValueDisplayMode(column.valueDisplayMode)
         })));
     }
 
@@ -852,6 +925,7 @@ class TableShape extends BaseShape {
                 width: Number.isFinite(column.width) ? column.width : null,
                 precision: precision,
                 barColor: this.normalizeColumnColor(column.color),
+                valueDisplayMode: this.normalizeColumnValueDisplayMode(column.valueDisplayMode),
                 isPreloadedTerm: isPreloadedTerm,
                 sourceColumn: column
             };
@@ -1066,6 +1140,8 @@ class TableShape extends BaseShape {
             includeColor: true,
             normalizeTermValue: value => this.normalizeColumnValue(value),
             normalizeColorValue: value => this.normalizeColumnColor(value),
+            normalizeItem: (sourceItem, normalizedItem) => this.normalizeColumnListItem(sourceItem, normalizedItem),
+            createEmptyItem: () => this.createEmptyColumnListItem(),
             getFallbackItems: () => this.getLegacyColumns()
         });
         return selectedColumns.map((column, index) => ({
@@ -1073,12 +1149,13 @@ class TableShape extends BaseShape {
             term: column.term,
             case: column.case,
             color: this.normalizeColumnColor(column.color),
+            valueDisplayMode: this.normalizeColumnValueDisplayMode(column.valueDisplayMode),
             width: Number.isFinite(columnWidths[index]) ? columnWidths[index] : null
         }));
     }
 
     getColumnsStateKey(columns = this.getSelectedColumns()) {
-        return JSON.stringify(columns.map(column => ({ term: column.term, case: column.case, color: this.normalizeColumnColor(column.color), width: Number.isFinite(column.width) ? column.width : null })));
+        return JSON.stringify(columns.map(column => ({ term: column.term, case: column.case, color: this.normalizeColumnColor(column.color), valueDisplayMode: this.normalizeColumnValueDisplayMode(column.valueDisplayMode), width: Number.isFinite(column.width) ? column.width : null })));
     }
 
     refreshColumnsControl() {
@@ -1092,6 +1169,8 @@ class TableShape extends BaseShape {
             includeColor: true,
             normalizeTermValue: value => this.normalizeColumnValue(value),
             normalizeColorValue: value => this.normalizeColumnColor(value),
+            normalizeItem: (sourceItem, normalizedItem) => this.normalizeColumnListItem(sourceItem, normalizedItem),
+            createEmptyItem: () => this.createEmptyColumnListItem(),
             getFallbackItems: () => this.getLegacyColumns()
         });
     }
@@ -1101,11 +1180,11 @@ class TableShape extends BaseShape {
         const column1Term = this.normalizeColumnValue(this.properties.column1Term);
         const column2Term = this.normalizeColumnValue(this.properties.column2Term);
         if (column1Term !== "")
-            columns.push({ term: column1Term, case: this.getClampedCaseNumber(this.properties.column1TermCase ?? 1), color: "transparent" });
+            columns.push({ term: column1Term, case: this.getClampedCaseNumber(this.properties.column1TermCase ?? 1), color: "transparent", valueDisplayMode: "bars" });
         if (column2Term !== "")
-            columns.push({ term: column2Term, case: this.getClampedCaseNumber(this.properties.column2TermCase ?? 1), color: "transparent" });
+            columns.push({ term: column2Term, case: this.getClampedCaseNumber(this.properties.column2TermCase ?? 1), color: "transparent", valueDisplayMode: "bars" });
         if (columns.length === 0)
-            columns.push({ term: "", case: 1, color: "transparent" });
+            columns.push({ term: "", case: 1, color: "transparent", valueDisplayMode: "bars" });
         return columns;
     }
 
