@@ -23,6 +23,12 @@ class TableControl {
         this.columnClipPaths = null;
         this.caseIconData = {};
         this.caseIconsLoadingPromise = null;
+        this.headerTooltip = null;
+        this.headerTooltipHost = null;
+        this.headerTooltipHoverTimer = null;
+        this.headerTooltipColumnIndex = -1;
+        this.headerTooltipTarget = null;
+        this.headerTooltipLatex = "";
         this.rowsClipId = `shape-svg-table-clip-${crypto.randomUUID()}`;
         this.tableClipId = `shape-svg-table-header-clip-${crypto.randomUUID()}`;
         this.initializeRoot();
@@ -121,6 +127,9 @@ class TableControl {
     }
 
     dispose() {
+        this.clearHeaderTooltipHoverTimer();
+        this.hideHeaderTooltip();
+        this.disposeHeaderTooltip();
         this.rootElement.removeEventListener("wheel", this.onWheelHandler);
         window.removeEventListener("wheel", this.onWindowWheelHandler);
         window.removeEventListener("pointerdown", this.onWindowPointerDownHandler, true);
@@ -274,6 +283,8 @@ class TableControl {
             caseNumber: parseInt(column?.caseNumber ?? column?.case ?? 1, 10) || 1,
             showCase: column?.showCase === true,
             editable: column?.editable === true,
+            termType: Number.isFinite(column?.termType) ? Number(column.termType) : null,
+            expressionLatex: typeof column?.expressionLatex === "string" ? column.expressionLatex : null,
             width: Number.isFinite(column?.width) ? Math.max(1, Number(column.width)) : null,
             precision: Number.isFinite(column?.precision) ? column.precision : null,
             barColor: this.normalizeBarColor(column?.barColor),
@@ -1222,6 +1233,7 @@ class TableControl {
     }
 
     onPointerDown(event) {
+        this.hideHeaderTooltip();
         const point = this.convertClientPoint(event);
         if (!point)
             return;
@@ -1243,21 +1255,39 @@ class TableControl {
     onPointerMove(event) {
         if (this.columnResizeDrag) {
             this.rootElement.style.cursor = "col-resize";
+            this.hideHeaderTooltip();
             return;
         }
         const point = this.convertClientPoint(event);
         if (!point) {
             this.rootElement.style.cursor = "";
+            this.hideHeaderTooltip();
             return;
         }
         const resizeColumnIndex = this.getResizeColumnIndexAtPoint(point);
-        this.rootElement.style.cursor = resizeColumnIndex >= 0 ? "col-resize" : "";
+        if (resizeColumnIndex >= 0) {
+            this.rootElement.style.cursor = "col-resize";
+            this.hideHeaderTooltip();
+            return;
+        }
+        this.rootElement.style.cursor = "";
+        if (!this.isPointInHeader(point)) {
+            this.hideHeaderTooltip();
+            return;
+        }
+        const columnIndex = this.getColumnIndexFromX(point.x);
+        if (columnIndex < 0) {
+            this.hideHeaderTooltip();
+            return;
+        }
+        this.scheduleHeaderTooltip(columnIndex, event.target);
     }
 
     onPointerLeave() {
         if (this.columnResizeDrag)
             return;
         this.rootElement.style.cursor = "";
+        this.hideHeaderTooltip();
     }
 
     onMouseDown(event) {
@@ -1581,6 +1611,124 @@ class TableControl {
         if (rowIndex < 0 || columnIndex < 0)
             return null;
         return { rowIndex: rowIndex, columnIndex: columnIndex };
+    }
+
+    clearHeaderTooltipHoverTimer() {
+        if (!this.headerTooltipHoverTimer)
+            return;
+        clearTimeout(this.headerTooltipHoverTimer);
+        this.headerTooltipHoverTimer = null;
+    }
+
+    hideHeaderTooltip() {
+        this.clearHeaderTooltipHoverTimer();
+        this.headerTooltipColumnIndex = -1;
+        this.headerTooltipTarget = null;
+        this.headerTooltipLatex = "";
+        if (!this.headerTooltip)
+            return;
+        this.headerTooltip.hide();
+    }
+
+    canUseDxTooltip() {
+        return typeof $ === "function";
+    }
+
+    ensureHeaderTooltip() {
+        if (this.headerTooltip)
+            return this.headerTooltip;
+        if (!this.canUseDxTooltip())
+            return null;
+        this.headerTooltipHost = $("<div>").appendTo("body");
+        this.headerTooltip = this.headerTooltipHost.dxTooltip({
+            target: this.rootElement,
+            contentTemplate: contentElement => {
+                contentElement.append($("<div class=\"tooltip\" style=\"white-space:nowrap\"><math-field read-only class=\"form-math-field\" style=\"height:auto;width:auto;display:inline-block\"></math-field></div>"));
+            },
+            onShowing: tooltipEvent => {
+                this.applyHeaderTooltipMath(tooltipEvent.component?.$content?.()?.[0]);
+            },
+            onShown: tooltipEvent => {
+                this.applyHeaderTooltipMath(tooltipEvent.component?.$content?.()?.[0]);
+            },
+            hideEvent: "mouseleave",
+            position: "top",
+            width: "auto"
+        }).dxTooltip("instance");
+        return this.headerTooltip;
+    }
+
+    disposeHeaderTooltip() {
+        if (this.headerTooltip) {
+            this.headerTooltip.dispose();
+            this.headerTooltip = null;
+        }
+        if (this.headerTooltipHost) {
+            this.headerTooltipHost.remove();
+            this.headerTooltipHost = null;
+        }
+    }
+
+    getHeaderColumnExpression(columnIndex) {
+        const column = this.options.columns[columnIndex];
+        if (!column)
+            return "";
+        if (!this.shouldShowTooltipForHeaderColumn(column))
+            return "";
+        return String(column.expressionLatex ?? "").trim();
+    }
+
+    shouldShowTooltipForHeaderColumn(column) {
+        if (!column)
+            return false;
+        const expressionLatex = String(column.expressionLatex ?? "").trim();
+        return expressionLatex !== "";
+    }
+
+    isHeaderTooltipTargetEqual(nextTarget) {
+        return nextTarget instanceof Element && this.headerTooltipTarget instanceof Element && this.headerTooltipTarget === nextTarget;
+    }
+
+    applyHeaderTooltipMath(tooltipContentElement) {
+        if (!(tooltipContentElement instanceof Element))
+            return;
+        const mathFieldElement = tooltipContentElement.querySelector("math-field");
+        if (!mathFieldElement)
+            return;
+        if (typeof mathFieldElement.setValue === "function")
+            mathFieldElement.setValue(this.headerTooltipLatex);
+        else
+            mathFieldElement.value = this.headerTooltipLatex;
+    }
+
+    scheduleHeaderTooltip(columnIndex, target) {
+        const mathExpression = this.getHeaderColumnExpression(columnIndex);
+        if (mathExpression === "") {
+            this.hideHeaderTooltip();
+            return;
+        }
+        const targetElement = target instanceof Element ? target : this.rootElement;
+        const canKeepCurrentTooltip = this.headerTooltipColumnIndex === columnIndex
+            && this.headerTooltipLatex === mathExpression
+            && this.isHeaderTooltipTargetEqual(targetElement);
+        if (canKeepCurrentTooltip)
+            return;
+        this.clearHeaderTooltipHoverTimer();
+        this.headerTooltipHoverTimer = setTimeout(() => {
+            this.headerTooltipHoverTimer = null;
+            this.showHeaderTooltip(columnIndex, targetElement, mathExpression);
+        }, 1000);
+    }
+
+    showHeaderTooltip(columnIndex, targetElement, mathExpression) {
+        const tooltip = this.ensureHeaderTooltip();
+        if (!tooltip)
+            return;
+        this.headerTooltipColumnIndex = columnIndex;
+        this.headerTooltipTarget = targetElement;
+        this.headerTooltipLatex = mathExpression;
+        tooltip.option("target", targetElement);
+        tooltip.show();
     }
 
     selectCell(rowIndex, columnIndex) {

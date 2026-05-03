@@ -57,6 +57,160 @@ declare class Branch {
     withOp(op: string): this;
 }
 
+declare class Term {
+    name: string;
+    type: TermType;
+    expressionLatex: string | null;
+    unitsTree: Branch | null;
+    unitsText: string | null;
+    private _initialValues;
+    constructor(name: string, type?: TermType);
+    getInitialValue(iteration?: number): number;
+    setInitialValue(value: number, iteration?: number): void;
+    get initialValues(): number[];
+    set initialValues(values: number[]);
+    hasInitialValue(iteration: number): boolean;
+}
+
+declare class PreloadedData {
+    private termNames;
+    private values;
+    private iterationCol;
+    private independentCol;
+    get names(): string[];
+    get isEmpty(): boolean;
+    load(names: string[], values: number[][], iterationTermName: string, independentTermName: string): void;
+    reset(): void;
+    clear(): void;
+    getDataTermNames(iterationTermName: string, independentTermName: string): string[];
+    getMaxCoveredIteration(initialIndependent: number, step: number): number;
+    apply(iteration: number, target: {
+        [name: string]: number;
+    }, independentTermName: string): void;
+    private applyRow;
+}
+
+declare class System {
+    static readonly ZERO: number;
+    static readonly INFINITY: number;
+    private _independent;
+    private _iterationTerm;
+    terms: {
+        [name: string]: Term;
+    };
+    expressions: Array<Expression>;
+    values: Array<{
+        [name: string]: number;
+    }>;
+    iteration: number;
+    step: number;
+    casesCount: number;
+    private caseInitialValues;
+    private expressionsByName;
+    private expressionTrees;
+    private termNames;
+    private differentialNames;
+    private functionExpressionsWithCondition;
+    private functionExpressionsWithoutCondition;
+    private readonly iterationValuesByKey;
+    private _lastIteration;
+    private _lastCalculatedIteration;
+    private readonly calculatedIterationKeys;
+    useRadians: boolean;
+    isCalculatingFunctions: boolean;
+    readonly preloadedData: PreloadedData;
+    private readonly bodies;
+    constructor(independent?: string, iterationTerm?: string);
+    get independent(): Term;
+    set independent(name: string);
+    get iterationTerm(): Term;
+    set iterationTerm(name: string);
+    setCaseCount(count: number): void;
+    get lastIteration(): number;
+    get lastCalculatedIteration(): number;
+    get(caseNumber?: number): {
+        [name: string]: number;
+    };
+    getIteration(iteration: number, caseNumber?: number): {
+        [name: string]: number;
+    };
+    getByName(name: string, caseNumber?: number): number | undefined;
+    getByNameOnIteration(iteration: number, name: string, caseNumber?: number): number | undefined;
+    getIndependentOnIteration(iteration: number, caseNumber?: number): number;
+    getIterationTermOnIteration(iteration: number, caseNumber?: number): number;
+    getByExpression(expression: Expression, caseNumber?: number): number | undefined;
+    getByTerm(term: Term, caseNumber?: number): number | undefined;
+    addExpression(expression: Expression, termType?: TermType): void;
+    addTerm(term: Term): void;
+    addTermByName(term: string, type: TermType): void;
+    addBody(body: Body): void;
+    getBodies(): Body[];
+    getBody(name: string): Body | undefined;
+    loadTerms(names: string[], values: number[][]): void;
+    reset(): void;
+    clear(): void;
+    calculateFunctions(): void;
+    private calculateFunctionsForVisibleIterations;
+    private calculateFunctionsOnIteration;
+    private evaluateFunctionExpressions;
+    private areFunctionValuesEqual;
+    private applyInitialValues;
+    addValues(values: {
+        [name: string]: number;
+    }): void;
+    calculate(values: {
+        [name: string]: number;
+    }, applyInitialValuesToCurrentIteration?: boolean): {
+        [name: string]: number;
+    };
+    isIterationCalculated(iteration: number, caseNumber?: number): boolean;
+    getIndependent(caseNumber?: number): number;
+    setInitialIndependent(value: number): void;
+    isEditable(term: Term): boolean;
+    set(term: Term, value: number, caseNumber?: number): void;
+    setByExpression(expression: Expression, value: number, caseNumber?: number): void;
+    getExpression(name: string): Expression | undefined;
+    storeExpressionTree(name: string, tree: Branch): void;
+    getExpressionTree(name: string): Branch | undefined;
+    getExpressionTrees(name: string): Branch[];
+    getTerm(name: string): Term | undefined;
+    isTerm(name: string): boolean;
+    renameRegressionTerm(currentName: string, newName: string): void;
+    setInitialByTerm(term: Term, value: number, iteration?: number, caseNumber?: number): void;
+    setInitialByName(name: string, value: number, iteration?: number, caseNumber?: number): void;
+    getValue(values: {
+        [name: string]: number;
+    }, term: string): number;
+    getValueAtIteration(iteration: number, term: string, caseNumber?: number): number;
+    getValueAtIndependent(value: number, term: string, caseNumber?: number): number;
+    getInitialByExpression(expression: Expression, iteration?: number): number;
+    getTermsNames(): string[];
+    getDifferentialTermsNames(): string[];
+    assertCaseNumber(caseNumber: number): void;
+    removeExpressionsByName(targetTermName: string): void;
+    removeTermCompletely(termName: string): void;
+    private hasInitialValueForCase;
+    private getInitialValueForCase;
+    private getIterationKey;
+    private indexIterationValue;
+    private getIterationValue;
+    private assertValidCase;
+    private populatePreloadedIterations;
+}
+
+declare class LatexVisitor {
+    private readonly system;
+    constructor(system: System);
+    build(): void;
+    private buildRegressionConditionalLatex;
+    private formatNumber;
+    visit(branch: Branch): string;
+    private render;
+    private renderBinaryOperator;
+    private renderFunction;
+    private wrapIfNeeded;
+}
+
 /**
  * This interface defines a complete listener for a parse tree produced by
  * `LatexMathParser`.
@@ -1788,168 +1942,6 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
     visitName?: (ctx: NameContext) => Result;
 }
 
-declare class Term {
-    name: string;
-    type: TermType;
-    unitsTree: Branch | null;
-    unitsText: string | null;
-    private _initialValues;
-    constructor(name: string, type?: TermType);
-    getInitialValue(iteration?: number): number;
-    setInitialValue(value: number, iteration?: number): void;
-    get initialValues(): number[];
-    set initialValues(values: number[]);
-    hasInitialValue(iteration: number): boolean;
-}
-
-declare class PreloadedData {
-    private termNames;
-    private values;
-    private iterationCol;
-    private independentCol;
-    get names(): string[];
-    get isEmpty(): boolean;
-    load(names: string[], values: number[][], iterationTermName: string, independentTermName: string): void;
-    reset(): void;
-    clear(): void;
-    getDataTermNames(iterationTermName: string, independentTermName: string): string[];
-    getMaxCoveredIteration(initialIndependent: number, step: number): number;
-    apply(iteration: number, target: {
-        [name: string]: number;
-    }, independentTermName: string): void;
-    private applyRow;
-}
-
-declare enum DataRegressionType {
-    LINEAR = "Linear",
-    QUADRATIC = "Quadratic"
-}
-interface DataRegressionPoint {
-    caseNumber: number;
-    iteration: number;
-    independent: number;
-    source: number;
-    value: number;
-}
-interface DataRegressionResult {
-    sourceTermName: string;
-    targetTermName: string;
-    regressionType: DataRegressionType;
-    expression: string;
-    quadratic: number;
-    linear: number;
-    constant: number;
-    slope: number;
-    intercept: number;
-    data: DataRegressionPoint[];
-}
-declare class System {
-    static readonly ZERO: number;
-    static readonly INFINITY: number;
-    private _independent;
-    private _iterationTerm;
-    terms: {
-        [name: string]: Term;
-    };
-    expressions: Array<Expression>;
-    values: Array<{
-        [name: string]: number;
-    }>;
-    iteration: number;
-    step: number;
-    casesCount: number;
-    private caseInitialValues;
-    private expressionsByName;
-    private expressionTrees;
-    private termNames;
-    private differentialNames;
-    private functionExpressionsWithCondition;
-    private functionExpressionsWithoutCondition;
-    private readonly iterationValuesByKey;
-    private _lastIteration;
-    private _lastCalculatedIteration;
-    private readonly calculatedIterationKeys;
-    useRadians: boolean;
-    isCalculatingFunctions: boolean;
-    readonly preloadedData: PreloadedData;
-    private readonly bodies;
-    constructor(independent?: string, iterationTerm?: string);
-    get independent(): Term;
-    set independent(name: string);
-    get iterationTerm(): Term;
-    set iterationTerm(name: string);
-    setCaseCount(count: number): void;
-    get lastIteration(): number;
-    get lastCalculatedIteration(): number;
-    get(caseNumber?: number): {
-        [name: string]: number;
-    };
-    getIteration(iteration: number, caseNumber?: number): {
-        [name: string]: number;
-    };
-    getByName(name: string, caseNumber?: number): number | undefined;
-    getByNameOnIteration(iteration: number, name: string, caseNumber?: number): number | undefined;
-    getIndependentOnIteration(iteration: number, caseNumber?: number): number;
-    getIterationTermOnIteration(iteration: number, caseNumber?: number): number;
-    getByExpression(expression: Expression, caseNumber?: number): number | undefined;
-    getByTerm(term: Term, caseNumber?: number): number | undefined;
-    addExpression(expression: Expression, termType?: TermType): void;
-    addTerm(term: Term): void;
-    addTermByName(term: string, type: TermType): void;
-    addBody(body: Body): void;
-    getBodies(): Body[];
-    getBody(name: string): Body | undefined;
-    loadTerms(names: string[], values: number[][]): void;
-    reset(): void;
-    clear(): void;
-    calculateFunctions(): void;
-    private calculateFunctionsForVisibleIterations;
-    private calculateFunctionsOnIteration;
-    private evaluateFunctionExpressions;
-    private areFunctionValuesEqual;
-    private applyInitialValues;
-    addValues(values: {
-        [name: string]: number;
-    }): void;
-    calculate(values: {
-        [name: string]: number;
-    }, applyInitialValuesToCurrentIteration?: boolean): {
-        [name: string]: number;
-    };
-    isIterationCalculated(iteration: number, caseNumber?: number): boolean;
-    getIndependent(caseNumber?: number): number;
-    setInitialIndependent(value: number): void;
-    isEditable(term: Term): boolean;
-    set(term: Term, value: number, caseNumber?: number): void;
-    setByExpression(expression: Expression, value: number, caseNumber?: number): void;
-    getExpression(name: string): Expression | undefined;
-    storeExpressionTree(name: string, tree: unknown): void;
-    getExpressionTree(name: string): unknown | undefined;
-    getTerm(name: string): Term | undefined;
-    isTerm(name: string): boolean;
-    renameRegressionTerm(currentName: string, newName: string): void;
-    setInitialByTerm(term: Term, value: number, iteration?: number, caseNumber?: number): void;
-    setInitialByName(name: string, value: number, iteration?: number, caseNumber?: number): void;
-    getValue(values: {
-        [name: string]: number;
-    }, term: string): number;
-    getValueAtIteration(iteration: number, term: string, caseNumber?: number): number;
-    getValueAtIndependent(value: number, term: string, caseNumber?: number): number;
-    getInitialByExpression(expression: Expression, iteration?: number): number;
-    getTermsNames(): string[];
-    getDifferentialTermsNames(): string[];
-    assertCaseNumber(caseNumber: number): void;
-    removeExpressionsByName(targetTermName: string): void;
-    removeTermCompletely(termName: string): void;
-    private hasInitialValueForCase;
-    private getInitialValueForCase;
-    private getIterationKey;
-    private indexIterationValue;
-    private getIterationValue;
-    private assertValidCase;
-    private populatePreloadedIterations;
-}
-
 declare class Deriver extends LatexMathVisitor<Branch> {
     private readonly variable;
     private readonly system;
@@ -2067,30 +2059,36 @@ declare class PhysicalEngine {
     reset(): void;
 }
 
-interface RegressionRange {
-    sourceTermName: string;
+declare enum RegressionType {
+    LINEAR = "Linear",
+    QUADRATIC = "Quadratic"
+}
+interface RegressionPoint {
     caseNumber: number;
-    independentStart: number;
-    independentEnd: number;
-    regressionType: DataRegressionType;
+    iteration: number;
+    independent: number;
+    source: number;
+    value: number;
+}
+interface RegressionResult {
+    sourceTermName: string;
+    targetTermName: string;
+    regressionType: RegressionType;
+    expression: string;
     quadratic: number;
     linear: number;
     constant: number;
-    parameterNames: string[];
+    slope: number;
+    intercept: number;
+    data: RegressionPoint[];
 }
-declare class RegressionTerm extends Term {
-    readonly sourceTermName: string;
-    ranges: RegressionRange[];
-    constructor(name: string, sourceTermName: string);
-}
-
 declare class Regressor {
     private static readonly LINEAR;
     private static readonly QUADRATIC;
     private static readonly ZERO;
     private readonly system;
     constructor(system: System);
-    calculate(sourceTermName: string, regressionType: DataRegressionType | string, caseNumber?: number, startIteration?: number, endIteration?: number): DataRegressionResult;
+    calculate(sourceTermName: string, regressionType: RegressionType | string, caseNumber?: number, startIteration?: number, endIteration?: number): RegressionResult;
     remove(targetTermName: string, caseNumber?: number, startIteration?: number, endIteration?: number): void;
     private getIndependentAtIteration;
     private getOrCreateTerm;
@@ -2100,6 +2098,7 @@ declare class Regressor {
     private clearTerm;
     private assignParameters;
     private addRange;
+    private buildRangeBranch;
     private recalculate;
     private findRange;
     private buildExpression;
@@ -2117,6 +2116,23 @@ declare class Regressor {
     private solve3x3;
     private formatNumber;
     private get systemZero();
+}
+
+interface RegressionRange {
+    sourceTermName: string;
+    caseNumber: number;
+    independentStart: number;
+    independentEnd: number;
+    regressionType: RegressionType;
+    quadratic: number;
+    linear: number;
+    constant: number;
+    parameterNames: string[];
+}
+declare class RegressionTerm extends Term {
+    readonly sourceTermName: string;
+    ranges: RegressionRange[];
+    constructor(name: string, sourceTermName: string);
 }
 
 declare class Visitor extends LatexMathVisitor<Branch> {
@@ -2183,5 +2199,5 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
 
-export { Body, Branch, DataRegressionType, Deriver, Engine, Expression, ExpressionExpander, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, System, Term, TermType, Visitor };
-export type { DataRegressionPoint, DataRegressionResult };
+export { Body, Branch, RegressionType as DataRegressionType, Deriver, Engine, Expression, ExpressionExpander, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, System, Term, TermType, Visitor };
+export type { RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult };

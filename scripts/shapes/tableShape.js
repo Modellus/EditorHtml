@@ -522,9 +522,8 @@ class TableShape extends BaseShape {
 
     isFocusedCellsToolbarOverlayOpen() {
         const focusedRegressionMethodControl = this.getDropDownButtonInstance(this._focusedRegressionMethodElement);
-        const focusedRegressionTermControl = this.getDropDownButtonInstance(this._focusedRegressionTermElement);
         const focusedDeleteMenuOpen = this._focusedDeleteMenuInstance?.option("visible") === true;
-        return focusedRegressionMethodControl?.option("opened") === true || focusedRegressionTermControl?.option("opened") === true || focusedDeleteMenuOpen;
+        return focusedRegressionMethodControl?.option("opened") === true || focusedDeleteMenuOpen;
     }
 
     initializeCellsContextToolbar() {
@@ -666,18 +665,6 @@ class TableShape extends BaseShape {
 
     createFocusedRegressionTermControl(itemElement) {
         this._focusedRegressionTermElement = $('<div class="mdl-focused-regression-term-control">');
-        this._focusedRegressionTermElement.dxDropDownButton({
-            showArrowIcon: false,
-            stylingMode: "text",
-            useSelectMode: false,
-            template: (_, element) => this.renderFocusedRegressionTermButtonTemplate(element[0]),
-            dropDownOptions: {
-                container: document.body,
-                wrapperAttr: this.getShapeOverlayWrapperAttr(),
-                width: 260,
-                contentTemplate: contentElement => this.buildFocusedRegressionTermMenuContent(contentElement)
-            }
-        });
         this._focusedRegressionTermElement.appendTo(itemElement);
     }
 
@@ -710,11 +697,6 @@ class TableShape extends BaseShape {
         });
     }
 
-    renderFocusedRegressionTermButtonTemplate(element) {
-        const colorValue = this._focusedRegressionDraftColor || "transparent";
-        element.innerHTML = `<span class="mdl-focused-toolbar-button mdl-focused-toolbar-button--term"><i class="fa-light fa-chart-fft"></i><span class="mdl-focused-term-swatch" style="background:${colorValue}"></span></span>`;
-    }
-
     buildColumnsWithInsertedRegressionTerm(columns, sourceColumnIndex, regressionResult, regressionColor) {
         const nextColumns = columns.map(column => ({ ...column }));
         if (sourceColumnIndex < 0 || sourceColumnIndex >= nextColumns.length)
@@ -745,18 +727,10 @@ class TableShape extends BaseShape {
         return nextColumns;
     }
 
-    buildFocusedRegressionTermMenuContent(contentElement) {
-        $(contentElement).empty();
-        const content = $('<div class="mdl-focused-regression-term-menu"></div>');
-        const colorRow = $('<div class="mdl-focused-regression-term-menu-row"></div>');
-        const colorLabel = $('<div class="mdl-focused-regression-term-menu-label"></div>').text(this.board.translations.get("Color") ?? "Color");
-        const colorControl = this.getColorControl().createEditor(this._focusedRegressionDraftColor, value => {
-            this._focusedRegressionDraftColor = this.normalizeColumnColor(value);
-            this.getDropDownButtonInstance(this._focusedRegressionTermElement)?.repaint();
-        });
-        colorRow.append(colorLabel, colorControl);
-        content.append(colorRow);
-        $(contentElement).append(content);
+    refreshFocusedRegressionTermLabel(termName) {
+        if (!this._focusedRegressionTermElement)
+            return;
+        this._focusedRegressionTermElement[0].innerHTML = termName ? `<span class="mdl-focused-term-name">${termName}</span>` : "";
     }
 
     onTableFocusedCellsChanged(payload) {
@@ -783,6 +757,7 @@ class TableShape extends BaseShape {
             this._focusedRegressionMethodValue = regressionType === "none" ? "Linear" : regressionType;
             this._focusedRegressionDraftColor = this.normalizeColumnColor(focusedColumn?.sourceColumn?.color);
             this._focusedRegressionDraftFocusKey = draftFocusKey;
+            this.refreshFocusedRegressionTermLabel(regressionType !== "none" ? currentTermName : "");
         }
     }
 
@@ -902,6 +877,8 @@ class TableShape extends BaseShape {
             caseNumber: column.caseNumber,
             editable: column.editable === true,
             isPreloadedTerm: column.isPreloadedTerm === true,
+            termType: Number.isFinite(column.termType) ? column.termType : null,
+            expressionLatex: typeof column.expressionLatex === "string" ? column.expressionLatex : null,
             width: Number.isFinite(column.width) ? column.width : null,
             precision: Number.isFinite(column.precision) ? column.precision : null,
             barColor: this.normalizeColumnColor(column.barColor),
@@ -915,6 +892,7 @@ class TableShape extends BaseShape {
         const system = this.board.calculator.system;
         const controlColumns = columns.map(column => {
             const isPreloadedTerm = this.isPreloadedTableColumnTerm(column.term, hasPreloadedData, system);
+            const term = system.getTerm(column.term);
             return {
                 key: column.key,
                 title: column.term,
@@ -927,6 +905,8 @@ class TableShape extends BaseShape {
                 barColor: this.normalizeColumnColor(column.color),
                 valueDisplayMode: this.normalizeColumnValueDisplayMode(column.valueDisplayMode),
                 isPreloadedTerm: isPreloadedTerm,
+                termType: term?.type,
+                expressionLatex: term?.expressionLatex,
                 sourceColumn: column
             };
         });

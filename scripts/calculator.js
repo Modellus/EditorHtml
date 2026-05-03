@@ -349,6 +349,8 @@ class Calculator extends EventTarget {
         text = text.replace(/\\placeholder\{\}/g, '');
         const expressions = this.splitExpressions(text);
         expressions.forEach(e => this.parser.parse(e));
+        const latexVisitor = new Modellus.LatexVisitor(this.system);
+        latexVisitor.build();
         this.engine.reset();
         this.system.reset();
     }
@@ -390,7 +392,12 @@ class Calculator extends EventTarget {
 
     applyDataRegression(sourceTermName = "", regressionType = "none", caseNumber = 1, startIteration = undefined, endIteration = undefined) {
         const regressor = this.regressor;
-        return /** @type {any} */ (regressor).calculate(sourceTermName, regressionType, caseNumber, startIteration, endIteration);
+        const regressionResult = /** @type {any} */ (regressor).calculate(sourceTermName, regressionType, caseNumber, startIteration, endIteration);
+        if (regressionResult) {
+            this.rebuildExpressionLatex();
+            this.ensureRegressionExpressionLatex(regressionResult);
+        }
+        return regressionResult;
     }
 
     removeDataRegression(targetTermName = "", caseNumber = 1, startIteration = undefined, endIteration = undefined) {
@@ -401,7 +408,42 @@ class Calculator extends EventTarget {
     /** @param {string} sourceTermName @param {string} regressionType @param {string} targetTermName @param {number} caseNumber */
     calculateDataRegression(sourceTermName, regressionType, targetTermName, caseNumber = 1) {
         const regressor = this.regressor;
-        return /** @type {any} */ (regressor).calculate(sourceTermName, regressionType, caseNumber);
+        const regressionResult = /** @type {any} */ (regressor).calculate(sourceTermName, regressionType, caseNumber);
+        if (regressionResult) {
+            this.rebuildExpressionLatex();
+            this.ensureRegressionExpressionLatex(regressionResult);
+        }
+        return regressionResult;
+    }
+
+    rebuildExpressionLatex() {
+        const latexVisitor = new Modellus.LatexVisitor(this.system);
+        latexVisitor.build();
+    }
+
+    ensureRegressionExpressionLatex(regressionResult = null) {
+        const normalizedRegressionResult = /** @type {any} */ (regressionResult ?? {});
+        const targetTermName = String(normalizedRegressionResult.targetTermName ?? "").trim();
+        if (targetTermName === "")
+            return;
+        const targetTerm = this.system.getTerm(targetTermName);
+        if (!targetTerm)
+            return;
+        const currentExpressionLatex = String(targetTerm.expressionLatex ?? "").trim();
+        if (currentExpressionLatex !== "")
+            return;
+        targetTerm.expressionLatex = this.buildRegressionExpressionLatex(normalizedRegressionResult, targetTermName);
+    }
+
+    buildRegressionExpressionLatex(regressionResult = null, targetTermName = "") {
+        const normalizedRegressionResult = /** @type {any} */ (regressionResult ?? {});
+        const independentName = this.system.independent.name;
+        const normalizedRegressionType = String(normalizedRegressionResult.regressionType ?? "").trim().toLowerCase();
+        if (normalizedRegressionType === "linear")
+            return `${targetTermName}.m1 \\cdot ${independentName} + ${targetTermName}.m2`;
+        if (normalizedRegressionType === "quadratic")
+            return `${targetTermName}.m1 \\cdot ${independentName}^2 + ${targetTermName}.m2 \\cdot ${independentName} + ${targetTermName}.m3`;
+        return String(normalizedRegressionResult.expression ?? "").trim();
     }
 
     getInitialValuesByCase() {

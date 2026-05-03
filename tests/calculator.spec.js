@@ -32,6 +32,53 @@ async function setExpressionValue(page, name, value) {
 }
 
 test.describe('Cases expression values in table', () => {
+    test('Builds reconstructed latex for differential expression', async ({ page }) => {
+        await setupEditor(page);
+        const expressionLatex = await page.evaluate(() => {
+            const system = new Modellus.System('t');
+            const parser = new Modellus.Parser(system);
+            const parseResult = parser.parse('\\frac{dx}{dt}=v');
+            if (!parseResult)
+                return null;
+            const xTerm = system.getTerm('x');
+            if (!xTerm)
+                return null;
+            xTerm.expressionLatex = null;
+            const latexVisitor = new Modellus.LatexVisitor(system);
+            latexVisitor.build();
+            return xTerm.expressionLatex;
+        });
+        expect(expressionLatex).toBe('v');
+    });
+
+    test('Calculator parse rebuilds term latex after parsing expressions', async ({ page }) => {
+        await setupEditor(page);
+        const expressionLatex = await page.evaluate(() => {
+            const calculator = new Calculator();
+            calculator.parse('\\frac{dx}{dt}=2*t');
+            const xTerm = calculator.system.getTerm('x');
+            return xTerm?.expressionLatex ?? null;
+        });
+        expect(expressionLatex).not.toBeNull();
+        expect(expressionLatex).toContain('\\cdot');
+        expect(expressionLatex).not.toContain('\\cdott');
+    });
+
+    test('Regression term gets expressionLatex from LatexVisitor after regression', async ({ page }) => {
+        await setupEditor(page);
+        const regressionLatex = await page.evaluate(() => {
+            const calculator = new Calculator();
+            calculator.parse('x=5\\cdot t+6');
+            calculator.engine.reset();
+            for (let iteration = 0; iteration < 10; iteration++)
+                calculator.engine.iterate();
+            calculator.applyDataRegression('x', Modellus.DataRegressionType.LINEAR, 1);
+            const fitTerm = calculator.system.getTerm('x.fit');
+            return fitTerm?.expressionLatex ?? null;
+        });
+        expect(regressionLatex).toBe('x.fit.m1 \\cdot t + x.fit.m2');
+    });
+
     test('x is 1 at t=0, NaN from 0.1 to 1.9, and matches y from t>=2', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
