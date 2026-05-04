@@ -2,6 +2,19 @@ import * as antlr from 'antlr4ng';
 import { ParseTreeListener, TerminalNode, ErrorNode, ParserRuleContext, AbstractParseTreeVisitor } from 'antlr4ng';
 import { EventEmitter } from 'events';
 
+declare class Branch {
+    readonly text: string;
+    readonly children: Branch[];
+    calculate: (values: {
+        [name: string]: number;
+    }) => number;
+    op?: string;
+    constructor(text: string, calculate: (values: {
+        [name: string]: number;
+    }) => number, ...children: Branch[]);
+    withOp(op: string): this;
+}
+
 declare enum TermType {
     DIFFERENTIAL = 0,
     FUNCTION = 1,
@@ -27,34 +40,27 @@ declare class Expression {
     }) => boolean) | null);
 }
 
+interface BodyExpressionRegistration {
+    expression: Expression;
+    termType: TermType;
+    expressionTree?: Branch;
+    conditionTree?: Branch;
+}
 declare class Body {
     readonly name: string;
     readonly type: string;
-    readonly expressions: Expression[];
+    readonly expressions: BodyExpressionRegistration[];
     readonly termInitialValues: {
         name: string;
         value: number;
         type: TermType;
     }[];
     constructor(name: string, type: string);
-    addExpression(expression: Expression): void;
+    addExpression(expression: Expression, termType?: TermType, expressionTree?: Branch, conditionTree?: Branch): void;
     addTermInitialValue(name: string, value: number, type?: TermType): void;
     afterIterate(values: {
         [name: string]: number;
     }): void;
-}
-
-declare class Branch {
-    readonly text: string;
-    readonly children: Branch[];
-    calculate: (values: {
-        [name: string]: number;
-    }) => number;
-    op?: string;
-    constructor(text: string, calculate: (values: {
-        [name: string]: number;
-    }) => number, ...children: Branch[]);
-    withOp(op: string): this;
 }
 
 declare class Term {
@@ -171,8 +177,13 @@ declare class System {
     setByExpression(expression: Expression, value: number, caseNumber?: number): void;
     getExpression(name: string): Expression | undefined;
     storeExpressionTree(name: string, tree: Branch): void;
+    storeExpressionTreeWithCondition(name: string, expressionTree: Branch, conditionTree?: Branch): void;
     getExpressionTree(name: string): Branch | undefined;
     getExpressionTrees(name: string): Branch[];
+    getExpressionTreePairs(name: string): {
+        expressionTree: Branch;
+        conditionTree?: Branch;
+    }[];
     getTerm(name: string): Term | undefined;
     isTerm(name: string): boolean;
     renameRegressionTerm(currentName: string, newName: string): void;
@@ -202,6 +213,8 @@ declare class LatexVisitor {
     private readonly system;
     constructor(system: System);
     build(): void;
+    private getTermLatexName;
+    private buildConditionalLatex;
     private buildRegressionConditionalLatex;
     private formatNumber;
     visit(branch: Branch): string;
@@ -2044,9 +2057,18 @@ declare class PhysicalBody extends Body {
     constructor(name: string, mass: number, initialPositionX?: number, initialPositionY?: number, initialVelocityX?: number, initialVelocityY?: number);
     private buildTerms;
     private buildExpressions;
-    afterIterate(values: {
-        [name: string]: number;
-    }): void;
+    private buildAccelerationXBranch;
+    private buildAccelerationYBranch;
+    private buildCollisionVelocityBranch;
+    private createVariableBranch;
+    private createConstantBranch;
+    private createNegationBranch;
+    private createMultiplicationBranch;
+    private createDivisionBranch;
+    private createSubtractionBranch;
+    private createLessThanBranch;
+    private createLessThanOrEqualBranch;
+    private createAndBranch;
 }
 
 declare class PhysicalEngine {

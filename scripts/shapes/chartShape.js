@@ -77,10 +77,11 @@ class ChartShape extends BaseShape {
         const normalizedTerm = this.normalizeYTermValue(term);
         if (normalizedTerm === "")
             return normalizedTerm;
+        const displayedTerm = this.formatTermForDisplay(normalizedTerm);
         if (!this.shouldShowCaseLabelForTerm(normalizedTerm))
-            return normalizedTerm;
+            return displayedTerm;
         const normalizedCaseNumber = TermControl.getShapeCaseNumber(this, normalizedTerm, caseNumber, value => this.normalizeYTermValue(value));
-        return `${normalizedTerm} ${TermControl.getCaseIconText(normalizedCaseNumber)}`;
+        return `${displayedTerm} ${TermControl.getCaseIconText(normalizedCaseNumber)}`;
     }
 
     getSeriesValueFieldName(index) {
@@ -348,9 +349,9 @@ class ChartShape extends BaseShape {
         const xTerm = this.formatTermForDisplay(this.properties.xTerm);
         const yTerms = (this.properties.yTerms ?? []).filter(y => y.term);
         const firstYTerm = yTerms.length > 0 ? this.formatTermForDisplay(yTerms[0].term) : "";
-        const xPart = xTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` : "";
+            const xPart = xTerm ? this.createNameButtonTermMarkup(xTerm) : "";
         const separator = (xTerm && firstYTerm) ? `<i class="fa-light fa-x mdl-name-btn-separator"></i>` : "";
-        const yPart = firstYTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${firstYTerm}</span></span>` : "";
+            const yPart = firstYTerm ? this.createNameButtonTermMarkup(firstYTerm) : "";
         const extraCount = yTerms.length - 1;
         const extraPart = extraCount > 0 ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-extra">+${extraCount}</span></span>` : "";
         if (!xPart && !yPart)

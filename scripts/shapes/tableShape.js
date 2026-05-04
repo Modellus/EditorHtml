@@ -182,7 +182,7 @@ class TableShape extends BaseShape {
         const firstTerm = columns.length > 0 ? this.formatTermForDisplay(columns[0].term) : "";
         const extraCount = columns.length - 1;
         if (firstTerm) {
-            const termPart = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${firstTerm}</span></span>`;
+            const termPart = this.createNameButtonTermMarkup(firstTerm);
             const extraPart = extraCount > 0 ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-extra">+${extraCount}</span></span>` : "";
             element.innerHTML = `${termPart}${extraPart}`;
         } else
@@ -336,6 +336,18 @@ class TableShape extends BaseShape {
             return false;
         const term = this.board.calculator.system.getTerm(normalizedTermName);
         return term?.type === Modellus.TermType.REGRESSION;
+    }
+
+    getDisplayedColumnTitle(termName) {
+        const normalizedTermName = this.normalizeColumnValue(termName);
+        if (normalizedTermName === "")
+            return "";
+        if (!this.isRegressionTermName(normalizedTermName))
+            return normalizedTermName;
+        const sourceTermName = this.getRegressionSourceTermName(normalizedTermName);
+        if (sourceTermName === "")
+            return normalizedTermName;
+        return `\\widehat{${sourceTermName}}`;
     }
 
     resolveFocusedRowsIterationRange(focusedRows) {
@@ -730,7 +742,9 @@ class TableShape extends BaseShape {
     refreshFocusedRegressionTermLabel(termName) {
         if (!this._focusedRegressionTermElement)
             return;
-        this._focusedRegressionTermElement[0].innerHTML = termName ? `<span class="mdl-focused-term-name">${termName}</span>` : "";
+        const sourceTermName = this.getRegressionSourceTermName(termName);
+        const hattedSourceTermName = sourceTermName !== "" ? `\\widehat{${sourceTermName}}` : "";
+        this._focusedRegressionTermElement[0].innerHTML = hattedSourceTermName !== "" ? `<span class="mdl-focused-term-name">${hattedSourceTermName}</span>` : "";
     }
 
     onTableFocusedCellsChanged(payload) {
@@ -895,7 +909,7 @@ class TableShape extends BaseShape {
             const term = system.getTerm(column.term);
             return {
                 key: column.key,
-                title: column.term,
+                title: this.getDisplayedColumnTitle(column.term),
                 term: column.term,
                 caseNumber: column.case,
                 showCase: TermControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value)),

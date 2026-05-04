@@ -545,11 +545,11 @@ class BodyShape extends ChildShape {
         const yTerm = this.formatTermForDisplay(this.properties.yTerm);
         const sizeTerm = this.formatTermForDisplay(this.properties.sizeTerm);
         element.innerHTML =
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` +
+            this.createNameButtonTermMarkup(xTerm) +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yTerm}</span></span>` +
+            this.createNameButtonTermMarkup(yTerm) +
             `<i class="fa-light fa-arrow-up-right mdl-name-btn-separator"></i>` +
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${sizeTerm}</span></span>`;
+            this.createNameButtonTermMarkup(sizeTerm);
     }
 
     refreshNameToolbarControl() {

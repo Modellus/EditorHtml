@@ -201,7 +201,7 @@ class TermControl {
 
     static getBaseShapeTermSelectItems(baseShape, term) {
         const calculator = baseShape.board.calculator;
-        const items = Utils.getTerms(calculator.getTermsNames());
+        const items = Utils.getTerms(calculator.getTermsNames(), calculator.system);
         const selectedValue = TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]);
         if (selectedValue === "")
             return items;
@@ -489,7 +489,7 @@ class TermControl {
 
     static buildShapeTermsCollectionTermItems(shape, selectedTerm, normalizeTermValue = value => TermControl.normalizeTermValue(value)) {
         const calculator = shape.board.calculator;
-        const items = Utils.getTerms(calculator.getTermsNames());
+        const items = Utils.getTerms(calculator.getTermsNames(), calculator.system);
         const normalizedSelectedTerm = normalizeTermValue(selectedTerm);
         if (normalizedSelectedTerm === "")
             return items;
@@ -1134,6 +1134,10 @@ class TermControl {
             keyExpr: "id",
             parentIdExpr: "parentId",
             displayExpr: "text",
+            itemTemplate: (itemData, _, element) => {
+                const itemText = String(itemData?.text ?? "");
+                element[0].innerHTML = `<div class="mdl-variable-selector"><math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block">${itemText}</math-field></div>`;
+            },
             selectionMode: "single",
             selectByClick: true,
             height: 220,
@@ -1153,6 +1157,58 @@ class TermControl {
         }).appendTo(contentElement);
     }
 
+    resolveTermEditorSelectedValue(data, fallbackValue = null) {
+        if (data != null && typeof data === "object" && Object.prototype.hasOwnProperty.call(data, "value"))
+            return data.value;
+        if (typeof data === "string" || typeof data === "number")
+            return data;
+        return fallbackValue;
+    }
+
+    resolveTermEditorDisplayedText(data, fallbackValue, system) {
+        const selectedValue = this.resolveTermEditorSelectedValue(data, fallbackValue);
+        return String(Utils.getDisplayedTerm(selectedValue, system));
+    }
+
+    setMathFieldValue(mathFieldElement, mathValue) {
+        if (!mathFieldElement)
+            return;
+        if (typeof mathFieldElement.setValue === "function")
+            mathFieldElement.setValue(mathValue);
+        else
+            mathFieldElement.value = mathValue;
+    }
+
+    getTermEditorInputContainer(component) {
+        const componentElement = component?.element?.();
+        const inputElement = componentElement?.find?.(".dx-texteditor-input")?.first?.();
+        if (inputElement?.length)
+            return inputElement.parent();
+        const inputContainer = componentElement?.find?.(".dx-texteditor-input-container")?.first?.();
+        if (inputContainer?.length)
+            return inputContainer;
+        const inputWrapper = componentElement?.find?.(".dx-dropdowneditor-input-wrapper")?.first?.();
+        if (inputWrapper?.length)
+            return inputWrapper;
+        return componentElement?.find?.(".dx-texteditor-container")?.first?.();
+    }
+
+    syncTermEditorMathField(component, fallbackValue, system) {
+        const selectedValue = component.option("value") ?? fallbackValue;
+        const selectedText = String(Utils.getDisplayedTerm(selectedValue, system));
+        const inputContainer = this.getTermEditorInputContainer(component);
+        if (!inputContainer?.length)
+            return;
+        const existingMathField = inputContainer.find(".mdl-term-editor-math-field").first()[0];
+        let mathFieldElement = existingMathField;
+        if (!mathFieldElement) {
+            inputContainer.prepend("<math-field read-only class='form-math-field mdl-term-editor-math-field' style='height:auto;width:auto;display:inline-block'></math-field>");
+            mathFieldElement = inputContainer.find(".mdl-term-editor-math-field").first()[0];
+        }
+        this.setMathFieldValue(mathFieldElement, selectedText);
+        inputContainer.find(".dx-texteditor-input").css({ color: "transparent", caretColor: "transparent", opacity: 0, textShadow: "none" });
+    }
+
     getTermEditorOptions(item, index) {
         const providedOptions = this.options.termEditor ?? {};
         const acceptCustomValue = typeof providedOptions.acceptCustomValue === "function"
@@ -1160,17 +1216,33 @@ class TermControl {
             : providedOptions.acceptCustomValue === true;
         const termValue = this.getTermValue(item, index);
         const board = this.options.getBoard?.();
+        const system = board?.calculator?.system;
         const flatItems = this.getTermItems(item, index);
         const treeItems = TermControl.buildTermTreeItems(board, flatItems);
         let dropDownBoxInstance = null;
-        const leafTerms = treeItems.filter(t => t.term !== undefined).map(t => t.term);
+        const leafTerms = treeItems.filter(t => t.term !== undefined).map(t => ({ value: t.term, text: Utils.getDisplayedTerm(t.term, system) }));
         return {
             value: termValue || null,
             dataSource: leafTerms,
+            valueExpr: "value",
+            displayExpr: data => this.resolveTermEditorDisplayedText(data, termValue, system),
             inputAttr: { class: "mdl-variable-selector" },
             stylingMode: "filled",
             elementAttr: { class: "mdl-variable-selector" },
-            onInitialized: e => { dropDownBoxInstance = e.component; },
+            fieldAddons: {
+                before: data => {
+                    const selectedText = this.resolveTermEditorDisplayedText(data, termValue, system);
+                    const mathField = $("<math-field read-only class='form-math-field' style='height:auto;width:auto;display:inline-block'></math-field>");
+                    this.setMathFieldValue(mathField[0], selectedText);
+                    return mathField;
+                }
+            },
+            onInitialized: e => {
+                dropDownBoxInstance = e.component;
+                this.syncTermEditorMathField(e.component, termValue, system);
+            },
+            onContentReady: e => this.syncTermEditorMathField(e.component, termValue, system),
+            onValueChanged: e => this.syncTermEditorMathField(e.component, termValue, system),
             contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), item, index, treeItems, acceptCustomValue, termValue, providedOptions, () => dropDownBoxInstance?.close()),
             dropDownOptions: {
                 container: document.body,
@@ -1182,10 +1254,9 @@ class TermControl {
 
     createDefaultTermItemTemplate() {
         return (data, _, element) => {
-            const item = $("<div>").text(data?.text ?? "");
-            item.addClass("mdl-variable-selector");
-            element.append(item);
-            return item;
+            const itemText = String(data?.text ?? "");
+            element[0].innerHTML = `<div class="mdl-variable-selector"><math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block">${itemText}</math-field></div>`;
+            return element;
         };
     }
 

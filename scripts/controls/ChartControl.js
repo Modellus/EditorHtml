@@ -498,6 +498,39 @@ class ChartControl {
         };
     }
 
+    normalizeTitleTextForWidth(textValue) {
+        const normalizedTextValue = String(textValue ?? "");
+        const simplifiedTextValue = normalizedTextValue
+            .replace(/\\widehat\s*\{([^}]*)\}/g, "$1")
+            .replace(/\\hat\s*\{([^}]*)\}/g, "$1")
+            .replace(/\\[a-zA-Z]+/g, "")
+            .replace(/[{}]/g, "");
+        if (simplifiedTextValue !== "")
+            return Utils.convertGreekLetters(simplifiedTextValue);
+        return Utils.convertGreekLetters(normalizedTextValue);
+    }
+
+    isMathTitleText(textValue) {
+        return String(textValue ?? "").includes("\\");
+    }
+
+    getTitleMathPadding(fontSize, textValue) {
+        const normalizedFontSize = Number(fontSize) || 16;
+        let padding = normalizedFontSize * 0.35;
+        if (String(textValue ?? "").includes("\\widehat"))
+            padding += normalizedFontSize * 0.45;
+        return padding;
+    }
+
+    estimateTitleTextSegmentWidth(textValue, fontSize) {
+        const normalizedTextValue = this.normalizeTitleTextForWidth(textValue);
+        const baseWidth = this.estimateTextWidth(normalizedTextValue, fontSize);
+        if (!this.isMathTitleText(textValue))
+            return baseWidth;
+        const padding = this.getTitleMathPadding(fontSize, textValue);
+        return baseWidth + padding * 2;
+    }
+
     estimateTitleSegmentsWidth(segments, fontSize) {
         let totalWidth = 0;
         for (let index = 0; index < segments.length; index++) {
@@ -506,12 +539,32 @@ class ChartControl {
                 totalWidth += this.getCaseIconSize(segment.caseNumber, fontSize).width;
                 continue;
             }
-            totalWidth += this.estimateTextWidth(segment.value, fontSize);
+            totalWidth += this.estimateTitleTextSegmentWidth(segment.value, fontSize);
         }
         return totalWidth;
     }
 
+    renderTitleMathSegment(layer, xPosition, yPosition, fontSize, fill, textValue) {
+        const segmentWidth = this.estimateTitleTextSegmentWidth(textValue, fontSize);
+        const segmentHeight = Math.max(18, fontSize * 1.9);
+        const foreignObject = this.createSvgElement("foreignObject");
+        foreignObject.setAttribute("x", `${xPosition}`);
+        foreignObject.setAttribute("y", `${yPosition - segmentHeight * 0.78}`);
+        foreignObject.setAttribute("width", `${segmentWidth}`);
+        foreignObject.setAttribute("height", `${segmentHeight}`);
+        foreignObject.setAttribute("pointer-events", "none");
+        const container = document.createElement("div");
+        container.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:flex-start;overflow:visible;pointer-events:none";
+        container.innerHTML = `<math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;color:${fill};font-size:${fontSize}px">${String(textValue ?? "")}</math-field>`;
+        foreignObject.appendChild(container);
+        layer.appendChild(foreignObject);
+    }
+
     renderTitleTextSegment(layer, xPosition, yPosition, fontSize, fill, textValue) {
+        if (this.isMathTitleText(textValue)) {
+            this.renderTitleMathSegment(layer, xPosition, yPosition, fontSize, fill, textValue);
+            return;
+        }
         const textElement = this.createSvgElement("text");
         textElement.setAttribute("x", `${xPosition}`);
         textElement.setAttribute("y", `${yPosition}`);
@@ -573,7 +626,7 @@ class ChartControl {
                 continue;
             }
             this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, fill, segment.value);
-            cursorX += this.estimateTextWidth(segment.value, fontSize);
+            cursorX += this.estimateTitleTextSegmentWidth(segment.value, fontSize);
         }
     }
 
@@ -621,7 +674,7 @@ class ChartControl {
                     continue;
                 }
                 this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, entry.color, segment.value);
-                cursorX += this.estimateTextWidth(segment.value, fontSize);
+                cursorX += this.estimateTitleTextSegmentWidth(segment.value, fontSize);
             }
         }
     }
@@ -953,14 +1006,16 @@ class ChartControl {
     }
 
     updateTitleClipRects(layout, height) {
+        const titlePadding = 10;
+        const xTitleClipTop = Math.max(0, layout.plotBottom - titlePadding);
         this.xTitleClipRect.setAttribute("x", `${layout.plotLeft}`);
-        this.xTitleClipRect.setAttribute("y", `${layout.plotBottom}`);
+        this.xTitleClipRect.setAttribute("y", `${xTitleClipTop}`);
         this.xTitleClipRect.setAttribute("width", `${layout.plotWidth}`);
-        this.xTitleClipRect.setAttribute("height", `${height - layout.plotBottom}`);
+        this.xTitleClipRect.setAttribute("height", `${Math.max(0, height - xTitleClipTop)}`);
         this.yTitleClipRect.setAttribute("x", "0");
-        this.yTitleClipRect.setAttribute("y", `${layout.plotTop}`);
-        this.yTitleClipRect.setAttribute("width", `${layout.plotLeft}`);
-        this.yTitleClipRect.setAttribute("height", `${layout.plotHeight}`);
+        this.yTitleClipRect.setAttribute("y", `${Math.max(0, layout.plotTop - titlePadding)}`);
+        this.yTitleClipRect.setAttribute("width", `${layout.plotLeft + titlePadding}`);
+        this.yTitleClipRect.setAttribute("height", `${layout.plotHeight + titlePadding * 2}`);
     }
 
     renderTitles(layout, width, height) {

@@ -214,6 +214,33 @@ class TableControl {
         return value.length * fontSize * 0.58;
     }
 
+    normalizeHeaderTitleForWidth(titleText) {
+        const normalizedTitleText = String(titleText ?? "");
+        const simplifiedTitleText = normalizedTitleText
+            .replace(/\\hat\s*\{([^}]*)\}/g, "$1")
+            .replace(/\\[a-zA-Z]+/g, "")
+            .replace(/[{}]/g, "");
+        if (simplifiedTitleText !== "")
+            return simplifiedTitleText;
+        return normalizedTitleText;
+    }
+
+    getHeaderTitleMathValue(titleText) {
+        const normalizedTitleText = String(titleText ?? "");
+        if (normalizedTitleText.includes("\\"))
+            return normalizedTitleText;
+        return Utils.convertGreekLetters(normalizedTitleText);
+    }
+
+    setMathFieldValue(mathFieldElement, mathValue) {
+        if (!mathFieldElement)
+            return;
+        if (typeof mathFieldElement.setValue === "function")
+            mathFieldElement.setValue(mathValue);
+        else
+            mathFieldElement.value = mathValue;
+    }
+
     getHeaderCaseIconSize(caseNumber) {
         const iconData = this.caseIconData[caseNumber];
         const baseHeight = Math.max(8, Number(this.options.headerFontSize) - 3);
@@ -521,7 +548,7 @@ class TableControl {
 
     getAutoColumnWidth(column) {
         const title = String(column?.title ?? "");
-        const titleWidth = this.estimateTextWidth(title, Number(this.options.headerFontSize) || 16);
+        const titleWidth = this.estimateTextWidth(this.normalizeHeaderTitleForWidth(title), Number(this.options.headerFontSize) || 16);
         let caseIconWidth = 0;
         if (column?.showCase === true)
             caseIconWidth = this.getHeaderCaseIconSize(column.caseNumber).width + 8;
@@ -721,6 +748,7 @@ class TableControl {
 
     renderHeaderCell(layout, column, cellGeometry, columnIndex, isLastColumn) {
         const headerBackgroundColor = this.getColumnHeaderBackgroundColor(column);
+        const headerTextColor = this.getContrastTextColor(headerBackgroundColor);
         const headerRect = this.createSvgElement("rect");
         headerRect.setAttribute("x", `${cellGeometry.x}`);
         headerRect.setAttribute("y", "0");
@@ -731,22 +759,26 @@ class TableControl {
         const centerX = cellGeometry.x + cellGeometry.width / 2;
         const centerY = layout.headerHeight / 2 + 4;
         const titleText = column.title ?? "";
-        const text = this.createSvgElement("text");
-        text.setAttribute("x", `${centerX}`);
-        text.setAttribute("y", `${centerY}`);
-        text.setAttribute("text-anchor", "middle");
-        text.setAttribute("font-family", this.options.termFontFamily);
-        text.setAttribute("font-size", `${this.options.headerFontSize}`);
-        text.setAttribute("fill", this.getContrastTextColor(headerBackgroundColor));
-        text.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
-        text.textContent = Utils.convertGreekLetters(titleText);
-        this.headerLayer.appendChild(text);
+        const titleMathValue = this.getHeaderTitleMathValue(titleText);
+        const titleForeignObject = this.createSvgElement("foreignObject");
+        titleForeignObject.setAttribute("x", `${cellGeometry.x}`);
+        titleForeignObject.setAttribute("y", "0");
+        titleForeignObject.setAttribute("width", `${cellGeometry.width}`);
+        titleForeignObject.setAttribute("height", `${layout.headerHeight}`);
+        titleForeignObject.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
+        titleForeignObject.setAttribute("pointer-events", "none");
+        const titleContainer = document.createElement("div");
+        titleContainer.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none";
+        titleContainer.innerHTML = `<math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;color:${headerTextColor};font-size:${this.options.headerFontSize}px"></math-field>`;
+        const titleMathField = titleContainer.querySelector("math-field");
+        this.setMathFieldValue(titleMathField, titleMathValue);
+        titleForeignObject.appendChild(titleContainer);
+        this.headerLayer.appendChild(titleForeignObject);
         if (column.showCase === true) {
-            let titleWidth = 0;
-            if (typeof text.getComputedTextLength === "function")
-                titleWidth = text.getComputedTextLength();
-            if (!(titleWidth > 0))
-                titleWidth = this.estimateTextWidth(titleText, Number(this.options.headerFontSize) || 16);
+            let titleWidth = this.estimateTextWidth(this.normalizeHeaderTitleForWidth(titleText), Number(this.options.headerFontSize) || 16);
+            const measuredTitleWidth = Number(titleMathField?.getBoundingClientRect?.().width);
+            if (Number.isFinite(measuredTitleWidth) && measuredTitleWidth > 0)
+                titleWidth = measuredTitleWidth;
             const iconX = centerX + titleWidth / 2 + 2;
             const iconY = centerY - 1;
             this.renderHeaderCaseIcon(column.caseNumber, iconX, iconY, columnIndex);
@@ -1695,10 +1727,7 @@ class TableControl {
         const mathFieldElement = tooltipContentElement.querySelector("math-field");
         if (!mathFieldElement)
             return;
-        if (typeof mathFieldElement.setValue === "function")
-            mathFieldElement.setValue(this.headerTooltipLatex);
-        else
-            mathFieldElement.value = this.headerTooltipLatex;
+        this.setMathFieldValue(mathFieldElement, this.headerTooltipLatex);
     }
 
     scheduleHeaderTooltip(columnIndex, target) {

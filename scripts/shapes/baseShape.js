@@ -1898,9 +1898,20 @@ class BaseShape {
             return "∞";
         if (numeric === -Infinity)
             return "-∞";
-        if (!Number.isFinite(numeric))
-            return Utils.convertGreekLetters(termText);
+        if (!Number.isFinite(numeric)) {
+            const calculator = this.board?.calculator;
+            if (calculator?.isTerm(termText))
+                return Utils.getDisplayedTerm(termText, calculator.system);
+            return Utils.getDisplayedTerm(termText);
+        }
         return this.formatModelValue(numeric);
+    }
+
+    createNameButtonTermMarkup(termText) {
+        const normalizedTermText = String(termText ?? "").trim();
+        if (normalizedTermText === "")
+            return "";
+        return `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text"><math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;pointer-events:none">${normalizedTermText}</math-field></span></span>`;
     }
 
     buildTermDisplayLabel(entry) {
@@ -1922,10 +1933,11 @@ class BaseShape {
                 valueText: valueText,
                 text: valueText
             };
+        const displayedTermText = this.formatTermForDisplay(termName);
         return {
-            termText: termName,
+            termText: displayedTermText,
             valueText: valueText,
-            text: `${termName} = ${valueText}`
+            text: `${displayedTermText} = ${valueText}`
         };
     }
 

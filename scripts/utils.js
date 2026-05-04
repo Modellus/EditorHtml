@@ -49,8 +49,33 @@ class Utils {
         return text.replace(Utils.greekLettersPattern, match => Utils.greekLetters[match]);
     }
 
-    static getTerms(terms) {
-        return terms.map(t => ({ text: Utils.convertGreekLetters(t), term: t }));
+    static getRegressionDisplayTerm(term, system = null) {
+        const normalizedTerm = String(term ?? "").trim();
+        if (normalizedTerm === "" || !system)
+            return null;
+        if (typeof Modellus === "undefined" || !Modellus?.TermType)
+            return null;
+        const resolvedTerm = system.getTerm(normalizedTerm);
+        if (!resolvedTerm || resolvedTerm.type !== Modellus.TermType.REGRESSION)
+            return null;
+        const sourceTermName = String(resolvedTerm.sourceTermName ?? "").trim();
+        if (sourceTermName === "")
+            return null;
+        return `\\widehat{${sourceTermName}}`;
+    }
+
+    static getDisplayedTerm(term, system = null) {
+        const normalizedTerm = String(term ?? "").trim();
+        if (normalizedTerm === "")
+            return "";
+        const regressionDisplayTerm = Utils.getRegressionDisplayTerm(normalizedTerm, system);
+        if (regressionDisplayTerm)
+            return regressionDisplayTerm;
+        return Utils.convertGreekLetters(normalizedTerm);
+    }
+
+    static getTerms(terms, system = null) {
+        return terms.map(t => ({ text: Utils.getDisplayedTerm(t, system), term: t }));
     }
 
     static throttle(func, delay) {

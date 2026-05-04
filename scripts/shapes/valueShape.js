@@ -183,7 +183,7 @@ class ValueShape extends BaseShape {
     renderTermsButtonTemplate(element) {
         const term = this.formatTermForDisplay(this.properties.term);
         element.innerHTML = term
-            ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${term}</span></span>`
+            ? this.createNameButtonTermMarkup(term)
             : `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Term</span></span>`;
     }
 

@@ -137,9 +137,9 @@ class GaugeShape extends BaseShape {
     renderTermsButtonTemplate(element) {
         const angleTerm = this.formatTermForDisplay(this.properties.angleTerm);
         const magnitudeTerm = this.formatTermForDisplay(this.properties.magnitudeTerm);
-        const anglePart = angleTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${angleTerm}</span></span>` : "";
+        const anglePart = angleTerm ? this.createNameButtonTermMarkup(angleTerm) : "";
         const separator = (angleTerm && magnitudeTerm) ? `<i class="fa-light fa-x mdl-name-btn-separator"></i>` : "";
-        const magnitudePart = magnitudeTerm ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${magnitudeTerm}</span></span>` : "";
+        const magnitudePart = magnitudeTerm ? this.createNameButtonTermMarkup(magnitudeTerm) : "";
         if (!anglePart && !magnitudePart)
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
         else

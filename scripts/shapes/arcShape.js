@@ -204,15 +204,15 @@ class ArcShape extends ChildShape {
         const startAngleTerm = this.formatTermForDisplay(this.properties.startAngleTerm);
         const endAngleTerm = this.formatTermForDisplay(this.properties.endAngleTerm);
         element.innerHTML =
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` +
+            this.createNameButtonTermMarkup(xTerm) +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yTerm}</span></span>` +
+            this.createNameButtonTermMarkup(yTerm) +
             `<i class="fa-light fa-pipe mdl-name-btn-separator" style="opacity:0.3"></i>` +
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${radiusTerm}</span></span>` +
+            this.createNameButtonTermMarkup(radiusTerm) +
             `<i class="fa-light fa-pipe mdl-name-btn-separator" style="opacity:0.3"></i>` +
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${startAngleTerm}</span></span>` +
+            this.createNameButtonTermMarkup(startAngleTerm) +
             `<i class="fa-light fa-arrow-right mdl-name-btn-separator"></i>` +
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${endAngleTerm}</span></span>`;
+            this.createNameButtonTermMarkup(endAngleTerm);
     }
 
     renderLineWidthButtonTemplate(element) {

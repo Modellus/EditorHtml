@@ -81,6 +81,13 @@ function isUnauthorizedError(error) {
     return Number(error?.status) === 401;
 }
 
+function isNetworkFetchError(error) {
+    if (!(error instanceof TypeError))
+        return false;
+    const message = String(error?.message ?? "");
+    return message.toLowerCase().includes("fetch");
+}
+
 function clearAuthState() {
     try {
         const sessionStorageKey = window.modellus?.auth?.sessionKey || "mp.session";
@@ -151,6 +158,10 @@ function redirectToLogin() {
                     redirectToLogin();
                     return;
                 }
+                if (isNetworkFetchError(error)) {
+                    shell = new Shell(null, modelsApiClient);
+                    return;
+                }
                 throw error;
             }
         }
@@ -177,6 +188,11 @@ function redirectToLogin() {
         if (isUnauthorizedError(error)) {
             clearAuthState();
             redirectToLogin();
+            return;
+        }
+        if (isNetworkFetchError(error)) {
+            if (!shell)
+                shell = new Shell(null, modelsApiClient);
             return;
         }
         console.error(error);

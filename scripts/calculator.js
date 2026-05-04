@@ -26,6 +26,7 @@ class Calculator extends EventTarget {
         this.preloadedTermValues = null;
         this.preloadedOriginalTermNames = null;
         this.preloadedOriginalTermValues = null;
+        this.preloadedRegressionTerms = null;
     }
 
     normalizeCasesCount(value = 1) {
@@ -249,6 +250,140 @@ class Calculator extends EventTarget {
         this.preloadedTermValues = null;
         this.preloadedOriginalTermNames = null;
         this.preloadedOriginalTermValues = null;
+    }
+
+    loadRegressionTerms(regressionTerms = null) {
+        if (!Array.isArray(regressionTerms)) {
+            this.preloadedRegressionTerms = null;
+            return;
+        }
+        const serializedRegressionTerms = /** @type {any[]} */ (regressionTerms);
+        const normalizedTerms = [];
+        for (let index = 0; index < serializedRegressionTerms.length; index++) {
+            const regressionTerm = /** @type {any} */ (serializedRegressionTerms[index]);
+            const targetTermName = String(regressionTerm?.targetTermName ?? "").trim();
+            const sourceTermName = String(regressionTerm?.sourceTermName ?? "").trim();
+            if (targetTermName === "" || sourceTermName === "")
+                continue;
+            const ranges = Array.isArray(regressionTerm?.ranges) ? regressionTerm.ranges : [];
+            const normalizedRanges = [];
+            for (let rangeIndex = 0; rangeIndex < ranges.length; rangeIndex++) {
+                const range = ranges[rangeIndex];
+                const caseNumber = parseInt(range?.caseNumber, 10);
+                const regressionType = String(range?.regressionType ?? "").trim();
+                const independentStart = Number(range?.independentStart);
+                const independentEnd = Number(range?.independentEnd);
+                if (!Number.isFinite(caseNumber) || caseNumber < 1)
+                    continue;
+                if (regressionType !== "Linear" && regressionType !== "Quadratic")
+                    continue;
+                if (!Number.isFinite(independentStart) || !Number.isFinite(independentEnd))
+                    continue;
+                normalizedRanges.push({ caseNumber: caseNumber, regressionType: regressionType, independentStart: independentStart, independentEnd: independentEnd });
+            }
+            if (normalizedRanges.length === 0)
+                continue;
+            const expressionLatex = String(regressionTerm?.expressionLatex ?? "").trim();
+            normalizedTerms.push({ targetTermName: targetTermName, sourceTermName: sourceTermName, ranges: normalizedRanges, expressionLatex: expressionLatex });
+        }
+        this.preloadedRegressionTerms = normalizedTerms.length > 0 ? normalizedTerms : null;
+    }
+
+    getRegressionTermsData() {
+        const termsNames = this.getTermsNames();
+        const regressionTerms = [];
+        for (let index = 0; index < termsNames.length; index++) {
+            const targetTermName = termsNames[index];
+            const term = this.system.getTerm(targetTermName);
+            if (!term || term.type !== Modellus.TermType.REGRESSION)
+                continue;
+            const regressionTerm = /** @type {any} */ (term);
+            const sourceTermName = String(regressionTerm.sourceTermName ?? "").trim();
+            if (sourceTermName === "")
+                continue;
+            const ranges = Array.isArray(regressionTerm.ranges) ? regressionTerm.ranges : [];
+            const serializedRanges = [];
+            for (let rangeIndex = 0; rangeIndex < ranges.length; rangeIndex++) {
+                const range = ranges[rangeIndex];
+                const caseNumber = parseInt(range?.caseNumber, 10);
+                const regressionType = String(range?.regressionType ?? "").trim();
+                const independentStart = Number(range?.independentStart);
+                const independentEnd = Number(range?.independentEnd);
+                if (!Number.isFinite(caseNumber) || caseNumber < 1)
+                    continue;
+                if (regressionType !== "Linear" && regressionType !== "Quadratic")
+                    continue;
+                if (!Number.isFinite(independentStart) || !Number.isFinite(independentEnd))
+                    continue;
+                serializedRanges.push({ caseNumber: caseNumber, regressionType: regressionType, independentStart: independentStart, independentEnd: independentEnd });
+            }
+            if (serializedRanges.length === 0)
+                continue;
+            const expressionLatex = String(regressionTerm.expressionLatex ?? "").trim();
+            regressionTerms.push({ targetTermName: targetTermName, sourceTermName: sourceTermName, ranges: serializedRanges, expressionLatex: expressionLatex });
+        }
+        if (regressionTerms.length === 0)
+            return null;
+        return regressionTerms;
+    }
+
+    getIterationFromIndependentValue(independentValue = 0) {
+        const independentStart = Number(this.properties?.independent?.start);
+        const independentStep = Number(this.properties?.independent?.step);
+        if (!Number.isFinite(independentStart) || !Number.isFinite(independentStep) || independentStep === 0)
+            return 1;
+        const rawIteration = Math.round((independentValue - independentStart) / independentStep) + 1;
+        const finalIteration = this.getFinalIteration();
+        return Math.max(1, Math.min(finalIteration, rawIteration));
+    }
+
+    restoreRegressionRange(sourceTermName = "", targetTermName = "", regressionType = "", caseNumber = 1, independentStart = 0, independentEnd = 0) {
+        const startIteration = this.getIterationFromIndependentValue(independentStart);
+        const endIteration = this.getIterationFromIndependentValue(independentEnd);
+        const normalizedStart = Math.min(startIteration, endIteration);
+        const normalizedEnd = Math.max(startIteration, endIteration);
+        const regressionResult = /** @type {any} */ (this.regressor).calculate(sourceTermName, regressionType, caseNumber, normalizedStart, normalizedEnd);
+        if (!regressionResult)
+            return;
+        this.rebuildExpressionLatex();
+        this.ensureRegressionExpressionLatex(regressionResult);
+        if (String(regressionResult.targetTermName ?? "") !== targetTermName)
+            return;
+    }
+
+    applyPreloadedRegressionTerms() {
+        if (!Array.isArray(this.preloadedRegressionTerms) || this.preloadedRegressionTerms.length === 0)
+            return;
+        for (let termIndex = 0; termIndex < this.preloadedRegressionTerms.length; termIndex++) {
+            const regressionTerm = this.preloadedRegressionTerms[termIndex];
+            const sourceTermName = String(regressionTerm?.sourceTermName ?? "").trim();
+            const targetTermName = String(regressionTerm?.targetTermName ?? "").trim();
+            const savedExpressionLatex = String(regressionTerm?.expressionLatex ?? "").trim();
+            const ranges = Array.isArray(regressionTerm?.ranges) ? regressionTerm.ranges : [];
+            if (sourceTermName === "" || targetTermName === "")
+                continue;
+            for (let rangeIndex = 0; rangeIndex < ranges.length; rangeIndex++) {
+                const range = ranges[rangeIndex];
+                const caseNumber = Number(range?.caseNumber);
+                const regressionType = String(range?.regressionType ?? "").trim();
+                const independentStart = Number(range?.independentStart);
+                const independentEnd = Number(range?.independentEnd);
+                if (!Number.isFinite(caseNumber) || caseNumber < 1)
+                    continue;
+                if (regressionType !== "Linear" && regressionType !== "Quadratic")
+                    continue;
+                if (!Number.isFinite(independentStart) || !Number.isFinite(independentEnd))
+                    continue;
+                try {
+                    this.restoreRegressionRange(sourceTermName, targetTermName, regressionType, caseNumber, independentStart, independentEnd);
+                } catch (_) {}
+            }
+            if (savedExpressionLatex === "")
+                continue;
+            const restoredTerm = /** @type {any} */ (this.system.getTerm(targetTermName));
+            if (restoredTerm)
+                restoredTerm.expressionLatex = savedExpressionLatex;
+        }
     }
 
     findMatchingBraceEnd(text = "", openBraceIndex = -1) {

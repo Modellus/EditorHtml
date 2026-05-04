@@ -215,13 +215,13 @@ class VectorShape extends ChildShape {
         const xOriginTerm = this.formatTermForDisplay(this.properties.xOriginTerm);
         const yOriginTerm = this.formatTermForDisplay(this.properties.yOriginTerm);
         element.innerHTML =
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xOriginTerm}</span></span>` +
+              this.createNameButtonTermMarkup(xOriginTerm) +
             `<i class="fa-light fa-circle-dot mdl-name-btn-separator"></i>` +
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yOriginTerm}</span></span>` +
+              this.createNameButtonTermMarkup(yOriginTerm) +
             `<i class="fa-light fa-pipe mdl-name-btn-separator" style="opacity:0.3"></i>` +
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${xTerm}</span></span>` +
+              this.createNameButtonTermMarkup(xTerm) +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
-            `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${yTerm}</span></span>`;
+              this.createNameButtonTermMarkup(yTerm);
     }
 
     positionContextToolbar() {
