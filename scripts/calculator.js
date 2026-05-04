@@ -186,8 +186,10 @@ class Calculator extends EventTarget {
     }
 
     applyPreloadedData() {
-        if (this.preloadedTermNames && this.preloadedTermValues)
+        if (this.preloadedTermNames && this.preloadedTermValues) {
             this.system.loadTerms(this.preloadedTermNames, this.preloadedTermValues);
+            this.engine.reset();
+        }
     }
 
     hasPreloadedData() {
