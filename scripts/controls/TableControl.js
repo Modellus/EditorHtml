@@ -1067,7 +1067,7 @@ class TableControl {
         if (numericValue === -Infinity)
             return "-∞";
         if (!Number.isFinite(numericValue))
-            return String(rawValue);
+            return "\u2014";
         const precision = Number.isFinite(column.precision) ? column.precision : this.options.precision;
         return this.formatNumber(numericValue, precision);
     }

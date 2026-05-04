@@ -1880,7 +1880,7 @@ class BaseShape {
         if (numericValue === -Infinity)
             return "-∞";
         if (!Number.isFinite(numericValue))
-            return "-";
+            return "\u2014";
         const precision = this.getModelPrecision();
         const rounded = Utils.roundToPrecision(numericValue, precision);
         const normalized = Object.is(rounded, -0) ? 0 : rounded;
