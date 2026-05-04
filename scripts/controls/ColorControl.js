@@ -123,12 +123,12 @@ class ColorControl {
 
     onColorPickerTileClick(event, picker, selectedColorState, onValueChanged) {
         selectedColorState.value = event.itemData.color;
-        if (onValueChanged)
-            onValueChanged(selectedColorState.value);
         const dropDownButtonInstance = picker.dxDropDownButton("instance");
         if (dropDownButtonInstance)
             dropDownButtonInstance.close();
         this.refreshColorPickerButtonTemplate(picker, selectedColorState.value);
+        if (onValueChanged)
+            onValueChanged(selectedColorState.value);
     }
 
     refreshColorPickerButtonTemplate(picker, selectedColor) {

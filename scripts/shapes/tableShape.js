@@ -1065,10 +1065,66 @@ class TableShape extends BaseShape {
         this.refreshTableRows();
     }
 
+    buildRegressionRangeOverlays(columns) {
+        if (!this.table)
+            return [];
+        const colorPalette = this.table.options.focusedRangeColors;
+        if (!Array.isArray(colorPalette) || colorPalette.length === 0)
+            return [];
+        const system = this.board.calculator.system;
+        const independentStart = Number(this.board.calculator.properties.independent.start);
+        const independentStep = Number(this.board.calculator.properties.independent.step);
+        if (!Number.isFinite(independentStart) || !Number.isFinite(independentStep) || independentStep === 0)
+            return [];
+        const overlays = [];
+        let colorIndex = 0;
+        for (let columnIndex = 0; columnIndex < columns.length; columnIndex++) {
+            const column = columns[columnIndex];
+            const termName = this.normalizeColumnValue(column.term);
+            if (!this.isRegressionTermName(termName))
+                continue;
+            const term = system.getTerm(termName);
+            if (!term || !Array.isArray(term.ranges))
+                continue;
+            const caseNumber = this.getClampedCaseNumber(column.case ?? 1);
+            const sourceTermName = term.sourceTermName;
+            const sourceColumnIndex = columns.findIndex((col, index) =>
+                index !== columnIndex &&
+                this.normalizeColumnValue(col.term) === sourceTermName &&
+                this.getClampedCaseNumber(col.case ?? 1) === caseNumber
+            );
+            const caseRanges = term.ranges.filter(range => range.caseNumber === caseNumber);
+            for (let rangeIndex = 0; rangeIndex < caseRanges.length; rangeIndex++) {
+                const regressionRange = caseRanges[rangeIndex];
+                const rangeIndependentStart = Number(regressionRange.independentStart);
+                const rangeIndependentEnd = Number(regressionRange.independentEnd);
+                if (!Number.isFinite(rangeIndependentStart) || !Number.isFinite(rangeIndependentEnd))
+                    continue;
+                const startRowIndex = Math.max(0, Math.round((rangeIndependentStart - independentStart) / independentStep));
+                const endRowIndex = Math.max(0, Math.round((rangeIndependentEnd - independentStart) / independentStep));
+                if (startRowIndex > endRowIndex)
+                    continue;
+                const color = colorPalette[colorIndex % colorPalette.length];
+                colorIndex++;
+                overlays.push({
+                    range: { startRowIndex, endRowIndex, startColumnIndex: columnIndex, endColumnIndex: columnIndex },
+                    color
+                });
+                if (sourceColumnIndex >= 0)
+                    overlays.push({
+                        range: { startRowIndex, endRowIndex, startColumnIndex: sourceColumnIndex, endColumnIndex: sourceColumnIndex },
+                        color
+                    });
+            }
+        }
+        return overlays;
+    }
+
     refreshTableRows() {
         if (!this.table)
             return;
         const columns = this._activeColumns ?? this.getSelectedColumns();
+        this.table.regressionRangeOverlays = this.buildRegressionRangeOverlays(columns);
         if (columns.length === 0) {
             this.table.setRows([]);
             return;

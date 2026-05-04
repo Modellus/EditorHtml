@@ -13,6 +13,7 @@ class TableControl {
         this.focusedCellRange = null;
         this.selectedFocusedRanges = [];
         this.nextFocusedRangeColorIndex = 0;
+        this.regressionRangeOverlays = [];
         this.editingCell = null;
         this.cellBoxes = [];
         this.verticalScrollbarThumbRect = null;
@@ -594,6 +595,7 @@ class TableControl {
         this.renderBackground(layout);
         this.renderHeader(layout, columns, geometry);
         this.renderBody(layout, columns, geometry, columnValueRanges);
+        this.renderRegressionRangeOverlays(layout, geometry);
         this.renderSelectedFocusedRanges(layout, geometry);
         this.renderScrollbars(layout);
         this.renderEditingValue(layout, geometry);
@@ -879,6 +881,52 @@ class TableControl {
         rowLine.setAttribute("stroke", this.options.gridColor);
         rowLine.setAttribute("stroke-width", "1");
         this.rowsLayer.appendChild(rowLine);
+    }
+
+    renderRegressionRangeOverlays(layout, geometry) {
+        if (!Array.isArray(this.regressionRangeOverlays) || this.regressionRangeOverlays.length === 0)
+            return;
+        const rowHeight = Math.max(16, Number(this.options.rowHeight) || 24);
+        const visible = this.getVisibleRange(layout);
+        for (let index = 0; index < this.regressionRangeOverlays.length; index++) {
+            const overlayEntry = this.regressionRangeOverlays[index];
+            const overlayRange = overlayEntry?.range;
+            const overlayColor = overlayEntry?.color;
+            if (!overlayRange || typeof overlayColor !== "string")
+                continue;
+            const visibleStartRowIndex = Math.max(overlayRange.startRowIndex, visible.first);
+            const visibleEndRowIndex = Math.min(overlayRange.endRowIndex, visible.last);
+            if (visibleStartRowIndex > visibleEndRowIndex)
+                continue;
+            const startColumnGeometry = geometry[overlayRange.startColumnIndex];
+            const endColumnGeometry = geometry[overlayRange.endColumnIndex];
+            if (!startColumnGeometry || !endColumnGeometry)
+                continue;
+            const rangeX = startColumnGeometry.x;
+            const rangeWidth = (endColumnGeometry.x + endColumnGeometry.width) - rangeX;
+            const rangeY = layout.headerHeight + (visibleStartRowIndex - visible.first) * rowHeight - visible.offset;
+            const rangeHeight = (visibleEndRowIndex - visibleStartRowIndex + 1) * rowHeight;
+            const rangeFill = this.createSvgElement("rect");
+            rangeFill.setAttribute("x", `${rangeX}`);
+            rangeFill.setAttribute("y", `${rangeY}`);
+            rangeFill.setAttribute("width", `${rangeWidth}`);
+            rangeFill.setAttribute("height", `${rangeHeight}`);
+            rangeFill.setAttribute("fill", overlayColor);
+            rangeFill.setAttribute("fill-opacity", "0.1");
+            rangeFill.setAttribute("pointer-events", "none");
+            this.overlayLayer.appendChild(rangeFill);
+            const rangeBorder = this.createSvgElement("rect");
+            rangeBorder.setAttribute("x", `${rangeX}`);
+            rangeBorder.setAttribute("y", `${rangeY}`);
+            rangeBorder.setAttribute("width", `${rangeWidth}`);
+            rangeBorder.setAttribute("height", `${rangeHeight}`);
+            rangeBorder.setAttribute("fill", "none");
+            rangeBorder.setAttribute("stroke", overlayColor);
+            rangeBorder.setAttribute("stroke-width", "1");
+            rangeBorder.setAttribute("stroke-dasharray", "4 2");
+            rangeBorder.setAttribute("pointer-events", "none");
+            this.overlayLayer.appendChild(rangeBorder);
+        }
     }
 
     renderSelectedFocusedRanges(layout, geometry) {
