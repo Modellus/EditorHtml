@@ -513,4 +513,132 @@ export class ModelsApiClient {
     });
     if (!response.ok) throw new Error(`Delete whats-new failed (${response.status})`);
   }
+
+  async fetchVideos(filters = {}) {
+    const url = new URL(`${this.apiBaseUrl}/videos`);
+    if (filters.science_id) url.searchParams.set("science_id", filters.science_id);
+    if (filters.education_level_id) url.searchParams.set("education_level_id", filters.education_level_id);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch videos failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createVideo(payload, assetFile) {
+    const formData = new FormData();
+    formData.append("title", payload.title);
+    if (payload.description) formData.append("description", payload.description);
+    if (payload.science_id) formData.append("science_id", payload.science_id);
+    if (payload.education_level_id) formData.append("education_level_id", payload.education_level_id);
+    if (assetFile) formData.append("asset", assetFile);
+    const response = await fetch(`${this.apiBaseUrl}/videos`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Create video failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteVideo(videoId) {
+    const response = await fetch(`${this.apiBaseUrl}/videos/${encodeURIComponent(videoId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete video failed (${response.status})`);
+  }
+
+  async fetchDataSets(filters = {}) {
+    const url = new URL(`${this.apiBaseUrl}/data`);
+    if (filters.science_id) url.searchParams.set("science_id", filters.science_id);
+    if (filters.education_level_id) url.searchParams.set("education_level_id", filters.education_level_id);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch data sets failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createDataSet(payload, assetFile) {
+    const formData = new FormData();
+    formData.append("title", payload.title);
+    if (payload.description) formData.append("description", payload.description);
+    if (payload.science_id) formData.append("science_id", payload.science_id);
+    if (payload.education_level_id) formData.append("education_level_id", payload.education_level_id);
+    if (assetFile) formData.append("asset", assetFile);
+    const response = await fetch(`${this.apiBaseUrl}/data`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Create data set failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteDataSet(dataId) {
+    const response = await fetch(`${this.apiBaseUrl}/data/${encodeURIComponent(dataId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete data set failed (${response.status})`);
+  }
+
+  async patchVideo(videoId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/videos/${encodeURIComponent(videoId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update video failed (${response.status})`);
+    return await response.json();
+  }
+
+  async patchDataSet(dataId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/data/${encodeURIComponent(dataId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update data set failed (${response.status})`);
+    return await response.json();
+  }
+
+  async uploadVideoThumbnail(videoId, imageFile) {
+    const formData = new FormData();
+    formData.append("asset", imageFile);
+    const response = await fetch(`${this.apiBaseUrl}/videos/${encodeURIComponent(videoId)}/thumbnail`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Upload video thumbnail failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteVideoThumbnail(videoId) {
+    const response = await fetch(`${this.apiBaseUrl}/videos/${encodeURIComponent(videoId)}/thumbnail`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete video thumbnail failed (${response.status})`);
+  }
+
+  async uploadDataSetThumbnail(dataId, imageFile) {
+    const formData = new FormData();
+    formData.append("asset", imageFile);
+    const response = await fetch(`${this.apiBaseUrl}/data/${encodeURIComponent(dataId)}/thumbnail`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Upload data set thumbnail failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteDataSetThumbnail(dataId) {
+    const response = await fetch(`${this.apiBaseUrl}/data/${encodeURIComponent(dataId)}/thumbnail`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete data set thumbnail failed (${response.status})`);
+  }
 }

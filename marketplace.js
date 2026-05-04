@@ -14,8 +14,15 @@ const treeNodeIds = {
   myFavorite: "my-favorite",
   myLibrary: "my-library",
   marketplace: "marketplace",
-  marketplaceEducation: "market-education",
-  marketplaceSciences: "market-sciences",
+  marketplaceModels: "marketplace-models",
+  marketplaceModelsEducation: "market-education",
+  marketplaceModelsSciences: "market-sciences",
+  marketplaceVideos: "marketplace-videos",
+  marketplaceVideosEducation: "marketplace-videos-education",
+  marketplaceVideosSciences: "marketplace-videos-sciences",
+  marketplaceData: "marketplace-data",
+  marketplaceDataEducation: "marketplace-data-education",
+  marketplaceDataSciences: "marketplace-data-sciences",
   maintenance: "maintenance",
   maintenanceModels: "maintenance-models",
   maintenanceEducation: "maintenance-education",
@@ -72,6 +79,8 @@ class ModelsApp {
     this.favoriteModels = [];
     this.libraryModels = [];
     this.publicModels = [];
+    this.videosData = [];
+    this.dataSetData = [];
     this.educationLookupOptions = [];
     this.scienceLookupOptions = [];
     this.educationLookupNameById = new Map();
@@ -90,6 +99,8 @@ class ModelsApp {
     }
     this.profileController = new ProfileController(this.apiClient, this.userSdk, this.state, this.translations);
     this.cardViewInstance = null;
+    this.videosCardViewInstance = null;
+    this.dataCardViewInstance = null;
     this.drawerInstance = null;
     this.treeViewInstance = null;
     this.toolbarInstance = null;
@@ -103,6 +114,12 @@ class ModelsApp {
     this.pickedModelIdSet = new Set();
     this.unreadNotificationCount = 0;
     this.notificationsGridInstance = null;
+    this.uploadVideoPopupInstance = null;
+    this.uploadDataPopupInstance = null;
+    this._uploadVideoFile = null;
+    this._uploadDataFile = null;
+    this._uploadVideoThumbnailFile = null;
+    this._uploadDataThumbnailFile = null;
     this.initNavToolbar();
     this.cacheNavElements();
     this.bindNav();
@@ -143,14 +160,21 @@ class ModelsApp {
     const scienceItems = this.buildGroupedPublicItems("science");
     if (scienceItems.length)
       return scienceItems[0].id;
-    return treeNodeIds.marketplace;
+    return treeNodeIds.marketplaceModels;
   }
 
   isNonSelectableTreeNodeId(nodeId) {
     return nodeId === treeNodeIds.myModels
       || nodeId === treeNodeIds.marketplace
-      || nodeId === treeNodeIds.marketplaceEducation
-      || nodeId === treeNodeIds.marketplaceSciences
+      || nodeId === treeNodeIds.marketplaceModels
+      || nodeId === treeNodeIds.marketplaceModelsEducation
+      || nodeId === treeNodeIds.marketplaceModelsSciences
+      || nodeId === treeNodeIds.marketplaceVideos
+      || nodeId === treeNodeIds.marketplaceVideosEducation
+      || nodeId === treeNodeIds.marketplaceVideosSciences
+      || nodeId === treeNodeIds.marketplaceData
+      || nodeId === treeNodeIds.marketplaceDataEducation
+      || nodeId === treeNodeIds.marketplaceDataSciences
       || nodeId === treeNodeIds.maintenance;
   }
 
@@ -197,10 +221,38 @@ class ModelsApp {
           widget: "dxButton",
           visible: isAuthenticated,
           options: {
-            elementAttr: { id: "nav-new-model", title: this.translations.get("Create model") },
+            elementAttr: { id: "nav-upload-video", title: "Upload Video" },
             stylingMode: "text",
-            text: this.translations.get("Create"),
-            icon: "fa-light fa-plus"
+            template: (_, contentElement) => {
+              const host = contentElement.get(0);
+              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-video" style="color:#e11d48;font-size:1rem"></i><span>Upload Video</span></span>`;
+            }
+          }
+        },
+        {
+          location: "after",
+          widget: "dxButton",
+          visible: isAuthenticated,
+          options: {
+            elementAttr: { id: "nav-upload-data", title: "Upload Data" },
+            stylingMode: "text",
+            template: (_, contentElement) => {
+              const host = contentElement.get(0);
+              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-table" style="color:#d97706;font-size:1rem"></i><span>Upload Data</span></span>`;
+            }
+          }
+        },
+        {
+          location: "after",
+          widget: "dxButton",
+          visible: isAuthenticated,
+          options: {
+            elementAttr: { id: "nav-new-model", title: "Create Model" },
+            stylingMode: "text",
+            template: (_, contentElement) => {
+              const host = contentElement.get(0);
+              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-earth-africa" style="color:#2563eb;font-size:1rem"></i><span>Create Model</span></span>`;
+            }
           }
         },
         {
@@ -267,6 +319,8 @@ class ModelsApp {
   }
   cacheNavElements() {
     this.elements.navNewModel = document.getElementById("nav-new-model");
+    this.elements.navUploadVideo = document.getElementById("nav-upload-video");
+    this.elements.navUploadData = document.getElementById("nav-upload-data");
     this.elements.userMenu = document.getElementById("user-menu");
     this.elements.navLogin = document.getElementById("nav-login");
     this.userSdk.applyUserMenu(this.elements.userMenu, this.state.session);
@@ -275,13 +329,6 @@ class ModelsApp {
   setStatus(message, isError = false) {
     this.elements.status.textContent = message || "";
     this.elements.status.classList.toggle("error", Boolean(isError));
-  }
-
-  getModelThumbnailSource(thumbnail) {
-    if (!thumbnail || typeof thumbnail !== "string") return "";
-    if (thumbnail.startsWith("data:")) return thumbnail;
-    if (thumbnail.startsWith("http://") || thumbnail.startsWith("https://") || thumbnail.startsWith("/") || thumbnail.startsWith("blob:")) return thumbnail;
-    return `data:image/png;base64,${thumbnail}`;
   }
 
   escapeHtml(value) {
@@ -328,6 +375,7 @@ class ModelsApp {
   ensureCardView() {
     if (this.cardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
     const CardView = DevExpress.ui.dxCardView;
+    this.elements.cardView.innerHTML = "";
       this.cardViewInstance = new CardView(this.elements.cardView, {
         dataSource: [],
         height: "100%",
@@ -356,7 +404,7 @@ class ModelsApp {
         const isFavorite = this.isFavoriteValue(data);
         const isPicked = this.isPickedValue(data);
         const isPublic = data.is_public === true || data.is_public === 1;
-        const thumbnailSrc = this.getModelThumbnailSource(data.thumbnail);
+        const thumbnailSrc = data.thumbnail_url || "";
         const educationLookupId = data.education_level_id;
         const scienceLookupId = data.science_id;
         const educationLabel = data.education_level || this.translations.get("Uncategorized");
@@ -377,7 +425,9 @@ class ModelsApp {
             <div class="card-thumb-dropdown science-dropdown-host" data-lookup-id="${scienceLookupId}">${escapedScienceLabel}</div>
           </div>
         `;
-        const thumbnailMarkup = thumbnailSrc ? `<div class="card-thumb-wrap"><img class="card-thumb" src="${thumbnailSrc}" alt="${this.escapeHtml(data.title || "")}">${taxonomyDropDownMarkup}</div>` : "";
+        const thumbnailMarkup = thumbnailSrc
+          ? `<div class="card-thumb-wrap"><img class="card-thumb" src="${this.escapeHtml(thumbnailSrc)}" alt="${this.escapeHtml(data.title || "")}">${taxonomyDropDownMarkup}</div>`
+          : "";
         const cardMarkup = `
           <div class="card-tile" data-model-id="${data.id || ""}">
             ${thumbnailMarkup}
@@ -525,6 +575,597 @@ class ModelsApp {
     this.cardViewInstance = null;
   }
 
+  disposeVideosCardView() {
+    if (!this.videosCardViewInstance) return;
+    this.videosCardViewInstance.dispose();
+    this.videosCardViewInstance = null;
+  }
+
+  disposeDataCardView() {
+    if (!this.dataCardViewInstance) return;
+    this.dataCardViewInstance.dispose();
+    this.dataCardViewInstance = null;
+  }
+
+  ensureVideosCardView() {
+    if (this.videosCardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
+    const CardView = DevExpress.ui.dxCardView;
+    this.elements.cardView.innerHTML = "";
+    this.videosCardViewInstance = new CardView(this.elements.cardView, {
+      dataSource: [],
+      height: "100%",
+      scrolling: { mode: "virtual" },
+      paging: { enabled: false },
+      pager: { visible: false },
+      showBorders: false,
+      focusStateEnabled: false,
+      hoverStateEnabled: false,
+      allowColumnReordering: false,
+      allowColumnResizing: false,
+      columnHidingEnabled: true,
+      headerPanel: { visible: false },
+      groupPanel: { visible: false },
+      grouping: { autoExpandAll: false, contextMenuEnabled: false },
+      sorting: { mode: "none" },
+      cardsPerRow: 4,
+      cardMinWidth: 125,
+      columns: [
+        { dataField: "title", caption: this.translations.get("Title") },
+        { dataField: "description", caption: this.translations.get("Description") }
+      ],
+      cardTemplate: (cardData, cardElement) => {
+        const host = cardElement.get(0);
+        const data = cardData.card.data;
+        const thumbnailUrl = data.thumbnail_url || "";
+        const educationLookupId = data.education_level_id;
+        const scienceLookupId = data.science_id;
+        const educationLabel = this.educationLookupNameById.get(educationLookupId) || data.education_level || this.translations.get("Uncategorized");
+        const scienceLabel = this.scienceLookupNameById.get(scienceLookupId) || data.science || this.translations.get("Uncategorized");
+        const educationColor = this.educationLookupColorById.get(educationLookupId) || "#8b5cf6";
+        const scienceColor = this.scienceLookupColorById.get(scienceLookupId) || "#0ea5e9";
+        const escapedEducationLabel = this.escapeHtml(educationLabel);
+        const escapedScienceLabel = this.escapeHtml(scienceLabel);
+        const descriptionLabel = this.escapeHtml(data.description || "");
+        const createdDate = this.formatShortDate(data.created_at);
+        const taxonomyMarkup = `
+          <div class="card-thumb-dropdowns">
+            <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
+            <div class="card-thumb-dropdown science-dropdown-host" data-lookup-id="${scienceLookupId}">${escapedScienceLabel}</div>
+          </div>
+        `;
+        const thumbContent = thumbnailUrl
+          ? `<img class="card-thumb" src="${this.escapeHtml(thumbnailUrl)}" alt="${this.escapeHtml(data.title || "")}">`
+          : `<div class="media-thumb-placeholder video-thumb"><i class="fa-light fa-video media-thumb-icon" aria-hidden="true"></i></div>`;
+        const cardMarkup = `
+          <div class="card-tile" data-item-id="${this.escapeHtml(data.id || "")}">
+            <div class="card-thumb-wrap">${thumbContent}${taxonomyMarkup}</div>
+            <div class="card-actions">
+              <button class="delete-button" aria-label="Delete video">
+                <i class="fa-light fa-trash-can trash" aria-hidden="true"></i>
+                <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">${this.escapeHtml(data.title) || "Untitled"}</h3>
+              <p class="card-desc">${descriptionLabel}</p>
+              <div class="card-meta">
+                <div class="card-dates">
+                  ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        host.innerHTML = cardMarkup;
+        const deleteButton = host.querySelector(".delete-button");
+        const educationDropdownHost = host.querySelector(".education-dropdown-host");
+        const scienceDropdownHost = host.querySelector(".science-dropdown-host");
+        if (educationDropdownHost) educationDropdownHost.style.setProperty("--pill-color", educationColor);
+        if (scienceDropdownHost) scienceDropdownHost.style.setProperty("--pill-color", scienceColor);
+        if (deleteButton)
+          deleteButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.deleteVideoItem(data);
+          });
+        if (educationDropdownHost) {
+          educationDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("click", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(educationDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchEducationLevelLookups(),
+              byKey: lookupId => this.apiClient.fetchEducationLevelLookupById(lookupId)
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: educationLookupId === undefined || educationLookupId === null || educationLookupId === "" ? null : educationLookupId,
+            text: educationLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              const nextEducationLookupId = event.itemData.id;
+              if (nextEducationLookupId === data.education_level_id) return;
+              try {
+                await this.apiClient.patchVideo(data.id, { education_level_id: nextEducationLookupId });
+                data.education_level_id = nextEducationLookupId;
+                data.education_level = event.itemData.name || data.education_level;
+                data.education_level_color = event.itemData.color || data.education_level_color;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
+              }
+            }
+          });
+        }
+        if (scienceDropdownHost) {
+          scienceDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("click", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(scienceDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchScienceLookups(),
+              byKey: lookupId => this.apiClient.fetchScienceLookupById(lookupId)
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: scienceLookupId === undefined || scienceLookupId === null || scienceLookupId === "" ? null : scienceLookupId,
+            text: scienceLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              const nextScienceLookupId = event.itemData.id;
+              if (nextScienceLookupId === data.science_id) return;
+              try {
+                await this.apiClient.patchVideo(data.id, { science_id: nextScienceLookupId });
+                data.science_id = nextScienceLookupId;
+                data.science = event.itemData.name || data.science;
+                data.science_color = event.itemData.color || data.science_color;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
+              }
+            }
+          });
+        }
+      }
+    });
+  }
+
+  ensureDataCardView() {
+    if (this.dataCardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
+    const CardView = DevExpress.ui.dxCardView;
+    this.elements.cardView.innerHTML = "";
+    this.dataCardViewInstance = new CardView(this.elements.cardView, {
+      dataSource: [],
+      height: "100%",
+      scrolling: { mode: "virtual" },
+      paging: { enabled: false },
+      pager: { visible: false },
+      showBorders: false,
+      focusStateEnabled: false,
+      hoverStateEnabled: false,
+      allowColumnReordering: false,
+      allowColumnResizing: false,
+      columnHidingEnabled: true,
+      headerPanel: { visible: false },
+      groupPanel: { visible: false },
+      grouping: { autoExpandAll: false, contextMenuEnabled: false },
+      sorting: { mode: "none" },
+      cardsPerRow: 4,
+      cardMinWidth: 125,
+      columns: [
+        { dataField: "title", caption: this.translations.get("Title") },
+        { dataField: "description", caption: this.translations.get("Description") }
+      ],
+      cardTemplate: (cardData, cardElement) => {
+        const host = cardElement.get(0);
+        const data = cardData.card.data;
+        const thumbnailUrl = data.thumbnail_url || "";
+        const educationLookupId = data.education_level_id;
+        const scienceLookupId = data.science_id;
+        const educationLabel = this.educationLookupNameById.get(educationLookupId) || data.education_level || this.translations.get("Uncategorized");
+        const scienceLabel = this.scienceLookupNameById.get(scienceLookupId) || data.science || this.translations.get("Uncategorized");
+        const educationColor = this.educationLookupColorById.get(educationLookupId) || "#8b5cf6";
+        const scienceColor = this.scienceLookupColorById.get(scienceLookupId) || "#0ea5e9";
+        const escapedEducationLabel = this.escapeHtml(educationLabel);
+        const escapedScienceLabel = this.escapeHtml(scienceLabel);
+        const descriptionLabel = this.escapeHtml(data.description || "");
+        const createdDate = this.formatShortDate(data.created_at);
+        const taxonomyMarkup = `
+          <div class="card-thumb-dropdowns">
+            <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
+            <div class="card-thumb-dropdown science-dropdown-host" data-lookup-id="${scienceLookupId}">${escapedScienceLabel}</div>
+          </div>
+        `;
+        const thumbContent = thumbnailUrl
+          ? `<img class="card-thumb" src="${this.escapeHtml(thumbnailUrl)}" alt="${this.escapeHtml(data.title || "")}">`
+          : `<div class="media-thumb-placeholder data-thumb"><i class="fa-light fa-table media-thumb-icon" aria-hidden="true"></i></div>`;
+        const cardMarkup = `
+          <div class="card-tile" data-item-id="${this.escapeHtml(data.id || "")}">
+            <div class="card-thumb-wrap">${thumbContent}${taxonomyMarkup}</div>
+            <div class="card-actions">
+              <button class="delete-button" aria-label="Delete data set">
+                <i class="fa-light fa-trash-can trash" aria-hidden="true"></i>
+                <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">${this.escapeHtml(data.title) || "Untitled"}</h3>
+              <p class="card-desc">${descriptionLabel}</p>
+              <div class="card-meta">
+                <div class="card-dates">
+                  ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        host.innerHTML = cardMarkup;
+        const deleteButton = host.querySelector(".delete-button");
+        const educationDropdownHost = host.querySelector(".education-dropdown-host");
+        const scienceDropdownHost = host.querySelector(".science-dropdown-host");
+        if (educationDropdownHost) educationDropdownHost.style.setProperty("--pill-color", educationColor);
+        if (scienceDropdownHost) scienceDropdownHost.style.setProperty("--pill-color", scienceColor);
+        if (deleteButton)
+          deleteButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.deleteDataSetItem(data);
+          });
+        if (educationDropdownHost) {
+          educationDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("click", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(educationDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchEducationLevelLookups(),
+              byKey: lookupId => this.apiClient.fetchEducationLevelLookupById(lookupId)
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: educationLookupId === undefined || educationLookupId === null || educationLookupId === "" ? null : educationLookupId,
+            text: educationLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              const nextEducationLookupId = event.itemData.id;
+              if (nextEducationLookupId === data.education_level_id) return;
+              try {
+                await this.apiClient.patchDataSet(data.id, { education_level_id: nextEducationLookupId });
+                data.education_level_id = nextEducationLookupId;
+                data.education_level = event.itemData.name || data.education_level;
+                data.education_level_color = event.itemData.color || data.education_level_color;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
+              }
+            }
+          });
+        }
+        if (scienceDropdownHost) {
+          scienceDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("click", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(scienceDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchScienceLookups(),
+              byKey: lookupId => this.apiClient.fetchScienceLookupById(lookupId)
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: scienceLookupId === undefined || scienceLookupId === null || scienceLookupId === "" ? null : scienceLookupId,
+            text: scienceLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              const nextScienceLookupId = event.itemData.id;
+              if (nextScienceLookupId === data.science_id) return;
+              try {
+                await this.apiClient.patchDataSet(data.id, { science_id: nextScienceLookupId });
+                data.science_id = nextScienceLookupId;
+                data.science = event.itemData.name || data.science;
+                data.science_color = event.itemData.color || data.science_color;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
+              }
+            }
+          });
+        }
+      }
+    });
+  }
+
+  showVideosCardView() {
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
+    this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
+    this.disposeDataCardView();
+    this.ensureVideosCardView();
+  }
+
+  showDataCardView() {
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
+    this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
+    this.disposeVideosCardView();
+    this.ensureDataCardView();
+  }
+
+  renderVideos(items) {
+    this.showVideosCardView();
+    if (this.videosCardViewInstance) this.videosCardViewInstance.option("dataSource", items);
+  }
+
+  renderDataSets(items) {
+    this.showDataCardView();
+    if (this.dataCardViewInstance) this.dataCardViewInstance.option("dataSource", items);
+  }
+
+  async deleteVideoItem(videoData) {
+    const videoId = videoData && videoData.id;
+    if (!videoId) return;
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    this.setStatus("Deleting video…");
+    try {
+      await this.apiClient.deleteVideo(videoId);
+      this.setStatus("Video deleted.");
+      this.loadModels();
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to delete video.", true);
+    }
+  }
+
+  async deleteDataSetItem(dataSetData) {
+    const dataId = dataSetData && dataSetData.id;
+    if (!dataId) return;
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    this.setStatus("Deleting data set…");
+    try {
+      await this.apiClient.deleteDataSet(dataId);
+      this.setStatus("Data set deleted.");
+      this.loadModels();
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to delete data set.", true);
+    }
+  }
+
+  showUploadVideoPopup() {
+    let popupHost = document.getElementById("upload-video-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="upload-video-popup"></div>`);
+      popupHost = document.getElementById("upload-video-popup");
+    }
+    this._uploadVideoFile = null;
+    this._uploadVideoThumbnailFile = null;
+    const formData = {};
+    const buildContent = contentElement => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      host.innerHTML = `<div id="upload-video-form"></div>`;
+      const formHost = document.getElementById("upload-video-form");
+      this._uploadVideoFormInstance = new DevExpress.ui.dxForm(formHost, {
+        formData,
+        colCount: 1,
+        items: [
+          {
+            dataField: "title",
+            label: { text: "Title" },
+            validationRules: [{ type: "required" }],
+            editorOptions: { placeholder: "Video title" }
+          },
+          {
+            dataField: "description",
+            label: { text: "Description" },
+            editorType: "dxTextArea",
+            editorOptions: { height: 80, placeholder: "Optional description" }
+          },
+          {
+            label: { text: "Video File" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              itemHost.innerHTML = `<div class="upload-file-uploader-host"></div>`;
+              const uploaderHost = itemHost.querySelector(".upload-file-uploader-host");
+              new DevExpress.ui.dxFileUploader(uploaderHost, {
+                selectButtonText: "Select video file",
+                labelText: "or drop video here",
+                multiple: false,
+                uploadMode: "useForm",
+                accept: "video/*",
+                onValueChanged: event => {
+                  this._uploadVideoFile = event.value?.[0] || null;
+                }
+              });
+            }
+          },
+          {
+            label: { text: "Thumbnail" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              this._uploadVideoThumbnailControl = new ImageControl({
+                dropHint: "Drop thumbnail image here",
+                onUploadFile: file => {
+                  this._uploadVideoThumbnailFile = file;
+                  return Promise.resolve(URL.createObjectURL(file));
+                },
+                onImageCleared: () => { this._uploadVideoThumbnailFile = null; }
+              });
+              itemHost.appendChild(this._uploadVideoThumbnailControl.createHost().get(0));
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "right",
+            buttonOptions: {
+              text: "Upload",
+              icon: "fa-light fa-upload",
+              type: "default",
+              onClick: async () => {
+                const result = this._uploadVideoFormInstance.validate();
+                if (!result.isValid) return;
+                const values = this._uploadVideoFormInstance.option("formData");
+                this.setStatus("Uploading video…");
+                try {
+                  const created = await this.apiClient.createVideo({ title: values.title, description: values.description || "" }, this._uploadVideoFile);
+                  if (this._uploadVideoThumbnailFile && created?.id)
+                    await this.apiClient.uploadVideoThumbnail(created.id, this._uploadVideoThumbnailFile);
+                  this.setStatus("Video uploaded.");
+                  this.uploadVideoPopupInstance.hide();
+                  this.loadModels();
+                } catch (error) {
+                  this.setStatus(error?.message || "Failed to upload video.", true);
+                }
+              }
+            }
+          }
+        ]
+      });
+    };
+    if (this.uploadVideoPopupInstance) {
+      buildContent(this.uploadVideoPopupInstance.content());
+      this.uploadVideoPopupInstance.show();
+      return;
+    }
+    this.uploadVideoPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: "Upload Video",
+      width: 480,
+      height: "auto",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
+  }
+
+  showUploadDataPopup() {
+    let popupHost = document.getElementById("upload-data-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="upload-data-popup"></div>`);
+      popupHost = document.getElementById("upload-data-popup");
+    }
+    this._uploadDataFile = null;
+    this._uploadDataThumbnailFile = null;
+    const formData = {};
+    const buildContent = contentElement => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      host.innerHTML = `<div id="upload-data-form"></div>`;
+      const formHost = document.getElementById("upload-data-form");
+      this._uploadDataFormInstance = new DevExpress.ui.dxForm(formHost, {
+        formData,
+        colCount: 1,
+        items: [
+          {
+            dataField: "title",
+            label: { text: "Title" },
+            validationRules: [{ type: "required" }],
+            editorOptions: { placeholder: "Data set title" }
+          },
+          {
+            dataField: "description",
+            label: { text: "Description" },
+            editorType: "dxTextArea",
+            editorOptions: { height: 80, placeholder: "Optional description" }
+          },
+          {
+            label: { text: "Data File" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              itemHost.innerHTML = `<div class="upload-file-uploader-host"></div>`;
+              const uploaderHost = itemHost.querySelector(".upload-file-uploader-host");
+              new DevExpress.ui.dxFileUploader(uploaderHost, {
+                selectButtonText: "Select data file",
+                labelText: "or drop file here (CSV, JSON, etc.)",
+                multiple: false,
+                uploadMode: "useForm",
+                onValueChanged: event => {
+                  this._uploadDataFile = event.value?.[0] || null;
+                }
+              });
+            }
+          },
+          {
+            label: { text: "Thumbnail" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              this._uploadDataThumbnailControl = new ImageControl({
+                dropHint: "Drop thumbnail image here",
+                onUploadFile: file => {
+                  this._uploadDataThumbnailFile = file;
+                  return Promise.resolve(URL.createObjectURL(file));
+                },
+                onImageCleared: () => { this._uploadDataThumbnailFile = null; }
+              });
+              itemHost.appendChild(this._uploadDataThumbnailControl.createHost().get(0));
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "right",
+            buttonOptions: {
+              text: "Upload",
+              icon: "fa-light fa-upload",
+              type: "default",
+              onClick: async () => {
+                const result = this._uploadDataFormInstance.validate();
+                if (!result.isValid) return;
+                const values = this._uploadDataFormInstance.option("formData");
+                this.setStatus("Uploading data set…");
+                try {
+                  const created = await this.apiClient.createDataSet({ title: values.title, description: values.description || "" }, this._uploadDataFile);
+                  if (this._uploadDataThumbnailFile && created?.id)
+                    await this.apiClient.uploadDataSetThumbnail(created.id, this._uploadDataThumbnailFile);
+                  this.setStatus("Data set uploaded.");
+                  this.uploadDataPopupInstance.hide();
+                  this.loadModels();
+                } catch (error) {
+                  this.setStatus(error?.message || "Failed to upload data set.", true);
+                }
+              }
+            }
+          }
+        ]
+      });
+    };
+    if (this.uploadDataPopupInstance) {
+      buildContent(this.uploadDataPopupInstance.content());
+      this.uploadDataPopupInstance.show();
+      return;
+    }
+    this.uploadDataPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: "Upload Data",
+      width: 480,
+      height: "auto",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
+  }
+
   disposeMaintenanceGrid() {
     if (!this.maintenanceGridInstance) return;
     this.maintenanceGridInstance.dispose();
@@ -641,6 +1282,8 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
     const maintenanceStore = this.buildMaintenanceStore(maintenanceType);
     if (!this.maintenanceGridInstance) {
       this.elements.cardView.innerHTML = "";
@@ -706,6 +1349,8 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
     this.ensureCardView();
   }
 
@@ -729,6 +1374,8 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
     const systemTemplatesStore = new DevExpress.data.CustomStore({
       key: "id",
       load: async () => {
@@ -759,14 +1406,14 @@ class ModelsApp {
         columns: [
           { dataField: "id", caption: "ID", visible: false },
           {
-            dataField: "thumbnail",
+            dataField: "thumbnail_url",
             caption: "",
             width: 60,
             allowFiltering: false,
             allowSorting: false,
             showInColumnChooser: false,
             cellTemplate: (cellElement, cellInfo) => {
-              const src = this.getModelThumbnailSource(cellInfo.value);
+              const src = cellInfo.value || "";
               if (!src) return;
               const host = cellElement.get(0);
               host.innerHTML = `<img src="${src}" style="width:40px;height:24px;object-fit:cover;border-radius:4px;">`;
@@ -827,6 +1474,8 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
     const allModelsStore = new DevExpress.data.CustomStore({
       key: "id",
       load: async () => {
@@ -858,14 +1507,14 @@ class ModelsApp {
         columns: [
           { dataField: "id", caption: "ID", visible: false },
           {
-            dataField: "thumbnail",
+            dataField: "thumbnail_url",
             caption: "",
             width: 60,
             allowFiltering: false,
             allowSorting: false,
             showInColumnChooser: false,
             cellTemplate: (cellElement, cellInfo) => {
-              const src = this.getModelThumbnailSource(cellInfo.value);
+              const src = cellInfo.value || "";
               if (!src)
                 return;
               const host = cellElement.get(0);
@@ -1047,6 +1696,8 @@ class ModelsApp {
     this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     this.disposeWhatsNewGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
     const usersStore = new DevExpress.data.CustomStore({
       key: "id",
       load: () => this.apiClient.fetchUsers(),
@@ -1257,6 +1908,18 @@ class ModelsApp {
       this.setStatus("");
       return;
     }
+    if (this.isVideoNodeId(this.state.selectedTreeNodeId)) {
+      const videos = this.getVideosByTreeNodeId(this.state.selectedTreeNodeId);
+      this.renderVideos(videos);
+      this.setStatus(videos.length ? "" : this.translations.get("No models found."));
+      return;
+    }
+    if (this.isDataNodeId(this.state.selectedTreeNodeId)) {
+      const dataSets = this.getDataSetsByTreeNodeId(this.state.selectedTreeNodeId);
+      this.renderDataSets(dataSets);
+      this.setStatus(dataSets.length ? "" : this.translations.get("No models found."));
+      return;
+    }
     const models = this.getModelsByTreeNodeId(this.state.selectedTreeNodeId);
     this.renderModels(models);
     this.setStatus(models.length ? "" : this.translations.get("No models found."));
@@ -1305,9 +1968,11 @@ class ModelsApp {
       isAuthenticated ? this.apiClient.fetchFavoriteModels() : Promise.resolve([]),
       this.apiClient.fetchPublicModels(),
       this.apiClient.fetchEducationLevelLookups(),
-      this.apiClient.fetchScienceLookups()
+      this.apiClient.fetchScienceLookups(),
+      this.apiClient.fetchVideos(),
+      this.apiClient.fetchDataSets()
     ];
-    const [personalModelsResult, favoriteModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult] = await Promise.allSettled(requests);
+    const [personalModelsResult, favoriteModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videosResult, dataSetsResult] = await Promise.allSettled(requests);
     const personalModels = personalModelsResult.status === "fulfilled" ? personalModelsResult.value : [];
     const favoriteModels = favoriteModelsResult.status === "fulfilled" ? favoriteModelsResult.value : [];
     if (publicModelsResult.status !== "fulfilled")
@@ -1326,6 +1991,8 @@ class ModelsApp {
     this.personalModels = this.applyModelLookupLabels(personalModels);
     this.favoriteModels = this.applyModelLookupLabels(favoriteModels);
     this.publicModels = this.applyModelLookupLabels(publicModels);
+    this.videosData = this.applyModelLookupLabels(videosResult.status === "fulfilled" ? videosResult.value : []);
+    this.dataSetData = this.applyModelLookupLabels(dataSetsResult.status === "fulfilled" ? dataSetsResult.value : []);
     if (!isAuthenticated) {
       this.libraryModels = [];
       this.rebuildInteractionModelIdSets();
@@ -1391,11 +2058,7 @@ class ModelsApp {
       return this.favoriteModels;
     if (nodeId === treeNodeIds.myLibrary)
       return this.libraryModels;
-    if (nodeId === treeNodeIds.marketplace)
-      return this.publicModels;
-    if (nodeId === treeNodeIds.marketplaceEducation)
-      return this.publicModels;
-    if (nodeId === treeNodeIds.marketplaceSciences)
+    if (nodeId === treeNodeIds.marketplace || nodeId === treeNodeIds.marketplaceModels)
       return this.publicModels;
     if (typeof nodeId === "string" && nodeId.startsWith("market-education-item:")) {
       const educationKey = nodeId.substring("market-education-item:".length);
@@ -1424,6 +2087,64 @@ class ModelsApp {
       return this.publicModels.filter(model => this.getScienceLabel(model) === scienceLabel);
     }
     return [];
+  }
+
+  getVideosByTreeNodeId(nodeId) {
+    if (nodeId === treeNodeIds.marketplaceVideos)
+      return this.videosData;
+    if (typeof nodeId === "string" && nodeId.startsWith("market-video-education-item:")) {
+      const educationKey = nodeId.substring("market-video-education-item:".length);
+      if (educationKey.startsWith("id:")) {
+        const educationLookupId = decodeURIComponent(educationKey.substring("id:".length));
+        return this.videosData.filter(video => video.education_level_id === educationLookupId);
+      }
+      const educationLabel = decodeURIComponent(educationKey.startsWith("label:") ? educationKey.substring("label:".length) : educationKey);
+      return this.videosData.filter(video => this.getEducationLabel(video) === educationLabel);
+    }
+    if (typeof nodeId === "string" && nodeId.startsWith("market-video-science-item:")) {
+      const scienceKey = nodeId.substring("market-video-science-item:".length);
+      if (scienceKey.startsWith("id:")) {
+        const scienceLookupId = decodeURIComponent(scienceKey.substring("id:".length));
+        return this.videosData.filter(video => video.science_id === scienceLookupId);
+      }
+      const scienceLabel = decodeURIComponent(scienceKey.startsWith("label:") ? scienceKey.substring("label:".length) : scienceKey);
+      return this.videosData.filter(video => this.getScienceLabel(video) === scienceLabel);
+    }
+    return [];
+  }
+
+  getDataSetsByTreeNodeId(nodeId) {
+    if (nodeId === treeNodeIds.marketplaceData)
+      return this.dataSetData;
+    if (typeof nodeId === "string" && nodeId.startsWith("market-data-education-item:")) {
+      const educationKey = nodeId.substring("market-data-education-item:".length);
+      if (educationKey.startsWith("id:")) {
+        const educationLookupId = decodeURIComponent(educationKey.substring("id:".length));
+        return this.dataSetData.filter(dataSet => dataSet.education_level_id === educationLookupId);
+      }
+      const educationLabel = decodeURIComponent(educationKey.startsWith("label:") ? educationKey.substring("label:".length) : educationKey);
+      return this.dataSetData.filter(dataSet => this.getEducationLabel(dataSet) === educationLabel);
+    }
+    if (typeof nodeId === "string" && nodeId.startsWith("market-data-science-item:")) {
+      const scienceKey = nodeId.substring("market-data-science-item:".length);
+      if (scienceKey.startsWith("id:")) {
+        const scienceLookupId = decodeURIComponent(scienceKey.substring("id:".length));
+        return this.dataSetData.filter(dataSet => dataSet.science_id === scienceLookupId);
+      }
+      const scienceLabel = decodeURIComponent(scienceKey.startsWith("label:") ? scienceKey.substring("label:".length) : scienceKey);
+      return this.dataSetData.filter(dataSet => this.getScienceLabel(dataSet) === scienceLabel);
+    }
+    return [];
+  }
+
+  isVideoNodeId(nodeId) {
+    return nodeId === treeNodeIds.marketplaceVideos
+      || (typeof nodeId === "string" && (nodeId.startsWith("market-video-education-item:") || nodeId.startsWith("market-video-science-item:")));
+  }
+
+  isDataNodeId(nodeId) {
+    return nodeId === treeNodeIds.marketplaceData
+      || (typeof nodeId === "string" && (nodeId.startsWith("market-data-education-item:") || nodeId.startsWith("market-data-science-item:")));
   }
 
   getEducationLabel(model) {
@@ -1487,9 +2208,91 @@ class ModelsApp {
       });
   }
 
+  buildGroupedVideosItems(type) {
+    const grouped = new Map();
+    const videos = Array.isArray(this.videosData) ? this.videosData : [];
+    for (let index = 0; index < videos.length; index++) {
+      const video = videos[index];
+      const lookupId = type === "education" ? video.education_level_id : video.science_id;
+      const label = type === "education" ? this.getEducationLabel(video) : this.getScienceLabel(video);
+      const groupKey = lookupId ? `id:${lookupId}` : `label:${label}`;
+      const existingGroup = grouped.get(groupKey);
+      if (existingGroup) {
+        existingGroup.count += 1;
+        continue;
+      }
+      grouped.set(groupKey, { lookupId, label, count: 1 });
+    }
+    return Array.from(grouped.values())
+      .sort((left, right) => left.label.localeCompare(right.label))
+      .map(entry => {
+        const isEducation = type === "education";
+        const defaultIconClass = isEducation ? "fa-light fa-graduation-cap" : "fa-light fa-flask";
+        const defaultIconColor = isEducation ? "#8b5cf6" : "#0ea5e9";
+        const lookupIconById = isEducation ? this.educationLookupIconById : this.scienceLookupIconById;
+        const lookupColorById = isEducation ? this.educationLookupColorById : this.scienceLookupColorById;
+        const iconClass = entry.lookupId ? lookupIconById.get(entry.lookupId) || defaultIconClass : defaultIconClass;
+        const iconColor = entry.lookupId ? lookupColorById.get(entry.lookupId) || defaultIconColor : defaultIconColor;
+        const nodePrefix = isEducation ? "market-video-education-item:" : "market-video-science-item:";
+        const nodeType = isEducation ? "market-video-education-item" : "market-video-science-item";
+        const nodeSuffix = entry.lookupId ? `id:${encodeURIComponent(entry.lookupId)}` : `label:${encodeURIComponent(entry.label)}`;
+        return {
+          id: `${nodePrefix}${nodeSuffix}`,
+          text: `${entry.label} (${entry.count})`,
+          nodeType,
+          count: entry.count,
+          iconClass,
+          iconColor
+        };
+      });
+  }
+
+  buildGroupedDataItems(type) {
+    const grouped = new Map();
+    const dataSets = Array.isArray(this.dataSetData) ? this.dataSetData : [];
+    for (let index = 0; index < dataSets.length; index++) {
+      const dataSet = dataSets[index];
+      const lookupId = type === "education" ? dataSet.education_level_id : dataSet.science_id;
+      const label = type === "education" ? this.getEducationLabel(dataSet) : this.getScienceLabel(dataSet);
+      const groupKey = lookupId ? `id:${lookupId}` : `label:${label}`;
+      const existingGroup = grouped.get(groupKey);
+      if (existingGroup) {
+        existingGroup.count += 1;
+        continue;
+      }
+      grouped.set(groupKey, { lookupId, label, count: 1 });
+    }
+    return Array.from(grouped.values())
+      .sort((left, right) => left.label.localeCompare(right.label))
+      .map(entry => {
+        const isEducation = type === "education";
+        const defaultIconClass = isEducation ? "fa-light fa-graduation-cap" : "fa-light fa-flask";
+        const defaultIconColor = isEducation ? "#8b5cf6" : "#0ea5e9";
+        const lookupIconById = isEducation ? this.educationLookupIconById : this.scienceLookupIconById;
+        const lookupColorById = isEducation ? this.educationLookupColorById : this.scienceLookupColorById;
+        const iconClass = entry.lookupId ? lookupIconById.get(entry.lookupId) || defaultIconClass : defaultIconClass;
+        const iconColor = entry.lookupId ? lookupColorById.get(entry.lookupId) || defaultIconColor : defaultIconColor;
+        const nodePrefix = isEducation ? "market-data-education-item:" : "market-data-science-item:";
+        const nodeType = isEducation ? "market-data-education-item" : "market-data-science-item";
+        const nodeSuffix = entry.lookupId ? `id:${encodeURIComponent(entry.lookupId)}` : `label:${encodeURIComponent(entry.label)}`;
+        return {
+          id: `${nodePrefix}${nodeSuffix}`,
+          text: `${entry.label} (${entry.count})`,
+          nodeType,
+          count: entry.count,
+          iconClass,
+          iconColor
+        };
+      });
+  }
+
   getTreeData() {
     const educationItems = this.buildGroupedPublicItems("education");
     const scienceItems = this.buildGroupedPublicItems("science");
+    const videoEducationItems = this.buildGroupedVideosItems("education");
+    const videoScienceItems = this.buildGroupedVideosItems("science");
+    const dataEducationItems = this.buildGroupedDataItems("education");
+    const dataScienceItems = this.buildGroupedDataItems("science");
     const treeData = [];
     if (this.isAuthenticated())
       treeData.push({
@@ -1532,22 +2335,88 @@ class ModelsApp {
         selectable: false,
         items: [
           {
-            id: treeNodeIds.marketplaceEducation,
-            text: this.translations.get("Education Levels"),
-            iconClass: "fa-light fa-graduation-cap",
-            iconColor: "#8b5cf6",
+            id: treeNodeIds.marketplaceModels,
+            text: this.translations.get("Models"),
+            iconClass: "fa-light fa-cube",
+            iconColor: "#16a34a",
             expanded: true,
             selectable: false,
-            items: educationItems
+            items: [
+              {
+                id: treeNodeIds.marketplaceModelsEducation,
+                text: this.translations.get("Education Levels"),
+                iconClass: "fa-light fa-graduation-cap",
+                iconColor: "#8b5cf6",
+                expanded: true,
+                selectable: false,
+                items: educationItems
+              },
+              {
+                id: treeNodeIds.marketplaceModelsSciences,
+                text: this.translations.get("Sciences"),
+                iconClass: "fa-light fa-flask",
+                iconColor: "#0ea5e9",
+                expanded: true,
+                selectable: false,
+                items: scienceItems
+              }
+            ]
           },
           {
-            id: treeNodeIds.marketplaceSciences,
-            text: this.translations.get("Sciences"),
-            iconClass: "fa-light fa-flask",
-            iconColor: "#0ea5e9",
+            id: treeNodeIds.marketplaceVideos,
+            text: `${this.translations.get("Videos")} (${this.videosData.length})`,
+            iconClass: "fa-light fa-video",
+            iconColor: "#e11d48",
             expanded: true,
             selectable: false,
-            items: scienceItems
+            items: [
+              {
+                id: treeNodeIds.marketplaceVideosEducation,
+                text: this.translations.get("Education Levels"),
+                iconClass: "fa-light fa-graduation-cap",
+                iconColor: "#8b5cf6",
+                expanded: true,
+                selectable: false,
+                items: videoEducationItems
+              },
+              {
+                id: treeNodeIds.marketplaceVideosSciences,
+                text: this.translations.get("Sciences"),
+                iconClass: "fa-light fa-flask",
+                iconColor: "#0ea5e9",
+                expanded: true,
+                selectable: false,
+                items: videoScienceItems
+              }
+            ]
+          },
+          {
+            id: treeNodeIds.marketplaceData,
+            text: `${this.translations.get("Data")} (${this.dataSetData.length})`,
+            iconClass: "fa-light fa-table",
+            iconColor: "#d97706",
+            expanded: true,
+            selectable: false,
+            items: [
+              {
+                id: treeNodeIds.marketplaceDataEducation,
+                text: this.translations.get("Education Levels"),
+                iconClass: "fa-light fa-graduation-cap",
+                iconColor: "#8b5cf6",
+                expanded: true,
+                selectable: false,
+                items: dataEducationItems
+              },
+              {
+                id: treeNodeIds.marketplaceDataSciences,
+                text: this.translations.get("Sciences"),
+                iconClass: "fa-light fa-flask",
+                iconColor: "#0ea5e9",
+                expanded: true,
+                selectable: false,
+                items: dataScienceItems
+              }
+            ]
           }
         ]
       }
@@ -1809,6 +2678,23 @@ class ModelsApp {
     if (!this.treeViewInstance)
       return;
     this.treeViewInstance.option("dataSource", this.getTreeData());
+    this.updateUploadButtonsVisibility();
+  }
+
+  updateUploadButtonsVisibility() {
+    const canAccess = this.canAccessMaintenance();
+    const uploadVideoElement = this.elements.navUploadVideo;
+    const uploadDataElement = this.elements.navUploadData;
+    if (uploadVideoElement) {
+      const uploadVideoContainer = uploadVideoElement.closest(".dx-item");
+      if (uploadVideoContainer)
+        uploadVideoContainer.style.display = canAccess ? "" : "none";
+    }
+    if (uploadDataElement) {
+      const uploadDataContainer = uploadDataElement.closest(".dx-item");
+      if (uploadDataContainer)
+        uploadDataContainer.style.display = canAccess ? "" : "none";
+    }
   }
 
   refreshTreeSelection() {
@@ -1824,6 +2710,8 @@ class ModelsApp {
   }
   bindNav() {
     if (this.elements.navNewModel) this.elements.navNewModel.addEventListener("click", () => this.createModel());
+    if (this.elements.navUploadVideo) this.elements.navUploadVideo.addEventListener("click", () => this.showUploadVideoPopup());
+    if (this.elements.navUploadData) this.elements.navUploadData.addEventListener("click", () => this.showUploadDataPopup());
   }
   async createModel() {
     this.userSdk.refreshState(this.state);
@@ -1887,7 +2775,7 @@ class ModelsApp {
       </div>
     `;
     const templateCardMarkups = templates.map(template => {
-      const src = this.getModelThumbnailSource(template.thumbnail);
+      const src = template.thumbnail_url || "";
       const thumbContent = src
         ? `<img src="${src}" alt="${this.escapeHtml(template.title || "")}">`
         : `<i class="fa-light fa-cube" aria-hidden="true"></i>`;
@@ -2076,6 +2964,8 @@ class ModelsApp {
     this.disposeSystemTemplatesGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
     const statusColors = {
       "new": { background: "#dbeafe", color: "#1d4ed8" },
       "todo": { background: "#fef3c7", color: "#b45309" },
@@ -2195,6 +3085,8 @@ class ModelsApp {
     this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
     const whatsNewStore = new DevExpress.data.CustomStore({
       key: "id",
       load: () => this.apiClient.fetchWhatsNew(),
