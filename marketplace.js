@@ -116,10 +116,16 @@ class ModelsApp {
     this.notificationsGridInstance = null;
     this.uploadVideoPopupInstance = null;
     this.uploadDataPopupInstance = null;
+    this.editVideoPopupInstance = null;
+    this.editDataPopupInstance = null;
     this._uploadVideoFile = null;
     this._uploadDataFile = null;
     this._uploadVideoThumbnailFile = null;
     this._uploadDataThumbnailFile = null;
+    this._editVideoThumbnailFile = null;
+    this._editDataThumbnailFile = null;
+    this._editVideoHTMLEditor = null;
+    this._editDataHTMLEditor = null;
     this.initNavToolbar();
     this.cacheNavElements();
     this.bindNav();
@@ -627,6 +633,8 @@ class ModelsApp {
         const escapedScienceLabel = this.escapeHtml(scienceLabel);
         const descriptionLabel = this.escapeHtml(data.description || "");
         const createdDate = this.formatShortDate(data.created_at);
+        const currentUserId = this.userSdk.getUserId(this.state.session);
+        const canEdit = this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId);
         const taxonomyMarkup = `
           <div class="card-thumb-dropdowns">
             <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
@@ -640,10 +648,8 @@ class ModelsApp {
           <div class="card-tile" data-item-id="${this.escapeHtml(data.id || "")}">
             <div class="card-thumb-wrap">${thumbContent}${taxonomyMarkup}</div>
             <div class="card-actions">
-              <button class="delete-button" aria-label="Delete video">
-                <i class="fa-light fa-trash-can trash" aria-hidden="true"></i>
-                <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
-              </button>
+              ${canEdit ? `<button class="edit-button" aria-label="Edit video"><i class="fa-light fa-pen" aria-hidden="true"></i></button>` : ""}
+              ${canEdit ? `<button class="delete-button" aria-label="Delete video"><i class="fa-light fa-trash-can trash" aria-hidden="true"></i><i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i></button>` : ""}
             </div>
             <div class="card-body">
               <h3 class="card-title">${this.escapeHtml(data.title) || "Untitled"}</h3>
@@ -657,11 +663,30 @@ class ModelsApp {
           </div>
         `;
         host.innerHTML = cardMarkup;
+        const cardDescElement = host.querySelector(".card-desc");
+        const editButton = host.querySelector(".edit-button");
         const deleteButton = host.querySelector(".delete-button");
         const educationDropdownHost = host.querySelector(".education-dropdown-host");
         const scienceDropdownHost = host.querySelector(".science-dropdown-host");
         if (educationDropdownHost) educationDropdownHost.style.setProperty("--pill-color", educationColor);
         if (scienceDropdownHost) scienceDropdownHost.style.setProperty("--pill-color", scienceColor);
+        if (cardDescElement && (data.title || data.description)) {
+          $('<div>').appendTo('body').dxTooltip({
+            target: cardDescElement,
+            contentTemplate: contentElement => {
+              contentElement.append($('<div class="card-desc-tooltip">').html(`<strong>${this.escapeHtml(data.title || "")}</strong>${data.description ? `<p>${this.escapeHtml(data.description)}</p>` : ""}`) );
+            },
+            showEvent: { delay: 600, name: 'mouseenter' },
+            hideEvent: 'mouseleave',
+            position: 'bottom',
+            maxWidth: 300
+          });
+        }
+        if (editButton)
+          editButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.showEditVideoPopup(data);
+          });
         if (deleteButton)
           deleteButton.addEventListener("click", event => {
             event.stopPropagation();
@@ -777,6 +802,8 @@ class ModelsApp {
         const escapedScienceLabel = this.escapeHtml(scienceLabel);
         const descriptionLabel = this.escapeHtml(data.description || "");
         const createdDate = this.formatShortDate(data.created_at);
+        const currentUserId = this.userSdk.getUserId(this.state.session);
+        const canEdit = this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId);
         const taxonomyMarkup = `
           <div class="card-thumb-dropdowns">
             <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
@@ -790,10 +817,8 @@ class ModelsApp {
           <div class="card-tile" data-item-id="${this.escapeHtml(data.id || "")}">
             <div class="card-thumb-wrap">${thumbContent}${taxonomyMarkup}</div>
             <div class="card-actions">
-              <button class="delete-button" aria-label="Delete data set">
-                <i class="fa-light fa-trash-can trash" aria-hidden="true"></i>
-                <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
-              </button>
+              ${canEdit ? `<button class="edit-button" aria-label="Edit data set"><i class="fa-light fa-pen" aria-hidden="true"></i></button>` : ""}
+              ${canEdit ? `<button class="delete-button" aria-label="Delete data set"><i class="fa-light fa-trash-can trash" aria-hidden="true"></i><i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i></button>` : ""}
             </div>
             <div class="card-body">
               <h3 class="card-title">${this.escapeHtml(data.title) || "Untitled"}</h3>
@@ -807,11 +832,30 @@ class ModelsApp {
           </div>
         `;
         host.innerHTML = cardMarkup;
+        const cardDescElement = host.querySelector(".card-desc");
+        const editButton = host.querySelector(".edit-button");
         const deleteButton = host.querySelector(".delete-button");
         const educationDropdownHost = host.querySelector(".education-dropdown-host");
         const scienceDropdownHost = host.querySelector(".science-dropdown-host");
         if (educationDropdownHost) educationDropdownHost.style.setProperty("--pill-color", educationColor);
         if (scienceDropdownHost) scienceDropdownHost.style.setProperty("--pill-color", scienceColor);
+        if (cardDescElement && (data.title || data.description)) {
+          $('<div>').appendTo('body').dxTooltip({
+            target: cardDescElement,
+            contentTemplate: contentElement => {
+              contentElement.append($('<div class="card-desc-tooltip">').html(`<strong>${this.escapeHtml(data.title || "")}</strong>${data.description ? `<p>${this.escapeHtml(data.description)}</p>` : ""}`) );
+            },
+            showEvent: { delay: 600, name: 'mouseenter' },
+            hideEvent: 'mouseleave',
+            position: 'bottom',
+            maxWidth: 300
+          });
+        }
+        if (editButton)
+          editButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.showEditDataPopup(data);
+          });
         if (deleteButton)
           deleteButton.addEventListener("click", event => {
             event.stopPropagation();
@@ -949,6 +993,220 @@ class ModelsApp {
     } catch (error) {
       this.setStatus(error?.message || "Failed to delete data set.", true);
     }
+  }
+
+  showEditVideoPopup(videoData) {
+    let popupHost = document.getElementById("edit-video-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="edit-video-popup"></div>`);
+      popupHost = document.getElementById("edit-video-popup");
+    }
+    this._editVideoThumbnailFile = null;
+    const formData = { title: videoData.title || "", description: videoData.description || "" };
+    const buildContent = contentElement => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      host.innerHTML = `<div id="edit-video-form"></div>`;
+      const formHost = document.getElementById("edit-video-form");
+      this._editVideoFormInstance = new DevExpress.ui.dxForm(formHost, {
+        formData,
+        colCount: 1,
+        items: [
+          {
+            label: { text: "Thumbnail" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              this._editVideoThumbnailControl = new ImageControl({
+                dropHint: "Drop new thumbnail image here",
+                imageSource: videoData.thumbnail_url || "",
+                onUploadFile: file => {
+                  this._editVideoThumbnailFile = file;
+                  return Promise.resolve(URL.createObjectURL(file));
+                },
+                onImageCleared: () => { this._editVideoThumbnailFile = null; }
+              });
+              itemHost.appendChild(this._editVideoThumbnailControl.createHost().get(0));
+            }
+          },
+          {
+            dataField: "title",
+            label: { text: "Title" },
+            validationRules: [{ type: "required" }],
+            editorOptions: { inputAttr: { style: "font-family: 'Atma', cursive; font-weight: 600;" } }
+          },
+          {
+            label: { text: "Description" },
+            template: async (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              itemHost.insertAdjacentHTML("beforeend", `
+                <div id="edit-video-html-editor"></div>
+                <div id="edit-video-html-toolbar" class="html-editor-toolbar"></div>
+              `);
+              const editorElement = document.getElementById("edit-video-html-editor");
+              const toolbarElement = document.getElementById("edit-video-html-toolbar");
+              this._editVideoHTMLEditor = new DevExpress.ui.dxHtmlEditor(editorElement, {
+                value: formData.description ? await Utils.toHtml(formData.description) : "",
+                valueType: "html",
+                height: 260,
+                toolbar: {
+                  container: toolbarElement,
+                  items: ["bold", "italic", "underline", "strike", "separator", "orderedList", "bulletList", "separator", "link", "separator", "undo", "redo"]
+                }
+              });
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "right",
+            buttonOptions: {
+              text: "Save",
+              type: "default",
+              onClick: async () => {
+                const result = this._editVideoFormInstance.validate();
+                if (!result.isValid) return;
+                const values = this._editVideoFormInstance.option("formData");
+                const rawDescription = this._editVideoHTMLEditor ? this._editVideoHTMLEditor.option("value") : (values.description || "");
+                const descriptionValue = await Utils.fromHtml(rawDescription);
+                this.setStatus("Saving video…");
+                try {
+                  await this.apiClient.patchVideo(videoData.id, { title: values.title, description: descriptionValue });
+                  if (this._editVideoThumbnailFile)
+                    await this.apiClient.uploadVideoThumbnail(videoData.id, this._editVideoThumbnailFile);
+                  this.setStatus("Video saved.");
+                  this.editVideoPopupInstance.hide();
+                  this.loadModels();
+                } catch (error) {
+                  this.setStatus(error?.message || "Failed to save video.", true);
+                }
+              }
+            }
+          }
+        ]
+      });
+    };
+    if (this.editVideoPopupInstance) {
+      buildContent(this.editVideoPopupInstance.content());
+      this.editVideoPopupInstance.show();
+      return;
+    }
+    this.editVideoPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: "Edit Video",
+      width: 520,
+      height: "auto",
+      maxHeight: "90vh",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
+  }
+
+  showEditDataPopup(dataSetData) {
+    let popupHost = document.getElementById("edit-data-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="edit-data-popup"></div>`);
+      popupHost = document.getElementById("edit-data-popup");
+    }
+    this._editDataThumbnailFile = null;
+    const formData = { title: dataSetData.title || "", description: dataSetData.description || "" };
+    const buildContent = contentElement => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      host.innerHTML = `<div id="edit-data-form"></div>`;
+      const formHost = document.getElementById("edit-data-form");
+      this._editDataFormInstance = new DevExpress.ui.dxForm(formHost, {
+        formData,
+        colCount: 1,
+        items: [
+          {
+            label: { text: "Thumbnail" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              this._editDataThumbnailControl = new ImageControl({
+                dropHint: "Drop new thumbnail image here",
+                imageSource: dataSetData.thumbnail_url || "",
+                onUploadFile: file => {
+                  this._editDataThumbnailFile = file;
+                  return Promise.resolve(URL.createObjectURL(file));
+                },
+                onImageCleared: () => { this._editDataThumbnailFile = null; }
+              });
+              itemHost.appendChild(this._editDataThumbnailControl.createHost().get(0));
+            }
+          },
+          {
+            dataField: "title",
+            label: { text: "Title" },
+            validationRules: [{ type: "required" }],
+            editorOptions: { inputAttr: { style: "font-family: 'Atma', cursive; font-weight: 600;" } }
+          },
+          {
+            label: { text: "Description" },
+            template: async (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              itemHost.insertAdjacentHTML("beforeend", `
+                <div id="edit-data-html-editor"></div>
+                <div id="edit-data-html-toolbar" class="html-editor-toolbar"></div>
+              `);
+              const editorElement = document.getElementById("edit-data-html-editor");
+              const toolbarElement = document.getElementById("edit-data-html-toolbar");
+              this._editDataHTMLEditor = new DevExpress.ui.dxHtmlEditor(editorElement, {
+                value: formData.description ? await Utils.toHtml(formData.description) : "",
+                valueType: "html",
+                height: 260,
+                toolbar: {
+                  container: toolbarElement,
+                  items: ["bold", "italic", "underline", "strike", "separator", "orderedList", "bulletList", "separator", "link", "separator", "undo", "redo"]
+                }
+              });
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "right",
+            buttonOptions: {
+              text: "Save",
+              type: "default",
+              onClick: async () => {
+                const result = this._editDataFormInstance.validate();
+                if (!result.isValid) return;
+                const values = this._editDataFormInstance.option("formData");
+                const rawDescription = this._editDataHTMLEditor ? this._editDataHTMLEditor.option("value") : (values.description || "");
+                const descriptionValue = await Utils.fromHtml(rawDescription);
+                this.setStatus("Saving data set…");
+                try {
+                  await this.apiClient.patchDataSet(dataSetData.id, { title: values.title, description: descriptionValue });
+                  if (this._editDataThumbnailFile)
+                    await this.apiClient.uploadDataSetThumbnail(dataSetData.id, this._editDataThumbnailFile);
+                  this.setStatus("Data set saved.");
+                  this.editDataPopupInstance.hide();
+                  this.loadModels();
+                } catch (error) {
+                  this.setStatus(error?.message || "Failed to save data set.", true);
+                }
+              }
+            }
+          }
+        ]
+      });
+    };
+    if (this.editDataPopupInstance) {
+      buildContent(this.editDataPopupInstance.content());
+      this.editDataPopupInstance.show();
+      return;
+    }
+    this.editDataPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: "Edit Data Set",
+      width: 520,
+      height: "auto",
+      maxHeight: "90vh",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
   }
 
   showUploadVideoPopup() {

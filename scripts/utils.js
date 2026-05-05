@@ -134,6 +134,32 @@ class Utils {
     static createTranslatedTooltip(e, key, translations, width, canShow) {
         return Utils.createTooltip(e, translations.get(key), width, canShow);
     }
+
+    static async toHtml(markdownValue) {
+        const { unified } = await import("https://esm.sh/unified@11");
+        const { default: remarkParse } = await import("https://esm.sh/remark-parse@11");
+        const { default: remarkRehype } = await import("https://esm.sh/remark-rehype@11");
+        const { default: rehypeStringify } = await import("https://esm.sh/rehype-stringify@10");
+        return unified()
+            .use(remarkParse)
+            .use(remarkRehype)
+            .use(rehypeStringify)
+            .processSync(markdownValue)
+            .toString();
+    }
+
+    static async fromHtml(htmlValue) {
+        const { unified } = await import("https://esm.sh/unified@11");
+        const { default: rehypeParse } = await import("https://esm.sh/rehype-parse@9");
+        const { default: rehypeRemark } = await import("https://esm.sh/rehype-remark@10");
+        const { default: remarkStringify } = await import("https://esm.sh/remark-stringify@11");
+        return unified()
+            .use(rehypeParse)
+            .use(rehypeRemark)
+            .use(remarkStringify)
+            .processSync(htmlValue)
+            .toString();
+    }
 }
 
 if (typeof module !== "undefined" && module.exports)

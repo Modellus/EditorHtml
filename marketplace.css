@@ -237,7 +237,8 @@ body {
   display: flex;
   gap: 0.35rem;
 }
-.delete-button {
+.delete-button,
+.edit-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -247,6 +248,10 @@ body {
   width: 34px;
   height: 34px;
   cursor: pointer;
+}
+.edit-button i {
+  color: #2563eb;
+  font-weight: 300;
 }
 .delete-button .trash {
   font-weight: 300;
@@ -286,10 +291,10 @@ body {
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   line-height: 1.25;
-  max-height: calc(2 * 1.25em);
+  max-height: calc(3 * 1.25em);
 }
 .card-meta {
   display: flex;
@@ -706,6 +711,26 @@ body {
   display: inline-block;
   font-weight: 900;
   color: red;
+}
+.card-desc-tooltip {
+  text-align: left;
+}
+.card-desc-tooltip strong {
+  display: block;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+.card-desc-tooltip p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--c-muted);
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+.html-editor-toolbar {
+  margin-top: 4px;
+  border-top: 1px solid var(--c-border);
+  padding-top: 4px;
 }
 .media-thumb-placeholder {
   width: 100%;
