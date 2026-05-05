@@ -782,3 +782,21 @@ body {
 .upload-file-uploader-host {
   width: 100%;
 }
+
+.mdl-nav-action-icon-hover {
+  display: none;
+}
+
+#nav-upload-video:hover .mdl-nav-action-icon,
+#nav-upload-data:hover .mdl-nav-action-icon,
+#nav-new-model:hover .mdl-nav-action-icon,
+#nav-notifications:hover .mdl-nav-action-icon {
+  display: none;
+}
+
+#nav-upload-video:hover .mdl-nav-action-icon-hover,
+#nav-upload-data:hover .mdl-nav-action-icon-hover,
+#nav-new-model:hover .mdl-nav-action-icon-hover,
+#nav-notifications:hover .mdl-nav-action-icon-hover {
+  display: inline-block;
+}

@@ -209,20 +209,6 @@ class ModelsApp {
       onContentReady: event => $(event.element).find('[title="Menu"]').removeAttr("title"),
       items: [
         {
-          location: "before",
-          widget: "dxButton",
-          options: {
-            onClick: () => this.toggleDrawer(),
-            hint: "",
-            elementAttr: { title: "" },
-            onContentReady: event => $(event.element).removeAttr("title"),
-            template: (_, contentElement) => {
-              const host = contentElement.get(0);
-              host.innerHTML = `<i class="fa-solid fa-sidebar mdl-nav-icon"></i>`;
-            }
-          }
-        },
-        {
           location: "after",
           widget: "dxButton",
           visible: isAuthenticated,
@@ -231,7 +217,7 @@ class ModelsApp {
             stylingMode: "text",
             template: (_, contentElement) => {
               const host = contentElement.get(0);
-              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-video" style="color:#e11d48;font-size:1rem"></i><span>Upload Video</span></span>`;
+              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-video mdl-nav-action-icon" style="color:#e11d48;font-size:1rem"></i><i class="fa-solid fa-video mdl-nav-action-icon-hover" style="color:#e11d48;font-size:1rem"></i><span>Upload Video</span></span>`;
             }
           }
         },
@@ -244,7 +230,7 @@ class ModelsApp {
             stylingMode: "text",
             template: (_, contentElement) => {
               const host = contentElement.get(0);
-              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-table" style="color:#d97706;font-size:1rem"></i><span>Upload Data</span></span>`;
+              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-table mdl-nav-action-icon" style="color:#d97706;font-size:1rem"></i><i class="fa-solid fa-table mdl-nav-action-icon-hover" style="color:#d97706;font-size:1rem"></i><span>Upload Data</span></span>`;
             }
           }
         },
@@ -257,7 +243,7 @@ class ModelsApp {
             stylingMode: "text",
             template: (_, contentElement) => {
               const host = contentElement.get(0);
-              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-earth-africa" style="color:#2563eb;font-size:1rem"></i><span>Create Model</span></span>`;
+              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-earth-africa mdl-nav-action-icon" style="color:#2563eb;font-size:1rem"></i><i class="fa-solid fa-earth-africa mdl-nav-action-icon-hover" style="color:#2563eb;font-size:1rem"></i><span>Create Model</span></span>`;
             }
           }
         },
@@ -271,7 +257,7 @@ class ModelsApp {
             onClick: () => this.navigateToNotifications(),
             template: (_, contentElement) => {
               const host = contentElement.get(0);
-              host.innerHTML = `<span class="notification-bell"><i class="fa-light fa-bell mdl-nav-icon"></i></span>`;
+              host.innerHTML = `<span class="notification-bell"><i class="fa-light fa-bell mdl-nav-icon mdl-nav-action-icon"></i><i class="fa-solid fa-bell mdl-nav-icon mdl-nav-action-icon-hover"></i></span>`;
               this.bellElement = host.querySelector(".notification-bell");
             }
           }
