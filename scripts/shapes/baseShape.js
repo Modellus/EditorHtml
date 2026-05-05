@@ -892,6 +892,13 @@ class BaseShape {
         return { class: wrapperClassName };
     }
 
+    getDropDownButtonInstance(element) {
+        const hostElement = element?.[0] ?? element;
+        if (!(hostElement instanceof Element))
+            return null;
+        return window.DevExpress?.ui?.dxDropDownButton?.getInstance(hostElement) ?? null;
+    }
+
     enterEditMode() {
         return false;
     }
@@ -1185,37 +1192,42 @@ class BaseShape {
 
     createRemoveDropDownButton(itemElement) {
         this._removeDropdownElement = $('<div class="mdl-remove-selector">');
-        const buttonId = `remove-btn-${this.id}`;
-        this._removeDropdownElement.html(`<div id="${buttonId}"></div><div id="${buttonId}-menu"></div>`);
-        $(`#${buttonId}`, this._removeDropdownElement).dxButton({
-            template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+        this._removeDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
             stylingMode: "text",
+            useSelectMode: false,
             onInitialized: e => Utils.createTranslatedTooltip(e, "Remove Tooltip", this.board.translations, 280),
-            onClick: e => {
-                this._removeMenuInstance.option("target", e.component.element());
-                this._removeMenuInstance.show();
+            template: (_, element) => {
+                element[0].innerHTML = `<span class="mdl-focused-toolbar-button"><i class="fa-light fa-trash-can trash"></i><i class="fa-solid fa-trash-can trash-hover"></i></span>`;
+            },
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: 140,
+                contentTemplate: contentElement => this.buildRemoveMenuContent(contentElement)
             }
         });
-        $(`#${buttonId}-menu`, this._removeDropdownElement).dxContextMenu({
-            dataSource: [
-                { text: "Remove", icon: "fa-light fa-trash-can", action: () => this.remove() },
-                { text: "Reset", icon: "fa-light fa-arrow-rotate-left", action: () => this.resetToDefaults() }
-            ],
-            itemTemplate: itemData => {
-                return `<div style="display:flex;align-items:center;width:100%">
-                            <span class="${itemData.icon}" style="width:15px;margin-right:10px;text-align:left;display:inline-block"></span>
-                            <span style="text-align:left;flex-grow:1">${itemData.text}</span>
-                        </div>`;
-            },
-            onItemClick: e => {
-                e.itemData.action();
-            },
-            showEvent: null,
-            position: { my: "top left", at: "bottom left" },
-            cssClass: "mdl-remove-context-menu"
-        });
-        this._removeMenuInstance = $(`#${buttonId}-menu`, this._removeDropdownElement).dxContextMenu("instance");
         this._removeDropdownElement.appendTo(itemElement);
+    }
+
+    buildRemoveMenuContent(contentElement) {
+        const items = [
+            { text: "Remove", icon: "fa-light fa-trash-can", action: () => this.remove() },
+            { text: "Reset", icon: "fa-light fa-arrow-rotate-left", action: () => this.resetToDefaults() }
+        ];
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: items,
+            scrollingEnabled: false,
+            itemTemplate: (itemData, _, itemElement) => {
+                itemElement[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${itemData.icon}"></i><span class="mdl-dropdown-list-label">${itemData.text}</span></div>`;
+            },
+            onItemClick: event => {
+                const removeControl = this.getDropDownButtonInstance(this._removeDropdownElement);
+                removeControl?.close();
+                event.itemData.action();
+            }
+        });
     }
 
     createActionsToolbarItem() {
@@ -1239,48 +1251,59 @@ class BaseShape {
     createActionsDropDownButton(itemElement) {
         const isMac = /mac/i.test(navigator.platform);
         const mod = isMac ? "⌘" : "Ctrl+";
-        const copySubItems = this.getCopySubMenuItems();
         this._actionsDropdownElement = $('<div class="mdl-actions-selector">');
-        const buttonId = `actions-btn-${this.id}`;
-        this._actionsDropdownElement.html(`<div id="${buttonId}"></div><div id="${buttonId}-menu"></div>`);
-        $(`#${buttonId}`, this._actionsDropdownElement).dxButton({
-            icon: "fa-light fa-ellipsis-vertical",
+        this._actionsDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
             stylingMode: "text",
+            useSelectMode: false,
             onInitialized: e => Utils.createTranslatedTooltip(e, "Actions Tooltip", this.board.translations, 280),
-            onClick: e => {
-                this._actionsMenuInstance.option("target", e.component.element());
-                this._actionsMenuInstance.show();
+            template: (_, element) => {
+                element[0].innerHTML = `<span class="mdl-focused-toolbar-button"><i class="fa-light fa-ellipsis-vertical"></i></span>`;
+            },
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: 220,
+                contentTemplate: contentElement => this.buildActionsMenuContent(contentElement, mod)
             }
         });
-        $(`#${buttonId}-menu`, this._actionsDropdownElement).dxContextMenu({
-            dataSource: [
-                { text: "Bring to Front", icon: "fa-light fa-bring-front", shortcut: "", action: () => this.board.bringToFront(this) },
-                { text: "Bring Forward", icon: "fa-light fa-bring-forward", shortcut: "", action: () => this.board.bringForward(this) },
-                { text: "Send Backward", icon: "fa-light fa-send-backward", shortcut: "", action: () => this.board.sendBackward(this) },
-                { text: "Send to Back", icon: "fa-light fa-send-back", shortcut: "", action: () => this.board.sendToBack(this) },
-                { text: "Copy", icon: "fa-light fa-copy", shortcut: `${mod}C`, beginGroup: true, action: () => this.copyToClipboard(), items: copySubItems },
-                { text: "Paste", icon: "fa-light fa-paste", shortcut: `${mod}V`, action: () => BaseShape.pasteFromClipboard(this.board, this.parent) },
-                { text: "Duplicate", icon: "fa-light fa-clone", shortcut: `${mod}D`, action: () => this.duplicate() }
-            ],
-            itemTemplate: itemData => {
-                const hasChildren = itemData.items?.length > 0;
-                return `<div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-                            <span class="${itemData.icon}" style="width:15px;margin-right:10px;text-align:left;display:inline-block"></span>
-                            <span style="text-align:left;padding-right:20px;flex-grow:1">${itemData.text}</span>
-                            <span style="color:#999">${itemData.shortcut}</span>
-                            <span style="width:12px;text-align:right">${hasChildren ? "<i class='fa-light fa-chevron-right'></i>" : ""}</span>
-                        </div>`;
-            },
-            onItemClick: e => {
-                if (e.itemData?.action)
-                    e.itemData.action();
-            },
-            showEvent: null,
-            position: { my: "top left", at: "bottom left" },
-            cssClass: "mdl-actions-context-menu"
-        });
-        this._actionsMenuInstance = $(`#${buttonId}-menu`, this._actionsDropdownElement).dxContextMenu("instance");
         this._actionsDropdownElement.appendTo(itemElement);
+    }
+
+    buildActionsMenuContent(contentElement, mod) {
+        const copySubItems = this.getCopySubMenuItems();
+        const layerItems = [
+            { text: "Bring to Front", icon: "fa-light fa-bring-front", shortcut: "", action: () => this.board.bringToFront(this) },
+            { text: "Bring Forward", icon: "fa-light fa-bring-forward", shortcut: "", action: () => this.board.bringForward(this) },
+            { text: "Send Backward", icon: "fa-light fa-send-backward", shortcut: "", action: () => this.board.sendBackward(this) },
+            { text: "Send to Back", icon: "fa-light fa-send-back", shortcut: "", action: () => this.board.sendToBack(this) }
+        ];
+        const actionItems = [
+            { text: "Copy", icon: "fa-light fa-copy", shortcut: `${mod}C`, action: () => this.copyToClipboard() },
+            ...copySubItems.map(subItem => ({ ...subItem, isSubItem: true })),
+            { text: "Paste", icon: "fa-light fa-paste", shortcut: `${mod}V`, action: () => BaseShape.pasteFromClipboard(this.board, this.parent) },
+            { text: "Duplicate", icon: "fa-light fa-clone", shortcut: `${mod}D`, action: () => this.duplicate() }
+        ];
+        const close = () => this.getDropDownButtonInstance(this._actionsDropdownElement)?.close();
+        const renderItem = (item) => {
+            const indent = item.isSubItem ? "padding-left:24px;" : "";
+            const shortcut = item.shortcut ? `<span style="color:#999;margin-left:auto">${item.shortcut}</span>` : "";
+            return `<div class="mdl-dropdown-list-item" style="${indent}cursor:pointer" data-action-item><i class="dx-icon ${item.icon}"></i><span class="mdl-dropdown-list-label">${item.text}</span>${shortcut}</div>`;
+        };
+        const container = $(contentElement).empty()[0];
+        const allItems = [...layerItems, ...actionItems];
+        const markup = `<div class="mdl-actions-menu">
+            ${layerItems.map(renderItem).join("")}
+            <div class="mdl-actions-menu-separator"></div>
+            ${actionItems.map(renderItem).join("")}
+        </div>`;
+        container.innerHTML = markup;
+        container.querySelectorAll("[data-action-item]").forEach((element, index) => {
+            element.addEventListener("click", () => {
+                close();
+                allItems[index]?.action?.();
+            });
+        });
     }
 
     createTermsDropDownButton(itemElement) {

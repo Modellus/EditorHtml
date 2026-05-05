@@ -83,10 +83,14 @@ declare class PreloadedData {
     private values;
     private iterationCol;
     private independentCol;
+    private outliersByTermName;
     get names(): string[];
     get isEmpty(): boolean;
     load(names: string[], values: number[][], iterationTermName: string, independentTermName: string): void;
     reset(): void;
+    addOutlierIteration(termName: string, iteration: number): void;
+    removeOutlierIteration(termName: string, iteration: number): void;
+    isOutlierIteration(termName: string, iteration: number): boolean;
     clear(): void;
     getDataTermNames(iterationTermName: string, independentTermName: string): string[];
     getMaxCoveredIteration(initialIndependent: number, step: number): number;
@@ -153,6 +157,8 @@ declare class System {
     getBodies(): Body[];
     getBody(name: string): Body | undefined;
     loadTerms(names: string[], values: number[][]): void;
+    addOutlierIteration(termName: string, iteration: number): void;
+    removeOutlierIteration(termName: string, iteration: number): void;
     reset(): void;
     clear(): void;
     calculateFunctions(): void;

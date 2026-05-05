@@ -32,6 +32,7 @@ class TableControl {
         this.headerTooltipLatex = "";
         this.rowsClipId = `shape-svg-table-clip-${crypto.randomUUID()}`;
         this.tableClipId = `shape-svg-table-header-clip-${crypto.randomUUID()}`;
+        this.outlierStripePatternId = `shape-svg-table-outlier-stripe-${crypto.randomUUID()}`;
         this.initializeRoot();
         this.bindEvents();
         this.ensureCaseIconsLoaded();
@@ -62,11 +63,13 @@ class TableControl {
             scrollbarWidth: 10,
             precision: 2,
             minColumnWidth: 48,
+            outlierCellColor: "#fff3e0",
             onCellValueChanged: null,
             onColumnWidthChanged: null,
             onRowDeleteRequested: null,
             onFocusedCellsChanged: null,
-            shouldKeepFocusedCellsOnPointerDown: null
+            shouldKeepFocusedCellsOnPointerDown: null,
+            isOutlierCell: null
         };
     }
 
@@ -75,6 +78,15 @@ class TableControl {
         this.rootElement.setAttribute("class", "table-control-root");
         this.rootElement.setAttribute("tabindex", "0");
         this.defsElement = this.createSvgElement("defs");
+        this.outlierStripePattern = this.createSvgElement("pattern");
+        this.outlierStripePattern.setAttribute("id", this.outlierStripePatternId);
+        this.outlierStripePattern.setAttribute("x", "0");
+        this.outlierStripePattern.setAttribute("y", "0");
+        this.outlierStripePattern.setAttribute("width", "6");
+        this.outlierStripePattern.setAttribute("height", "6");
+        this.outlierStripePattern.setAttribute("patternUnits", "userSpaceOnUse");
+        this.outlierStripePattern.innerHTML = `<rect width="6" height="6" fill="#ffffff"/><line x1="0" y1="0" x2="6" y2="6" stroke="#f5a623" stroke-width="1.5"/>`;
+        this.defsElement.appendChild(this.outlierStripePattern);
         this.rowsClipPath = this.createSvgElement("clipPath");
         this.rowsClipPath.setAttribute("id", this.rowsClipId);
         this.rowsClipRect = this.createSvgElement("rect");
@@ -833,6 +845,16 @@ class TableControl {
             const selected = this.isCellSelected(rowIndex, columnIndex);
             const focused = this.isCellFocused(rowIndex, columnIndex);
             const isEditingCell = this.editingCell && this.editingCell.rowIndex === rowIndex && this.editingCell.columnIndex === columnIndex;
+            const isOutlierCell = typeof this.options.isOutlierCell === "function" && this.options.isOutlierCell(rowIndex, columnIndex);
+            if (isOutlierCell) {
+                const outlierRect = this.createSvgElement("rect");
+                outlierRect.setAttribute("x", `${cell.x}`);
+                outlierRect.setAttribute("y", `${y}`);
+                outlierRect.setAttribute("width", `${cell.width}`);
+                outlierRect.setAttribute("height", `${rowHeight}`);
+                outlierRect.setAttribute("fill", `url(#${this.outlierStripePatternId})`);
+                this.rowsLayer.appendChild(outlierRect);
+            }
             if (focused || selected) {
                 const selectedRect = this.createSvgElement("rect");
                 selectedRect.setAttribute("x", `${cell.x}`);
@@ -1424,6 +1446,9 @@ class TableControl {
             this.commitEditing();
         if (event.shiftKey && this.selectedCell && this.canCreatePreloadedRangeSelection(this.selectedCell, cell)) {
             this.focusCellRange(this.selectedCell.rowIndex, this.selectedCell.columnIndex, cell.rowIndex, cell.columnIndex);
+            this.selectedCellRange = null;
+        } else if (this.isPreloadedColumn(cell.columnIndex)) {
+            this.focusCellRange(cell.rowIndex, cell.columnIndex, cell.rowIndex, cell.columnIndex);
             this.selectedCellRange = null;
         } else {
             this.selectCell(cell.rowIndex, cell.columnIndex);

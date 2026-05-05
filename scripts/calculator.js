@@ -712,6 +712,18 @@ class Calculator extends EventTarget {
             return parameters[0];
         return this.properties.independent.name;
     }
+
+    addOutlierIteration(termName = "", iteration = 1) {
+        this.system.addOutlierIteration(termName, iteration);
+    }
+
+    removeOutlierIteration(termName = "", iteration = 1) {
+        this.system.removeOutlierIteration(termName, iteration);
+    }
+
+    isOutlierIteration(termName = "", iteration = 1) {
+        return this.system.preloadedData.isOutlierIteration(termName, iteration);
+    }
 }
 
 if (typeof module !== "undefined" && module.exports)

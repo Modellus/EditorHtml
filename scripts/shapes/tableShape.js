@@ -508,7 +508,8 @@ class TableShape extends BaseShape {
             onColumnWidthChanged: payload => this.onTableColumnWidthChanged(payload),
             onRowDeleteRequested: payload => this.onTableRowDeleteRequested(payload),
             onFocusedCellsChanged: payload => this.onTableFocusedCellsChanged(payload),
-            shouldKeepFocusedCellsOnPointerDown: payload => this.shouldKeepFocusedCellsOnPointerDown(payload)
+            shouldKeepFocusedCellsOnPointerDown: payload => this.shouldKeepFocusedCellsOnPointerDown(payload),
+            isOutlierCell: (rowIndex, columnIndex) => this.isOutlierTableCell(rowIndex, columnIndex)
         };
     }
 
@@ -534,8 +535,11 @@ class TableShape extends BaseShape {
 
     isFocusedCellsToolbarOverlayOpen() {
         const focusedRegressionMethodControl = this.getDropDownButtonInstance(this._focusedRegressionMethodElement);
-        const focusedDeleteMenuOpen = this._focusedDeleteMenuInstance?.option("visible") === true;
-        return focusedRegressionMethodControl?.option("opened") === true || focusedDeleteMenuOpen;
+        const focusedOutlierControl = this.getDropDownButtonInstance(this._focusedOutlierButtonElement);
+        const focusedDeleteControl = this.getDropDownButtonInstance(this._focusedDeleteButtonElement);
+        return focusedRegressionMethodControl?.option("opened") === true
+            || focusedOutlierControl?.option("opened") === true
+            || focusedDeleteControl?.option("opened") === true;
     }
 
     initializeCellsContextToolbar() {
@@ -570,6 +574,18 @@ class TableShape extends BaseShape {
             },
             {
                 location: "center",
+                template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createFocusedOutlierButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
                 template: () => {
                     const container = $('<div></div>');
                     this.createFocusedDeleteButton(container);
@@ -579,39 +595,142 @@ class TableShape extends BaseShape {
         ];
     }
 
-    createFocusedDeleteButton(itemElement) {
-        this._focusedDeleteButtonElement = $('<div class="mdl-remove-selector">');
-        const buttonId = `focused-delete-btn-${this.id}`;
-        this._focusedDeleteButtonElement.html(`<div id="${buttonId}"></div><div id="${buttonId}-menu"></div>`);
-        $(`#${buttonId}`, this._focusedDeleteButtonElement).dxButton({
-            template: "<div class='dx-icon'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></div>",
+    isOutlierTableCell(rowIndex, columnIndex) {
+        const column = this.table?.getColumnByIndex(columnIndex);
+        if (!column?.isPreloadedTerm)
+            return false;
+        const termName = this.normalizeColumnValue(column.term);
+        if (termName === "")
+            return false;
+        return this.board.calculator.isOutlierIteration(termName, rowIndex + 1);
+    }
+
+    createFocusedOutlierButton(itemElement) {
+        this._focusedOutlierButtonElement = $('<div class="mdl-outlier-selector">');
+        this._focusedOutlierButtonElement.dxDropDownButton({
+            showArrowIcon: false,
             stylingMode: "text",
-            onClick: e => {
-                this._focusedDeleteMenuInstance.option("target", e.component.element());
-                this._focusedDeleteMenuInstance.show();
+            useSelectMode: false,
+            template: (_, element) => {
+                element[0].innerHTML = `<span class="mdl-focused-toolbar-button"><i class="fa-light fa-table-slash"></i></span>`;
+            },
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: 160,
+                contentTemplate: contentElement => this.buildFocusedOutlierMenuContent(contentElement)
             }
         });
-        this._focusedDeleteMenuInstance = $(`#${buttonId}-menu`, this._focusedDeleteButtonElement).dxContextMenu({
-            dataSource: [
-                { value: "delete", text: "Delete", icon: "fa-light fa-trash-can" },
-                { value: "reset", text: "Reset", icon: "fa-light fa-arrow-rotate-left" }
-            ],
-            itemTemplate: itemData => {
-                return `<div style="display:flex;align-items:center;width:100%"><span class="${itemData.icon}" style="width:15px;margin-right:10px;text-align:left;display:inline-block"></span><span style="text-align:left;flex-grow:1">${itemData.text}</span></div>`;
+        this._focusedOutlierButtonElement.appendTo(itemElement);
+    }
+
+    buildFocusedOutlierMenuContent(contentElement) {
+        const items = [
+            { value: "set", text: "Set as Outlier", icon: "fa-light fa-table-slash" },
+            { value: "restore", text: "Restore", icon: "fa-light fa-arrow-rotate-left" }
+        ];
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: items,
+            scrollingEnabled: false,
+            itemTemplate: (itemData, _, itemElement) => {
+                itemElement[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${itemData.icon}"></i><span class="mdl-dropdown-list-label">${itemData.text}</span></div>`;
             },
             onItemClick: event => {
-                if (event.itemData.value === "delete") {
-                    this.table?.deleteFocusedRows();
-                    return;
-                }
-                if (event.itemData.value === "reset")
-                    this.resetFocusedCellsFromPreloadedData();
+                const outlierControl = this.getDropDownButtonInstance(this._focusedOutlierButtonElement);
+                outlierControl?.close();
+                if (event.itemData.value === "set")
+                    this.setFocusedCellsAsOutliers();
+                else if (event.itemData.value === "restore")
+                    this.restoreFocusedCellsFromOutliers();
+            }
+        });
+    }
+
+    setFocusedCellsAsOutliers() {
+        const focusedColumn = this._focusedCellsPayload?.focusedColumn;
+        const focusedRows = this._focusedCellsPayload?.focusedRows;
+        if (!focusedColumn || !Array.isArray(focusedRows) || focusedRows.length === 0)
+            return;
+        if (!focusedColumn.isPreloadedTerm)
+            return;
+        const termName = this.normalizeColumnValue(focusedColumn.term);
+        if (termName === "")
+            return;
+        for (let index = 0; index < focusedRows.length; index++) {
+            const rowIndex = Number(focusedRows[index]?.rowIndex);
+            if (!Number.isFinite(rowIndex))
+                continue;
+            this.board.calculator.addOutlierIteration(termName, rowIndex + 1);
+        }
+        this.table?.clearFocusedCells();
+        if (this.table)
+            this.table.selectedCell = null;
+        this.table?.render();
+    }
+
+    restoreFocusedCellsFromOutliers() {
+        const focusedColumn = this._focusedCellsPayload?.focusedColumn;
+        const focusedRows = this._focusedCellsPayload?.focusedRows;
+        if (!focusedColumn || !Array.isArray(focusedRows) || focusedRows.length === 0)
+            return;
+        if (!focusedColumn.isPreloadedTerm)
+            return;
+        const termName = this.normalizeColumnValue(focusedColumn.term);
+        if (termName === "")
+            return;
+        for (let index = 0; index < focusedRows.length; index++) {
+            const rowIndex = Number(focusedRows[index]?.rowIndex);
+            if (!Number.isFinite(rowIndex))
+                continue;
+            this.board.calculator.removeOutlierIteration(termName, rowIndex + 1);
+        }
+        this.table?.clearFocusedCells();
+        if (this.table)
+            this.table.selectedCell = null;
+        this.table?.render();
+    }
+
+    createFocusedDeleteButton(itemElement) {
+        this._focusedDeleteButtonElement = $('<div class="mdl-remove-selector">');
+        this._focusedDeleteButtonElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            template: (_, element) => {
+                element[0].innerHTML = `<span class="mdl-focused-toolbar-button"><i class="fa-light fa-trash-can trash"></i><i class="fa-solid fa-trash-can trash-hover"></i></span>`;
             },
-            showEvent: null,
-            position: { my: "top left", at: "bottom left" },
-            cssClass: "mdl-remove-context-menu"
-        }).dxContextMenu("instance");
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: 140,
+                contentTemplate: contentElement => this.buildFocusedDeleteMenuContent(contentElement)
+            }
+        });
         this._focusedDeleteButtonElement.appendTo(itemElement);
+    }
+
+    buildFocusedDeleteMenuContent(contentElement) {
+        const items = [
+            { value: "delete", text: "Delete", icon: "fa-light fa-trash-can" },
+            { value: "reset", text: "Reset", icon: "fa-light fa-arrow-rotate-left" }
+        ];
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: items,
+            scrollingEnabled: false,
+            itemTemplate: (itemData, _, itemElement) => {
+                itemElement[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${itemData.icon}"></i><span class="mdl-dropdown-list-label">${itemData.text}</span></div>`;
+            },
+            onItemClick: event => {
+                const deleteControl = this.getDropDownButtonInstance(this._focusedDeleteButtonElement);
+                deleteControl?.close();
+                if (event.itemData.value === "delete")
+                    this.table?.deleteFocusedRows();
+                else if (event.itemData.value === "reset")
+                    this.resetFocusedCellsFromPreloadedData();
+            }
+        });
     }
 
     resetFocusedCellsFromPreloadedData() {
@@ -654,6 +773,8 @@ class TableShape extends BaseShape {
             return false;
         this.board.calculator.refreshPreloadedData();
         this.refreshTableRows();
+        this.table.clearFocusedCells();
+        this.table.selectedCell = null;
         this.table.render();
         return true;
     }
@@ -839,6 +960,9 @@ class TableShape extends BaseShape {
             return;
         const nextColumns = this.buildColumnsWithInsertedRegressionTerm(columns, columnIndex, regressionResult, this._focusedRegressionDraftColor);
         this.applyRegressionColumnUpdate(nextColumns);
+        this.table?.clearFocusedCells();
+        if (this.table)
+            this.table.selectedCell = null;
         this.board.calculator.emit("iterate", { calculator: this.board.calculator });
     }
 
