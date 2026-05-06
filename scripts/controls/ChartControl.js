@@ -160,7 +160,8 @@ class ChartControl {
             valueField: item?.valueField ?? `series${index}`,
             name: item?.name ?? `Series ${index + 1}`,
             color: this.normalizeColor(item?.color, index),
-            showLabel: item?.showLabel === true
+            showLabel: item?.showLabel === true,
+            chartType: item?.chartType ?? "line"
         }));
     }
 
@@ -276,7 +277,7 @@ class ChartControl {
         this.render();
     }
 
-    getDomain(argumentField, series, chartType) {
+    getDomain(argumentField, series) {
         const xValues = [];
         const yValues = [];
         for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
@@ -292,7 +293,8 @@ class ChartControl {
                 yValues.push(seriesValue);
             }
         }
-        if (chartType === "bar" || chartType === "area")
+        const hasBaselineType = series.some(s => (s.chartType ?? "line") === "bar" || (s.chartType ?? "line") === "area");
+        if (hasBaselineType)
             yValues.push(0);
         if (xValues.length === 0)
             xValues.push(0, 1);
@@ -725,7 +727,7 @@ class ChartControl {
         if (width <= 2 || height <= 2)
             return;
         this.renderBackground(width, height);
-        const rawDomain = this.getDomain(this.options.argumentField, this.options.series, this.options.chartType);
+        const rawDomain = this.getDomain(this.options.argumentField, this.options.series);
         const preliminaryTicks = this.buildTicks(rawDomain.xMin, rawDomain.xMax, 5);
         const preliminaryYTicks = this.buildTicks(rawDomain.yMin, rawDomain.yMax, 5);
         const preliminaryLayout = this.getLayout(width, height, preliminaryTicks, preliminaryYTicks);
@@ -886,30 +888,24 @@ class ChartControl {
         return points;
     }
 
-    getChartTypes() {
-        const chartType = this.options.chartType;
-        if (Array.isArray(chartType))
-            return chartType;
-        return [chartType];
-    }
-
     renderSeries(layout, xScale, yScale) {
-        const chartTypes = this.getChartTypes();
-        if (chartTypes.includes("bar")) {
-            this.renderBarSeries(layout, xScale, yScale);
-            return;
-        }
         const areaBaseY = Math.min(Math.max(yScale(0), layout.plotTop), layout.plotBottom);
+        const barSeriesList = this.options.series.filter(series => (series.chartType ?? "line") === "bar");
+        if (barSeriesList.length > 0)
+            this.renderBarSeries(layout, xScale, yScale, barSeriesList);
         for (let seriesIndex = 0; seriesIndex < this.options.series.length; seriesIndex++) {
             const series = this.options.series[seriesIndex];
+            const seriesChartType = series.chartType ?? "line";
+            if (seriesChartType === "bar")
+                continue;
             const points = this.getSeriesPoints(series, xScale, yScale);
             if (points.length === 0)
                 continue;
-            if (chartTypes.includes("area"))
+            if (seriesChartType === "area")
                 this.renderAreaSeries(points, series.color, areaBaseY);
-            else if (chartTypes.includes("line"))
+            else if (seriesChartType === "line")
                 this.renderLineSeries(points, series.color);
-            if (chartTypes.includes("scatter"))
+            else if (seriesChartType === "scatter")
                 this.renderPointMarkers(points, series.color);
         }
     }
@@ -946,9 +942,8 @@ class ChartControl {
         this.renderPointMarkers(points, color);
     }
 
-    renderBarSeries(layout, xScale, yScale) {
-        const barSeries = this.options.series;
-        if (barSeries.length === 0)
+    renderBarSeries(layout, xScale, yScale, barSeriesList) {
+        if (barSeriesList.length === 0)
             return;
         const xValues = [];
         for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
@@ -964,12 +959,12 @@ class ChartControl {
             if (diff > 0)
                 stepPixels = Math.min(stepPixels, diff);
         }
-        const barWidth = Math.max(2, Math.min(24, stepPixels / Math.max(1, barSeries.length + 1)));
+        const barWidth = Math.max(2, Math.min(24, stepPixels / Math.max(1, barSeriesList.length + 1)));
         const baselineY = yScale(0);
         let barsMarkup = "";
-        for (let seriesIndex = 0; seriesIndex < barSeries.length; seriesIndex++) {
-            const series = barSeries[seriesIndex];
-            const offset = (seriesIndex - (barSeries.length - 1) / 2) * barWidth;
+        for (let seriesIndex = 0; seriesIndex < barSeriesList.length; seriesIndex++) {
+            const series = barSeriesList[seriesIndex];
+            const offset = (seriesIndex - (barSeriesList.length - 1) / 2) * barWidth;
             for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
                 const row = this.dataRows[rowIndex];
                 const xValue = this.getNumericValue(row, this.options.argumentField);

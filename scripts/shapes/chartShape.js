@@ -26,7 +26,46 @@ class ChartShape extends BaseShape {
             includeColor: true,
             includeVisibility: true,
             normalizeTermValue: value => this.normalizeYTermValue(value),
-            normalizeColorValue: value => this.normalizeYTermColor(value)
+            normalizeColorValue: value => this.normalizeYTermColor(value),
+            normalizeItem: (sourceItem, normalizedItem) => {
+                normalizedItem.chartType = sourceItem?.chartType ?? "line";
+            },
+            createEmptyItem: () => ({ chartType: "line" }),
+            lock: {
+                width: "28px",
+                editorType: "dxDropDownButton",
+                valueExpr: "value",
+                getValue: item => item?.chartType ?? "line",
+                getItems: () => [
+                    { value: "scatter", icon: "fa-light fa-chart-scatter" },
+                    { value: "line", icon: "fa-light fa-chart-line" },
+                    { value: "area", icon: "fa-light fa-chart-area" },
+                    { value: "bar", icon: "fa-light fa-chart-column" }
+                ],
+                buttonTemplate: (element, item, index, selectedValue) => {
+                    const chartTypeIcons = { scatter: "fa-light fa-chart-scatter", line: "fa-light fa-chart-line", area: "fa-light fa-chart-area", bar: "fa-light fa-chart-column" };
+                    const iconClass = chartTypeIcons[selectedValue] ?? "fa-light fa-chart-line";
+                    $(element).empty().append(`<div class="shape-term-secondary-button"><i class="${iconClass} shape-term-secondary-icon"></i></div>`);
+                },
+                itemTemplate: (itemData, itemIndex, element) => {
+                    $(element).empty().append(`<div class="shape-term-secondary-item"><i class="${itemData.icon} shape-term-secondary-icon"></i></div>`);
+                },
+                onValueChanged: (index, chartType) => {
+                    TermControl.applyShapeTermsCollectionMutation(this, "yTerms", {
+                        normalizeTermValue: value => this.normalizeYTermValue(value),
+                        normalizeColorValue: value => this.normalizeYTermColor(value),
+                        includeColor: true,
+                        normalizeItem: (sourceItem, normalizedItem) => {
+                            normalizedItem.chartType = sourceItem?.chartType ?? "line";
+                        },
+                        createEmptyItem: () => ({ chartType: "line" })
+                    }, items => {
+                        if (!items[index])
+                            return;
+                        items[index].chartType = chartType;
+                    });
+                }
+            }
         });
         return this._yTermsControl.createHost();
     }
@@ -57,7 +96,11 @@ class ChartShape extends BaseShape {
         TermControl.normalizeShapeTermsCollection(this, "yTerms", {
             includeColor: true,
             normalizeTermValue: value => this.normalizeYTermValue(value),
-            normalizeColorValue: value => this.normalizeYTermColor(value)
+            normalizeColorValue: value => this.normalizeYTermColor(value),
+            normalizeItem: (sourceItem, normalizedItem) => {
+                normalizedItem.chartType = sourceItem?.chartType ?? "line";
+            },
+            createEmptyItem: () => ({ chartType: "line" })
         });
     }
 
@@ -65,7 +108,10 @@ class ChartShape extends BaseShape {
         return TermControl.getSelectedShapeTermsCollection(this, "yTerms", {
             includeColor: true,
             normalizeTermValue: value => this.normalizeYTermValue(value),
-            normalizeColorValue: value => this.normalizeYTermColor(value)
+            normalizeColorValue: value => this.normalizeYTermColor(value),
+            normalizeItem: (sourceItem, normalizedItem) => {
+                normalizedItem.chartType = sourceItem?.chartType ?? "line";
+            }
         });
     }
 
@@ -169,42 +215,7 @@ class ChartShape extends BaseShape {
     }
 
     buildChartTypeMenuContent(contentElement) {
-        const chartTypes = [
-            { type: "scatter", iconName: "fa-chart-scatter" },
-            { type: "line", iconName: "fa-chart-line" },
-            { type: "area", iconName: "fa-chart-area" },
-            { type: "bar", iconName: "fa-chart-column" }
-        ];
-        const listItems = [{
-            text: "Display",
-            buildControl: $container => {
-                const wrapper = $('<div style="display: flex; gap: 6px;">');
-                this._chartTypeButtonInstances = {};
-                for (const chartType of chartTypes) {
-                    const selected = (this.properties.chartType ?? []).includes(chartType.type);
-                    $('<div>').appendTo(wrapper).dxButton({
-                        stylingMode: selected ? "outlined" : "text",
-                        elementAttr: { class: "mdl-display-group mdl-small-icon" },
-                        template: (data, container) => {
-                            $(container).html(`<i class="dx-icon fa-light ${chartType.iconName}"></i>`);
-                        },
-                        onInitialized: e => { this._chartTypeButtonInstances[chartType.type] = e.component; },
-                        onClick: () => {
-                            const current = new Set(this.properties.chartType ?? []);
-                            if (current.has(chartType.type)) {
-                                if (current.size > 1)
-                                    current.delete(chartType.type);
-                            } else {
-                                current.add(chartType.type);
-                            }
-                            this.setPropertyCommand("chartType", [...current]);
-                            this.refreshChartTypeButtons();
-                        }
-                    });
-                }
-                wrapper.appendTo($container);
-            }
-        }];
+        const listItems = [];
         listItems.push({
             text: "Auto Scale",
             buildControl: $container => {
@@ -370,12 +381,6 @@ class ChartShape extends BaseShape {
         });
     }
 
-    refreshChartTypeButtons() {
-        const selected = new Set(this.properties.chartType ?? []);
-        for (const [type, instance] of Object.entries(this._chartTypeButtonInstances ?? {}))
-            instance?.option("stylingMode", selected.has(type) ? "outlined" : "text");
-    }
-
     refreshDomainBoxes() {
         const autoScale = this.properties.autoScale === true;
         const equalScales = this.properties.equalScales === true;
@@ -390,7 +395,6 @@ class ChartShape extends BaseShape {
         this.termFormControls["xTerm"]?.termControl?.refresh();
         this.refreshYTermsControl();
         this.refreshTermsToolbarControl();
-        this.refreshChartTypeButtons();
         this.refreshDomainBoxes();
         this._autoScaleSwitchInstance?.option("value", this.properties.autoScale === true);
         this._equalScalesSwitchInstance?.option("value", this.properties.equalScales === true);
@@ -405,12 +409,11 @@ class ChartShape extends BaseShape {
         this.properties.y = center.y - 100;
         this.properties.width = 400;
         this.properties.height = 200;
-        this.properties.chartType = ["line"];
         this.properties.autoScale = true;
         this.properties.equalScales = false;
         this.properties.tangentColor = "#00000000";
         this.properties.xTerm = this.board.calculator.properties.independent.name;
-        this.properties.yTerms = [{ term: this.board.calculator.getDefaultTerm(), case: 1, color: "", showLabel: false }];
+        this.properties.yTerms = [{ term: this.board.calculator.getDefaultTerm(), case: 1, color: "", showLabel: false, chartType: "line" }];
         this.properties.domainOverride = this.getDefaultDomainOverride();
     }
 
@@ -435,7 +438,6 @@ class ChartShape extends BaseShape {
 
     getChartControlOptions() {
         return {
-            chartType: this.properties.chartType,
             argumentField: "argument",
             series: [],
             argumentTitle: "",
@@ -570,6 +572,7 @@ class ChartShape extends BaseShape {
             case: TermControl.getShapeCaseNumber(this, yTerm.term, yTerm.case ?? 1, value => this.normalizeYTermValue(value)),
             color: this.normalizeYTermColor(yTerm.color),
             showLabel: yTerm.showLabel === true,
+            chartType: yTerm.chartType ?? "line",
             valueField: this.getSeriesValueFieldName(index),
             name: this.getSeriesName(yTerm)
         }));
@@ -581,7 +584,6 @@ class ChartShape extends BaseShape {
         };
         this.chartDataConfig = chartDataConfig;
         const config = {
-            chartType: this.properties.chartType,
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
             argField: argumentField,
@@ -589,7 +591,8 @@ class ChartShape extends BaseShape {
                 valueField: series.valueField,
                 name: series.name,
                 color: series.color === "" ? undefined : series.color,
-                showLabel: series.showLabel === true
+                showLabel: series.showLabel === true,
+                chartType: series.chartType ?? "line"
             })),
             color: this.properties.foregroundColor,
             bg: this.properties.backgroundColor,
@@ -605,7 +608,6 @@ class ChartShape extends BaseShape {
         const changed = JSON.stringify(config) !== JSON.stringify(this._appliedConfig);
         if (changed) {
             this.chart.setOptions({
-                chartType: config.chartType,
                 equalScales: config.equalScales,
                 tangentColor: config.tangentColor,
                 argumentField: config.argField,
