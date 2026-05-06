@@ -696,7 +696,7 @@ body.read-only #context-menu {
 .shape-image-dropzone__preview {
     width: 100%;
     max-height: 180px;
-    object-fit: contain;
+    object-fit: cover;
     border-radius: 10px;
     border: 1px solid #d1d5db;
     background: #fff;

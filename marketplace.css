@@ -673,7 +673,7 @@ body {
 .shape-image-dropzone__preview {
   width: 100%;
   max-height: 180px;
-  object-fit: contain;
+  object-fit: cover;
   border-radius: 10px;
   border: 1px solid var(--c-border);
   background: #fff;
