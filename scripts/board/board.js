@@ -41,6 +41,8 @@ class Board {
         this._gridDefs = null;
         this._gridRect = null;
         this._gridPattern = null;
+        this._gridMinorLine = null;
+        this._gridMajorLine = null;
     }
 
     deserialize(model) {
@@ -237,13 +239,18 @@ class Board {
             this._gridPattern = this.createSvgElement("pattern");
             this._gridPattern.id = "board-grid-pattern";
             this._gridPattern.setAttribute("patternUnits", "userSpaceOnUse");
-            const dot = this.createSvgElement("circle");
-            dot.setAttribute("cx", "0");
-            dot.setAttribute("cy", "0");
-            dot.setAttribute("r", "0.6");
-            dot.setAttribute("fill", "rgba(0,0,0,0.15)");
-            this._gridDot = dot;
-            this._gridPattern.appendChild(dot);
+            const minorLine = this.createSvgElement("path");
+            minorLine.setAttribute("fill", "none");
+            minorLine.setAttribute("stroke", "rgba(0,0,0,0.08)");
+            minorLine.setAttribute("stroke-width", "0.5");
+            this._gridMinorLine = minorLine;
+            this._gridPattern.appendChild(minorLine);
+            const majorLine = this.createSvgElement("path");
+            majorLine.setAttribute("fill", "none");
+            majorLine.setAttribute("stroke", "rgba(0,0,0,0.18)");
+            majorLine.setAttribute("stroke-width", "0.8");
+            this._gridMajorLine = majorLine;
+            this._gridPattern.appendChild(majorLine);
             this._gridDefs.appendChild(this._gridPattern);
             this._gridRect = this.createSvgElement("rect");
             this._gridRect.setAttribute("fill", "url(#board-grid-pattern)");
@@ -251,8 +258,15 @@ class Board {
             this.svg.insertBefore(this._gridRect, this.svg.firstChild);
             this.svg.insertBefore(this._gridDefs, this.svg.firstChild);
         }
-        this._gridPattern.setAttribute("width", gridSize);
-        this._gridPattern.setAttribute("height", gridSize);
+        const majorSize = gridSize * 5;
+        this._gridPattern.setAttribute("width", majorSize);
+        this._gridPattern.setAttribute("height", majorSize);
+        let minorPath = "";
+        for (let i = 1; i < 5; i++) {
+            minorPath += `M ${i * gridSize} 0 V ${majorSize} M 0 ${i * gridSize} H ${majorSize} `;
+        }
+        this._gridMinorLine.setAttribute("d", minorPath.trim());
+        this._gridMajorLine.setAttribute("d", `M ${majorSize} 0 L 0 0 0 ${majorSize}`);
         this._gridRect.setAttribute("x", "-1e6");
         this._gridRect.setAttribute("y", "-1e6");
         this._gridRect.setAttribute("width", "2e6");
