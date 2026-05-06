@@ -103,6 +103,7 @@ class TableControl {
         this.rowsLayer = this.createSvgElement("g");
         this.rowsLayer.setAttribute("clip-path", `url(#${this.rowsClipId})`);
         this.overlayLayer = this.createSvgElement("g");
+        this.overlayLayer.setAttribute("clip-path", `url(#${this.rowsClipId})`);
         this.scrollbarLayer = this.createSvgElement("g");
         this.rootElement.appendChild(this.defsElement);
         this.rootElement.appendChild(this.backgroundLayer);
