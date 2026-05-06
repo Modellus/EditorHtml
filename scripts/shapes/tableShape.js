@@ -471,7 +471,8 @@ class TableShape extends BaseShape {
         const normalizedTermName = this.normalizeColumnValue(termName);
         if (normalizedTermName === "")
             return "";
-        if (!this.isRegressionTermName(normalizedTermName))
+        const isRegression = this.isRegressionTermName(normalizedTermName);
+        if (!isRegression)
             return normalizedTermName;
         const sourceTermName = this.getRegressionSourceTermName(normalizedTermName);
         if (sourceTermName === "")

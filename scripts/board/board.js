@@ -193,16 +193,23 @@ class Board {
             return;
         this._refreshId = requestAnimationFrame(() => {
             this._refreshId = null;
-            if (this._dirtyShapes.size > 0) {
+            if (this._forceFullRefresh || this._dirtyShapes.size === 0) {
+                this._forceFullRefresh = false;
+                this._dirtyShapes.clear();
+                this.update();
+                this.draw();
+            } else {
                 const dirty = Array.from(this._dirtyShapes);
                 this._dirtyShapes.clear();
                 dirty.forEach(shape => shape.update());
                 dirty.forEach(shape => shape.draw());
-            } else {
-                this.update();
-                this.draw();
             }
         });
+    }
+
+    forceRefresh() {
+        this._forceFullRefresh = true;
+        this.refresh();
     }
 
     markDirty(shape) {

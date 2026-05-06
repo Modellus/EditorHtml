@@ -506,6 +506,7 @@ class ChartShape extends BaseShape {
         for (let index = 0; index < chartDataConfig.ySeries.length; index++) {
             const ySeries = chartDataConfig.ySeries[index];
             item[ySeries.valueField] = this.getChartTermValueOnIteration(iteration, ySeries.term, ySeries.case);
+            item[`outlier_${ySeries.valueField}`] = this.board.calculator.isOutlierIteration(ySeries.term, iteration);
         }
         return item;
     }

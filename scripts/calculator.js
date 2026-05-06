@@ -254,6 +254,36 @@ class Calculator extends EventTarget {
         this.preloadedOriginalTermValues = null;
     }
 
+    getOutlierIterations() {
+        const outliersByTermName = this.system.preloadedData.outliersByTermName;
+        if (!outliersByTermName || outliersByTermName.size === 0)
+            return null;
+        const result = [];
+        for (const [termName, iterationSet] of outliersByTermName)
+            result.push({ termName: termName, iterations: [...iterationSet] });
+        return result.length > 0 ? result : null;
+    }
+
+    loadOutlierIterations(outlierIterations = null) {
+        if (!Array.isArray(outlierIterations)) {
+            this.preloadedOutlierIterations = null;
+            return;
+        }
+        this.preloadedOutlierIterations = outlierIterations;
+    }
+
+    applyPreloadedOutlierIterations() {
+        if (!Array.isArray(this.preloadedOutlierIterations))
+            return;
+        for (let index = 0; index < this.preloadedOutlierIterations.length; index++) {
+            const entry = this.preloadedOutlierIterations[index];
+            if (!entry?.termName || !Array.isArray(entry.iterations))
+                continue;
+            for (let iterationIndex = 0; iterationIndex < entry.iterations.length; iterationIndex++)
+                this.system.addOutlierIteration(entry.termName, entry.iterations[iterationIndex]);
+        }
+    }
+
     loadRegressionTerms(regressionTerms = null) {
         if (!Array.isArray(regressionTerms)) {
             this.preloadedRegressionTerms = null;
@@ -335,8 +365,9 @@ class Calculator extends EventTarget {
         if (!Number.isFinite(independentStart) || !Number.isFinite(independentStep) || independentStep === 0)
             return 1;
         const rawIteration = Math.round((independentValue - independentStart) / independentStep) + 1;
-        const finalIteration = this.getFinalIteration();
-        return Math.max(1, Math.min(finalIteration, rawIteration));
+        const finalIteration = Math.min(this.getFinalIteration(), this.system.lastIteration);
+        const clampedIteration = Math.max(1, Math.min(finalIteration, rawIteration));
+        return clampedIteration;
     }
 
     restoreRegressionRange(sourceTermName = "", targetTermName = "", regressionType = "", caseNumber = 1, independentStart = 0, independentEnd = 0) {
@@ -349,7 +380,8 @@ class Calculator extends EventTarget {
             return;
         this.rebuildExpressionLatex();
         this.ensureRegressionExpressionLatex(regressionResult);
-        if (String(regressionResult.targetTermName ?? "") !== targetTermName)
+        const resultTargetName = String(regressionResult.targetTermName ?? "");
+        if (resultTargetName !== targetTermName)
             return;
     }
 
@@ -378,11 +410,13 @@ class Calculator extends EventTarget {
                     continue;
                 try {
                     this.restoreRegressionRange(sourceTermName, targetTermName, regressionType, caseNumber, independentStart, independentEnd);
-                } catch (_) {}
+                } catch (error) {
+                    console.error(`[regression] restoreRegressionRange threw:`, error);
+                }
             }
+            const restoredTerm = /** @type {any} */ (this.system.getTerm(targetTermName));
             if (savedExpressionLatex === "")
                 continue;
-            const restoredTerm = /** @type {any} */ (this.system.getTerm(targetTermName));
             if (restoredTerm)
                 restoredTerm.expressionLatex = savedExpressionLatex;
         }
@@ -715,10 +749,29 @@ class Calculator extends EventTarget {
 
     addOutlierIteration(termName = "", iteration = 1) {
         this.system.addOutlierIteration(termName, iteration);
+        if (!Array.isArray(this.preloadedOutlierIterations))
+            this.preloadedOutlierIterations = [];
+        let entry = this.preloadedOutlierIterations.find(e => e.termName === termName);
+        if (!entry) {
+            entry = { termName: termName, iterations: [] };
+            this.preloadedOutlierIterations.push(entry);
+        }
+        if (!entry.iterations.includes(iteration))
+            entry.iterations.push(iteration);
     }
 
     removeOutlierIteration(termName = "", iteration = 1) {
         this.system.removeOutlierIteration(termName, iteration);
+        if (!Array.isArray(this.preloadedOutlierIterations))
+            return;
+        const entry = this.preloadedOutlierIterations.find(e => e.termName === termName);
+        if (!entry)
+            return;
+        entry.iterations = entry.iterations.filter(i => i !== iteration);
+        if (entry.iterations.length === 0)
+            this.preloadedOutlierIterations = this.preloadedOutlierIterations.filter(e => e.termName !== termName);
+        if (this.preloadedOutlierIterations.length === 0)
+            this.preloadedOutlierIterations = null;
     }
 
     isOutlierIteration(termName = "", iteration = 1) {

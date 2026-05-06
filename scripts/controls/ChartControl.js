@@ -882,7 +882,8 @@ class ChartControl {
                 xValue: xValue,
                 yValue: yValue,
                 x: xScale(xValue),
-                y: yScale(yValue)
+                y: yScale(yValue),
+                isOutlier: row[`outlier_${series.valueField}`] === true
             });
         }
         return points;
@@ -901,12 +902,16 @@ class ChartControl {
             const points = this.getSeriesPoints(series, xScale, yScale);
             if (points.length === 0)
                 continue;
+            const regularPoints = points.filter(point => !point.isOutlier);
+            const outlierPoints = points.filter(point => point.isOutlier);
             if (seriesChartType === "area")
-                this.renderAreaSeries(points, series.color, areaBaseY);
+                this.renderAreaSeries(regularPoints, series.color, areaBaseY);
             else if (seriesChartType === "line")
-                this.renderLineSeries(points, series.color);
+                this.renderLineSeries(regularPoints, series.color);
             else if (seriesChartType === "scatter")
-                this.renderPointMarkers(points, series.color);
+                this.renderPointMarkers(regularPoints, series.color);
+            if (outlierPoints.length > 0)
+                this.renderOutlierMarkers(outlierPoints, series.color);
         }
     }
 
@@ -942,6 +947,17 @@ class ChartControl {
         this.renderPointMarkers(points, color);
     }
 
+    renderOutlierMarkers(points, color) {
+        let markersMarkup = "";
+        for (let pointIndex = 0; pointIndex < points.length; pointIndex++) {
+            const point = points[pointIndex];
+            markersMarkup += `
+                <circle cx="${point.x}" cy="${point.y}" r="3.5" fill="none" stroke="${color}" stroke-width="1.5" />
+            `;
+        }
+        this.appendSvgMarkup(this.seriesLayer, markersMarkup);
+    }
+
     renderBarSeries(layout, xScale, yScale, barSeriesList) {
         if (barSeriesList.length === 0)
             return;
@@ -962,23 +978,35 @@ class ChartControl {
         const barWidth = Math.max(2, Math.min(24, stepPixels / Math.max(1, barSeriesList.length + 1)));
         const baselineY = yScale(0);
         let barsMarkup = "";
+        const outlierPointsBySeries = [];
         for (let seriesIndex = 0; seriesIndex < barSeriesList.length; seriesIndex++) {
             const series = barSeriesList[seriesIndex];
             const offset = (seriesIndex - (barSeriesList.length - 1) / 2) * barWidth;
+            const seriesOutlierPoints = [];
             for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
                 const row = this.dataRows[rowIndex];
                 const xValue = this.getNumericValue(row, this.options.argumentField);
                 const yValue = this.getNumericValue(row, series.valueField);
                 if (xValue == null || yValue == null)
                     continue;
+                if (row[`outlier_${series.valueField}`] === true) {
+                    seriesOutlierPoints.push({ x: xScale(xValue), y: yScale(yValue) });
+                    continue;
+                }
                 const xPosition = xScale(xValue) + offset - barWidth * 0.45;
                 const yPosition = yScale(yValue);
                 barsMarkup += `
                     <rect x="${xPosition}" y="${Math.min(yPosition, baselineY)}" width="${barWidth * 0.9}" height="${Math.max(1, Math.abs(yPosition - baselineY))}" fill="${series.color}" fill-opacity="0.8" />
                 `;
             }
+            outlierPointsBySeries.push({ points: seriesOutlierPoints, color: series.color });
         }
         this.appendSvgMarkup(this.seriesLayer, barsMarkup);
+        for (let seriesIndex = 0; seriesIndex < outlierPointsBySeries.length; seriesIndex++) {
+            const entry = outlierPointsBySeries[seriesIndex];
+            if (entry.points.length > 0)
+                this.renderOutlierMarkers(entry.points, entry.color);
+        }
     }
 
     getPolylinePath(points) {

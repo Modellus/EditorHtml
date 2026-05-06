@@ -300,10 +300,11 @@ class Shell  {
                 this.calculator.addPhysicalBody(shape.properties.name, shape.properties.mass ?? 1);
         });
         this.calculator.applyPreloadedData();
+        this.calculator.applyPreloadedOutlierIterations();
         this.calculator.applyPreloadedRegressionTerms();
         this.calculator.applyInitialValuesByCase(initialValuesByCase);
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
-        this.board.refresh();
+        this.board.forceRefresh();
         this.bottomToolbar.updatePlayer();
         this.topToolbar.update();
         if (this.properties.instructions)
@@ -381,6 +382,9 @@ class Shell  {
         const preloaded = this.calculator.getPreloadedData();
         if (preloaded)
             result.preloadedData = preloaded;
+        const outlierIterations = this.calculator.getOutlierIterations();
+        if (outlierIterations)
+            result.outlierIterations = outlierIterations;
         const regressionTerms = this.calculator.getRegressionTermsData();
         if (regressionTerms)
             result.regressionTerms = regressionTerms;
@@ -396,6 +400,7 @@ class Shell  {
             this.calculator.loadTerms(model.preloadedData.names, model.preloadedData.values);
         else
             this.calculator.clearPreloadedData();
+        this.calculator.loadOutlierIterations(model?.outlierIterations);
         this.calculator.loadRegressionTerms(model?.regressionTerms);
     }
 
