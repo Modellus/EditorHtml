@@ -212,6 +212,11 @@ class Board {
         this.refresh();
     }
 
+    resetChartData() {
+        this.shapes.shapes.forEach(shape => shape.resetChartValues?.());
+        this.forceRefresh();
+    }
+
     markDirty(shape) {
         this._dirtyShapes.add(shape);
         this.refresh();
