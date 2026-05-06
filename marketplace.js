@@ -115,15 +115,13 @@ class ModelsApp {
     this.unreadNotificationCount = 0;
     this.notificationsGridInstance = null;
     this.uploadVideoPopupInstance = null;
-    this.uploadDataPopupInstance = null;
+    this.dataPopupInstance = null;
     this.editVideoPopupInstance = null;
-    this.editDataPopupInstance = null;
     this._uploadVideoFile = null;
-    this._uploadDataFile = null;
+    this._dataFile = null;
     this._uploadVideoThumbnailFile = null;
-    this._uploadDataThumbnailFile = null;
+    this._dataThumbnailFile = null;
     this._editVideoThumbnailFile = null;
-    this._editDataThumbnailFile = null;
     this._editVideoHTMLEditor = null;
     this._editDataHTMLEditor = null;
     this.initNavToolbar();
@@ -840,7 +838,7 @@ class ModelsApp {
         if (editButton)
           editButton.addEventListener("click", event => {
             event.stopPropagation();
-            this.showEditDataPopup(data);
+            this.showDataPopup(data);
           });
         if (deleteButton)
           deleteButton.addEventListener("click", event => {
@@ -1088,18 +1086,20 @@ class ModelsApp {
     });
   }
 
-  showEditDataPopup(dataSetData) {
-    let popupHost = document.getElementById("edit-data-popup");
+  showDataPopup(dataSetData = null) {
+    let popupHost = document.getElementById("data-popup");
     if (!popupHost) {
-      document.body.insertAdjacentHTML("beforeend", `<div id="edit-data-popup"></div>`);
-      popupHost = document.getElementById("edit-data-popup");
+      document.body.insertAdjacentHTML("beforeend", `<div id="data-popup"></div>`);
+      popupHost = document.getElementById("data-popup");
     }
-    this._editDataThumbnailFile = null;
-    const formData = { title: dataSetData.title || "", description: dataSetData.description || "" };
+    this._dataFile = null;
+    this._dataThumbnailFile = null;
+    const isEdit = dataSetData !== null;
+    const formData = { title: dataSetData?.title || "", description: dataSetData?.description || "" };
     const buildContent = contentElement => {
       const host = contentElement.get ? contentElement.get(0) : contentElement;
-      host.innerHTML = `<div id="edit-data-form"></div>`;
-      const formHost = document.getElementById("edit-data-form");
+      host.innerHTML = `<div id="data-form"></div>`;
+      const formHost = document.getElementById("data-form");
       this._editDataFormInstance = new DevExpress.ui.dxForm(formHost, {
         formData,
         colCount: 1,
@@ -1109,13 +1109,13 @@ class ModelsApp {
             template: (_, itemElement) => {
               const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
               this._editDataThumbnailControl = new ImageControl({
-                dropHint: "Drop new thumbnail image here",
-                imageSource: dataSetData.thumbnail_url || "",
+                dropHint: "Drop thumbnail image here",
+                imageSource: dataSetData?.thumbnail_url || "",
                 onUploadFile: file => {
-                  this._editDataThumbnailFile = file;
+                  this._dataThumbnailFile = file;
                   return Promise.resolve(URL.createObjectURL(file));
                 },
-                onImageCleared: () => { this._editDataThumbnailFile = null; }
+                onImageCleared: () => { this._dataThumbnailFile = null; }
               });
               itemHost.appendChild(this._editDataThumbnailControl.createHost().get(0));
             }
@@ -1148,24 +1148,50 @@ class ModelsApp {
             }
           },
           {
+            label: { text: "Data File" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              itemHost.innerHTML = `<div class="upload-file-uploader-host"></div>`;
+              const uploaderHost = itemHost.querySelector(".upload-file-uploader-host");
+              new DevExpress.ui.dxFileUploader(uploaderHost, {
+                selectButtonText: isEdit ? "Replace data file" : "Select data file",
+                labelText: "or drop file here (CSV, JSON, etc.)",
+                multiple: false,
+                uploadMode: "useForm",
+                onValueChanged: event => {
+                  this._dataFile = event.value?.[0] || null;
+                }
+              });
+            }
+          },
+          {
             itemType: "button",
             horizontalAlignment: "right",
             buttonOptions: {
-              text: "Save",
+              text: isEdit ? "Save" : "Upload",
               type: "default",
               onClick: async () => {
                 const result = this._editDataFormInstance.validate();
                 if (!result.isValid) return;
                 const values = this._editDataFormInstance.option("formData");
-                const rawDescription = this._editDataHTMLEditor ? this._editDataHTMLEditor.option("value") : (values.description || "");
+                const rawDescription = this._editDataHTMLEditor ? this._editDataHTMLEditor.option("value") : "";
                 const descriptionValue = await Utils.fromHtml(rawDescription);
-                this.setStatus("Saving data set…");
+                this.setStatus(isEdit ? "Saving data set…" : "Uploading data set…");
                 try {
-                  await this.apiClient.patchDataSet(dataSetData.id, { title: values.title, description: descriptionValue });
-                  if (this._editDataThumbnailFile)
-                    await this.apiClient.uploadDataSetThumbnail(dataSetData.id, this._editDataThumbnailFile);
-                  this.setStatus("Data set saved.");
-                  this.editDataPopupInstance.hide();
+                  if (isEdit) {
+                    await this.apiClient.patchDataSet(dataSetData.id, { title: values.title, description: descriptionValue });
+                    if (this._dataFile)
+                      await this.apiClient.createDataSet({ title: values.title, description: descriptionValue }, this._dataFile);
+                    if (this._dataThumbnailFile)
+                      await this.apiClient.uploadDataSetThumbnail(dataSetData.id, this._dataThumbnailFile);
+                    this.setStatus("Data set saved.");
+                  } else {
+                    const created = await this.apiClient.createDataSet({ title: values.title, description: descriptionValue }, this._dataFile);
+                    if (this._dataThumbnailFile && created?.id)
+                      await this.apiClient.uploadDataSetThumbnail(created.id, this._dataThumbnailFile);
+                    this.setStatus("Data set uploaded.");
+                  }
+                  this.dataPopupInstance.hide();
                   this.loadModels();
                 } catch (error) {
                   this.setStatus(error?.message || "Failed to save data set.", true);
@@ -1176,15 +1202,17 @@ class ModelsApp {
         ]
       });
     };
-    if (this.editDataPopupInstance) {
-      buildContent(this.editDataPopupInstance.content());
-      this.editDataPopupInstance.show();
+    const popupTitle = isEdit ? "Edit Data Set" : "Upload Data";
+    if (this.dataPopupInstance) {
+      this.dataPopupInstance.option("title", popupTitle);
+      buildContent(this.dataPopupInstance.content());
+      this.dataPopupInstance.show();
       return;
     }
-    this.editDataPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+    this.dataPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
       visible: true,
       showTitle: true,
-      title: "Edit Data Set",
+      title: popupTitle,
       width: 520,
       height: "auto",
       maxHeight: "90vh",
@@ -1294,113 +1322,6 @@ class ModelsApp {
       visible: true,
       showTitle: true,
       title: "Upload Video",
-      width: 480,
-      height: "auto",
-      dragEnabled: true,
-      closeOnOutsideClick: true,
-      showCloseButton: true,
-      contentTemplate: contentElement => buildContent(contentElement)
-    });
-  }
-
-  showUploadDataPopup() {
-    let popupHost = document.getElementById("upload-data-popup");
-    if (!popupHost) {
-      document.body.insertAdjacentHTML("beforeend", `<div id="upload-data-popup"></div>`);
-      popupHost = document.getElementById("upload-data-popup");
-    }
-    this._uploadDataFile = null;
-    this._uploadDataThumbnailFile = null;
-    const formData = {};
-    const buildContent = contentElement => {
-      const host = contentElement.get ? contentElement.get(0) : contentElement;
-      host.innerHTML = `<div id="upload-data-form"></div>`;
-      const formHost = document.getElementById("upload-data-form");
-      this._uploadDataFormInstance = new DevExpress.ui.dxForm(formHost, {
-        formData,
-        colCount: 1,
-        items: [
-          {
-            dataField: "title",
-            label: { text: "Title" },
-            validationRules: [{ type: "required" }],
-            editorOptions: { placeholder: "Data set title" }
-          },
-          {
-            dataField: "description",
-            label: { text: "Description" },
-            editorType: "dxTextArea",
-            editorOptions: { height: 80, placeholder: "Optional description" }
-          },
-          {
-            label: { text: "Data File" },
-            template: (_, itemElement) => {
-              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
-              itemHost.innerHTML = `<div class="upload-file-uploader-host"></div>`;
-              const uploaderHost = itemHost.querySelector(".upload-file-uploader-host");
-              new DevExpress.ui.dxFileUploader(uploaderHost, {
-                selectButtonText: "Select data file",
-                labelText: "or drop file here (CSV, JSON, etc.)",
-                multiple: false,
-                uploadMode: "useForm",
-                onValueChanged: event => {
-                  this._uploadDataFile = event.value?.[0] || null;
-                }
-              });
-            }
-          },
-          {
-            label: { text: "Thumbnail" },
-            template: (_, itemElement) => {
-              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
-              this._uploadDataThumbnailControl = new ImageControl({
-                dropHint: "Drop thumbnail image here",
-                onUploadFile: file => {
-                  this._uploadDataThumbnailFile = file;
-                  return Promise.resolve(URL.createObjectURL(file));
-                },
-                onImageCleared: () => { this._uploadDataThumbnailFile = null; }
-              });
-              itemHost.appendChild(this._uploadDataThumbnailControl.createHost().get(0));
-            }
-          },
-          {
-            itemType: "button",
-            horizontalAlignment: "right",
-            buttonOptions: {
-              text: "Upload",
-              icon: "fa-light fa-upload",
-              type: "default",
-              onClick: async () => {
-                const result = this._uploadDataFormInstance.validate();
-                if (!result.isValid) return;
-                const values = this._uploadDataFormInstance.option("formData");
-                this.setStatus("Uploading data set…");
-                try {
-                  const created = await this.apiClient.createDataSet({ title: values.title, description: values.description || "" }, this._uploadDataFile);
-                  if (this._uploadDataThumbnailFile && created?.id)
-                    await this.apiClient.uploadDataSetThumbnail(created.id, this._uploadDataThumbnailFile);
-                  this.setStatus("Data set uploaded.");
-                  this.uploadDataPopupInstance.hide();
-                  this.loadModels();
-                } catch (error) {
-                  this.setStatus(error?.message || "Failed to upload data set.", true);
-                }
-              }
-            }
-          }
-        ]
-      });
-    };
-    if (this.uploadDataPopupInstance) {
-      buildContent(this.uploadDataPopupInstance.content());
-      this.uploadDataPopupInstance.show();
-      return;
-    }
-    this.uploadDataPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
-      visible: true,
-      showTitle: true,
-      title: "Upload Data",
       width: 480,
       height: "auto",
       dragEnabled: true,
@@ -2955,7 +2876,7 @@ class ModelsApp {
   bindNav() {
     if (this.elements.navNewModel) this.elements.navNewModel.addEventListener("click", () => this.createModel());
     if (this.elements.navUploadVideo) this.elements.navUploadVideo.addEventListener("click", () => this.showUploadVideoPopup());
-    if (this.elements.navUploadData) this.elements.navUploadData.addEventListener("click", () => this.showUploadDataPopup());
+    if (this.elements.navUploadData) this.elements.navUploadData.addEventListener("click", () => this.showDataPopup());
   }
   async createModel() {
     this.userSdk.refreshState(this.state);
