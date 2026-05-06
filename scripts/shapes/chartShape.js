@@ -37,19 +37,17 @@ class ChartShape extends BaseShape {
                 valueExpr: "value",
                 getValue: item => item?.chartType ?? "line",
                 getItems: () => [
-                    { value: "scatter", icon: "fa-light fa-chart-scatter" },
-                    { value: "line", icon: "fa-light fa-chart-line" },
-                    { value: "area", icon: "fa-light fa-chart-area" },
-                    { value: "bar", icon: "fa-light fa-chart-column" }
+                    { value: "scatter", text: "Scatter", icon: "fa-light fa-chart-scatter" },
+                    { value: "line", text: "Line", icon: "fa-light fa-chart-line" },
+                    { value: "area", text: "Area", icon: "fa-light fa-chart-area" },
+                    { value: "bar", text: "Bar", icon: "fa-light fa-chart-column" }
                 ],
                 buttonTemplate: (element, item, index, selectedValue) => {
                     const chartTypeIcons = { scatter: "fa-light fa-chart-scatter", line: "fa-light fa-chart-line", area: "fa-light fa-chart-area", bar: "fa-light fa-chart-column" };
                     const iconClass = chartTypeIcons[selectedValue] ?? "fa-light fa-chart-line";
                     $(element).empty().append(`<div class="shape-term-secondary-button"><i class="${iconClass} shape-term-secondary-icon"></i></div>`);
                 },
-                itemTemplate: (itemData, itemIndex, element) => {
-                    $(element).empty().append(`<div class="shape-term-secondary-item"><i class="${itemData.icon} shape-term-secondary-icon"></i></div>`);
-                },
+                dropDownOptions: { width: 120 },
                 onValueChanged: (index, chartType) => {
                     TermControl.applyShapeTermsCollectionMutation(this, "yTerms", {
                         normalizeTermValue: value => this.normalizeYTermValue(value),
