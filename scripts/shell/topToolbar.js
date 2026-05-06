@@ -261,7 +261,7 @@ class TopToolbar {
             ]
         });
         this.instance = $("#toolbar").dxToolbar("instance");
-        document.getElementById("svg-container").insertAdjacentHTML("afterend", `<div id="model-info-label"><span id="model-name-label">${this.shell.properties.name}</span></div>`);
+        document.getElementById("svg-container").insertAdjacentHTML("afterend", `<div id="model-info-label"><div id="model-name-row"><i id="auto-save-icon" class="fa-light fa-floppy-disk"></i><span id="model-name-label">${this.shell.properties.name}</span></div></div>`);
         document.body.insertAdjacentHTML("beforeend", `<div id="help-context-menu"></div><div id="about-popup"></div><div id="feedback-popup"></div><div id="whats-new-popup"></div>`);
         const translations = this.shell.board.translations;
         this._helpMenu = $("#help-context-menu").dxContextMenu({
@@ -491,6 +491,18 @@ class TopToolbar {
         return rootShapes.map(shape => BaseShape.buildShapeTreeItem(shape));
     }
 
+    showSavingIndicator() {
+        const icon = document.getElementById("auto-save-icon");
+        if (icon)
+            icon.style.display = "inline";
+    }
+
+    hideSavingIndicator() {
+        const icon = document.getElementById("auto-save-icon");
+        if (icon)
+            icon.style.display = "none";
+    }
+
     updateModelName() {
         const label = document.getElementById("model-name-label");
         if (!label)
@@ -531,6 +543,11 @@ class TopToolbar {
         if (nameLabel) {
             nameLabel.style.color = isLight ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)";
             nameLabel.style.webkitTextStroke = `2px ${hex}`;
+        }
+        const saveIcon = document.getElementById("auto-save-icon");
+        if (saveIcon) {
+            saveIcon.style.color = isLight ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)";
+            saveIcon.style.webkitTextStroke = `2px ${hex}`;
         }
         const creatorLabel = container.querySelector(".model-creator");
         if (creatorLabel) {

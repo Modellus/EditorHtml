@@ -34,6 +34,7 @@ class Shell  {
             this.openModel(model);
         this._resumeOnSpaceUp = false;
         this._hasChanges = false;
+        this._autoSaveTimer = null;
         window.addEventListener("keydown", e => this.onKeyDown(e));
         window.addEventListener("keyup", e => this.onKeyUp(e));
         window.addEventListener("beforeunload", e => this.onBeforeUnload(e));
@@ -41,6 +42,7 @@ class Shell  {
         history.pushState(null, "");
         this.reset();
         this.calculator.calculate();
+        this.startAutoSave();
     }
 
     setDefaults() {
@@ -198,10 +200,12 @@ class Shell  {
 
     undoPressed() {
         this.commands.invoker.undo();
+        this._hasChanges = true;
     }
-    
+
     redoPressed() {
         this.commands.invoker.redo();
+        this._hasChanges = true;
     }
 
     updateToolbar() {
@@ -523,6 +527,50 @@ class Shell  {
             window.location.href = `/editor.html?model_id=${newModel.id}`;
         } catch (error) {
             alert("Failed to save model.");
+        }
+    }
+
+    startAutoSave() {
+        if (this._autoSaveTimer)
+            clearInterval(this._autoSaveTimer);
+        this._autoSaveTimer = setInterval(() => this.autoSaveModel(), 30000);
+    }
+
+    stopAutoSave() {
+        if (this._autoSaveTimer) {
+            clearInterval(this._autoSaveTimer);
+            this._autoSaveTimer = null;
+        }
+    }
+
+    async autoSaveModel() {
+        if (!this._hasChanges || this.isAnonymous())
+            return;
+        const modelId = this.getCurrentModelId();
+        if (!modelId)
+            return;
+        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
+        const headers = { "Content-Type": "application/json" };
+        if (session?.token) headers.Authorization = `Bearer ${session.token}`;
+        this.topToolbar?.showSavingIndicator();
+        try {
+            const payload = {
+                title: this.properties.name || "Untitled model",
+                description: this.properties.description || "",
+                definition: JSON.stringify(this.serialize())
+            };
+            if (this.properties.thumbnailUrl)
+                payload.thumbnail = this.properties.thumbnailUrl;
+            const response = await fetch(`${apiBase}/models/${modelId}`, {
+                method: "PUT",
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (response.ok)
+                this._hasChanges = false;
+        } catch (_) {
+        } finally {
+            this.topToolbar?.hideSavingIndicator();
         }
     }
 

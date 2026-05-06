@@ -8,6 +8,7 @@ export class UserSdk {
     this.refreshTokenStorageKey = refreshTokenStorageKey;
     this.featureFlags = [];
     this.refreshTimer = null;
+    this.onAuthFailed = null;
   }
 
   readSession() {
@@ -390,7 +391,7 @@ export class UserSdk {
       this.saveUser(this.buildUserFromSession(session));
       if (authPayload?.refreshToken)
         this.saveRefreshToken(authPayload.refreshToken);
-      this.startSessionRefresh(apiBaseUrl);
+      this.startSessionRefresh(apiBaseUrl, this.onAuthFailed);
       return true;
     } catch {
       return false;
@@ -400,6 +401,8 @@ export class UserSdk {
   startSessionRefresh(apiBaseUrl, onAuthFailed = null) {
     if (this.refreshTimer)
       clearTimeout(this.refreshTimer);
+    if (onAuthFailed !== null)
+      this.onAuthFailed = onAuthFailed;
     const session = this.readSession();
     if (!session?.exp)
       return;
@@ -409,6 +412,8 @@ export class UserSdk {
     this.refreshTimer = setTimeout(async () => {
       const refreshed = await this.refreshSession(apiBaseUrl);
       if (refreshed)
+        return;
+      if (this.isSessionValid())
         return;
       this.clearToken();
       this.clearRefreshToken();
