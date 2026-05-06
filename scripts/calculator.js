@@ -27,6 +27,7 @@ class Calculator extends EventTarget {
         this.preloadedOriginalTermNames = null;
         this.preloadedOriginalTermValues = null;
         this.preloadedRegressionTerms = null;
+        this.preloadedOutlierIterations = null;
     }
 
     normalizeCasesCount(value = 1) {
