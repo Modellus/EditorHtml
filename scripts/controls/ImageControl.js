@@ -7,6 +7,7 @@ class ImageControl {
             onUploadFile: null,
             onImageChanged: null,
             onImageCleared: null,
+            onImageTransformChanged: null,
             ...options
         };
         this.currentImageSource = this.normalizeImageSource(this.options.imageSource);
@@ -17,6 +18,14 @@ class ImageControl {
         this.hintElement = null;
         this.removeButtonElement = null;
         this.progressBarElement = null;
+        this._translateX = 0;
+        this._translateY = 0;
+        this._zoomLevel = 1;
+        this._isDraggingImage = false;
+        this._dragStartX = 0;
+        this._dragStartY = 0;
+        this._dragStartTranslateX = 0;
+        this._dragStartTranslateY = 0;
     }
 
     createHost() {
@@ -37,6 +46,7 @@ class ImageControl {
         removeButton.on("click", event => this.onRemoveButtonClick(event));
         this.container.on("dragover", event => this.onDropZoneDragOver(event));
         this.container.on("drop", event => this.onDropZoneDrop(event));
+        this.initializeDragBehavior();
         uploaderHost.dxFileUploader({
             accept: this.options.accept,
             multiple: false,
@@ -112,6 +122,7 @@ class ImageControl {
             }
             this.previewElement.setAttribute("src", this.currentImageSource);
             this.hintElement.style.display = "none";
+            this.applyImageTransform();
             return;
         }
         this._thumbnailCapturedFor = null;
@@ -212,6 +223,9 @@ class ImageControl {
         if (!imageSource)
             return;
         this.currentImageSource = this.normalizeImageSource(imageSource);
+        this._translateX = 0;
+        this._translateY = 0;
+        this._zoomLevel = 1;
         this.updatePreview();
         const onImageChanged = this.options.onImageChanged;
         if (typeof onImageChanged === "function")
@@ -236,5 +250,84 @@ class ImageControl {
         if (element[0] instanceof HTMLElement)
             return element[0];
         return null;
+    }
+
+    initializeDragBehavior() {
+        this.previewElement.addEventListener("mousedown", event => this.onPreviewMouseDown(event));
+        this.previewElement.addEventListener("click", event => event.stopPropagation());
+        this.previewElement.addEventListener("wheel", event => this.onPreviewWheel(event), { passive: false });
+        document.addEventListener("mousemove", event => this.onDocumentMouseMove(event));
+        document.addEventListener("mouseup", () => this.onDocumentMouseUp());
+    }
+
+    onPreviewMouseDown(event) {
+        if (!this.currentImageSource)
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        this._isDraggingImage = true;
+        this._dragStartX = event.clientX;
+        this._dragStartY = event.clientY;
+        this._dragStartTranslateX = this._translateX;
+        this._dragStartTranslateY = this._translateY;
+        this.previewElement.style.cursor = "grabbing";
+    }
+
+    onPreviewWheel(event) {
+        if (!this.currentImageSource)
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        const zoomStep = 0.12;
+        const direction = event.deltaY < 0 ? 1 : -1;
+        this._zoomLevel = Math.max(1, this._zoomLevel + direction * zoomStep);
+        this.clampTranslation();
+        this.applyImageTransform();
+        this.fireTransformChanged();
+    }
+
+    onDocumentMouseMove(event) {
+        if (!this._isDraggingImage)
+            return;
+        this._translateX = this._dragStartTranslateX + (event.clientX - this._dragStartX);
+        this._translateY = this._dragStartTranslateY + (event.clientY - this._dragStartY);
+        this.clampTranslation();
+        this.applyImageTransform();
+        this.fireTransformChanged();
+    }
+
+    onDocumentMouseUp() {
+        if (!this._isDraggingImage)
+            return;
+        this._isDraggingImage = false;
+        this.previewElement.style.cursor = "";
+    }
+
+    clampTranslation() {
+        const containerElement = this.container?.get(0);
+        if (!containerElement)
+            return;
+        const maxTranslateX = (this._zoomLevel - 1) * containerElement.offsetWidth / 2;
+        const maxTranslateY = (this._zoomLevel - 1) * containerElement.offsetHeight / 2;
+        this._translateX = Math.max(-maxTranslateX, Math.min(maxTranslateX, this._translateX));
+        this._translateY = Math.max(-maxTranslateY, Math.min(maxTranslateY, this._translateY));
+    }
+
+    applyImageTransform() {
+        this.previewElement.style.transform = `translate(${this._translateX}px, ${this._translateY}px) scale(${this._zoomLevel})`;
+    }
+
+    fireTransformChanged() {
+        const onImageTransformChanged = this.options.onImageTransformChanged;
+        if (typeof onImageTransformChanged === "function")
+            onImageTransformChanged(this._translateX, this._translateY, this._zoomLevel);
+    }
+
+    setImageTransform(translateX, translateY, zoomLevel) {
+        this._zoomLevel = Math.max(1, zoomLevel);
+        this._translateX = translateX;
+        this._translateY = translateY;
+        this.clampTranslation();
+        this.applyImageTransform();
     }
 }

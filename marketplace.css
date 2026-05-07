@@ -628,6 +628,7 @@ body {
   cursor: pointer;
   transition: border-color 0.2s ease, background-color 0.2s ease;
   position: relative;
+  overflow: hidden;
 }
 .shape-image-dropzone.drag-over {
   border-color: #4039d7;
@@ -639,12 +640,13 @@ body {
   text-align: center;
 }
 .shape-image-dropzone__preview {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  max-height: 180px;
+  height: 100%;
   object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid var(--c-border);
-  background: #fff;
+  transform-origin: center center;
+  cursor: grab;
 }
 .shape-image-dropzone__preview:not([src]),
 .shape-image-dropzone__preview[src=""] {
