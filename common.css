@@ -1,0 +1,45 @@
+body {
+    font-family: "Atma", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.dx-widget {
+    font-family: "Atma", "Assistant", sans-serif;
+    font-size: 15px;
+}
+
+.dx-widget:not(.dx-icon):not(i),
+.dx-overlay-content,
+.dx-popup-content,
+.dx-button-text,
+.dx-texteditor-input,
+.dx-list-item-content,
+.dx-treeview-item-content,
+.dx-toolbar-item-content,
+.dx-datagrid-text-content,
+.dx-selectbox-container,
+.dx-dropdowneditor-input-wrapper,
+.dx-tag-content,
+.dx-dropdowneditor-overlay {
+    font-family: "Atma", "Inter", sans-serif;
+    font-size: 15px;
+}
+
+.dx-layout-manager .dx-field-item {
+    font-family: "Atma", "Nunito", sans-serif;
+    font-size: 15px;
+}
+
+.mdl-save-metadata-popup .dx-texteditor-input {
+    font-family: "Atma", "Assistant", sans-serif !important;
+}
+
+.mdl-value-sound-selectbox .dx-texteditor-input,
+.mdl-value-sound-selectbox .dx-dropdowneditor-input-wrapper,
+.mdl-value-sound-popup .dx-list-item-content,
+.mdl-value-sound-popup .mdl-dropdown-list-label {
+    font-family: "Atma", "Assistant", sans-serif !important;
+}
+
+.feedback-toast .dx-toast-content {
+    font-family: "Atma", sans-serif;
+}

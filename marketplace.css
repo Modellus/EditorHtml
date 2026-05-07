@@ -14,14 +14,6 @@ body {
 
 body {
   margin: 0;
-  font-family:
-    "Atma",
-    "Inter",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
   font-size: 15px;
   background: var(--c-bg);
   color: var(--c-text);
@@ -481,30 +473,6 @@ body {
   padding: 0 4px;
   box-sizing: border-box;
   pointer-events: none;
-}
-.dx-widget {
-  font-family: "Atma", "Assistant", sans-serif;
-  font-size: 15px;
-}
-.dx-widget:not(.dx-icon):not(i),
-.dx-overlay-content,
-.dx-popup-content,
-.dx-button-text,
-.dx-texteditor-input,
-.dx-list-item-content,
-.dx-treeview-item-content,
-.dx-toolbar-item-content,
-.dx-datagrid-text-content,
-.dx-selectbox-container,
-.dx-dropdowneditor-input-wrapper,
-.dx-tag-content,
-.dx-dropdowneditor-overlay {
-  font-family: "Atma", "Inter", sans-serif;
-  font-size: 15px;
-}
-.dx-layout-manager .dx-field-item {
-  font-family: "Atma", "Nunito", sans-serif;
-  font-size: 15px;
 }
 .dx-overlay-wrapper {
   font-size: 15px;

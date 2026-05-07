@@ -123,32 +123,8 @@ body.read-only #model-info-label {
     z-index: 10;
 }
 
-.dx-widget {
-    font-family: "Atma","Assistant", sans-serif;
-    font-size: 15px;
-}
-
-.dx-widget:not(.dx-icon):not(i), .dx-overlay-content, .dx-popup-content,
-      .dx-button-text, .dx-texteditor-input, .dx-list-item-content,
-      .dx-treeview-item-content, .dx-toolbar-item-content,
-      .dx-datagrid-text-content, .dx-selectbox-container,
-      .dx-dropdowneditor-input-wrapper, .dx-tag-content,
-      .dx-dropdowneditor-overlay { 
-        font-family: "Atma", "Inter", sans-serif; 
-        font-size: 15px;
-}
-
-.dx-layout-manager .dx-field-item {
-    font-family: "Atma", "Nunito", sans-serif;
-    font-size: 15px;
-}
-
 .dx-overlay-wrapper {
     font-size: 15px;
-}
-
-.mdl-save-metadata-popup .dx-texteditor-input {
-    font-family: "Atma", "Assistant", sans-serif !important;
 }
 
 .mdl-shape-overlay-popup {
@@ -1308,7 +1284,6 @@ math-field {
 .mdl-value-sound-selectbox .dx-dropdowneditor-input-wrapper,
 .mdl-value-sound-popup .dx-list-item-content,
 .mdl-value-sound-popup .mdl-dropdown-list-label {
-    font-family: "Atma", "Assistant", sans-serif !important;
     font-style: normal;
 }
 
@@ -2020,7 +1995,6 @@ math-field {
 
 .feedback-toast .dx-toast-content {
     background-color: #86efac;
-    font-family: "Atma", sans-serif;
     color: #166534;
     text-align: center;
 }
