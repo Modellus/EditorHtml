@@ -262,7 +262,7 @@ class TopToolbar {
         });
         this.instance = $("#toolbar").dxToolbar("instance");
         document.getElementById("svg-container").insertAdjacentHTML("afterend", `<div id="model-info-label"><div id="model-name-row"><i id="auto-save-icon" class="fa-light fa-floppy-disk"></i><span id="model-name-label">${this.shell.properties.name}</span></div></div>`);
-        document.body.insertAdjacentHTML("beforeend", `<div id="help-context-menu"></div><div id="about-popup"></div><div id="feedback-popup"></div><div id="whats-new-popup"></div>`);
+        document.body.insertAdjacentHTML("beforeend", `<div id="help-context-menu"></div><div id="about-popup"></div><div id="feedback-popup"></div>`);
         const translations = this.shell.board.translations;
         this._helpMenu = $("#help-context-menu").dxContextMenu({
             items: [
@@ -361,54 +361,7 @@ class TopToolbar {
                 });
             }
         });
-        $("#whats-new-popup").dxPopup({
-            title: translations.get("Whats New Title"),
-            visible: false,
-            width: 560,
-            height: 540,
-            showCloseButton: true,
-            dragEnabled: false,
-            shading: true,
-            onContentReady: e => {
-                const overlayContent = e.component.$content()[0].closest(".dx-overlay-content");
-                const labelEl = overlayContent?.querySelector(".dx-popup-title .dx-toolbar-label");
-                if (labelEl && !labelEl.querySelector(".mdl-beta-badge")) {
-                    const contentEl = labelEl.querySelector(".dx-toolbar-item-content");
-                    if (contentEl) {
-                        contentEl.style.display = "flex";
-                        contentEl.style.alignItems = "center";
-                        contentEl.insertAdjacentHTML("beforeend", `<span class="mdl-beta-badge" style="background:#e84c3d;color:white;font-size:0.7em;font-weight:bold;padding:1px 6px;border-radius:3px;text-transform:uppercase;margin-left:8px">beta</span>`);
-                    }
-                }
-            },
-            onShowing: () => {
-                const sorted = (this._whatsNewEntries || []).slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-                this._whatsNewList?.option("dataSource", sorted);
-            },
-            contentTemplate: contentElement => {
-                const listContainer = $('<div style="height:100%">').appendTo($(contentElement));
-                listContainer.dxList({
-                    dataSource: [],
-                    height: "100%",
-                    scrollingEnabled: true,
-                    activeStateEnabled: false,
-                    focusStateEnabled: false,
-                    hoverStateEnabled: false,
-                    itemTemplate: (data, _, el) => {
-                        const dateObj = new Date(data.date);
-                        const formattedDate = dateObj.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-                        const imageHtml = data.image_url ? `<img src="${data.image_url}" style="width:100%;max-width:100%;height:auto;border-radius:8px;margin-bottom:12px;display:block;box-sizing:border-box;border:1px solid #e5e7eb" alt="">` : "";
-                        el[0].innerHTML = `<div style="box-sizing:border-box;width:100%;padding:12px 0;border-bottom:1px solid #e5e7eb">
-                            ${imageHtml}
-                            <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:5px">${formattedDate}</div>
-                            <div style="font-weight:600;font-size:15px;margin-bottom:8px;white-space:normal;word-break:break-word">${data.title}</div>
-                            <p style="margin:0;font-size:13px;line-height:1.6;color:#374151;white-space:normal;word-break:break-word">${data.description}</p>
-                        </div>`;
-                    }
-                });
-                this._whatsNewList = listContainer.dxList("instance");
-            }
-        });
+        this._whatsNewPopup = new WhatsNewPopup(translations);
         this.expressionButton = $("#expression-button").dxButton("instance");
         this.valueButton = $("#value-button").dxButton("instance");
         this.referentialButton = $("#referential-button").dxButton("instance");
@@ -473,16 +426,14 @@ class TopToolbar {
         const latestDate = entries[0].date;
         const storedDate = localStorage.getItem("mp.whats_new_last_date");
         if (storedDate && storedDate >= latestDate) return;
-        this._whatsNewEntries = entries;
         localStorage.setItem("mp.whats_new_last_date", latestDate);
-        $("#whats-new-popup").dxPopup("instance").show();
+        this._whatsNewPopup.show(entries);
     }
 
     async showWhatsNewPopup() {
         if (!this.shell.modelsApiClient) return;
         const entries = await this.shell.modelsApiClient.fetchWhatsNew().catch(() => []);
-        this._whatsNewEntries = entries.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-        $("#whats-new-popup").dxPopup("instance").show();
+        this._whatsNewPopup.show(entries);
     }
 
     _buildShapeTreeItems() {

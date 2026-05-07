@@ -2078,3 +2078,18 @@ math-field {
 .mdl-marketplace-data-tooltip {
     z-index: 100000 !important;
 }
+
+.dx-gallery .dx-gallery-nav-button-prev::before,
+.dx-gallery .dx-gallery-nav-button-next::before {
+    font-family: "Font Awesome 7 Pro";
+    font-weight: 300;
+    font-style: normal;
+}
+
+.dx-gallery .dx-gallery-nav-button-prev::before {
+    content: "\f053";
+}
+
+.dx-gallery .dx-gallery-nav-button-next::before {
+    content: "\f054";
+}
