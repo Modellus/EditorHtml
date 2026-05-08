@@ -207,6 +207,8 @@ class ExpressionShape extends BaseShape {
         delete inlineShortcutMap.dt;
         inlineShortcutMap["#"] = "\\sqrt{#0}";
         inlineShortcutMap["%"] = "\\Delta";
+        inlineShortcutMap["&"] = "\\land";
+        inlineShortcutMap["|"] = "\\lor";
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];

@@ -25,6 +25,10 @@
             delete inlineShortcutMap.dx;
             delete inlineShortcutMap.dy;
             delete inlineShortcutMap.dt;
+            inlineShortcutMap["#"] = "\\sqrt{#0}";
+            inlineShortcutMap["%"] = "\\Delta";
+            inlineShortcutMap["&"] = "\\land";
+            inlineShortcutMap["|"] = "\\lor";
             const shortcuts = getExpressionFunctionShortcuts();
             for (const s of shortcuts)
                 inlineShortcutMap[s.shortcutText] = s.functionLatex;
