@@ -346,17 +346,29 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitCaseRow?: (ctx: CaseRowContext) => void;
     /**
-     * Enter a parse tree produced by the `ConditionExpression`
+     * Enter a parse tree produced by the `ConditionAnd`
      * labeled alternative in `LatexMathParser.condition`.
      * @param ctx the parse tree
      */
-    enterConditionExpression?: (ctx: ConditionExpressionContext) => void;
+    enterConditionAnd?: (ctx: ConditionAndContext) => void;
     /**
-     * Exit a parse tree produced by the `ConditionExpression`
+     * Exit a parse tree produced by the `ConditionAnd`
      * labeled alternative in `LatexMathParser.condition`.
      * @param ctx the parse tree
      */
-    exitConditionExpression?: (ctx: ConditionExpressionContext) => void;
+    exitConditionAnd?: (ctx: ConditionAndContext) => void;
+    /**
+     * Enter a parse tree produced by the `ConditionChained`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    enterConditionChained?: (ctx: ConditionChainedContext) => void;
+    /**
+     * Exit a parse tree produced by the `ConditionChained`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    exitConditionChained?: (ctx: ConditionChainedContext) => void;
     /**
      * Enter a parse tree produced by the `ConditionOtherwiseText`
      * labeled alternative in `LatexMathParser.condition`.
@@ -370,6 +382,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitConditionOtherwiseText?: (ctx: ConditionOtherwiseTextContext) => void;
     /**
+     * Enter a parse tree produced by the `ConditionOr`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    enterConditionOr?: (ctx: ConditionOrContext) => void;
+    /**
+     * Exit a parse tree produced by the `ConditionOr`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    exitConditionOr?: (ctx: ConditionOrContext) => void;
+    /**
      * Enter a parse tree produced by the `ConditionOtherwise`
      * labeled alternative in `LatexMathParser.condition`.
      * @param ctx the parse tree
@@ -381,6 +405,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitConditionOtherwise?: (ctx: ConditionOtherwiseContext) => void;
+    /**
+     * Enter a parse tree produced by the `ConditionExpression`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    enterConditionExpression?: (ctx: ConditionExpressionContext) => void;
+    /**
+     * Exit a parse tree produced by the `ConditionExpression`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    exitConditionExpression?: (ctx: ConditionExpressionContext) => void;
     /**
      * Enter a parse tree produced by `LatexMathParser.conditionOperator`.
      * @param ctx the parse tree
@@ -1094,8 +1130,34 @@ declare class ConditionContext extends antlr.ParserRuleContext {
     get ruleIndex(): number;
     copyFrom(ctx: ConditionContext): void;
 }
+declare class ConditionAndContext extends ConditionContext {
+    constructor(ctx: ConditionContext);
+    condition(): ConditionContext[];
+    condition(i: number): ConditionContext | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class ConditionChainedContext extends ConditionContext {
+    constructor(ctx: ConditionContext);
+    expression(): ExpressionContext[];
+    expression(i: number): ExpressionContext | null;
+    conditionOperator(): ConditionOperatorContext[];
+    conditionOperator(i: number): ConditionOperatorContext | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class ConditionOtherwiseTextContext extends ConditionContext {
     constructor(ctx: ConditionContext);
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class ConditionOrContext extends ConditionContext {
+    constructor(ctx: ConditionContext);
+    condition(): ConditionContext[];
+    condition(i: number): ConditionContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1588,12 +1650,19 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitCaseRow?: (ctx: CaseRowContext) => Result;
     /**
-     * Visit a parse tree produced by the `ConditionExpression`
+     * Visit a parse tree produced by the `ConditionAnd`
      * labeled alternative in `LatexMathParser.condition`.
      * @param ctx the parse tree
      * @return the visitor result
      */
-    visitConditionExpression?: (ctx: ConditionExpressionContext) => Result;
+    visitConditionAnd?: (ctx: ConditionAndContext) => Result;
+    /**
+     * Visit a parse tree produced by the `ConditionChained`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitConditionChained?: (ctx: ConditionChainedContext) => Result;
     /**
      * Visit a parse tree produced by the `ConditionOtherwiseText`
      * labeled alternative in `LatexMathParser.condition`.
@@ -1602,12 +1671,26 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitConditionOtherwiseText?: (ctx: ConditionOtherwiseTextContext) => Result;
     /**
+     * Visit a parse tree produced by the `ConditionOr`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitConditionOr?: (ctx: ConditionOrContext) => Result;
+    /**
      * Visit a parse tree produced by the `ConditionOtherwise`
      * labeled alternative in `LatexMathParser.condition`.
      * @param ctx the parse tree
      * @return the visitor result
      */
     visitConditionOtherwise?: (ctx: ConditionOtherwiseContext) => Result;
+    /**
+     * Visit a parse tree produced by the `ConditionExpression`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitConditionExpression?: (ctx: ConditionExpressionContext) => Result;
     /**
      * Visit a parse tree produced by `LatexMathParser.conditionOperator`.
      * @param ctx the parse tree
