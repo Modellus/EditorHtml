@@ -78,6 +78,18 @@ class ChartControl {
         this.shapeClipRect = this.createSvgElement("rect");
         shapeClipPath.appendChild(this.shapeClipRect);
         this.rootElement.appendChild(shapeClipPath);
+        this.xTicksClipId = `chart-xticks-clip-${crypto.randomUUID()}`;
+        const xTicksClipPath = this.createSvgElement("clipPath");
+        xTicksClipPath.setAttribute("id", this.xTicksClipId);
+        this.xTicksClipRect = this.createSvgElement("rect");
+        xTicksClipPath.appendChild(this.xTicksClipRect);
+        this.rootElement.appendChild(xTicksClipPath);
+        this.yTicksClipId = `chart-yticks-clip-${crypto.randomUUID()}`;
+        const yTicksClipPath = this.createSvgElement("clipPath");
+        yTicksClipPath.setAttribute("id", this.yTicksClipId);
+        this.yTicksClipRect = this.createSvgElement("rect");
+        yTicksClipPath.appendChild(this.yTicksClipRect);
+        this.rootElement.appendChild(yTicksClipPath);
         this.axisLayer = this.createSvgElement("g");
         this.axisLayer.setAttribute("clip-path", `url(#${this.shapeClipId})`);
         this.focusLayer = this.createSvgElement("g");
@@ -747,6 +759,14 @@ class ChartControl {
         this.shapeClipRect.setAttribute("y", "0");
         this.shapeClipRect.setAttribute("width", `${width}`);
         this.shapeClipRect.setAttribute("height", `${height}`);
+        this.xTicksClipRect.setAttribute("x", `${layout.plotLeft}`);
+        this.xTicksClipRect.setAttribute("y", "0");
+        this.xTicksClipRect.setAttribute("width", `${layout.plotWidth}`);
+        this.xTicksClipRect.setAttribute("height", `${height}`);
+        this.yTicksClipRect.setAttribute("x", "0");
+        this.yTicksClipRect.setAttribute("y", `${layout.plotTop}`);
+        this.yTicksClipRect.setAttribute("width", `${width}`);
+        this.yTicksClipRect.setAttribute("height", `${layout.plotHeight}`);
         const scales = this.getScales(layout, domain);
         this.renderGrid(layout, scales.xScale, scales.yScale, xTicks, yTicks, xMinorTicks, yMinorTicks);
         this.renderAxes(layout, scales.xScale, scales.yScale, xTicks, yTicks, xMinorTicks, yMinorTicks);
@@ -826,8 +846,10 @@ class ChartControl {
     renderXAxisMinorTick(layout, xScale, xValue) {
         const xPosition = xScale(xValue);
         this.appendSvgMarkup(this.axisLayer, `
-            <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 2.5}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
-            <line x1="${xPosition}" y1="${layout.plotTop}" x2="${xPosition}" y2="${layout.plotTop - 2.5}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
+            <g clip-path="url(#${this.xTicksClipId})">
+                <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 2.5}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
+                <line x1="${xPosition}" y1="${layout.plotTop}" x2="${xPosition}" y2="${layout.plotTop - 2.5}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
+            </g>
         `);
     }
 
@@ -845,9 +867,11 @@ class ChartControl {
         }
         const labelText = this.escapeMarkupText(this.formatAxisValue(xValue));
         this.appendSvgMarkup(this.axisLayer, `
-            <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 4}" stroke="${this.options.axisColor}" stroke-width="1" />
-            <line x1="${xPosition}" y1="${layout.plotTop}" x2="${xPosition}" y2="${layout.plotTop - 4}" stroke="${this.options.axisColor}" stroke-width="1" />
-            <text class="shape-tick-label" x="${labelX}" y="${layout.plotBottom + 18}" text-anchor="${anchor}" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
+            <g clip-path="url(#${this.xTicksClipId})">
+                <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 4}" stroke="${this.options.axisColor}" stroke-width="1" />
+                <line x1="${xPosition}" y1="${layout.plotTop}" x2="${xPosition}" y2="${layout.plotTop - 4}" stroke="${this.options.axisColor}" stroke-width="1" />
+                <text class="shape-tick-label" x="${labelX}" y="${layout.plotBottom + 18}" text-anchor="${anchor}" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
+            </g>
         `);
     }
 
@@ -855,17 +879,21 @@ class ChartControl {
         const yPosition = yScale(yValue);
         const labelText = this.escapeMarkupText(this.formatAxisValue(yValue));
         this.appendSvgMarkup(this.axisLayer, `
-            <line x1="${layout.plotLeft - 4}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
-            <line x1="${layout.plotRight}" y1="${yPosition}" x2="${layout.plotRight + 4}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
-            <text class="shape-tick-label" x="${layout.plotLeft - 7}" y="${yPosition + 3}" text-anchor="end" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
+            <g clip-path="url(#${this.yTicksClipId})">
+                <line x1="${layout.plotLeft - 4}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
+                <line x1="${layout.plotRight}" y1="${yPosition}" x2="${layout.plotRight + 4}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
+                <text class="shape-tick-label" x="${layout.plotLeft - 7}" y="${yPosition + 3}" text-anchor="end" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
+            </g>
         `);
     }
 
     renderYAxisMinorTick(layout, yScale, yValue) {
         const yPosition = yScale(yValue);
         this.appendSvgMarkup(this.axisLayer, `
-            <line x1="${layout.plotLeft - 2.5}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
-            <line x1="${layout.plotRight}" y1="${yPosition}" x2="${layout.plotRight + 2.5}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
+            <g clip-path="url(#${this.yTicksClipId})">
+                <line x1="${layout.plotLeft - 2.5}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
+                <line x1="${layout.plotRight}" y1="${yPosition}" x2="${layout.plotRight + 2.5}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-opacity="0.45" stroke-width="1" />
+            </g>
         `);
     }
 
