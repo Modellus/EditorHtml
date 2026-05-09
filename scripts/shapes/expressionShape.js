@@ -207,8 +207,7 @@ class ExpressionShape extends BaseShape {
         delete inlineShortcutMap.dt;
         inlineShortcutMap["#"] = "\\sqrt{#0}";
         inlineShortcutMap["%"] = "\\Delta";
-        inlineShortcutMap["&"] = "\\land";
-        inlineShortcutMap["|"] = "\\lor";
+        inlineShortcutMap["|"] = "\\left|#0\\right|";
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];
@@ -224,6 +223,21 @@ class ExpressionShape extends BaseShape {
             keydownEvent.stopImmediatePropagation();
             return;
         }
+        if (keydownEvent.key === "\\") {
+            keydownEvent.preventDefault();
+            keydownEvent.stopImmediatePropagation();
+            this.insert("\\begin{cases}\\placeholder{} & \\placeholder{}\\end{cases}");
+            return;
+        }
+        if (keydownEvent.altKey && !keydownEvent.ctrlKey && !keydownEvent.metaKey) {
+            const key = keydownEvent.key;
+            if (key === 'v' || key === '\u221A') {
+                keydownEvent.preventDefault();
+                keydownEvent.stopImmediatePropagation();
+                this.insert('\\lor');
+                return;
+            }
+        }
         if (this.handleEnterKeydown(keydownEvent))
             return;
         if (this.handleSpaceKeydown(keydownEvent))
@@ -233,14 +247,24 @@ class ExpressionShape extends BaseShape {
 
     interceptDeadKeySuperscript() {
         const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+        sink.addEventListener('keydown', (keydownEvent) => {
+            this._lastKeydownAlt = keydownEvent.altKey;
+        }, true);
         sink.addEventListener('compositionstart', () => {
             this._preCompositionValue = this.mathfield.getValue();
             this._preCompositionPosition = this.mathfield.position;
+            this._compositionStartedWithAlt = this._lastKeydownAlt;
         }, true);
         sink.addEventListener('compositionupdate', (compositionEvent) => {
-            if (compositionEvent.data !== '^')
-                return;
-            this._deadKeyComposition = true;
+            const data = compositionEvent.data;
+            if (data === '^' || data === '\u02C6') {
+                if (this._compositionStartedWithAlt)
+                    this._deadKeyComposition = 'land';
+                else
+                    this._deadKeyComposition = '^';
+            } else if (data === '~') {
+                this._deadKeyComposition = '~';
+            }
         }, true);
     }
 
@@ -252,10 +276,32 @@ class ExpressionShape extends BaseShape {
         this.mathfield.executeCommand("moveToSuperscript");
     }
 
+    fixDeadKeyLand() {
+        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '^', bubbles: true }));
+        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
+        this.mathfield.position = this._preCompositionPosition;
+        this.mathfield.insert('\\land');
+    }
+
+    fixDeadKeyTilde() {
+        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '~', bubbles: true }));
+        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
+        this.mathfield.position = this._preCompositionPosition;
+        this.mathfield.insert('\\lnot');
+    }
+
     onInput(inputEvent) {
-        if (this._deadKeyComposition) {
-            this._deadKeyComposition = false;
+        if (this._deadKeyComposition === 'land') {
+            this._deadKeyComposition = null;
+            this.fixDeadKeyLand();
+        } else if (this._deadKeyComposition === '^') {
+            this._deadKeyComposition = null;
             this.fixDeadKeySuperscript();
+        } else if (this._deadKeyComposition === '~') {
+            this._deadKeyComposition = null;
+            this.fixDeadKeyTilde();
         }
         this.deferFixContentOutsideDisplaylines();
         const shortcutApplied = this.applyExpressionFunctionShortcuts();

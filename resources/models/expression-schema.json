@@ -1,0 +1,1331 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://modellus.com/schemas/expression.json",
+  "title": "Modellus Expression Language",
+  "description": "Schema for the LatexMath ANTLR expression language used inside ExpressionShape. The 'expression' field of each shape stores a \\displaylines{} LaTeX block split on \\\\\\\\ into individual statements, each parsed as a LatexMath program. This file serves two purposes: (1) $defs — structural type definitions for tooling and agent code generation; (2) root properties — a grammar-accurate reference document for AI agents reading or producing model files.",
+
+  "$defs": {
+
+    "ModelExpressionSet": {
+      "title": "ModelExpressionSet",
+      "description": "The complete mathematical content of a model, assembled across all its ExpressionShapes. All shapes share one calculator System; term names must be globally unique across shapes. A model commonly uses several small ExpressionShapes grouped by theme (parameters, equations, derived quantities) to improve readability.",
+      "type": "object",
+      "required": ["shapes"],
+      "additionalProperties": false,
+      "properties": {
+        "shapes": {
+          "type": "array",
+          "description": "One entry per ExpressionShape in board order.",
+          "items": { "$ref": "#/$defs/ExpressionShapeContent" }
+        }
+      }
+    },
+
+    "ExpressionShapeContent": {
+      "title": "ExpressionShapeContent",
+      "description": "The parsed content of one ExpressionShape. 'latexSource' is the raw 'expression' field from the model. Each \\\\\\\\ inside \\displaylines{} separates one LatexMath program (statement).",
+      "type": "object",
+      "required": ["shapeId", "latexSource", "statements"],
+      "additionalProperties": false,
+      "properties": {
+        "shapeId": {
+          "type": "string",
+          "description": "UUID of the ExpressionShape (matches shape.id in the board array)."
+        },
+        "latexSource": {
+          "type": "string",
+          "description": "Raw 'expression' field value. Example: \"\\\\displaylines{g=9.8\\\\\\\\\\\\frac{dx}{dt}=v}\"."
+        },
+        "statements": {
+          "type": "array",
+          "description": "Ordered list of parsed statements.",
+          "items": { "$ref": "#/$defs/Statement" }
+        }
+      }
+    },
+
+    "Statement": {
+      "title": "Statement",
+      "description": "One LatexMath program (one line inside \\displaylines{}). Grammar: program → statement EOF. Three alternatives: differential | assignment | expression.",
+      "oneOf": [
+        { "$ref": "#/$defs/DifferentialStatement" },
+        { "$ref": "#/$defs/FunctionAssignment" },
+        { "$ref": "#/$defs/FunctionSubscriptAssignment" },
+        { "$ref": "#/$defs/FunctionSubscriptDigitAssignment" },
+        { "$ref": "#/$defs/FunctionIndependentAssignment" },
+        { "$ref": "#/$defs/ConditionalAssignment" },
+        { "$ref": "#/$defs/DisplayStatement" }
+      ]
+    },
+
+    "DifferentialStatement": {
+      "title": "DifferentialStatement",
+      "description": "First-order ODE at statement level. Grammar: '\\frac' differentialMarker name '}' differentialMarker name '}' '=' expression units?. Both numerator and denominator are plain 'name' tokens — not expressions. Only first-order ODEs are supported; second-order must be written as two first-order equations. Produces TermType.DIFFERENTIAL. Requires an initial value in properties.initialValuesByCase.",
+      "type": "object",
+      "required": ["kind", "dependentName", "independentName", "rhs", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["differential"] },
+        "dependentName": {
+          "type": "string",
+          "description": "The term being differentiated (numerator). Must be a 'name' token: ID or SPECIAL. Example: 'x' in dx/dt = v."
+        },
+        "independentName": {
+          "type": "string",
+          "description": "The variable of differentiation (denominator). Should match properties.independent.name. Example: 't'."
+        },
+        "differentialMarker": {
+          "type": "string",
+          "enum": ["d", "\\mathrm{d}"],
+          "description": "Which differentialMarker token was used: plain 'd' (from token '{d') or '\\mathrm{d}' (from token '{\\mathrm{d}')."
+        },
+        "rhs": { "$ref": "#/$defs/MathExpr" },
+        "units": { "$ref": "#/$defs/Units" },
+        "latex": {
+          "type": "string",
+          "description": "Full LaTeX. Examples: \"\\\\frac{dx}{dt}=v\", \"\\\\frac{\\\\mathrm{d}x}{\\\\mathrm{d}t}=v\"."
+        }
+      }
+    },
+
+    "FunctionAssignment": {
+      "title": "FunctionAssignment",
+      "description": "Simple assignment. Grammar: name '=' expression units? (#Function). When the RHS has no dependency on other terms or the independent variable, the engine classifies the term as TermType.PARAMETER (a constant). Otherwise TermType.FUNCTION.",
+      "type": "object",
+      "required": ["kind", "termName", "rhs", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["function"] },
+        "termName": {
+          "type": "string",
+          "description": "Name being defined. Can be ID ('x', 'v0', 'mass') or SPECIAL ('\\omega', '\\alpha', '\\beta')."
+        },
+        "rhs": { "$ref": "#/$defs/MathExpr" },
+        "units": { "$ref": "#/$defs/Units" },
+        "latex": {
+          "type": "string",
+          "description": "Examples: \"g=9.8\" (PARAMETER), \"E=\\\\frac{1}{2}\\\\cdot m\\\\cdot v^{2}\" (FUNCTION)."
+        }
+      }
+    },
+
+    "FunctionSubscriptAssignment": {
+      "title": "FunctionSubscriptAssignment",
+      "description": "Recurrence with expression subscript. Grammar: name '_' '{' expression '}' '=' expression units? (#FunctionSubscript). Defines a recurrence relation where the subscript expression is evaluated to determine the step index. Typical use: x_{n} = x_{n-1} + v.",
+      "type": "object",
+      "required": ["kind", "termName", "subscriptExpr", "rhs", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["functionSubscript"] },
+        "termName": { "type": "string" },
+        "subscriptExpr": {
+          "type": "string",
+          "description": "LaTeX of the subscript expression on the LHS. Examples: 'n', 't', 'n+1'."
+        },
+        "rhs": { "$ref": "#/$defs/MathExpr" },
+        "units": { "$ref": "#/$defs/Units" },
+        "latex": {
+          "type": "string",
+          "description": "Examples: \"x_{n}=x_{n-1}+v\\\\cdot\\\\Delta t\", \"p_{n}=p_{n-1}\\\\cdot\\\\left(1+r\\\\right)\"."
+        }
+      }
+    },
+
+    "FunctionSubscriptDigitAssignment": {
+      "title": "FunctionSubscriptDigitAssignment",
+      "description": "Assignment with a single bare digit as subscript. Grammar: name '_' DIGIT '=' expression units? (#FunctionSubscriptDigit). Note: x_0 (no braces) is this form; x_{0} (with braces) is FunctionSubscriptAssignment with subscript expression '0'. Typically used to define initial or reference values.",
+      "type": "object",
+      "required": ["kind", "termName", "subscriptDigit", "rhs", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["functionSubscriptDigit"] },
+        "termName": { "type": "string" },
+        "subscriptDigit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9,
+          "description": "The single digit (0-9) used as subscript on the LHS."
+        },
+        "rhs": { "$ref": "#/$defs/MathExpr" },
+        "units": { "$ref": "#/$defs/Units" },
+        "latex": {
+          "type": "string",
+          "description": "Examples: \"x_0=0\", \"v_0=10\"."
+        }
+      }
+    },
+
+    "FunctionIndependentAssignment": {
+      "title": "FunctionIndependentAssignment",
+      "description": "Function definition with explicit argument. Grammar: name '\\left(' expression '\\right)' '=' expression units? (#FunctionIndependent). The argument in the \\left(\\right) on the LHS documents what the function depends on. Produces TermType.FUNCTION.",
+      "type": "object",
+      "required": ["kind", "termName", "argument", "rhs", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["functionIndependent"] },
+        "termName": { "type": "string" },
+        "argument": {
+          "$ref": "#/$defs/MathExpr",
+          "description": "The expression inside \\left(\\right) on the LHS. Typically the independent variable or a term name."
+        },
+        "rhs": { "$ref": "#/$defs/MathExpr" },
+        "units": { "$ref": "#/$defs/Units" },
+        "latex": {
+          "type": "string",
+          "description": "Examples: \"f\\\\left(t\\\\right)=\\\\sin\\\\left(\\\\omega\\\\cdot t\\\\right)\", \"h\\\\left(t\\\\right)=v_0\\\\cdot t-\\\\frac{1}{2}\\\\cdot g\\\\cdot t^{2}\"."
+        }
+      }
+    },
+
+    "ConditionalAssignment": {
+      "title": "ConditionalAssignment",
+      "description": "Piecewise definition. Grammar: name '=' '\\begin{cases}' caseRow ('\\\\' caseRow)+ '\\end{cases}' units? (#FunctionConditional). The grammar requires at least two case rows (the '+' after the first row). Rows are separated by \\\\. Each row is: expression '&' condition. Produces TermType.FUNCTION.",
+      "type": "object",
+      "required": ["kind", "termName", "cases", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["conditional"] },
+        "termName": { "type": "string" },
+        "cases": {
+          "type": "array",
+          "minItems": 2,
+          "description": "Ordered case rows. Evaluated top-to-bottom; first matching condition is used.",
+          "items": { "$ref": "#/$defs/CaseRow" }
+        },
+        "units": { "$ref": "#/$defs/Units" },
+        "latex": {
+          "type": "string",
+          "description": "Example: \"x=\\\\begin{cases}0 & t=0\\\\\\\\v\\\\cdot t & \\\\text{otherwise}\\\\end{cases}\"."
+        }
+      }
+    },
+
+    "DisplayStatement": {
+      "title": "DisplayStatement",
+      "description": "Standalone expression with no assignment. Grammar rule: statement → expression. Not evaluated by the calculator. Used to annotate the canvas with formula labels (e.g. writing F=ma as a visual reference).",
+      "type": "object",
+      "required": ["kind", "expression", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["display"] },
+        "expression": { "$ref": "#/$defs/MathExpr" },
+        "latex": { "type": "string" }
+      }
+    },
+
+    "CaseRow": {
+      "title": "CaseRow",
+      "description": "One branch in a \\begin{cases} block. Grammar: expression '&' condition.",
+      "type": "object",
+      "required": ["value", "condition"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "$ref": "#/$defs/MathExpr" },
+        "condition": { "$ref": "#/$defs/Condition" }
+      }
+    },
+
+    "Condition": {
+      "title": "Condition",
+      "description": "Boolean condition in a case row. Four grammar alternatives.",
+      "oneOf": [
+        { "$ref": "#/$defs/ConditionExpr" },
+        { "$ref": "#/$defs/ConditionChained" },
+        { "$ref": "#/$defs/ConditionCompound" },
+        { "$ref": "#/$defs/ConditionOtherwise" }
+      ]
+    },
+
+    "ConditionExpr": {
+      "title": "ConditionExpr",
+      "description": "Simple two-operand comparison. Grammar: expression conditionOperator expression (#ConditionExpression).",
+      "type": "object",
+      "required": ["kind", "left", "operator", "right"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["expression"] },
+        "left": { "$ref": "#/$defs/MathExpr" },
+        "operator": { "$ref": "#/$defs/ConditionOperator" },
+        "right": { "$ref": "#/$defs/MathExpr" }
+      }
+    },
+
+    "ConditionChained": {
+      "title": "ConditionChained",
+      "description": "Chained three-part comparison. Grammar: expression conditionOperator expression conditionOperator expression (#ConditionChained). Represents compound inequalities such as 0 < x < 1 or a \\le t \\le b.",
+      "type": "object",
+      "required": ["kind", "left", "operator1", "middle", "operator2", "right"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["chained"] },
+        "left": { "$ref": "#/$defs/MathExpr" },
+        "operator1": { "$ref": "#/$defs/ConditionOperator" },
+        "middle": { "$ref": "#/$defs/MathExpr" },
+        "operator2": { "$ref": "#/$defs/ConditionOperator" },
+        "right": { "$ref": "#/$defs/MathExpr" }
+      }
+    },
+
+    "ConditionCompound": {
+      "title": "ConditionCompound",
+      "description": "Two conditions joined by \\lor (OR) or \\land (AND). Grammar: condition '\\lor' condition (#ConditionOr) | condition '\\land' condition (#ConditionAnd).",
+      "type": "object",
+      "required": ["kind", "connector", "left", "right"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["compound"] },
+        "connector": {
+          "type": "string",
+          "enum": ["\\lor", "\\land"],
+          "description": "\\lor = logical OR, \\land = logical AND."
+        },
+        "left": { "$ref": "#/$defs/Condition" },
+        "right": { "$ref": "#/$defs/Condition" }
+      }
+    },
+
+    "ConditionOtherwise": {
+      "title": "ConditionOtherwise",
+      "description": "Catch-all else branch. Grammar: '\\text{otherwise}' (#ConditionOtherwiseText) | 'otherwise' (#ConditionOtherwise). Both forms are accepted. Should always be the last case row.",
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["otherwise"] },
+        "latex": {
+          "type": "string",
+          "enum": ["\\text{otherwise}", "otherwise"]
+        }
+      }
+    },
+
+    "ConditionOperator": {
+      "title": "ConditionOperator",
+      "description": "Comparison operator. Grammar: '=' | '>' | '<' | '\\ge' | '\\geq' | '\\le' | '\\leq' | '\\neq'. Note: '\\ge' and '\\geq' are interchangeable (>=); '\\le' and '\\leq' are interchangeable (<=). '\\ne' is NOT in the grammar — use '\\neq' for not-equal.",
+      "type": "string",
+      "enum": ["=", ">", "<", "\\ge", "\\geq", "\\le", "\\leq", "\\neq"]
+    },
+
+    "MathExpr": {
+      "title": "MathExpr",
+      "description": "A mathematical expression in the LatexMath grammar. The actual stored value is always LaTeX. The 'tree' field is the parsed AST provided by an agent when analyzing or generating the model.",
+      "type": "object",
+      "required": ["latex"],
+      "additionalProperties": false,
+      "properties": {
+        "latex": {
+          "type": "string",
+          "description": "The LaTeX string for this expression."
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional plain-text description of what the expression computes."
+        },
+        "tree": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "ExprNode": {
+      "title": "ExprNode",
+      "description": "Recursive AST node. The 'kind' value maps to a grammar alternative label (e.g. #Power, #Multiplication, #Variable).",
+      "oneOf": [
+        { "$ref": "#/$defs/NumberNode" },
+        { "$ref": "#/$defs/ConstantNode" },
+        { "$ref": "#/$defs/VariableNode" },
+        { "$ref": "#/$defs/SubscriptNode" },
+        { "$ref": "#/$defs/SubscriptDigitNode" },
+        { "$ref": "#/$defs/DeltaNameNode" },
+        { "$ref": "#/$defs/DeltaExprNode" },
+        { "$ref": "#/$defs/AddNode" },
+        { "$ref": "#/$defs/SubtractNode" },
+        { "$ref": "#/$defs/MultiplyNode" },
+        { "$ref": "#/$defs/MultiplyImplicitNode" },
+        { "$ref": "#/$defs/DivideNode" },
+        { "$ref": "#/$defs/FractionNode" },
+        { "$ref": "#/$defs/FractionDigitsNode" },
+        { "$ref": "#/$defs/PowerNode" },
+        { "$ref": "#/$defs/NegateNode" },
+        { "$ref": "#/$defs/PositiveNode" },
+        { "$ref": "#/$defs/SqrtNode" },
+        { "$ref": "#/$defs/FunctionCallNode" },
+        { "$ref": "#/$defs/DerivativeNode" },
+        { "$ref": "#/$defs/ParenthesisNode" },
+        { "$ref": "#/$defs/BracesNode" }
+      ]
+    },
+
+    "NumberNode": {
+      "description": "Numeric literal. Grammar: decimal -> ('+' | '-')? DIGIT+ (DOT DIGIT+)?",
+      "type": "object",
+      "required": ["kind", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["number"] },
+        "value": { "type": "number" }
+      }
+    },
+
+    "ConstantNode": {
+      "description": "Named mathematical constant. Grammar: reserved -> '\\PI' | '\\pi' | '\\E' | '\\e' | 'e' | 'E'. Only pi and Euler's e are built-in constants. 'g' is not reserved — define it as a parameter assignment.",
+      "type": "object",
+      "required": ["kind", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["constant"] },
+        "name": {
+          "type": "string",
+          "enum": ["pi", "e"],
+          "description": "pi: source is \\pi or \\PI. e: source is e, E, \\e, or \\E."
+        },
+        "latex": {
+          "type": "string",
+          "description": "Exact token from source: \\pi, \\PI, e, E, \\e, or \\E."
+        }
+      }
+    },
+
+    "VariableNode": {
+      "description": "Reference to a calculator term. Grammar: name -> ID (DOT ID)* | SPECIAL. ID = LETTER (LETTER | DIGIT)*. SPECIAL = '\\' LETTER+ (LaTeX command, e.g. \\alpha). Dotted names (e.g. body.x) reference child-shape terms under a ReferentialShape.",
+      "type": "object",
+      "required": ["kind", "termName"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["variable"] },
+        "termName": {
+          "type": "string",
+          "description": "Full term name as it appears in source. Examples: 'x', 'v0', 'mass', '\\omega', '\\alpha', 'body.x'."
+        }
+      }
+    },
+
+    "SubscriptNode": {
+      "description": "Term read at a shifted step. Grammar: name '_' '{' expression '}' (#Subscript). The subscript expression is evaluated to determine which iteration to read. Example: x_{n-1} reads x one step back.",
+      "type": "object",
+      "required": ["kind", "termName", "subscript"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["subscript"] },
+        "termName": { "type": "string" },
+        "subscript": {
+          "$ref": "#/$defs/ExprNode",
+          "description": "Expression inside the braces. Examples: n-1, t-1, 0, n+1."
+        }
+      }
+    },
+
+    "SubscriptDigitNode": {
+      "description": "Term read with a single bare digit. Grammar: name '_' DIGIT (#SubscriptDigit). Example: x_0 reads the initial value of x. Note the absence of braces — this is a distinct grammar alternative from SubscriptNode.",
+      "type": "object",
+      "required": ["kind", "termName", "digit"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["subscriptDigit"] },
+        "termName": { "type": "string" },
+        "digit": { "type": "integer", "minimum": 0, "maximum": 9 }
+      }
+    },
+
+    "DeltaNameNode": {
+      "description": "Finite difference of a named term. Grammar: '\\Delta' name (#DeltaName). \\Delta x = x(currentIteration) minus x(currentIteration - 1). \\Delta t = the step size (properties.independent.step).",
+      "type": "object",
+      "required": ["kind", "termName"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["deltaName"] },
+        "termName": {
+          "type": "string",
+          "description": "The name token after \\Delta. Example: 'x' in \\Delta x."
+        }
+      }
+    },
+
+    "DeltaExprNode": {
+      "description": "Finite difference of a sub-expression. Grammar: '\\Delta' '\\left(' expression '\\right)' (#DeltaExpression). Applies the finite-difference operator to the whole sub-expression.",
+      "type": "object",
+      "required": ["kind", "operand"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["deltaExpr"] },
+        "operand": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "AddNode": {
+      "description": "Addition. Grammar: expression PLUS expression (#Addition). LaTeX: a + b.",
+      "type": "object",
+      "required": ["kind", "left", "right"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["add"] },
+        "left": { "$ref": "#/$defs/ExprNode" },
+        "right": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "SubtractNode": {
+      "description": "Subtraction. Grammar: expression MINUS expression (#Subtraction). LaTeX: a - b.",
+      "type": "object",
+      "required": ["kind", "left", "right"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["subtract"] },
+        "left": { "$ref": "#/$defs/ExprNode" },
+        "right": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "MultiplyNode": {
+      "description": "Explicit multiplication. Grammar: expression '\\cdot' expression (#Multiplication) or expression '\\cdot' decimal (#MultiplicationDigit). LaTeX: a\\cdot b. This is the only explicit multiplication operator — \\times is not in the grammar.",
+      "type": "object",
+      "required": ["kind", "left", "right"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["multiply"] },
+        "left": { "$ref": "#/$defs/ExprNode" },
+        "right": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "MultiplyImplicitNode": {
+      "description": "Implicit multiplication. Grammar: decimal implicitMultiplicand (#MultiplicationImplicit). A numeric literal immediately followed by a name, function call, or parenthesized expression. Examples: 2x, 3\\sin\\left(t\\right), 4\\left(x+1\\right), 2\\sqrt{x}. The left operand must always be a decimal literal.",
+      "type": "object",
+      "required": ["kind", "coefficient", "multiplicand"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["multiplyImplicit"] },
+        "coefficient": {
+          "$ref": "#/$defs/NumberNode",
+          "description": "The numeric coefficient (always a decimal literal)."
+        },
+        "multiplicand": {
+          "$ref": "#/$defs/ExprNode",
+          "description": "Any implicitMultiplicand: name, function call, parenthesized expression, sqrt, delta, etc."
+        }
+      }
+    },
+
+    "DivideNode": {
+      "description": "Inline division. Grammar: expression '/' expression (#Division). LaTeX: a/b. For display-quality fractions use FractionNode (\\frac{}{}).",
+      "type": "object",
+      "required": ["kind", "left", "right"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["divide"] },
+        "left": { "$ref": "#/$defs/ExprNode" },
+        "right": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "FractionNode": {
+      "description": "Display-quality fraction. Grammar: '\\frac' '{' expression '}' '{' expression '}' (#Fraction). LaTeX: \\frac{numerator}{denominator}.",
+      "type": "object",
+      "required": ["kind", "numerator", "denominator"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["fraction"] },
+        "numerator": { "$ref": "#/$defs/ExprNode" },
+        "denominator": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "FractionDigitsNode": {
+      "description": "Compact single-digit fraction. Grammar: '\\frac' DIGIT DIGIT (#FractionDigits). No braces — both digits are bare characters. Example: \\frac12 = one-half, \\frac13 = one-third. Denominator must be non-zero.",
+      "type": "object",
+      "required": ["kind", "numeratorDigit", "denominatorDigit"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["fractionDigits"] },
+        "numeratorDigit": { "type": "integer", "minimum": 0, "maximum": 9 },
+        "denominatorDigit": { "type": "integer", "minimum": 1, "maximum": 9 }
+      }
+    },
+
+    "PowerNode": {
+      "description": "Exponentiation. Grammar: expression '^' expression (#Power). LaTeX: base^{exponent}.",
+      "type": "object",
+      "required": ["kind", "base", "exponent"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["power"] },
+        "base": { "$ref": "#/$defs/ExprNode" },
+        "exponent": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "NegateNode": {
+      "description": "Unary negation. Grammar: MINUS expression (#Negation). LaTeX: -expression.",
+      "type": "object",
+      "required": ["kind", "operand"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["negate"] },
+        "operand": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "PositiveNode": {
+      "description": "Explicit unary plus. Grammar: PLUS expression (#Positive). LaTeX: +expression. Semantically a no-op.",
+      "type": "object",
+      "required": ["kind", "operand"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["positive"] },
+        "operand": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "SqrtNode": {
+      "description": "Square root. Grammar: '\\sqrt' '{' expression '}' (#SquareRoot). LaTeX: \\sqrt{expression}.",
+      "type": "object",
+      "required": ["kind", "operand"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["sqrt"] },
+        "operand": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "FunctionCallNode": {
+      "description": "Built-in function call. All functions use '\\left(' '\\right)' delimiters — bare parentheses are not valid. sign, rnd, irnd, int, round have no backslash prefix. \\max, \\min, \\mod take two comma-separated arguments. All others take one argument.",
+      "type": "object",
+      "required": ["kind", "function", "arguments"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["call"] },
+        "function": { "$ref": "#/$defs/BuiltInFunction" },
+        "arguments": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/ExprNode" },
+          "description": "One argument for unary functions. Exactly two for \\max, \\min, \\mod."
+        }
+      }
+    },
+
+    "DerivativeNode": {
+      "description": "Derivative operator inside an expression. Grammar: '\\frac' differentialMarker expression '}' differentialMarker name '}' (#Derivative). Distinct from DifferentialStatement: the numerator here is an arbitrary expression (not just a name), and this construct appears on the RHS of equations. Example: a = \\frac{dv}{dt}.",
+      "type": "object",
+      "required": ["kind", "numeratorExpr", "denominatorName"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["derivative"] },
+        "numeratorExpr": {
+          "$ref": "#/$defs/ExprNode",
+          "description": "The expression being differentiated. Unlike DifferentialStatement, this can be any expression."
+        },
+        "denominatorName": {
+          "type": "string",
+          "description": "The variable of differentiation — a 'name' token."
+        },
+        "differentialMarker": {
+          "type": "string",
+          "enum": ["d", "\\mathrm{d}"]
+        }
+      }
+    },
+
+    "ParenthesisNode": {
+      "description": "Parenthesized grouping. Grammar: '\\left(' expression '\\right)' (#Parenthesis). Semantically equivalent to its inner expression.",
+      "type": "object",
+      "required": ["kind", "operand"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["parenthesis"] },
+        "operand": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "BracesNode": {
+      "description": "Brace grouping. Grammar: '{' expression '}' (#Braces). Used for grouping in LaTeX contexts. Semantically equivalent to its inner expression.",
+      "type": "object",
+      "required": ["kind", "operand"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["braces"] },
+        "operand": { "$ref": "#/$defs/ExprNode" }
+      }
+    },
+
+    "BuiltInFunction": {
+      "title": "BuiltInFunction",
+      "description": "All built-in functions in the LatexMath grammar. Backslash-prefixed: \\sin, \\cos, \\tan, \\cot, \\sec, \\csc (also \\cosec), \\arcsin, \\arccos, \\arctan, \\sinh, \\cosh, \\tanh, \\ln, \\log, \\max, \\min, \\mod, \\det. No-backslash: sign, rnd, irnd, int, round. Note: \\sqrt uses braces not \\left\\right and is a separate SqrtNode.",
+      "type": "string",
+      "enum": [
+        "sin", "cos", "tan", "cot", "sec", "csc",
+        "arcsin", "arccos", "arctan",
+        "sinh", "cosh", "tanh",
+        "ln", "log",
+        "max", "min", "mod",
+        "det",
+        "sign", "rnd", "irnd", "int", "round"
+      ]
+    },
+
+    "Units": {
+      "title": "Units",
+      "description": "Physical unit annotation. Grammar: '\\quad' '\\textcolor' '{' name '}' '{' '\\mathrm' '{' expression '}' '}'. The colorName is a LaTeX color identifier (e.g. 'gray'). The unitExpression is a LaTeX math expression inside \\mathrm{}. Units are display-only; the engine does not validate or convert them.",
+      "type": "object",
+      "required": ["colorName", "unitExpression", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "colorName": {
+          "type": "string",
+          "description": "LaTeX color name for \\textcolor. Examples: 'gray', 'blue', 'black'."
+        },
+        "unitExpression": {
+          "type": "string",
+          "description": "Unit text inside \\mathrm{}. Examples: 'm', 'm/s', 'kg\\cdot m/s^{2}', 'rad', 'mol/L'."
+        },
+        "latex": {
+          "type": "string",
+          "description": "Full LaTeX: \\quad\\textcolor{gray}{\\mathrm{m/s}}."
+        }
+      }
+    }
+
+  },
+
+  "type": "object",
+  "required": ["overview", "grammar", "statementTypes", "operators", "functions", "constants", "specialSyntax", "latexTemplates"],
+  "properties": {
+
+    "agentGuidance": {
+      "type": "object",
+      "description": "Guidance for AI agents reading expressions from or writing expressions for Modellus models. For model-level structure (shapes, visualization, properties), see model-schema.json.",
+      "properties": {
+
+        "readingExpressions": {
+          "type": "object",
+          "description": "How to extract and interpret the mathematical content from an existing model.",
+          "properties": {
+            "step1_collect":    { "type": "string", "const": "Find all ExpressionShape items in the board array. Each shape has a properties.expression field." },
+            "step2_unwrap":     { "type": "string", "const": "Strip the outer \\displaylines{...} wrapper. Split the inner content on \\\\\\\\ (two backslashes) to get individual statement strings." },
+            "step3_parse":      { "type": "string", "const": "Parse each statement string using the grammar rules in this schema (see 'grammar' section). Identify the statement kind: differential, function, conditional, display, etc." },
+            "step4_classifyTerms": { "type": "string", "const": "DIFFERENTIAL terms (dx/dt = ...) are state variables requiring initial values in model properties.initialValuesByCase. PARAMETER terms (simple assignment, RHS is a literal or constant expression) are physical constants. FUNCTION terms are computed quantities that may be plotted or animated." },
+            "step5_inferScience": { "type": "string", "const": "Use model-schema.json agentGuidance.identifyingTheScience to map expression patterns to science domains (mechanics, population dynamics, epidemiology, etc.)." }
+          }
+        },
+
+        "writingExpressions": {
+          "type": "object",
+          "description": "Rules an agent must follow when generating LaTeX for ExpressionShape.properties.expression.",
+          "properties": {
+            "wrapper":              { "type": "string", "const": "Always wrap the full content in \\displaylines{...}. Separate statements with \\\\\\\\." },
+            "multiplySymbol":       { "type": "string", "const": "Use \\cdot for all explicit multiplication. Never write \\times. Variable*variable juxtaposition is NOT supported — write x\\cdot y, not xy." },
+            "functionParens":       { "type": "string", "const": "All function calls require \\left( \\right) delimiters: \\sin\\left(x\\right), NOT \\sin(x)." },
+            "noBackslashFunctions": { "type": "string", "const": "sign, rnd, irnd, int, round have no backslash: write sign\\left(x\\right), not \\sign\\left(x\\right)." },
+            "absoluteValue":        { "type": "string", "const": "Use \\det\\left(x\\right) for absolute value |x|. There is no \\abs function." },
+            "fractionVsDivide":     { "type": "string", "const": "Prefer \\frac{a}{b} for display quality. Use a/b for inline division in compact expressions." },
+            "greekTermNames":       { "type": "string", "const": "Greek letter term names are SPECIAL tokens: \\omega, \\alpha, \\beta, \\rho, etc. They can be used in assignments and references just like plain ID names." },
+            "noReservedAsNames":    { "type": "string", "const": "Never use e, E, \\e, \\E, \\pi, or \\PI as term names — they are parsed as the constants Euler's e and pi." },
+            "physicalConstants":    { "type": "string", "const": "Physical constants (g, c, k, R, NA, etc.) are NOT built in. Always define them as parameter assignments: g=9.8, c=3\\cdot10^{8}, etc." },
+            "conditionNotEqual":    { "type": "string", "const": "In \\begin{cases} conditions, use \\neq for not-equal. Do NOT write \\ne — it is NOT in the grammar." },
+            "secondOrderODEs":      { "type": "string", "const": "Second-order ODEs (d2x/dt2 = f) must be decomposed: introduce v = dx/dt, then write dv/dt = f. Two separate DIFFERENTIAL statements." },
+            "initialValues":        { "type": "string", "const": "Initial values for DIFFERENTIAL terms are stored in model properties.initialValuesByCase, NOT in the expression. Do not write x(0) = ... syntax — it is not valid." },
+            "unitsAnnotation":      { "type": "string", "const": "To annotate a statement with physical units, append \\quad\\textcolor{gray}{\\mathrm{m/s}} after the RHS. Units are display-only — the engine ignores them." }
+          }
+        },
+
+        "commonMistakes": {
+          "type": "object",
+          "description": "Mistakes an agent must avoid when generating expressions.",
+          "properties": {
+            "timesOperator":      { "type": "string", "const": "WRONG: a\\times b. CORRECT: a\\cdot b. The \\times token is not in the grammar." },
+            "bareParens":         { "type": "string", "const": "WRONG: \\sin(x). CORRECT: \\sin\\left(x\\right). All function calls need \\left(\\right)." },
+            "neVsNeq":            { "type": "string", "const": "WRONG: x\\ne 0 (in a condition). CORRECT: x\\neq 0." },
+            "gAsConstant":        { "type": "string", "const": "WRONG: using g without defining it. CORRECT: add g=9.8 as a parameter assignment." },
+            "eulerAsName":        { "type": "string", "const": "WRONG: using 'e' as a term name for energy. CORRECT: use E, En, energy, or \\mathcal{E} — but avoid plain 'e' and 'E' both (E is also the Euler constant)." },
+            "secondOrderDirect":  { "type": "string", "const": "WRONG: \\frac{d^{2}x}{dt^{2}}=f (not supported by grammar). CORRECT: two first-order ODEs dx/dt=v and dv/dt=f." },
+            "initialInExpr":      { "type": "string", "const": "WRONG: x\\left(0\\right)=5 in an expression shape. CORRECT: set initialValuesByCase[\"1\"][\"x\"] = 5 in model properties." },
+            "implicitVarVar":     { "type": "string", "const": "WRONG: mv (implicit multiply of two variables). CORRECT: m\\cdot v. Implicit multiplication only works with a decimal literal on the left: 2v." }
+          }
+        }
+      }
+    },
+
+    "overview": {
+      "type": "object",
+      "description": "High-level description of how expression shapes work in a model.",
+      "properties": {
+        "container": {
+          "type": "string",
+          "const": "\\displaylines{stmt1 \\\\\\\\ stmt2 \\\\\\\\ ...}",
+          "description": "Every ExpressionShape.expression is wrapped in \\displaylines{}. Statements are separated by \\\\ (two backslashes). Each statement is parsed independently as a LatexMath 'program'."
+        },
+        "parser": {
+          "type": "string",
+          "const": "ANTLR4 grammar: LatexMath",
+          "description": "The engine uses an ANTLR4 grammar called LatexMath to parse LaTeX produced by the MathLive editor."
+        },
+        "evaluationModel": {
+          "type": "string",
+          "const": "Fixed-step Euler integration",
+          "description": "The engine iterates from independent.start to independent.end in steps of independent.step (delta-t). Each step: FUNCTION terms are re-evaluated; DIFFERENTIAL terms advance via x(t+dt) = x(t) + rhs(t)*dt; PARAMETER terms stay constant unless a slider changes them."
+        },
+        "multipleShapes": {
+          "type": "string",
+          "description": "A model normally has multiple ExpressionShapes. All statements from all shapes feed into one shared calculator System. Term names must be unique across the entire model. Authors use separate shapes to group related equations — for example one shape for parameters, one for differential equations, one for derived quantities — making models easier to read."
+        },
+        "casesSystem": {
+          "type": "string",
+          "description": "When properties.casesCount > 1 the whole equation system is solved independently for each case index. Initial values can differ per case via properties.initialValuesByCase. Charts and tables can overlay all cases simultaneously, enabling parameter studies."
+        }
+      }
+    },
+
+    "grammar": {
+      "type": "object",
+      "description": "Key grammar rules and token definitions from the LatexMath ANTLR grammar.",
+      "properties": {
+        "program": { "type": "string", "const": "statement EOF" },
+        "statement": { "type": "string", "const": "differential | assignment | expression" },
+        "differential": {
+          "type": "string",
+          "const": "'\\frac' differentialMarker name '}' differentialMarker name '}' '=' expression units?",
+          "description": "Numerator and denominator are plain 'name' tokens (not expressions). First-order only."
+        },
+        "differentialMarker": {
+          "type": "string",
+          "const": "'{d' | '{\\mathrm{d}'",
+          "description": "Starts the brace group inside \\frac. Immediately followed by name then '}'."
+        },
+        "assignment": {
+          "type": "object",
+          "properties": {
+            "Function":               { "type": "string", "const": "name '=' expression units?" },
+            "FunctionSubscript":      { "type": "string", "const": "name '_' '{' expression '}' '=' expression units?" },
+            "FunctionSubscriptDigit": { "type": "string", "const": "name '_' DIGIT '=' expression units?" },
+            "FunctionIndependent":    { "type": "string", "const": "name '\\left(' expression '\\right)' '=' expression units?" },
+            "FunctionConditional":    { "type": "string", "const": "name '=' '\\begin{cases}' caseRow ('\\\\' caseRow)+ '\\end{cases}' units?" }
+          }
+        },
+        "caseRow": { "type": "string", "const": "expression '&' condition" },
+        "conditionOperators": {
+          "type": "array",
+          "const": ["=", ">", "<", "\\ge", "\\geq", "\\le", "\\leq", "\\neq"],
+          "description": "\\ge and \\geq both mean >=; \\le and \\leq both mean <=. \\ne is NOT in the grammar — use \\neq."
+        },
+        "units": {
+          "type": "string",
+          "const": "'\\quad' '\\textcolor' '{' name '}' '{' '\\mathrm' '{' expression '}' '}'",
+          "description": "Example: \\quad\\textcolor{gray}{\\mathrm{m/s}}"
+        },
+        "reserved": {
+          "type": "string",
+          "const": "'\\PI' | '\\pi' | '\\E' | '\\e' | 'e' | 'E'",
+          "description": "Built-in constants only: pi (\\pi, \\PI) and e (e, E, \\e, \\E). 'g' is NOT reserved."
+        },
+        "name": {
+          "type": "string",
+          "const": "ID (DOT ID)* | SPECIAL",
+          "description": "ID = LETTER (LETTER | DIGIT)*. SPECIAL = '\\' LETTER+ (e.g. \\alpha, \\omega). Dotted IDs for referential child terms (e.g. body.x)."
+        },
+        "decimal": {
+          "type": "string",
+          "const": "('+' | '-')? DIGIT+ (DOT DIGIT+)?",
+          "description": "Signed or unsigned integer or decimal. Note: 'e' and 'E' are reserved constants, not exponent notation."
+        },
+        "implicitMultiplicand": {
+          "type": "string",
+          "const": "name | '\\left(' expression '\\right)' | '{' expression '}' | any_function | '\\sqrt{' expression '}' | '\\Delta' name | '\\Delta\\left(' expression '\\right)'",
+          "description": "What can follow a decimal in implicit multiplication. Covers all function forms, parenthesized groups, square root, and delta expressions. Does NOT include bare decimal or another decimal — variable-variable juxtaposition is not supported."
+        }
+      }
+    },
+
+    "statementTypes": {
+      "type": "object",
+      "description": "Precise descriptions of each statement form with grammar alignment, TermType produced, and domain examples.",
+      "properties": {
+
+        "differential": {
+          "type": "object",
+          "properties": {
+            "grammar": { "type": "string", "const": "\\frac{d<name>}{d<name>} = expression" },
+            "produces": { "type": "string", "const": "TermType.DIFFERENTIAL" },
+            "description": { "type": "string", "const": "First-order ODE only. Both numerator and denominator are plain variable names. Second-order ODEs (d2x/dt2) are not directly supported — decompose into two first-order equations by introducing a velocity term." },
+            "initialValueNote": { "type": "string", "const": "Each DIFFERENTIAL term requires an initial value stored in model properties.initialValuesByCase (not in the expression itself). For multi-case models, set a different initial value per case number." },
+            "markerVariants": {
+              "type": "array",
+              "const": ["\\frac{dx}{dt}=v", "\\frac{\\mathrm{d}x}{\\mathrm{d}t}=v"]
+            },
+            "examples": {
+              "type": "array",
+              "const": [
+                { "latex": "\\frac{dx}{dt}=v",                                            "meaning": "position x changes at rate v" },
+                { "latex": "\\frac{dv}{dt}=-g",                                           "meaning": "velocity decreases at g" },
+                { "latex": "\\frac{dQ}{dt}=-k\\cdot Q",                                   "meaning": "radioactive or exponential decay" },
+                { "latex": "\\frac{dN}{dt}=r\\cdot N\\cdot\\left(1-\\frac{N}{K}\\right)", "meaning": "logistic population growth" },
+                { "latex": "\\frac{dT}{dt}=-k\\cdot\\left(T-T_{\\mathrm{env}}\\right)",   "meaning": "Newton's law of cooling" }
+              ]
+            }
+          }
+        },
+
+        "function": {
+          "type": "object",
+          "properties": {
+            "grammar": { "type": "string", "const": "name = expression" },
+            "produces": { "type": "string", "const": "TermType.FUNCTION or TermType.PARAMETER when RHS is constant" },
+            "description": { "type": "string", "const": "Defines a term from a formula. Re-evaluated each iteration. When the RHS has no dependency on any other term or the independent variable, the engine classifies it as PARAMETER (a constant editable by sliders)." },
+            "examples": {
+              "type": "array",
+              "const": [
+                { "latex": "g=9.8",                                    "type": "PARAMETER", "meaning": "gravitational acceleration" },
+                { "latex": "\\omega=2\\cdot\\pi",                       "type": "PARAMETER", "meaning": "angular frequency" },
+                { "latex": "E=\\frac{1}{2}\\cdot m\\cdot v^{2}",       "type": "FUNCTION",  "meaning": "kinetic energy" },
+                { "latex": "F=G\\cdot\\frac{m_{1}\\cdot m_{2}}{r^{2}}", "type": "FUNCTION",  "meaning": "gravitational force" },
+                { "latex": "y=A\\cdot\\sin\\left(\\omega\\cdot t\\right)", "type": "FUNCTION", "meaning": "sinusoidal signal" }
+              ]
+            }
+          }
+        },
+
+        "functionSubscript": {
+          "type": "object",
+          "properties": {
+            "grammar": { "type": "string", "const": "name_{expression} = expression" },
+            "produces": { "type": "string", "const": "TermType.FUNCTION with subscript evaluation" },
+            "description": { "type": "string", "const": "Recurrence relation. The subscript expression on the LHS (wrapped in braces) specifies the current step index. The RHS typically references the same term at n-1 or t-1. Important: x_{n} uses braces; x_n (bare n) would parse as a new variable name 'xn' — it is NOT a subscript." },
+            "examples": {
+              "type": "array",
+              "const": [
+                { "latex": "x_{n}=x_{n-1}+v\\cdot\\Delta t",                             "meaning": "Euler integration as recurrence" },
+                { "latex": "p_{n}=p_{n-1}\\cdot\\left(1+r\\right)",                       "meaning": "compound interest" },
+                { "latex": "T_{n}=T_{n-1}-k\\cdot\\left(T_{n-1}-T_{\\mathrm{env}}\\right)", "meaning": "Newton's cooling, discrete" }
+              ]
+            }
+          }
+        },
+
+        "functionSubscriptDigit": {
+          "type": "object",
+          "properties": {
+            "grammar": { "type": "string", "const": "name_DIGIT = expression" },
+            "produces": { "type": "string", "const": "TermType.PARAMETER" },
+            "description": { "type": "string", "const": "Single bare digit as subscript (no braces). Used to define initial or fixed reference values. Syntactically distinct from x_{0} = ... (FunctionSubscript with subscript expression 0). The digit must be a single character 0-9." },
+            "examples": {
+              "type": "array",
+              "const": [
+                { "latex": "x_0=0",  "meaning": "initial position" },
+                { "latex": "v_0=10", "meaning": "initial velocity" }
+              ]
+            }
+          }
+        },
+
+        "functionIndependent": {
+          "type": "object",
+          "properties": {
+            "grammar": { "type": "string", "const": "name\\left(expression\\right) = expression" },
+            "produces": { "type": "string", "const": "TermType.FUNCTION" },
+            "description": { "type": "string", "const": "Defines a function with the argument shown explicitly in \\left(\\right). The LHS argument is parsed as an expression but documents dependency only — it does not make the term a true mathematical function. Typically used to emphasize that a quantity is a function of the independent variable." },
+            "examples": {
+              "type": "array",
+              "const": [
+                { "latex": "f\\left(t\\right)=\\sin\\left(\\omega\\cdot t\\right)",             "meaning": "sinusoidal function of t" },
+                { "latex": "h\\left(t\\right)=v_0\\cdot t-\\frac{1}{2}\\cdot g\\cdot t^{2}",  "meaning": "height as function of time" }
+              ]
+            }
+          }
+        },
+
+        "conditional": {
+          "type": "object",
+          "properties": {
+            "grammar": { "type": "string", "const": "name = \\begin{cases} expression & condition \\\\ expression & condition \\end{cases}" },
+            "produces": { "type": "string", "const": "TermType.FUNCTION with condition tree" },
+            "description": { "type": "string", "const": "Piecewise definition. At least two case rows are required by the grammar ('+' quantifier). Rows separated by \\\\. Evaluated top-to-bottom; first matching condition wins." },
+            "conditionForms": {
+              "type": "object",
+              "properties": {
+                "simple":        { "type": "string", "const": "expr conditionOp expr  — e.g. t=0, x>0" },
+                "chained":       { "type": "string", "const": "expr op expr op expr  — e.g. 0<x<1 (a single grammar alternative, not two conditions)" },
+                "and":           { "type": "string", "const": "condition \\land condition" },
+                "or":            { "type": "string", "const": "condition \\lor condition" },
+                "otherwiseText": { "type": "string", "const": "\\text{otherwise}  (#ConditionOtherwiseText)" },
+                "otherwise":     { "type": "string", "const": "otherwise  (#ConditionOtherwise — no backslash, no \\text{})" }
+              }
+            },
+            "examples": {
+              "type": "array",
+              "const": [
+                { "latex": "F=\\begin{cases}-k\\cdot x & x>0 \\\\ k\\cdot x & x<0 \\\\ 0 & \\text{otherwise}\\end{cases}", "meaning": "spring force with dead-zone" },
+                { "latex": "f=\\begin{cases}1 & 0<t<5 \\\\ 0 & \\text{otherwise}\\end{cases}",                            "meaning": "unit pulse using chained condition" },
+                { "latex": "y=\\begin{cases}x^{2} & x\\ge0 \\\\ -x^{2} & x<0\\end{cases}",                               "meaning": "signed square" }
+              ]
+            }
+          }
+        },
+
+        "display": {
+          "type": "object",
+          "properties": {
+            "grammar": { "type": "string", "const": "expression  (statement -> expression alternative)" },
+            "produces": { "type": "string", "const": "No calculator term. Rendered visually only." },
+            "description": { "type": "string", "const": "A formula shown as a static label on the canvas. Not evaluated. Useful for annotating models with the governing law or formula being studied." },
+            "examples": {
+              "type": "array",
+              "const": [
+                { "latex": "F=m\\cdot a",       "meaning": "Newton's second law as a visual label" },
+                { "latex": "E=mc^{2}",           "meaning": "mass-energy equivalence as a label" },
+                { "latex": "\\frac{dN}{dt}=rN", "meaning": "exponential growth law as a label" }
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    "operators": {
+      "type": "object",
+      "description": "All operators with their exact LaTeX tokens as defined in the grammar.",
+      "properties": {
+        "arithmetic": {
+          "type": "object",
+          "properties": {
+            "addition":               { "type": "string", "const": "a + b  (PLUS token)" },
+            "subtraction":            { "type": "string", "const": "a - b  (MINUS token)" },
+            "multiplicationExplicit": { "type": "string", "const": "a\\cdot b  — \\cdot is the only explicit multiply operator; \\times is NOT in the grammar" },
+            "multiplicationImplicit": { "type": "string", "const": "decimal implicitMultiplicand  — e.g. 2x, 3\\sin\\left(t\\right), 4\\left(x+1\\right); left side must be a decimal literal" },
+            "divisionInline":         { "type": "string", "const": "a/b  (forward slash)" },
+            "fractionDisplay":        { "type": "string", "const": "\\frac{a}{b}" },
+            "fractionCompact":        { "type": "string", "const": "\\frac DIGIT DIGIT  — e.g. \\frac12 = one half (no braces, both operands are single digits)" },
+            "power":                  { "type": "string", "const": "a^{b}  (caret)" },
+            "negation":               { "type": "string", "const": "-a  (unary MINUS)" },
+            "positive":               { "type": "string", "const": "+a  (unary PLUS, no-op)" }
+          }
+        },
+        "comparison": {
+          "type": "object",
+          "description": "Valid only inside condition expressions in \\begin{cases} blocks.",
+          "properties": {
+            "equal":          { "type": "string", "const": "=" },
+            "greater":        { "type": "string", "const": ">" },
+            "less":           { "type": "string", "const": "<" },
+            "greaterOrEqual": { "type": "string", "const": "\\ge  or  \\geq  (both accepted)" },
+            "lessOrEqual":    { "type": "string", "const": "\\le  or  \\leq  (both accepted)" },
+            "notEqual":       { "type": "string", "const": "\\neq  — NOTE: \\ne is standard LaTeX but is NOT in this grammar" }
+          }
+        },
+        "logical": {
+          "type": "object",
+          "description": "Valid only inside condition expressions.",
+          "properties": {
+            "and": { "type": "string", "const": "\\land" },
+            "or":  { "type": "string", "const": "\\lor" }
+          }
+        }
+      }
+    },
+
+    "functions": {
+      "type": "object",
+      "description": "All built-in functions. \\left( \\right) delimiters are mandatory — the grammar does not accept bare parentheses for function calls. \\sqrt uses braces: \\sqrt{x}.",
+      "properties": {
+        "trigonometric": {
+          "type": "object",
+          "properties": {
+            "sine":      { "type": "string", "const": "\\sin\\left(x\\right)" },
+            "cosine":    { "type": "string", "const": "\\cos\\left(x\\right)" },
+            "tangent":   { "type": "string", "const": "\\tan\\left(x\\right)" },
+            "cotangent": { "type": "string", "const": "\\cot\\left(x\\right)" },
+            "secant":    { "type": "string", "const": "\\sec\\left(x\\right)" },
+            "cosecant":  { "type": "string", "const": "\\csc\\left(x\\right)  or  \\cosec\\left(x\\right)  (both accepted)" },
+            "angleUnit": { "type": "string", "const": "Angle arguments are in the model's angleUnit (radians or degrees per properties.angleUnit). Inverse trig returns the same unit." }
+          }
+        },
+        "inverseTrigonometric": {
+          "type": "object",
+          "properties": {
+            "arcSine":    { "type": "string", "const": "\\arcsin\\left(x\\right)" },
+            "arcCosine":  { "type": "string", "const": "\\arccos\\left(x\\right)" },
+            "arcTangent": { "type": "string", "const": "\\arctan\\left(x\\right)" }
+          }
+        },
+        "hyperbolic": {
+          "type": "object",
+          "properties": {
+            "sinh": { "type": "string", "const": "\\sinh\\left(x\\right)" },
+            "cosh": { "type": "string", "const": "\\cosh\\left(x\\right)" },
+            "tanh": { "type": "string", "const": "\\tanh\\left(x\\right)" }
+          }
+        },
+        "logarithms": {
+          "type": "object",
+          "properties": {
+            "naturalLog": { "type": "string", "const": "\\ln\\left(x\\right)" },
+            "base10Log":  { "type": "string", "const": "\\log\\left(x\\right)" }
+          }
+        },
+        "algebraic": {
+          "type": "object",
+          "properties": {
+            "squareRoot":    { "type": "string", "const": "\\sqrt{x}  — uses braces, not \\left\\right" },
+            "absoluteValue": { "type": "string", "const": "\\det\\left(x\\right)  — the \\det token maps to |x| in the engine" },
+            "minimum":       { "type": "string", "const": "\\min\\left(a,b\\right)  — exactly two comma-separated arguments" },
+            "maximum":       { "type": "string", "const": "\\max\\left(a,b\\right)  — exactly two comma-separated arguments" },
+            "modulo":        { "type": "string", "const": "\\mod\\left(a,b\\right)  — result = a mod b; exactly two arguments" }
+          }
+        },
+        "noBackslash": {
+          "type": "object",
+          "description": "These five functions have no backslash prefix in the source. They still require \\left(\\right) delimiters.",
+          "properties": {
+            "sign":  { "type": "string", "const": "sign\\left(x\\right)  — returns -1, 0, or 1" },
+            "rnd":   { "type": "string", "const": "rnd\\left(x\\right)  — uniform random float in [0,1); the argument is syntactically required by the grammar; use rnd\\left(0\\right)" },
+            "irnd":  { "type": "string", "const": "irnd\\left(x\\right)  — random integer 0 or 1; same syntactic note as rnd" },
+            "int":   { "type": "string", "const": "int\\left(x\\right)  — truncates toward zero" },
+            "round": { "type": "string", "const": "round\\left(x\\right)  — rounds to nearest integer" }
+          }
+        }
+      }
+    },
+
+    "constants": {
+      "type": "object",
+      "description": "Only two values are built-in grammar constants (reserved rule). All physical constants such as g, c, k, R must be defined as parameter assignment statements.",
+      "properties": {
+        "pi": {
+          "type": "object",
+          "properties": {
+            "value":      { "type": "number", "const": 3.141592653589793 },
+            "latexForms": { "type": "array",  "const": ["\\pi", "\\PI"] }
+          }
+        },
+        "e": {
+          "type": "object",
+          "properties": {
+            "value":      { "type": "number", "const": 2.718281828459045 },
+            "latexForms": { "type": "array",  "const": ["e", "E", "\\e", "\\E"] },
+            "warning":    { "type": "string", "const": "The bare letters 'e' and 'E' are parsed as Euler's number. Do not use 'e' or 'E' as term names." }
+          }
+        }
+      }
+    },
+
+    "specialSyntax": {
+      "type": "object",
+      "description": "Special constructs beyond basic arithmetic.",
+      "properties": {
+
+        "termNames": {
+          "type": "object",
+          "properties": {
+            "simpleId":    { "type": "string", "const": "x, v, mass, v0, temperature  — LETTER (LETTER | DIGIT)*" },
+            "greekLetter": { "type": "string", "const": "\\alpha, \\omega, \\beta, \\rho, \\mu, \\sigma, \\phi, \\theta  — any SPECIAL token ('\\' LETTER+)" },
+            "dottedName":  { "type": "string", "const": "body.x, planet.velocity  — ID.ID for terms belonging to child shapes inside a ReferentialShape" },
+            "reserved":    { "type": "string", "const": "e, E, \\e, \\E, \\pi, \\PI are parsed as constants and cannot be used as term names" }
+          }
+        },
+
+        "subscriptSyntax": {
+          "type": "object",
+          "properties": {
+            "braceSubscript":  { "type": "string", "const": "x_{n-1}  — name followed by _{expression} with braces; the subscript is a full expression" },
+            "digitSubscript":  { "type": "string", "const": "x_0  — name followed by a bare single digit (no braces); only digits 0-9" },
+            "lhsRecurrence":   { "type": "string", "const": "x_{n} = ...  defines a recurrence (FunctionSubscriptAssignment)" },
+            "lhsInitialValue": { "type": "string", "const": "x_0 = ...  sets a reference value (FunctionSubscriptDigitAssignment)" },
+            "rhsLookup":       { "type": "string", "const": "x_{n-1} or x_0 on the RHS reads a term's value at the specified step" }
+          }
+        },
+
+        "deltaOperator": {
+          "type": "object",
+          "properties": {
+            "deltaT":    { "type": "string", "const": "\\Delta t  — the step size properties.independent.step (constant per simulation run)" },
+            "deltaName": { "type": "string", "const": "\\Delta x  — finite difference: x(currentIteration) minus x(currentIteration minus 1)" },
+            "deltaExpr": { "type": "string", "const": "\\Delta\\left(x+y\\right)  — finite difference of a sub-expression" }
+          }
+        },
+
+        "derivativeInExpression": {
+          "type": "object",
+          "properties": {
+            "grammar":     { "type": "string", "const": "'\\frac' differentialMarker expression '}' differentialMarker name '}'" },
+            "distinction": { "type": "string", "const": "Unlike the top-level differential statement (numerator is a plain name), here the numerator is any expression. Appears on the RHS of equations." },
+            "example":     { "type": "string", "const": "a=\\frac{dv}{dt}  — assigns the derivative of v to a" }
+          }
+        },
+
+        "implicitMultiplication": {
+          "type": "object",
+          "properties": {
+            "grammar":    { "type": "string", "const": "decimal implicitMultiplicand" },
+            "examples":   { "type": "array",  "const": ["2x", "3\\sin\\left(t\\right)", "4\\left(x+1\\right)", "2\\sqrt{x}", "5\\Delta t"] },
+            "constraint": { "type": "string", "const": "Only a decimal literal can be the implicit multiplier. Variable-variable juxtaposition (xy) is NOT supported — use x\\cdot y." }
+          }
+        },
+
+        "units": {
+          "type": "object",
+          "properties": {
+            "grammar":  { "type": "string", "const": "'\\quad' '\\textcolor' '{' name '}' '{' '\\mathrm' '{' expression '}' '}'" },
+            "example":  { "type": "string", "const": "\\frac{dx}{dt}=v\\quad\\textcolor{gray}{\\mathrm{m/s}}" },
+            "position": { "type": "string", "const": "Appended at the end of a statement after the entire RHS expression." },
+            "semantic": { "type": "string", "const": "Display-only annotation. The engine ignores the unit value entirely." }
+          }
+        },
+
+        "multipleStatements": {
+          "type": "object",
+          "properties": {
+            "separator": { "type": "string", "const": "\\\\\\\\ (two backslashes) separates statements inside \\displaylines{}" },
+            "example":   { "type": "string", "const": "\\displaylines{g=9.8\\\\\\\\\\frac{dx}{dt}=v\\\\\\\\\\frac{dv}{dt}=-g}" }
+          }
+        }
+      }
+    },
+
+    "latexTemplates": {
+      "type": "object",
+      "description": "Ready-to-use templates for common STEM problems. Each entry shows how a model is typically split across multiple ExpressionShapes: one for parameters, one for equations. All values are valid \\displaylines{} blocks for the 'expression' field of an ExpressionShape.",
+      "properties": {
+
+        "kinematics_constant_acceleration": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Physics — Kinematics" },
+            "description":      { "type": "string", "const": "1-D constant-acceleration motion. Set initial values x0, v0 in initialValuesByCase." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{g=9.8}" },
+            "shape_equations":  { "type": "string", "const": "\\displaylines{\\frac{dx}{dt}=v\\\\\\\\\\frac{dv}{dt}=-g}" }
+          }
+        },
+
+        "projectile_2d": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Physics — Kinematics" },
+            "description":      { "type": "string", "const": "2-D projectile. Initial values: x0=0, y0=0, vx0, vy0." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{g=9.8}" },
+            "shape_equations":  { "type": "string", "const": "\\displaylines{\\frac{dx}{dt}=v_{x}\\\\\\\\\\frac{dv_{x}}{dt}=0\\\\\\\\\\frac{dy}{dt}=v_{y}\\\\\\\\\\frac{dv_{y}}{dt}=-g}" }
+          }
+        },
+
+        "simple_harmonic_motion": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Physics — Oscillations" },
+            "description":      { "type": "string", "const": "Spring-mass. Initial values: x0 (displacement), v0=0." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{k=1\\\\\\\\m=1}" },
+            "shape_equations":  { "type": "string", "const": "\\displaylines{\\frac{dx}{dt}=v\\\\\\\\\\frac{dv}{dt}=-\\frac{k}{m}\\cdot x}" }
+          }
+        },
+
+        "damped_oscillation": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Physics — Oscillations" },
+            "description":      { "type": "string", "const": "Damped harmonic oscillator. Initial values: x0, v0=0." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{k=1\\\\\\\\m=1\\\\\\\\b=0.2}" },
+            "shape_equations":  { "type": "string", "const": "\\displaylines{\\frac{dx}{dt}=v\\\\\\\\\\frac{dv}{dt}=-\\frac{k}{m}\\cdot x-\\frac{b}{m}\\cdot v}" }
+          }
+        },
+
+        "exponential_decay": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Mathematics / Physics — Decay, Cooling" },
+            "description":      { "type": "string", "const": "dQ/dt = -kQ. Initial value Q0." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{k=0.1}" },
+            "shape_equation":   { "type": "string", "const": "\\displaylines{\\frac{dQ}{dt}=-k\\cdot Q}" }
+          }
+        },
+
+        "logistic_growth": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Biology — Population Dynamics" },
+            "description":      { "type": "string", "const": "Logistic growth. Initial value N0." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{r=0.5\\\\\\\\K=100}" },
+            "shape_equation":   { "type": "string", "const": "\\displaylines{\\frac{dN}{dt}=r\\cdot N\\cdot\\left(1-\\frac{N}{K}\\right)}" }
+          }
+        },
+
+        "lotka_volterra": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Biology — Predator-Prey" },
+            "description":      { "type": "string", "const": "Lotka-Volterra. Initial values: X0 (prey), Y0 (predator)." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{\\alpha=1\\\\\\\\\\beta=0.1\\\\\\\\\\delta=0.075\\\\\\\\\\gamma=1.5}" },
+            "shape_equations":  { "type": "string", "const": "\\displaylines{\\frac{dX}{dt}=\\alpha\\cdot X-\\beta\\cdot X\\cdot Y\\\\\\\\\\frac{dY}{dt}=\\delta\\cdot X\\cdot Y-\\gamma\\cdot Y}" }
+          }
+        },
+
+        "sir_epidemic": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Medicine / Biology — Epidemiology" },
+            "description":      { "type": "string", "const": "SIR model. Initial values: S0, I0, R0 (S0 + I0 + R0 = N)." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{\\beta=0.3\\\\\\\\\\gamma=0.05\\\\\\\\N=1000}" },
+            "shape_equations":  { "type": "string", "const": "\\displaylines{\\frac{dS}{dt}=-\\frac{\\beta\\cdot S\\cdot I}{N}\\\\\\\\\\frac{dI}{dt}=\\frac{\\beta\\cdot S\\cdot I}{N}-\\gamma\\cdot I\\\\\\\\\\frac{dR}{dt}=\\gamma\\cdot I}" }
+          }
+        },
+
+        "newtons_cooling": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Physics — Thermodynamics" },
+            "description":      { "type": "string", "const": "Newton's law of cooling toward ambient. Initial value T0." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{k=0.1\\\\\\\\T_{\\mathrm{env}}=20}" },
+            "shape_equation":   { "type": "string", "const": "\\displaylines{\\frac{dT}{dt}=-k\\cdot\\left(T-T_{\\mathrm{env}}\\right)}" }
+          }
+        },
+
+        "rc_circuit": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Physics — Electricity" },
+            "description":      { "type": "string", "const": "RC circuit charging toward supply voltage V. Q = charge on capacitor. Initial value Q0=0." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{R=1000\\\\\\\\C=0.001\\\\\\\\V=5}" },
+            "shape_equation":   { "type": "string", "const": "\\displaylines{\\frac{dQ}{dt}=\\frac{V-Q/C}{R}}" }
+          }
+        },
+
+        "chemical_first_order": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Chemistry — Reaction Kinetics" },
+            "description":      { "type": "string", "const": "First-order reaction A to B. Initial values: A0, B0=0." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{k=0.2}" },
+            "shape_equations":  { "type": "string", "const": "\\displaylines{\\frac{dA}{dt}=-k\\cdot A\\\\\\\\B=A_0-A}" }
+          }
+        },
+
+        "second_order_as_system": {
+          "type": "object",
+          "properties": {
+            "domain":      { "type": "string", "const": "Physics — General pattern for second-order ODEs" },
+            "description": { "type": "string", "const": "The grammar only supports first-order differential statements. A second-order ODE d2x/dt2 = f(x,v,t) must be split into two first-order equations by introducing the velocity term." },
+            "pattern":     { "type": "string", "const": "\\displaylines{\\frac{dx}{dt}=v\\\\\\\\\\frac{dv}{dt}=f\\left(x,v,t\\right)}" },
+            "shm_example": { "type": "string", "const": "\\displaylines{\\frac{dx}{dt}=v\\\\\\\\\\frac{dv}{dt}=-\\omega^{2}\\cdot x}  (encodes d2x/dt2 = -omega^2 * x)" }
+          }
+        },
+
+        "compound_interest_discrete": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Mathematics / Economics — Finance" },
+            "description":      { "type": "string", "const": "Compound interest as recurrence. Set initial value P0 in initialValuesByCase." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{r=0.05}" },
+            "shape_equation":   { "type": "string", "const": "\\displaylines{P_{n}=P_{n-1}\\cdot\\left(1+r\\right)}" }
+          }
+        },
+
+        "piecewise_force": {
+          "type": "object",
+          "properties": {
+            "domain":           { "type": "string", "const": "Physics — Piecewise / Conditional Forces" },
+            "description":      { "type": "string", "const": "Spring with dead zone: no restoring force when |x| < d." },
+            "shape_parameters": { "type": "string", "const": "\\displaylines{k=1\\\\\\\\m=1\\\\\\\\d=0.1}" },
+            "shape_force":      { "type": "string", "const": "\\displaylines{F=\\begin{cases}-k\\cdot\\left(x-d\\right) & x>d \\\\ -k\\cdot\\left(x+d\\right) & x<-d \\\\ 0 & \\text{otherwise}\\end{cases}}" },
+            "shape_equations":  { "type": "string", "const": "\\displaylines{\\frac{dx}{dt}=v\\\\\\\\\\frac{dv}{dt}=F/m}" }
+          }
+        }
+
+      }
+    }
+
+  }
+}

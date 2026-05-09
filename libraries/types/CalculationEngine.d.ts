@@ -63,6 +63,13 @@ declare class Body {
     }): void;
 }
 
+declare enum SingularityType {
+    None = "None",
+    Infinity = "Infinity",
+    NaN = "NaN",
+    Discontinuity = "Discontinuity"
+}
+
 declare class Term {
     name: string;
     type: TermType;
@@ -126,6 +133,8 @@ declare class System {
     private _lastIteration;
     private _lastCalculatedIteration;
     private readonly calculatedIterationKeys;
+    private readonly singularities;
+    private readonly previouslyActiveExpressions;
     useRadians: boolean;
     isCalculatingFunctions: boolean;
     readonly preloadedData: PreloadedData;
@@ -150,6 +159,7 @@ declare class System {
     getIterationTermOnIteration(iteration: number, caseNumber?: number): number;
     getByExpression(expression: Expression, caseNumber?: number): number | undefined;
     getByTerm(term: Term, caseNumber?: number): number | undefined;
+    getSingularityType(termName: string, iteration: number, caseNumber?: number): SingularityType;
     addExpression(expression: Expression, termType?: TermType): void;
     addTerm(term: Term): void;
     addTermByName(term: string, type: TermType): void;
@@ -166,6 +176,8 @@ declare class System {
     private calculateFunctionsOnIteration;
     private evaluateFunctionExpressions;
     private areFunctionValuesEqual;
+    private singularityKey;
+    private recordValueSingularities;
     private applyInitialValues;
     addValues(values: {
         [name: string]: number;
@@ -405,6 +417,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitConditionOtherwise?: (ctx: ConditionOtherwiseContext) => void;
+    /**
+     * Enter a parse tree produced by the `ConditionNot`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    enterConditionNot?: (ctx: ConditionNotContext) => void;
+    /**
+     * Exit a parse tree produced by the `ConditionNot`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    exitConditionNot?: (ctx: ConditionNotContext) => void;
     /**
      * Enter a parse tree produced by the `ConditionExpression`
      * labeled alternative in `LatexMathParser.condition`.
@@ -785,6 +809,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitArcCosine?: (ctx: ArcCosineContext) => void;
+    /**
+     * Enter a parse tree produced by the `AbsoluteValue`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterAbsoluteValue?: (ctx: AbsoluteValueContext) => void;
+    /**
+     * Exit a parse tree produced by the `AbsoluteValue`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitAbsoluteValue?: (ctx: AbsoluteValueContext) => void;
     /**
      * Enter a parse tree produced by the `Addition`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1168,6 +1204,13 @@ declare class ConditionOtherwiseContext extends ConditionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class ConditionNotContext extends ConditionContext {
+    constructor(ctx: ConditionContext);
+    condition(): ConditionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class ConditionExpressionContext extends ConditionContext {
     constructor(ctx: ConditionContext);
     expression(): ExpressionContext[];
@@ -1404,6 +1447,13 @@ declare class SubscriptDigitContext extends ExpressionContext {
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
 declare class ArcCosineContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class AbsoluteValueContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
     enterRule(listener: LatexMathListener): void;
@@ -1685,6 +1735,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitConditionOtherwise?: (ctx: ConditionOtherwiseContext) => Result;
     /**
+     * Visit a parse tree produced by the `ConditionNot`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitConditionNot?: (ctx: ConditionNotContext) => Result;
+    /**
      * Visit a parse tree produced by the `ConditionExpression`
      * labeled alternative in `LatexMathParser.condition`.
      * @param ctx the parse tree
@@ -1906,6 +1963,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitArcCosine?: (ctx: ArcCosineContext) => Result;
+    /**
+     * Visit a parse tree produced by the `AbsoluteValue`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitAbsoluteValue?: (ctx: AbsoluteValueContext) => Result;
     /**
      * Visit a parse tree produced by the `Addition`
      * labeled alternative in `LatexMathParser.expression`.
@@ -2273,6 +2337,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitMultiplicationImplicit: (context: MultiplicationImplicitContext) => Branch;
     visitSubtraction: (context: SubtractionContext) => Branch;
     visitAddition: (context: AdditionContext) => Branch;
+    visitAbsoluteValue: (context: AbsoluteValueContext) => Branch;
     visitParenthesis: (context: ParenthesisContext) => Branch;
     visitBraces: (context: BracesContext) => Branch;
     visitDifferential: (context: DifferentialContext) => Branch;
@@ -2310,5 +2375,5 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
 
-export { Body, Branch, RegressionType as DataRegressionType, Deriver, Engine, Expression, ExpressionExpander, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, System, Term, TermType, Visitor };
+export { Body, Branch, RegressionType as DataRegressionType, Deriver, Engine, Expression, ExpressionExpander, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, SingularityType, System, Term, TermType, Visitor };
 export type { RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult };

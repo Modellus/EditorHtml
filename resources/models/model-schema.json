@@ -1,0 +1,1676 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://modellus.com/schemas/model.json",
+  "title": "Modellus Model",
+  "description": "JSON schema for a Modellus model file produced by shell.serialize().",
+  "type": "object",
+  "required": ["properties", "board"],
+  "additionalProperties": false,
+  "properties": {
+    "properties": { "$ref": "#/$defs/ModelProperties" },
+    "board": { "$ref": "#/$defs/Board" },
+    "preloadedData": { "$ref": "#/$defs/PreloadedData" },
+    "outlierIterations": { "$ref": "#/$defs/OutlierIterations" },
+    "regressionTerms": { "$ref": "#/$defs/RegressionTerms" },
+
+    "agentGuidance": {
+      "type": "object",
+      "description": "Guidance for AI agents reading or building Modellus models. This section is schema-only documentation; it never appears in real model files.",
+      "properties": {
+
+        "readingAModel": {
+          "type": "object",
+          "description": "How to interpret an existing model file step by step.",
+          "properties": {
+            "step1_identity":       { "type": "string", "const": "Read properties.name and properties.description to understand the stated intent." },
+            "step2_independent":    { "type": "string", "const": "Check properties.independent: 'name' is the simulation variable (usually 't' for time); 'start', 'end', 'step' define the numerical range." },
+            "step3_expressions":    { "type": "string", "const": "Collect all ExpressionShape items from the board array. Each shape's properties.expression is a \\displaylines{} block — split on \\\\\\\\ to get individual statements. Parse each statement using expression-schema." },
+            "step4_termTypes":      { "type": "string", "const": "Classify terms: DIFFERENTIAL (dx/dt = ...) are dynamical state variables. PARAMETER (constant RHS, no dependencies) are physical constants. FUNCTION are derived quantities recomputed each step." },
+            "step5_initialValues":  { "type": "string", "const": "properties.initialValuesByCase keys are 1-based case numbers as strings. Each value is a {termName: number} map giving starting values for every DIFFERENTIAL term." },
+            "step6_visualization":  { "type": "string", "const": "Scan board for: ChartShape (xTerm + yTerms reveal what is plotted against what); ReferentialShape + child shapes (xTerm/yTerm of children reveal spatial motion); SliderShape.term (explorable parameters); ValueShape.term (key output displays)." },
+            "step7_cases":          { "type": "string", "const": "If properties.casesCount > 1, the full equation system is solved independently for each case. Different initial values or parameter values per case enable parameter studies. ChartYTerm.case and TableColumn.case select which case a series displays." },
+            "step8_preloadedData":  { "type": "string", "const": "If preloadedData is present, external CSV data is loaded into calculator terms (names array maps to columns; values is rows × columns). This enables model–data comparison." }
+          }
+        },
+
+        "identifyingTheScience": {
+          "type": "object",
+          "description": "How to infer the scientific principle from the expression patterns present in the model.",
+          "properties": {
+            "singleDecayODE":          { "type": "string", "const": "One DIFFERENTIAL term whose RHS contains only that term (dQ/dt = -k*Q) → exponential growth or decay. Domains: radioactive decay, bacterial growth, RC circuit charging, first-order chemical reaction, Newton's cooling." },
+            "secondOrderMechanics":    { "type": "string", "const": "dx/dt = v and dv/dt = f(x,v,t) → second-order dynamical system. dv/dt = -g → free fall. dv/dt = -omega^2 * x → SHM. dv/dt = -k/m*x - b/m*v → damped oscillation. dv/dt = F/m (piecewise F) → nonlinear mechanics." },
+            "projectile2D":            { "type": "string", "const": "Four ODEs: dx/dt=vx, dvx/dt=Fx/m, dy/dt=vy, dvy/dt=Fy/m → 2D planar mechanics. Visualized with ReferentialShape + BodyShape." },
+            "predatorPrey":            { "type": "string", "const": "Two ODEs where dX/dt = alpha*X - beta*X*Y and dY/dt = delta*X*Y - gamma*Y → Lotka-Volterra. Domains: predator-prey, competing species." },
+            "compartmental":           { "type": "string", "const": "Three or more ODEs where all terms flowing out of one compartment appear as positive inflows in another → SIR/SEIR epidemic model, pharmacokinetics, nutrient cycling." },
+            "logistic":                { "type": "string", "const": "dN/dt = r*N*(1 - N/K) → logistic growth with carrying capacity K. Domains: population ecology, resource-limited growth." },
+            "coupledOscillators":      { "type": "string", "const": "Multiple pairs of (dx/dt, dv/dt) ODEs linked through shared force terms → spring chains, pendulum networks, wave propagation." },
+            "noODEs":                  { "type": "string", "const": "All terms are FUNCTION or PARAMETER with no DIFFERENTIAL terms → static/algebraic model. Domains: geometry exploration, algebraic identities, function graphing, discrete recurrence." },
+            "recurrence":              { "type": "string", "const": "Statements of the form name_{n} = f(name_{n-1}) → discrete-time recurrence. Domains: compound interest, discrete population models, iterative maps (logistic map)." }
+          }
+        },
+
+        "buildingAModel": {
+          "type": "object",
+          "description": "How to construct a new model from a science or math intent.",
+          "properties": {
+            "step1_equations":      { "type": "string", "const": "Identify the governing equations. Write as first-order ODEs (decompose second-order by introducing velocity). List physical constants as parameter assignments." },
+            "step2_independent":    { "type": "string", "const": "Set properties.independent: 'name' (usually 't'), 'start' (usually 0), 'end' (simulation duration), 'step' (see stepSizeGuidance)." },
+            "step3_expressions":    { "type": "string", "const": "Create ExpressionShape items: one for parameters (e.g. g=9.8, k=1, m=0.5), one for the dynamic equations, optionally one for derived quantities (energy, momentum, etc.). Place them at non-overlapping x/y positions on the canvas." },
+            "step4_initialValues":  { "type": "string", "const": "Set properties.initialValuesByCase[\"1\"] with {termName: number} for every DIFFERENTIAL term. For multi-case models, add keys \"2\", \"3\", ... with different starting conditions." },
+            "step5_visualization":  { "type": "string", "const": "Add visualization shapes: ChartShape for time-series plots (xTerm: 't', yTerms listing key quantities); ReferentialShape + BodyShape for spatial motion (BodyShape.xTerm/yTerm bound to position terms); SliderShape for parameters users should explore; ValueShape for key output numbers." },
+            "step6_metadata":       { "type": "string", "const": "Set properties.name (brief title, e.g. 'Free Fall'), properties.description (1-2 sentences on the science), properties.instructions (Markdown guide for users)." },
+            "step7_angleUnit":      { "type": "string", "const": "Set properties.angleUnit to 'radians' (default) or 'degrees'. This affects all trig functions and angle terms throughout the model." }
+          }
+        },
+
+        "stepSizeGuidance": {
+          "type": "object",
+          "description": "How to choose properties.independent.step for numerical stability with Euler integration.",
+          "properties": {
+            "general":        { "type": "string", "const": "Euler method is first-order accurate. Smaller step = more accurate but slower. Typical: step = 0.01 to 0.1 for physical problems on a 0–10 time scale." },
+            "oscillation":    { "type": "string", "const": "For oscillatory systems: step < period / 100 for reasonable accuracy. SHM with omega=1 (period ≈ 6.28) → step ≤ 0.05." },
+            "fast_dynamics":  { "type": "string", "const": "If the RHS contains large coefficients (e.g. k=1000), the time scale is ~1/k = 0.001 — match the step to that scale." },
+            "rule_of_thumb":  { "type": "string", "const": "Safe default: step = (end - start) / 1000. Increase if the model is too slow; decrease if trajectories look jagged or diverge." }
+          }
+        }
+      }
+    },
+
+    "shapeRoles": {
+      "type": "object",
+      "description": "Semantic role of each shape type in a model and how to configure it. Schema-only documentation.",
+      "properties": {
+        "ExpressionShape":   { "type": "string", "const": "Hosts LaTeX mathematical statements. properties.expression is a \\displaylines{} block. All terms defined here feed the shared calculator. Use multiple shapes: one per conceptual group (parameters, equations, derived quantities). Canvas position matters only for readability." },
+        "TextShape":         { "type": "string", "const": "Static rich-text annotation. properties.text contains HTML. Use for titles, explanations, axis labels, or instructions. No calculator interaction." },
+        "ReferentialShape":  { "type": "string", "const": "Coordinate system frame for spatial visualization. Child shapes are positioned by calculator terms. Set autoScale:true to fit data. Set scaleX/scaleY for a fixed unit-per-pixel ratio. Essential for any model with x/y position terms." },
+        "BodyShape":         { "type": "string", "const": "Animated body (circle or character sprite) inside a ReferentialShape. parent = ReferentialShape id. xTerm and yTerm are calculator term names for position. trajectoryColor shows the motion trail. characterKey selects a sprite (see resources/characters/characters.json)." },
+        "PointShape":        { "type": "string", "const": "Small dot inside a ReferentialShape tracking (xTerm, yTerm). Lighter than BodyShape when no sprite or trail is needed." },
+        "VectorShape":       { "type": "string", "const": "Animated arrow inside a ReferentialShape. xTerm/yTerm = vector components. xOriginTerm/yOriginTerm = base of arrow. Use to visualize force, velocity, or acceleration vectors." },
+        "LineShape":         { "type": "string", "const": "Infinite line inside a ReferentialShape defined by a point (xTerm, yTerm) and angleTerm." },
+        "ArcShape":          { "type": "string", "const": "Animated arc inside a ReferentialShape. xTerm/yTerm = center, radiusTerm = radius, startAngleTerm/endAngleTerm = sweep. Use for angles, sectors, pendulum bobs." },
+        "ChartShape":        { "type": "string", "const": "Line/scatter/area/bar chart. xTerm is usually the independent variable 't'. yTerms lists series: each entry has a term name and a case number. For multi-case comparisons add one entry per case with the same term name. autoScale:true fills the axis range automatically." },
+        "SliderShape":       { "type": "string", "const": "Interactive slider controlling a PARAMETER term. term = parameter name (e.g. 'g', 'k', 'm'). Set minimum/maximum to a sensible physical range. Users drag to explore parameter sensitivity." },
+        "ValueShape":        { "type": "string", "const": "Displays the current numeric value of any calculator term. term = term name. termDisplayMode: 'nameValue' shows label + number, 'valueOnly' shows only the number." },
+        "TableShape":        { "type": "string", "const": "Tabular view of term values across iterations. columns array lists term names. Useful for discrete/recurrence models or when exact numeric output matters." },
+        "GaugeShape":        { "type": "string", "const": "Polar gauge. angleTerm + magnitudeTerm drive the needle. Use for two-component quantities like velocity direction and speed." },
+        "ImageShape":        { "type": "string", "const": "Static or animated image/video. Can be a child of ReferentialShape. Use for background reference images (e.g., a photograph to overlay a model trajectory)." },
+        "RulerShape":        { "type": "string", "const": "On-canvas ruler for manual distance measurement. Not connected to calculator terms. Teaching aid." },
+        "ProtractorShape":   { "type": "string", "const": "On-canvas protractor for manual angle measurement. Not connected to calculator terms. Teaching aid." }
+      }
+    },
+
+    "modelTemplates": {
+      "type": "object",
+      "description": "Complete model specifications for common STEM problems. Each template lists all fields an agent needs to construct a working model. Expression content references expression-schema latexTemplates for the LaTeX strings. Schema-only documentation.",
+      "properties": {
+
+        "free_fall_1d": {
+          "type": "object",
+          "properties": {
+            "domain":         { "type": "string", "const": "Physics — Kinematics" },
+            "principle":      { "type": "string", "const": "An object dropped from rest (or thrown vertically) under constant gravitational acceleration. Position x and velocity v change over time." },
+            "properties":     { "type": "object", "const": { "name": "Free Fall", "independent": { "name": "t", "start": 0, "end": 5, "step": 0.05 }, "angleUnit": "radians", "casesCount": 1, "initialValuesByCase": { "1": { "x": 100, "v": 0 } } } },
+            "expressionShapes": {
+              "type": "array",
+              "const": [
+                { "role": "parameters", "expression": "\\displaylines{g=9.8}" },
+                { "role": "equations",  "expression": "\\displaylines{\\frac{dx}{dt}=v\\\\\\\\\\frac{dv}{dt}=-g}" }
+              ]
+            },
+            "visualizationShapes": {
+              "type": "array",
+              "const": [
+                { "type": "ChartShape",   "xTerm": "t", "yTerms": [{ "term": "x" }, { "term": "v" }], "note": "Plot height and velocity over time." },
+                { "type": "SliderShape",  "term": "g", "minimum": 1, "maximum": 25, "note": "Explore gravity on different planets." }
+              ]
+            },
+            "exploration": { "type": "string", "const": "Change g (Moon: 1.6, Mars: 3.7, Jupiter: 24.8). Change initial x for different drop heights. Add a second case with a different initial v to compare." }
+          }
+        },
+
+        "projectile_2d": {
+          "type": "object",
+          "properties": {
+            "domain":     { "type": "string", "const": "Physics — Kinematics" },
+            "principle":  { "type": "string", "const": "2D projectile launched at an angle. Horizontal motion is uniform; vertical motion has constant gravitational deceleration." },
+            "properties": { "type": "object", "const": { "name": "Projectile Motion", "independent": { "name": "t", "start": 0, "end": 5, "step": 0.05 }, "angleUnit": "radians", "casesCount": 1, "initialValuesByCase": { "1": { "x": 0, "vx": 10, "y": 0, "vy": 15 } } } },
+            "expressionShapes": {
+              "type": "array",
+              "const": [
+                { "role": "parameters", "expression": "\\displaylines{g=9.8}" },
+                { "role": "equations",  "expression": "\\displaylines{\\frac{dx}{dt}=vx\\\\\\\\\\frac{dvx}{dt}=0\\\\\\\\\\frac{dy}{dt}=vy\\\\\\\\\\frac{dvy}{dt}=-g}" }
+              ]
+            },
+            "visualizationShapes": {
+              "type": "array",
+              "const": [
+                { "type": "ReferentialShape", "autoScale": true, "note": "Spatial canvas for the trajectory." },
+                { "type": "BodyShape",  "parent": "ReferentialShapeId", "xTerm": "x", "yTerm": "y", "trajectoryColor": "#4488ff", "note": "Projectile with trail." },
+                { "type": "ChartShape", "xTerm": "t", "yTerms": [{ "term": "y" }, { "term": "vy" }], "note": "Height and vertical velocity vs. time." },
+                { "type": "SliderShape", "term": "g", "minimum": 1, "maximum": 25 }
+              ]
+            },
+            "exploration": { "type": "string", "const": "Vary initial vx and vy to see range and height. Use casesCount > 1 with different launch angles to compare trajectories. Add air resistance: change dvx/dt = -k*vx, dvy/dt = -g - k*vy." }
+          }
+        },
+
+        "simple_harmonic_motion": {
+          "type": "object",
+          "properties": {
+            "domain":     { "type": "string", "const": "Physics — Oscillations" },
+            "principle":  { "type": "string", "const": "Spring-mass system. Restoring force proportional to displacement produces sinusoidal oscillation. Angular frequency omega = sqrt(k/m)." },
+            "properties": { "type": "object", "const": { "name": "Simple Harmonic Motion", "independent": { "name": "t", "start": 0, "end": 20, "step": 0.05 }, "angleUnit": "radians", "casesCount": 1, "initialValuesByCase": { "1": { "x": 1, "v": 0 } } } },
+            "expressionShapes": {
+              "type": "array",
+              "const": [
+                { "role": "parameters", "expression": "\\displaylines{k=1\\\\\\\\m=1}" },
+                { "role": "equations",  "expression": "\\displaylines{\\frac{dx}{dt}=v\\\\\\\\\\frac{dv}{dt}=-\\frac{k}{m}\\cdot x}" },
+                { "role": "derived",    "expression": "\\displaylines{E=\\frac{1}{2}\\cdot m\\cdot v^{2}+\\frac{1}{2}\\cdot k\\cdot x^{2}}" }
+              ]
+            },
+            "visualizationShapes": {
+              "type": "array",
+              "const": [
+                { "type": "ChartShape",  "xTerm": "t", "yTerms": [{ "term": "x" }, { "term": "v" }] },
+                { "type": "ChartShape",  "xTerm": "x", "yTerms": [{ "term": "v" }], "note": "Phase portrait: ellipse in x-v plane." },
+                { "type": "ChartShape",  "xTerm": "t", "yTerms": [{ "term": "E" }], "note": "Total energy should remain constant." },
+                { "type": "SliderShape", "term": "k", "minimum": 0.1, "maximum": 10 },
+                { "type": "SliderShape", "term": "m", "minimum": 0.1, "maximum": 10 }
+              ]
+            },
+            "exploration": { "type": "string", "const": "Verify period T = 2*pi*sqrt(m/k). Check that total energy E is conserved. Add a damping term b: change dv/dt to -k/m*x - b/m*v and vary b from 0 to 2*sqrt(k*m) to show underdamped, critically damped, overdamped regimes." }
+          }
+        },
+
+        "damped_oscillation": {
+          "type": "object",
+          "properties": {
+            "domain":     { "type": "string", "const": "Physics — Oscillations" },
+            "principle":  { "type": "string", "const": "Spring-mass system with viscous damping b. Energy dissipates over time; the system transitions from underdamped to overdamped as b increases." },
+            "properties": { "type": "object", "const": { "name": "Damped Oscillation", "independent": { "name": "t", "start": 0, "end": 30, "step": 0.05 }, "angleUnit": "radians", "casesCount": 1, "initialValuesByCase": { "1": { "x": 1, "v": 0 } } } },
+            "expressionShapes": {
+              "type": "array",
+              "const": [
+                { "role": "parameters", "expression": "\\displaylines{k=1\\\\\\\\m=1\\\\\\\\b=0.2}" },
+                { "role": "equations",  "expression": "\\displaylines{\\frac{dx}{dt}=v\\\\\\\\\\frac{dv}{dt}=-\\frac{k}{m}\\cdot x-\\frac{b}{m}\\cdot v}" }
+              ]
+            },
+            "visualizationShapes": {
+              "type": "array",
+              "const": [
+                { "type": "ChartShape",  "xTerm": "t", "yTerms": [{ "term": "x" }] },
+                { "type": "ChartShape",  "xTerm": "x", "yTerms": [{ "term": "v" }], "note": "Phase portrait: spiral toward origin." },
+                { "type": "SliderShape", "term": "b", "minimum": 0, "maximum": 4, "precision": 2, "note": "Critical damping at b = 2*sqrt(k*m) = 2." }
+              ]
+            },
+            "exploration": { "type": "string", "const": "Drag b slider: b < 2 underdamped (oscillatory decay); b = 2 critically damped (fastest return without oscillation); b > 2 overdamped (slow exponential return). Use casesCount=3 with b=0.5, 2, 4 to compare regimes on one chart." }
+          }
+        },
+
+        "lotka_volterra": {
+          "type": "object",
+          "properties": {
+            "domain":     { "type": "string", "const": "Biology — Ecology" },
+            "principle":  { "type": "string", "const": "Predator-prey population dynamics. Prey X grows exponentially in absence of predators; predators Y die in absence of prey. Their interaction produces coupled oscillations." },
+            "properties": { "type": "object", "const": { "name": "Lotka-Volterra Predator-Prey", "independent": { "name": "t", "start": 0, "end": 50, "step": 0.05 }, "angleUnit": "radians", "casesCount": 1, "initialValuesByCase": { "1": { "X": 10, "Y": 5 } } } },
+            "expressionShapes": {
+              "type": "array",
+              "const": [
+                { "role": "parameters", "expression": "\\displaylines{\\alpha=1\\\\\\\\\\beta=0.1\\\\\\\\\\delta=0.075\\\\\\\\\\gamma=1.5}" },
+                { "role": "equations",  "expression": "\\displaylines{\\frac{dX}{dt}=\\alpha\\cdot X-\\beta\\cdot X\\cdot Y\\\\\\\\\\frac{dY}{dt}=\\delta\\cdot X\\cdot Y-\\gamma\\cdot Y}" }
+              ]
+            },
+            "visualizationShapes": {
+              "type": "array",
+              "const": [
+                { "type": "ChartShape", "xTerm": "t", "yTerms": [{ "term": "X" }, { "term": "Y" }], "note": "Oscillating populations over time." },
+                { "type": "ChartShape", "xTerm": "X", "yTerms": [{ "term": "Y" }], "note": "Phase portrait: closed orbits." },
+                { "type": "SliderShape", "term": "\\alpha", "minimum": 0.1, "maximum": 3 },
+                { "type": "SliderShape", "term": "\\gamma", "minimum": 0.1, "maximum": 3 }
+              ]
+            },
+            "exploration": { "type": "string", "const": "Observe that population cycles are out of phase (prey peaks before predators). Change alpha and gamma to see how growth/death rates affect cycle frequency. Start with X=Y=10 then try X=40, Y=2 to see larger orbits." }
+          }
+        },
+
+        "sir_epidemic": {
+          "type": "object",
+          "properties": {
+            "domain":     { "type": "string", "const": "Medicine / Biology — Epidemiology" },
+            "principle":  { "type": "string", "const": "SIR compartmental epidemic model. S = susceptible, I = infected, R = recovered. The basic reproduction number R0 = beta/gamma determines whether an epidemic occurs (R0 > 1)." },
+            "properties": { "type": "object", "const": { "name": "SIR Epidemic Model", "independent": { "name": "t", "start": 0, "end": 200, "step": 0.1 }, "angleUnit": "radians", "casesCount": 1, "initialValuesByCase": { "1": { "S": 990, "I": 10, "R": 0 } } } },
+            "expressionShapes": {
+              "type": "array",
+              "const": [
+                { "role": "parameters", "expression": "\\displaylines{\\beta=0.3\\\\\\\\\\gamma=0.05\\\\\\\\N=1000}" },
+                { "role": "equations",  "expression": "\\displaylines{\\frac{dS}{dt}=-\\frac{\\beta\\cdot S\\cdot I}{N}\\\\\\\\\\frac{dI}{dt}=\\frac{\\beta\\cdot S\\cdot I}{N}-\\gamma\\cdot I\\\\\\\\\\frac{dR}{dt}=\\gamma\\cdot I}" },
+                { "role": "derived",    "expression": "\\displaylines{R0=\\frac{\\beta}{\\gamma}}" }
+              ]
+            },
+            "visualizationShapes": {
+              "type": "array",
+              "const": [
+                { "type": "ChartShape",  "xTerm": "t", "yTerms": [{ "term": "S" }, { "term": "I" }, { "term": "R" }] },
+                { "type": "ValueShape",  "term": "R0", "note": "Display reproduction number." },
+                { "type": "SliderShape", "term": "\\beta", "minimum": 0.01, "maximum": 1, "precision": 2 },
+                { "type": "SliderShape", "term": "\\gamma", "minimum": 0.01, "maximum": 0.5, "precision": 2 }
+              ]
+            },
+            "exploration": { "type": "string", "const": "Drag beta and gamma and watch the R0 display. R0 < 1: no epidemic; R0 > 1: epidemic peak appears. Reduce beta to simulate social distancing. Increase gamma to simulate faster recovery (treatment). Note S + I + R = N is conserved." }
+          }
+        },
+
+        "newtons_cooling": {
+          "type": "object",
+          "properties": {
+            "domain":     { "type": "string", "const": "Physics — Thermodynamics" },
+            "principle":  { "type": "string", "const": "Newton's law of cooling: the rate of heat loss is proportional to the temperature difference between the object and the ambient environment." },
+            "properties": { "type": "object", "const": { "name": "Newton's Law of Cooling", "independent": { "name": "t", "start": 0, "end": 60, "step": 0.1 }, "angleUnit": "radians", "casesCount": 1, "initialValuesByCase": { "1": { "T": 90 } } } },
+            "expressionShapes": {
+              "type": "array",
+              "const": [
+                { "role": "parameters", "expression": "\\displaylines{k=0.05\\\\\\\\T_{\\mathrm{env}}=20}" },
+                { "role": "equation",   "expression": "\\displaylines{\\frac{dT}{dt}=-k\\cdot\\left(T-T_{\\mathrm{env}}\\right)}" }
+              ]
+            },
+            "visualizationShapes": {
+              "type": "array",
+              "const": [
+                { "type": "ChartShape",  "xTerm": "t", "yTerms": [{ "term": "T" }] },
+                { "type": "SliderShape", "term": "k", "minimum": 0.01, "maximum": 0.5, "precision": 2, "note": "Cooling rate (material/surface area)." },
+                { "type": "SliderShape", "term": "T_{\\mathrm{env}}", "minimum": -20, "maximum": 40, "note": "Ambient temperature." }
+              ]
+            },
+            "exploration": { "type": "string", "const": "Use casesCount=3 with initial T = 90, 60, 30 to show that all curves approach the same ambient. Verify the half-life formula t_half = ln(2)/k. Compare to preloaded experimental temperature data to fit k." }
+          }
+        },
+
+        "logistic_growth": {
+          "type": "object",
+          "properties": {
+            "domain":     { "type": "string", "const": "Biology — Population Dynamics" },
+            "principle":  { "type": "string", "const": "Population grows exponentially when small but slows as it approaches the carrying capacity K. The inflection point occurs at N = K/2." },
+            "properties": { "type": "object", "const": { "name": "Logistic Population Growth", "independent": { "name": "t", "start": 0, "end": 30, "step": 0.1 }, "angleUnit": "radians", "casesCount": 1, "initialValuesByCase": { "1": { "N": 10 } } } },
+            "expressionShapes": {
+              "type": "array",
+              "const": [
+                { "role": "parameters", "expression": "\\displaylines{r=0.5\\\\\\\\K=100}" },
+                { "role": "equation",   "expression": "\\displaylines{\\frac{dN}{dt}=r\\cdot N\\cdot\\left(1-\\frac{N}{K}\\right)}" }
+              ]
+            },
+            "visualizationShapes": {
+              "type": "array",
+              "const": [
+                { "type": "ChartShape",  "xTerm": "t", "yTerms": [{ "term": "N" }] },
+                { "type": "SliderShape", "term": "r", "minimum": 0.05, "maximum": 2 },
+                { "type": "SliderShape", "term": "K", "minimum": 10,   "maximum": 500 }
+              ]
+            },
+            "exploration": { "type": "string", "const": "Change r to see how intrinsic growth rate affects the S-curve steepness. Change K to see the horizontal asymptote shift. Use casesCount=3 with N0 = 5, 50, 150 to show convergence to K from below and above." }
+          }
+        },
+
+        "rc_circuit": {
+          "type": "object",
+          "properties": {
+            "domain":     { "type": "string", "const": "Physics — Electricity" },
+            "principle":  { "type": "string", "const": "RC charging circuit. The capacitor voltage (or charge Q) approaches the supply voltage V exponentially. Time constant tau = R*C." },
+            "properties": { "type": "object", "const": { "name": "RC Circuit", "independent": { "name": "t", "start": 0, "end": 0.05, "step": 0.0001 }, "angleUnit": "radians", "casesCount": 1, "initialValuesByCase": { "1": { "Q": 0 } } } },
+            "expressionShapes": {
+              "type": "array",
+              "const": [
+                { "role": "parameters", "expression": "\\displaylines{R=1000\\\\\\\\C=0.0001\\\\\\\\V=5}" },
+                { "role": "equations",  "expression": "\\displaylines{\\frac{dQ}{dt}=\\frac{V-Q/C}{R}\\\\\\\\U=Q/C}" }
+              ]
+            },
+            "visualizationShapes": {
+              "type": "array",
+              "const": [
+                { "type": "ChartShape",  "xTerm": "t", "yTerms": [{ "term": "U" }], "note": "Capacitor voltage rising toward V." },
+                { "type": "SliderShape", "term": "R", "minimum": 100, "maximum": 10000 },
+                { "type": "SliderShape", "term": "C", "minimum": 0.00001, "maximum": 0.001, "precision": 5 }
+              ]
+            },
+            "exploration": { "type": "string", "const": "Verify tau = R*C by reading the time at which U reaches 63% of V. Use casesCount=3 with different R values to compare charging speeds. Add a discharge phase using a piecewise conditional for the supply: V active for t < 0.025, 0 after." }
+          }
+        },
+
+        "compound_interest_discrete": {
+          "type": "object",
+          "properties": {
+            "domain":     { "type": "string", "const": "Mathematics / Economics — Finance" },
+            "principle":  { "type": "string", "const": "Discrete-time compound interest. Principal P grows by factor (1+r) each iteration. The independent variable n represents compounding periods." },
+            "properties": { "type": "object", "const": { "name": "Compound Interest", "independent": { "name": "n", "start": 0, "end": 30, "step": 1 }, "angleUnit": "radians", "casesCount": 1, "initialValuesByCase": { "1": { "P": 1000 } } } },
+            "expressionShapes": {
+              "type": "array",
+              "const": [
+                { "role": "parameters", "expression": "\\displaylines{r=0.07}" },
+                { "role": "equation",   "expression": "\\displaylines{P_{n}=P_{n-1}\\cdot\\left(1+r\\right)}" }
+              ]
+            },
+            "visualizationShapes": {
+              "type": "array",
+              "const": [
+                { "type": "ChartShape",  "xTerm": "n", "yTerms": [{ "term": "P" }], "chartType": "bar" },
+                { "type": "SliderShape", "term": "r", "minimum": 0.01, "maximum": 0.3, "precision": 2 }
+              ]
+            },
+            "exploration": { "type": "string", "const": "Use casesCount=3 with r=0.03, 0.07, 0.12 to compare growth rates. Note the doubling time ≈ 70/r% (rule of 70). Compare continuous growth (ODE: dP/dt = r*P) with discrete recurrence to see convergence as step -> 0." }
+          }
+        }
+
+      }
+    }
+
+  },
+
+  "$defs": {
+
+    "ModelProperties": {
+      "title": "ModelProperties",
+      "description": "Top-level model configuration stored in shell.properties.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "default": "Model",
+          "description": "Display name of the model."
+        },
+        "description": {
+          "type": "string",
+          "default": "",
+          "description": "Optional description shown in the marketplace."
+        },
+        "backgroundColor": {
+          "type": "string",
+          "default": "#FFFFFF",
+          "description": "Background color of the canvas (hex color string)."
+        },
+        "precision": {
+          "type": "number",
+          "default": 2,
+          "description": "Default number of decimal places shown in outputs."
+        },
+        "angleUnit": {
+          "type": "string",
+          "enum": ["radians", "degrees"],
+          "default": "radians",
+          "description": "Unit used for angle calculations."
+        },
+        "independent": {
+          "$ref": "#/$defs/IndependentVariable"
+        },
+        "iterationTerm": {
+          "type": "string",
+          "default": "n",
+          "description": "Name of the iteration counter term."
+        },
+        "casesCount": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "Number of simulation cases."
+        },
+        "initialValuesByCase": {
+          "type": "object",
+          "description": "Map of case index to initial term values. Keys are 1-based case numbers as strings.",
+          "additionalProperties": {
+            "type": "object",
+            "description": "Map of term name to initial numeric value.",
+            "additionalProperties": { "type": "number" }
+          }
+        },
+        "iterationDuration": {
+          "type": ["number", "null"],
+          "default": null,
+          "description": "Optional duration (in ms) per iteration step for animation playback."
+        },
+        "thumbnailUrl": {
+          "type": "string",
+          "default": "",
+          "description": "URL of the model thumbnail image."
+        },
+        "instructions": {
+          "type": "string",
+          "default": "",
+          "description": "Markdown instructions shown to users who open the model."
+        },
+        "educationLevel": {
+          "type": "string",
+          "enum": ["university", "midSchool"],
+          "default": "university",
+          "description": "Target education level; affects UI simplification."
+        },
+        "gridSize": {
+          "type": "number",
+          "default": 20,
+          "description": "Grid spacing in canvas pixels."
+        },
+        "snapToGrid": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether shapes snap to the grid when dragged."
+        }
+      }
+    },
+
+    "IndependentVariable": {
+      "title": "IndependentVariable",
+      "description": "Configuration of the independent variable (e.g. time).",
+      "type": "object",
+      "required": ["name", "start", "end", "step"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "default": "t",
+          "description": "Name of the independent variable term."
+        },
+        "start": {
+          "type": "number",
+          "default": 0,
+          "description": "Starting value of the independent variable."
+        },
+        "end": {
+          "type": "number",
+          "default": 10,
+          "description": "Ending value of the independent variable."
+        },
+        "step": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 0.1,
+          "description": "Step size per iteration."
+        },
+        "noLimit": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, the simulation runs without an end value."
+        }
+      }
+    },
+
+    "Board": {
+      "title": "Board",
+      "description": "Ordered array of all shapes on the canvas.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/AnyShape" }
+    },
+
+    "AnyShape": {
+      "title": "AnyShape",
+      "description": "Discriminated union of all supported shape types.",
+      "oneOf": [
+        { "$ref": "#/$defs/ExpressionShape" },
+        { "$ref": "#/$defs/TextShape" },
+        { "$ref": "#/$defs/BodyShape" },
+        { "$ref": "#/$defs/ChartShape" },
+        { "$ref": "#/$defs/SliderShape" },
+        { "$ref": "#/$defs/ValueShape" },
+        { "$ref": "#/$defs/TableShape" },
+        { "$ref": "#/$defs/ImageShape" },
+        { "$ref": "#/$defs/PointShape" },
+        { "$ref": "#/$defs/LineShape" },
+        { "$ref": "#/$defs/VectorShape" },
+        { "$ref": "#/$defs/ArcShape" },
+        { "$ref": "#/$defs/GaugeShape" },
+        { "$ref": "#/$defs/RulerShape" },
+        { "$ref": "#/$defs/ProtractorShape" },
+        { "$ref": "#/$defs/ReferentialShape" }
+      ]
+    },
+
+    "BaseProperties": {
+      "title": "BaseProperties",
+      "description": "Properties shared by every shape (from BaseShape.setDefaults).",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "User-visible label of the shape."
+        },
+        "x": {
+          "type": "number",
+          "description": "Horizontal position in canvas coordinates."
+        },
+        "y": {
+          "type": "number",
+          "description": "Vertical position in canvas coordinates."
+        },
+        "width": {
+          "type": "number",
+          "description": "Width in canvas pixels."
+        },
+        "height": {
+          "type": "number",
+          "description": "Height in canvas pixels."
+        },
+        "rotation": {
+          "type": "number",
+          "default": 0,
+          "description": "Rotation angle in degrees."
+        },
+        "foregroundColor": {
+          "type": "string",
+          "default": "#000000",
+          "description": "Primary color used for strokes and text (hex)."
+        },
+        "borderColor": {
+          "type": "string",
+          "description": "Border/outline color (hex or 'transparent')."
+        },
+        "backgroundColor": {
+          "type": "string",
+          "description": "Fill color (hex or 'transparent')."
+        },
+        "showName": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the shape name label is rendered on canvas."
+        },
+        "nameColor": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Color of the name label. Inherits foregroundColor when null."
+        },
+        "visibleToUsers": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the shape is visible to non-creator users."
+        },
+        "lockedForUsers": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether non-creator users can interact with the shape."
+        }
+      }
+    },
+
+    "ChildProperties": {
+      "title": "ChildProperties",
+      "description": "Additional properties for shapes that live inside a ReferentialShape.",
+      "type": "object",
+      "properties": {
+        "parentId": {
+          "type": ["string", "null"],
+          "description": "ID of the parent ReferentialShape. Null for top-level shapes."
+        },
+        "trajectoryColor": {
+          "type": "string",
+          "default": "transparent",
+          "description": "Color of the motion trail drawn on the canvas (hex or 'transparent')."
+        },
+        "stroboscopyColor": {
+          "type": "string",
+          "default": "transparent",
+          "description": "Color of stroboscopy ghost copies (hex or 'transparent')."
+        },
+        "stroboscopyInterval": {
+          "type": "integer",
+          "default": 10,
+          "description": "Number of iterations between stroboscopy frames."
+        },
+        "stroboscopyOpacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.5,
+          "description": "Opacity of stroboscopy ghost copies."
+        }
+      }
+    },
+
+    "TermDisplayMode": {
+      "type": "string",
+      "enum": ["none", "value", "nameValue"],
+      "description": "Controls whether a term value label is rendered next to the shape."
+    },
+
+    "ExpressionShape": {
+      "title": "ExpressionShape",
+      "description": "A mathematical expression entry box rendered as LaTeX.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["ExpressionShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"], "description": "Always null for ExpressionShape." },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "required": ["expression"],
+              "properties": {
+                "expression": {
+                  "type": "string",
+                  "default": "\\displaylines{}",
+                  "description": "LaTeX content of the expression, using \\displaylines{} for multi-line."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "TextShape": {
+      "title": "TextShape",
+      "description": "A rich-text box rendered with the Quill editor.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["TextShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "required": ["text"],
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "HTML/Markdown content of the text box."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "BodyShape": {
+      "title": "BodyShape",
+      "description": "A physics body (circle or character sprite) that moves according to calculator terms.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["BodyShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"], "description": "ID of the parent ReferentialShape." },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            { "$ref": "#/$defs/ChildProperties" },
+            {
+              "type": "object",
+              "properties": {
+                "xTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the x coordinate in model units."
+                },
+                "yTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the y coordinate in model units."
+                },
+                "sizeTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the body radius in model units."
+                },
+                "xTermLocked": {
+                  "type": "boolean",
+                  "description": "When true, the x term cannot be changed by dragging."
+                },
+                "yTermLocked": {
+                  "type": "boolean",
+                  "description": "When true, the y term cannot be changed by dragging."
+                },
+                "radius": {
+                  "type": "number",
+                  "description": "Computed radius in canvas pixels (derived from sizeTerm at runtime)."
+                },
+                "angle": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Visual rotation of the body sprite in degrees."
+                },
+                "animationFrameStep": {
+                  "type": "integer",
+                  "default": 1,
+                  "description": "Number of simulation steps per animation frame for character sprites."
+                },
+                "imageUrl": {
+                  "type": "string",
+                  "default": "",
+                  "description": "URL of a custom image asset."
+                },
+                "imageBase64": {
+                  "type": "string",
+                  "default": "",
+                  "description": "Base-64 encoded image data (used when imageUrl is empty)."
+                },
+                "characterKey": {
+                  "type": "string",
+                  "default": "",
+                  "description": "Key matching a folder name in resources/characters/characters.json."
+                },
+                "dropShadow": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether to render a drop shadow beneath the body."
+                },
+                "showCenter": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Whether to show a center-point marker on the body."
+                },
+                "nameIsDefault": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "True when the name has not been changed by the user."
+                },
+                "isPhysical": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When true, the body participates in physics calculations."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "ChartShape": {
+      "title": "ChartShape",
+      "description": "A line/scatter/area/bar chart plotting one or more calculator terms.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["ChartShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "required": ["xTerm", "yTerms"],
+              "properties": {
+                "xTerm": {
+                  "type": "string",
+                  "description": "Term name plotted on the x axis."
+                },
+                "autoScale": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "When true, axes are auto-scaled to fit data."
+                },
+                "equalScales": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When true, x and y scales are constrained to be equal."
+                },
+                "tangentColor": {
+                  "type": "string",
+                  "default": "#00000000",
+                  "description": "Color of the tangent line overlay (hex with alpha)."
+                },
+                "yTerms": {
+                  "type": "array",
+                  "description": "One entry per series plotted on the y axis.",
+                  "items": { "$ref": "#/$defs/ChartYTerm" }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "ChartYTerm": {
+      "title": "ChartYTerm",
+      "type": "object",
+      "required": ["term"],
+      "additionalProperties": false,
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "Calculator term name for this series."
+        },
+        "case": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "1-based case index."
+        },
+        "color": {
+          "type": "string",
+          "description": "Series color (hex or empty string for theme default)."
+        },
+        "showLabel": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to show the series name as a data label."
+        },
+        "chartType": {
+          "type": "string",
+          "enum": ["line", "scatter", "area", "bar"],
+          "default": "line",
+          "description": "Rendering style for this series."
+        }
+      }
+    },
+
+    "SliderShape": {
+      "title": "SliderShape",
+      "description": "An interactive vertical slider that controls a calculator term.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["SliderShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "required": ["term"],
+              "properties": {
+                "term": {
+                  "type": "string",
+                  "description": "Calculator term name controlled by this slider."
+                },
+                "value": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Current value of the slider."
+                },
+                "autoScale": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "When true, min/max auto-adjust to encompass data range."
+                },
+                "minimum": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Minimum slider value."
+                },
+                "maximum": {
+                  "type": "number",
+                  "default": 10,
+                  "description": "Maximum slider value."
+                },
+                "fillColor": {
+                  "type": "string",
+                  "description": "Fill color of the slider track (hex)."
+                },
+                "precision": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 0,
+                  "description": "Number of decimal places for the slider value."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "ValueShape": {
+      "title": "ValueShape",
+      "description": "A display box showing the current value of a calculator term.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["ValueShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "required": ["term"],
+              "properties": {
+                "term": {
+                  "type": "string",
+                  "description": "Calculator term name to display."
+                },
+                "termCase": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 1,
+                  "description": "1-based case index for the displayed term."
+                },
+                "fontSizeTerm": {
+                  "type": "string",
+                  "default": "14",
+                  "description": "Font size in pixels, or a calculator expression that evaluates to a size."
+                },
+                "fontBold": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "fontItalic": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "termDisplayMode": {
+                  "type": "string",
+                  "enum": ["nameValue", "valueOnly", "nameOnly"],
+                  "default": "nameValue",
+                  "description": "Controls which parts of the term (name, value, or both) are rendered."
+                },
+                "soundInstrument": {
+                  "type": "string",
+                  "enum": ["none", "triangle", "sine", "square", "sawtooth"],
+                  "default": "none",
+                  "description": "Web Audio oscillator type used to sonify the term value."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "TableShape": {
+      "title": "TableShape",
+      "description": "A data table displaying columns of calculator term values over time.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["TableShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "required": ["columns"],
+              "properties": {
+                "columnWidths": {
+                  "type": "array",
+                  "items": { "type": "number" },
+                  "description": "Per-column pixel widths. Empty array means equal widths."
+                },
+                "headerBackgroundColor": {
+                  "type": "string",
+                  "default": "#f7f7f7",
+                  "description": "Background color of the header row (hex)."
+                },
+                "columns": {
+                  "type": "array",
+                  "description": "Ordered list of columns to display.",
+                  "items": { "$ref": "#/$defs/TableColumn" }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "TableColumn": {
+      "title": "TableColumn",
+      "type": "object",
+      "required": ["term"],
+      "additionalProperties": false,
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "Calculator term name for this column."
+        },
+        "case": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "1-based case index."
+        },
+        "color": {
+          "type": "string",
+          "description": "Accent color for this column (hex or 'transparent')."
+        },
+        "valueDisplayMode": {
+          "type": "string",
+          "enum": ["bars", "lines", "none"],
+          "default": "bars",
+          "description": "Mini-chart style rendered inside each cell."
+        }
+      }
+    },
+
+    "ImageShape": {
+      "title": "ImageShape",
+      "description": "A static image or video element placed on the canvas.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["ImageShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"], "description": "ID of the parent ReferentialShape." },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            { "$ref": "#/$defs/ChildProperties" },
+            {
+              "type": "object",
+              "properties": {
+                "imageUrl": {
+                  "type": "string",
+                  "default": "",
+                  "description": "URL of the image asset."
+                },
+                "imageBase64": {
+                  "type": "string",
+                  "default": "",
+                  "description": "Base-64 encoded image data."
+                },
+                "videoUrl": {
+                  "type": "string",
+                  "default": "",
+                  "description": "URL of a video asset."
+                },
+                "videoStepsPerFrame": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 1,
+                  "description": "Number of simulation steps per video frame."
+                },
+                "lockAspectRatio": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "When true, resizing preserves the media aspect ratio."
+                },
+                "mediaAspectRatio": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Width-to-height ratio of the loaded media (0 when not yet loaded)."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "PointShape": {
+      "title": "PointShape",
+      "description": "A small dot that tracks the position of a calculator term within a referential.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["PointShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"], "description": "ID of the parent ReferentialShape." },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            { "$ref": "#/$defs/ChildProperties" },
+            {
+              "type": "object",
+              "required": ["xTerm", "yTerm"],
+              "properties": {
+                "xTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the x coordinate in model units."
+                },
+                "yTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the y coordinate in model units."
+                },
+                "xTermCase": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 1
+                },
+                "yTermCase": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 1
+                },
+                "radius": {
+                  "type": "number",
+                  "default": 4,
+                  "description": "Radius of the dot in canvas pixels."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "LineShape": {
+      "title": "LineShape",
+      "description": "An infinite line passing through a point at a given angle within a referential.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["LineShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"], "description": "ID of the parent ReferentialShape." },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            { "$ref": "#/$defs/ChildProperties" },
+            {
+              "type": "object",
+              "required": ["xTerm", "yTerm", "angleTerm"],
+              "properties": {
+                "xTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the x coordinate of a point on the line."
+                },
+                "yTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the y coordinate of a point on the line."
+                },
+                "xTermCase": { "type": "integer", "minimum": 1, "default": 1 },
+                "yTermCase": { "type": "integer", "minimum": 1, "default": 1 },
+                "xTermDisplayMode": { "$ref": "#/$defs/TermDisplayMode" },
+                "yTermDisplayMode": { "$ref": "#/$defs/TermDisplayMode" },
+                "angleTerm": {
+                  "type": "string",
+                  "default": "45",
+                  "description": "Calculator expression for the line angle (in model angle units)."
+                },
+                "angleTermCase": { "type": "integer", "minimum": 1, "default": 1 },
+                "angleTermDisplayMode": { "$ref": "#/$defs/TermDisplayMode" },
+                "angle": {
+                  "type": "number",
+                  "description": "Computed angle in model angle units (derived from angleTerm at runtime)."
+                },
+                "lineWidth": {
+                  "type": "number",
+                  "default": 1,
+                  "description": "Stroke width in canvas pixels."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "VectorShape": {
+      "title": "VectorShape",
+      "description": "An arrow from an origin point to a tip defined by x/y component terms.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["VectorShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"], "description": "ID of the parent ReferentialShape." },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            { "$ref": "#/$defs/ChildProperties" },
+            {
+              "type": "object",
+              "required": ["xTerm", "yTerm"],
+              "properties": {
+                "xTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the x component (model units)."
+                },
+                "yTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the y component (model units)."
+                },
+                "xTermCase": { "type": "integer", "minimum": 1, "default": 1 },
+                "yTermCase": { "type": "integer", "minimum": 1, "default": 1 },
+                "xTermDisplayMode": { "$ref": "#/$defs/TermDisplayMode" },
+                "yTermDisplayMode": { "$ref": "#/$defs/TermDisplayMode" },
+                "xOriginTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the x coordinate of the vector origin."
+                },
+                "yOriginTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the y coordinate of the vector origin."
+                },
+                "lineWidth": {
+                  "type": "number",
+                  "default": 3,
+                  "description": "Stroke width in canvas pixels."
+                },
+                "startTipType": {
+                  "type": "string",
+                  "enum": ["none", "arrow"],
+                  "default": "none",
+                  "description": "Arrowhead style at the origin end."
+                },
+                "endTipType": {
+                  "type": "string",
+                  "enum": ["none", "arrow"],
+                  "default": "arrow",
+                  "description": "Arrowhead style at the tip end."
+                },
+                "showComponents": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When true, horizontal and vertical component projections are shown."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "ArcShape": {
+      "title": "ArcShape",
+      "description": "A circular arc defined by a centre, radius and two angle terms.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["ArcShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"], "description": "ID of the parent ReferentialShape." },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            { "$ref": "#/$defs/ChildProperties" },
+            {
+              "type": "object",
+              "required": ["xTerm", "yTerm", "radiusTerm", "startAngleTerm", "endAngleTerm"],
+              "properties": {
+                "xTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the centre x coordinate."
+                },
+                "yTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the centre y coordinate."
+                },
+                "xTermCase": { "type": "integer", "minimum": 1, "default": 1 },
+                "yTermCase": { "type": "integer", "minimum": 1, "default": 1 },
+                "xTermDisplayMode": { "$ref": "#/$defs/TermDisplayMode" },
+                "yTermDisplayMode": { "$ref": "#/$defs/TermDisplayMode" },
+                "radiusTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the arc radius in model units."
+                },
+                "radiusTermCase": { "type": "integer", "minimum": 1, "default": 1 },
+                "radiusTermDisplayMode": { "$ref": "#/$defs/TermDisplayMode" },
+                "radius": {
+                  "type": "number",
+                  "description": "Computed radius in canvas pixels."
+                },
+                "startAngleTerm": {
+                  "type": "string",
+                  "default": "0",
+                  "description": "Calculator expression for the start angle in model angle units."
+                },
+                "startAngleTermCase": { "type": "integer", "minimum": 1, "default": 1 },
+                "startAngleTermDisplayMode": { "$ref": "#/$defs/TermDisplayMode" },
+                "startAngle": {
+                  "type": "number",
+                  "description": "Computed start angle in model angle units."
+                },
+                "endAngleTerm": {
+                  "type": "string",
+                  "description": "Calculator expression for the end angle in model angle units."
+                },
+                "endAngleTermCase": { "type": "integer", "minimum": 1, "default": 1 },
+                "endAngleTermDisplayMode": { "$ref": "#/$defs/TermDisplayMode" },
+                "endAngle": {
+                  "type": "number",
+                  "description": "Computed end angle in model angle units."
+                },
+                "lineWidth": {
+                  "type": "number",
+                  "default": 2,
+                  "description": "Stroke width in canvas pixels."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "GaugeShape": {
+      "title": "GaugeShape",
+      "description": "A polar gauge with an angle axis and a magnitude axis.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["GaugeShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "required": ["angleTerm", "magnitudeTerm"],
+              "properties": {
+                "angleTerm": {
+                  "type": "string",
+                  "description": "Calculator term controlling the needle angle."
+                },
+                "angleValue": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Last computed angle value (runtime state)."
+                },
+                "magnitudeTerm": {
+                  "type": "string",
+                  "description": "Calculator term controlling the needle magnitude."
+                },
+                "magnitudeValue": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Last computed magnitude value (runtime state)."
+                },
+                "startAngle": {
+                  "type": "number",
+                  "default": 225,
+                  "description": "Start of the gauge sweep in degrees."
+                },
+                "endAngle": {
+                  "type": "number",
+                  "default": -45,
+                  "description": "End of the gauge sweep in degrees."
+                },
+                "minimumMagnitude": {
+                  "type": "number",
+                  "default": 0
+                },
+                "maximumMagnitude": {
+                  "type": "number",
+                  "default": 1
+                },
+                "anglePrecision": {
+                  "type": "number",
+                  "default": 30,
+                  "description": "Tick interval in degrees for the angle axis."
+                },
+                "snapToAngleTick": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "magnitudePrecision": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Tick count for the magnitude axis."
+                },
+                "snapToMagnitudeTick": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "RulerShape": {
+      "title": "RulerShape",
+      "description": "A physical ruler overlay used to measure distances on the canvas.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["RulerShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "properties": {
+                "scale": {
+                  "type": "number",
+                  "default": 1,
+                  "description": "Pixel-to-unit scale factor for ruler tick labels."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "ProtractorShape": {
+      "title": "ProtractorShape",
+      "description": "A physical protractor overlay used to measure angles on the canvas.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["ProtractorShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "properties": {
+                "scale": {
+                  "type": "number",
+                  "default": 1,
+                  "description": "Pixel-to-unit scale factor."
+                },
+                "startAngle": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Start of the visible arc in model angle units."
+                },
+                "endAngle": {
+                  "type": "number",
+                  "description": "End of the visible arc in model angle units (π or 180 depending on angleUnit)."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "ReferentialShape": {
+      "title": "ReferentialShape",
+      "description": "A coordinate system frame that hosts child shapes (points, vectors, arcs, lines, bodies, images).",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["ReferentialShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "properties": {
+                "originX": {
+                  "type": "number",
+                  "description": "x offset of the mathematical origin within the shape bounding box (canvas pixels)."
+                },
+                "originY": {
+                  "type": "number",
+                  "description": "y offset of the mathematical origin within the shape bounding box (canvas pixels)."
+                },
+                "scaleX": {
+                  "type": "number",
+                  "default": 0.05,
+                  "description": "Model units per canvas pixel along the x axis."
+                },
+                "scaleY": {
+                  "type": "number",
+                  "default": 0.05,
+                  "description": "Model units per canvas pixel along the y axis."
+                },
+                "autoScale": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "When true, scaleX/scaleY auto-fit to the data on each calculation."
+                },
+                "equalAxisScales": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "When true, scaleX and scaleY are kept equal."
+                },
+                "showHorizontalAxis": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "showVerticalAxis": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "showTicksWithValues": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Whether axis tick labels are rendered."
+                },
+                "showHorizontalGrid": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "showVerticalGrid": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "snapToTicks": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When true, child shapes snap to the referential tick grid when dragged."
+                },
+                "backgroundImageUrl": {
+                  "type": "string",
+                  "default": "",
+                  "description": "URL of an optional background image shown inside the referential."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "PreloadedData": {
+      "title": "PreloadedData",
+      "description": "External data imported from a CSV file or URL, loaded into calculator terms.",
+      "type": "object",
+      "required": ["names", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered list of term names corresponding to CSV columns."
+        },
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" },
+            "description": "One row of numeric values."
+          },
+          "description": "2-D array of rows × columns of numeric values."
+        }
+      }
+    },
+
+    "OutlierIterations": {
+      "title": "OutlierIterations",
+      "description": "Set of iteration indices excluded from preloaded data for each term.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["termName", "iterations"],
+        "additionalProperties": false,
+        "properties": {
+          "termName": {
+            "type": "string",
+            "description": "Name of the term whose outlier rows are stored."
+          },
+          "iterations": {
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "0-based row indices of outlier data points."
+          }
+        }
+      }
+    },
+
+    "RegressionTerms": {
+      "title": "RegressionTerms",
+      "description": "List of regression term definitions computed from preloaded data.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/RegressionTerm" }
+    },
+
+    "RegressionTerm": {
+      "title": "RegressionTerm",
+      "type": "object",
+      "required": ["targetTermName", "sourceTermName", "ranges"],
+      "additionalProperties": false,
+      "properties": {
+        "targetTermName": {
+          "type": "string",
+          "description": "Name of the term whose values are predicted by the regression."
+        },
+        "sourceTermName": {
+          "type": "string",
+          "description": "Name of the independent-variable term used as the regression input."
+        },
+        "ranges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/RegressionRange" },
+          "description": "One entry per case/range combination fitted."
+        },
+        "expressionLatex": {
+          "type": "string",
+          "description": "LaTeX representation of the fitted regression expression."
+        }
+      }
+    },
+
+    "RegressionRange": {
+      "title": "RegressionRange",
+      "type": "object",
+      "required": ["caseNumber", "regressionType", "independentStart", "independentEnd"],
+      "additionalProperties": false,
+      "properties": {
+        "caseNumber": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based case index this range applies to."
+        },
+        "regressionType": {
+          "type": "string",
+          "enum": ["Linear", "Quadratic"],
+          "description": "Polynomial degree of the regression fit."
+        },
+        "independentStart": {
+          "type": "number",
+          "description": "Lower bound of the independent variable range used for fitting."
+        },
+        "independentEnd": {
+          "type": "number",
+          "description": "Upper bound of the independent variable range used for fitting."
+        }
+      }
+    }
+
+  }
+}

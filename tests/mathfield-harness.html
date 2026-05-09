@@ -27,8 +27,7 @@
             delete inlineShortcutMap.dt;
             inlineShortcutMap["#"] = "\\sqrt{#0}";
             inlineShortcutMap["%"] = "\\Delta";
-            inlineShortcutMap["&"] = "\\land";
-            inlineShortcutMap["|"] = "\\lor";
+            inlineShortcutMap["|"] = "\\left|#0\\right|";
             const shortcuts = getExpressionFunctionShortcuts();
             for (const s of shortcuts)
                 inlineShortcutMap[s.shortcutText] = s.functionLatex;
@@ -113,6 +112,21 @@
         }
 
         function handleKeyDown(e) {
+            if (e.altKey && !e.ctrlKey && !e.metaKey) {
+                const key = e.key;
+                if (key === 'v' || key === '\u221A') {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    mf.insert('\\lor');
+                    return;
+                }
+                if (key === '^' || key === '\u02C6') {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    mf.insert('\\land');
+                    return;
+                }
+            }
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
