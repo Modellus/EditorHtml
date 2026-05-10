@@ -134,6 +134,10 @@ function redirectToLogin() {
                         shell = payload ? new Shell(payload, modelsApiClient) : new Shell(null, modelsApiClient);
                         applyModelMetadata(shell, model);
                         shell.setupCollab(modelId);
+                        if (urlParams.get("new") === "1") {
+                            shell.properties.name = shell.board.translations.get("Unnamed Model");
+                            shell.topToolbar?.updateModelName();
+                        }
                         return;
                     } catch (error) {
                         if (!isUnauthorizedError(error))

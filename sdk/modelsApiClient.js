@@ -69,6 +69,21 @@ export class ModelsApiClient {
     return Array.isArray(data) ? data : [];
   }
 
+  async fetchLikedModels() {
+    const session = this.getSession();
+    if (!session || !session.token) return [];
+    const userId = this.getUserId();
+    if (!userId) return [];
+    const headers = this.buildAuthHeaders();
+    const url = new URL(`${this.apiBaseUrl}/models`);
+    url.searchParams.set("user_id", userId);
+    url.searchParams.set("scope", "liked");
+    const response = await fetch(url.toString(), { headers });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
   async fetchPublicModels() {
     const headers = this.buildAuthHeaders();
     const response = await fetch(`${this.apiBaseUrl}/models/public`, { headers });
@@ -229,7 +244,6 @@ export class ModelsApiClient {
 
   async createModel(payload, fromModelId = null) {
     const url = new URL(`${this.apiBaseUrl}/models`);
-    debugger;
     if (fromModelId) url.searchParams.set("source_model_id", fromModelId);
     const response = await fetch(url.toString(), {
       method: "POST",
@@ -238,6 +252,15 @@ export class ModelsApiClient {
     });
     if (!response.ok) throw new Error(`Create failed (${response.status})`);
     return await response.json();
+  }
+
+  async patchModel(modelId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}`, {
+      method: "PATCH",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Model update failed (${response.status})`);
   }
 
   uploadModelAsset(modelId, assetId, file, fileName = "asset.png", onProgress = null) {

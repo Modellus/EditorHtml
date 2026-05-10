@@ -391,8 +391,12 @@ class ModelsApp {
       cardTemplate: (cardData, cardElement) => {
         const host = cardElement.get(0);
         const data = cardData.card.data;
+        const currentUserId = this.userSdk.getUserId(this.state.session);
+        const canEdit = this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId);
         const isFavorite = this.isFavoriteValue(data);
         const isPicked = this.isPickedValue(data);
+        const isLiked = this.isLikedValue(data);
+        const likesCount = data.likes_count || 0;
         const isPublic = data.is_public === true || data.is_public === 1;
         const thumbnailSrc = data.thumbnail_url || "";
         const educationLookupId = data.education_level_id;
@@ -405,8 +409,8 @@ class ModelsApp {
         const escapedEducationLabel = this.escapeHtml(educationLabel);
         const escapedScienceLabel = this.escapeHtml(scienceLabel);
         const escapedDescriptionLabel = this.escapeHtml(descriptionLabel);
-        const creatorName = this.escapeHtml(data.user_name);
-        const creatorAvatar = data.user_avatar || "";
+        const creatorName = this.escapeHtml(data.creator_name || "");
+        const creatorAvatar = data.creator_avatar || "";
         const createdDate = this.formatShortDate(data.created_at);
         const modifiedDate = this.formatShortDate(data.updated_at);
         const taxonomyDropDownMarkup = `
@@ -422,28 +426,30 @@ class ModelsApp {
           <div class="card-tile" data-model-id="${data.id || ""}">
             ${thumbnailMarkup}
             <div class="card-actions">
-              <button class="delete-button" aria-label="${this.translations.get("Delete model")}">
+              ${canEdit ? `<button class="edit-button" aria-label="${this.translations.get("Edit model")}"><i class="fa-light fa-pen" aria-hidden="true"></i></button>` : ""}
+              ${canEdit ? `<button class="delete-button" aria-label="${this.translations.get("Delete model")}">
                 <i class="fa-light fa-trash-can trash" aria-hidden="true"></i>
                 <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
-              </button>
+              </button>` : ""}
             </div>
             <div class="card-body">
               <h3 class="card-title">${this.escapeHtml(data.title) || this.translations.get("Untitled model")}</h3>
               <p class="card-desc">${escapedDescriptionLabel}</p>
-              <div class="card-meta">
-                ${creatorName ? `<div class="card-creator">${creatorAvatar ? `<img class="card-creator-avatar" src="${creatorAvatar}" alt="">` : ""}<span class="card-creator-name">${creatorName}</span></div>` : ""}
-                <div class="card-dates">
-                  ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
-                  ${modifiedDate ? `<span class="card-date"><i class="fa-light fa-calendar-pen" aria-hidden="true"></i>${modifiedDate}</span>` : ""}
-                </div>
-              </div>
               <div class="card-meta-actions">
+                <button class="like-button${isLiked ? " is-liked" : ""}" aria-label="${isLiked ? this.translations.get("Unlike action") : this.translations.get("Like action")}">
+                  <i class="${isLiked ? "fa-solid fa-heart like-icon" : "fa-light fa-heart like-icon"}" aria-hidden="true"></i>
+                  ${likesCount > 0 ? `<span class="like-count">${likesCount}</span>` : ""}
+                </button>
                 <button class="favorite-button${isFavorite ? " is-favorite" : ""}" aria-label="${isFavorite ? this.translations.get("Unfavorite action") : this.translations.get("Favorite action")}">
                   <i class="${isFavorite ? "fa-solid fa-star favorite-icon" : "fa-regular fa-star favorite-icon"}" aria-hidden="true"></i>
                 </button>
                 <button class="pick-button${isPicked ? " is-picked" : ""}" aria-label="${isPicked ? this.translations.get("Remove from library") : this.translations.get("Add to library")}" title="${isPicked ? this.translations.get("In library") : this.translations.get("Add to library")}">
                   <i class="${isPicked ? "fa-solid fa-bookmark pick-icon" : "fa-regular fa-bookmark pick-icon"}" aria-hidden="true"></i>
                 </button>
+              </div>
+              <div class="card-meta">
+                ${creatorName ? `<div class="card-creator">${creatorAvatar ? `<img class="card-creator-avatar" src="${creatorAvatar}" alt="">` : ""}<span class="card-creator-name">${creatorName}</span></div>` : ""}
+                ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
               </div>
             </div>
             <button class="visibility-button${isPublic ? " is-public" : ""}" aria-label="${isPublic ? this.translations.get("Set private") : this.translations.get("Set public")}" title="${isPublic ? this.translations.get("Public") : this.translations.get("Private")}">
@@ -453,16 +459,24 @@ class ModelsApp {
         `;
         host.innerHTML = cardMarkup;
         const cardTile = host.querySelector(".card-tile");
+        const likeButton = host.querySelector(".like-button");
         const favoriteButton = host.querySelector(".favorite-button");
         const pickButton = host.querySelector(".pick-button");
+        const editButton = host.querySelector(".edit-button");
         const deleteButton = host.querySelector(".delete-button");
         const visibilityButton = host.querySelector(".visibility-button");
         const educationDropdownHost = host.querySelector(".education-dropdown-host");
         const scienceDropdownHost = host.querySelector(".science-dropdown-host");
         if (educationDropdownHost) educationDropdownHost.style.setProperty("--pill-color", educationColor);
         if (scienceDropdownHost) scienceDropdownHost.style.setProperty("--pill-color", scienceColor);
+        if (likeButton) likeButton.addEventListener("click", () => this.toggleLike(data, likeButton));
         if (favoriteButton) favoriteButton.addEventListener("click", () => this.toggleFavorite(data, !isFavorite));
         if (pickButton) pickButton.addEventListener("click", () => this.togglePick(data, !isPicked));
+        if (editButton)
+          editButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.showEditModelPopup(data);
+          });
         if (deleteButton) deleteButton.addEventListener("click", event => {
           event.stopPropagation();
           this.deleteModel(data);
@@ -539,16 +553,20 @@ class ModelsApp {
         }
         if (cardTile) {
           cardTile.addEventListener("click", event => {
+            if (event?.target?.closest(".like-button")) return;
             if (event?.target?.closest(".favorite-button")) return;
             if (event?.target?.closest(".pick-button")) return;
+            if (event?.target?.closest(".edit-button")) return;
             if (event?.target?.closest(".delete-button")) return;
             if (event?.target?.closest(".visibility-button")) return;
             if (event?.target?.closest(".card-thumb-dropdowns")) return;
             this.selectModelCard(cardTile);
           });
           cardTile.addEventListener("dblclick", event => {
+            if (event?.target?.closest(".like-button")) return;
             if (event?.target?.closest(".favorite-button")) return;
             if (event?.target?.closest(".pick-button")) return;
+            if (event?.target?.closest(".edit-button")) return;
             if (event?.target?.closest(".delete-button")) return;
             if (event?.target?.closest(".visibility-button")) return;
             if (event?.target?.closest(".card-thumb-dropdowns")) return;
@@ -976,6 +994,32 @@ class ModelsApp {
       this.loadModels();
     } catch (error) {
       this.setStatus(error?.message || "Failed to delete data set.", true);
+    }
+  }
+
+  async showEditModelPopup(modelData) {
+    if (!this._editModelPopup)
+      this._editModelPopup = new ModelMetadataPopup({ translations: this.translations });
+    const result = await this._editModelPopup.show({
+      popupTitle: this.translations.get("Edit Model"),
+      saveButtonText: this.translations.get("Save"),
+      name: modelData.title || "",
+      description: modelData.description || "",
+      thumbnailUrl: modelData.thumbnail_url || ""
+    });
+    if (!result)
+      return;
+    try {
+      await this.apiClient.patchModel(modelData.id, { title: result.name, description: result.description });
+      if (result.thumbnailFile) {
+        const thumbnailUrl = await this.apiClient.uploadModelAsset(modelData.id, "thumbnail-" + crypto.randomUUID(), result.thumbnailFile);
+        await this.apiClient.patchModel(modelData.id, { thumbnail_url: thumbnailUrl });
+      } else if (result.thumbnailCleared) {
+        await this.apiClient.patchModel(modelData.id, { thumbnail_url: "" });
+      }
+      this.loadModels();
+    } catch (error) {
+      this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
     }
   }
 
@@ -2130,16 +2174,14 @@ class ModelsApp {
     const isAuthenticated = this.isAuthenticated();
     const requests = [
       isAuthenticated ? this.apiClient.fetchPersonalModels() : Promise.resolve([]),
-      isAuthenticated ? this.apiClient.fetchFavoriteModels() : Promise.resolve([]),
       this.apiClient.fetchPublicModels(),
       this.apiClient.fetchEducationLevelLookups(),
       this.apiClient.fetchScienceLookups(),
       this.apiClient.fetchVideos(),
       this.apiClient.fetchDataSets()
     ];
-    const [personalModelsResult, favoriteModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videosResult, dataSetsResult] = await Promise.allSettled(requests);
+    const [personalModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videosResult, dataSetsResult] = await Promise.allSettled(requests);
     const personalModels = personalModelsResult.status === "fulfilled" ? personalModelsResult.value : [];
-    const favoriteModels = favoriteModelsResult.status === "fulfilled" ? favoriteModelsResult.value : [];
     if (publicModelsResult.status !== "fulfilled")
       throw publicModelsResult.reason;
     const publicModels = publicModelsResult.value;
@@ -2154,21 +2196,17 @@ class ModelsApp {
     this.educationLookupIconById = this.createLookupIconByIdMap(educationLookupOptions);
     this.scienceLookupIconById = this.createLookupIconByIdMap(scienceLookupOptions);
     this.personalModels = this.applyModelLookupLabels(personalModels);
-    this.favoriteModels = this.applyModelLookupLabels(favoriteModels);
     this.publicModels = this.applyModelLookupLabels(publicModels);
     this.videosData = this.applyModelLookupLabels(videosResult.status === "fulfilled" ? videosResult.value : []);
     this.dataSetData = this.applyModelLookupLabels(dataSetsResult.status === "fulfilled" ? dataSetsResult.value : []);
     if (!isAuthenticated) {
+      this.favoriteModels = [];
       this.libraryModels = [];
       this.rebuildInteractionModelIdSets();
       return;
     }
-    try {
-      const libraryModels = await this.apiClient.fetchLibraryModels();
-      this.libraryModels = this.applyModelLookupLabels(libraryModels);
-    } catch (_) {
-      this.libraryModels = this.personalModels.filter(model => this.hasPickedFlag(model));
-    }
+    this.favoriteModels = this.personalModels.filter(model => this.hasFavoriteFlag(model));
+    this.libraryModels = this.personalModels.filter(model => this.hasPickedFlag(model));
     this.rebuildInteractionModelIdSets();
   }
 
@@ -2691,18 +2729,24 @@ class ModelsApp {
 
   hasFavoriteFlag(modelData) {
     if (!modelData) return false;
-    return this.isTruthyInteractionFlag(modelData.is_favorite);
+    return this.isTruthyInteractionFlag(modelData.user_interaction_is_favorite);
   }
 
   hasPickedFlag(modelData) {
     if (!modelData) return false;
-    return this.isTruthyInteractionFlag(modelData.is_picked);
+    return this.isTruthyInteractionFlag(modelData.user_interaction_is_picked);
+  }
+
+  hasLikedFlag(modelData) {
+    if (!modelData) return false;
+    return this.isTruthyInteractionFlag(modelData.user_interaction_is_liked);
   }
 
   rebuildInteractionModelIdSets() {
     this.favoriteModelIdSet = new Set();
     this.pickedModelIdSet = new Set();
-    const modelGroups = [this.personalModels, this.favoriteModels, this.libraryModels, this.publicModels];
+    this.likedModelIdSet = new Set();
+    const modelGroups = [this.personalModels, this.publicModels];
     for (let groupIndex = 0; groupIndex < modelGroups.length; groupIndex++) {
       const modelGroup = modelGroups[groupIndex];
       if (!Array.isArray(modelGroup)) continue;
@@ -2712,15 +2756,8 @@ class ModelsApp {
         if (!modelId) continue;
         if (this.hasFavoriteFlag(modelData)) this.favoriteModelIdSet.add(modelId);
         if (this.hasPickedFlag(modelData)) this.pickedModelIdSet.add(modelId);
+        if (this.hasLikedFlag(modelData)) this.likedModelIdSet.add(modelId);
       }
-    }
-    for (let modelIndex = 0; modelIndex < this.favoriteModels.length; modelIndex++) {
-      const modelId = this.normalizeModelId(this.favoriteModels[modelIndex]);
-      if (modelId) this.favoriteModelIdSet.add(modelId);
-    }
-    for (let modelIndex = 0; modelIndex < this.libraryModels.length; modelIndex++) {
-      const modelId = this.normalizeModelId(this.libraryModels[modelIndex]);
-      if (modelId) this.pickedModelIdSet.add(modelId);
     }
   }
 
@@ -2738,6 +2775,50 @@ class ModelsApp {
     const modelId = this.normalizeModelId(modelData);
     if (!modelId) return false;
     return this.pickedModelIdSet.has(modelId);
+  }
+
+  isLikedValue(modelData) {
+    if (!modelData) return false;
+    const flagValue = this.hasLikedFlag(modelData);
+    const modelId = this.normalizeModelId(modelData);
+    const inSet = modelId ? this.likedModelIdSet.has(modelId) : false;
+    if (flagValue) return true;
+    return inSet;
+  }
+
+  async toggleLike(modelData, likeButton) {
+    if (!modelData || !modelData.id) return;
+    if (!this.state.session || !this.state.session.token) return;
+    if (!this.state.session.userId) return;
+    const desiredLikeState = !this.isLikedValue(modelData);
+    modelData.user_interaction_is_liked = desiredLikeState;
+    if (desiredLikeState)
+      this.likedModelIdSet.add(this.normalizeModelId(modelData));
+    else
+      this.likedModelIdSet.delete(this.normalizeModelId(modelData));
+    if (likeButton) {
+      likeButton.classList.toggle("is-liked", desiredLikeState);
+      const icon = likeButton.querySelector(".like-icon");
+      if (icon)
+        icon.className = desiredLikeState ? "fa-solid fa-heart like-icon" : "fa-light fa-heart like-icon";
+    }
+    try {
+      await this.apiClient.patchUserModelInteraction(modelData.id, { is_liked: desiredLikeState });
+      this.loadModels();
+    } catch (error) {
+      modelData.user_interaction_is_liked = !desiredLikeState;
+      if (desiredLikeState)
+        this.likedModelIdSet.delete(this.normalizeModelId(modelData));
+      else
+        this.likedModelIdSet.add(this.normalizeModelId(modelData));
+      if (likeButton) {
+        likeButton.classList.toggle("is-liked", !desiredLikeState);
+        const icon = likeButton.querySelector(".like-icon");
+        if (icon)
+          icon.className = !desiredLikeState ? "fa-solid fa-heart like-icon" : "fa-light fa-heart like-icon";
+      }
+      this.setStatus(error?.message || this.translations.get("Failed to update likes."), true);
+    }
   }
 
   async toggleFavorite(modelData, shouldFavorite) {
@@ -3010,8 +3091,13 @@ class ModelsApp {
       }, fromModelId);
       this.setStatus(this.translations.get("Model created."));
       this.loadModels();
-      if (created && created.id)
-        this.openModel(created);
+      if (created && created.id) {
+        const editorUrl = new URL("/editor.html", window.location.origin);
+        editorUrl.searchParams.set("model_id", created.id);
+        if (fromModelId)
+            editorUrl.searchParams.set("new", "1");
+        window.location.href = editorUrl.toString();
+      }
     } catch (error) {
       this.setStatus(error && error.message ? error.message : this.translations.get("Failed to create model."), true);
     }
