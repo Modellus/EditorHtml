@@ -288,6 +288,14 @@ body {
   line-height: 1.25;
   max-height: calc(3 * 1.25em);
 }
+.card-desc--empty {
+  font-style: italic;
+  color: var(--c-border);
+  font-size: 0.8rem;
+}
+.card-thumb-placeholder {
+  display: block;
+}
 .card-creator {
   display: flex;
   align-items: center;

@@ -112,6 +112,16 @@ export class ModelsApiClient {
     return Array.isArray(data) ? data : [];
   }
 
+  async fetchDeletedModels() {
+    const headers = this.buildAuthHeaders();
+    const url = new URL(`${this.apiBaseUrl}/models`);
+    url.searchParams.set("is_deleted", "1");
+    const response = await fetch(url.toString(), { headers });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
   async fetchLibraryModels() {
     const headers = this.buildAuthHeaders();
     const url = new URL(`${this.apiBaseUrl}/models`);

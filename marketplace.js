@@ -13,6 +13,9 @@ const treeNodeIds = {
   myPersonal: "my-personal",
   myFavorite: "my-favorite",
   myLibrary: "my-library",
+  myDraft: "my-draft",
+  myPublished: "my-published",
+  myDeleted: "my-deleted",
   marketplace: "marketplace",
   marketplaceModels: "marketplace-models",
   marketplaceModelsEducation: "market-education",
@@ -78,6 +81,9 @@ class ModelsApp {
     this.personalModels = [];
     this.favoriteModels = [];
     this.libraryModels = [];
+    this.draftModels = [];
+    this.publishedModels = [];
+    this.deletedModels = [];
     this.publicModels = [];
     this.videosData = [];
     this.dataSetData = [];
@@ -338,6 +344,32 @@ class ModelsApp {
       .replace(/\s+/g, " ")
       .trim();
   }
+  generateThumbPlaceholder(seed) {
+    const str = String(seed || "default");
+    let hash = 0;
+    for (let i = 0; i < str.length; i++)
+      hash = Math.imul(31, hash) + str.charCodeAt(i) | 0;
+    hash = Math.abs(hash);
+    const palettes = [
+      ["#dbeafe", "#93c5fd"],
+      ["#fce7f3", "#f9a8d4"],
+      ["#d1fae5", "#6ee7b7"],
+      ["#fef3c7", "#fcd34d"],
+      ["#ede9fe", "#c4b5fd"],
+      ["#ffedd5", "#fdba74"],
+      ["#cffafe", "#67e8f9"],
+      ["#ecfdf5", "#a7f3d0"],
+    ];
+    const [base, accent] = palettes[hash % palettes.length];
+    const patternIndex = (hash >> 4) % 4;
+    if (patternIndex === 0)
+      return `background-color:${base};background-image:radial-gradient(circle,${accent} 1.5px,transparent 1.5px);background-size:14px 14px`;
+    if (patternIndex === 1)
+      return `background-color:${base};background-image:repeating-linear-gradient(45deg,${accent} 0,${accent} 1.5px,transparent 0,transparent 10px)`;
+    if (patternIndex === 2)
+      return `background-color:${base};background-image:linear-gradient(${accent} 1px,transparent 1px),linear-gradient(90deg,${accent} 1px,transparent 1px);background-size:16px 16px`;
+    return `background:linear-gradient(135deg,${base},${accent})`;
+  }
   formatShortDate(value) {
     if (!value)
       return "";
@@ -405,10 +437,11 @@ class ModelsApp {
         const scienceLabel = data.science || this.translations.get("Uncategorized");
         const educationColor = data.education_level_color || "#8b5cf6";
         const scienceColor = data.science_color || "#0ea5e9";
-        const descriptionLabel = this.getModelDescriptionText(data.description) || this.translations.get("No description provided.");
+        const descriptionText = this.getModelDescriptionText(data.description);
+        const hasDescription = !!descriptionText;
         const escapedEducationLabel = this.escapeHtml(educationLabel);
         const escapedScienceLabel = this.escapeHtml(scienceLabel);
-        const escapedDescriptionLabel = this.escapeHtml(descriptionLabel);
+        const escapedDescriptionLabel = hasDescription ? this.escapeHtml(descriptionText) : this.escapeHtml(this.translations.get("No description provided."));
         const creatorName = this.escapeHtml(data.creator_name || "");
         const creatorAvatar = data.creator_avatar || "";
         const createdDate = this.formatShortDate(data.created_at);
@@ -421,7 +454,7 @@ class ModelsApp {
         `;
         const thumbnailMarkup = thumbnailSrc
           ? `<div class="card-thumb-wrap"><img class="card-thumb" src="${this.escapeHtml(thumbnailSrc)}" alt="${this.escapeHtml(data.title || "")}">${taxonomyDropDownMarkup}</div>`
-          : "";
+          : `<div class="card-thumb-wrap"><div class="card-thumb card-thumb-placeholder" style="${this.generateThumbPlaceholder(data.id)}">${taxonomyDropDownMarkup}</div></div>`;
         const cardMarkup = `
           <div class="card-tile" data-model-id="${data.id || ""}">
             ${thumbnailMarkup}
@@ -434,7 +467,7 @@ class ModelsApp {
             </div>
             <div class="card-body">
               <h3 class="card-title">${this.escapeHtml(data.title) || this.translations.get("Untitled model")}</h3>
-              <p class="card-desc">${escapedDescriptionLabel}</p>
+              <p class="card-desc${hasDescription ? "" : " card-desc--empty"}">${escapedDescriptionLabel}</p>
               <div class="card-meta-actions">
                 <button class="like-button${isLiked ? " is-liked" : ""}" aria-label="${isLiked ? this.translations.get("Unlike action") : this.translations.get("Like action")}">
                   <i class="${isLiked ? "fa-solid fa-heart like-icon" : "fa-light fa-heart like-icon"}" aria-hidden="true"></i>
@@ -2178,9 +2211,10 @@ class ModelsApp {
       this.apiClient.fetchEducationLevelLookups(),
       this.apiClient.fetchScienceLookups(),
       this.apiClient.fetchVideos(),
-      this.apiClient.fetchDataSets()
+      this.apiClient.fetchDataSets(),
+      isAuthenticated ? this.apiClient.fetchDeletedModels() : Promise.resolve([])
     ];
-    const [personalModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videosResult, dataSetsResult] = await Promise.allSettled(requests);
+    const [personalModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videosResult, dataSetsResult, deletedModelsResult] = await Promise.allSettled(requests);
     const personalModels = personalModelsResult.status === "fulfilled" ? personalModelsResult.value : [];
     if (publicModelsResult.status !== "fulfilled")
       throw publicModelsResult.reason;
@@ -2202,11 +2236,17 @@ class ModelsApp {
     if (!isAuthenticated) {
       this.favoriteModels = [];
       this.libraryModels = [];
+      this.draftModels = [];
+      this.publishedModels = [];
+      this.deletedModels = [];
       this.rebuildInteractionModelIdSets();
       return;
     }
     this.favoriteModels = this.personalModels.filter(model => this.hasFavoriteFlag(model));
     this.libraryModels = this.personalModels.filter(model => this.hasPickedFlag(model));
+    this.draftModels = this.personalModels.filter(model => model.is_public !== true && model.is_public !== 1);
+    this.publishedModels = this.personalModels.filter(model => model.is_public === true || model.is_public === 1);
+    this.deletedModels = this.applyModelLookupLabels(deletedModelsResult.status === "fulfilled" ? deletedModelsResult.value : []);
     this.rebuildInteractionModelIdSets();
   }
 
@@ -2261,6 +2301,12 @@ class ModelsApp {
       return this.favoriteModels;
     if (nodeId === treeNodeIds.myLibrary)
       return this.libraryModels;
+    if (nodeId === treeNodeIds.myDraft)
+      return this.draftModels;
+    if (nodeId === treeNodeIds.myPublished)
+      return this.publishedModels;
+    if (nodeId === treeNodeIds.myDeleted)
+      return this.deletedModels;
     if (nodeId === treeNodeIds.marketplace || nodeId === treeNodeIds.marketplaceModels)
       return this.publicModels;
     if (typeof nodeId === "string" && nodeId.startsWith("market-education-item:")) {
@@ -2525,6 +2571,27 @@ class ModelsApp {
             text: `${this.translations.get("Library")} (${this.libraryModels.length})`,
             nodeType: "my-library",
             iconClass: "fa-light fa-bookmark",
+            iconColor: "#dc2626"
+          },
+          {
+            id: treeNodeIds.myDraft,
+            text: `${this.translations.get("Draft")} (${this.draftModels.length})`,
+            nodeType: "my-draft",
+            iconClass: "fa-light fa-file-pen",
+            iconColor: "#6b7280"
+          },
+          {
+            id: treeNodeIds.myPublished,
+            text: `${this.translations.get("Published")} (${this.publishedModels.length})`,
+            nodeType: "my-published",
+            iconClass: "fa-light fa-earth-americas",
+            iconColor: "#16a34a"
+          },
+          {
+            id: treeNodeIds.myDeleted,
+            text: `${this.translations.get("Deleted")} (${this.deletedModels.length})`,
+            nodeType: "my-deleted",
+            iconClass: "fa-light fa-trash-can",
             iconColor: "#dc2626"
           }
         ]
