@@ -423,8 +423,9 @@ class ModelsApp {
       cardTemplate: (cardData, cardElement) => {
         const host = cardElement.get(0);
         const data = cardData.card.data;
+        const isDeleted = this.state.selectedTreeNodeId === treeNodeIds.myDeleted;
         const currentUserId = this.userSdk.getUserId(this.state.session);
-        const canEdit = this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId);
+        const canEdit = !isDeleted && (this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId));
         const isFavorite = this.isFavoriteValue(data);
         const isPicked = this.isPickedValue(data);
         const isLiked = this.isLikedValue(data);
@@ -459,8 +460,9 @@ class ModelsApp {
           <div class="card-tile" data-model-id="${data.id || ""}">
             ${thumbnailMarkup}
             <div class="card-actions">
+              ${isDeleted ? `<button class="recover-button" aria-label="${this.translations.get("Recover model")}"><i class="fa-light fa-rotate-left" aria-hidden="true"></i></button>` : ""}
               ${canEdit ? `<button class="edit-button" aria-label="${this.translations.get("Edit model")}"><i class="fa-light fa-pen" aria-hidden="true"></i></button>` : ""}
-              ${canEdit ? `<button class="delete-button" aria-label="${this.translations.get("Delete model")}">
+              ${(canEdit || isDeleted) ? `<button class="delete-button" aria-label="${this.translations.get("Delete model")}">
                 <i class="fa-light fa-trash-can trash" aria-hidden="true"></i>
                 <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
               </button>` : ""}
@@ -468,7 +470,7 @@ class ModelsApp {
             <div class="card-body">
               <h3 class="card-title">${this.escapeHtml(data.title) || this.translations.get("Untitled model")}</h3>
               <p class="card-desc${hasDescription ? "" : " card-desc--empty"}">${escapedDescriptionLabel}</p>
-              <div class="card-meta-actions">
+              ${isDeleted ? "" : `<div class="card-meta-actions">
                 <button class="like-button${isLiked ? " is-liked" : ""}" aria-label="${isLiked ? this.translations.get("Unlike action") : this.translations.get("Like action")}">
                   <i class="${isLiked ? "fa-solid fa-heart like-icon" : "fa-light fa-heart like-icon"}" aria-hidden="true"></i>
                   ${likesCount > 0 ? `<span class="like-count">${likesCount}</span>` : ""}
@@ -479,15 +481,15 @@ class ModelsApp {
                 <button class="pick-button${isPicked ? " is-picked" : ""}" aria-label="${isPicked ? this.translations.get("Remove from library") : this.translations.get("Add to library")}" title="${isPicked ? this.translations.get("In library") : this.translations.get("Add to library")}">
                   <i class="${isPicked ? "fa-solid fa-bookmark pick-icon" : "fa-regular fa-bookmark pick-icon"}" aria-hidden="true"></i>
                 </button>
-              </div>
+              </div>`}
               <div class="card-meta">
                 ${creatorName ? `<div class="card-creator">${creatorAvatar ? `<img class="card-creator-avatar" src="${creatorAvatar}" alt="">` : ""}<span class="card-creator-name">${creatorName}</span></div>` : ""}
                 ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
               </div>
             </div>
-            <button class="visibility-button${isPublic ? " is-public" : ""}" aria-label="${isPublic ? this.translations.get("Set private") : this.translations.get("Set public")}" title="${isPublic ? this.translations.get("Public") : this.translations.get("Private")}">
+            ${isDeleted ? "" : `<button class="visibility-button${isPublic ? " is-public" : ""}" aria-label="${isPublic ? this.translations.get("Set private") : this.translations.get("Set public")}" title="${isPublic ? this.translations.get("Public") : this.translations.get("Private")}">
               <i class="${isPublic ? "fa-light fa-lock-open" : "fa-light fa-lock"} visibility-icon" aria-hidden="true"></i>
-            </button>
+            </button>`}
           </div>
         `;
         host.innerHTML = cardMarkup;
@@ -497,6 +499,7 @@ class ModelsApp {
         const pickButton = host.querySelector(".pick-button");
         const editButton = host.querySelector(".edit-button");
         const deleteButton = host.querySelector(".delete-button");
+        const recoverButton = host.querySelector(".recover-button");
         const visibilityButton = host.querySelector(".visibility-button");
         const educationDropdownHost = host.querySelector(".education-dropdown-host");
         const scienceDropdownHost = host.querySelector(".science-dropdown-host");
@@ -513,6 +516,10 @@ class ModelsApp {
         if (deleteButton) deleteButton.addEventListener("click", event => {
           event.stopPropagation();
           this.deleteModel(data);
+        });
+        if (recoverButton) recoverButton.addEventListener("click", event => {
+          event.stopPropagation();
+          this.recoverModel(data);
         });
         if (visibilityButton) visibilityButton.addEventListener("click", event => {
           event.stopPropagation();
@@ -3178,20 +3185,111 @@ class ModelsApp {
       this.setStatus(this.translations.get("Sign-in required to delete a model."), true);
       return;
     }
-    const confirmed = await this.confirmDelete();
-    if (!confirmed) return;
+    const isPermanentDelete = modelData.is_deleted === true || modelData.is_deleted === 1;
+    if (isPermanentDelete) {
+      const confirmed = await this.confirmPermanentDelete();
+      if (!confirmed) return;
+    }
     this.setStatus(this.translations.get("Deleting model…"));
     try {
       await this.apiClient.deleteModel(modelId);
       this.setStatus(this.translations.get("Model deleted."));
-      this.loadModels();
+      if (isPermanentDelete) {
+        this.deletedModels = this.deletedModels.filter(model => model.id !== modelId);
+        this.renderTree();
+        this.renderCurrentTreeNode();
+      } else {
+        await this.refreshAfterModelDelete(modelId);
+      }
     } catch (error) {
       this.setStatus(error && error.message ? error.message : this.translations.get("Failed to delete model."), true);
     }
   }
+  async refreshAfterModelDelete(deletedModelId) {
+    this.personalModels = this.personalModels.filter(model => model.id !== deletedModelId);
+    this.favoriteModels = this.personalModels.filter(model => this.hasFavoriteFlag(model));
+    this.libraryModels = this.personalModels.filter(model => this.hasPickedFlag(model));
+    this.draftModels = this.personalModels.filter(model => model.is_public !== true && model.is_public !== 1);
+    this.publishedModels = this.personalModels.filter(model => model.is_public === true || model.is_public === 1);
+    try {
+      this.deletedModels = this.applyModelLookupLabels(await this.apiClient.fetchDeletedModels());
+    } catch {
+      this.deletedModels = [];
+    }
+    this.renderTree();
+    this.renderCurrentTreeNode();
+  }
+  async recoverModel(modelData) {
+    const modelId = modelData && modelData.id;
+    if (!modelId)
+      return;
+    this.userSdk.refreshState(this.state);
+    if (!this.state.session || !this.state.session.token) {
+      this.setStatus(this.translations.get("Sign-in required."), true);
+      return;
+    }
+    this.setStatus(this.translations.get("Recovering model…"));
+    try {
+      await this.apiClient.patchModel(modelId, { is_deleted: false });
+      this.setStatus(this.translations.get("Model recovered."));
+      this.deletedModels = this.deletedModels.filter(model => model.id !== modelId);
+      try {
+        const freshPersonalModels = await this.apiClient.fetchPersonalModels();
+        this.personalModels = this.applyModelLookupLabels(freshPersonalModels);
+      } catch {
+        // keep existing personalModels
+      }
+      this.favoriteModels = this.personalModels.filter(model => this.hasFavoriteFlag(model));
+      this.libraryModels = this.personalModels.filter(model => this.hasPickedFlag(model));
+      this.draftModels = this.personalModels.filter(model => model.is_public !== true && model.is_public !== 1);
+      this.publishedModels = this.personalModels.filter(model => model.is_public === true || model.is_public === 1);
+      this.renderTree();
+      this.renderCurrentTreeNode();
+    } catch (error) {
+      this.setStatus(error && error.message ? error.message : this.translations.get("Failed to recover model."), true);
+    }
+  }
+  confirmPermanentDelete() {
+    if (!this.deletePopupInstance) return Promise.resolve(window.confirm(this.translations.get("This model will be permanently deleted and cannot be recovered. Are you sure?")));
+    return new Promise(resolve => {
+      this.deletePopupInstance.option("title", this.translations.get("Delete permanently?"));
+      this.deletePopupInstance.option("contentTemplate", contentElement => {
+        const host = contentElement.get(0);
+        host.innerHTML = `
+          <div class="delete-popup-content">
+            <p style="margin:0 0 1rem">${this.translations.get("This model will be permanently deleted and cannot be recovered.")}</p>
+            <div class="delete-popup-buttons" style="display:flex;justify-content:center;gap:0.5rem">
+              <div class="delete-popup-cancel"></div>
+              <div class="delete-popup-confirm"></div>
+            </div>
+          </div>
+        `;
+        const cancelButtonHost = host.querySelector(".delete-popup-cancel");
+        const confirmButtonHost = host.querySelector(".delete-popup-confirm");
+        if (!cancelButtonHost || !confirmButtonHost) return;
+        $(cancelButtonHost).dxButton({
+          text: this.translations.get("Cancel"),
+          onClick: () => {
+            this.deletePopupInstance.hide();
+            resolve(false);
+          }
+        });
+        $(confirmButtonHost).dxButton({
+          text: this.translations.get("Delete permanently"),
+          type: "danger",
+          onClick: () => {
+            this.deletePopupInstance.hide();
+            resolve(true);
+          }
+        });
+      });
+      this.deletePopupInstance.show();
+    });
+  }
   confirmDelete() {
     if (!this.deletePopupInstance) return Promise.resolve(window.confirm(this.translations.get("Delete model?")));
     return new Promise(resolve => {
+      this.deletePopupInstance.option("title", this.translations.get("Delete model?"));
       this.deletePopupInstance.option("contentTemplate", contentElement => {
         const host = contentElement.get(0);
         host.innerHTML = `

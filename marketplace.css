@@ -150,9 +150,8 @@ body {
   gap: 0.5rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   position: relative;
-  aspect-ratio: 1 / 1;
   height: auto;
-  overflow: hidden;
+  overflow: visible;
 }
 .card-thumb-wrap {
   position: relative;
@@ -261,6 +260,21 @@ body {
 .trash-hover {
   display: none;
 }
+.recover-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--c-border);
+  background: #fff;
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+}
+.recover-button i {
+  color: #16a34a;
+  font-weight: 300;
+}
 .card-tile.selected {
   border-color: var(--c-link);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
@@ -286,6 +300,7 @@ body {
   -webkit-line-clamp: 3;
   line-clamp: 3;
   line-height: 1.25;
+  min-height: calc(3 * 1.25em);
   max-height: calc(3 * 1.25em);
 }
 .card-desc--empty {
