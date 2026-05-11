@@ -29,6 +29,7 @@ class ChartControl {
             argumentTitle: "",
             valueTitle: "",
             backgroundColor: "#ffffff",
+            dataAreaColor: "",
             borderColor: "#666666",
             foregroundColor: "#666666",
             gridColor: "#d3d3d3",
@@ -768,6 +769,7 @@ class ChartControl {
         this.yTicksClipRect.setAttribute("width", `${width}`);
         this.yTicksClipRect.setAttribute("height", `${layout.plotHeight}`);
         const scales = this.getScales(layout, domain);
+        this.renderDataAreaBackground(layout);
         this.renderGrid(layout, scales.xScale, scales.yScale, xTicks, yTicks, xMinorTicks, yMinorTicks);
         this.renderAxes(layout, scales.xScale, scales.yScale, xTicks, yTicks, xMinorTicks, yMinorTicks);
         this.renderSeries(layout, scales.xScale, scales.yScale);
@@ -790,6 +792,14 @@ class ChartControl {
     renderBackground(width, height) {
         this.appendSvgMarkup(this.backgroundLayer, `
             <rect x="0" y="0" width="${width}" height="${height}" fill="${this.options.backgroundColor}" stroke="${this.options.borderColor}" stroke-width="1" />
+        `);
+    }
+
+    renderDataAreaBackground(layout) {
+        if (!this.options.dataAreaColor)
+            return;
+        this.appendSvgMarkup(this.backgroundLayer, `
+            <rect x="${layout.plotLeft}" y="${layout.plotTop}" width="${layout.plotWidth}" height="${layout.plotHeight}" fill="${this.options.dataAreaColor}" />
         `);
     }
 

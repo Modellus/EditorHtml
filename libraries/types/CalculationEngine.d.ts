@@ -63,13 +63,6 @@ declare class Body {
     }): void;
 }
 
-declare enum SingularityType {
-    None = "None",
-    Infinity = "Infinity",
-    NaN = "NaN",
-    Discontinuity = "Discontinuity"
-}
-
 declare class Term {
     name: string;
     type: TermType;
@@ -107,6 +100,12 @@ declare class PreloadedData {
     private applyRow;
 }
 
+interface SystemProcessor {
+    reset(): void;
+    clear(): void;
+    afterIterate(iteration: number): void;
+}
+
 declare class System {
     static readonly ZERO: number;
     static readonly INFINITY: number;
@@ -133,17 +132,17 @@ declare class System {
     private _lastIteration;
     private _lastCalculatedIteration;
     private readonly calculatedIterationKeys;
-    private readonly singularities;
-    private readonly previouslyActiveExpressions;
     useRadians: boolean;
     isCalculatingFunctions: boolean;
     readonly preloadedData: PreloadedData;
     private readonly bodies;
+    private readonly processors;
     constructor(independent?: string, iterationTerm?: string);
     get independent(): Term;
     set independent(name: string);
     get iterationTerm(): Term;
     set iterationTerm(name: string);
+    registerProcessor(processor: SystemProcessor): void;
     setCaseCount(count: number): void;
     get lastIteration(): number;
     get lastCalculatedIteration(): number;
@@ -159,7 +158,6 @@ declare class System {
     getIterationTermOnIteration(iteration: number, caseNumber?: number): number;
     getByExpression(expression: Expression, caseNumber?: number): number | undefined;
     getByTerm(term: Term, caseNumber?: number): number | undefined;
-    getSingularityType(termName: string, iteration: number, caseNumber?: number): SingularityType;
     addExpression(expression: Expression, termType?: TermType): void;
     addTerm(term: Term): void;
     addTermByName(term: string, type: TermType): void;
@@ -176,8 +174,8 @@ declare class System {
     private calculateFunctionsOnIteration;
     private evaluateFunctionExpressions;
     private areFunctionValuesEqual;
-    private singularityKey;
-    private recordValueSingularities;
+    getConditionalExpressions(): Expression[];
+    getConditionalTermNames(): string[];
     private applyInitialValues;
     addValues(values: {
         [name: string]: number;
@@ -441,6 +439,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitConditionExpression?: (ctx: ConditionExpressionContext) => void;
+    /**
+     * Enter a parse tree produced by the `ConditionParenthesis`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    enterConditionParenthesis?: (ctx: ConditionParenthesisContext) => void;
+    /**
+     * Exit a parse tree produced by the `ConditionParenthesis`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     */
+    exitConditionParenthesis?: (ctx: ConditionParenthesisContext) => void;
     /**
      * Enter a parse tree produced by `LatexMathParser.conditionOperator`.
      * @param ctx the parse tree
@@ -1220,6 +1230,13 @@ declare class ConditionExpressionContext extends ConditionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class ConditionParenthesisContext extends ConditionContext {
+    constructor(ctx: ConditionContext);
+    condition(): ConditionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class ConditionOperatorContext extends antlr.ParserRuleContext {
     constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
     get ruleIndex(): number;
@@ -1748,6 +1765,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitConditionExpression?: (ctx: ConditionExpressionContext) => Result;
+    /**
+     * Visit a parse tree produced by the `ConditionParenthesis`
+     * labeled alternative in `LatexMathParser.condition`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitConditionParenthesis?: (ctx: ConditionParenthesisContext) => Result;
     /**
      * Visit a parse tree produced by `LatexMathParser.conditionOperator`.
      * @param ctx the parse tree
@@ -2310,6 +2334,34 @@ declare class RegressionTerm extends Term {
     constructor(name: string, sourceTermName: string);
 }
 
+declare enum SingularityType {
+    None = 0,
+    Infinity = 1,
+    NaN = 2,
+    Discontinuity = 3
+}
+
+interface Singularity {
+    type: SingularityType;
+    termName: string;
+    iteration: number;
+    caseNumber: number;
+}
+declare class SingularitiesDetector implements SystemProcessor {
+    private readonly system;
+    private readonly previouslyActiveExpressions;
+    private readonly singularities;
+    constructor(system: System);
+    reset(): void;
+    clear(): void;
+    afterIterate(iteration: number): void;
+    getSingularityType(termName: string, iteration: number, caseNumber?: number): SingularityType;
+    getSingularities(): ReadonlyArray<Singularity>;
+    private addSingularity;
+    private detectValueSingularities;
+    private detectDiscontinuities;
+}
+
 declare class Visitor extends LatexMathVisitor<Branch> {
     private readonly system;
     private isParsingUnits;
@@ -2375,5 +2427,5 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
 
-export { Body, Branch, RegressionType as DataRegressionType, Deriver, Engine, Expression, ExpressionExpander, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, SingularityType, System, Term, TermType, Visitor };
-export type { RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult };
+export { Body, Branch, RegressionType as DataRegressionType, Deriver, Engine, Expression, ExpressionExpander, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, SingularitiesDetector, SingularityType, System, Term, TermType, Visitor };
+export type { RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult, Singularity, SystemProcessor };

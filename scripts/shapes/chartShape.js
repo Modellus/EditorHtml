@@ -370,12 +370,19 @@ class ChartShape extends BaseShape {
     }
 
     populateShapeColorMenuSections(sections) {
-        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
+        const bgLabel = this.board.translations.get("Background") ?? "Background";
         this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
         sections[0].items.push({
             text: bgLabel,
             iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
             buildControl: $p => $p.append(this._bgColorPicker)
+        });
+        const dataAreaLabel = this.board.translations.get("Data Area") ?? "Data Area";
+        this._dataAreaColorPicker = this.createColorPickerEditor("dataAreaColor");
+        sections[0].items.push({
+            text: dataAreaLabel,
+            iconHtml: this.menuIconHtml("fa-chart-area", !!this.properties.dataAreaColor),
+            buildControl: $p => $p.append(this._dataAreaColorPicker)
         });
     }
 
@@ -442,6 +449,7 @@ class ChartShape extends BaseShape {
             valueTitle: "",
             foregroundColor: this.properties.foregroundColor,
             backgroundColor: this.properties.backgroundColor,
+            dataAreaColor: this.properties.dataAreaColor,
             borderColor: this.getBorderColor(),
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
@@ -595,6 +603,7 @@ class ChartShape extends BaseShape {
             })),
             color: this.properties.foregroundColor,
             bg: this.properties.backgroundColor,
+            dataAreaColor: this.properties.dataAreaColor,
             border: this.getBorderColor(),
             argTitle: this.getTermLabelWithCase(xTerm, xCase),
             valTitle: ySeries.map(series => series.name).join(", ")
@@ -613,6 +622,7 @@ class ChartShape extends BaseShape {
                 series: config.series,
                 foregroundColor: config.color,
                 backgroundColor: config.bg,
+                dataAreaColor: config.dataAreaColor,
                 borderColor: config.border,
                 argumentTitle: config.argTitle,
                 valueTitle: config.valTitle
