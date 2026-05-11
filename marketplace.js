@@ -3230,7 +3230,7 @@ class ModelsApp {
     }
     this.setStatus(this.translations.get("Recovering model…"));
     try {
-      await this.apiClient.patchModel(modelId, { is_deleted: false });
+      await this.apiClient.recoverModel(modelId);
       this.setStatus(this.translations.get("Model recovered."));
       this.deletedModels = this.deletedModels.filter(model => model.id !== modelId);
       try {

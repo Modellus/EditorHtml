@@ -139,8 +139,7 @@ class ExpressionShape extends BaseShape {
         this.mathfield.popoverPolicy = "off";
         this.mathfield.virtualKeyboardMode = "off";
         this.mathfield.mathVirtualKeyboardPolicy = "manual";
-        this.mathfield.smartMode = true;
-        this.mathfield.smartFence = true;
+        this.mathfield.smartMode = false;
         this.mathfield.multiline = true;
         this.mathfield.returnKeyAction = "none";
         this.installMathfieldValueNormalization();

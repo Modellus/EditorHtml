@@ -45,8 +45,6 @@ export class ModelsApiClient {
   async fetchPersonalModels() {
     const headers = this.buildAuthHeaders();
     const url = new URL(`${this.apiBaseUrl}/models`);
-    const userId = this.getUserId();
-    if (userId) url.searchParams.set("user_id", userId);
     url.searchParams.set("scope", "own");
     const response = await fetch(url.toString(), { headers });
     if (!response.ok) throw new Error(`API error ${response.status}`);
@@ -308,6 +306,14 @@ export class ModelsApiClient {
         xhr.setRequestHeader(key, value);
       xhr.send(formData);
     });
+  }
+
+  async recoverModel(modelId) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}/recover`, {
+      method: "POST",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Recover failed (${response.status})`);
   }
 
   async deleteModel(modelId) {
