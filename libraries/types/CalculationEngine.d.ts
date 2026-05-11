@@ -106,6 +106,19 @@ interface SystemProcessor {
     afterIterate(iteration: number): void;
 }
 
+declare enum SingularityType {
+    None = 0,
+    Infinity = 1,
+    NaN = 2,
+    Discontinuity = 3
+}
+
+interface Singularity {
+    type: SingularityType;
+    termName: string;
+    iteration: number;
+    caseNumber: number;
+}
 declare class System {
     static readonly ZERO: number;
     static readonly INFINITY: number;
@@ -137,6 +150,8 @@ declare class System {
     readonly preloadedData: PreloadedData;
     private readonly bodies;
     private readonly processors;
+    private readonly singularitiesByKey;
+    private readonly singularityList;
     constructor(independent?: string, iterationTerm?: string);
     get independent(): Term;
     set independent(name: string);
@@ -174,6 +189,9 @@ declare class System {
     private calculateFunctionsOnIteration;
     private evaluateFunctionExpressions;
     private areFunctionValuesEqual;
+    addSingularity(type: SingularityType, termName: string, iteration: number, caseNumber: number): void;
+    getSingularityType(termName: string, iteration: number, caseNumber?: number): SingularityType;
+    getSingularities(): ReadonlyArray<Singularity>;
     getConditionalExpressions(): Expression[];
     getConditionalTermNames(): string[];
     private applyInitialValues;
@@ -2334,30 +2352,15 @@ declare class RegressionTerm extends Term {
     constructor(name: string, sourceTermName: string);
 }
 
-declare enum SingularityType {
-    None = 0,
-    Infinity = 1,
-    NaN = 2,
-    Discontinuity = 3
-}
-
-interface Singularity {
-    type: SingularityType;
-    termName: string;
-    iteration: number;
-    caseNumber: number;
-}
 declare class SingularitiesDetector implements SystemProcessor {
     private readonly system;
     private readonly previouslyActiveExpressions;
-    private readonly singularities;
     constructor(system: System);
     reset(): void;
     clear(): void;
     afterIterate(iteration: number): void;
     getSingularityType(termName: string, iteration: number, caseNumber?: number): SingularityType;
-    getSingularities(): ReadonlyArray<Singularity>;
-    private addSingularity;
+    getSingularities(): readonly Singularity[];
     private detectValueSingularities;
     private detectDiscontinuities;
 }

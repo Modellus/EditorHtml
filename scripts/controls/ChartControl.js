@@ -174,8 +174,18 @@ class ChartControl {
             name: item?.name ?? `Series ${index + 1}`,
             color: this.normalizeColor(item?.color, index),
             showLabel: item?.showLabel === true,
-            chartType: item?.chartType ?? "line"
+            chartTypes: this.normalizeChartTypes(item?.chartTypes)
         }));
+    }
+
+    normalizeChartTypes(chartTypes) {
+        const validTypes = ["line", "scatter", "area", "bar"];
+        if (Array.isArray(chartTypes) && chartTypes.length > 0) {
+            const filtered = chartTypes.filter(t => validTypes.includes(t));
+            if (filtered.length > 0)
+                return filtered;
+        }
+        return ["line"];
     }
 
     normalizeColor(colorValue, index) {
@@ -306,7 +316,10 @@ class ChartControl {
                 yValues.push(seriesValue);
             }
         }
-        const hasBaselineType = series.some(s => (s.chartType ?? "line") === "bar" || (s.chartType ?? "line") === "area");
+        const hasBaselineType = series.some(s => {
+            const types = s.chartTypes ?? ["line"];
+            return types.includes("bar") || types.includes("area");
+        });
         if (hasBaselineType)
             yValues.push(0);
         if (xValues.length === 0)
@@ -929,25 +942,30 @@ class ChartControl {
 
     renderSeries(layout, xScale, yScale) {
         const areaBaseY = Math.min(Math.max(yScale(0), layout.plotTop), layout.plotBottom);
-        const barSeriesList = this.options.series.filter(series => (series.chartType ?? "line") === "bar");
+        const barSeriesList = this.options.series.filter(series => (series.chartTypes ?? ["line"]).includes("bar"));
         if (barSeriesList.length > 0)
             this.renderBarSeries(layout, xScale, yScale, barSeriesList);
         for (let seriesIndex = 0; seriesIndex < this.options.series.length; seriesIndex++) {
             const series = this.options.series[seriesIndex];
-            const seriesChartType = series.chartType ?? "line";
-            if (seriesChartType === "bar")
-                continue;
+            const seriesChartTypes = series.chartTypes ?? ["line"];
             const points = this.getSeriesPoints(series, xScale, yScale);
             if (points.length === 0)
                 continue;
             const regularPoints = points.filter(point => !point.isOutlier);
             const outlierPoints = points.filter(point => point.isOutlier);
-            if (seriesChartType === "area")
-                this.renderAreaSeries(regularPoints, series.color, areaBaseY);
-            else if (seriesChartType === "line")
-                this.renderLineSeries(regularPoints, series.color);
-            else if (seriesChartType === "scatter")
-                this.renderPointMarkers(regularPoints, series.color);
+            for (let typeIndex = 0; typeIndex < seriesChartTypes.length; typeIndex++) {
+                const chartType = seriesChartTypes[typeIndex];
+                if (chartType === "bar")
+                    continue;
+                if (chartType === "line" && seriesChartTypes.includes("area"))
+                    continue;
+                if (chartType === "area")
+                    this.renderAreaSeries(regularPoints, series.color, areaBaseY);
+                else if (chartType === "line")
+                    this.renderLineSeries(regularPoints, series.color);
+                else if (chartType === "scatter")
+                    this.renderPointMarkers(regularPoints, series.color);
+            }
             if (outlierPoints.length > 0)
                 this.renderOutlierMarkers(outlierPoints, series.color);
         }

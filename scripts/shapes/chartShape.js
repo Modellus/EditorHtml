@@ -28,14 +28,14 @@ class ChartShape extends BaseShape {
             normalizeTermValue: value => this.normalizeYTermValue(value),
             normalizeColorValue: value => this.normalizeYTermColor(value),
             normalizeItem: (sourceItem, normalizedItem) => {
-                normalizedItem.chartType = sourceItem?.chartType ?? "line";
+                normalizedItem.chartTypes = Array.isArray(sourceItem?.chartTypes) && sourceItem.chartTypes.length > 0 ? sourceItem.chartTypes : ["line"];
             },
-            createEmptyItem: () => ({ chartType: "line" }),
+            createEmptyItem: () => ({ chartTypes: ["line"] }),
             lock: {
-                width: "28px",
+                width: "auto",
                 editorType: "dxDropDownButton",
                 valueExpr: "value",
-                getValue: item => item?.chartType ?? "line",
+                getValue: item => item?.chartTypes ?? ["line"],
                 getItems: () => [
                     { value: "scatter", text: "Scatter", icon: "fa-light fa-chart-scatter" },
                     { value: "line", text: "Line", icon: "fa-light fa-chart-line" },
@@ -43,24 +43,37 @@ class ChartShape extends BaseShape {
                     { value: "bar", text: "Bar", icon: "fa-light fa-chart-column" }
                 ],
                 buttonTemplate: (element, item, index, selectedValue) => {
-                    const chartTypeIcons = { scatter: "fa-light fa-chart-scatter", line: "fa-light fa-chart-line", area: "fa-light fa-chart-area", bar: "fa-light fa-chart-column" };
-                    const iconClass = chartTypeIcons[selectedValue] ?? "fa-light fa-chart-line";
-                    $(element).empty().append(`<div class="shape-term-secondary-button"><i class="${iconClass} shape-term-secondary-icon"></i></div>`);
+                    $(element).empty().append(`<div class="shape-term-secondary-button" style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fa-light fa-chart-mixed shape-term-secondary-icon"></i></div>`);
                 },
-                dropDownOptions: { width: 120 },
-                onValueChanged: (index, chartType) => {
+                itemTemplate: (itemData, itemIndex, element, item) => {
+                    const selectedTypes = item?.chartTypes ?? ["line"];
+                    const isSelected = selectedTypes.includes(itemData.value);
+                    const chartTypeIconsLight = { scatter: "fa-light fa-chart-scatter", line: "fa-light fa-chart-line", area: "fa-light fa-chart-area", bar: "fa-light fa-chart-column" };
+                    const chartTypeIconsSolid = { scatter: "fa-solid fa-chart-scatter", line: "fa-solid fa-chart-line", area: "fa-solid fa-chart-area", bar: "fa-solid fa-chart-column" };
+                    const iconClass = isSelected ? (chartTypeIconsSolid[itemData.value] ?? "fa-solid fa-chart-line") : (chartTypeIconsLight[itemData.value] ?? "fa-light fa-chart-line");
+                    $(element).empty().append(`<div class="shape-term-secondary-item" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;"><i class="${iconClass} shape-term-secondary-icon"></i><span>${itemData.text}</span></div>`);
+                },
+                dropDownOptions: { width: 140 },
+                onValueChanged: (index, clickedType) => {
                     TermControl.applyShapeTermsCollectionMutation(this, "yTerms", {
                         normalizeTermValue: value => this.normalizeYTermValue(value),
                         normalizeColorValue: value => this.normalizeYTermColor(value),
                         includeColor: true,
                         normalizeItem: (sourceItem, normalizedItem) => {
-                            normalizedItem.chartType = sourceItem?.chartType ?? "line";
+                            normalizedItem.chartTypes = Array.isArray(sourceItem?.chartTypes) && sourceItem.chartTypes.length > 0 ? sourceItem.chartTypes : ["line"];
                         },
-                        createEmptyItem: () => ({ chartType: "line" })
+                        createEmptyItem: () => ({ chartTypes: ["line"] })
                     }, items => {
                         if (!items[index])
                             return;
-                        items[index].chartType = chartType;
+                        const currentTypes = items[index].chartTypes ?? ["line"];
+                        const typeIndex = currentTypes.indexOf(clickedType);
+                        if (typeIndex >= 0) {
+                            if (currentTypes.length > 1)
+                                items[index].chartTypes = currentTypes.filter(t => t !== clickedType);
+                        } else {
+                            items[index].chartTypes = [...currentTypes, clickedType];
+                        }
                     });
                 }
             }
@@ -96,9 +109,9 @@ class ChartShape extends BaseShape {
             normalizeTermValue: value => this.normalizeYTermValue(value),
             normalizeColorValue: value => this.normalizeYTermColor(value),
             normalizeItem: (sourceItem, normalizedItem) => {
-                normalizedItem.chartType = sourceItem?.chartType ?? "line";
+                normalizedItem.chartTypes = Array.isArray(sourceItem?.chartTypes) && sourceItem.chartTypes.length > 0 ? sourceItem.chartTypes : ["line"];
             },
-            createEmptyItem: () => ({ chartType: "line" })
+            createEmptyItem: () => ({ chartTypes: ["line"] })
         });
     }
 
@@ -108,7 +121,7 @@ class ChartShape extends BaseShape {
             normalizeTermValue: value => this.normalizeYTermValue(value),
             normalizeColorValue: value => this.normalizeYTermColor(value),
             normalizeItem: (sourceItem, normalizedItem) => {
-                normalizedItem.chartType = sourceItem?.chartType ?? "line";
+                normalizedItem.chartTypes = Array.isArray(sourceItem?.chartTypes) && sourceItem.chartTypes.length > 0 ? sourceItem.chartTypes : ["line"];
             }
         });
     }
@@ -418,7 +431,7 @@ class ChartShape extends BaseShape {
         this.properties.equalScales = false;
         this.properties.tangentColor = "#00000000";
         this.properties.xTerm = this.board.calculator.properties.independent.name;
-        this.properties.yTerms = [{ term: this.board.calculator.getDefaultTerm(), case: 1, color: "", showLabel: false, chartType: "line" }];
+        this.properties.yTerms = [{ term: this.board.calculator.getDefaultTerm(), case: 1, color: "", showLabel: false, chartTypes: ["line"] }];
         this.properties.domainOverride = this.getDefaultDomainOverride();
     }
 
@@ -579,7 +592,7 @@ class ChartShape extends BaseShape {
             case: TermControl.getShapeCaseNumber(this, yTerm.term, yTerm.case ?? 1, value => this.normalizeYTermValue(value)),
             color: this.normalizeYTermColor(yTerm.color),
             showLabel: yTerm.showLabel === true,
-            chartType: yTerm.chartType ?? "line",
+            chartTypes: Array.isArray(yTerm.chartTypes) && yTerm.chartTypes.length > 0 ? yTerm.chartTypes : ["line"],
             valueField: this.getSeriesValueFieldName(index),
             name: this.getSeriesName(yTerm)
         }));
@@ -599,7 +612,7 @@ class ChartShape extends BaseShape {
                 name: series.name,
                 color: series.color === "" ? undefined : series.color,
                 showLabel: series.showLabel === true,
-                chartType: series.chartType ?? "line"
+                chartTypes: Array.isArray(series.chartTypes) && series.chartTypes.length > 0 ? series.chartTypes : ["line"]
             })),
             color: this.properties.foregroundColor,
             bg: this.properties.backgroundColor,
