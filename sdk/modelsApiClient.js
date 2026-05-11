@@ -113,6 +113,7 @@ export class ModelsApiClient {
   async fetchDeletedModels() {
     const headers = this.buildAuthHeaders();
     const url = new URL(`${this.apiBaseUrl}/models`);
+    url.searchParams.set("scope", "own");
     url.searchParams.set("is_deleted", "1");
     const response = await fetch(url.toString(), { headers });
     if (!response.ok) throw new Error(`API error ${response.status}`);
