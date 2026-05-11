@@ -524,10 +524,12 @@ class ChartShape extends BaseShape {
         const item = { iteration: iteration };
         const xValue = this.getChartTermValueOnIteration(iteration, chartDataConfig.xTerm, chartDataConfig.xCase);
         item[chartDataConfig.argumentField] = xValue;
+        const system = this.board.calculator.system;
         for (let index = 0; index < chartDataConfig.ySeries.length; index++) {
             const ySeries = chartDataConfig.ySeries[index];
             item[ySeries.valueField] = this.getChartTermValueOnIteration(iteration, ySeries.term, ySeries.case);
             item[`outlier_${ySeries.valueField}`] = this.board.calculator.isOutlierIteration(ySeries.term, iteration);
+            item[`singularity_${ySeries.valueField}`] = system.getSingularityType(this.normalizeYTermValue(ySeries.term), iteration, ySeries.case) !== 0;
         }
         return item;
     }

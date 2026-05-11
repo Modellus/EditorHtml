@@ -10,6 +10,7 @@ class Calculator extends EventTarget {
         this.regressor = new Modellus.Regressor(this.system);
         this.parser = new Modellus.Parser(this.system);
         this.engine = new Modellus.Engine(this.system);
+        this.singularitiesDetector = new Modellus.SingularitiesDetector(this.system);
         this.physicalEngine = new Modellus.PhysicalEngine(this.system);
         this.status = STATUS.STOPPED;
         this.properties = this.createDefaultProperties();

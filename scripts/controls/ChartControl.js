@@ -922,20 +922,26 @@ class ChartControl {
 
     getSeriesPoints(series, xScale, yScale) {
         const points = [];
+        let effectiveRowIndex = 0;
         for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
             const row = this.dataRows[rowIndex];
             const xValue = this.getNumericValue(row, this.options.argumentField);
             const yValue = this.getNumericValue(row, series.valueField);
-            if (xValue == null || yValue == null)
+            if (xValue == null || yValue == null) {
+                effectiveRowIndex++;
                 continue;
+            }
+            if (row[`singularity_${series.valueField}`] === true)
+                effectiveRowIndex++;
             points.push({
-                rowIndex: rowIndex,
+                rowIndex: effectiveRowIndex,
                 xValue: xValue,
                 yValue: yValue,
                 x: xScale(xValue),
                 y: yScale(yValue),
                 isOutlier: row[`outlier_${series.valueField}`] === true
             });
+            effectiveRowIndex++;
         }
         return points;
     }
