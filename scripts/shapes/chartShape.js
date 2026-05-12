@@ -653,10 +653,10 @@ class ChartShape extends BaseShape {
         };
         const domainChanged = JSON.stringify(domainConfig) !== JSON.stringify(this._appliedDomainConfig);
         if (domainChanged) {
-            if (domainConfig.domainOverride)
-                this.chart.setDomainOverride(domainConfig.domainOverride);
-            else if (domainConfig.autoScale)
+            if (domainConfig.autoScale)
                 this.chart.resetDomainOverride();
+            else if (domainConfig.domainOverride)
+                this.chart.setDomainOverride(domainConfig.domainOverride);
             this._appliedDomainConfig = domainConfig;
         }
         this.updateValues();
