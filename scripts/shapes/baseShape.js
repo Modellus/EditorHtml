@@ -14,7 +14,7 @@ class BaseShape {
         ValueShape: "fa-light fa-input-numeric",
         ImageShape: "fa-light fa-image",
         ExpressionShape: "fa-light fa-function",
-        TextShape: "fa-light fa-quotes",
+        TextShape: "fa-light fa-text",
         RulerShape: "fa-light fa-ruler",
         ProtractorShape: "fa-light fa-angle",
         ReferentialShape: "fa-light fa-shapes",
@@ -1165,6 +1165,13 @@ class BaseShape {
     }
 
     populateShapeColorMenuSections(sections) {
+        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        sections[0].items.push({
+            text: bgLabel,
+            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
+            buildControl: $p => $p.append(this._bgColorPicker)
+        });
     }
 
     refreshShapeColorToolbarControl() {
@@ -1177,6 +1184,8 @@ class BaseShape {
             this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
         if (this._borderColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
     }
 
     createRemoveToolbarItem() {

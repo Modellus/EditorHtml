@@ -41,16 +41,6 @@ class ImageShape extends ChildShape {
         return items;
     }
 
-    populateShapeColorMenuSections(sections) {
-        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
-        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
-        sections[0].items.push({
-            text: bgLabel,
-            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
-            buildControl: $p => $p.append(this._bgColorPicker)
-        });
-    }
-
     createImageSettingsDropDownButton(container) {
         this._imageSettingsDropdownElement = $('<div class="mdl-image-settings-selector">');
         this._imageSettingsDropdownElement.dxDropDownButton({

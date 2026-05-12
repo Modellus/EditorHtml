@@ -61,11 +61,11 @@ class TextShape extends BaseShape {
         const $wrapper = $("<div>").appendTo(foreignObject);
         this.container = $wrapper.get(0);
         $wrapper.css({ "width": "100%", "height": "100%", "display": "flex", "flex-direction": "column", "overflow": "hidden" });
-        const $editorHost = $("<div>").appendTo($wrapper);
-        $editorHost.css({ "flex": "1", "min-height": "0", "overflow": "auto" });
+        this.$editorHost = $("<div>").appendTo($wrapper);
+        this.$editorHost.css({ "flex": "1", "min-height": "0", "overflow": "auto" });
         this.$toolbarHost = $("<div>").appendTo(document.body);
         this.$toolbarHost.css({ "display": "none", "position": "fixed", "z-index": "10000", "background-color": "#fff", "border": "1px solid #e0e0e0", "border-radius": "4px", "box-shadow": "0 2px 8px rgba(0,0,0,0.15)", "width": this.properties.width + "px" });
-        this.htmlEditor = $editorHost.dxHtmlEditor({
+        this.htmlEditor = this.$editorHost.dxHtmlEditor({
             valueType: "markdown",
             toolbar: {
                 container: this.$toolbarHost[0],
@@ -252,6 +252,9 @@ class TextShape extends BaseShape {
             ${this.properties.y + this.properties.height / 2})`);
         if (this.$toolbarHost.is(":visible"))
             this.positionEditorToolbar();
+        const backgroundColor = this.properties.backgroundColor ?? "transparent";
+        this.container.style.backgroundColor = backgroundColor;
+        this.$editorHost.css("background-color", backgroundColor);
         this.applyBorderStyle(this.container, 1);
     }
 }

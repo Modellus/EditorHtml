@@ -123,22 +123,6 @@ class ProtractorShape extends BaseShape {
         });
     }
 
-    populateShapeColorMenuSections(sections) {
-        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
-        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
-        sections[0].items.push({
-            text: bgLabel,
-            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
-            buildControl: $container => $container.append(this._bgColorPicker)
-        });
-    }
-
-    refreshShapeColorToolbarControl() {
-        super.refreshShapeColorToolbarControl();
-        if (this._bgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
-    }
-
     showContextToolbar() {
         const popup = this._scaleDropdownElement?.dxDropDownButton("instance")?.option("dropDownOptions");
         if (popup?.visible)

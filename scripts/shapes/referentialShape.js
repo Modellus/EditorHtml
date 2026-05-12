@@ -392,13 +392,7 @@ class ReferentialShape extends BaseShape {
     }
 
     populateShapeColorMenuSections(sections) {
-        const bgLabel = this.board.translations.get("Background Color") ?? "Background";
-        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
-        sections[0].items.push({
-            text: bgLabel,
-            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
-            buildControl: $p => $p.append(this._bgColorPicker)
-        });
+        super.populateShapeColorMenuSections(sections);
         sections[0].items.push({
             text: "Background Image",
             stacked: true,
