@@ -601,7 +601,8 @@ class BodyShape extends ChildShape {
         input.type = "file";
         input.accept = "image/*";
         input.onchange = async e => {
-            const imageSource = await this.board.assetManager.uploadAsset(this.id, e.target.files[0]);
+            const file = e.target.files[0];
+            const imageSource = await this.board.assetManager.uploadAsset(this.id, file, file.name);
             if (imageSource)
                 this.onImageControlChanged(imageSource);
         };
@@ -642,7 +643,7 @@ class BodyShape extends ChildShape {
     createImageDropZoneEditor() {
         this.imageDropZoneControl = new ImageControl({
             imageSource: this.getImageSource(),
-            onUploadFile: file => this.board.assetManager.uploadAsset(this.id, file),
+            onUploadFile: (file, onProgress) => this.board.assetManager.uploadAsset(this.id, file, file.name, onProgress),
             onImageChanged: imageSource => this.onImageControlChanged(imageSource),
             onImageCleared: () => this.onImageControlCleared()
         });
@@ -726,7 +727,7 @@ class BodyShape extends ChildShape {
 
     drawStroboscopy() {
         const hasCharacterOrImage = !!(this.getSelectedCharacter() || this.getImageSource());
-        if (!hasCharacterOrImage && (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000")) {
+        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
             while (this.stroboscopy.firstChild)
                 this.stroboscopy.removeChild(this.stroboscopy.firstChild);
             return;
@@ -889,11 +890,17 @@ class BodyShape extends ChildShape {
             this.drawCenterDot(position);
             return;
         }
-        this.circle.setAttribute("cx", position.x);
-        this.circle.setAttribute("cy", position.y);
-        this.circle.setAttribute("r", radius);
-        this.circle.setAttribute("fill", this.properties.foregroundColor);
-        this.applyBorderStroke(this.circle, 1);
+        const imageSource = this.getImageSource();
+        if (imageSource) {
+            this.circle.setAttribute("r", 0);
+            this.circle.setAttribute("stroke", "none");
+        } else {
+            this.circle.setAttribute("cx", position.x);
+            this.circle.setAttribute("cy", position.y);
+            this.circle.setAttribute("r", radius);
+            this.circle.setAttribute("fill", this.properties.foregroundColor);
+            this.applyBorderStroke(this.circle, 1);
+        }
         this.image.setAttribute("x", position.x - radius);
         this.image.setAttribute("y", position.y - radius);
         this.image.setAttribute("width", diameter);

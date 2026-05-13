@@ -18,7 +18,10 @@ class AssetManager {
             return null;
         }
         try {
-            return await this.modelsApiClient.uploadModelAsset(modelId, assetId, file, fileName, onProgress);
+            const url = await this.modelsApiClient.uploadModelAsset(modelId, assetId, file, fileName, onProgress);
+            if (!url) return null;
+            const separator = url.includes("?") ? "&" : "?";
+            return `${url}${separator}t=${Date.now()}`;
         } catch (error) {
             this.showError(error?.message || "Failed to upload asset.");
             return null;
