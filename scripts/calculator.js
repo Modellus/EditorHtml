@@ -23,10 +23,6 @@ class Calculator extends EventTarget {
 
     setDefaults() {
         this.properties = this.createDefaultProperties();
-        this.preloadedTermNames = null;
-        this.preloadedTermValues = null;
-        this.preloadedOriginalTermNames = null;
-        this.preloadedOriginalTermValues = null;
         this.preloadedRegressionTerms = null;
         this.preloadedOutlierIterations = null;
     }
@@ -178,82 +174,16 @@ class Calculator extends EventTarget {
         this.hookFunction = null;
     }
 
-    /** @param {string[]} names @param {number[][]} values */
-    loadTerms(names, values) {
-        this.preloadedTermNames = Array.isArray(names) ? [...names] : [];
-        this.preloadedTermValues = Array.isArray(values) ? values.map(row => Array.isArray(row) ? [...row] : []) : [];
-        this.preloadedOriginalTermNames = Array.isArray(names) ? [...names] : [];
-        this.preloadedOriginalTermValues = Array.isArray(values) ? values.map(row => Array.isArray(row) ? [...row] : []) : [];
-        this.system.loadTerms(this.preloadedTermNames, this.preloadedTermValues);
+    loadExternalData(names, values) {
+        this.system.loadTerms(names, values);
+        this.engine.reset();
     }
 
-    applyPreloadedData() {
-        if (this.preloadedTermNames && this.preloadedTermValues) {
-            this.system.loadTerms(this.preloadedTermNames, this.preloadedTermValues);
-            this.engine.reset();
-        }
-    }
-
-    hasPreloadedData() {
-        return this.preloadedTermNames != null && this.preloadedTermValues != null;
-    }
-
-    getPreloadedData() {
-        if (!this.preloadedTermNames || !this.preloadedTermValues)
-            return null;
-        return { names: this.preloadedTermNames, values: this.preloadedTermValues };
-    }
-
-    getOriginalPreloadedData() {
-        if (!this.preloadedOriginalTermNames || !this.preloadedOriginalTermValues)
-            return null;
-        return { names: this.preloadedOriginalTermNames, values: this.preloadedOriginalTermValues };
-    }
-
-    refreshPreloadedData() {
-        if (!this.preloadedTermNames || !this.preloadedTermValues)
-            return false;
-        this.system.loadTerms(this.preloadedTermNames, this.preloadedTermValues);
+    refreshExternalData(names, values) {
+        this.system.loadTerms(names, values);
         this.engine.reset();
         this.system.reset();
         this.emit("iterate", { calculator: this });
-        return true;
-    }
-
-    getPreloadedColumnIndex(name = "") {
-        if (!this.preloadedTermNames)
-            return -1;
-        return this.preloadedTermNames.indexOf(name);
-    }
-
-    setPreloadedValue(rowIndex = -1, name = "", value = NaN) {
-        if (!this.preloadedTermValues || !this.preloadedTermNames)
-            return false;
-        if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= this.preloadedTermValues.length)
-            return false;
-        const columnIndex = this.getPreloadedColumnIndex(name);
-        if (columnIndex < 0)
-            return false;
-        if (!Number.isFinite(value))
-            return false;
-        this.preloadedTermValues[rowIndex][columnIndex] = value;
-        return this.refreshPreloadedData();
-    }
-
-    deletePreloadedRow(rowIndex = -1) {
-        if (!this.preloadedTermValues)
-            return false;
-        if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= this.preloadedTermValues.length)
-            return false;
-        this.preloadedTermValues.splice(rowIndex, 1);
-        return this.refreshPreloadedData();
-    }
-
-    clearPreloadedData() {
-        this.preloadedTermNames = null;
-        this.preloadedTermValues = null;
-        this.preloadedOriginalTermNames = null;
-        this.preloadedOriginalTermValues = null;
     }
 
     getOutlierIterations() {

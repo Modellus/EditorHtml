@@ -18,18 +18,18 @@ async function addTable(page, name) {
 
 async function setupPreloadedTable(page) {
     await page.evaluate(() => {
-        shell.calculator.loadTerms(['t', 'p'], [
-            [0, 10],
-            [1, 20],
-            [2, 30]
-        ]);
+        const tableShape = shell.board.shapes.getByName('Table1');
+        const names = ['t', 'p'];
+        const values = [[0, 10], [1, 20], [2, 30]];
+        tableShape.properties.externalData = { names, values };
+        tableShape.properties.originalExternalData = { names: [...names], values: values.map(row => [...row]) };
         modellus.shape.setProperties('Table1', {
             columns: [
                 { term: 't', case: 1, color: 'transparent' },
                 { term: 'p', case: 1, color: 'transparent' }
             ]
         });
-        const tableShape = shell.board.shapes.getByName('Table1');
+        shell.reset();
         tableShape.refreshTableColumns();
         tableShape.refreshTableRows();
         tableShape.draw();
@@ -39,14 +39,9 @@ async function setupPreloadedTable(page) {
 
 async function loadPreloadedDataIntoExistingTable(page) {
     await page.evaluate(() => {
-        modellus.shape.setProperties('Table1', {
-            columns: [
-                { term: 'a', case: 1, color: 'transparent' },
-                { term: 'b', case: 1, color: 'transparent' },
-                { term: 'c', case: 1, color: 'transparent' }
-            ]
-        });
-        shell.loadPreloadedData(['a', 'b', 'c'], [
+        const tableShape = shell.board.shapes.getByName('Table1');
+        const names = ['a', 'b', 'c'];
+        const values = [
             [1, 2, 23],
             [2, 4, 43],
             [3, 5, 52],
@@ -57,7 +52,17 @@ async function loadPreloadedDataIntoExistingTable(page) {
             [8, 7, 43],
             [9, 4, 12],
             [10, 3, 21]
-        ]);
+        ];
+        tableShape.properties.externalData = { names, values };
+        tableShape.properties.originalExternalData = { names: [...names], values: values.map(row => [...row]) };
+        modellus.shape.setProperties('Table1', {
+            columns: [
+                { term: 'a', case: 1, color: 'transparent' },
+                { term: 'b', case: 1, color: 'transparent' },
+                { term: 'c', case: 1, color: 'transparent' }
+            ]
+        });
+        shell.reset();
     });
     await page.waitForTimeout(500);
 }
@@ -87,25 +92,18 @@ async function getCellClientPoint(page, rowIndex, columnIndex) {
 async function setupTenRowTable(page) {
     await page.evaluate(() => {
         shell.calculator.setProperties({ independent: { name: 't', start: 0, end: 9, step: 1 } });
+        const tableShape = shell.board.shapes.getByName('Table1');
+        const names = ['y'];
+        const values = [[2], [5], [9], [14], [20], [27], [35], [44], [54], [65]];
+        tableShape.properties.externalData = { names, values };
+        tableShape.properties.originalExternalData = { names: [...names], values: values.map(row => [...row]) };
         modellus.shape.setProperties('Table1', {
             columns: [
                 { term: 't', case: 1, color: 'transparent' },
                 { term: 'y', case: 1, color: 'transparent' }
             ]
         });
-        shell.loadPreloadedData(['y'], [
-            [2],
-            [5],
-            [9],
-            [14],
-            [20],
-            [27],
-            [35],
-            [44],
-            [54],
-            [65]
-        ]);
-        const tableShape = shell.board.shapes.getByName('Table1');
+        shell.reset();
         tableShape.refreshTableColumns();
         tableShape.refreshTableRows();
         tableShape.draw();
@@ -207,22 +205,26 @@ test.describe('Table shape editing', () => {
             if (!tableShape || !table)
                 return null;
 
-            shell.calculator.setPreloadedValue(1, 'y', 500);
-            shell.calculator.setPreloadedValue(2, 'y', 600);
-            shell.calculator.setPreloadedValue(7, 'y', 700);
+            const yColumnIndex = tableShape.properties.externalData.names.indexOf('y');
+            tableShape.properties.externalData.values[1][yColumnIndex] = 500;
+            shell.calculator.refreshExternalData(tableShape.properties.externalData.names, tableShape.properties.externalData.values);
+            tableShape.properties.externalData.values[2][yColumnIndex] = 600;
+            shell.calculator.refreshExternalData(tableShape.properties.externalData.names, tableShape.properties.externalData.values);
+            tableShape.properties.externalData.values[7][yColumnIndex] = 700;
+            shell.calculator.refreshExternalData(tableShape.properties.externalData.names, tableShape.properties.externalData.values);
             tableShape.refreshTableRows();
 
             table.focusCellRange(1, 1, 2, 1);
             const resetApplied = tableShape.resetFocusedCellsFromPreloadedData();
 
-            const preloadedData = shell.calculator.getPreloadedData();
-            const yColumnIndex = preloadedData?.names?.indexOf('y') ?? -1;
-            if (!preloadedData || yColumnIndex < 0)
+            const externalData = tableShape.properties.externalData;
+            const yColIdx = externalData?.names?.indexOf('y') ?? -1;
+            if (!externalData || yColIdx < 0)
                 return null;
 
-            const focusedRow1 = preloadedData.values[1][yColumnIndex];
-            const focusedRow2 = preloadedData.values[2][yColumnIndex];
-            const outsideRow7 = preloadedData.values[7][yColumnIndex];
+            const focusedRow1 = externalData.values[1][yColIdx];
+            const focusedRow2 = externalData.values[2][yColIdx];
+            const outsideRow7 = externalData.values[7][yColIdx];
             return {
                 resetApplied,
                 focusedRow1,

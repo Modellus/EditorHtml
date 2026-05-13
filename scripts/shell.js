@@ -299,7 +299,10 @@ class Shell  {
             else if (shape.constructor.name == "BodyShape" && shape.properties.isPhysical)
                 this.calculator.addPhysicalBody(shape.properties.name, shape.properties.mass ?? 1);
         });
-        this.calculator.applyPreloadedData();
+        this.board.shapes.shapes.forEach(shape => {
+            if (shape.constructor.name === "TableShape" && shape.properties.externalData)
+                this.calculator.loadExternalData(shape.properties.externalData.names, shape.properties.externalData.values);
+        });
         this.calculator.applyPreloadedOutlierIterations();
         this.calculator.applyPreloadedRegressionTerms();
         this.calculator.applyInitialValuesByCase(initialValuesByCase);
@@ -379,9 +382,6 @@ class Shell  {
             properties,
             board: this.board.serialize()
         };
-        const preloaded = this.calculator.getPreloadedData();
-        if (preloaded)
-            result.preloadedData = preloaded;
         const outlierIterations = this.calculator.getOutlierIterations();
         if (outlierIterations)
             result.outlierIterations = outlierIterations;
@@ -396,10 +396,6 @@ class Shell  {
         this.setProperties(model.properties);
         this.board.deserialize(model.board);
         this.applyGrid();
-        if (model.preloadedData)
-            this.calculator.loadTerms(model.preloadedData.names, model.preloadedData.values);
-        else
-            this.calculator.clearPreloadedData();
         this.calculator.loadOutlierIterations(model?.outlierIterations);
         this.calculator.loadRegressionTerms(model?.regressionTerms);
     }
@@ -792,16 +788,6 @@ class Shell  {
         return { names, values };
     }
 
-    loadPreloadedData(names, values) {
-        this.calculator.loadTerms(names, values);
-        this.reset();
-    }
-
-    clearPreloadedData() {
-        this.calculator.clearPreloadedData();
-        this.reset();
-    }
-
     async importDataFromFile() {
         const [fileHandle] = await window.showOpenFilePicker({
             types: [{ description: "CSV Files", accept: { "text/csv": [".csv"] } }]
@@ -809,7 +795,6 @@ class Shell  {
         const file = await fileHandle.getFile();
         const text = await file.text();
         const { names, values } = this.parseCsv(text);
-        this.loadPreloadedData(names, values);
         return { names, values };
     }
 
@@ -820,7 +805,6 @@ class Shell  {
         const response = await fetch(url);
         const text = await response.text();
         const { names, values } = this.parseCsv(text);
-        this.loadPreloadedData(names, values);
         return { names, values };
     }
 

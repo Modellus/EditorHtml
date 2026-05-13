@@ -72,7 +72,7 @@ class TableShape extends BaseShape {
     }
 
     getDataButtonIconClass() {
-        return this.board.calculator.hasPreloadedData() ? "fa-solid" : "fa-light";
+        return this.properties.externalData != null ? "fa-solid" : "fa-light";
     }
 
     getColumnValueDisplayModeItems() {
@@ -151,13 +151,23 @@ class TableShape extends BaseShape {
 
     async importExternalDataFromFile() {
         const result = await this.board.shell.importDataFromFile();
-        this.applyExternalDataColumns(result?.names);
+        if (!result)
+            return;
+        this.properties.externalData = { names: result.names, values: result.values };
+        this.properties.originalExternalData = { names: [...result.names], values: result.values.map(row => [...row]) };
+        this.applyExternalDataColumns(result.names);
+        this.board.shell.reset();
         this.refreshDataToolbarControl();
     }
 
     async importExternalDataFromUrl() {
         const result = await this.board.shell.importDataFromUrl();
-        this.applyExternalDataColumns(result?.names);
+        if (!result)
+            return;
+        this.properties.externalData = { names: result.names, values: result.values };
+        this.properties.originalExternalData = { names: [...result.names], values: result.values.map(row => [...row]) };
+        this.applyExternalDataColumns(result.names);
+        this.board.shell.reset();
         this.refreshDataToolbarControl();
     }
 
@@ -278,10 +288,14 @@ class TableShape extends BaseShape {
         const response = await fetch(dataset.asset_url);
         const text = await response.text();
         const { names, values } = this.board.shell.parseCsv(text);
-        this.board.shell.loadPreloadedData(names, values);
+        this.properties.externalData = { names, values };
+        this.properties.originalExternalData = { names: [...names], values: values.map(row => [...row]) };
         const resolveCallback = this._marketplaceDataResolve;
         this._marketplaceDataResolve = null;
         this._marketplaceDataPopupInstance.hide();
+        this.applyExternalDataColumns(names);
+        this.board.shell.reset();
+        this.refreshDataToolbarControl();
         resolveCallback?.({ names, values });
     }
 
@@ -597,6 +611,8 @@ class TableShape extends BaseShape {
         this.properties.height = 200;
         this.properties.columnWidths = [];
         this.properties.headerBackgroundColor = "#f7f7f7";
+        this.properties.externalData = null;
+        this.properties.originalExternalData = null;
         const defaultTerm = this.board.calculator.getDefaultTerm();
         this.properties.columns = [
             { term: this.board.calculator.properties.independent.name, case: 1, color: "transparent", valueDisplayMode: "bars" },
@@ -856,19 +872,17 @@ class TableShape extends BaseShape {
     }
 
     resetFocusedCellsFromPreloadedData() {
-        if (!this.board.calculator.hasPreloadedData())
+        if (this.properties.externalData == null)
             return false;
         const table = this.table;
         const focusedCellRange = table?.focusedCellRange;
         if (!table || !focusedCellRange)
             return false;
-        const preloadedData = this.board.calculator.getPreloadedData();
-        const originalPreloadedData = this.board.calculator.getOriginalPreloadedData();
-        if (!preloadedData || !originalPreloadedData)
+        const names = this.properties.externalData.names;
+        const values = this.properties.externalData.values;
+        const originalValues = this.properties.originalExternalData?.values;
+        if (!originalValues)
             return false;
-        const names = preloadedData.names;
-        const values = preloadedData.values;
-        const originalValues = originalPreloadedData.values;
         let hasChanges = false;
         for (let rowIndex = focusedCellRange.startRowIndex; rowIndex <= focusedCellRange.endRowIndex; rowIndex++) {
             const tableRow = table.rows[rowIndex];
@@ -893,7 +907,7 @@ class TableShape extends BaseShape {
         }
         if (!hasChanges)
             return false;
-        this.board.calculator.refreshPreloadedData();
+        this.board.calculator.refreshExternalData(names, values);
         this.refreshTableRows();
         this.table.clearFocusedCells();
         this.table.selectedCell = null;
@@ -1148,7 +1162,7 @@ class TableShape extends BaseShape {
 
     buildControlColumns(columns = this._activeColumns) {
         const precision = this.board.calculator.getPrecision();
-        const hasPreloadedData = this.board.calculator.hasPreloadedData();
+        const hasPreloadedData = this.properties.externalData != null;
         const system = this.board.calculator.system;
         const controlColumns = columns.map(column => {
             const isPreloadedTerm = this.isPreloadedTableColumnTerm(column.term, hasPreloadedData, system);
@@ -1173,14 +1187,14 @@ class TableShape extends BaseShape {
         return controlColumns;
     }
 
-    isPreloadedTableColumnTerm(term, hasPreloadedData = this.board.calculator.hasPreloadedData(), system = this.board.calculator.system) {
-        if (hasPreloadedData && this.board.calculator.getPreloadedColumnIndex(term) >= 0)
+    isPreloadedTableColumnTerm(term, hasPreloadedData = this.properties.externalData != null, system = this.board.calculator.system) {
+        if (hasPreloadedData && this.properties.externalData?.names?.indexOf(term) >= 0)
             return true;
         return system.getTerm(term)?.type === Modellus.TermType.PRELOADED;
     }
 
     canEditTableColumn(term, isPreloadedTerm = this.isPreloadedTableColumnTerm(term)) {
-        if (this.board.calculator.hasPreloadedData())
+        if (this.properties.externalData != null)
             return isPreloadedTerm;
         return this._canEditTerm(term);
     }
@@ -1194,11 +1208,18 @@ class TableShape extends BaseShape {
             return false;
         const precision = this.board.calculator.getPrecision();
         const roundedValue = Utils.roundToPrecision(numericValue, precision);
-        if (this.board.calculator.hasPreloadedData()) {
+        if (this.properties.externalData != null) {
             const rowIndex = Number.isInteger(payload?.rowKey) ? payload.rowKey : payload?.rowIndex;
             if (!Number.isInteger(rowIndex))
                 return false;
-            return this.board.calculator.setPreloadedValue(rowIndex, sourceColumn.term, roundedValue);
+            const columnIndex = this.properties.externalData.names.indexOf(sourceColumn.term);
+            if (columnIndex < 0)
+                return false;
+            if (rowIndex < 0 || rowIndex >= this.properties.externalData.values.length)
+                return false;
+            this.properties.externalData.values[rowIndex][columnIndex] = roundedValue;
+            this.board.calculator.refreshExternalData(this.properties.externalData.names, this.properties.externalData.values);
+            return true;
         }
         if (!this._canEditTerm(sourceColumn.term))
             return false;
@@ -1217,12 +1238,16 @@ class TableShape extends BaseShape {
     }
 
     onTableRowDeleteRequested(payload) {
-        if (!this.board.calculator.hasPreloadedData())
+        if (this.properties.externalData == null)
             return false;
         const rowIndex = Number.isInteger(payload?.rowKey) ? payload.rowKey : payload?.rowIndex;
         if (!Number.isInteger(rowIndex))
             return false;
-        return this.board.calculator.deletePreloadedRow(rowIndex);
+        if (rowIndex < 0 || rowIndex >= this.properties.externalData.values.length)
+            return false;
+        this.properties.externalData.values.splice(rowIndex, 1);
+        this.board.calculator.refreshExternalData(this.properties.externalData.names, this.properties.externalData.values);
+        return true;
     }
 
     onTableColumnWidthChanged(payload) {
@@ -1244,7 +1269,7 @@ class TableShape extends BaseShape {
             this.table.setFocusedRowKey(null);
             return;
         }
-        if (this.board.calculator.hasPreloadedData()) {
+        if (this.properties.externalData != null) {
             this.table.setFocusedRowKey(null);
             return;
         }
@@ -1375,7 +1400,7 @@ class TableShape extends BaseShape {
             this.table.setRows([]);
             return;
         }
-        if (this.board.calculator.hasPreloadedData()) {
+        if (this.properties.externalData != null) {
             this.table.setRows(this.buildPreloadedRows(columns));
             return;
         }
@@ -1394,11 +1419,11 @@ class TableShape extends BaseShape {
     }
 
     buildPreloadedRows(columns) {
-        const preloadedData = this.board.calculator.getPreloadedData();
-        if (!preloadedData)
+        const externalData = this.properties.externalData;
+        if (!externalData)
             return [];
-        const names = Array.isArray(preloadedData.names) ? preloadedData.names : [];
-        const values = Array.isArray(preloadedData.values) ? preloadedData.values : [];
+        const names = Array.isArray(externalData.names) ? externalData.names : [];
+        const values = Array.isArray(externalData.values) ? externalData.values : [];
         const iterationTermName = this.board.calculator.properties.iterationTerm;
         const independentTermName = this.board.calculator.properties.independent.name;
         const iterationColumnIndex = names.indexOf(iterationTermName);
