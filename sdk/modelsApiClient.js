@@ -681,4 +681,121 @@ export class ModelsApiClient {
     });
     if (!response.ok) throw new Error(`Delete data set thumbnail failed (${response.status})`);
   }
+
+  async fetchCharacters() {
+    const response = await fetch(`${this.apiBaseUrl}/characters`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch characters failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createCharacter(payload, assetFile) {
+    const formData = new FormData();
+    formData.append("title", payload.title);
+    if (payload.description) formData.append("description", payload.description);
+    if (assetFile) formData.append("asset", assetFile);
+    const response = await fetch(`${this.apiBaseUrl}/characters`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      throw new Error(`Create character failed (${response.status})${errorBody?.error ? ': ' + errorBody.error : ''}`);
+    }
+    return await response.json();
+  }
+
+  async deleteCharacter(characterId) {
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete character failed (${response.status})`);
+  }
+
+  async patchCharacter(characterId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update character failed (${response.status})`);
+    return await response.json();
+  }
+
+  async uploadCharacterAsset(characterId, assetFile) {
+    const formData = new FormData();
+    formData.append("asset", assetFile);
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/asset`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Upload character asset failed (${response.status})`);
+    return await response.json();
+  }
+
+  async fetchCharacterDefinition(characterId) {
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/definition`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch character definition failed (${response.status})`);
+    return await response.json();
+  }
+
+  async fetchCharacterAnimations(characterId) {
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/animations`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch character animations failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createCharacterAnimation(characterId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/animations`, {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Create character animation failed (${response.status})`);
+    return await response.json();
+  }
+
+  async updateCharacterAnimation(characterId, animationId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/animations/${encodeURIComponent(animationId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update character animation failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteCharacterAnimation(characterId, animationId) {
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/animations/${encodeURIComponent(animationId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete character animation failed (${response.status})`);
+  }
+
+  async uploadCharacterAnimationFrame(characterId, animationId, file, frameIndex) {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (frameIndex !== undefined && frameIndex !== null)
+      formData.append("frame_index", String(frameIndex));
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/animations/${encodeURIComponent(animationId)}/frames`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Upload character animation frame failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteCharacterAnimationFrame(characterId, animationId, frameId) {
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/animations/${encodeURIComponent(animationId)}/frames/${encodeURIComponent(frameId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete character animation frame failed (${response.status})`);
+  }
 }

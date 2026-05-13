@@ -26,6 +26,7 @@ const treeNodeIds = {
   marketplaceData: "marketplace-data",
   marketplaceDataEducation: "marketplace-data-education",
   marketplaceDataSciences: "marketplace-data-sciences",
+  marketplaceCharacters: "marketplace-characters",
   maintenance: "maintenance",
   maintenanceModels: "maintenance-models",
   maintenanceEducation: "maintenance-education",
@@ -107,6 +108,7 @@ class ModelsApp {
     this.cardViewInstance = null;
     this.videosCardViewInstance = null;
     this.dataCardViewInstance = null;
+    this.characterCardViewInstance = null;
     this.drawerInstance = null;
     this.treeViewInstance = null;
     this.toolbarInstance = null;
@@ -123,13 +125,21 @@ class ModelsApp {
     this.uploadVideoPopupInstance = null;
     this.dataPopupInstance = null;
     this.editVideoPopupInstance = null;
+    this.characterPopupInstance = null;
     this._uploadVideoFile = null;
     this._dataFile = null;
+    this._characterAssetFile = null;
     this._uploadVideoThumbnailFile = null;
     this._dataThumbnailFile = null;
     this._editVideoThumbnailFile = null;
     this._editVideoHTMLEditor = null;
     this._editDataHTMLEditor = null;
+    this._editCharacterHTMLEditor = null;
+    this._charEditorCharacter = null;
+    this._charEditorTitleInput = null;
+    this._charEditorDescEditor = null;
+    this._charEditorHost = null;
+    this.charactersData = [];
     this.initNavToolbar();
     this.cacheNavElements();
     this.bindNav();
@@ -243,6 +253,19 @@ class ModelsApp {
           widget: "dxButton",
           visible: isAuthenticated,
           options: {
+            elementAttr: { id: "nav-add-character", title: "Add Character" },
+            stylingMode: "text",
+            template: (_, contentElement) => {
+              const host = contentElement.get(0);
+              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-person-running mdl-nav-action-icon" style="color:#7c3aed;font-size:1rem"></i><i class="fa-solid fa-person-running mdl-nav-action-icon-hover" style="color:#7c3aed;font-size:1rem"></i><span>Add Character</span></span>`;
+            }
+          }
+        },
+        {
+          location: "after",
+          widget: "dxButton",
+          visible: isAuthenticated,
+          options: {
             elementAttr: { id: "nav-new-model", title: "Create Model" },
             stylingMode: "text",
             template: (_, contentElement) => {
@@ -317,6 +340,7 @@ class ModelsApp {
     this.elements.navNewModel = document.getElementById("nav-new-model");
     this.elements.navUploadVideo = document.getElementById("nav-upload-video");
     this.elements.navUploadData = document.getElementById("nav-upload-data");
+    this.elements.navAddCharacter = document.getElementById("nav-add-character");
     this.elements.userMenu = document.getElementById("user-menu");
     this.elements.navLogin = document.getElementById("nav-login");
     this.userSdk.applyUserMenu(this.elements.userMenu, this.state.session);
@@ -633,6 +657,97 @@ class ModelsApp {
     if (!this.dataCardViewInstance) return;
     this.dataCardViewInstance.dispose();
     this.dataCardViewInstance = null;
+  }
+
+  disposeCharacterCardView() {
+    if (!this.characterCardViewInstance) return;
+    this.characterCardViewInstance.dispose();
+    this.characterCardViewInstance = null;
+  }
+
+  ensureCharacterCardView() {
+    if (this.characterCardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
+    const CardView = DevExpress.ui.dxCardView;
+    this.elements.cardView.innerHTML = "";
+    this.characterCardViewInstance = new CardView(this.elements.cardView, {
+      dataSource: [],
+      height: "100%",
+      scrolling: { mode: "virtual" },
+      paging: { enabled: false },
+      pager: { visible: false },
+      showBorders: false,
+      focusStateEnabled: false,
+      hoverStateEnabled: false,
+      allowColumnReordering: false,
+      allowColumnResizing: false,
+      columnHidingEnabled: true,
+      headerPanel: { visible: false },
+      groupPanel: { visible: false },
+      grouping: { autoExpandAll: false, contextMenuEnabled: false },
+      sorting: { mode: "none" },
+      cardsPerRow: 4,
+      cardMinWidth: 125,
+      columns: [
+        { dataField: "title", caption: this.translations.get("Title") },
+        { dataField: "description", caption: this.translations.get("Description") }
+      ],
+      cardTemplate: (cardData, cardElement) => {
+        const host = cardElement.get(0);
+        const data = cardData.card.data;
+        const assetUrl = data.thumbnail_url || "";
+        const descriptionLabel = this.escapeHtml(data.description || "");
+        const createdDate = this.formatShortDate(data.created_at);
+        const currentUserId = this.userSdk.getUserId(this.state.session);
+        const canEdit = this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId);
+        const thumbContent = assetUrl
+          ? `<img class="card-thumb" src="${this.escapeHtml(assetUrl)}" alt="${this.escapeHtml(data.title || "")}">`
+          : `<div class="media-thumb-placeholder character-thumb"><i class="fa-light fa-person-running media-thumb-icon" aria-hidden="true"></i></div>`;
+        const cardMarkup = `
+          <div class="card-tile" data-item-id="${this.escapeHtml(data.id || "")}">
+            <div class="card-thumb-wrap">${thumbContent}</div>
+            <div class="card-actions">
+              ${canEdit ? `<button class="edit-button" aria-label="Edit character"><i class="fa-light fa-pen" aria-hidden="true"></i></button>` : ""}
+              ${canEdit ? `<button class="delete-button" aria-label="Delete character"><i class="fa-light fa-trash-can trash" aria-hidden="true"></i><i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i></button>` : ""}
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">${this.escapeHtml(data.title) || "Untitled"}</h3>
+              <p class="card-desc">${descriptionLabel}</p>
+              <div class="card-meta">
+                <div class="card-dates">
+                  ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        host.innerHTML = cardMarkup;
+        const cardDescElement = host.querySelector(".card-desc");
+        const editButton = host.querySelector(".edit-button");
+        const deleteButton = host.querySelector(".delete-button");
+        if (cardDescElement && (data.title || data.description)) {
+          $('<div>').appendTo('body').dxTooltip({
+            target: cardDescElement,
+            contentTemplate: contentElement => {
+              contentElement.append($('<div class="card-desc-tooltip">').html(`<strong>${this.escapeHtml(data.title || "")}</strong>${data.description ? `<p>${this.escapeHtml(data.description)}</p>` : ""}`));
+            },
+            showEvent: { delay: 600, name: 'mouseenter' },
+            hideEvent: 'mouseleave',
+            position: 'bottom',
+            maxWidth: 300
+          });
+        }
+        if (editButton)
+          editButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.showCharacterPopup(data);
+          });
+        if (deleteButton)
+          deleteButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.deleteCharacterItem(data);
+          });
+      }
+    });
   }
 
   ensureVideosCardView() {
@@ -982,6 +1097,7 @@ class ModelsApp {
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
     this.disposeDataCardView();
+    this.disposeCharacterCardView();
     this.ensureVideosCardView();
   }
 
@@ -994,7 +1110,21 @@ class ModelsApp {
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
     this.disposeVideosCardView();
+    this.disposeCharacterCardView();
     this.ensureDataCardView();
+  }
+
+  showCharacterCardView() {
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
+    this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
+    this.ensureCharacterCardView();
   }
 
   renderVideos(items) {
@@ -1005,6 +1135,11 @@ class ModelsApp {
   renderDataSets(items) {
     this.showDataCardView();
     if (this.dataCardViewInstance) this.dataCardViewInstance.option("dataSource", items);
+  }
+
+  renderCharacters(items) {
+    this.showCharacterCardView();
+    if (this.characterCardViewInstance) this.characterCardViewInstance.option("dataSource", items);
   }
 
   async deleteVideoItem(videoData) {
@@ -1034,6 +1169,21 @@ class ModelsApp {
       this.loadModels();
     } catch (error) {
       this.setStatus(error?.message || "Failed to delete data set.", true);
+    }
+  }
+
+  async deleteCharacterItem(characterData) {
+    const characterId = characterData && characterData.id;
+    if (!characterId) return;
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    this.setStatus("Deleting character…");
+    try {
+      await this.apiClient.deleteCharacter(characterId);
+      this.setStatus("Character deleted.");
+      this.loadModels();
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to delete character.", true);
     }
   }
 
@@ -1133,7 +1283,7 @@ class ModelsApp {
                 if (!result.isValid) return;
                 const values = this._editVideoFormInstance.option("formData");
                 const rawDescription = this._editVideoHTMLEditor ? this._editVideoHTMLEditor.option("value") : (values.description || "");
-                const descriptionValue = await Utils.fromHtml(rawDescription);
+                const descriptionValue = rawDescription ? (await Utils.fromHtml(rawDescription)).trim() || null : null;
                 this.setStatus("Saving video…");
                 try {
                   await this.apiClient.patchVideo(videoData.id, { title: values.title, description: descriptionValue });
@@ -1259,7 +1409,7 @@ class ModelsApp {
                 if (!result.isValid) return;
                 const values = this._editDataFormInstance.option("formData");
                 const rawDescription = this._editDataHTMLEditor ? this._editDataHTMLEditor.option("value") : "";
-                const descriptionValue = await Utils.fromHtml(rawDescription);
+                const descriptionValue = rawDescription ? (await Utils.fromHtml(rawDescription)).trim() || null : null;
                 this.setStatus(isEdit ? "Saving data set…" : "Uploading data set…");
                 try {
                   if (isEdit) {
@@ -1415,6 +1565,298 @@ class ModelsApp {
     });
   }
 
+  showCharacterPopup(characterData = null) {
+    let popupHost = document.getElementById("character-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="character-popup"></div>`);
+      popupHost = document.getElementById("character-popup");
+    }
+    this._charEditorCharacter = characterData ? Object.assign({}, characterData) : null;
+    this._characterAssetFile = null;
+    this._charEditorDescEditor = null;
+    this._charEditorTitleInput = null;
+    this._charEditorHost = null;
+    const buildContent = contentElement => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      this._charEditorHost = host;
+      const hasCharacter = Boolean(this._charEditorCharacter);
+      host.innerHTML = `
+        <div class="char-editor">
+          <div class="char-editor-info">
+            <div class="char-editor-field-label">Name</div>
+            <div id="char-title-input"></div>
+            <div class="char-editor-field-label" style="margin-top:0.75rem">Description</div>
+            <div id="char-desc-editor"></div>
+            <div id="char-desc-toolbar" class="html-editor-toolbar"></div>
+            <div class="char-editor-field-label" style="margin-top:0.75rem">Asset File</div>
+            <div id="char-asset-uploader"></div>
+            <div class="char-editor-info-actions">
+              <div id="char-save-info-btn"></div>
+            </div>
+          </div>
+          <div class="char-editor-anims" id="char-editor-anims"${hasCharacter ? "" : ` style="display:none"`}>
+            <div class="char-editor-anims-header">
+              <span class="char-editor-section-title">Animations</span>
+              <div id="char-add-anim-btn"></div>
+            </div>
+            <div id="char-anims-list"></div>
+          </div>
+        </div>
+      `;
+      this._charEditorTitleInput = new DevExpress.ui.dxTextBox(host.querySelector("#char-title-input"), {
+        value: this._charEditorCharacter?.title || "",
+        placeholder: "Character name"
+      });
+      this._charEditorDescEditor = new DevExpress.ui.dxHtmlEditor(host.querySelector("#char-desc-editor"), {
+        value: "",
+        valueType: "html",
+        height: 180,
+        toolbar: {
+          container: host.querySelector("#char-desc-toolbar"),
+          items: ["bold", "italic", "underline", "strike", "separator", "orderedList", "bulletList", "separator", "link", "separator", "undo", "redo"]
+        }
+      });
+      if (this._charEditorCharacter?.description)
+        this._charEditorDescEditor.option("value", this._charEditorCharacter.description);
+      new DevExpress.ui.dxFileUploader(host.querySelector("#char-asset-uploader"), {
+        selectButtonText: hasCharacter ? "Replace asset file" : "Select asset file",
+        labelText: "or drop file here",
+        multiple: false,
+        uploadMode: "useForm",
+        onValueChanged: event => { this._characterAssetFile = event.value?.[0] || null; }
+      });
+      new DevExpress.ui.dxButton(host.querySelector("#char-save-info-btn"), {
+        text: hasCharacter ? "Save" : "Create",
+        type: "default",
+        onClick: () => this._charEditorSaveInfo()
+      });
+      if (hasCharacter) {
+        new DevExpress.ui.dxButton(host.querySelector("#char-add-anim-btn"), {
+          text: "Add Animation",
+          icon: "fa-light fa-plus",
+          stylingMode: "outlined",
+          onClick: () => this._charEditorAddAnimation()
+        });
+        this._charEditorRefreshAnimations();
+      }
+    };
+    const popupTitle = this._charEditorCharacter ? "Edit Character" : "Add Character";
+    if (this.characterPopupInstance) {
+      this.characterPopupInstance.option("title", popupTitle);
+      buildContent(this.characterPopupInstance.content());
+      this.characterPopupInstance.show();
+      return;
+    }
+    this.characterPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: popupTitle,
+      width: 680,
+      height: "auto",
+      maxHeight: "92vh",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
+  }
+
+  async _charEditorSaveInfo() {
+    const title = (this._charEditorTitleInput?.option("value") || "").trim();
+    if (!title) {
+      this.setStatus("Character name is required.", true);
+      return;
+    }
+    const descriptionValue = this._charEditorDescEditor?.option("value") ?? null;
+    this.setStatus(this._charEditorCharacter ? "Saving character…" : "Creating character…");
+    try {
+      if (this._charEditorCharacter) {
+        await this.apiClient.patchCharacter(this._charEditorCharacter.id, { title, description: descriptionValue });
+        if (this._characterAssetFile)
+          await this.apiClient.uploadCharacterAsset(this._charEditorCharacter.id, this._characterAssetFile);
+        this.setStatus("Character saved.");
+        this.loadModels();
+      } else {
+        const created = await this.apiClient.createCharacter({ title, description: descriptionValue }, this._characterAssetFile);
+        this.setStatus("Character created.");
+        this._charEditorCharacter = created;
+        if (this.characterPopupInstance)
+          this.characterPopupInstance.option("title", "Edit Character");
+        if (this._charEditorHost) {
+          const saveBtnHost = this._charEditorHost.querySelector("#char-save-info-btn");
+          if (saveBtnHost) $(saveBtnHost).dxButton("option", "text", "Save");
+          const animsSection = this._charEditorHost.querySelector("#char-editor-anims");
+          if (animsSection) animsSection.style.removeProperty("display");
+          const addAnimBtnHost = this._charEditorHost.querySelector("#char-add-anim-btn");
+          if (addAnimBtnHost)
+            new DevExpress.ui.dxButton(addAnimBtnHost, {
+              text: "Add Animation",
+              icon: "fa-light fa-plus",
+              stylingMode: "outlined",
+              onClick: () => this._charEditorAddAnimation()
+            });
+        }
+        this._charEditorRefreshAnimations();
+        this.loadModels();
+      }
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to save character.", true);
+    }
+  }
+
+  async _charEditorRefreshAnimations() {
+    const host = this._charEditorHost;
+    if (!host || !this._charEditorCharacter) return;
+    const listHost = host.querySelector("#char-anims-list");
+    if (!listHost) return;
+    listHost.innerHTML = `<div style="padding:1rem;text-align:center;color:#6b7280"><i class="fa-light fa-spinner fa-spin"></i></div>`;
+    try {
+      const definition = await this.apiClient.fetchCharacterDefinition(this._charEditorCharacter.id);
+      this._charEditorRenderAnimations(listHost, definition.animations || []);
+    } catch (error) {
+      listHost.innerHTML = `<div style="padding:0.75rem;color:#dc2626">Failed to load animations.</div>`;
+    }
+  }
+
+  _charEditorRenderAnimations(listHost, animations) {
+    if (!animations.length) {
+      listHost.innerHTML = `<div class="char-no-anims">No animations yet.</div>`;
+      return;
+    }
+    listHost.innerHTML = animations.map(anim => this._charEditorAnimationItemHtml(anim)).join("");
+    listHost.querySelectorAll(".char-anim-save-btn").forEach(btn => {
+      btn.addEventListener("click", event => {
+        const animItem = event.target.closest(".char-anim");
+        const animId = animItem.dataset.animId;
+        const name = animItem.querySelector(".char-anim-name-input").value;
+        const rawSortOrder = animItem.querySelector(".char-anim-order-input").value;
+        this._charEditorSaveAnimation(animId, name, rawSortOrder !== "" ? parseInt(rawSortOrder) : null);
+      });
+    });
+    listHost.querySelectorAll(".char-anim-del-btn").forEach(btn => {
+      btn.addEventListener("click", event => {
+        const animItem = event.target.closest(".char-anim");
+        this._charEditorDeleteAnimation(animItem.dataset.animId);
+      });
+    });
+    listHost.querySelectorAll(".char-frame-file-input").forEach(fileInput => {
+      fileInput.addEventListener("change", event => {
+        const animId = event.target.dataset.animId;
+        const files = Array.from(event.target.files);
+        if (files.length)
+          this._charEditorUploadFrames(animId, files);
+        event.target.value = "";
+      });
+    });
+    listHost.querySelectorAll(".char-frame-del-btn").forEach(btn => {
+      btn.addEventListener("click", event => {
+        const frameItem = event.target.closest(".char-frame");
+        const animItem = event.target.closest(".char-anim");
+        this._charEditorDeleteFrame(animItem.dataset.animId, frameItem.dataset.frameId);
+      });
+    });
+  }
+
+  _charEditorAnimationItemHtml(anim) {
+    const escapedId = this.escapeHtml(anim.id);
+    const framesHtml = (anim.frames || []).map(frame => this._charEditorFrameItemHtml(anim, frame)).join("");
+    return `
+      <div class="char-anim" data-anim-id="${escapedId}">
+        <div class="char-anim-header">
+          <input class="char-anim-name-input" value="${this.escapeHtml(anim.name || "")}" placeholder="Animation name">
+          <input class="char-anim-order-input" type="number" min="0" value="${anim.sort_order ?? ""}" placeholder="Order" title="Sort order">
+          <button class="char-anim-save-btn">Save</button>
+          <button class="char-anim-del-btn" title="Delete animation"><i class="fa-light fa-trash-can" aria-hidden="true"></i></button>
+        </div>
+        <div class="char-anim-frames">
+          ${framesHtml}
+          <label class="char-frame-add" title="Add frames">
+            <i class="fa-light fa-plus" aria-hidden="true"></i>
+            <input class="char-frame-file-input" type="file" accept="image/*" multiple data-anim-id="${escapedId}">
+          </label>
+        </div>
+      </div>
+    `;
+  }
+
+  _charEditorFrameItemHtml(anim, frame) {
+    const characterId = this._charEditorCharacter?.id || "";
+    const imageUrl = frame.image_url || `${apiBase}/characters/${encodeURIComponent(characterId)}/animations/${encodeURIComponent(anim.id)}/frames/${encodeURIComponent(frame.id)}/image`;
+    const frameIndex = frame.frame_index ?? "";
+    return `
+      <div class="char-frame" data-frame-id="${this.escapeHtml(frame.id)}">
+        <img class="char-frame-img" src="${this.escapeHtml(imageUrl)}" alt="${frameIndex !== "" ? `Frame ${frameIndex}` : "Frame"}" loading="lazy">
+        <button class="char-frame-del-btn" title="Delete frame"><i class="fa-light fa-xmark" aria-hidden="true"></i></button>
+        ${frameIndex !== "" ? `<span class="char-frame-index">${frameIndex}</span>` : ""}
+      </div>
+    `;
+  }
+
+  async _charEditorAddAnimation() {
+    if (!this._charEditorCharacter) return;
+    this.setStatus("Creating animation…");
+    try {
+      const existingCount = this._charEditorHost ? this._charEditorHost.querySelectorAll(".char-anim").length : 0;
+      await this.apiClient.createCharacterAnimation(this._charEditorCharacter.id, { name: "New Animation", sort_order: existingCount });
+      await this._charEditorRefreshAnimations();
+      this.setStatus("");
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to create animation.", true);
+    }
+  }
+
+  async _charEditorSaveAnimation(animId, name, sortOrder) {
+    if (!this._charEditorCharacter) return;
+    this.setStatus("Saving animation…");
+    try {
+      await this.apiClient.updateCharacterAnimation(this._charEditorCharacter.id, animId, { name, sort_order: sortOrder });
+      this.setStatus("Animation saved.");
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to save animation.", true);
+    }
+  }
+
+  async _charEditorDeleteAnimation(animId) {
+    if (!this._charEditorCharacter) return;
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    this.setStatus("Deleting animation…");
+    try {
+      await this.apiClient.deleteCharacterAnimation(this._charEditorCharacter.id, animId);
+      await this._charEditorRefreshAnimations();
+      this.setStatus("");
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to delete animation.", true);
+    }
+  }
+
+  async _charEditorUploadFrames(animId, files) {
+    if (!this._charEditorCharacter) return;
+    this.setStatus(`Uploading ${files.length} frame${files.length !== 1 ? "s" : ""}…`);
+    try {
+      for (let fileIndex = 0; fileIndex < files.length; fileIndex++)
+        await this.apiClient.uploadCharacterAnimationFrame(this._charEditorCharacter.id, animId, files[fileIndex]);
+      await this._charEditorRefreshAnimations();
+      this.setStatus("Frames uploaded.");
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to upload frames.", true);
+    }
+  }
+
+  async _charEditorDeleteFrame(animId, frameId) {
+    if (!this._charEditorCharacter) return;
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    this.setStatus("Deleting frame…");
+    try {
+      await this.apiClient.deleteCharacterAnimationFrame(this._charEditorCharacter.id, animId, frameId);
+      await this._charEditorRefreshAnimations();
+      this.setStatus("");
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to delete frame.", true);
+    }
+  }
+
   disposeMaintenanceGrid() {
     if (!this.maintenanceGridInstance) return;
     this.maintenanceGridInstance.dispose();
@@ -1533,6 +1975,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
+    this.disposeCharacterCardView();
     const maintenanceStore = this.buildMaintenanceStore(maintenanceType);
     if (!this.maintenanceGridInstance) {
       this.elements.cardView.innerHTML = "";
@@ -1600,6 +2043,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
+    this.disposeCharacterCardView();
     this.ensureCardView();
   }
 
@@ -1625,6 +2069,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
+    this.disposeCharacterCardView();
     const systemTemplatesStore = new DevExpress.data.CustomStore({
       key: "id",
       load: async () => {
@@ -1725,6 +2170,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
+    this.disposeCharacterCardView();
     const allModelsStore = new DevExpress.data.CustomStore({
       key: "id",
       load: async () => {
@@ -1947,6 +2393,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
+    this.disposeCharacterCardView();
     const usersStore = new DevExpress.data.CustomStore({
       key: "id",
       load: () => this.apiClient.fetchUsers(),
@@ -2169,6 +2616,12 @@ class ModelsApp {
       this.setStatus(dataSets.length ? "" : this.translations.get("No models found."));
       return;
     }
+    if (this.isCharacterNodeId(this.state.selectedTreeNodeId)) {
+      const characters = this.getCharactersByTreeNodeId(this.state.selectedTreeNodeId);
+      this.renderCharacters(characters);
+      this.setStatus(characters.length ? "" : this.translations.get("No models found."));
+      return;
+    }
     const models = this.getModelsByTreeNodeId(this.state.selectedTreeNodeId);
     this.renderModels(models);
     this.setStatus(models.length ? "" : this.translations.get("No models found."));
@@ -2219,9 +2672,10 @@ class ModelsApp {
       this.apiClient.fetchScienceLookups(),
       this.apiClient.fetchVideos(),
       this.apiClient.fetchDataSets(),
+      this.apiClient.fetchCharacters(),
       isAuthenticated ? this.apiClient.fetchDeletedModels() : Promise.resolve([])
     ];
-    const [personalModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videosResult, dataSetsResult, deletedModelsResult] = await Promise.allSettled(requests);
+    const [personalModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videosResult, dataSetsResult, charactersResult, deletedModelsResult] = await Promise.allSettled(requests);
     const personalModels = personalModelsResult.status === "fulfilled" ? personalModelsResult.value : [];
     if (publicModelsResult.status !== "fulfilled")
       throw publicModelsResult.reason;
@@ -2240,6 +2694,7 @@ class ModelsApp {
     this.publicModels = this.applyModelLookupLabels(publicModels);
     this.videosData = this.applyModelLookupLabels(videosResult.status === "fulfilled" ? videosResult.value : []);
     this.dataSetData = this.applyModelLookupLabels(dataSetsResult.status === "fulfilled" ? dataSetsResult.value : []);
+    this.charactersData = charactersResult.status === "fulfilled" ? charactersResult.value : [];
     if (!isAuthenticated) {
       this.favoriteModels = [];
       this.libraryModels = [];
@@ -2403,6 +2858,16 @@ class ModelsApp {
       || (typeof nodeId === "string" && (nodeId.startsWith("market-data-education-item:") || nodeId.startsWith("market-data-science-item:")));
   }
 
+  isCharacterNodeId(nodeId) {
+    return nodeId === treeNodeIds.marketplaceCharacters;
+  }
+
+  getCharactersByTreeNodeId(nodeId) {
+    if (nodeId === treeNodeIds.marketplaceCharacters)
+      return this.charactersData;
+    return [];
+  }
+
   getEducationLabel(model) {
     const educationLabel = this.educationLookupNameById.get(model.education_level_id);
     if (educationLabel)
@@ -2553,7 +3018,7 @@ class ModelsApp {
     if (this.isAuthenticated())
       treeData.push({
         id: treeNodeIds.myModels,
-        text: this.translations.get("My Models"),
+        text: `${this.translations.get("My Models")} (${this.personalModels.length + this.deletedModels.length})`,
         iconClass: "fa-light fa-folder-user",
         iconColor: "#2563eb",
         expanded: true,
@@ -2605,35 +3070,35 @@ class ModelsApp {
       });
     treeData.push({
         id: treeNodeIds.marketplace,
-        text: this.translations.get("Marketplace"),
+        text: `${this.translations.get("Marketplace")} (${(Array.isArray(this.publicModels) ? this.publicModels.length : 0) + this.videosData.length + this.dataSetData.length + this.charactersData.length})`,
         iconClass: "fa-light fa-store",
         iconColor: "#16a34a",
-        expanded: true,
+        expanded: false,
         selectable: false,
         items: [
           {
             id: treeNodeIds.marketplaceModels,
-            text: this.translations.get("Models"),
+            text: `${this.translations.get("Models")} (${Array.isArray(this.publicModels) ? this.publicModels.length : 0})`,
             iconClass: "fa-light fa-cube",
             iconColor: "#16a34a",
-            expanded: true,
+            expanded: false,
             selectable: false,
             items: [
               {
                 id: treeNodeIds.marketplaceModelsEducation,
-                text: this.translations.get("Education Levels"),
+                text: `${this.translations.get("Education Levels")} (${educationItems.length})`,
                 iconClass: "fa-light fa-graduation-cap",
                 iconColor: "#8b5cf6",
-                expanded: true,
+                expanded: false,
                 selectable: false,
                 items: educationItems
               },
               {
                 id: treeNodeIds.marketplaceModelsSciences,
-                text: this.translations.get("Sciences"),
+                text: `${this.translations.get("Sciences")} (${scienceItems.length})`,
                 iconClass: "fa-light fa-flask",
                 iconColor: "#0ea5e9",
-                expanded: true,
+                expanded: false,
                 selectable: false,
                 items: scienceItems
               }
@@ -2644,24 +3109,24 @@ class ModelsApp {
             text: `${this.translations.get("Videos")} (${this.videosData.length})`,
             iconClass: "fa-light fa-video",
             iconColor: "#e11d48",
-            expanded: true,
+            expanded: false,
             selectable: false,
             items: [
               {
                 id: treeNodeIds.marketplaceVideosEducation,
-                text: this.translations.get("Education Levels"),
+                text: `${this.translations.get("Education Levels")} (${videoEducationItems.length})`,
                 iconClass: "fa-light fa-graduation-cap",
                 iconColor: "#8b5cf6",
-                expanded: true,
+                expanded: false,
                 selectable: false,
                 items: videoEducationItems
               },
               {
                 id: treeNodeIds.marketplaceVideosSciences,
-                text: this.translations.get("Sciences"),
+                text: `${this.translations.get("Sciences")} (${videoScienceItems.length})`,
                 iconClass: "fa-light fa-flask",
                 iconColor: "#0ea5e9",
-                expanded: true,
+                expanded: false,
                 selectable: false,
                 items: videoScienceItems
               }
@@ -2672,28 +3137,35 @@ class ModelsApp {
             text: `${this.translations.get("Data")} (${this.dataSetData.length})`,
             iconClass: "fa-light fa-table",
             iconColor: "#d97706",
-            expanded: true,
+            expanded: false,
             selectable: false,
             items: [
               {
                 id: treeNodeIds.marketplaceDataEducation,
-                text: this.translations.get("Education Levels"),
+                text: `${this.translations.get("Education Levels")} (${dataEducationItems.length})`,
                 iconClass: "fa-light fa-graduation-cap",
                 iconColor: "#8b5cf6",
-                expanded: true,
+                expanded: false,
                 selectable: false,
                 items: dataEducationItems
               },
               {
                 id: treeNodeIds.marketplaceDataSciences,
-                text: this.translations.get("Sciences"),
+                text: `${this.translations.get("Sciences")} (${dataScienceItems.length})`,
                 iconClass: "fa-light fa-flask",
                 iconColor: "#0ea5e9",
-                expanded: true,
+                expanded: false,
                 selectable: false,
                 items: dataScienceItems
               }
             ]
+          },
+          {
+            id: treeNodeIds.marketplaceCharacters,
+            text: `${this.translations.get("Characters")} (${this.charactersData.length})`,
+            iconClass: "fa-light fa-person-running",
+            iconColor: "#7c3aed",
+            nodeType: "marketplace-characters"
           }
         ]
       }
@@ -2704,7 +3176,7 @@ class ModelsApp {
         text: this.translations.get("Maintenance"),
         iconClass: "fa-light fa-screwdriver-wrench",
         iconColor: "#475569",
-        expanded: true,
+        expanded: false,
         selectable: false,
         items: [
           {
@@ -3015,6 +3487,12 @@ class ModelsApp {
       if (uploadDataContainer)
         uploadDataContainer.style.display = canAccess ? "" : "none";
     }
+    const addCharacterElement = this.elements.navAddCharacter;
+    if (addCharacterElement) {
+      const addCharacterContainer = addCharacterElement.closest(".dx-item");
+      if (addCharacterContainer)
+        addCharacterContainer.style.display = canAccess ? "" : "none";
+    }
   }
 
   refreshTreeSelection() {
@@ -3032,6 +3510,7 @@ class ModelsApp {
     if (this.elements.navNewModel) this.elements.navNewModel.addEventListener("click", () => this.createModel());
     if (this.elements.navUploadVideo) this.elements.navUploadVideo.addEventListener("click", () => this.showUploadVideoPopup());
     if (this.elements.navUploadData) this.elements.navUploadData.addEventListener("click", () => this.showDataPopup());
+    if (this.elements.navAddCharacter) this.elements.navAddCharacter.addEventListener("click", () => this.showCharacterPopup());
   }
   async createModel() {
     this.userSdk.refreshState(this.state);
@@ -3382,6 +3861,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
+    this.disposeCharacterCardView();
     const statusColors = {
       "new": { background: "#dbeafe", color: "#1d4ed8" },
       "todo": { background: "#fef3c7", color: "#b45309" },
@@ -3503,6 +3983,7 @@ class ModelsApp {
     this.disposeUsersGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
+    this.disposeCharacterCardView();
     const whatsNewStore = new DevExpress.data.CustomStore({
       key: "id",
       load: () => this.apiClient.fetchWhatsNew(),

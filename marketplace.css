@@ -803,6 +803,7 @@ body {
 
 #nav-upload-video:hover .mdl-nav-action-icon,
 #nav-upload-data:hover .mdl-nav-action-icon,
+#nav-add-character:hover .mdl-nav-action-icon,
 #nav-new-model:hover .mdl-nav-action-icon,
 #nav-notifications:hover .mdl-nav-action-icon {
   display: none;
@@ -810,7 +811,202 @@ body {
 
 #nav-upload-video:hover .mdl-nav-action-icon-hover,
 #nav-upload-data:hover .mdl-nav-action-icon-hover,
+#nav-add-character:hover .mdl-nav-action-icon-hover,
 #nav-new-model:hover .mdl-nav-action-icon-hover,
 #nav-notifications:hover .mdl-nav-action-icon-hover {
   display: inline-block;
+}
+
+.media-thumb-placeholder.character-thumb {
+  background: linear-gradient(135deg, #ede9fe, #c4b5fd);
+}
+
+.char-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.char-editor-field-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.3rem;
+}
+.char-editor-info-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+.char-editor-anims {
+  border-top: 1px solid var(--c-border);
+  padding-top: 1rem;
+}
+.char-editor-anims-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.char-editor-section-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+.char-no-anims {
+  color: var(--c-muted);
+  font-size: 0.875rem;
+  padding: 0.5rem 0;
+}
+.char-anim {
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  overflow: hidden;
+}
+.char-anim-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  background: #f9fafb;
+  border-bottom: 1px solid var(--c-border);
+}
+.char-anim-name-input {
+  flex: 1;
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.875rem;
+  background: #fff;
+  color: var(--c-text);
+  min-width: 0;
+  outline: none;
+}
+.char-anim-name-input:focus {
+  border-color: var(--c-link);
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+}
+.char-anim-order-input {
+  width: 62px;
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.875rem;
+  background: #fff;
+  color: var(--c-text);
+  text-align: center;
+  outline: none;
+}
+.char-anim-order-input:focus {
+  border-color: var(--c-link);
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+}
+.char-anim-save-btn {
+  border: 1px solid var(--c-link);
+  border-radius: 4px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.8rem;
+  background: transparent;
+  color: var(--c-link);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.char-anim-save-btn:hover {
+  background: var(--c-link);
+  color: #fff;
+}
+.char-anim-del-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #dc2626;
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.15s;
+}
+.char-anim-del-btn:hover {
+  background: #fee2e2;
+}
+.char-anim-frames {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  min-height: 3rem;
+}
+.char-frame {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+.char-frame-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.char-frame-del-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 0;
+  line-height: 1;
+}
+.char-frame:hover .char-frame-del-btn {
+  opacity: 1;
+}
+.char-frame-index {
+  position: absolute;
+  bottom: 2px;
+  left: 3px;
+  font-size: 0.58rem;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  padding: 0 3px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+.char-frame-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border: 2px dashed var(--c-border);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--c-muted);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+.char-frame-add:hover {
+  border-color: var(--c-link);
+  color: var(--c-link);
+}
+.char-frame-file-input {
+  display: none;
 }
