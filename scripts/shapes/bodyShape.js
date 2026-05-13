@@ -1,42 +1,51 @@
 class BodyShape extends ChildShape {
-    static characters;
-    static loadCharactersPromise;
-
-    static setup() {
-        super.setup();
-        this.loadCharacters();
-    }
-
-    static loadCharacters() {
-        if (this.loadCharactersPromise)
-            return this.loadCharactersPromise;
-        this.loadCharactersPromise = fetch("resources/characters/characters.json")
-            .then(file => file.json())
-            .then(directories => Promise.all(directories.map(directory => this.loadCharacter(directory))))
-            .then(results => {
-                this.characters = results;
-                return results;
-            });
-        return this.loadCharactersPromise;
-    }
-
-    static loadCharacter(directory) {
-        return fetch(`resources/characters/${directory}/character.json`)
-            .then(file => file.json())
-            .then(data => {
-                data.folder = directory;
-                return data;
-            });
-    }
-
-    static getCharacters() {
-        if (!this.characters)
-            return [];
-        return this.characters;
-    }
+    static apiCharacterDefinitions = new Map();
+    static pendingApiCharacterFetches = new Map();
 
     static getCharacterByKey(characterKey) {
-        return this.getCharacters().find(character => character.folder === characterKey);
+        return this.apiCharacterDefinitions.get(characterKey) ?? null;
+    }
+
+    static adaptApiCharacterDefinition(definition) {
+        const animations = (definition.animations ?? []).map(animation => {
+            const sortedFrames = [...(animation.frames ?? [])].sort((a, b) => (a.frame_index ?? 0) - (b.frame_index ?? 0));
+            const frameUrls = sortedFrames.map(frame => frame.image_url);
+            return {
+                name: animation.name || "Idle",
+                frames: frameUrls.length || 1,
+                frameUrls,
+                startIndex: 0
+            };
+        });
+        return {
+            id: definition.id,
+            name: definition.title || "",
+            title: definition.title || "",
+            thumbnail_url: definition.thumbnail_url,
+            folder: null,
+            centerPoint: { x: 0.5, y: 0.5 },
+            animations
+        };
+    }
+
+    static fetchApiCharacterDefinition(characterKey, apiClient) {
+        if (this.apiCharacterDefinitions.has(characterKey))
+            return Promise.resolve(this.apiCharacterDefinitions.get(characterKey));
+        if (this.pendingApiCharacterFetches.has(characterKey))
+            return this.pendingApiCharacterFetches.get(characterKey);
+        const promise = apiClient.fetchCharacterDefinition(characterKey)
+            .then(definition => {
+                const adapted = BodyShape.adaptApiCharacterDefinition(definition);
+                BodyShape.apiCharacterDefinitions.set(characterKey, adapted);
+                BodyShape.pendingApiCharacterFetches.delete(characterKey);
+                return adapted;
+            })
+            .catch(error => {
+                BodyShape.pendingApiCharacterFetches.delete(characterKey);
+                throw error;
+            });
+        this.pendingApiCharacterFetches.set(characterKey, promise);
+        return promise;
     }
 
     constructor(board, parent, id) {
@@ -94,20 +103,21 @@ class BodyShape extends ChildShape {
                 this.dispatchEvent("changed", {});
             }
         }
+        if ("characterKey" in properties)
+            this.character = BodyShape.getCharacterByKey(this.properties.characterKey);
         if (!this.character && this.properties.characterKey)
-            BodyShape.loadCharactersPromise?.then(() => {
-                this.character = this.getSelectedCharacter();
-                this.synchronizeIdleAnimationTicker();
-                this.board.markDirty(this);
-            });
+            this.loadApiCharacterIfNeeded(this.properties.characterKey);
         this.synchronizeIdleAnimationTicker();
     }
 
     setProperty(name, value) {
         if (name === "name")
             this.properties.nameIsDefault = false;
-        if (name === "characterKey")
+        if (name === "characterKey") {
             this.character = BodyShape.getCharacterByKey(value);
+            if (!this.character && value)
+                this.loadApiCharacterIfNeeded(value);
+        }
         if (name === "isPhysical") {
             if (value === true) {
                 const prefix = (this.properties.name ?? "").replace(/\s+/g, "");
@@ -316,84 +326,169 @@ class BodyShape extends ChildShape {
         return items;
     }
 
-    createCharacterPickerButton() {
-        const baseItemSize = 50;
-        const columns = 4;
-        const itemMargin = 2;
-        const step = baseItemSize + itemMargin * 2;
-        const popupPadding = 6;
-        this._characterPicker = $('<div class="mdl-character-picker"></div>');
-        this._characterPicker.dxDropDownButton({
-            showArrowIcon: false,
-            stylingMode: "text",
-            useSelectMode: false,
-            onInitialized: e => Utils.createTranslatedTooltip(e, "Character Tooltip", this.board.translations, 280),
-            buttonTemplate: (data, element) => this.renderCharacterPickerButtonTemplate(element),
-            dropDownOptions: {
-                container: document.body,
-                wrapperAttr: this.getShapeOverlayWrapperAttr("mdl-character-picker-menu"),
-                width: "auto",
-                contentTemplate: contentElement => this.createCharacterPickerGrid(contentElement)
-            }
-        });
-        return this._characterPicker;
-    }
-
-    renderCharacterPickerButtonTemplate(element) {
-        const character = this.getSelectedCharacter();
-        const content = $('<div class="mdl-character-picker-button-template"></div>');
-        if (character)
-            content.html(`<img src="resources/characters/${character.folder}/${character.image}" alt="${character.name}" />`);
-        else
-            content.html(`<i class="fa-light fa-circle mdl-character-picker-button-icon"></i>`);
-        $(element).empty().append(content);
-    }
-
-    createCharacterPickerGrid(contentElement) {
-        const baseItemSize = 50;
-        const columns = 4;
-        const itemMargin = 2;
-        const step = baseItemSize + itemMargin * 2;
-        const characters = BodyShape.characters ?? [];
-        const allItems = [
-            { key: "", name: "None", description: "", icon: null },
-            ...characters.map(c => ({ key: c.folder, name: c.name, description: c.description ?? "", icon: `resources/characters/${c.folder}/${c.image}` }))
-        ];
-        const rows = Math.ceil(allItems.length / columns);
-        $(contentElement).empty();
-        const container = $('<div class="mdl-character-picker-grid"></div>');
-        $(contentElement).append(container);
-        container.dxTileView({
-            items: allItems,
-            baseItemHeight: baseItemSize,
-            baseItemWidth: baseItemSize,
-            itemMargin: itemMargin,
-            direction: "vertical",
-            height: rows * step,
-            width: columns * step,
-            itemTemplate: (itemData, index, element) => {
-                const cell = $(`<div class="mdl-character-picker-item"></div>`);
-                if (itemData.icon)
-                    cell.html(`<img src="${itemData.icon}" alt="${itemData.name}" />`);
-                else
-                    cell.html(`<i class="fa-light fa-ban"></i>`);
-                $(element).append(cell);
-                this.configureCharacterTooltip(itemData, $(element)[0]);
-            },
-            onItemClick: e => {
-                this.setPropertyCommand("characterKey", e.itemData.key ?? "");
-                this._characterPicker?.dxDropDownButton("instance")?.close();
-                this.refreshCharacterPickerButtonTemplate();
-            }
-        });
-    }
-
-    refreshCharacterPickerButtonTemplate() {
-        if (!this._characterPicker)
+    _buildCharacterPickerContent(contentElement) {
+        const host = contentElement.get ? contentElement.get(0) : contentElement;
+        host.innerHTML = `<div class="mdl-marketplace-data-status"><i class="fa-light fa-spinner fa-spin"></i></div>`;
+        const apiClient = this.board.shell?.modelsApiClient;
+        if (!apiClient) {
+            host.innerHTML = `<div class="mdl-marketplace-data-status">Characters unavailable.</div>`;
             return;
-        const buttonContentElement = this._characterPicker.find(".dx-button-content")[0];
-        if (buttonContentElement)
-            this.renderCharacterPickerButtonTemplate(buttonContentElement);
+        }
+        Promise.all([
+            apiClient.fetchCharacters().catch(() => []),
+            apiClient.fetchCharacterCategories().catch(() => [])
+        ]).then(([characters, categories]) => {
+            const categoryNameById = new Map(categories.map(cat => [cat.id, cat.name]));
+            const grouped = new Map();
+            const sortedCharacters = [...characters].sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+            for (const character of sortedCharacters) {
+                const categoryId = character.category_id || null;
+                const categoryName = categoryId ? (categoryNameById.get(categoryId) || categoryId) : "Uncategorized";
+                const groupKey = categoryId || "__uncategorized__";
+                if (!grouped.has(groupKey))
+                    grouped.set(groupKey, { name: categoryName, characters: [] });
+                grouped.get(groupKey).characters.push(character);
+            }
+            const sortedGroups = Array.from(grouped.values()).sort((a, b) => {
+                if (a.name === "Uncategorized") return 1;
+                if (b.name === "Uncategorized") return -1;
+                return a.name.localeCompare(b.name);
+            });
+            host.innerHTML = `
+                <div class="mdl-char-picker-container">
+                    <div class="mdl-char-picker-search-bar">
+                        <input class="mdl-char-picker-search-input" type="text" placeholder="Search characters…" autocomplete="off">
+                    </div>
+                    <div class="mdl-marketplace-data-scroll mdl-char-picker-scroll"><div class="mdl-char-picker-body"></div></div>
+                </div>`;
+            const body = host.querySelector(".mdl-char-picker-body");
+            const searchInput = host.querySelector(".mdl-char-picker-search-input");
+            for (const group of sortedGroups) {
+                const groupId = `char-picker-group-${CSS.escape(group.name)}`;
+                body.insertAdjacentHTML("beforeend", `
+                    <div class="mdl-char-picker-group" id="${groupId}">
+                        <div class="mdl-char-picker-group-label">${this._escapePickerHtml(group.name)}</div>
+                        <div class="mdl-marketplace-data-grid"></div>
+                    </div>`);
+                const grid = body.querySelector(`#${groupId} .mdl-marketplace-data-grid`);
+                for (const character of group.characters) {
+                    const cardId = `char-card-${CSS.escape(character.id)}`;
+                    const isSelected = this._selectedCharacterKey === character.id;
+                    const thumbHtml = character.thumbnail_url
+                        ? `<img class="mdl-marketplace-data-thumb" src="${this._escapePickerHtml(character.thumbnail_url)}" alt="${this._escapePickerHtml(character.title || "")}">`
+                        : `<div class="mdl-marketplace-data-thumb-placeholder"><i class="fa-light fa-person-running"></i></div>`;
+                    grid.insertAdjacentHTML("beforeend", `
+                        <div class="mdl-marketplace-data-card${isSelected ? " selected" : ""}" id="${cardId}" data-character-id="${this._escapePickerHtml(character.id)}" data-character-title="${this._escapePickerHtml((character.title || "").toLowerCase())}">
+                            ${thumbHtml}
+                            <div class="mdl-marketplace-data-title">${this._escapePickerHtml(character.title || "")}</div>
+                        </div>`);
+                    const card = grid.lastElementChild;
+                    card.addEventListener("click", () => {
+                        host.querySelectorAll(".mdl-marketplace-data-card").forEach(c => c.classList.remove("selected"));
+                        card.classList.add("selected");
+                        this._selectedCharacterKey = character.id;
+                    });
+                    if (character.title || character.description) {
+                        $('<div>').appendTo('body').dxTooltip({
+                            target: card,
+                            contentTemplate: tooltipContent => {
+                                tooltipContent.append($('<div class="card-desc-tooltip">').html(`<strong>${this._escapePickerHtml(character.title || "")}</strong>${character.description ? `<p>${this._escapePickerHtml(character.description)}</p>` : ``}`));
+                            },
+                            showEvent: { delay: 600, name: "mouseenter" },
+                            hideEvent: "mouseleave",
+                            position: "bottom",
+                            maxWidth: 300,
+                            zIndex: 95000
+                        });
+                    }
+                }
+            }
+            searchInput.addEventListener("input", event => {
+                const query = event.target.value.toLowerCase().trim();
+                body.querySelectorAll(".mdl-char-picker-group:not([data-none-group])").forEach(group => {
+                    let visibleCount = 0;
+                    group.querySelectorAll(".mdl-marketplace-data-card").forEach(card => {
+                        const matches = !query || card.dataset.characterTitle.includes(query);
+                        card.style.display = matches ? "" : "none";
+                        if (matches) visibleCount++;
+                    });
+                    group.style.display = visibleCount > 0 ? "" : "none";
+                });
+            });
+        });
+    }
+
+    _escapePickerHtml(text) {
+        return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    showCharacterPickerPopup() {
+        this._selectedCharacterKey = this.properties.characterKey ?? "";
+        if (this._characterPickerPopupInstance) {
+            this._buildCharacterPickerContent(this._characterPickerPopupInstance.content());
+            this._characterPickerPopupInstance.show();
+            return;
+        }
+        const popupHost = document.createElement("div");
+        document.body.appendChild(popupHost);
+        this._characterPickerPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+            visible: true,
+            showTitle: true,
+            title: this.board.translations.get("Select Character") ?? "Select Character",
+            width: 1040,
+            height: 600,
+            dragEnabled: true,
+            hideOnOutsideClick: true,
+            showCloseButton: true,
+            wrapperAttr: this.getShapeOverlayWrapperAttr("mdl-character-picker-popup"),
+            toolbarItems: [
+                {
+                    widget: "dxButton",
+                    location: "after",
+                    toolbar: "bottom",
+                    options: {
+                        text: this.board.translations.get("Select") ?? "Select",
+                        type: "default",
+                        stylingMode: "contained",
+                        onClick: () => {
+                            this.setPropertyCommand("characterKey", this._selectedCharacterKey);
+                            this.refreshShapeColorToolbarControl();
+                            this._characterPickerPopupInstance.hide();
+                        }
+                    }
+                },
+                {
+                    widget: "dxButton",
+                    location: "after",
+                    toolbar: "bottom",
+                    options: {
+                        text: this.board.translations.get("Remove") ?? "Remove",
+                        type: "danger",
+                        stylingMode: "outlined",
+                        onClick: () => {
+                            this.setPropertyCommand("characterKey", "");
+                            this.refreshShapeColorToolbarControl();
+                            this._characterPickerPopupInstance.hide();
+                        }
+                    }
+                },
+                {
+                    widget: "dxButton",
+                    location: "after",
+                    toolbar: "bottom",
+                    options: {
+                        text: this.board.translations.get("Cancel") ?? "Cancel",
+                        stylingMode: "text",
+                        onClick: () => this._characterPickerPopupInstance.hide()
+                    }
+                }
+            ],
+            contentTemplate: contentElement => this._buildCharacterPickerContent(contentElement)
+        });
+    }
+
+    resolveCharacterImageSrc(character) {
+        return character.thumbnail_url || null;
     }
 
     renderParentButtonTemplate(element) {
@@ -401,8 +496,11 @@ class BodyShape extends ChildShape {
         const parentCharacter = parentShape?.character;
         if (parentCharacter) {
             const name = parentShape.properties.name ?? parentCharacter.name;
-            element.innerHTML = `<img class="mdl-parent-btn-character" src="resources/characters/${parentCharacter.folder}/${parentCharacter.image}" title="${name}" alt="${name}"/>`;
-            return;
+            const characterImageSrc = this.resolveCharacterImageSrc(parentCharacter);
+            if (characterImageSrc) {
+                element.innerHTML = `<img class="mdl-parent-btn-character" src="${characterImageSrc}" title="${name}" alt="${name}"/>`;
+                return;
+            }
         }
         super.renderParentButtonTemplate(element);
     }
@@ -410,7 +508,12 @@ class BodyShape extends ChildShape {
     renderShapeColorButtonTemplate(element) {
         const name = this.properties.name ?? "";
         if (this.character) {
-            element.innerHTML = `<img class="mdl-name-btn-character" src="resources/characters/${this.character.folder}/${this.character.image}" alt="${name}"/><span>${name}</span>`;
+            const characterImageSrc = this.resolveCharacterImageSrc(this.character);
+            if (characterImageSrc) {
+                element.innerHTML = `<img class="mdl-name-btn-character" src="${characterImageSrc}" alt="${name}"/><span>${name}</span>`;
+                return;
+            }
+            element.innerHTML = `<i class="fa-light fa-person-running"></i><span>${name}</span>`;
             return;
         }
         super.renderShapeColorButtonTemplate(element);
@@ -442,8 +545,14 @@ class BodyShape extends ChildShape {
                 text: "Character",
                 items: [
                     {
-                        text: "",
-                        buildControl: $p => this.createCharacterPickerGrid($p[0])
+                        text: "Character",
+                        buildControl: $p => {
+                            $('<div>').dxButton({
+                                icon: "fa-light fa-person-running",
+                                stylingMode: "text",
+                                onClick: () => this.showCharacterPickerPopup()
+                            }).appendTo($p);
+                        }
                     }
                 ]
             },
@@ -609,37 +718,6 @@ class BodyShape extends ChildShape {
         input.click();
     }
 
-    configureCharacterTooltip(itemData, itemElement) {
-        if (itemElement.dataset.tooltipInitialized === "true")
-            return;
-        itemElement.dataset.tooltipInitialized = "true";
-        const name = this.escapeCharacterTooltipText(itemData.name ?? "");
-        const description = this.escapeCharacterTooltipText(itemData.description ?? "");
-        const tooltipHtml = `<div class="tooltip"><strong>${name}</strong><div>${description}</div></div>`;
-        $("<div>")
-            .appendTo("body")
-            .dxTooltip({
-                target: itemElement,
-                contentTemplate: contentElement => contentElement.append($("<div class='tooltip'/>").html(tooltipHtml)),
-                showEvent: {
-                    delay: 300,
-                    name: "mouseenter"
-                },
-                hideEvent: "mouseleave",
-                position: "top",
-                width: 220
-            });
-    }
-
-    escapeCharacterTooltipText(value) {
-        return String(value)
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#39;");
-    }
-
     createImageDropZoneEditor() {
         this.imageDropZoneControl = new ImageControl({
             imageSource: this.getImageSource(),
@@ -712,15 +790,11 @@ class BodyShape extends ChildShape {
         const animation = this.getCharacterAnimation(character);
         const frameCount = animation.frames;
         const startIndex = animation.startIndex ?? 0;
-        const padLength = animation.padLength ?? 0;
-        const filePrefix = animation.filePrefix ?? `${character.name} ${animation.name} `;
         const interval = Math.max(1, this.properties.stroboscopyInterval);
         this._stroboscopyPositions = this._stroboscopyPositions.map((pos, i) => {
             const iteration = i === 0 ? 1 : i * interval;
             const rawFrameIndex = this.getAnimationFrameIndex(animation, frameCount, iteration, startIndex);
-            const frameIndex = padLength > 0 ? String(rawFrameIndex).padStart(padLength, "0") : String(rawFrameIndex);
-            const frameName = `${filePrefix}${frameIndex}.png`;
-            const href = `resources/characters/${character.folder}/${animation.folder}/${frameName}`;
+            const href = animation.frameUrls?.[Math.min(rawFrameIndex, (animation.frameUrls.length || 1) - 1)] ?? "";
             return { ...pos, href };
         });
     }
@@ -856,6 +930,10 @@ class BodyShape extends ChildShape {
                 this.imageDropZoneControl.setImageSource(this.getImageSource());
             return;
         }
+        if (this.properties.characterKey) {
+            this.image.removeAttribute("href");
+            return;
+        }
         const imageSource = this.getImageSource();
         if (imageSource != "")
             this.image.setAttribute("href", imageSource);
@@ -887,6 +965,12 @@ class BodyShape extends ChildShape {
         if (character) {
             this.drawCharacter(position, radius, diameter, character);
             this.applyImageFlipTransform(position, true);
+            this.drawCenterDot(position);
+            return;
+        }
+        if (this.properties.characterKey) {
+            this.circle.setAttribute("r", 0);
+            this.image.removeAttribute("href");
             this.drawCenterDot(position);
             return;
         }
@@ -932,6 +1016,21 @@ class BodyShape extends ChildShape {
         this.image.setAttribute("transform", `translate(${position.x * 2} 0) scale(-1 1)`);
     }
 
+    loadApiCharacterIfNeeded(characterKey) {
+        const apiClient = this.board.shell?.modelsApiClient;
+        if (!apiClient || !characterKey)
+            return;
+        BodyShape.fetchApiCharacterDefinition(characterKey, apiClient)
+            .then(adapted => {
+                if (this.properties.characterKey !== characterKey)
+                    return;
+                this.character = adapted;
+                this.synchronizeIdleAnimationTicker();
+                this.board.markDirty(this);
+            })
+            .catch(() => {});
+    }
+
     getSelectedCharacter() {
         if (!this.properties.characterKey)
             return null;
@@ -955,17 +1054,10 @@ class BodyShape extends ChildShape {
         const iteration = this.board.calculator.getIteration();
         const animation = this.getCharacterAnimation(character);
         const frameCount = animation.frames;
-        const animationFolder = animation.folder;
         const startIndex = animation.startIndex ?? 0;
         const rawFrameIndex = this.getAnimationFrameIndex(animation, frameCount, iteration, startIndex);
-        const padLength = animation.padLength ?? 0;
-        const frameIndex = padLength > 0 ? String(rawFrameIndex).padStart(padLength, "0") : String(rawFrameIndex);
-        const filePrefix = animation.filePrefix ?? `${character.name} ${animation.name} `;
-        const frameName = `${filePrefix}${frameIndex}.png`;
-        this.image.setAttribute("href", `resources/characters/${character.folder}/${animationFolder}/${frameName}`);
-        this._lastFrameName = frameName;
-        this._lastAnimationFolder = animationFolder;
-        this._lastCharacterFolder = character.folder;
+        const frameUrl = animation.frameUrls?.[Math.min(rawFrameIndex, (animation.frameUrls.length || 1) - 1)];
+        this.image.setAttribute("href", frameUrl || character.thumbnail_url || "");
     }
 
     getAnimationFrameIndex(animation, frameCount, iteration, startIndex) {

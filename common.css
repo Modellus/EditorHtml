@@ -12,6 +12,7 @@ body {
 .dx-popup-content,
 .dx-button-text,
 .dx-texteditor-input,
+input,
 .dx-list-item-content,
 .dx-treeview-item-content,
 .dx-toolbar-item-content,
@@ -20,7 +21,7 @@ body {
 .dx-dropdowneditor-input-wrapper,
 .dx-tag-content,
 .dx-dropdowneditor-overlay {
-    font-family: "Atma", "Inter", sans-serif;
+    font-family: "Atma", "Inter", sans-serif !important;
     font-size: 15px;
 }
 

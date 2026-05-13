@@ -164,3 +164,18 @@ class Utils {
 
 if (typeof module !== "undefined" && module.exports)
     module.exports = Utils;
+
+document.addEventListener("click", event => {
+    const item = event.target.closest(".mdl-dropdown-list-item");
+    if (!item)
+        return;
+    const control = item.querySelector(".mdl-dropdown-list-control");
+    if (!control)
+        return;
+    const buttons = control.querySelectorAll(".dx-button");
+    if (buttons.length !== 1)
+        return;
+    if (buttons[0].contains(event.target))
+        return;
+    buttons[0].click();
+});

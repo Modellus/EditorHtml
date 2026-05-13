@@ -34,7 +34,8 @@ const treeNodeIds = {
   maintenanceNotifications: "maintenance-notifications",
   maintenanceUsers: "maintenance-users",
   maintenanceSystemTemplates: "maintenance-system-templates",
-  maintenanceWhatsNew: "maintenance-whats-new"
+  maintenanceWhatsNew: "maintenance-whats-new",
+  maintenanceCharacterCategories: "maintenance-character-categories"
 };
 const fontAwesomeIcons = [
   { value: "", label: "No icon" },
@@ -195,6 +196,7 @@ class ModelsApp {
       || nodeId === treeNodeIds.marketplaceData
       || nodeId === treeNodeIds.marketplaceDataEducation
       || nodeId === treeNodeIds.marketplaceDataSciences
+      || nodeId === treeNodeIds.marketplaceCharacters
       || nodeId === treeNodeIds.maintenance;
   }
 
@@ -700,7 +702,7 @@ class ModelsApp {
         const currentUserId = this.userSdk.getUserId(this.state.session);
         const canEdit = this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId);
         const thumbContent = assetUrl
-          ? `<img class="card-thumb" src="${this.escapeHtml(assetUrl)}" alt="${this.escapeHtml(data.title || "")}">`
+          ? `<img class="card-thumb character-card-thumb" src="${this.escapeHtml(assetUrl)}" alt="${this.escapeHtml(data.title || "")}">`
           : `<div class="media-thumb-placeholder character-thumb"><i class="fa-light fa-person-running media-thumb-icon" aria-hidden="true"></i></div>`;
         const cardMarkup = `
           <div class="card-tile" data-item-id="${this.escapeHtml(data.id || "")}">
@@ -1096,6 +1098,7 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.ensureVideosCardView();
@@ -1109,6 +1112,7 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeCharacterCardView();
     this.ensureDataCardView();
@@ -1122,6 +1126,7 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.ensureCharacterCardView();
@@ -1565,7 +1570,7 @@ class ModelsApp {
     });
   }
 
-  showCharacterPopup(characterData = null) {
+  async showCharacterPopup(characterData = null) {
     let popupHost = document.getElementById("character-popup");
     if (!popupHost) {
       document.body.insertAdjacentHTML("beforeend", `<div id="character-popup"></div>`);
@@ -1575,70 +1580,71 @@ class ModelsApp {
     this._characterAssetFile = null;
     this._charEditorDescEditor = null;
     this._charEditorTitleInput = null;
+    this._charEditorCategorySelector = null;
     this._charEditorHost = null;
+    this._charEditorTabs = [];
+    this._charEditorActiveTabIndex = 0;
+    let characterCategories = [];
+    try {
+      characterCategories = await this.apiClient.fetchCharacterCategories();
+    } catch (_) {}
     const buildContent = contentElement => {
       const host = contentElement.get ? contentElement.get(0) : contentElement;
       this._charEditorHost = host;
       const hasCharacter = Boolean(this._charEditorCharacter);
       host.innerHTML = `
-        <div class="char-editor">
-          <div class="char-editor-info">
-            <div class="char-editor-field-label">Name</div>
-            <div id="char-title-input"></div>
-            <div class="char-editor-field-label" style="margin-top:0.75rem">Description</div>
-            <div id="char-desc-editor"></div>
-            <div id="char-desc-toolbar" class="html-editor-toolbar"></div>
-            <div class="char-editor-field-label" style="margin-top:0.75rem">Asset File</div>
-            <div id="char-asset-uploader"></div>
-            <div class="char-editor-info-actions">
-              <div id="char-save-info-btn"></div>
-            </div>
-          </div>
-          <div class="char-editor-anims" id="char-editor-anims"${hasCharacter ? "" : ` style="display:none"`}>
-            <div class="char-editor-anims-header">
-              <span class="char-editor-section-title">Animations</span>
-              <div id="char-add-anim-btn"></div>
-            </div>
-            <div id="char-anims-list"></div>
+        <div class="char-editor-tab-strip" id="char-tab-strip"></div>
+        <div id="char-general-content">
+          <div class="char-editor-field-label">Thumbnail</div>
+          <div id="char-thumbnail-control"></div>
+          <div class="char-editor-field-label" style="margin-top:0.75rem">Name</div>
+          <div id="char-title-input"></div>
+          <div class="char-editor-field-label" style="margin-top:0.75rem">Category</div>
+          <div id="char-category-select"></div>
+          <div class="char-editor-field-label" style="margin-top:0.75rem">Description</div>
+          <div id="char-desc-editor"></div>
+          <div class="char-editor-info-actions">
+            <div id="char-save-info-btn"></div>
           </div>
         </div>
+        <div id="char-anim-content" style="display:none"></div>
       `;
+      this._charEditorRenderTabStrip([{ text: "General", tabType: "general" }], 0);
       this._charEditorTitleInput = new DevExpress.ui.dxTextBox(host.querySelector("#char-title-input"), {
         value: this._charEditorCharacter?.title || "",
         placeholder: "Character name"
       });
-      this._charEditorDescEditor = new DevExpress.ui.dxHtmlEditor(host.querySelector("#char-desc-editor"), {
-        value: "",
-        valueType: "html",
-        height: 180,
-        toolbar: {
-          container: host.querySelector("#char-desc-toolbar"),
-          items: ["bold", "italic", "underline", "strike", "separator", "orderedList", "bulletList", "separator", "link", "separator", "undo", "redo"]
-        }
+      this._charEditorCategorySelector = new DevExpress.ui.dxSelectBox(host.querySelector("#char-category-select"), {
+        items: characterCategories,
+        valueExpr: "id",
+        displayExpr: "name",
+        value: this._charEditorCharacter?.category_id || null,
+        placeholder: "No category",
+        showClearButton: true
       });
-      if (this._charEditorCharacter?.description)
-        this._charEditorDescEditor.option("value", this._charEditorCharacter.description);
-      new DevExpress.ui.dxFileUploader(host.querySelector("#char-asset-uploader"), {
-        selectButtonText: hasCharacter ? "Replace asset file" : "Select asset file",
-        labelText: "or drop file here",
-        multiple: false,
-        uploadMode: "useForm",
-        onValueChanged: event => { this._characterAssetFile = event.value?.[0] || null; }
+      this._charEditorDescEditor = new DevExpress.ui.dxTextArea(host.querySelector("#char-desc-editor"), {
+        value: this._charEditorCharacter?.description || "",
+        placeholder: "Optional description",
+        height: 90
       });
+      this._characterAssetFile = null;
+      const thumbnailControl = new ImageControl({
+        dropHint: "Drop thumbnail image here",
+        imageSource: this._charEditorCharacter?.thumbnail_url || "",
+        onUploadFile: file => {
+          this._characterAssetFile = file;
+          return Promise.resolve(URL.createObjectURL(file));
+        },
+        onImageCleared: () => { this._characterAssetFile = null; }
+      });
+      host.querySelector("#char-thumbnail-control").appendChild(thumbnailControl.createHost().get(0));
       new DevExpress.ui.dxButton(host.querySelector("#char-save-info-btn"), {
         text: hasCharacter ? "Save" : "Create",
         type: "default",
         onClick: () => this._charEditorSaveInfo()
       });
-      if (hasCharacter) {
-        new DevExpress.ui.dxButton(host.querySelector("#char-add-anim-btn"), {
-          text: "Add Animation",
-          icon: "fa-light fa-plus",
-          stylingMode: "outlined",
-          onClick: () => this._charEditorAddAnimation()
-        });
+      if (hasCharacter)
         this._charEditorRefreshAnimations();
-      }
     };
     const popupTitle = this._charEditorCharacter ? "Edit Character" : "Add Character";
     if (this.characterPopupInstance) {
@@ -1657,8 +1663,51 @@ class ModelsApp {
       dragEnabled: true,
       closeOnOutsideClick: true,
       showCloseButton: true,
+      toolbarItems: [],
       contentTemplate: contentElement => buildContent(contentElement)
     });
+  }
+
+  _charEditorRenderTabStrip(tabs, activeIndex) {
+    const host = this._charEditorHost;
+    if (!host) return;
+    this._charEditorTabs = tabs;
+    this._charEditorActiveTabIndex = activeIndex;
+    const strip = host.querySelector("#char-tab-strip");
+    if (!strip) return;
+    const tabButtons = tabs.map((tab, index) =>
+      `<button class="char-editor-tab-btn${index === activeIndex ? " active" : ""}" data-tab-index="${index}">${tab.text}</button>`
+    ).join("");
+    const addButton = this._charEditorCharacter
+      ? `<button class="char-editor-tab-add-btn" title="Add Animation"><i class="fa-light fa-plus"></i></button>`
+      : "";
+    strip.innerHTML = tabButtons + addButton;
+    strip.querySelectorAll(".char-editor-tab-btn").forEach(button => {
+      button.addEventListener("click", () => this._charEditorSelectTab(Number(button.dataset.tabIndex)));
+    });
+    strip.querySelector(".char-editor-tab-add-btn")?.addEventListener("click", () => this._charEditorAddAnimation());
+  }
+
+  _charEditorSelectTab(tabIndex) {
+    const host = this._charEditorHost;
+    if (!host) return;
+    const tabs = this._charEditorTabs;
+    if (tabIndex < 0 || tabIndex >= tabs.length) return;
+    this._charEditorActiveTabIndex = tabIndex;
+    host.querySelectorAll(".char-editor-tab-btn").forEach((button, index) => {
+      button.classList.toggle("active", index === tabIndex);
+    });
+    const generalContent = host.querySelector("#char-general-content");
+    const animContent = host.querySelector("#char-anim-content");
+    const tabItem = tabs[tabIndex];
+    if (tabItem.tabType === "general") {
+      generalContent.style.removeProperty("display");
+      animContent.style.display = "none";
+      return;
+    }
+    generalContent.style.display = "none";
+    animContent.style.removeProperty("display");
+    this._charEditorRenderAnimationTabContent(animContent, tabItem.anim);
   }
 
   async _charEditorSaveInfo() {
@@ -1668,35 +1717,18 @@ class ModelsApp {
       return;
     }
     const descriptionValue = this._charEditorDescEditor?.option("value") ?? null;
+    const categoryId = this._charEditorCategorySelector?.option("value") ?? null;
     this.setStatus(this._charEditorCharacter ? "Saving character…" : "Creating character…");
     try {
       if (this._charEditorCharacter) {
-        await this.apiClient.patchCharacter(this._charEditorCharacter.id, { title, description: descriptionValue });
-        if (this._characterAssetFile)
-          await this.apiClient.uploadCharacterAsset(this._charEditorCharacter.id, this._characterAssetFile);
+        await this.apiClient.patchCharacter(this._charEditorCharacter.id, { title, description: descriptionValue, category_id: categoryId }, this._characterAssetFile || undefined);
         this.setStatus("Character saved.");
+        this.characterPopupInstance?.hide();
         this.loadModels();
       } else {
-        const created = await this.apiClient.createCharacter({ title, description: descriptionValue }, this._characterAssetFile);
+        const created = await this.apiClient.createCharacter({ title, description: descriptionValue, category_id: categoryId }, this._characterAssetFile);
         this.setStatus("Character created.");
-        this._charEditorCharacter = created;
-        if (this.characterPopupInstance)
-          this.characterPopupInstance.option("title", "Edit Character");
-        if (this._charEditorHost) {
-          const saveBtnHost = this._charEditorHost.querySelector("#char-save-info-btn");
-          if (saveBtnHost) $(saveBtnHost).dxButton("option", "text", "Save");
-          const animsSection = this._charEditorHost.querySelector("#char-editor-anims");
-          if (animsSection) animsSection.style.removeProperty("display");
-          const addAnimBtnHost = this._charEditorHost.querySelector("#char-add-anim-btn");
-          if (addAnimBtnHost)
-            new DevExpress.ui.dxButton(addAnimBtnHost, {
-              text: "Add Animation",
-              icon: "fa-light fa-plus",
-              stylingMode: "outlined",
-              onClick: () => this._charEditorAddAnimation()
-            });
-        }
-        this._charEditorRefreshAnimations();
+        this.characterPopupInstance?.hide();
         this.loadModels();
       }
     } catch (error) {
@@ -1704,63 +1736,27 @@ class ModelsApp {
     }
   }
 
-  async _charEditorRefreshAnimations() {
-    const host = this._charEditorHost;
-    if (!host || !this._charEditorCharacter) return;
-    const listHost = host.querySelector("#char-anims-list");
-    if (!listHost) return;
-    listHost.innerHTML = `<div style="padding:1rem;text-align:center;color:#6b7280"><i class="fa-light fa-spinner fa-spin"></i></div>`;
+  async _charEditorRefreshAnimations(selectAnimId = null) {
+    if (!this._charEditorCharacter) return;
     try {
       const definition = await this.apiClient.fetchCharacterDefinition(this._charEditorCharacter.id);
-      this._charEditorRenderAnimations(listHost, definition.animations || []);
-    } catch (error) {
-      listHost.innerHTML = `<div style="padding:0.75rem;color:#dc2626">Failed to load animations.</div>`;
-    }
+      const animations = definition.animations || [];
+      const generalTab = { text: "General", tabType: "general" };
+      const animTabs = animations.map(anim => ({ text: anim.name || "Untitled", tabType: "animation", anim }));
+      const allTabs = [generalTab, ...animTabs];
+      const targetIndex = selectAnimId
+          ? allTabs.findIndex(tab => tab.anim?.id === selectAnimId)
+          : null;
+        const newIndex = targetIndex > 0 ? targetIndex : this._charEditorActiveTabIndex;
+        this._charEditorRenderTabStrip(allTabs, newIndex);
+        this._charEditorSelectTab(newIndex);
+    } catch (_) {}
   }
 
-  _charEditorRenderAnimations(listHost, animations) {
-    if (!animations.length) {
-      listHost.innerHTML = `<div class="char-no-anims">No animations yet.</div>`;
-      return;
-    }
-    listHost.innerHTML = animations.map(anim => this._charEditorAnimationItemHtml(anim)).join("");
-    listHost.querySelectorAll(".char-anim-save-btn").forEach(btn => {
-      btn.addEventListener("click", event => {
-        const animItem = event.target.closest(".char-anim");
-        const animId = animItem.dataset.animId;
-        const name = animItem.querySelector(".char-anim-name-input").value;
-        const rawSortOrder = animItem.querySelector(".char-anim-order-input").value;
-        this._charEditorSaveAnimation(animId, name, rawSortOrder !== "" ? parseInt(rawSortOrder) : null);
-      });
-    });
-    listHost.querySelectorAll(".char-anim-del-btn").forEach(btn => {
-      btn.addEventListener("click", event => {
-        const animItem = event.target.closest(".char-anim");
-        this._charEditorDeleteAnimation(animItem.dataset.animId);
-      });
-    });
-    listHost.querySelectorAll(".char-frame-file-input").forEach(fileInput => {
-      fileInput.addEventListener("change", event => {
-        const animId = event.target.dataset.animId;
-        const files = Array.from(event.target.files);
-        if (files.length)
-          this._charEditorUploadFrames(animId, files);
-        event.target.value = "";
-      });
-    });
-    listHost.querySelectorAll(".char-frame-del-btn").forEach(btn => {
-      btn.addEventListener("click", event => {
-        const frameItem = event.target.closest(".char-frame");
-        const animItem = event.target.closest(".char-anim");
-        this._charEditorDeleteFrame(animItem.dataset.animId, frameItem.dataset.frameId);
-      });
-    });
-  }
-
-  _charEditorAnimationItemHtml(anim) {
+  _charEditorRenderAnimationTabContent(contentHost, anim) {
     const escapedId = this.escapeHtml(anim.id);
     const framesHtml = (anim.frames || []).map(frame => this._charEditorFrameItemHtml(anim, frame)).join("");
-    return `
+    contentHost.innerHTML = `
       <div class="char-anim" data-anim-id="${escapedId}">
         <div class="char-anim-header">
           <input class="char-anim-name-input" value="${this.escapeHtml(anim.name || "")}" placeholder="Animation name">
@@ -1777,6 +1773,27 @@ class ModelsApp {
         </div>
       </div>
     `;
+    const animItem = contentHost.querySelector(".char-anim");
+    animItem.querySelector(".char-anim-save-btn").addEventListener("click", () => {
+      const name = animItem.querySelector(".char-anim-name-input").value;
+      const rawSortOrder = animItem.querySelector(".char-anim-order-input").value;
+      this._charEditorSaveAnimation(anim.id, name, rawSortOrder !== "" ? parseInt(rawSortOrder) : null);
+    });
+    animItem.querySelector(".char-anim-del-btn").addEventListener("click", () => {
+      this._charEditorDeleteAnimation(anim.id);
+    });
+    animItem.querySelector(".char-frame-file-input").addEventListener("change", event => {
+      const files = Array.from(event.target.files);
+      if (files.length)
+        this._charEditorUploadFrames(anim.id, files);
+      event.target.value = "";
+    });
+    animItem.querySelectorAll(".char-frame-del-btn").forEach(btn => {
+      btn.addEventListener("click", event => {
+        const frameItem = event.target.closest(".char-frame");
+        this._charEditorDeleteFrame(anim.id, frameItem.dataset.frameId);
+      });
+    });
   }
 
   _charEditorFrameItemHtml(anim, frame) {
@@ -1796,9 +1813,8 @@ class ModelsApp {
     if (!this._charEditorCharacter) return;
     this.setStatus("Creating animation…");
     try {
-      const existingCount = this._charEditorHost ? this._charEditorHost.querySelectorAll(".char-anim").length : 0;
-      await this.apiClient.createCharacterAnimation(this._charEditorCharacter.id, { name: "New Animation", sort_order: existingCount });
-      await this._charEditorRefreshAnimations();
+      const created = await this.apiClient.createCharacterAnimation(this._charEditorCharacter.id, { name: "New Animation", sort_order: 0 });
+      await this._charEditorRefreshAnimations(created?.id || null);
       this.setStatus("");
     } catch (error) {
       this.setStatus(error?.message || "Failed to create animation.", true);
@@ -1973,6 +1989,7 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
@@ -2041,6 +2058,7 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
@@ -2067,6 +2085,7 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
@@ -2168,6 +2187,7 @@ class ModelsApp {
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
@@ -2391,6 +2411,7 @@ class ModelsApp {
     this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
@@ -2593,6 +2614,11 @@ class ModelsApp {
       this.setStatus("");
       return;
     }
+    if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceCharacterCategories) {
+      this.showCharacterCategoriesGrid();
+      this.setStatus("");
+      return;
+    }
     if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceUsers) {
       this.showUsersGrid();
       this.setStatus("");
@@ -2673,9 +2699,10 @@ class ModelsApp {
       this.apiClient.fetchVideos(),
       this.apiClient.fetchDataSets(),
       this.apiClient.fetchCharacters(),
+      this.apiClient.fetchCharacterCategories(),
       isAuthenticated ? this.apiClient.fetchDeletedModels() : Promise.resolve([])
     ];
-    const [personalModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videosResult, dataSetsResult, charactersResult, deletedModelsResult] = await Promise.allSettled(requests);
+    const [personalModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videosResult, dataSetsResult, charactersResult, characterCategoriesResult, deletedModelsResult] = await Promise.allSettled(requests);
     const personalModels = personalModelsResult.status === "fulfilled" ? personalModelsResult.value : [];
     if (publicModelsResult.status !== "fulfilled")
       throw publicModelsResult.reason;
@@ -2695,6 +2722,9 @@ class ModelsApp {
     this.videosData = this.applyModelLookupLabels(videosResult.status === "fulfilled" ? videosResult.value : []);
     this.dataSetData = this.applyModelLookupLabels(dataSetsResult.status === "fulfilled" ? dataSetsResult.value : []);
     this.charactersData = charactersResult.status === "fulfilled" ? charactersResult.value : [];
+    const characterCategories = characterCategoriesResult.status === "fulfilled" ? characterCategoriesResult.value : [];
+    this.characterCategoryNameById = new Map(characterCategories.map(cat => [cat.id, cat.name]));
+    this.characterCategoryIconById = new Map();
     if (!isAuthenticated) {
       this.favoriteModels = [];
       this.libraryModels = [];
@@ -2859,12 +2889,22 @@ class ModelsApp {
   }
 
   isCharacterNodeId(nodeId) {
-    return nodeId === treeNodeIds.marketplaceCharacters;
+    return nodeId === treeNodeIds.marketplaceCharacters
+      || (typeof nodeId === "string" && nodeId.startsWith("market-character-category-item:"));
   }
 
   getCharactersByTreeNodeId(nodeId) {
     if (nodeId === treeNodeIds.marketplaceCharacters)
       return this.charactersData;
+    if (typeof nodeId === "string" && nodeId.startsWith("market-character-category-item:")) {
+      const categoryKey = nodeId.substring("market-character-category-item:".length);
+      if (categoryKey.startsWith("id:")) {
+        const categoryId = decodeURIComponent(categoryKey.substring("id:".length));
+        return this.charactersData.filter(character => character.category_id === categoryId);
+      }
+      if (categoryKey === "uncategorized")
+        return this.charactersData.filter(character => !character.category_id);
+    }
     return [];
   }
 
@@ -2968,6 +3008,39 @@ class ModelsApp {
       });
   }
 
+  buildGroupedCharacterItems() {
+    const grouped = new Map();
+    const characters = Array.isArray(this.charactersData) ? this.charactersData : [];
+    for (let index = 0; index < characters.length; index++) {
+      const character = characters[index];
+      const categoryId = character.category_id || null;
+      const groupKey = categoryId ? `id:${categoryId}` : "uncategorized";
+      const existingGroup = grouped.get(groupKey);
+      if (existingGroup) {
+        existingGroup.count += 1;
+        continue;
+      }
+      const label = categoryId ? (this.characterCategoryNameById?.get(categoryId) || categoryId) : (this.translations.get("Uncategorized") ?? "Uncategorized");
+      grouped.set(groupKey, { categoryId, label, count: 1 });
+    }
+    return Array.from(grouped.values())
+      .sort((left, right) => {
+        if (!left.categoryId) return 1;
+        if (!right.categoryId) return -1;
+        return left.label.localeCompare(right.label);
+      })
+      .map(entry => {
+        const nodeSuffix = entry.categoryId ? `id:${encodeURIComponent(entry.categoryId)}` : "uncategorized";
+        return {
+          id: `market-character-category-item:${nodeSuffix}`,
+          text: `${entry.label} (${entry.count})`,
+          nodeType: "market-character-category-item",
+          iconClass: "fa-light fa-person-running",
+          iconColor: "#7c3aed"
+        };
+      });
+  }
+
   buildGroupedDataItems(type) {
     const grouped = new Map();
     const dataSets = Array.isArray(this.dataSetData) ? this.dataSetData : [];
@@ -3014,6 +3087,7 @@ class ModelsApp {
     const videoScienceItems = this.buildGroupedVideosItems("science");
     const dataEducationItems = this.buildGroupedDataItems("education");
     const dataScienceItems = this.buildGroupedDataItems("science");
+    const characterCategoryItems = this.buildGroupedCharacterItems();
     const treeData = [];
     if (this.isAuthenticated())
       treeData.push({
@@ -3165,7 +3239,9 @@ class ModelsApp {
             text: `${this.translations.get("Characters")} (${this.charactersData.length})`,
             iconClass: "fa-light fa-person-running",
             iconColor: "#7c3aed",
-            nodeType: "marketplace-characters"
+            expanded: false,
+            selectable: false,
+            items: characterCategoryItems
           }
         ]
       }
@@ -3227,6 +3303,13 @@ class ModelsApp {
             nodeType: "maintenance-whats-new",
             iconClass: "fa-light fa-sparkles",
             iconColor: "#10b981"
+          },
+          {
+            id: treeNodeIds.maintenanceCharacterCategories,
+            text: this.translations.get("Character Categories"),
+            nodeType: "maintenance-character-categories",
+            iconClass: "fa-light fa-person-running",
+            iconColor: "#f97316"
           }
         ]
       });
@@ -3859,6 +3942,7 @@ class ModelsApp {
     this.disposeSystemTemplatesGrid();
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
@@ -3972,6 +4056,101 @@ class ModelsApp {
     this.whatsNewGridInstance.dispose();
     this.whatsNewGridInstance = null;
   }
+  disposeCharacterCategoriesGrid() {
+    if (!this.characterCategoriesGridInstance)
+      return;
+    this.characterCategoriesGridInstance.dispose();
+    this.characterCategoriesGridInstance = null;
+  }
+  showCharacterCategoriesGrid() {
+    if (!this.elements.cardView) return;
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
+    this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
+    this.disposeCharacterCardView();
+    const categoriesStore = new DevExpress.data.CustomStore({
+      key: "id",
+      load: () => this.apiClient.fetchCharacterCategories(),
+      byKey: categoryId => this.apiClient.fetchCharacterCategoryById(categoryId),
+      insert: values => this.apiClient.createCharacterCategory(values),
+      update: (categoryId, values) => this.apiClient.updateCharacterCategory(categoryId, values),
+      remove: categoryId => this.apiClient.deleteCharacterCategory(categoryId)
+    });
+    if (!this.characterCategoriesGridInstance) {
+      this.elements.cardView.innerHTML = "";
+      this.characterCategoriesGridInstance = new DevExpress.ui.dxDataGrid(this.elements.cardView, {
+        dataSource: categoriesStore,
+        keyExpr: "id",
+        height: "100%",
+        showBorders: false,
+        columnAutoWidth: true,
+        selection: { mode: "multiple", showCheckBoxesMode: "always" },
+        paging: { enabled: true, pageSize: 20 },
+        pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
+        searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search...") },
+        export: { enabled: true },
+        onExporting: event => this.exportGridToExcel(event, this.translations.get("Character Categories")),
+        editing: {
+          mode: "cell",
+          allowAdding: true,
+          allowUpdating: true,
+          allowDeleting: false
+        },
+        toolbar: {
+          items: [
+            "addRowButton",
+            "exportButton",
+            "searchPanel",
+            {
+              location: "after",
+              locateInMenu: "always",
+              widget: "dxButton",
+              options: {
+                text: this.translations.get("Delete selected"),
+                type: "danger",
+                stylingMode: "contained",
+                icon: "fa-light fa-trash-can",
+                onClick: () => this.deleteSelectedCharacterCategoryRows()
+              }
+            }
+          ]
+        },
+        columns: [
+          { dataField: "id", caption: "ID", allowEditing: true, width: 180, validationRules: [{ type: "required" }] },
+          { dataField: "name", caption: this.translations.get("Name"), validationRules: [{ type: "required" }] },
+          { dataField: "sort_order", caption: this.translations.get("Sort Order"), dataType: "number", width: 120 }
+        ]
+      });
+      return;
+    }
+    this.characterCategoriesGridInstance.option("dataSource", categoriesStore);
+    this.characterCategoriesGridInstance.refresh();
+  }
+  async deleteSelectedCharacterCategoryRows() {
+    if (!this.characterCategoriesGridInstance) return;
+    const selectedRowKeys = this.characterCategoriesGridInstance.getSelectedRowKeys();
+    if (!selectedRowKeys.length) return;
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    const dataSource = this.characterCategoriesGridInstance.getDataSource();
+    const store = dataSource.store();
+    this.setStatus(this.translations.get("Deleting selected items…"));
+    try {
+      for (let rowIndex = 0; rowIndex < selectedRowKeys.length; rowIndex++)
+        await store.remove(selectedRowKeys[rowIndex]);
+      await dataSource.reload();
+      this.characterCategoriesGridInstance.clearSelection();
+      this.setStatus(this.translations.get("Selected items deleted."));
+    } catch (error) {
+      this.setStatus(error?.message || this.translations.get("Failed to delete selected items."), true);
+    }
+  }
   showWhatsNewGrid() {
     if (!this.elements.cardView)
       return;
@@ -3981,6 +4160,7 @@ class ModelsApp {
     this.disposeSystemTemplatesGrid();
     this.disposeNotificationsGrid();
     this.disposeUsersGrid();
+    this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();

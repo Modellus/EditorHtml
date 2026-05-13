@@ -215,6 +215,45 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Lookup delete failed (${response.status})`);
   }
 
+  async fetchCharacterCategories() {
+    const headers = this.buildAuthHeaders();
+    const response = await fetch(`${this.apiBaseUrl}/character-categories`, { headers });
+    if (!response.ok) throw new Error(`Character categories error ${response.status}`);
+    return await response.json();
+  }
+  async fetchCharacterCategoryById(categoryId) {
+    const headers = this.buildAuthHeaders();
+    const response = await fetch(`${this.apiBaseUrl}/character-categories/${encodeURIComponent(categoryId)}`, { headers });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`Character categories error ${response.status}`);
+    return await response.json();
+  }
+  async createCharacterCategory(payload) {
+    const response = await fetch(`${this.apiBaseUrl}/character-categories`, {
+      method: "POST",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Character category create failed (${response.status})`);
+    return await response.json();
+  }
+  async updateCharacterCategory(categoryId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/character-categories/${encodeURIComponent(categoryId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Character category update failed (${response.status})`);
+    return await response.json();
+  }
+  async deleteCharacterCategory(categoryId) {
+    const response = await fetch(`${this.apiBaseUrl}/character-categories/${encodeURIComponent(categoryId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Character category delete failed (${response.status})`);
+  }
+
   async patchModelEducationLevel(modelId, educationLookupId) {
     const response = await fetch(`${this.apiBaseUrl}/models/${modelId}`, {
       method: "PATCH",
@@ -714,25 +753,36 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Delete character failed (${response.status})`);
   }
 
-  async patchCharacter(characterId, payload) {
+  async patchCharacter(characterId, payload, assetFile) {
     const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}`, {
       method: "PUT",
       headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
       body: JSON.stringify(payload)
     });
     if (!response.ok) throw new Error(`Update character failed (${response.status})`);
-    return await response.json();
-  }
-
-  async uploadCharacterAsset(characterId, assetFile) {
+    const result = await response.json();
+    if (!assetFile)
+      return result;
     const formData = new FormData();
     formData.append("asset", assetFile);
-    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/asset`, {
+    const thumbnailResponse = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/thumbnail`, {
       method: "POST",
       headers: this.buildAuthHeaders(),
       body: formData
     });
-    if (!response.ok) throw new Error(`Upload character asset failed (${response.status})`);
+    if (!thumbnailResponse.ok) throw new Error(`Upload character thumbnail failed (${thumbnailResponse.status})`);
+    return await thumbnailResponse.json();
+  }
+
+  async uploadCharacterThumbnail(characterId, thumbnailFile) {
+    const formData = new FormData();
+    formData.append("asset", thumbnailFile);
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/thumbnail`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Upload character thumbnail failed (${response.status})`);
     return await response.json();
   }
 
