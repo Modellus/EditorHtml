@@ -72,7 +72,7 @@ class Calculator extends EventTarget {
         }
         if (this.status != STATUS.PLAYING)
             return;
-        if (this.system.iteration < this.system.lastIteration)
+        if (this.system.iteration < this.system.lastCalculatedIteration)
             this.system.iteration++;
         else if (!this.properties.independent.noLimit && Math.abs(this.getIndependentValue(this.system.iteration) - this.properties.independent.end) < this.properties.independent.step / 10.0)
             this.pause();
