@@ -494,6 +494,7 @@ class ChartShape extends BaseShape {
         const element = this.board.createSvgElement("g");
         this.chartRows = [];
         this.lastSyncedIteration = 0;
+        this.lastSyncedCalculatedIteration = 0;
         this.chartDataConfig = null;
         this.chart = new ChartControl(element, this.getChartControlOptions());
         this._appliedConfig = {};
@@ -507,9 +508,23 @@ class ChartShape extends BaseShape {
             return;
         var system = this.board.calculator.system;
         const lastIteration = system.lastIteration;
+        const lastCalculatedIteration = system.lastCalculatedIteration;
         if (this.lastSyncedIteration > lastIteration)
             this.resetChartValues();
         let hasChanges = false;
+        if (lastCalculatedIteration > this.lastSyncedCalculatedIteration) {
+            const recalcStart = this.lastSyncedCalculatedIteration + 1;
+            const recalcEnd = Math.min(lastCalculatedIteration, this.lastSyncedIteration);
+            for (let rowIndex = 0; rowIndex < this.chartRows.length; rowIndex++) {
+                const row = this.chartRows[rowIndex];
+                if (row.iteration >= recalcStart && row.iteration <= recalcEnd) {
+                    const updated = this.createChartDataItem(row.iteration, chartDataConfig);
+                    this.chartRows[rowIndex] = updated;
+                    hasChanges = true;
+                }
+            }
+            this.lastSyncedCalculatedIteration = lastCalculatedIteration;
+        }
         for (let iteration = this.lastSyncedIteration + 1; iteration <= lastIteration; iteration++)
             this.chartRows.push(this.createChartDataItem(iteration, chartDataConfig));
         if (lastIteration > this.lastSyncedIteration)
@@ -549,6 +564,7 @@ class ChartShape extends BaseShape {
 
     resetChartValues() {
         this.lastSyncedIteration = 0;
+        this.lastSyncedCalculatedIteration = 0;
         this.chartRows = [];
         if (this.chart)
             this.chart.setData(this.chartRows);
