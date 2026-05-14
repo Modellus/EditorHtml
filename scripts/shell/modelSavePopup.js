@@ -1,4 +1,4 @@
-class ModelMetadataPopup {
+class ModelSavePopup {
     constructor({ translations, onGenerateDescription = null }) {
         this.translations = translations;
         this.onGenerateDescription = onGenerateDescription;
@@ -8,7 +8,7 @@ class ModelMetadataPopup {
         this._thumbnailCleared = false;
     }
 
-    show({ popupTitle, saveButtonText, name, description, thumbnailUrl }) {
+    show({ popupTitle, saveButtonText, name, description, thumbnailUrl, discardButtonText = null, seed = null }) {
         return new Promise(resolve => {
             let popupHost = document.getElementById("model-metadata-popup");
             if (!popupHost) {
@@ -29,6 +29,7 @@ class ModelMetadataPopup {
                         label: { text: this.translations.get("Thumbnail"), visible: true },
                         template: (_, itemElement) => {
                             const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+                            const placeholderStyle = Utils.generateThumbPlaceholder(seed ?? name);
                             const thumbnailControl = new ImageControl({
                                 dropHint: this.translations.get("Thumbnail Dropzone"),
                                 imageSource: initialThumbnailUrl || "",
@@ -40,9 +41,13 @@ class ModelMetadataPopup {
                                 onImageCleared: () => {
                                     this._thumbnailFile = null;
                                     this._thumbnailCleared = true;
+                                    thumbnailControl.container[0].setAttribute("style", placeholderStyle);
                                 }
                             });
-                            itemHost.appendChild(thumbnailControl.createHost().get(0));
+                            const hostElement = thumbnailControl.createHost().get(0);
+                            if (!initialThumbnailUrl)
+                                hostElement.setAttribute("style", placeholderStyle);
+                            itemHost.appendChild(hostElement);
                         }
                     },
                     {
@@ -112,7 +117,7 @@ class ModelMetadataPopup {
             if (this._popupInstance) {
                 buildContent(this._popupInstance.content(), thumbnailUrl);
                 this._popupInstance.option("title", popupTitle);
-                this._popupInstance.option("toolbarItems", this._buildToolbarItems(saveButtonText, formData, resolve));
+                this._popupInstance.option("toolbarItems", this._buildToolbarItems(saveButtonText, discardButtonText, formData, resolve));
                 this._popupInstance.show();
                 return;
             }
@@ -126,15 +131,15 @@ class ModelMetadataPopup {
                 shading: false,
                 hideOnOutsideClick: false,
                 wrapperAttr: { class: "mdl-save-metadata-popup" },
-                toolbarItems: this._buildToolbarItems(saveButtonText, formData, resolve),
+                toolbarItems: this._buildToolbarItems(saveButtonText, discardButtonText, formData, resolve),
                 contentTemplate: contentElement => buildContent(contentElement, thumbnailUrl),
                 position: { at: "center", of: window }
             });
         });
     }
 
-    _buildToolbarItems(saveButtonText, formData, resolve) {
-        return [
+    _buildToolbarItems(saveButtonText, discardButtonText, formData, resolve) {
+        const items = [
             {
                 widget: "dxButton",
                 location: "after",
@@ -156,20 +161,36 @@ class ModelMetadataPopup {
                         });
                     }
                 }
-            },
-            {
+            }
+        ];
+        if (discardButtonText) {
+            items.push({
                 widget: "dxButton",
                 location: "after",
                 toolbar: "bottom",
                 options: {
-                    text: this.translations.get("Cancel"),
+                    text: discardButtonText,
                     stylingMode: "text",
                     onClick: () => {
                         this._popupInstance.hide();
-                        resolve(null);
+                        resolve(false);
                     }
                 }
+            });
+        }
+        items.push({
+            widget: "dxButton",
+            location: "after",
+            toolbar: "bottom",
+            options: {
+                text: this.translations.get("Cancel"),
+                stylingMode: "text",
+                onClick: () => {
+                    this._popupInstance.hide();
+                    resolve(null);
+                }
             }
-        ];
+        });
+        return items;
     }
 }

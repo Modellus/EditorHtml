@@ -711,7 +711,7 @@ class Shell  {
         if (result === "cancel")
             return;
         if (result === "save")
-            await this.saveToApi();
+            await this.autoSaveModel();
         else
             this._hasChanges = false;
         window.location.href = "/marketplace.html";
@@ -726,7 +726,7 @@ class Shell  {
         if (result === "cancel")
             return;
         if (result === "save") {
-            await this.saveToApi();
+            await this.autoSaveModel();
             window.location.href = "/marketplace.html";
             return;
         }

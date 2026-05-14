@@ -370,32 +370,6 @@ class ModelsApp {
       .replace(/\s+/g, " ")
       .trim();
   }
-  generateThumbPlaceholder(seed) {
-    const str = String(seed || "default");
-    let hash = 0;
-    for (let i = 0; i < str.length; i++)
-      hash = Math.imul(31, hash) + str.charCodeAt(i) | 0;
-    hash = Math.abs(hash);
-    const palettes = [
-      ["#dbeafe", "#93c5fd"],
-      ["#fce7f3", "#f9a8d4"],
-      ["#d1fae5", "#6ee7b7"],
-      ["#fef3c7", "#fcd34d"],
-      ["#ede9fe", "#c4b5fd"],
-      ["#ffedd5", "#fdba74"],
-      ["#cffafe", "#67e8f9"],
-      ["#ecfdf5", "#a7f3d0"],
-    ];
-    const [base, accent] = palettes[hash % palettes.length];
-    const patternIndex = (hash >> 4) % 4;
-    if (patternIndex === 0)
-      return `background-color:${base};background-image:radial-gradient(circle,${accent} 1.5px,transparent 1.5px);background-size:14px 14px`;
-    if (patternIndex === 1)
-      return `background-color:${base};background-image:repeating-linear-gradient(45deg,${accent} 0,${accent} 1.5px,transparent 0,transparent 10px)`;
-    if (patternIndex === 2)
-      return `background-color:${base};background-image:linear-gradient(${accent} 1px,transparent 1px),linear-gradient(90deg,${accent} 1px,transparent 1px);background-size:16px 16px`;
-    return `background:linear-gradient(135deg,${base},${accent})`;
-  }
   formatShortDate(value) {
     if (!value)
       return "";
@@ -481,7 +455,7 @@ class ModelsApp {
         `;
         const thumbnailMarkup = thumbnailSrc
           ? `<div class="card-thumb-wrap"><img class="card-thumb" src="${this.escapeHtml(thumbnailSrc)}" alt="${this.escapeHtml(data.title || "")}">${taxonomyDropDownMarkup}</div>`
-          : `<div class="card-thumb-wrap"><div class="card-thumb card-thumb-placeholder" style="${this.generateThumbPlaceholder(data.id)}">${taxonomyDropDownMarkup}</div></div>`;
+          : `<div class="card-thumb-wrap"><div class="card-thumb card-thumb-placeholder" style="${Utils.generateThumbPlaceholder(data.id)}">${taxonomyDropDownMarkup}</div></div>`;
         const cardMarkup = `
           <div class="card-tile" data-model-id="${data.id || ""}">
             ${thumbnailMarkup}
@@ -1194,13 +1168,14 @@ class ModelsApp {
 
   async showEditModelPopup(modelData) {
     if (!this._editModelPopup)
-      this._editModelPopup = new ModelMetadataPopup({ translations: this.translations });
+      this._editModelPopup = new ModelSavePopup({ translations: this.translations });
     const result = await this._editModelPopup.show({
       popupTitle: this.translations.get("Edit Model"),
       saveButtonText: this.translations.get("Save"),
       name: modelData.title || "",
       description: modelData.description || "",
-      thumbnailUrl: modelData.thumbnail_url || ""
+      thumbnailUrl: modelData.thumbnail_url || "",
+      seed: modelData.id
     });
     if (!result)
       return;
