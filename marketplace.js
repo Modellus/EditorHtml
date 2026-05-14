@@ -2658,8 +2658,14 @@ class ModelsApp {
     if (this.cardViewInstance) this.cardViewInstance.option("dataSource", items);
   }
 
-  checkProfileComplete() {
-    const user = this.state.user || {};
+  async checkProfileComplete() {
+    const userId = this.userSdk.getUserId(this.state.session);
+    let user;
+    try {
+      user = await this.apiClient.fetchUserById(userId);
+    } catch (_) {
+      user = this.state.user || {};
+    }
     if (!user.role || !user.country || !user.preferredLanguage)
       this.profileController.show();
   }
