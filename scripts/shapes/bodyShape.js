@@ -794,7 +794,7 @@ class BodyShape extends ChildShape {
         this._stroboscopyPositions = this._stroboscopyPositions.map((pos, i) => {
             const iteration = i === 0 ? 1 : i * interval;
             const rawFrameIndex = this.getAnimationFrameIndex(animation, frameCount, iteration, startIndex);
-            const href = animation.frameUrls?.[Math.min(rawFrameIndex, (animation.frameUrls.length || 1) - 1)] ?? "";
+            const href = animation.frameUrls?.[Math.min(rawFrameIndex, (animation.frameUrls.length || 1) - 1)] || character.thumbnail_url || "";
             return { ...pos, href };
         });
     }
