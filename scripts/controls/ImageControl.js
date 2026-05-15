@@ -2,7 +2,7 @@ class ImageControl {
     constructor(options = {}) {
         this.options = {
             imageSource: "",
-            dropHint: "Drop an image or click to select",
+            dropHint: "Drop, paste or click to select an image",
             accept: "image/*",
             onUploadFile: null,
             onImageChanged: null,
@@ -26,10 +26,11 @@ class ImageControl {
         this._dragStartY = 0;
         this._dragStartTranslateX = 0;
         this._dragStartTranslateY = 0;
+        this._boundDocumentPaste = null;
     }
 
     createHost() {
-        this.container = $("<div class='shape-image-dropzone'></div>");
+        this.container = $("<div class='shape-image-dropzone' tabindex='0'></div>");
         const preview = $("<img class='shape-image-dropzone__preview' alt='Body image preview' />");
         const hint = $("<div class='shape-image-dropzone__hint'></div>").text(this.options.dropHint);
         const removeButton = $("<button type='button' class='shape-image-dropzone__remove' aria-label='Remove image'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></button>");
@@ -46,6 +47,7 @@ class ImageControl {
         removeButton.on("click", event => this.onRemoveButtonClick(event));
         this.container.on("dragover", event => this.onDropZoneDragOver(event));
         this.container.on("drop", event => this.onDropZoneDrop(event));
+        this.container.on("paste", event => this.onContainerPaste(event));
         this.initializeDragBehavior();
         uploaderHost.dxFileUploader({
             accept: this.options.accept,
@@ -183,6 +185,59 @@ class ImageControl {
         const file = dragEvent.dataTransfer?.files?.[0];
         if (!file)
             return;
+        await this.handleFile(file);
+    }
+
+    activateDocumentPaste() {
+        if (this._boundDocumentPaste)
+            return;
+        this._boundDocumentPaste = event => this.onDocumentKeyDown(event);
+        document.addEventListener("keydown", this._boundDocumentPaste, { capture: true });
+    }
+
+    deactivateDocumentPaste() {
+        if (!this._boundDocumentPaste)
+            return;
+        document.removeEventListener("keydown", this._boundDocumentPaste, { capture: true });
+        this._boundDocumentPaste = null;
+    }
+
+    async onDocumentKeyDown(event) {
+        if (!(event.key === "v" && (event.ctrlKey || event.metaKey)))
+            return;
+        const activeElement = document.activeElement;
+        if (activeElement?.matches("input, textarea") || activeElement?.isContentEditable)
+            return;
+        let clipboardItems;
+        try {
+            clipboardItems = await navigator.clipboard.read();
+        } catch {
+            return;
+        }
+        for (const clipboardItem of clipboardItems) {
+            const imageType = clipboardItem.types.find(type => type.startsWith("image/"));
+            if (!imageType)
+                continue;
+            const blob = await clipboardItem.getType(imageType);
+            const extension = imageType.split("/")[1] || "png";
+            const file = new File([blob], `pasted-image.${extension}`, { type: imageType });
+            await this.handleFile(file);
+            break;
+        }
+    }
+
+    async onContainerPaste(event) {
+        const nativeEvent = event.originalEvent ?? event;
+        const items = nativeEvent.clipboardData?.items;
+        if (!items)
+            return;
+        const imageItem = Array.from(items).find(item => item.type.startsWith("image/"));
+        if (!imageItem)
+            return;
+        const file = imageItem.getAsFile();
+        if (!file)
+            return;
+        nativeEvent.preventDefault();
         await this.handleFile(file);
     }
 

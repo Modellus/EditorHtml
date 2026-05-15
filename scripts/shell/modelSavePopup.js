@@ -4,6 +4,7 @@ class ModelSavePopup {
         this.onGenerateDescription = onGenerateDescription;
         this._popupInstance = null;
         this._formInstance = null;
+        this._thumbnailControl = null;
         this._thumbnailFile = null;
         this._thumbnailCleared = false;
     }
@@ -22,8 +23,6 @@ class ModelSavePopup {
                 const host = contentElement.get ? contentElement.get(0) : contentElement;
                 host.innerHTML = `<div id="model-metadata-popup-form"></div>`;
                 const formHost = document.getElementById("model-metadata-popup-form");
-                const descriptionItemId = "model-metadata-description-editor-" + Date.now();
-                const descriptionToolbarId = "model-metadata-description-toolbar-" + Date.now();
                 const items = [
                     {
                         label: { text: this.translations.get("Thumbnail"), visible: true },
@@ -44,7 +43,9 @@ class ModelSavePopup {
                                     thumbnailControl.container[0].setAttribute("style", placeholderStyle);
                                 }
                             });
+                            this._thumbnailControl = thumbnailControl;
                             const hostElement = thumbnailControl.createHost().get(0);
+                            this._thumbnailControl.activateDocumentPaste();
                             if (!initialThumbnailUrl)
                                 hostElement.setAttribute("style", placeholderStyle);
                             itemHost.appendChild(hostElement);
@@ -58,54 +59,10 @@ class ModelSavePopup {
                         validationRules: [{ type: "required" }]
                     },
                     {
+                        dataField: "description",
                         label: { text: this.translations.get("Description"), visible: true },
-                        template: (_, itemElement) => {
-                            const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
-                            itemHost.insertAdjacentHTML("beforeend", `
-                                <div id="${descriptionItemId}"></div>
-                                <div id="${descriptionToolbarId}" class="html-editor-toolbar"></div>
-                            `);
-                            const editorElement = document.getElementById(descriptionItemId);
-                            const toolbarElement = document.getElementById(descriptionToolbarId);
-                            const toolbarItems = [
-                                "bold", "italic", "underline", "separator",
-                                "orderedList", "bulletList"
-                            ];
-                            if (this.onGenerateDescription) {
-                                toolbarItems.push("separator");
-                                toolbarItems.push({
-                                    name: "generateDescription",
-                                    widget: "dxButton",
-                                    options: {
-                                        icon: "fa-light fa-wand-magic-sparkles",
-                                        hint: "Generate description with AI",
-                                        stylingMode: "text",
-                                        onClick: async buttonEvent => {
-                                            const buttonEl = buttonEvent.element[0];
-                                            buttonEl.classList.add("mdl-wand-loading");
-                                            try {
-                                                const generatedDescription = await this.onGenerateDescription();
-                                                descriptionEditor.option("value", generatedDescription);
-                                                formData.description = generatedDescription;
-                                            } finally {
-                                                buttonEl.classList.remove("mdl-wand-loading");
-                                            }
-                                        }
-                                    }
-                                });
-                            }
-                            const descriptionEditor = new DevExpress.ui.dxHtmlEditor(editorElement, {
-                                valueType: "markdown",
-                                value: formData.description,
-                                height: 120,
-                                stylingMode: "filled",
-                                toolbar: {
-                                    container: toolbarElement,
-                                    items: toolbarItems
-                                },
-                                onValueChanged: changeEvent => { formData.description = changeEvent.value; }
-                            });
-                        }
+                        editorType: "dxTextArea",
+                        editorOptions: { stylingMode: "filled", height: 100 }
                     }
                 ];
                 this._formInstance = new DevExpress.ui.dxForm(formHost, {
@@ -133,6 +90,7 @@ class ModelSavePopup {
                 wrapperAttr: { class: "mdl-save-metadata-popup" },
                 toolbarItems: this._buildToolbarItems(saveButtonText, discardButtonText, formData, resolve),
                 contentTemplate: contentElement => buildContent(contentElement, thumbnailUrl),
+                onHidden: () => this._thumbnailControl?.deactivateDocumentPaste(),
                 position: { at: "center", of: window }
             });
         });
