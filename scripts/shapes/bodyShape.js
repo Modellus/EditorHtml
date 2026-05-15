@@ -1,6 +1,34 @@
 class BodyShape extends ChildShape {
     static apiCharacterDefinitions = new Map();
     static pendingApiCharacterFetches = new Map();
+    static characterImageAspectCache = new Map();
+
+    loadImageAspectIfNeeded(imageUrl) {
+        if (!imageUrl || BodyShape.characterImageAspectCache.has(imageUrl))
+            return;
+        BodyShape.characterImageAspectCache.set(imageUrl, null);
+        const img = new Image();
+        img.onload = () => {
+            BodyShape.characterImageAspectCache.set(imageUrl, img.naturalWidth / img.naturalHeight);
+            this.board.markDirty(this);
+        };
+        img.src = imageUrl;
+    }
+
+    static computeLetterboxedPivotOffset(pivotX, pivotY, diameter, imageAspectRatio) {
+        let renderedWidth, renderedHeight;
+        if (imageAspectRatio >= 1) {
+            renderedWidth = diameter;
+            renderedHeight = diameter / imageAspectRatio;
+        } else {
+            renderedWidth = diameter * imageAspectRatio;
+            renderedHeight = diameter;
+        }
+        return {
+            x: (diameter - renderedWidth) / 2 + pivotX * renderedWidth,
+            y: (diameter - renderedHeight) / 2 + pivotY * renderedHeight
+        };
+    }
 
     static getCharacterByKey(characterKey) {
         return this.apiCharacterDefinitions.get(characterKey) ?? null;
@@ -23,7 +51,8 @@ class BodyShape extends ChildShape {
             title: definition.title || "",
             thumbnail_url: definition.thumbnail_url,
             folder: null,
-            centerPoint: { x: 0.5, y: 0.5 },
+            centerPoint: { x: definition.pivot_x ?? 0.5, y: definition.pivot_y ?? 0.5 },
+            shouldRotate: !!definition.should_rotate,
             animations
         };
     }
@@ -33,9 +62,17 @@ class BodyShape extends ChildShape {
             return Promise.resolve(this.apiCharacterDefinitions.get(characterKey));
         if (this.pendingApiCharacterFetches.has(characterKey))
             return this.pendingApiCharacterFetches.get(characterKey);
-        const promise = apiClient.fetchCharacterDefinition(characterKey)
-            .then(definition => {
-                const adapted = BodyShape.adaptApiCharacterDefinition(definition);
+        const promise = Promise.all([
+                apiClient.fetchCharacterById(characterKey),
+                apiClient.fetchCharacterDefinition(characterKey)
+            ])
+            .then(([character, definition]) => {
+                const merged = Object.assign({}, definition, {
+                    pivot_x: character.pivot_x,
+                    pivot_y: character.pivot_y,
+                    should_rotate: character.should_rotate
+                });
+                const adapted = BodyShape.adaptApiCharacterDefinition(merged);
                 BodyShape.apiCharacterDefinitions.set(characterKey, adapted);
                 BodyShape.pendingApiCharacterFetches.delete(characterKey);
                 return adapted;
@@ -828,8 +865,10 @@ class BodyShape extends ChildShape {
                 const diameter = radius * 2;
                 const pivotX = character?.centerPoint?.x ?? 0.5;
                 const pivotY = character?.centerPoint?.y ?? 0.5;
-                imageClone.setAttribute("x", pos.x - pivotX * diameter);
-                imageClone.setAttribute("y", pos.y - pivotY * diameter);
+                const imageAspectRatio = BodyShape.characterImageAspectCache.get(href ?? "") ?? 1;
+                const pivotOffset = BodyShape.computeLetterboxedPivotOffset(pivotX, pivotY, diameter, imageAspectRatio);
+                imageClone.setAttribute("x", pos.x - pivotOffset.x);
+                imageClone.setAttribute("y", pos.y - pivotOffset.y);
                 imageClone.setAttribute("width", diameter);
                 imageClone.setAttribute("height", diameter);
                 imageClone.setAttribute("preserveAspectRatio", "xMidYMid meet");
@@ -878,6 +917,8 @@ class BodyShape extends ChildShape {
         this.properties.isPhysical = false;
         this.character = null;
         this.lastBoardHorizontalPosition = null;
+        this.lastBoardPosition = null;
+        this.characterMovementAngle = null;
         this.flipImageHorizontally = false;
         this.idleAnimationIntervalId = null;
         this.idleAnimationIntervalMs = null;
@@ -964,7 +1005,6 @@ class BodyShape extends ChildShape {
         const character = this.getSelectedCharacter();
         if (character) {
             this.drawCharacter(position, radius, diameter, character);
-            this.applyImageFlipTransform(position, true);
             this.drawCenterDot(position);
             return;
         }
@@ -1046,18 +1086,27 @@ class BodyShape extends ChildShape {
         this.circle.setAttribute("stroke", "transparent");
         const pivotX = character.centerPoint?.x ?? 0.5;
         const pivotY = character.centerPoint?.y ?? 0.5;
-        this.image.setAttribute("x", position.x - pivotX * diameter);
-        this.image.setAttribute("y", position.y - pivotY * diameter);
-        this.image.setAttribute("width", diameter);
-        this.image.setAttribute("height", diameter);
-        this.image.setAttribute("preserveAspectRatio", "xMidYMid meet");
         const iteration = this.board.calculator.getIteration();
         const animation = this.getCharacterAnimation(character);
         const frameCount = animation.frames;
         const startIndex = animation.startIndex ?? 0;
         const rawFrameIndex = this.getAnimationFrameIndex(animation, frameCount, iteration, startIndex);
         const frameUrl = animation.frameUrls?.[Math.min(rawFrameIndex, (animation.frameUrls.length || 1) - 1)];
-        this.image.setAttribute("href", frameUrl || character.thumbnail_url || "");
+        const imageUrl = frameUrl || character.thumbnail_url || "";
+        this.loadImageAspectIfNeeded(imageUrl);
+        const imageAspectRatio = BodyShape.characterImageAspectCache.get(imageUrl) ?? 1;
+        const pivotOffset = BodyShape.computeLetterboxedPivotOffset(pivotX, pivotY, diameter, imageAspectRatio);
+        this.image.setAttribute("x", position.x - pivotOffset.x);
+        this.image.setAttribute("y", position.y - pivotOffset.y);
+        this.image.setAttribute("width", diameter);
+        this.image.setAttribute("height", diameter);
+        this.image.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        if (character.shouldRotate && this.characterMovementAngle !== null) {
+            this.image.setAttribute("transform", `rotate(${this.characterMovementAngle} ${position.x} ${position.y})`);
+        } else {
+            this.image.removeAttribute("transform");
+        }
+        this.image.setAttribute("href", imageUrl);
     }
 
     getAnimationFrameIndex(animation, frameCount, iteration, startIndex) {
@@ -1117,10 +1166,25 @@ class BodyShape extends ChildShape {
     tick() {
         super.tick();
         const boardPosition = this.getBoardPosition();
-        if (this.lastBoardHorizontalPosition !== boardPosition.x) {
-            this.flipImageHorizontally = this.lastBoardHorizontalPosition !== null && this.lastBoardHorizontalPosition > boardPosition.x;
-            this.lastBoardHorizontalPosition = boardPosition.x;
+        const character = this.getSelectedCharacter();
+        if (character?.shouldRotate) {
+            if (this.lastBoardPosition !== null) {
+                const dx = boardPosition.x - this.lastBoardPosition.x;
+                const dy = boardPosition.y - this.lastBoardPosition.y;
+                if (Math.hypot(dx, dy) > 0.01)
+                    this.characterMovementAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+            }
+        } else if (character) {
+            this.characterMovementAngle = null;
+            this.flipImageHorizontally = false;
+        } else {
+            this.characterMovementAngle = null;
+            if (this.lastBoardHorizontalPosition !== boardPosition.x) {
+                this.flipImageHorizontally = this.lastBoardHorizontalPosition !== null && this.lastBoardHorizontalPosition > boardPosition.x;
+                this.lastBoardHorizontalPosition = boardPosition.x;
+            }
         }
+        this.lastBoardPosition = { x: boardPosition.x, y: boardPosition.y };
     }
 
     getStroboscopyRadius() {

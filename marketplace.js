@@ -1559,6 +1559,11 @@ class ModelsApp {
     this._charEditorHost = null;
     this._charEditorTabs = [];
     this._charEditorActiveTabIndex = 0;
+    this._charEditorPivotXBox = null;
+    this._charEditorPivotYBox = null;
+    this._charEditorPivotDotElement = null;
+    this._charEditorThumbnailContainerEl = null;
+    this._charEditorShouldRotateValue = false;
     let characterCategories = [];
     try {
       characterCategories = await this.apiClient.fetchCharacterCategories();
@@ -1572,6 +1577,17 @@ class ModelsApp {
         <div id="char-general-content">
           <div class="char-editor-field-label">Thumbnail</div>
           <div id="char-thumbnail-control"></div>
+          <div class="char-pivot-below-row">
+            <div class="char-pivot-xy-row">
+              <span class="char-pivot-coord-label">X</span>
+              <div id="char-pivot-x-box"></div>
+              <span class="char-pivot-coord-label">Y</span>
+              <div id="char-pivot-y-box"></div>
+            </div>
+            <div class="char-rotate-toggle-row">
+              <div id="char-rotate-switch"></div>
+            </div>
+          </div>
           <div class="char-editor-field-label" style="margin-top:0.75rem">Name</div>
           <div id="char-title-input"></div>
           <div class="char-editor-field-label" style="margin-top:0.75rem">Category</div>
@@ -1612,7 +1628,86 @@ class ModelsApp {
         },
         onImageCleared: () => { this._characterAssetFile = null; }
       });
-      host.querySelector("#char-thumbnail-control").appendChild(thumbnailControl.createHost().get(0));
+      const thumbnailContainerEl = host.querySelector("#char-thumbnail-control");
+      this._charEditorThumbnailContainerEl = thumbnailContainerEl;
+      thumbnailContainerEl.appendChild(thumbnailControl.createHost().get(0));
+      const pivotDotEl = document.createElement("div");
+      pivotDotEl.id = "char-pivot-dot";
+      pivotDotEl.className = "char-pivot-dot";
+      thumbnailContainerEl.appendChild(pivotDotEl);
+      this._charEditorPivotDotElement = pivotDotEl;
+      const initialPivotX = this._charEditorCharacter?.pivot_x ?? 0.5;
+      const initialPivotY = this._charEditorCharacter?.pivot_y ?? 0.5;
+      const previewImg = thumbnailContainerEl.querySelector(".shape-image-dropzone__preview");
+      if (previewImg)
+        previewImg.addEventListener("load", () => this._charEditorPositionPivotDot(initialPivotX, initialPivotY), { once: true });
+      this._charEditorPositionPivotDot(initialPivotX, initialPivotY);
+      pivotDotEl.addEventListener("pointerdown", e => {
+        e.stopPropagation();
+        e.preventDefault();
+        pivotDotEl.setPointerCapture(e.pointerId);
+        const containerRect = thumbnailContainerEl.getBoundingClientRect();
+        const localX = e.clientX - containerRect.left;
+        const localY = e.clientY - containerRect.top;
+        const bounds = this._charEditorGetImageRenderBounds();
+        const pivotX = bounds ? (localX - bounds.left) / bounds.width : localX / containerRect.width;
+        const pivotY = bounds ? (localY - bounds.top) / bounds.height : localY / containerRect.height;
+        this._charEditorUpdatePivot(pivotX, pivotY);
+      });
+      pivotDotEl.addEventListener("pointermove", e => {
+        if (!pivotDotEl.hasPointerCapture(e.pointerId))
+          return;
+        const containerRect = thumbnailContainerEl.getBoundingClientRect();
+        const localX = e.clientX - containerRect.left;
+        const localY = e.clientY - containerRect.top;
+        const bounds = this._charEditorGetImageRenderBounds();
+        const pivotX = bounds ? (localX - bounds.left) / bounds.width : localX / containerRect.width;
+        const pivotY = bounds ? (localY - bounds.top) / bounds.height : localY / containerRect.height;
+        this._charEditorUpdatePivot(pivotX, pivotY);
+      });
+      pivotDotEl.addEventListener("click", e => e.stopPropagation());
+      this._charEditorPivotXBox = new DevExpress.ui.dxNumberBox(host.querySelector("#char-pivot-x-box"), {
+        value: initialPivotX,
+        min: 0,
+        max: 1,
+        step: 0.01,
+        format: "0.##",
+        onValueChanged: e => this._charEditorPositionPivotDot(e.value, this._charEditorPivotYBox?.option("value") ?? 0.5)
+      });
+      this._charEditorPivotYBox = new DevExpress.ui.dxNumberBox(host.querySelector("#char-pivot-y-box"), {
+        value: initialPivotY,
+        min: 0,
+        max: 1,
+        step: 0.01,
+        format: "0.##",
+        onValueChanged: e => this._charEditorPositionPivotDot(this._charEditorPivotXBox?.option("value") ?? 0.5, e.value)
+      });
+      this._charEditorShouldRotateValue = this._charEditorCharacter?.should_rotate ?? false;
+      const rotateGroupEl = host.querySelector("#char-rotate-switch");
+      const rotateButtonHtml = value => `<i class="char-rotate-btn-icon ${value ? "fa-light fa-rotate" : "fa-light fa-person"}"></i><span class="char-rotate-btn-label">${value ? "Rotates" : "No Rotation"}</span>`;
+      new DevExpress.ui.dxButtonGroup(rotateGroupEl, {
+        items: [{ key: "rotate" }],
+        keyExpr: "key",
+        selectedItemKeys: this._charEditorShouldRotateValue ? ["rotate"] : [],
+        selectionMode: "multiple",
+        stylingMode: "outlined",
+        buttonTemplate: (data, btnContainer) => {
+          btnContainer[0].innerHTML = rotateButtonHtml(this._charEditorShouldRotateValue);
+        },
+        onSelectionChanged: e => {
+          this._charEditorShouldRotateValue = e.component.option("selectedItemKeys").length > 0;
+          const btnContent = rotateGroupEl.querySelector(".dx-button-content");
+          if (btnContent) {
+            btnContent.innerHTML = rotateButtonHtml(this._charEditorShouldRotateValue);
+            const iconEl = btnContent.querySelector(".char-rotate-btn-icon");
+            if (iconEl) {
+              iconEl.classList.remove("char-icon-animate");
+              iconEl.offsetWidth;
+              iconEl.classList.add("char-icon-animate");
+            }
+          }
+        }
+      });
       new DevExpress.ui.dxButton(host.querySelector("#char-save-info-btn"), {
         text: hasCharacter ? "Save" : "Create",
         type: "default",
@@ -1693,15 +1788,18 @@ class ModelsApp {
     }
     const descriptionValue = this._charEditorDescEditor?.option("value") ?? null;
     const categoryId = this._charEditorCategorySelector?.option("value") ?? null;
+    const pivotX = this._charEditorPivotXBox?.option("value") ?? null;
+    const pivotY = this._charEditorPivotYBox?.option("value") ?? null;
+    const shouldRotate = this._charEditorShouldRotateValue;
     this.setStatus(this._charEditorCharacter ? "Saving character…" : "Creating character…");
     try {
       if (this._charEditorCharacter) {
-        await this.apiClient.patchCharacter(this._charEditorCharacter.id, { title, description: descriptionValue, category_id: categoryId }, this._characterAssetFile || undefined);
+        await this.apiClient.patchCharacter(this._charEditorCharacter.id, { title, description: descriptionValue, category_id: categoryId, pivot_x: pivotX, pivot_y: pivotY, should_rotate: shouldRotate }, this._characterAssetFile || undefined);
         this.setStatus("Character saved.");
         this.characterPopupInstance?.hide();
         this.loadModels();
       } else {
-        const created = await this.apiClient.createCharacter({ title, description: descriptionValue, category_id: categoryId }, this._characterAssetFile);
+        const created = await this.apiClient.createCharacter({ title, description: descriptionValue, category_id: categoryId, pivot_x: pivotX, pivot_y: pivotY, should_rotate: shouldRotate }, this._characterAssetFile);
         this.setStatus("Character created.");
         this.characterPopupInstance?.hide();
         this.loadModels();
@@ -1709,6 +1807,56 @@ class ModelsApp {
     } catch (error) {
       this.setStatus(error?.message || "Failed to save character.", true);
     }
+  }
+
+  _charEditorGetImageRenderBounds() {
+    const containerEl = this._charEditorThumbnailContainerEl;
+    if (!containerEl) return null;
+    const img = containerEl.querySelector(".shape-image-dropzone__preview");
+    if (!img || !img.naturalWidth || !img.naturalHeight) return null;
+    const containerWidth = containerEl.clientWidth;
+    const containerHeight = containerEl.clientHeight;
+    if (!containerWidth || !containerHeight) return null;
+    const naturalAspect = img.naturalWidth / img.naturalHeight;
+    const containerAspect = containerWidth / containerHeight;
+    let renderWidth, renderHeight;
+    if (naturalAspect > containerAspect) {
+      renderWidth = containerWidth;
+      renderHeight = containerWidth / naturalAspect;
+    } else {
+      renderHeight = containerHeight;
+      renderWidth = containerHeight * naturalAspect;
+    }
+    return {
+      left: (containerWidth - renderWidth) / 2,
+      top: (containerHeight - renderHeight) / 2,
+      width: renderWidth,
+      height: renderHeight
+    };
+  }
+
+  _charEditorPositionPivotDot(x, y) {
+    const dotEl = this._charEditorPivotDotElement;
+    const containerEl = this._charEditorThumbnailContainerEl;
+    if (!dotEl || !containerEl) return;
+    const bounds = this._charEditorGetImageRenderBounds();
+    if (!bounds) {
+      dotEl.style.left = `${x * 100}%`;
+      dotEl.style.top = `${y * 100}%`;
+      return;
+    }
+    const containerWidth = containerEl.clientWidth;
+    const containerHeight = containerEl.clientHeight;
+    dotEl.style.left = `${(bounds.left + x * bounds.width) / containerWidth * 100}%`;
+    dotEl.style.top = `${(bounds.top + y * bounds.height) / containerHeight * 100}%`;
+  }
+
+  _charEditorUpdatePivot(xRatio, yRatio) {
+    const x = Math.min(1, Math.max(0, xRatio));
+    const y = Math.min(1, Math.max(0, yRatio));
+    this._charEditorPivotXBox?.option("value", x);
+    this._charEditorPivotYBox?.option("value", y);
+    this._charEditorPositionPivotDot(x, y);
   }
 
   async _charEditorRefreshAnimations(selectAnimId = null) {

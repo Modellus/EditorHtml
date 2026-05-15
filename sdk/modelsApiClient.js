@@ -786,6 +786,12 @@ export class ModelsApiClient {
     return await response.json();
   }
 
+  async fetchCharacterById(characterId) {
+    const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch character failed (${response.status})`);
+    return await response.json();
+  }
+
   async fetchCharacterDefinition(characterId) {
     const response = await fetch(`${this.apiBaseUrl}/characters/${encodeURIComponent(characterId)}/definition`, { headers: this.buildAuthHeaders() });
     if (!response.ok) throw new Error(`Fetch character definition failed (${response.status})`);
