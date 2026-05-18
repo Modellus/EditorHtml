@@ -429,7 +429,7 @@ class Shell  {
                 definition: JSON.stringify(this.serialize())
             };
             if (this.properties.thumbnailUrl)
-                payload.thumbnail = this.properties.thumbnailUrl;
+                payload.thumbnail_url = this.properties.thumbnailUrl;
             const response = await fetch(`${apiBase}/models/${modelId}`, {
                 method: "PUT",
                 headers,
@@ -474,7 +474,7 @@ class Shell  {
                 definition: JSON.stringify(definition)
             };
             if (this.properties.thumbnailUrl)
-                savePayload.thumbnail = this.properties.thumbnailUrl;
+                savePayload.thumbnail_url = this.properties.thumbnailUrl;
             await fetch(`${apiBase}/models/${newModel.id}`, {
                 method: "PUT",
                 headers,
@@ -518,7 +518,7 @@ class Shell  {
                 definition: JSON.stringify(definition)
             };
             if (this.properties.thumbnailUrl)
-                savePayload.thumbnail = this.properties.thumbnailUrl;
+                savePayload.thumbnail_url = this.properties.thumbnailUrl;
             await fetch(`${apiBase}/models/${newModel.id}`, {
                 method: "PUT",
                 headers,
@@ -561,7 +561,7 @@ class Shell  {
                 definition: JSON.stringify(this.serialize())
             };
             if (this.properties.thumbnailUrl)
-                payload.thumbnail = this.properties.thumbnailUrl;
+                payload.thumbnail_url = this.properties.thumbnailUrl;
             const response = await fetch(`${apiBase}/models/${modelId}`, {
                 method: "PUT",
                 headers,
