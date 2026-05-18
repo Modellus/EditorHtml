@@ -308,9 +308,9 @@ class TopToolbar {
                         <img src="scripts/themes/modellus.svg" alt="Modellus" style="float: left; height: 48px; margin: 0 12px 4px 0">
                         <p style="text-align: justify; margin: 0">${translations.get("About Description")}</p>
                     </div>
-                    <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; margin-top: 36px">
-                        <p style="text-align: justify; margin: 0; flex: 1">${translations.get("About Beta")}</p>
-                        <img id="about-character-img" src="" alt="" style="height: 80px; flex-shrink: 0">
+                    <div style="overflow: hidden; margin-bottom: 12px; margin-top: 36px">
+                        <img id="about-character-img" src="" alt="" style="float: right; height: 48px; margin: 0 0 4px 12px">
+                        <p style="text-align: justify; margin: 0">${translations.get("About Beta")}</p>
                     </div>
                     <div id="about-understand-button" style="display: flex; justify-content: center; margin-top: 16px"></div>
                     <p style="text-align: center; margin-top: 16px">${translations.get("About Tagline")}</p>`);
@@ -379,22 +379,10 @@ class TopToolbar {
     }
 
     _startAboutAnimation() {
-        const idleCharacters = [
-            { name: "giraffe", animation: { folder: "idle", frames: 40, startIndex: 1, filePrefix: "giraffe_idle" } },
-            { name: "bird", animation: { folder: "idle", frames: 40, startIndex: 1, filePrefix: "bird_idle" } }
-        ];
-        const character = idleCharacters[Math.floor(Math.random() * idleCharacters.length)];
         const img = document.getElementById("about-character-img");
         if (!img)
             return;
-        let frameIndex = character.animation.startIndex;
-        img.src = `resources/characters/${character.name}/${character.animation.folder}/${character.animation.filePrefix}${frameIndex}.png`;
-        this._aboutAnimationIntervalId = setInterval(() => {
-            frameIndex++;
-            if (frameIndex > character.animation.startIndex + character.animation.frames - 1)
-                frameIndex = character.animation.startIndex;
-            img.src = `resources/characters/${character.name}/${character.animation.folder}/${character.animation.filePrefix}${frameIndex}.png`;
-        }, 80);
+        img.src = "resources/img/Apple.png";
     }
 
     _stopAboutAnimation() {
