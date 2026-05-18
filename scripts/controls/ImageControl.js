@@ -18,6 +18,7 @@ class ImageControl {
         this.hintElement = null;
         this.removeButtonElement = null;
         this.progressBarElement = null;
+        this._fileInput = null;
         this._translateX = 0;
         this._translateY = 0;
         this._zoomLevel = 1;
@@ -34,28 +35,30 @@ class ImageControl {
         const preview = $("<img class='shape-image-dropzone__preview' alt='Body image preview' />");
         const hint = $("<div class='shape-image-dropzone__hint'></div>").text(this.options.dropHint);
         const removeButton = $("<button type='button' class='shape-image-dropzone__remove' aria-label='Remove image'><i class='fa-light fa-trash-can trash'></i><i class='fa-solid fa-trash-can trash-hover'></i></button>");
+        const fileInput = $(`<input type="file" accept="${this.options.accept}" style="display:none">`);
         const uploaderHost = $("<div class='shape-image-dropzone__uploader'></div>");
         const progressBarHost = $('<div class="shape-image-dropzone__progress"></div>');
         this.previewElement = preview.get(0);
         this.hintElement = hint.get(0);
         this.removeButtonElement = removeButton.get(0);
+        this._fileInput = fileInput.get(0);
         this.progressBarElement = progressBarHost.get(0);
         progressBarHost.dxProgressBar({ min: 0, max: 100, value: 0, visible: false });
         this.updatePreview();
-        this.container.append(preview, hint, removeButton, progressBarHost, uploaderHost);
+        this.container.append(preview, hint, removeButton, progressBarHost, fileInput, uploaderHost);
         removeButton.on("mousedown", event => this.onRemoveButtonMouseDown(event));
         removeButton.on("click", event => this.onRemoveButtonClick(event));
+        fileInput.on("change", event => this.onFileInputChange(event));
         this.container.on("dragover", event => this.onDropZoneDragOver(event));
         this.container.on("drop", event => this.onDropZoneDrop(event));
         this.container.on("paste", event => this.onContainerPaste(event));
+        this.container.get(0).addEventListener("click", event => this.onContainerClick(event), { capture: true });
         this.initializeDragBehavior();
         uploaderHost.dxFileUploader({
             accept: this.options.accept,
             multiple: false,
             uploadMode: "useForm",
             dropZone: this.container.get(0),
-            dialogTrigger: this.container.get(0),
-            onValueChanged: event => this.onUploaderValueChanged(event),
             onDropZoneEnter: event => this.onDropZoneEnter(event),
             onDropZoneLeave: event => this.onDropZoneLeave(event)
         });
@@ -132,6 +135,22 @@ class ImageControl {
         this.hintElement.textContent = this.options.dropHint;
         this.hintElement.style.display = "";
         this.removeButtonElement.style.display = "none";
+    }
+
+    onContainerClick(event) {
+        if (event.target === this.removeButtonElement || this.removeButtonElement?.contains(event.target))
+            return;
+        if (event.target === this._fileInput)
+            return;
+        this._fileInput.click();
+    }
+
+    async onFileInputChange(event) {
+        const file = event.target.files?.[0];
+        if (!file)
+            return;
+        event.target.value = "";
+        await this.handleFile(file);
     }
 
     onRemoveButtonMouseDown(event) {
@@ -238,13 +257,6 @@ class ImageControl {
         if (!file)
             return;
         nativeEvent.preventDefault();
-        await this.handleFile(file);
-    }
-
-    async onUploaderValueChanged(event) {
-        const file = event.value && event.value[0];
-        if (!file)
-            return;
         await this.handleFile(file);
     }
 

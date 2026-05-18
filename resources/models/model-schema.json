@@ -93,7 +93,7 @@
         "ValueShape":        { "type": "string", "const": "Displays the current numeric value of any calculator term. term = term name. termDisplayMode: 'nameValue' shows label + number, 'valueOnly' shows only the number." },
         "TableShape":        { "type": "string", "const": "Tabular view of term values across iterations. columns array lists term names. Useful for discrete/recurrence models or when exact numeric output matters." },
         "GaugeShape":        { "type": "string", "const": "Polar gauge. angleTerm + magnitudeTerm drive the needle. Use for two-component quantities like velocity direction and speed." },
-        "ImageShape":        { "type": "string", "const": "Static or animated image/video. Can be a child of ReferentialShape. Use for background reference images (e.g., a photograph to overlay a model trajectory)." },
+        "ImageShape":        { "type": "string", "const": "Static or animated image/video. Use for background reference images (e.g., a photograph to overlay a model trajectory)." },
         "RulerShape":        { "type": "string", "const": "On-canvas ruler for manual distance measurement. Not connected to calculator terms. Teaching aid." },
         "ProtractorShape":   { "type": "string", "const": "On-canvas protractor for manual angle measurement. Not connected to calculator terms. Teaching aid." }
       }

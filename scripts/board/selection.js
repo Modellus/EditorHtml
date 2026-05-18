@@ -206,8 +206,6 @@ class Selection {
     applyHighlight(shape) {
         const foreground = shape.properties?.foregroundColor;
         const color = this.isTransparentColor(foreground) ? "#000000" : foreground;
-        shape.element?.style.setProperty("--highlight-filter", `drop-shadow(0 0 2px ${color})`);
-        shape.element?.classList.add("highlighted");
         this.addHighlightProxy(shape, color);
     }
 
@@ -222,8 +220,6 @@ class Selection {
     }
 
     removeHighlight(shape) {
-        shape.element?.classList.remove("highlighted");
-        shape.element?.style.removeProperty("--highlight-filter");
         this.removeHighlightProxy(shape);
     }
 
@@ -241,7 +237,8 @@ class Selection {
         proxy.setAttribute("height", bounds.height);
         proxy.setAttribute("fill", "none");
         proxy.setAttribute("stroke", color);
-        proxy.setAttribute("stroke-width", "0.5");
+        proxy.setAttribute("stroke-width", "1.5");
+        proxy.style.filter = `drop-shadow(0 0 2px ${color})`;
         proxy.setAttribute("pointer-events", "none");
         this.applyOutlineRotation(proxy, shape, bounds);
         this.board.svg.appendChild(proxy);

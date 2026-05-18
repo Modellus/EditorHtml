@@ -270,10 +270,6 @@ line.handle.move {
     cursor: move;
 }
 
-.highlighted {
-    filter: var(--highlight-filter);
-}
-
 .hover-outline {
     stroke: #4039d7;
     stroke-dasharray: 3 2;
