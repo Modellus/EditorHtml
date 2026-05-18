@@ -332,6 +332,7 @@ class TopToolbar {
             showCloseButton: true,
             dragEnabled: false,
             shading: true,
+            onHidden: () => this._feedbackImageControl?.deactivateDocumentPaste(),
             contentTemplate: contentElement => {
                 $(contentElement).html(`<div id="feedback-form"></div>`);
                 $("#feedback-form").dxForm({
@@ -347,7 +348,9 @@ class TopToolbar {
                                 },
                                 onImageCleared: () => { this._feedbackImageFile = null; }
                             });
-                            return this._feedbackImageControl.createHost();
+                            const host = this._feedbackImageControl.createHost();
+                            this._feedbackImageControl.activateDocumentPaste();
+                            return host;
                         } },
                         {
                             itemType: "button",
