@@ -204,8 +204,8 @@ class Selection {
     }
 
     applyHighlight(shape) {
-        const foreground = shape.properties?.foregroundColor;
-        const color = this.isTransparentColor(foreground) ? "#000000" : foreground;
+        const borderColor = shape.properties?.borderColor ?? shape.properties?.foregroundColor;
+        const color = this.isTransparentColor(borderColor) ? "#000000" : borderColor;
         this.addHighlightProxy(shape, color);
     }
 
@@ -229,20 +229,28 @@ class Selection {
         const bounds = this.getOutlineBounds(shape);
         if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height))
             return;
-        const proxy = this.board.createSvgElement("rect");
+        this.ensureHoverGlowFilter();
+        const proxy = this.board.createSvgElement("g");
         proxy.setAttribute("class", "highlight-proxy");
-        proxy.setAttribute("x", bounds.x);
-        proxy.setAttribute("y", bounds.y);
-        proxy.setAttribute("width", bounds.width);
-        proxy.setAttribute("height", bounds.height);
-        proxy.setAttribute("fill", "none");
-        proxy.setAttribute("stroke", color);
-        proxy.setAttribute("stroke-width", "1.5");
-        proxy.style.filter = `drop-shadow(0 0 2px ${color})`;
         proxy.setAttribute("pointer-events", "none");
+        proxy.innerHTML = `<rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="${color}" stroke="none" filter="url(#mdl-hover-glow)" style="color: ${color}" pointer-events="none"/>
+            <rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="none" stroke="${color}" stroke-width="1.5" pointer-events="none"/>`;
         this.applyOutlineRotation(proxy, shape, bounds);
         this.board.svg.appendChild(proxy);
         shape._highlightProxy = proxy;
+    }
+
+    ensureHoverGlowFilter() {
+        if (this.board.svg.querySelector("#mdl-hover-glow"))
+            return;
+        const defs = this.board.createSvgElement("defs");
+        defs.innerHTML = `<filter id="mdl-hover-glow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
+            <feComposite in="blur" in2="SourceAlpha" operator="out" result="outer-glow"/>
+            <feFlood flood-color="currentColor" result="flood-color"/>
+            <feComposite in="flood-color" in2="outer-glow" operator="in"/>
+        </filter>`;
+        this.board.svg.insertBefore(defs, this.board.svg.firstChild);
     }
 
     removeHighlightProxy(shape) {
