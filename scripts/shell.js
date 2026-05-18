@@ -443,7 +443,8 @@ class Shell  {
     }
 
     async duplicateModel() {
-        if (this.isAnonymous()) {
+        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
+        if (!session?.token) {
             this.saveToSessionStorage();
             window.location.href = "/login.html";
             return;

@@ -22,6 +22,7 @@ class TopToolbar {
             items: [
                 {
                     location: "before",
+                    cssClass: "mdl-menu-button-item",
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-bars",
@@ -251,6 +252,7 @@ class TopToolbar {
                 },
                 {
                     location: "after",
+                    cssClass: "mdl-help-button-item",
                     widget: "dxButton",
                     options: {
                         icon: "fa-light fa-circle-question",

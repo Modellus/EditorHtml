@@ -393,8 +393,9 @@ svg:active.pan-available {
     background-color: transparent;
 }
 
-body.read-only #toolbar-container,
-body.read-only #context-menu {
+body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-before .dx-item:not(.mdl-menu-button-item),
+body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-center,
+body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:not(.mdl-help-button-item) {
     display: none;
 }
 

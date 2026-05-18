@@ -5,10 +5,29 @@ class ContextMenuController {
         this._create();
     }
 
+    _readOnlyMenuItems(mod) {
+        return [
+            {
+                text: this.shell.board.translations.get("Duplicate") + "...",
+                icon: "fa-light fa-clone",
+                shortcut: `${mod}D`,
+                name: "Duplicate",
+                action: _ => this.shell.duplicateModel()
+            },
+            {
+                text: this.shell.board.translations.get("More Models"),
+                icon: "fa-light fa-chevrons-left",
+                shortcut: "",
+                name: "Models",
+                action: _ => this.shell.exitEditor()
+            }
+        ];
+    }
+
     _create() {
         const isMac = /mac/i.test(navigator.platform);
         const mod = isMac ? "⌘" : "Ctrl+";
-        const menuItems = [
+        const menuItems = window.modellusReadOnly ? this._readOnlyMenuItems(mod) : [
             {
                 text: this.shell.board.translations.get("Clear"),
                 icon: "fa-light fa-file",
