@@ -135,7 +135,7 @@ function redirectToLogin() {
                         applyModelMetadata(shell, model);
                         shell.setupCollab(modelId);
                         if (urlParams.get("new") === "1") {
-                            shell.properties.name = shell.board.translations.get("Unnamed Model");
+                            shell.properties.name = shell.board.translations.get("New Model");
                             shell.topToolbar?.updateModelName();
                         }
                         return;

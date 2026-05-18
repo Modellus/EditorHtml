@@ -3849,7 +3849,7 @@ class ModelsApp {
     this.setStatus(this.translations.get("Creating model…"));
     try {
       const created = await this.apiClient.createModel({
-        title: this.translations.get("Untitled model"),
+        title: this.translations.get("New Model"),
         description: "",
         type: "model",
         status: "draft"
@@ -3859,8 +3859,7 @@ class ModelsApp {
       if (created && created.id) {
         const editorUrl = new URL("/editor.html", window.location.origin);
         editorUrl.searchParams.set("model_id", created.id);
-        if (fromModelId)
-            editorUrl.searchParams.set("new", "1");
+        editorUrl.searchParams.set("new", "1");
         window.location.href = editorUrl.toString();
       }
     } catch (error) {

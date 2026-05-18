@@ -437,6 +437,7 @@ class Shell  {
             });
             if (!response.ok) throw new Error(`Save failed (${response.status})`);
             this._hasChanges = false;
+            this.topToolbar?.updateModelName();
         } catch (error) {
             alert("Failed to save model.");
         }
