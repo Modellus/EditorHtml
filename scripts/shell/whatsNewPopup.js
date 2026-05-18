@@ -44,7 +44,7 @@ class WhatsNewPopup {
                             ? `<img src="${data.image_url}" style="width:100%;max-width:100%;height:auto;border-radius:8px;margin-bottom:12px;display:block;box-sizing:border-box;border:1px solid #e5e7eb" alt="">`
                             : "";
                         el[0].innerHTML = `
-                            <div style="box-sizing:border-box;width:100%;height:100%;padding:0 32px;overflow-y:auto;text-align:left">
+                            <div style="box-sizing:border-box;width:100%;height:calc(100% - 30px);padding:0 32px;overflow-y:auto;text-align:left">
                                 ${imageHtml}
                                 <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:#9ca3af;margin-bottom:5px">${formattedDate}</div>
                                 <div style="font-weight:600;font-size:15px;margin-bottom:8px;white-space:normal;word-break:break-word">${data.title}</div>
