@@ -35,6 +35,7 @@ class Selection {
     select(shape, modifiers = null) {
         this.deselect();
         this.clearHover();
+        this.removeEditModeHighlight();
         this.selectedShape = shape;
         shape.createHandles();
         shape.showHandles();
@@ -58,8 +59,10 @@ class Selection {
     }
 
     onClickOutside(event) {
-        if (!event.target.classList.contains("handle") && !event.target.classList.contains("bounding-box") && !event.target.isSameNode(this.selectedShape?.element))
+        if (!event.target.classList.contains("handle") && !event.target.classList.contains("bounding-box") && !event.target.isSameNode(this.selectedShape?.element)) {
+            this.removeEditModeHighlight();
             this.deselect();
+        }
     }
 
     onPointerDown(event) {
@@ -128,6 +131,7 @@ class Selection {
         event.stopPropagation();
         this.deselect();
         this.clearHover();
+        this.applyEditModeHighlight(shape);
         setTimeout(() => {
             if (this.board.suppressNextFocusSelect)
                 this.board.suppressNextFocusSelect = false;
@@ -257,6 +261,28 @@ class Selection {
         if (shape._highlightProxy) {
             shape._highlightProxy.remove();
             shape._highlightProxy = null;
+        }
+    }
+
+    applyEditModeHighlight(shape) {
+        this.removeEditModeHighlight();
+        this._editModeShape = shape;
+        const bounds = this.getOutlineBounds(shape);
+        if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height))
+            return;
+        const proxy = this.board.createSvgElement("g");
+        proxy.setAttribute("class", "highlight-proxy edit-mode");
+        proxy.setAttribute("pointer-events", "none");
+        proxy.innerHTML = `<rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="none" stroke="#0f6cbd" stroke-width="2.5" stroke-dasharray="6 3" pointer-events="none"/>`;
+        this.applyOutlineRotation(proxy, shape, bounds);
+        this.board.svg.appendChild(proxy);
+        shape._highlightProxy = proxy;
+    }
+
+    removeEditModeHighlight() {
+        if (this._editModeShape) {
+            this.removeHighlightProxy(this._editModeShape);
+            this._editModeShape = null;
         }
     }
 

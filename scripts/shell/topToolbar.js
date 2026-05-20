@@ -165,6 +165,18 @@ class TopToolbar {
                 },
                 {
                     location: "center",
+                    widget: "dxButton",
+                    options: {
+                        icon: "fa-light fa-clipboard-question",
+                        elementAttr: {
+                            id: "question-button"
+                        },
+                        onClick: _ => this.shell.commands.addShape("QuestionShape", "Question"),
+                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Question Tooltip", 280)
+                    }
+                },
+                {
+                    location: "center",
                     template() {
                         return $("<div id='measurement-tools-separator' class='toolbar-separator'>|</div>");
                     }

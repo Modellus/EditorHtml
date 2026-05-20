@@ -2425,6 +2425,50 @@ declare class SingularitiesDetector implements SystemProcessor {
     private detectDiscontinuities;
 }
 
+/**
+ * Simplifies a Branch expression tree by repeatedly applying algebraic identity
+ * rules until the tree no longer changes. Each pass traverses the tree top-down:
+ * a rule is attempted at the current node first; if one fires, the simplified
+ * result is returned immediately and the children are NOT recursed into during
+ * that same pass. This means deeply-nested redundancies require one pass per
+ * level, which is tracked in `passCount`.
+ *
+ * Rules applied at each node:
+ *   add:  x+0 → x,  0+x → x
+ *   sub:  x-0 → x,  0-x → neg(x)
+ *   mul:  x*0 → 0,  0*x → 0,  x*1 → x,  1*x → x
+ *   div:  0/x → 0,  x/1 → x
+ *   pow:  x^0 → 1,  x^1 → x,  1^x → 1
+ *   neg:  neg(0) → 0,  neg(neg(x)) → x
+ *   constant folding: any node whose direct children are all constants
+ */
+declare class Simplifier {
+    private _passCount;
+    /** Total number of passes executed during the last call to `simplify`. */
+    get passCount(): number;
+    /**
+     * Simplifies the given branch tree, running passes until no further
+     * simplification is possible. Returns the simplified tree.
+     */
+    simplify(branch: Branch): Branch;
+    /**
+     * A single top-down pass. Tries a rule at the current node; if one fires,
+     * returns the simplified result without recursing into it (deferred to the
+     * next pass). If no rule fires, recurses into children and rebuilds.
+     */
+    private runPass;
+    /**
+     * Rebuilds a branch with replacement children, creating a new `calculate`
+     * closure that references the new children so evaluation stays correct.
+     */
+    private rebuildBranch;
+    private makeConstant;
+    private isConstValue;
+    private isAllConst;
+    private foldConst;
+    private tryApplyRule;
+}
+
 declare class Visitor extends LatexMathVisitor<Branch> {
     private readonly system;
     private isParsingUnits;
@@ -2492,5 +2536,5 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
 
-export { Body, Branch, RegressionType as DataRegressionType, Deriver, Engine, Expression, ExpressionExpander, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, SingularitiesDetector, SingularityType, System, Term, TermType, Visitor };
+export { Body, Branch, RegressionType as DataRegressionType, Deriver, Engine, Expression, ExpressionExpander, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, Simplifier, SingularitiesDetector, SingularityType, System, Term, TermType, Visitor };
 export type { RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult, Singularity, SystemProcessor };

@@ -15,6 +15,7 @@ class BaseShape {
         ImageShape: "fa-light fa-image",
         ExpressionShape: "fa-light fa-function",
         TextShape: "fa-light fa-text",
+        QuestionShape: "fa-light fa-clipboard-question",
         RulerShape: "fa-light fa-ruler",
         ProtractorShape: "fa-light fa-angle",
         ReferentialShape: "fa-light fa-shapes",
@@ -560,10 +561,26 @@ class BaseShape {
                 if (probeEvent.defaultPrevented) {
                     event.stopPropagation();
                     event.preventDefault();
+                    const now = Date.now();
+                    if (this._lastPassthroughTime && now - this._lastPassthroughTime < 400) {
+                        this._lastPassthroughTime = 0;
+                        handle.dispatchEvent(new MouseEvent("dblclick", {
+                            bubbles: true, cancelable: true,
+                            clientX: event.clientX, clientY: event.clientY
+                        }));
+                        return;
+                    }
+                    this._lastPassthroughTime = now;
                     this.board.selection.select(this);
                     handle.style.pointerEvents = "none";
+                    const clickTarget = underlying;
+                    const clickEvent = event;
                     const restoreHandle = () => {
                         handle.style.pointerEvents = "";
+                        clickTarget.dispatchEvent(new MouseEvent("click", {
+                            bubbles: true, cancelable: true,
+                            clientX: clickEvent.clientX, clientY: clickEvent.clientY
+                        }));
                         window.removeEventListener("pointerup", restoreHandle);
                         window.removeEventListener("pointercancel", restoreHandle);
                     };
