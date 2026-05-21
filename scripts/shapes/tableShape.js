@@ -1530,12 +1530,15 @@ class TableShape extends BaseShape {
     enterEditMode(event) {
         if (!this.table)
             return super.enterEditMode();
+        console.log("[editmode] TableShape.enterEditMode calling table.focus()");
         this.table.focus();
+        console.log("[editmode] TableShape.enterEditMode table.focus() done");
         const cell = this.table.getClickedCell(event);
         if (cell && this.table.canEditCell(cell.rowIndex, cell.columnIndex)) {
             this.table.startEditing(cell.rowIndex, cell.columnIndex, null);
             this.table.render();
         }
+        console.log("[editmode] TableShape.enterEditMode returning true");
         return true;
     }
 

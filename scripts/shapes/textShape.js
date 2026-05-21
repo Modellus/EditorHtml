@@ -3,10 +3,9 @@ class TextShape extends BaseShape {
         super(board, null, id);
     }
 
-    _onDocumentMouseDown = e => {
-        if (!this.element.contains(e.target) && !this.$toolbarHost[0].contains(e.target) && !$(e.target).closest(".dx-overlay-wrapper").length)
-            this.exitEditMode();
-    };
+    isClickOutsideEditArea(target) {
+        return super.isClickOutsideEditArea(target) && !this.$toolbarHost[0].contains(target);
+    }
 
     createToolbar() {
         const items = super.createToolbar();
@@ -128,7 +127,7 @@ class TextShape extends BaseShape {
         this.container.style.cursor = "";
         this.$toolbarHost.css("display", "none");
         this.board.pointerLocked = false;
-        document.removeEventListener("mousedown", this._onDocumentMouseDown);
+        super.exitEditMode();
         this.htmlEditor.blur();
     }
 

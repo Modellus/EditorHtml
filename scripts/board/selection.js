@@ -59,10 +59,11 @@ class Selection {
     }
 
     onClickOutside(event) {
-        if (!event.target.classList.contains("handle") && !event.target.classList.contains("bounding-box") && !event.target.isSameNode(this.selectedShape?.element)) {
+        console.log("[editmode] onClickOutside", { target: event.target, editModeShape: this._editModeShape?.constructor.name, pointerLocked: this.board.pointerLocked });
+        if (this._editModeShape)
             this.removeEditModeHighlight();
+        if (!event.target.classList.contains("handle") && !event.target.classList.contains("bounding-box") && !event.target.isSameNode(this.selectedShape?.element))
             this.deselect();
-        }
     }
 
     onPointerDown(event) {
@@ -75,6 +76,7 @@ class Selection {
     }
 
     onPointerUp(event) {
+        console.log("[editmode] onPointerUp", { pointerLocked: this.board.pointerLocked, defaultPrevented: event.defaultPrevented, hasPointerDown: !!this.pointerDown });
         if (event.defaultPrevented)
             return;
         if (this.board.pointerLocked)
@@ -123,6 +125,7 @@ class Selection {
             return;
         this.board.suppressNextFocusSelect = true;
         const entered = shape.enterEditMode?.(event);
+        console.log("[editmode] onDoubleClick enterEditMode result", { shape: shape.constructor.name, entered });
         if (!entered) {
             this.board.suppressNextFocusSelect = false;
             return;
@@ -131,8 +134,11 @@ class Selection {
         event.stopPropagation();
         this.deselect();
         this.clearHover();
+        console.log("[editmode] onDoubleClick BEFORE applyEditModeHighlight", shape.constructor.name, "_editModeShape:", this._editModeShape?.constructor.name);
         this.applyEditModeHighlight(shape);
+        console.log("[editmode] onDoubleClick AFTER applyEditModeHighlight", "_editModeShape:", this._editModeShape?.constructor.name);
         setTimeout(() => {
+            console.log("[editmode] onDoubleClick setTimeout _editModeShape:", this._editModeShape?.constructor.name);
             if (this.board.suppressNextFocusSelect)
                 this.board.suppressNextFocusSelect = false;
         }, 150);
@@ -267,22 +273,33 @@ class Selection {
     applyEditModeHighlight(shape) {
         this.removeEditModeHighlight();
         this._editModeShape = shape;
+        console.log("[editmode] applyEditModeHighlight SET", shape.constructor.name);
         const bounds = this.getOutlineBounds(shape);
-        if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height))
+        if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height)) {
+            console.log("[editmode] applyEditModeHighlight early return - bad bounds", bounds);
             return;
+        }
         const proxy = this.board.createSvgElement("g");
         proxy.setAttribute("class", "highlight-proxy edit-mode");
         proxy.setAttribute("pointer-events", "none");
         proxy.innerHTML = `<rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="none" stroke="#0f6cbd" stroke-width="2.5" stroke-dasharray="6 3" pointer-events="none"/>`;
         this.applyOutlineRotation(proxy, shape, bounds);
         this.board.svg.appendChild(proxy);
-        shape._highlightProxy = proxy;
+        this._editModeProxy = proxy;
+        console.log("[editmode] applyEditModeHighlight proxy created");
     }
 
     removeEditModeHighlight() {
-        if (this._editModeShape) {
-            this.removeHighlightProxy(this._editModeShape);
+        console.log("[editmode] removeEditModeHighlight", { editModeShape: this._editModeShape?.constructor.name });
+        console.trace("[editmode] removeEditModeHighlight trace");
+        const shape = this._editModeShape;
+        if (shape) {
             this._editModeShape = null;
+            shape.exitEditMode();
+        }
+        if (this._editModeProxy) {
+            this._editModeProxy.remove();
+            this._editModeProxy = null;
         }
     }
 

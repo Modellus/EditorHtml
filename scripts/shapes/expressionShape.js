@@ -726,6 +726,7 @@ class ExpressionShape extends BaseShape {
 
     enterEditMode() {
         if (this.mathfield) {
+            document.addEventListener("mousedown", this._onDocumentMouseDown);
             this.mathfield.focus();
             return true;
         }

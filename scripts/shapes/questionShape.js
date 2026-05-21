@@ -6,12 +6,9 @@ class QuestionShape extends BaseShape {
         this.submitted = false;
     }
 
-    _onDocumentMouseDown = e => {
-        if (!this.element.contains(e.target) && !$(e.target).closest(".dx-overlay-wrapper").length && !$(e.target).closest(".shape-context-toolbar").length) {
-            this.exitEditMode();
-            this.board.selection.removeEditModeHighlight();
-        }
-    };
+    isClickOutsideEditArea(target) {
+        return super.isClickOutsideEditArea(target) && !$(target).closest(".shape-context-toolbar").length;
+    }
 
     setDefaults() {
         super.setDefaults();
@@ -44,7 +41,7 @@ class QuestionShape extends BaseShape {
             document.activeElement.blur();
         this.isInEditMode = false;
         this.board.pointerLocked = false;
-        document.removeEventListener("mousedown", this._onDocumentMouseDown);
+        super.exitEditMode();
         this.buildQuestionInput();
         this.buildAnswerContent();
     }

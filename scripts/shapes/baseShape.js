@@ -916,8 +916,24 @@ class BaseShape {
         return window.DevExpress?.ui?.dxDropDownButton?.getInstance(hostElement) ?? null;
     }
 
+    _onDocumentMouseDown = e => {
+        const outside = this.isClickOutsideEditArea(e.target);
+        console.log("[editmode] _onDocumentMouseDown", { target: e.target, outside, shape: this.constructor.name });
+        if (outside)
+            this.board.selection.removeEditModeHighlight();
+    };
+
+    isClickOutsideEditArea(target) {
+        return !this.element.contains(target) && !$(target).closest(".dx-overlay-wrapper").length;
+    }
+
     enterEditMode() {
         return false;
+    }
+
+    exitEditMode() {
+        console.log("[editmode] exitEditMode", this.constructor.name);
+        document.removeEventListener("mousedown", this._onDocumentMouseDown);
     }
 
     initializeContextToolbar() {
