@@ -254,6 +254,8 @@ class ExpressionShape extends BaseShape {
                     this._deadKeyComposition = '^';
             } else if (data === '~') {
                 this._deadKeyComposition = '~';
+            } else if (!this._deadKeyComposition) {
+                this._deadKeyComposition = 'blocked';
             }
         }, true);
     }
@@ -282,6 +284,13 @@ class ExpressionShape extends BaseShape {
         this.mathfield.insert('\\lnot');
     }
 
+    fixDeadKeyBlocked() {
+        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '', bubbles: true }));
+        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
+        this.mathfield.position = this._preCompositionPosition;
+    }
+
     onInput(inputEvent) {
         if (this._deadKeyComposition === 'land') {
             this._deadKeyComposition = null;
@@ -292,6 +301,9 @@ class ExpressionShape extends BaseShape {
         } else if (this._deadKeyComposition === '~') {
             this._deadKeyComposition = null;
             this.fixDeadKeyTilde();
+        } else if (this._deadKeyComposition === 'blocked') {
+            this._deadKeyComposition = null;
+            this.fixDeadKeyBlocked();
         }
         this.deferFixContentOutsideDisplaylines();
         const shortcutApplied = this.applyExpressionFunctionShortcuts();
