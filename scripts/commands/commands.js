@@ -11,6 +11,11 @@ class Commands {
         shapeClass.setup();
     }
 
+    /** @deprecated */
+    registerShapeAlias(alias, shapeClass) {
+        this.shapes.registerShapeAlias(alias, shapeClass);
+    }
+
     selectShape(name) {
         var shape = this.shapes.getByName(name);
         if (shape === null) 

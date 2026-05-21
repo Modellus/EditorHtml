@@ -10,6 +10,10 @@ class Shapes {
         this.shapeRegistry[shapeClass.name] = shapeClass;
     }
 
+    registerShapeAlias(alias, shapeClass) {
+        this.shapeRegistry[alias] = shapeClass;
+    }
+
     createShape(shapeType, parent, id) {
         const ShapeClass = this.shapeRegistry[shapeType];
         if (ShapeClass)

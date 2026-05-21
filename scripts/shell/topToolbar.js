@@ -145,9 +145,9 @@ class TopToolbar {
                         elementAttr: {
                             id: "background-button"
                         },
-                        icon: "fa-light fa-image",
-                        onClick: _ => this.shell.commands.addShape("ImageShape", "Image"),
-                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Background Tooltip", 280)
+                        icon: "fa-light fa-photo-film-music",
+                        onClick: _ => this.shell.commands.addShape("MediaShape", "Media"),
+                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Media Tooltip", 280)
                     }
                 },
                 {
@@ -514,7 +514,7 @@ class TopToolbar {
     }
 
     update() {
-        const disabled = this.shell.board.selection.selectedShape == null || !["BodyShape", "PointShape", "VectorShape", "ImageShape", "ReferentialShape"].includes(this.shell.board.selection.selectedShape.constructor.name);
+        const disabled = this.shell.board.selection.selectedShape == null || !["BodyShape", "PointShape", "VectorShape", "MediaShape", "ReferentialShape"].includes(this.shell.board.selection.selectedShape.constructor.name);
     }
 
     _createCollabDropDownButton(container) {

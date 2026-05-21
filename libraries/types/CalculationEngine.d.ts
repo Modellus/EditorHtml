@@ -2444,6 +2444,9 @@ declare class SingularitiesDetector implements SystemProcessor {
  */
 declare class Simplifier {
     private _passCount;
+    private readonly rules;
+    private readonly rebuilders;
+    constructor();
     /** Total number of passes executed during the last call to `simplify`. */
     get passCount(): number;
     /**
@@ -2467,6 +2470,12 @@ declare class Simplifier {
     private isAllConst;
     private foldConst;
     private tryApplyRule;
+    private simplifyAdd;
+    private simplifySub;
+    private simplifyMul;
+    private simplifyDiv;
+    private simplifyPow;
+    private simplifyNeg;
 }
 
 declare class Visitor extends LatexMathVisitor<Branch> {

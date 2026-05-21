@@ -93,7 +93,7 @@
         "ValueShape":        { "type": "string", "const": "Displays the current numeric value of any calculator term. term = term name. termDisplayMode: 'nameValue' shows label + number, 'valueOnly' shows only the number." },
         "TableShape":        { "type": "string", "const": "Tabular view of term values across iterations. columns array lists term names. Useful for discrete/recurrence models or when exact numeric output matters." },
         "GaugeShape":        { "type": "string", "const": "Polar gauge. angleTerm + magnitudeTerm drive the needle. Use for two-component quantities like velocity direction and speed." },
-        "ImageShape":        { "type": "string", "const": "Static or animated image/video. Use for background reference images (e.g., a photograph to overlay a model trajectory)." },
+        "MediaShape":        { "type": "string", "const": "Static or animated image, video or audio. Use for background reference images (e.g., a photograph to overlay a model trajectory) or synced/free-running video and audio." },
         "RulerShape":        { "type": "string", "const": "On-canvas ruler for manual distance measurement. Not connected to calculator terms. Teaching aid." },
         "ProtractorShape":   { "type": "string", "const": "On-canvas protractor for manual angle measurement. Not connected to calculator terms. Teaching aid." }
       }
@@ -510,7 +510,7 @@
         { "$ref": "#/$defs/SliderShape" },
         { "$ref": "#/$defs/ValueShape" },
         { "$ref": "#/$defs/TableShape" },
-        { "$ref": "#/$defs/ImageShape" },
+        { "$ref": "#/$defs/MediaShape" },
         { "$ref": "#/$defs/PointShape" },
         { "$ref": "#/$defs/LineShape" },
         { "$ref": "#/$defs/VectorShape" },
@@ -1045,14 +1045,14 @@
       }
     },
 
-    "ImageShape": {
-      "title": "ImageShape",
-      "description": "A static image or video element placed on the canvas.",
+    "MediaShape": {
+      "title": "MediaShape",
+      "description": "A static image, video or audio element placed on the canvas.",
       "type": "object",
       "required": ["type", "id", "properties"],
       "additionalProperties": false,
       "properties": {
-        "type": { "type": "string", "enum": ["ImageShape"] },
+        "type": { "type": "string", "enum": ["MediaShape"] },
         "id": { "type": "string", "format": "uuid" },
         "parent": { "type": ["string", "null"], "description": "ID of the parent ReferentialShape." },
         "properties": {
@@ -1077,11 +1077,16 @@
                   "default": "",
                   "description": "URL of a video asset."
                 },
+                "audioUrl": {
+                  "type": "string",
+                  "default": "",
+                  "description": "URL of an audio asset."
+                },
                 "videoStepsPerFrame": {
                   "type": "integer",
                   "minimum": 1,
                   "default": 1,
-                  "description": "Number of simulation steps per video frame."
+                  "description": "Number of simulation steps per video/audio frame."
                 },
                 "lockAspectRatio": {
                   "type": "boolean",
@@ -1092,6 +1097,11 @@
                   "type": "number",
                   "default": 0,
                   "description": "Width-to-height ratio of the loaded media (0 when not yet loaded)."
+                },
+                "mediaSynced": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "When true, video/audio playback is synced with the simulation player. When false, hovering shows native media controls."
                 }
               }
             }

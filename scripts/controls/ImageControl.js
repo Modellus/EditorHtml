@@ -67,13 +67,22 @@ class ImageControl {
 
     setImageSource(imageSource) {
         this.currentIsVideo = false;
+        this.currentIsAudio = false;
         this.currentImageSource = this.normalizeImageSource(imageSource);
         this.updatePreview();
     }
 
     setVideoSource(videoUrl) {
         this.currentIsVideo = true;
+        this.currentIsAudio = false;
         this.currentImageSource = this.normalizeImageSource(videoUrl);
+        this.updatePreview();
+    }
+
+    setAudioSource(audioUrl) {
+        this.currentIsVideo = false;
+        this.currentIsAudio = true;
+        this.currentImageSource = this.normalizeImageSource(audioUrl);
         this.updatePreview();
     }
 
@@ -115,6 +124,12 @@ class ImageControl {
             return;
         if (this.currentImageSource !== "") {
             this.removeButtonElement.style.display = "flex";
+            if (this.currentIsAudio) {
+                this.previewElement.removeAttribute("src");
+                this.hintElement.innerHTML = "<i class='fa-light fa-music fa-2x'></i>";
+                this.hintElement.style.display = "";
+                return;
+            }
             if (this.isVideoSource(this.currentImageSource)) {
                 if (this._thumbnailCapturedFor !== this.currentImageSource) {
                     this._thumbnailCapturedFor = this.currentImageSource;

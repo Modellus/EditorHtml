@@ -12,7 +12,7 @@ class BaseShape {
         TableShape: "fa-light fa-table",
         SliderShape: "fa-light fa-slider",
         ValueShape: "fa-light fa-input-numeric",
-        ImageShape: "fa-light fa-image",
+        MediaShape: "fa-light fa-photo-film-music",
         ExpressionShape: "fa-light fa-function",
         TextShape: "fa-light fa-text",
         QuestionShape: "fa-light fa-clipboard-question",
@@ -918,7 +918,6 @@ class BaseShape {
 
     _onDocumentMouseDown = e => {
         const outside = this.isClickOutsideEditArea(e.target);
-        console.log("[editmode] _onDocumentMouseDown", { target: e.target, outside, shape: this.constructor.name });
         if (outside)
             this.board.selection.removeEditModeHighlight();
     };
@@ -932,7 +931,6 @@ class BaseShape {
     }
 
     exitEditMode() {
-        console.log("[editmode] exitEditMode", this.constructor.name);
         document.removeEventListener("mousedown", this._onDocumentMouseDown);
     }
 
