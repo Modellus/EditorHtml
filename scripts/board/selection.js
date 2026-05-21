@@ -279,11 +279,20 @@ class Selection {
             console.log("[editmode] applyEditModeHighlight early return - bad bounds", bounds);
             return;
         }
+        const rotation = Number(shape.properties?.rotation) || 0;
+        const cx = bounds.x + bounds.width / 2;
+        const cy = bounds.y + bounds.height / 2;
+        const rotateAttr = Math.abs(rotation) > 0.00001 ? ` transform="rotate(${rotation} ${cx} ${cy})"` : "";
         const proxy = this.board.createSvgElement("g");
         proxy.setAttribute("class", "highlight-proxy edit-mode");
         proxy.setAttribute("pointer-events", "none");
-        proxy.innerHTML = `<rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="none" stroke="#0f6cbd" stroke-width="2.5" stroke-dasharray="6 3" pointer-events="none"/>`;
-        this.applyOutlineRotation(proxy, shape, bounds);
+        proxy.innerHTML = `<defs>
+            <mask id="mdl-edit-mode-mask">
+                <rect x="-100000" y="-100000" width="200000" height="200000" fill="white"/>
+                <rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="black"${rotateAttr}/>
+            </mask>
+        </defs>
+        <rect x="-100000" y="-100000" width="200000" height="200000" fill="rgba(0,0,0,0.15)" mask="url(#mdl-edit-mode-mask)"/>`;
         this.board.svg.appendChild(proxy);
         this._editModeProxy = proxy;
         console.log("[editmode] applyEditModeHighlight proxy created");
