@@ -1273,13 +1273,10 @@ class ChartControl {
             const endX = xScale(tangent.xValue + deltaX);
             const endY = yScale(tangent.yValue + deltaY);
             tangentMarkup += `
-                <polygon points="${pointX},${pointY} ${startX},${pointY} ${startX},${startY}" fill="${tangentColor}" fill-opacity="0.25" stroke="none" />
-                <polygon points="${pointX},${pointY} ${endX},${pointY} ${endX},${endY}" fill="${tangentColor}" fill-opacity="0.25" stroke="none" />
+                <polygon points="${startX},${startY} ${endX},${startY} ${endX},${endY}" fill="${tangentColor}" fill-opacity="0.25" stroke="none" />
                 <line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="${tangentColor}" stroke-width="1.5" />
-                <line x1="${startX}" y1="${pointY}" x2="${pointX}" y2="${pointY}" stroke="${tangentColor}" stroke-width="1.2" stroke-dasharray="4 3" />
-                <line x1="${startX}" y1="${startY}" x2="${startX}" y2="${pointY}" stroke="${tangentColor}" stroke-width="1.2" stroke-dasharray="4 3" />
-                <line x1="${pointX}" y1="${pointY}" x2="${endX}" y2="${pointY}" stroke="${tangentColor}" stroke-width="1.2" stroke-dasharray="4 3" />
-                <line x1="${endX}" y1="${pointY}" x2="${endX}" y2="${endY}" stroke="${tangentColor}" stroke-width="1.2" stroke-dasharray="4 3" />
+                <line x1="${startX}" y1="${startY}" x2="${endX}" y2="${startY}" stroke="${tangentColor}" stroke-width="1.2" stroke-dasharray="4 3" />
+                <line x1="${endX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="${tangentColor}" stroke-width="1.2" stroke-dasharray="4 3" />
             `;
         }
         this.appendSvgMarkup(this.focusLayer, tangentMarkup);
