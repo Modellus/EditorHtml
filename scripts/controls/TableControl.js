@@ -100,6 +100,10 @@ class TableControl {
         this.backgroundLayer = this.createSvgElement("g");
         this.headerLayer = this.createSvgElement("g");
         this.headerLayer.setAttribute("clip-path", `url(#${this.tableClipId})`);
+        this.headerGeometryLayer = this.createSvgElement("g");
+        this.headerContentLayer = this.createSvgElement("g");
+        this.headerLayer.appendChild(this.headerGeometryLayer);
+        this.headerLayer.appendChild(this.headerContentLayer);
         this.rowsLayer = this.createSvgElement("g");
         this.rowsLayer.setAttribute("clip-path", `url(#${this.rowsClipId})`);
         this.overlayLayer = this.createSvgElement("g");
@@ -281,7 +285,7 @@ class TableControl {
             fallbackText.setAttribute("font-size", `${Math.max(8, Number(this.options.headerFontSize) - 3)}`);
             fallbackText.setAttribute("clip-path", clipPathRef);
             fallbackText.textContent = `${caseNumber}`;
-            this.headerLayer.appendChild(fallbackText);
+            this.headerGeometryLayer.appendChild(fallbackText);
             return;
         }
         const scaleX = size.width / iconData.width;
@@ -294,7 +298,7 @@ class TableControl {
         iconPath.setAttribute("d", iconData.pathData);
         iconPath.setAttribute("fill", caseIconColor);
         iconGroup.appendChild(iconPath);
-        this.headerLayer.appendChild(iconGroup);
+        this.headerGeometryLayer.appendChild(iconGroup);
     }
 
     clearLayer(layerElement) {
@@ -588,17 +592,31 @@ class TableControl {
         return { first: first, last: last, offset: offset };
     }
 
+    getHeaderContentKey(columns) {
+        const columnSummary = columns.map(column => `${column.title}|${column.barColor}|${column.caseNumber}|${column.showCase}`).join(",");
+        return `${this.options.headerBackgroundColor}|${this.options.foregroundColor}|${this.options.headerFontSize}|${columnSummary}`;
+    }
+
+    getHeaderGeometryKey(layout, columns) {
+        const columnWidths = columns.map(column => column.width ?? "auto").join(",");
+        return `${layout.bodyWidth}|${layout.headerHeight}|${this.options.gridColor}|${columnWidths}`;
+    }
+
     render() {
         this.clearLayer(this.backgroundLayer);
-        this.clearLayer(this.headerLayer);
+        this.clearLayer(this.headerGeometryLayer);
         this.clearLayer(this.rowsLayer);
         this.clearLayer(this.overlayLayer);
         this.clearLayer(this.scrollbarLayer);
         this.cellBoxes = [];
         this.verticalScrollbarThumbRect = null;
         this.horizontalScrollbarThumbRect = null;
-        if (this.width <= 2 || this.height <= 2)
+        if (this.width <= 2 || this.height <= 2) {
+            this.clearLayer(this.headerContentLayer);
+            this._appliedHeaderContentKey = null;
+            this._appliedHeaderGeometryKey = null;
             return;
+        }
         const layout = this.getLayout();
         const columns = this.options.columns ?? [];
         const geometry = this.getColumnGeometry(layout, columns);
@@ -606,7 +624,21 @@ class TableControl {
         this.updateClipRect(layout);
         this.updateColumnClipPaths(geometry);
         this.renderBackground(layout);
-        this.renderHeader(layout, columns, geometry);
+        const headerContentKey = this.getHeaderContentKey(columns);
+        if (this._appliedHeaderContentKey !== headerContentKey) {
+            this.clearLayer(this.headerContentLayer);
+            this._headerContentForeignObjects = [];
+            this.renderHeader(layout, columns, geometry);
+            this._appliedHeaderContentKey = headerContentKey;
+            this._appliedHeaderGeometryKey = this.getHeaderGeometryKey(layout, columns);
+        } else {
+            this.renderHeaderBackground(layout, columns, geometry);
+            const headerGeometryKey = this.getHeaderGeometryKey(layout, columns);
+            if (this._appliedHeaderGeometryKey !== headerGeometryKey) {
+                this.updateHeaderContentGeometry(columns, geometry, layout);
+                this._appliedHeaderGeometryKey = headerGeometryKey;
+            }
+        }
         this.renderBody(layout, columns, geometry, columnValueRanges);
         this.renderRegressionRangeOverlays(layout, geometry);
         this.renderSelectedFocusedRanges(layout, geometry);
@@ -650,13 +682,21 @@ class TableControl {
     }
 
     renderHeader(layout, columns, geometry) {
+        this.renderHeaderBackground(layout, columns, geometry);
+        for (let index = 0; index < columns.length; index++)
+            this._headerContentForeignObjects.push(
+                this.renderHeaderCellContent(layout, columns[index], geometry[index], index)
+            );
+    }
+
+    renderHeaderBackground(layout, columns, geometry) {
         const headerRect = this.createSvgElement("rect");
         headerRect.setAttribute("x", "0");
         headerRect.setAttribute("y", "0");
         headerRect.setAttribute("width", `${layout.bodyWidth}`);
         headerRect.setAttribute("height", `${layout.headerHeight}`);
         headerRect.setAttribute("fill", this.options.headerBackgroundColor);
-        this.headerLayer.appendChild(headerRect);
+        this.headerGeometryLayer.appendChild(headerRect);
         const borderLine = this.createSvgElement("line");
         borderLine.setAttribute("x1", "0");
         borderLine.setAttribute("y1", `${layout.headerHeight}`);
@@ -665,9 +705,70 @@ class TableControl {
         borderLine.setAttribute("stroke", this.options.gridColor);
         borderLine.setAttribute("stroke-width", "1");
         for (let index = 0; index < columns.length; index++)
-            this.renderHeaderCell(layout, columns[index], geometry[index], index, index === columns.length - 1);
-        this.headerLayer.appendChild(borderLine);
+            this.renderHeaderCellBackground(layout, columns[index], geometry[index], index, index === columns.length - 1);
+        this.headerGeometryLayer.appendChild(borderLine);
         this.renderResizeHandles(layout, geometry);
+    }
+
+    renderHeaderCellBackground(layout, column, cellGeometry, columnIndex, isLastColumn) {
+        const headerBackgroundColor = this.getColumnHeaderBackgroundColor(column);
+        const headerRect = this.createSvgElement("rect");
+        headerRect.setAttribute("x", `${cellGeometry.x}`);
+        headerRect.setAttribute("y", "0");
+        headerRect.setAttribute("width", `${cellGeometry.width}`);
+        headerRect.setAttribute("height", `${layout.headerHeight}`);
+        headerRect.setAttribute("fill", headerBackgroundColor);
+        this.headerGeometryLayer.appendChild(headerRect);
+        if (column.showCase === true) {
+            const centerX = cellGeometry.x + cellGeometry.width / 2;
+            const centerY = layout.headerHeight / 2 + 4;
+            const titleText = column.title ?? "";
+            const titleWidth = this.estimateTextWidth(this.normalizeHeaderTitleForWidth(titleText), Number(this.options.headerFontSize) || 16);
+            const iconX = centerX + titleWidth / 2 + 2;
+            const iconY = centerY - 1;
+            this.renderHeaderCaseIcon(column.caseNumber, iconX, iconY, columnIndex);
+        }
+        if (isLastColumn)
+            return;
+        const columnLine = this.createSvgElement("line");
+        columnLine.setAttribute("x1", `${cellGeometry.x + cellGeometry.width}`);
+        columnLine.setAttribute("y1", "0");
+        columnLine.setAttribute("x2", `${cellGeometry.x + cellGeometry.width}`);
+        columnLine.setAttribute("y2", `${this.height}`);
+        columnLine.setAttribute("stroke", this.options.gridColor);
+        columnLine.setAttribute("stroke-width", "1");
+        this.headerGeometryLayer.appendChild(columnLine);
+    }
+
+    renderHeaderCellContent(layout, column, cellGeometry, columnIndex) {
+        const headerBackgroundColor = this.getColumnHeaderBackgroundColor(column);
+        const headerTextColor = this.getContrastTextColor(headerBackgroundColor);
+        const titleText = column.title ?? "";
+        const titleMathValue = this.getHeaderTitleMathValue(titleText);
+        const titleForeignObject = this.createSvgElement("foreignObject");
+        titleForeignObject.setAttribute("x", `${cellGeometry.x}`);
+        titleForeignObject.setAttribute("y", "0");
+        titleForeignObject.setAttribute("width", `${cellGeometry.width}`);
+        titleForeignObject.setAttribute("height", `${layout.headerHeight}`);
+        titleForeignObject.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
+        titleForeignObject.setAttribute("pointer-events", "none");
+        const titleContainer = document.createElement("div");
+        titleContainer.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none";
+        titleContainer.innerHTML = `<math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;color:${headerTextColor};font-size:${this.options.headerFontSize}px"></math-field>`;
+        const titleMathField = titleContainer.querySelector("math-field");
+        this.setMathFieldValue(titleMathField, titleMathValue);
+        titleForeignObject.appendChild(titleContainer);
+        this.headerContentLayer.appendChild(titleForeignObject);
+        return titleForeignObject;
+    }
+
+    updateHeaderContentGeometry(columns, geometry, layout) {
+        for (let index = 0; index < this._headerContentForeignObjects.length && index < geometry.length; index++) {
+            const foreignObject = this._headerContentForeignObjects[index];
+            foreignObject.setAttribute("x", `${geometry[index].x}`);
+            foreignObject.setAttribute("width", `${geometry[index].width}`);
+            foreignObject.setAttribute("height", `${layout.headerHeight}`);
+        }
     }
 
     getColumnHeaderBackgroundColor(column) {
@@ -759,55 +860,6 @@ class TableControl {
         if (channelValue <= 0.03928)
             return channelValue / 12.92;
         return ((channelValue + 0.055) / 1.055) ** 2.4;
-    }
-
-    renderHeaderCell(layout, column, cellGeometry, columnIndex, isLastColumn) {
-        const headerBackgroundColor = this.getColumnHeaderBackgroundColor(column);
-        const headerTextColor = this.getContrastTextColor(headerBackgroundColor);
-        const headerRect = this.createSvgElement("rect");
-        headerRect.setAttribute("x", `${cellGeometry.x}`);
-        headerRect.setAttribute("y", "0");
-        headerRect.setAttribute("width", `${cellGeometry.width}`);
-        headerRect.setAttribute("height", `${layout.headerHeight}`);
-        headerRect.setAttribute("fill", headerBackgroundColor);
-        this.headerLayer.appendChild(headerRect);
-        const centerX = cellGeometry.x + cellGeometry.width / 2;
-        const centerY = layout.headerHeight / 2 + 4;
-        const titleText = column.title ?? "";
-        const titleMathValue = this.getHeaderTitleMathValue(titleText);
-        const titleForeignObject = this.createSvgElement("foreignObject");
-        titleForeignObject.setAttribute("x", `${cellGeometry.x}`);
-        titleForeignObject.setAttribute("y", "0");
-        titleForeignObject.setAttribute("width", `${cellGeometry.width}`);
-        titleForeignObject.setAttribute("height", `${layout.headerHeight}`);
-        titleForeignObject.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
-        titleForeignObject.setAttribute("pointer-events", "none");
-        const titleContainer = document.createElement("div");
-        titleContainer.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none";
-        titleContainer.innerHTML = `<math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;color:${headerTextColor};font-size:${this.options.headerFontSize}px"></math-field>`;
-        const titleMathField = titleContainer.querySelector("math-field");
-        this.setMathFieldValue(titleMathField, titleMathValue);
-        titleForeignObject.appendChild(titleContainer);
-        this.headerLayer.appendChild(titleForeignObject);
-        if (column.showCase === true) {
-            let titleWidth = this.estimateTextWidth(this.normalizeHeaderTitleForWidth(titleText), Number(this.options.headerFontSize) || 16);
-            const measuredTitleWidth = Number(titleMathField?.getBoundingClientRect?.().width);
-            if (Number.isFinite(measuredTitleWidth) && measuredTitleWidth > 0)
-                titleWidth = measuredTitleWidth;
-            const iconX = centerX + titleWidth / 2 + 2;
-            const iconY = centerY - 1;
-            this.renderHeaderCaseIcon(column.caseNumber, iconX, iconY, columnIndex);
-        }
-        if (isLastColumn)
-            return;
-        const columnLine = this.createSvgElement("line");
-        columnLine.setAttribute("x1", `${cellGeometry.x + cellGeometry.width}`);
-        columnLine.setAttribute("y1", "0");
-        columnLine.setAttribute("x2", `${cellGeometry.x + cellGeometry.width}`);
-        columnLine.setAttribute("y2", `${this.height}`);
-        columnLine.setAttribute("stroke", this.options.gridColor);
-        columnLine.setAttribute("stroke-width", "1");
-        this.headerLayer.appendChild(columnLine);
     }
 
     renderBody(layout, columns, geometry, columnValueRanges) {
@@ -1119,7 +1171,7 @@ class TableControl {
             handle.setAttribute("height", `${layout.headerHeight}`);
             handle.setAttribute("fill", "transparent");
             handle.setAttribute("pointer-events", "all");
-            this.headerLayer.appendChild(handle);
+            this.headerGeometryLayer.appendChild(handle);
         }
     }
 
