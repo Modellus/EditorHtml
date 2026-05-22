@@ -275,6 +275,27 @@ class TableShape extends BaseShape {
         listItems.push({ text: "Columns", stacked: true, buildControl: $p => $p.append(this.createColumnsControl()) });
     }
 
+    populateShapeColorMenuSections(sections) {
+        super.populateShapeColorMenuSections(sections);
+        sections[0].items.push({
+            text: this.board.translations.get("Row Step") ?? "Row Step",
+            buildControl: $container => {
+                $('<div>').appendTo($container).dxNumberBox({
+                    value: this.properties.iterationSkip ?? 0,
+                    min: 0,
+                    step: 1,
+                    format: "#",
+                    showSpinButtons: true,
+                    width: 80,
+                    onValueChanged: e => {
+                        const value = Math.max(0, Math.floor(Number(e.value) || 0));
+                        this.setPropertyCommand("iterationSkip", value);
+                    }
+                });
+            }
+        });
+    }
+
     renderTermsButtonTemplate(element) {
         const columns = (this.properties.columns ?? []).filter(c => c.term);
         const firstTerm = columns.length > 0 ? this.formatTermForDisplay(columns[0].term) : "";
@@ -566,6 +587,7 @@ class TableShape extends BaseShape {
         this.properties.height = 200;
         this.properties.columnWidths = [];
         this.properties.headerBackgroundColor = "#f7f7f7";
+        this.properties.iterationSkip = 0;
         this.properties.externalData = null;
         this.properties.originalExternalData = null;
         const defaultTerm = this.board.calculator.getDefaultTerm();
@@ -1361,8 +1383,11 @@ class TableShape extends BaseShape {
         }
         const system = this.board.calculator.system;
         const lastIteration = this.board.calculator.getLastIteration();
+        const iterationSkip = Math.max(0, Math.floor(Number(this.properties.iterationSkip) || 0));
         const rows = [];
         for (let iteration = 1; iteration <= lastIteration; iteration++) {
+            if (iterationSkip > 0 && (iteration - 1) % iterationSkip !== 0)
+                continue;
             const row = { key: iteration };
             for (let index = 0; index < columns.length; index++) {
                 const column = columns[index];
