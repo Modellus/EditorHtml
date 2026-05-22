@@ -322,9 +322,12 @@ class TableShape extends BaseShape {
         const system = this.board.calculator.system;
         const lastIteration = this.board.calculator.getLastIteration();
         const precision = this.board.calculator.getPrecision();
+        const iterationSkip = Math.max(0, Math.floor(Number(this.properties.iterationSkip) || 0));
         const header = columns.map(column => column.term).join(",");
         const rows = [header];
         for (let iteration = 1; iteration <= lastIteration; iteration++) {
+            if (iterationSkip > 0 && (iteration - 1) % iterationSkip !== 0)
+                continue;
             const values = columns.map(column => {
                 const value = system.getByNameOnIteration(iteration, column.term, column.case);
                 return Number.isFinite(value) ? Utils.roundToPrecision(value, precision) : "";
@@ -1529,9 +1532,12 @@ class TableShape extends BaseShape {
         const system = this.board.calculator.system;
         const lastIteration = this.board.calculator.getLastIteration();
         const precision = this.board.calculator.getPrecision();
+        const iterationSkip = Math.max(0, Math.floor(Number(this.properties.iterationSkip) || 0));
         const headerCells = columns.map(column => `<th>${column.term}</th>`).join("");
         const rows = [];
         for (let iteration = 1; iteration <= lastIteration; iteration++) {
+            if (iterationSkip > 0 && (iteration - 1) % iterationSkip !== 0)
+                continue;
             const cells = columns.map(column => {
                 const value = system.getByNameOnIteration(iteration, column.term, column.case);
                 if (value == null || !Number.isFinite(value))
@@ -1543,13 +1549,35 @@ class TableShape extends BaseShape {
         return `<table><thead><tr>${headerCells}</tr></thead><tbody>${rows.join("")}</tbody></table>`;
     }
 
+    toTsvTable() {
+        const columns = this._activeColumns ?? this.getSelectedColumns();
+        if (columns.length === 0)
+            return "";
+        const system = this.board.calculator.system;
+        const lastIteration = this.board.calculator.getLastIteration();
+        const precision = this.board.calculator.getPrecision();
+        const iterationSkip = Math.max(0, Math.floor(Number(this.properties.iterationSkip) || 0));
+        const rows = [columns.map(column => column.term).join("\t")];
+        for (let iteration = 1; iteration <= lastIteration; iteration++) {
+            if (iterationSkip > 0 && (iteration - 1) % iterationSkip !== 0)
+                continue;
+            const values = columns.map(column => {
+                const value = system.getByNameOnIteration(iteration, column.term, column.case);
+                return Number.isFinite(value) ? Utils.roundToPrecision(value, precision) : "";
+            });
+            rows.push(values.join("\t"));
+        }
+        return rows.join("\n");
+    }
+
     async copyToClipboard() {
         const shapeData = this.getClipboardData();
         const json = JSON.stringify(shapeData);
         const htmlTable = this.toHtmlTable();
+        const tsvTable = this.toTsvTable();
         const imageBlob = this.toImageBlob();
         const items = [new ClipboardItem({
-            "text/plain": new Blob([json], { type: "text/plain" }),
+            "text/plain": new Blob([tsvTable], { type: "text/plain" }),
             "text/html": new Blob([htmlTable], { type: "text/html" }),
             "image/png": imageBlob
         })];
