@@ -337,3 +337,40 @@ test.describe('Inline shortcut handling', () => {
         expect(value).toMatch(/\\neq?\b/);
     });
 });
+
+test.describe('Backspace - character by character deletion', () => {
+    test('deleting \\ln\\left(t\\right) from end removes one step at a time', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await setExpressionValue(page, 'Expr1', '\\displaylines{\\ln\\left(t\\right)}');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.press('End');
+        await page.waitForTimeout(100);
+
+        // \ln\left(t\right)| → enters \left(t\right) group, value unchanged, t still present
+        await page.keyboard.press('Backspace');
+        await page.waitForTimeout(200);
+        let value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('t');
+        expect(value).toContain('\\ln');
+
+        // inside paren after t → deletes t
+        await page.keyboard.press('Backspace');
+        await page.waitForTimeout(200);
+        value = await getExpressionValue(page, 'Expr1');
+        expect(value).not.toContain('t');
+        expect(value).toContain('\\ln');
+
+        // inside empty paren → collapses \left(\right) structure
+        await page.keyboard.press('Backspace');
+        await page.waitForTimeout(200);
+        value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\ln');
+
+        // \ln is a single operator atom → one backspace removes it
+        await page.keyboard.press('Backspace');
+        await page.waitForTimeout(200);
+        value = await getExpressionValue(page, 'Expr1');
+        expect(value).toBe('\\displaylines{}');
+    });
+});
