@@ -10,7 +10,8 @@ coverage/
 
 # Build artifacts
 dist/
-build/
+build/*
+!build/icon.png
 out/
 
 # Logs

@@ -44,10 +44,6 @@ jobs:
       - name: Build offline assets
         run: npm run build:offline
 
-      - name: Generate app icon
-        run: npm install --no-save sharp && node electron/generate-icons.js
-        shell: bash
-
       - name: Build app
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
