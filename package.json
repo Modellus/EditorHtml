@@ -53,6 +53,9 @@
     "mac": {
       "target": "dmg"
     },
+    "dmg": {
+      "icon": "build/icon.png"
+    },
     "win": {
       "target": "nsis"
     },
