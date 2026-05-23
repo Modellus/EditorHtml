@@ -95,6 +95,7 @@ jobs:
           tag_name: latest
           name: Latest Build
           body: "Automatically updated on every push to main."
+          prerelease: false
           make_latest: true
           files: |
             artifacts/Modellus-mac.dmg
