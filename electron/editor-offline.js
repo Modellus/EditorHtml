@@ -3,7 +3,7 @@ DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImN
 var shell = null;
 
 async function initOnline() {
-    const { ModelsApiClient } = await import("./sdk/modelsApiClient.js");
+    const { ModelsApiClient } = await import("../sdk/modelsApiClient.js");
     const apiBase = "https://modellus-api.interactivebook.workers.dev";
     const modelsApiClient = new ModelsApiClient(
         apiBase,
