@@ -6,6 +6,7 @@
   "scripts": {
     "test": "npx playwright test",
     "build:offline": "node electron/build-offline.js",
+    "icons": "node electron/generate-icons.js",
     "start": "electron .",
     "dist": "electron-builder"
   },
@@ -27,12 +28,16 @@
     "directories": {
       "output": "dist"
     },
+    "icon": "build/icon.png",
     "files": [
       "**/*",
       "!tests/**",
       "!test-results/**",
       "!functions/**",
       "!sdk/**",
+      "!build/**",
+      "!electron/build-offline.js",
+      "!electron/generate-icons.js",
       "!editor.js",
       "!editor.html",
       "!playwright.config.js",
