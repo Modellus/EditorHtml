@@ -21,7 +21,7 @@ function createWindow() {
             const filename = path.basename(decodedPath);
             if (filename === "marketplace.html") {
                 event.preventDefault();
-                shell.openExternal("https://www.modellus.science/marketplace.html");
+                win.loadURL("https://www.modellus.science/marketplace.html");
                 return;
             }
             const normalizedPath = process.platform === "win32" ? decodedPath.slice(1) : decodedPath;
