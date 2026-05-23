@@ -1,8 +1,13 @@
 {
   "name": "modellus-editor",
+  "version": "1.0.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
-    "test": "npx playwright test"
+    "test": "npx playwright test",
+    "build:offline": "node electron/build-offline.js",
+    "start": "electron .",
+    "dist": "electron-builder"
   },
   "dependencies": {
     "agents": "^0.7.5",
@@ -12,6 +17,42 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.50.0",
+    "electron": "^35.7.5",
+    "electron-builder": "^25.1.8",
     "http-server": "^14.1.1"
+  },
+  "build": {
+    "appId": "com.modellus.editor",
+    "productName": "Modellus",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!tests/**",
+      "!test-results/**",
+      "!functions/**",
+      "!sdk/**",
+      "!editor.js",
+      "!editor.html",
+      "!playwright.config.js",
+      "!login.html",
+      "!login.js",
+      "!marketplace.html",
+      "!marketplace.css",
+      "!marketplace.js",
+      "!index.html",
+      "!CNAME",
+      "!AGENTS.md"
+    ],
+    "mac": {
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }
