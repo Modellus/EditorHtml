@@ -46,6 +46,7 @@ class TextShape extends BaseShape {
         this.$toolbarHost.css({ "display": "none", "position": "fixed", "z-index": "10000", "background-color": "#fff", "border": "1px solid #e0e0e0", "border-radius": "4px", "box-shadow": "0 2px 8px rgba(0,0,0,0.15)", "width": this.properties.width + "px" });
         this.htmlEditor = this.$editorHost.dxHtmlEditor({
             valueType: "markdown",
+            mediaResizing: { enabled: true },
             toolbar: {
                 container: this.$toolbarHost[0],
                 multiline: false,

@@ -743,6 +743,13 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
     cursor: inherit;
 }
 
+.dx-htmleditor .dx-htmleditor-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    cursor: default;
+}
+
 .dx-htmleditor .dx-htmleditor-content .ql-formula {
     padding: 2px 4px;
     vertical-align: middle;
