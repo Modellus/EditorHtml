@@ -2,19 +2,7 @@ DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImN
 
 var shell = null;
 
-async function initOnline() {
-    const { ModelsApiClient } = await import("../sdk/modelsApiClient.js");
-    const apiBase = "https://modellus-api.interactivebook.workers.dev";
-    const modelsApiClient = new ModelsApiClient(
-        apiBase,
-        () => window.modellus?.auth?.getSession?.() ?? null,
-        () => window.modellus?.auth?.getSession?.()?.userId ?? ""
-    );
-    const storedModel = sessionStorage.getItem("mp.anon.model");
-    shell = new Shell(storedModel || null, modelsApiClient);
-}
-
-function initOffline() {
+(async () => {
     const storedModel = sessionStorage.getItem("mp.anon.model");
     shell = new Shell(storedModel || null, null);
     shell.saveToApi = () => shell.exportToFile();
@@ -27,13 +15,4 @@ function initOffline() {
         );
         menuInstance.option("items", filteredItems);
     }
-}
-
-(async () => {
-    if (navigator.onLine)
-        await initOnline();
-    else
-        initOffline();
-    window.addEventListener("online", () => location.reload());
-    window.addEventListener("offline", () => location.reload());
 })();
