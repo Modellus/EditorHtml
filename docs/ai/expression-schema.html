@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expression Schema – Modellus Docs</title>
+    <meta name="description" content="JSON Schema reference for the Modellus expression language: statement types, operators, functions, and AST node definitions." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/editor.html">Editor</a></li>
+                    <li><a href="/marketplace.html">Marketplace</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/editor.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="/docs/shapes/expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="/docs/shapes/table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="/docs/shapes/chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="/docs/shapes/body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="/docs/shapes/point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="/docs/shapes/line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="/docs/shapes/arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="/docs/shapes/vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="/docs/shapes/slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="/docs/shapes/gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="/docs/shapes/value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="/docs/shapes/media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="/docs/shapes/text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="/docs/shapes/ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="/docs/shapes/protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="/docs/shapes/referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="/docs/shapes/question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+        </ul>
+        <h5>Marketplace</h5>
+        <ul>
+            <li><a href="/docs/marketplace/index.html"><i class="fa-light fa-store"></i> Marketplace</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html" class="active"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <a href="/docs/ai/reference.html">AI Agents</a> <span class="sep">/</span>
+            <span>Expression Schema</span>
+        </div>
+
+        <h1>Expression Schema</h1>
+        <p class="page-desc">The canonical JSON Schema for the Modellus expression language — the LaTeX-based mathematical notation used inside Expression shapes. Covers statement types, operator precedence, built-in functions, and AST node definitions.</p>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-download"></i>
+            <span><a href="/resources/models/expression-schema.json">View the full Expression Schema JSON</a> — JSON Schema (Draft-07), 1331 lines.</span>
+        </div>
+
+        <h2>Overview</h2>
+        <p>The <code>expression</code> field of each ExpressionShape stores a <code>\displaylines{}</code> LaTeX block. Lines are separated by <code>\\</code>. Each line is parsed as one statement by the LatexMath grammar.</p>
+
+        <h2>Statement Types</h2>
+        <table class="docs-table">
+            <thead><tr><th>Kind</th><th>Pattern</th><th>Term Type Produced</th></tr></thead>
+            <tbody>
+                <tr><td><code>differential</code></td><td><code>\frac{dx}{dt} = expr</code></td><td>DIFFERENTIAL — requires initial value</td></tr>
+                <tr><td><code>function</code></td><td><code>name = expr</code></td><td>PARAMETER (constant RHS) or FUNCTION (depends on other terms)</td></tr>
+                <tr><td><code>functionSubscript</code></td><td><code>x_{n} = f(x_{n-1})</code></td><td>RECURRENCE — discrete-time iteration</td></tr>
+                <tr><td><code>functionSubscriptDigit</code></td><td><code>x_0 = value</code></td><td>PARAMETER — initial/reference value</td></tr>
+                <tr><td><code>functionIndependent</code></td><td><code>f(t) = expr</code></td><td>FUNCTION — explicit argument form</td></tr>
+                <tr><td><code>conditional</code></td><td><code>name = \begin{cases}...\end{cases}</code></td><td>FUNCTION — piecewise definition (≥ 2 rows)</td></tr>
+                <tr><td><code>display</code></td><td><code>expr</code> (no assignment)</td><td>None — visual display only</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Expression Nodes (AST)</h2>
+        <p>The right-hand side of any statement is a <code>MathExpr</code> — a tree of these node types:</p>
+        <table class="docs-table">
+            <thead><tr><th>Node</th><th>Description</th><th>Example LaTeX</th></tr></thead>
+            <tbody>
+                <tr><td>BinaryOp</td><td>Two operands with operator (+, -, ·, /)</td><td><code>a + b</code></td></tr>
+                <tr><td>UnaryMinus</td><td>Negation prefix</td><td><code>-x</code></td></tr>
+                <tr><td>Power</td><td>Exponentiation</td><td><code>x^{2}</code></td></tr>
+                <tr><td>Fraction</td><td>Division as \frac{}{}</td><td><code>\frac{a}{b}</code></td></tr>
+                <tr><td>Sqrt</td><td>Square root</td><td><code>\sqrt{x}</code></td></tr>
+                <tr><td>FunctionCall</td><td>Built-in function application</td><td><code>\sin\left(x\right)</code></td></tr>
+                <tr><td>Comparison</td><td>Relational operator</td><td><code>x > 0</code></td></tr>
+                <tr><td>Logical</td><td>\lor or \land</td><td><code>a \lor b</code></td></tr>
+                <tr><td>TermReference</td><td>Reference to a named term</td><td><code>v</code>, <code>\omega</code></td></tr>
+                <tr><td>NumberLiteral</td><td>Numeric constant</td><td><code>9.8</code></td></tr>
+                <tr><td>Constant</td><td>\pi or e</td><td><code>\pi</code></td></tr>
+                <tr><td>Delta</td><td>Finite difference operator</td><td><code>\Delta x</code></td></tr>
+                <tr><td>SubscriptRef</td><td>Subscript term access</td><td><code>x_{n-1}</code></td></tr>
+                <tr><td>Absolute</td><td>Absolute value bars</td><td><code>|x|</code></td></tr>
+            </tbody>
+        </table>
+
+        <h2>Built-in Functions</h2>
+        <table class="docs-table">
+            <thead><tr><th>Category</th><th>Functions</th></tr></thead>
+            <tbody>
+                <tr><td>Trigonometric</td><td><code>\sin</code>, <code>\cos</code>, <code>\tan</code>, <code>\cot</code>, <code>\sec</code>, <code>\csc</code></td></tr>
+                <tr><td>Inverse Trig</td><td><code>\arcsin</code>, <code>\arccos</code>, <code>\arctan</code></td></tr>
+                <tr><td>Hyperbolic</td><td><code>\sinh</code>, <code>\cosh</code>, <code>\tanh</code></td></tr>
+                <tr><td>Logarithmic</td><td><code>\ln</code>, <code>\log</code></td></tr>
+                <tr><td>Two-argument</td><td><code>\max(a,b)</code>, <code>\min(a,b)</code>, <code>\mod(a,b)</code></td></tr>
+                <tr><td>Utility</td><td><code>sign(x)</code>, <code>rnd(x)</code>, <code>irnd(x)</code>, <code>int(x)</code>, <code>round(x)</code></td></tr>
+                <tr><td>Other</td><td><code>\det(x)</code>, <code>\sqrt{x}</code></td></tr>
+            </tbody>
+        </table>
+
+        <h2>Operators &amp; Precedence</h2>
+        <table class="docs-table">
+            <thead><tr><th>Precedence</th><th>Operators</th><th>Associativity</th></tr></thead>
+            <tbody>
+                <tr><td>1 (lowest)</td><td><code>\lor</code>, <code>\land</code></td><td>Left</td></tr>
+                <tr><td>2</td><td><code>=</code>, <code>></code>, <code><</code>, <code>\ge</code>, <code>\le</code>, <code>\neq</code></td><td>Left</td></tr>
+                <tr><td>3</td><td><code>+</code>, <code>-</code></td><td>Left</td></tr>
+                <tr><td>4</td><td><code>\cdot</code>, <code>/</code>, implicit multiplication</td><td>Left</td></tr>
+                <tr><td>5 (highest)</td><td><code>^{}</code>, <code>\sqrt{}</code></td><td>Right</td></tr>
+            </tbody>
+        </table>
+
+        <h2>LaTeX Templates</h2>
+        <p>The schema includes a <code>latexTemplates</code> section providing ready-to-use LaTeX strings for common patterns that agents can emit directly into <code>expression</code> fields.</p>
+
+        <h2>Name Tokens</h2>
+        <p>Term names follow two patterns:</p>
+        <ul>
+            <li><strong>ID</strong> — alphanumeric identifiers: <code>x</code>, <code>v0</code>, <code>mass</code>, <code>kB</code></li>
+            <li><strong>SPECIAL</strong> — Greek letters and symbols: <code>\omega</code>, <code>\alpha</code>, <code>\beta</code>, <code>\theta</code>, <code>\lambda</code></li>
+        </ul>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expression Shape – Modellus Docs</title>
+    <meta name="description" content="Complete reference for the Modellus Expression shape: statement types, functions, operators, keystrokes, and examples." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/editor.html">Editor</a></li>
+                    <li><a href="/marketplace.html">Marketplace</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/editor.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="expression.html" class="active"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>Marketplace</h5>
+        <ul>
+            <li><a href="/docs/marketplace/index.html"><i class="fa-light fa-store"></i> Marketplace</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <a href="/docs/index.html">Shapes</a> <span class="sep">/</span>
+            <span>Expression</span>
+        </div>
+
+        <h1>Expression Shape</h1>
+        <p class="page-desc">The Expression shape is the mathematical heart of every Modellus model. It is where you define equations, parameters, differential equations, recurrences, and conditional logic that drive the simulation.</p>
+
+        <img src="/docs/screenshots/expression-overview.png" alt="Expression shape on the board with equations visible" class="screenshot">
+
+        <h2>Overview</h2>
+        <p>An Expression shape contains one or more mathematical statements written in LaTeX-like syntax using a MathLive math field. Each statement occupies one line. All Expression shapes in a model share a single calculator system — term names must be globally unique across shapes.</p>
+
+        <div class="callout callout-tip">
+            <i class="fa-light fa-lightbulb"></i>
+            <span>Use multiple small Expression shapes grouped by theme (parameters, equations, derived quantities) to keep your model organized and readable.</span>
+        </div>
+
+        <h2>Toolbar</h2>
+        <img src="/docs/screenshots/expression-toolbar.png" alt="Expression shape toolbar showing color picker, shortcuts picker, and delete button" class="screenshot">
+        <p>The toolbar appears when you select an Expression shape. It provides:</p>
+        <ul>
+            <li><strong>Color picker</strong> — Change the shape accent color</li>
+            <li><strong>Shortcuts picker</strong> — Quick insertion of common mathematical templates</li>
+            <li><strong>Delete</strong> — Remove the shape from the board</li>
+        </ul>
+
+        <h2>Statement Types</h2>
+        <p>Each line in an Expression shape is parsed as one of these statement types:</p>
+
+        <table class="docs-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Syntax</th>
+                    <th>Example</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Parameter</strong></td>
+                    <td><code>name = value</code></td>
+                    <td><code>g = 9.8</code></td>
+                    <td>A constant value. No dependency on other terms or the independent variable.</td>
+                </tr>
+                <tr>
+                    <td><strong>Function</strong></td>
+                    <td><code>name = expression</code></td>
+                    <td><code>E = ½·m·v²</code></td>
+                    <td>A computed value depending on other terms or the independent variable.</td>
+                </tr>
+                <tr>
+                    <td><strong>Differential</strong></td>
+                    <td><code>dx/dt = expression</code></td>
+                    <td><code>dx/dt = v</code></td>
+                    <td>First-order ODE. Requires an initial value in shape properties.</td>
+                </tr>
+                <tr>
+                    <td><strong>Recurrence</strong></td>
+                    <td><code>x_{n} = expression</code></td>
+                    <td><code>x_{n} = x_{n-1} + v·Δt</code></td>
+                    <td>Iterative step definition. Subscript determines step offset.</td>
+                </tr>
+                <tr>
+                    <td><strong>Conditional</strong></td>
+                    <td><code>name = \begin{cases}...\end{cases}</code></td>
+                    <td><code>v = { 0 &amp; t=0 \\ a·t &amp; otherwise }</code></td>
+                    <td>Piecewise definition. At least two branches required.</td>
+                </tr>
+                <tr>
+                    <td><strong>Function with argument</strong></td>
+                    <td><code>f(t) = expression</code></td>
+                    <td><code>h(t) = v₀·t - ½·g·t²</code></td>
+                    <td>Explicit argument notation (cosmetic; behavior same as Function).</td>
+                </tr>
+                <tr>
+                    <td><strong>Display</strong></td>
+                    <td><code>expression</code></td>
+                    <td><code>F = ma</code></td>
+                    <td>Visual label only. Not computed by the calculator.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Arithmetic Operators</h2>
+        <table class="docs-table">
+            <thead>
+                <tr>
+                    <th>Operator</th>
+                    <th>LaTeX</th>
+                    <th>Keystroke</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Addition</td><td><code>+</code></td><td><kbd>+</kbd></td><td>Sum of two expressions</td></tr>
+                <tr><td>Subtraction</td><td><code>-</code></td><td><kbd>-</kbd></td><td>Difference of two expressions</td></tr>
+                <tr><td>Multiplication</td><td><code>\cdot</code></td><td><kbd>*</kbd></td><td>Explicit multiplication (· symbol)</td></tr>
+                <tr><td>Implicit multiplication</td><td><code>2x</code></td><td><kbd>2</kbd><kbd>x</kbd></td><td>Coefficient followed by name or parenthesis</td></tr>
+                <tr><td>Inline division</td><td><code>/</code></td><td><kbd>/</kbd></td><td>a/b inline notation</td></tr>
+                <tr><td>Fraction</td><td><code>\frac{a}{b}</code></td><td><kbd>/</kbd> (in numerator position)</td><td>Display-quality vertical fraction</td></tr>
+                <tr><td>Power</td><td><code>^{n}</code></td><td><kbd>^</kbd></td><td>Exponentiation</td></tr>
+                <tr><td>Square root</td><td><code>\sqrt{x}</code></td><td><kbd>\</kbd><kbd>s</kbd><kbd>q</kbd><kbd>r</kbd><kbd>t</kbd></td><td>Square root</td></tr>
+                <tr><td>Negation</td><td><code>-x</code></td><td><kbd>-</kbd></td><td>Unary negation</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Comparison Operators</h2>
+        <p>Used in conditional (<code>\begin{cases}</code>) branches:</p>
+        <table class="docs-table">
+            <thead>
+                <tr>
+                    <th>Operator</th>
+                    <th>LaTeX</th>
+                    <th>Meaning</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>=</td><td><code>=</code></td><td>Equal to</td></tr>
+                <tr><td>&gt;</td><td><code>&gt;</code></td><td>Greater than</td></tr>
+                <tr><td>&lt;</td><td><code>&lt;</code></td><td>Less than</td></tr>
+                <tr><td>≥</td><td><code>\ge</code> or <code>\geq</code></td><td>Greater than or equal</td></tr>
+                <tr><td>≤</td><td><code>\le</code> or <code>\leq</code></td><td>Less than or equal</td></tr>
+                <tr><td>≠</td><td><code>\neq</code></td><td>Not equal to</td></tr>
+            </tbody>
+        </table>
+
+        <p>Conditions can be chained (e.g., <code>0 &lt; x &lt; 1</code>) or combined with <code>\lor</code> (OR) and <code>\land</code> (AND). The <code>\text{otherwise}</code> keyword acts as an else branch.</p>
+
+        <h2>Built-in Functions</h2>
+        <table class="docs-table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Function</th>
+                    <th>LaTeX</th>
+                    <th>Arguments</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td rowspan="6">Trigonometric</td><td>Sine</td><td><code>\sin\left(x\right)</code></td><td>1</td></tr>
+                <tr><td>Cosine</td><td><code>\cos\left(x\right)</code></td><td>1</td></tr>
+                <tr><td>Tangent</td><td><code>\tan\left(x\right)</code></td><td>1</td></tr>
+                <tr><td>Cotangent</td><td><code>\cot\left(x\right)</code></td><td>1</td></tr>
+                <tr><td>Secant</td><td><code>\sec\left(x\right)</code></td><td>1</td></tr>
+                <tr><td>Cosecant</td><td><code>\csc\left(x\right)</code></td><td>1</td></tr>
+                <tr><td rowspan="3">Inverse Trig</td><td>Arc sine</td><td><code>\arcsin\left(x\right)</code></td><td>1</td></tr>
+                <tr><td>Arc cosine</td><td><code>\arccos\left(x\right)</code></td><td>1</td></tr>
+                <tr><td>Arc tangent</td><td><code>\arctan\left(x\right)</code></td><td>1</td></tr>
+                <tr><td rowspan="3">Hyperbolic</td><td>Hyperbolic sine</td><td><code>\sinh\left(x\right)</code></td><td>1</td></tr>
+                <tr><td>Hyperbolic cosine</td><td><code>\cosh\left(x\right)</code></td><td>1</td></tr>
+                <tr><td>Hyperbolic tangent</td><td><code>\tanh\left(x\right)</code></td><td>1</td></tr>
+                <tr><td rowspan="2">Logarithmic</td><td>Natural log</td><td><code>\ln\left(x\right)</code></td><td>1</td></tr>
+                <tr><td>Logarithm base 10</td><td><code>\log\left(x\right)</code></td><td>1</td></tr>
+                <tr><td rowspan="3">Two-argument</td><td>Maximum</td><td><code>\max\left(a, b\right)</code></td><td>2</td></tr>
+                <tr><td>Minimum</td><td><code>\min\left(a, b\right)</code></td><td>2</td></tr>
+                <tr><td>Modulo</td><td><code>\mod\left(a, b\right)</code></td><td>2</td></tr>
+                <tr><td rowspan="5">Utility</td><td>Sign</td><td><code>sign\left(x\right)</code></td><td>1 — returns -1, 0, or 1</td></tr>
+                <tr><td>Random</td><td><code>rnd\left(x\right)</code></td><td>1 — random float in [0, x]</td></tr>
+                <tr><td>Integer random</td><td><code>irnd\left(x\right)</code></td><td>1 — random integer in [0, x]</td></tr>
+                <tr><td>Integer part</td><td><code>int\left(x\right)</code></td><td>1 — truncate to integer</td></tr>
+                <tr><td>Round</td><td><code>round\left(x\right)</code></td><td>1 — round to nearest integer</td></tr>
+                <tr><td>Other</td><td>Determinant</td><td><code>\det\left(x\right)</code></td><td>1</td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>All function calls use <code>\left(</code> and <code>\right)</code> delimiters. Bare parentheses are not valid in function calls. The math field inserts these automatically.</span>
+        </div>
+
+        <h2>Constants</h2>
+        <table class="docs-table">
+            <thead>
+                <tr><th>Name</th><th>LaTeX</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Pi</td><td><code>\pi</code></td><td>3.14159…</td></tr>
+                <tr><td>Euler's number</td><td><code>e</code> or <code>\E</code></td><td>2.71828…</td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout callout-warning">
+            <i class="fa-light fa-triangle-exclamation"></i>
+            <span><code>g</code> is <strong>not</strong> a built-in constant. Define it as a parameter: <code>g = 9.8</code>.</span>
+        </div>
+
+        <h2>Special Syntax</h2>
+
+        <h3>Finite Difference (Δ)</h3>
+        <table class="docs-table">
+            <thead><tr><th>Syntax</th><th>Meaning</th></tr></thead>
+            <tbody>
+                <tr><td><code>\Delta x</code></td><td>x(current) − x(previous). For the independent variable: the step size.</td></tr>
+                <tr><td><code>\Delta\left(expr\right)</code></td><td>Finite difference applied to a sub-expression.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Subscripts (Step References)</h3>
+        <table class="docs-table">
+            <thead><tr><th>Syntax</th><th>Meaning</th></tr></thead>
+            <tbody>
+                <tr><td><code>x_{n-1}</code></td><td>Value of x from the previous iteration</td></tr>
+                <tr><td><code>x_{n}</code></td><td>Current iteration (LHS of recurrence)</td></tr>
+                <tr><td><code>x_0</code></td><td>Initial value of x (bare digit, no braces)</td></tr>
+                <tr><td><code>x_{0}</code></td><td>Initial value (braces form)</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Units Annotation</h3>
+        <p>Append display-only units after any statement:</p>
+        <pre><code>v = 10 \quad\textcolor{gray}{\mathrm{m/s}}</code></pre>
+        <p>Units are cosmetic — the engine does not validate or convert them.</p>
+
+        <h3>Dotted Names (Child References)</h3>
+        <p>Reference terms from child shapes inside a Referential: <code>body.x</code>, <code>particle.velocity</code>.</p>
+
+        <h2>Keyboard Shortcuts</h2>
+        <p>The MathLive math field supports these keyboard shortcuts for fast input:</p>
+
+        <table class="docs-table">
+            <thead>
+                <tr><th>Action</th><th>macOS</th><th>Windows</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Fraction</td><td><kbd>⌘</kbd> + <kbd>/</kbd></td><td><kbd>Ctrl</kbd> + <kbd>/</kbd></td></tr>
+                <tr><td>Superscript (power)</td><td><kbd>^</kbd></td><td><kbd>^</kbd></td></tr>
+                <tr><td>Subscript</td><td><kbd>_</kbd></td><td><kbd>_</kbd></td></tr>
+                <tr><td>Square root</td><td><kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd></td><td><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd></td></tr>
+                <tr><td>Greek letter</td><td>Type <kbd>\</kbd> + name (e.g., <kbd>\alpha</kbd>)</td><td>Same</td></tr>
+                <tr><td>Multiplication dot</td><td><kbd>*</kbd></td><td><kbd>*</kbd></td></tr>
+                <tr><td>Greater or equal</td><td>Type <kbd>\ge</kbd></td><td>Same</td></tr>
+                <tr><td>Less or equal</td><td>Type <kbd>\le</kbd></td><td>Same</td></tr>
+                <tr><td>Not equal</td><td>Type <kbd>\neq</kbd></td><td>Same</td></tr>
+                <tr><td>Delta</td><td>Type <kbd>\Delta</kbd></td><td>Same</td></tr>
+                <tr><td>Pi</td><td>Type <kbd>\pi</kbd></td><td>Same</td></tr>
+                <tr><td>New line (new statement)</td><td><kbd>Enter</kbd></td><td><kbd>Enter</kbd></td></tr>
+                <tr><td>Navigate out of fraction</td><td><kbd>Tab</kbd></td><td><kbd>Tab</kbd></td></tr>
+                <tr><td>Navigate into next placeholder</td><td><kbd>Tab</kbd></td><td><kbd>Tab</kbd></td></tr>
+            </tbody>
+        </table>
+
+        <h2>Shortcuts Picker</h2>
+        <img src="/docs/screenshots/expression-selected.png" alt="Expression shape selected with toolbar visible" class="screenshot">
+        <p>Click the <i class="fa-light fa-sigma"></i> button in the toolbar to open the shortcuts picker. It provides pre-built templates for common expressions including:</p>
+        <ul>
+            <li>Differential equations (dx/dt = ...)</li>
+            <li>Recurrences (x_n = x_{n-1} + ...)</li>
+            <li>Piecewise functions</li>
+            <li>Common physics formulas</li>
+            <li>Trigonometric identities</li>
+        </ul>
+
+        <h2>Properties Panel</h2>
+        <img src="/docs/screenshots/expression-selected.png" alt="Expression shape properties panel" class="screenshot">
+        <p>When an Expression shape is selected, the properties panel shows:</p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td>Independent variable</td><td>The variable of iteration (default: <code>t</code>)</td></tr>
+                <tr><td>Step</td><td>The increment per iteration (Δt)</td></tr>
+                <tr><td>Start / End</td><td>Range of the independent variable</td></tr>
+                <tr><td>Initial values</td><td>Starting values for differential equations and recurrences</td></tr>
+                <tr><td>Cases</td><td>Multiple sets of initial values for parameter studies</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Examples</h2>
+
+        <h3>Simple Kinematics</h3>
+        <pre><code>g = 9.8
+v₀ = 20
+θ = 45
+vx = v₀·\cos\left(θ\right)
+vy = v₀·\sin\left(θ\right) - g·t
+\frac{dx}{dt} = vx
+\frac{dy}{dt} = vy</code></pre>
+
+        <h3>Population Growth (Recurrence)</h3>
+        <pre><code>r = 0.05
+P_{n} = P_{n-1}·\left(1 + r\right)</code></pre>
+
+        <h3>Piecewise Velocity</h3>
+        <pre><code>v = \begin{cases} 0 & t = 0 \\ a·t & 0 < t < 5 \\ a·5 & \text{otherwise} \end{cases}</code></pre>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

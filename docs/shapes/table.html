@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Table Shape – Modellus Docs</title>
+    <meta name="description" content="Table shape documentation: data entry, cell selection, regression analysis, and computed columns." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/editor.html">Editor</a></li>
+                    <li><a href="/marketplace.html">Marketplace</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/editor.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="table.html" class="active"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>Marketplace</h5>
+        <ul>
+            <li><a href="/docs/marketplace/index.html"><i class="fa-light fa-store"></i> Marketplace</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <a href="/docs/index.html">Shapes</a> <span class="sep">/</span>
+            <span>Table</span>
+        </div>
+
+        <h1>Table Shape</h1>
+        <p class="page-desc">The Table shape displays computed values from your model, allows manual data entry, and provides cell selection for performing regression analysis.</p>
+
+        <img src="/docs/screenshots/table-overview.png" alt="Table shape on the board showing columns of computed data" class="screenshot">
+
+        <h2>Overview</h2>
+        <p>A Table shape shows the value of selected terms at each iteration step. It can display both computed columns (from expressions) and user-entered data columns. Tables are essential for data analysis workflows — you select cells, apply regression, and see results in linked charts.</p>
+
+        <h2>Toolbar</h2>
+        <div class="screenshot-placeholder">
+            <i class="fa-light fa-image"></i>
+            Screenshot: Table toolbar with column picker, regression method, and options
+        </div>
+        <p>The Table toolbar provides:</p>
+        <ul>
+            <li><strong>Column picker</strong> — Choose which terms to display as columns</li>
+            <li><strong>Add data column</strong> — Add a manually-editable column</li>
+            <li><strong>Regression method</strong> — Apply regression to selected data</li>
+            <li><strong>Color picker</strong> — Change shape accent color</li>
+            <li><strong>Delete</strong> — Remove the table from the board</li>
+        </ul>
+
+        <h2>Column Types</h2>
+        <table class="docs-table">
+            <thead>
+                <tr><th>Type</th><th>Description</th><th>Editable</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Computed</strong></td><td>Values calculated from model expressions at each iteration</td><td>No</td></tr>
+                <tr><td><strong>Data</strong></td><td>User-entered values for experimental or reference data</td><td>Yes</td></tr>
+                <tr><td><strong>Regression</strong></td><td>Column generated by a regression fit</td><td>No</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Cell Selection</h2>
+        <div class="screenshot-placeholder">
+            <i class="fa-light fa-image"></i>
+            Screenshot: Table with cells selected (highlighted) for regression
+        </div>
+        <p>To perform regression analysis:</p>
+        <ol>
+            <li>Click and drag to select a range of cells in a data column</li>
+            <li>The selected range is highlighted</li>
+            <li>Choose a regression method from the toolbar dropdown</li>
+            <li>The regression result is created as a new term in the model</li>
+        </ol>
+
+        <div class="callout callout-tip">
+            <i class="fa-light fa-lightbulb"></i>
+            <span>Select cells from two columns (X and Y) to define which data pair to use for the regression fit.</span>
+        </div>
+
+        <h2>Regression Methods</h2>
+        <table class="docs-table">
+            <thead>
+                <tr><th>Method</th><th>Fit Function</th><th>Output</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>No Regression</strong></td><td>—</td><td>Clears any existing regression on the selection</td></tr>
+                <tr><td><strong>Linear</strong></td><td>y = ax + b</td><td>Creates a regression term with slope and intercept</td></tr>
+                <tr><td><strong>Quadratic</strong></td><td>y = ax² + bx + c</td><td>Creates a regression term with quadratic coefficients</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Working with Regression Results</h2>
+        <p>When you apply a regression:</p>
+        <ul>
+            <li>A new term is created in the calculator (type: REGRESSION)</li>
+            <li>The regression curve can be displayed in a Chart shape</li>
+            <li>Outlier data points are automatically detected</li>
+            <li>The regression parameters (slope, intercept, etc.) are available as term properties</li>
+        </ul>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>See <a href="/docs/analysis/regression.html">Regression</a> for a full workflow guide, and <a href="/docs/analysis/outliers.html">Outliers</a> for how outlier detection works.</span>
+        </div>
+
+        <h2>Properties Panel</h2>
+        <div class="screenshot-placeholder">
+            <i class="fa-light fa-image"></i>
+            Screenshot: Table properties panel
+        </div>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td>Columns</td><td>List of terms displayed in the table</td></tr>
+                <tr><td>Show iteration</td><td>Whether to show the iteration/step column</td></tr>
+                <tr><td>Decimal places</td><td>Number of decimal digits to display</td></tr>
+            </tbody>
+        </table>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

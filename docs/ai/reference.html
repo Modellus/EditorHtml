@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Agent Reference – Modellus Docs</title>
+    <meta name="description" content="Machine-readable reference for AI agents working with Modellus models: shapes, expression syntax, and model structure." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/editor.html">Editor</a></li>
+                    <li><a href="/marketplace.html">Marketplace</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/editor.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="/docs/shapes/expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="/docs/shapes/table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="/docs/shapes/chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="/docs/shapes/body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="/docs/shapes/point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="/docs/shapes/line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="/docs/shapes/arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="/docs/shapes/vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="/docs/shapes/slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="/docs/shapes/gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="/docs/shapes/value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="/docs/shapes/media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="/docs/shapes/text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="/docs/shapes/ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="/docs/shapes/protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="/docs/shapes/referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="/docs/shapes/question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>Marketplace</h5>
+        <ul>
+            <li><a href="/docs/marketplace/index.html"><i class="fa-light fa-store"></i> Marketplace</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html" class="active"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <span>AI Agent Reference</span>
+        </div>
+
+        <h1>AI Agent Reference</h1>
+        <p class="page-desc">This page provides a structured, machine-readable summary of the Modellus system for AI agents that generate, interpret, or modify Modellus models.</p>
+
+        <h2>Schema Files</h2>
+        <p>Canonical references for model structure and expression syntax:</p>
+        <table class="docs-table">
+            <thead><tr><th>Schema</th><th>Purpose</th></tr></thead>
+            <tbody>
+                <tr><td><a href="/docs/ai/model-schema.html">Model Schema</a></td><td>Full model JSON structure: shapes array, properties, visualization settings</td></tr>
+                <tr><td><a href="/docs/ai/expression-schema.html">Expression Schema</a></td><td>Expression language grammar: statements, operators, functions, AST nodes</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Shape Types</h2>
+        <table class="docs-table">
+            <thead><tr><th>Type ID</th><th>Class</th><th>Purpose</th><th>Parent Required</th></tr></thead>
+            <tbody>
+                <tr><td>expression</td><td>ExpressionShape</td><td>Define equations, parameters, ODEs, recurrences</td><td>No</td></tr>
+                <tr><td>table</td><td>TableShape</td><td>Display/enter data, perform regression</td><td>No</td></tr>
+                <tr><td>chart</td><td>ChartShape</td><td>Plot data series and regression curves</td><td>No</td></tr>
+                <tr><td>body</td><td>BodyShape</td><td>Animated sprite controlled by terms</td><td>Referential</td></tr>
+                <tr><td>point</td><td>PointShape</td><td>Positioned dot driven by X/Y terms</td><td>Referential</td></tr>
+                <tr><td>line</td><td>LineShape</td><td>Segment between two coordinate pairs</td><td>Referential</td></tr>
+                <tr><td>arc</td><td>ArcShape</td><td>Curved segment / angle indicator</td><td>Referential</td></tr>
+                <tr><td>vector</td><td>VectorShape</td><td>Arrow with direction and magnitude</td><td>Referential</td></tr>
+                <tr><td>slider</td><td>SliderShape</td><td>Interactive parameter control</td><td>No</td></tr>
+                <tr><td>gauge</td><td>GaugeShape</td><td>Circular meter display</td><td>No</td></tr>
+                <tr><td>value</td><td>ValueShape</td><td>Numeric readout of a term</td><td>No</td></tr>
+                <tr><td>media</td><td>MediaShape</td><td>Image / background</td><td>No</td></tr>
+                <tr><td>text</td><td>TextShape</td><td>Rich text annotation</td><td>No</td></tr>
+                <tr><td>ruler</td><td>RulerShape</td><td>Distance measurement tool</td><td>No</td></tr>
+                <tr><td>protractor</td><td>ProtractorShape</td><td>Angle measurement tool</td><td>No</td></tr>
+                <tr><td>referential</td><td>ReferentialShape</td><td>Coordinate system container</td><td>No</td></tr>
+                <tr><td>question</td><td>QuestionShape</td><td>Assessment question</td><td>No</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Expression Language Summary</h2>
+
+        <h3>Statement Types</h3>
+        <table class="docs-table">
+            <thead><tr><th>Kind</th><th>Pattern</th><th>Term Type</th></tr></thead>
+            <tbody>
+                <tr><td>function</td><td><code>name = expr</code></td><td>PARAMETER (no dependencies) or FUNCTION</td></tr>
+                <tr><td>differential</td><td><code>\frac{dx}{dt} = expr</code></td><td>DIFFERENTIAL</td></tr>
+                <tr><td>functionSubscript</td><td><code>x_{n} = expr</code></td><td>RECURRENCE</td></tr>
+                <tr><td>functionSubscriptDigit</td><td><code>x_0 = expr</code></td><td>PARAMETER</td></tr>
+                <tr><td>functionIndependent</td><td><code>f(t) = expr</code></td><td>FUNCTION</td></tr>
+                <tr><td>conditional</td><td><code>name = \begin{cases}...\end{cases}</code></td><td>FUNCTION</td></tr>
+                <tr><td>display</td><td><code>expr</code> (no assignment)</td><td>None (visual only)</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Built-in Functions</h3>
+        <pre><code>Trig:      \sin, \cos, \tan, \cot, \sec, \csc
+Inv Trig:  \arcsin, \arccos, \arctan
+Hyperbolic: \sinh, \cosh, \tanh
+Log:       \ln, \log
+Two-arg:   \max(a,b), \min(a,b), \mod(a,b)
+Utility:   sign(x), rnd(x), irnd(x), int(x), round(x)
+Other:     \det(x), \sqrt{x}</code></pre>
+
+        <h3>Operators</h3>
+        <pre><code>Arithmetic: +  -  \cdot  /  \frac{}{}  ^{}  \sqrt{}
+Comparison: =  >  <  \ge  \le  \neq
+Logical:    \lor (OR)  \land (AND)
+Special:    \Delta (finite difference)</code></pre>
+
+        <h3>Constants</h3>
+        <pre><code>\pi = 3.14159...
+e (or \E) = 2.71828...</code></pre>
+
+        <h2>Model JSON Structure</h2>
+        <pre><code>{
+  "properties": {
+    "independent": { "name": "t", "start": 0, "end": 10, "step": 0.1 },
+    "initialValuesByCase": { "1": { "x": 0, "v": 5 } }
+  },
+  "shapes": [
+    {
+      "type": "expression",
+      "id": "uuid",
+      "expression": "\\displaylines{g=9.8\\\\\\frac{dx}{dt}=v}",
+      "position": { "x": 100, "y": 100 }
+    },
+    {
+      "type": "referential",
+      "id": "uuid",
+      "children": [
+        { "type": "point", "id": "uuid", "xTerm": "x", "yTerm": "y" }
+      ]
+    }
+  ]
+}</code></pre>
+
+        <h2>Key Rules for Agents</h2>
+        <ul>
+            <li>Term names must be globally unique across all Expression shapes in a model</li>
+            <li>Differential equations require initial values in <code>properties.initialValuesByCase</code></li>
+            <li>Second-order ODEs must be decomposed into two first-order ODEs</li>
+            <li>All function calls use <code>\left(</code> and <code>\right)</code> delimiters</li>
+            <li>Explicit multiplication uses <code>\cdot</code> — the <code>×</code> symbol is not in the grammar</li>
+            <li>Positional child shapes (Point, Body, Vector, Line, Arc) require a Referential parent</li>
+            <li>The expression field stores LaTeX in a <code>\displaylines{}</code> wrapper with <code>\\</code> line separators</li>
+            <li>Data columns in Tables produce terms of type DATA</li>
+            <li>Regression results produce terms of type REGRESSION</li>
+        </ul>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>For the complete formal grammar specification, see the <a href="/docs/ai/expression-schema.html">Expression Schema</a> page.</span>
+        </div>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

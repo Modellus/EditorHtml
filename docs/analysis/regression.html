@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Regression Analysis – Modellus Docs</title>
+    <meta name="description" content="How to perform linear and quadratic regression analysis in Modellus using table cell selection." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/editor.html">Editor</a></li>
+                    <li><a href="/marketplace.html">Marketplace</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/editor.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="/docs/shapes/expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="/docs/shapes/table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="/docs/shapes/chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="/docs/shapes/body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="/docs/shapes/point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="/docs/shapes/line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="/docs/shapes/arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="/docs/shapes/vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="/docs/shapes/slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="/docs/shapes/gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="/docs/shapes/value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="/docs/shapes/media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="/docs/shapes/text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="/docs/shapes/ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="/docs/shapes/protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="/docs/shapes/referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="/docs/shapes/question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="regression.html" class="active"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>Marketplace</h5>
+        <ul>
+            <li><a href="/docs/marketplace/index.html"><i class="fa-light fa-store"></i> Marketplace</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <a href="/docs/index.html">Data Analysis</a> <span class="sep">/</span>
+            <span>Regression</span>
+        </div>
+
+        <h1>Regression Analysis</h1>
+        <p class="page-desc">Fit mathematical curves to your experimental data using the Table shape's built-in regression tools, then visualize the results in Charts.</p>
+
+        <h2>Overview</h2>
+        <p>Regression analysis in Modellus lets you find the best-fit curve through a set of data points. This is essential for comparing experimental measurements with theoretical models. Modellus supports linear and quadratic regression.</p>
+
+        <h2>Step-by-Step Workflow</h2>
+
+        <h3>1. Enter or compute data</h3>
+        <div class="screenshot-placeholder">
+            <i class="fa-light fa-image"></i>
+            Screenshot: Table with experimental data entered in columns
+        </div>
+        <p>Start by having data in a Table shape. This can be:</p>
+        <ul>
+            <li>Manually entered experimental measurements (data columns)</li>
+            <li>Computed values from model expressions</li>
+        </ul>
+
+        <h3>2. Select cells for regression</h3>
+        <div class="screenshot-placeholder">
+            <i class="fa-light fa-image"></i>
+            Screenshot: Table with highlighted cell selection across X and Y columns
+        </div>
+        <p>Click and drag to select the range of cells you want to include in the regression. Select cells from both an X column and a Y column to define the data pair.</p>
+
+        <div class="callout callout-tip">
+            <i class="fa-light fa-lightbulb"></i>
+            <span>You can select a subset of rows to exclude extreme values or focus on a specific region of your data.</span>
+        </div>
+
+        <h3>3. Choose regression method</h3>
+        <div class="screenshot-placeholder">
+            <i class="fa-light fa-image"></i>
+            Screenshot: Regression method dropdown showing Linear and Quadratic options
+        </div>
+        <p>From the Table toolbar, open the regression method dropdown and choose:</p>
+
+        <table class="docs-table">
+            <thead>
+                <tr><th>Method</th><th>Model</th><th>Best for</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Linear</strong></td>
+                    <td>y = ax + b</td>
+                    <td>Data with a constant rate of change. Produces slope (a) and intercept (b).</td>
+                </tr>
+                <tr>
+                    <td><strong>Quadratic</strong></td>
+                    <td>y = ax² + bx + c</td>
+                    <td>Data with acceleration or curvature. Produces three coefficients.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>4. Review the regression term</h3>
+        <p>After applying regression, Modellus creates a new term of type <strong>REGRESSION</strong> in the calculator. This term:</p>
+        <ul>
+            <li>Stores the fitted coefficients</li>
+            <li>References the source data ranges</li>
+            <li>Can be plotted in any Chart shape</li>
+            <li>Automatically flags outlier iterations</li>
+        </ul>
+
+        <h3>5. Visualize in a Chart</h3>
+        <div class="screenshot-placeholder">
+            <i class="fa-light fa-image"></i>
+            Screenshot: Chart showing scatter data with overlaid regression line
+        </div>
+        <p>Add the regression term to a Chart shape as a Y-axis series. The fitted curve will overlay on the original data scatter, allowing you to visually assess the quality of the fit.</p>
+
+        <h2>Interpreting Results</h2>
+
+        <h3>Linear Regression (y = ax + b)</h3>
+        <table class="docs-table">
+            <thead><tr><th>Coefficient</th><th>Meaning</th></tr></thead>
+            <tbody>
+                <tr><td><strong>a</strong> (slope)</td><td>Rate of change of Y per unit X. A steeper line means a larger slope.</td></tr>
+                <tr><td><strong>b</strong> (intercept)</td><td>The Y value when X = 0. Where the line crosses the Y-axis.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Quadratic Regression (y = ax² + bx + c)</h3>
+        <table class="docs-table">
+            <thead><tr><th>Coefficient</th><th>Meaning</th></tr></thead>
+            <tbody>
+                <tr><td><strong>a</strong></td><td>Controls the curvature. Positive = opens upward, negative = opens downward.</td></tr>
+                <tr><td><strong>b</strong></td><td>Linear component affecting the slope at the origin.</td></tr>
+                <tr><td><strong>c</strong></td><td>Y-intercept (Y value when X = 0).</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Clearing a Regression</h2>
+        <p>To remove a regression from selected data, choose <strong>No Regression</strong> from the regression method dropdown. This removes the regression term and any associated outlier markers.</p>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>See <a href="outliers.html">Outliers</a> to learn how outlier detection works with regression analysis.</span>
+        </div>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

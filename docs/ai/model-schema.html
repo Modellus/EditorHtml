@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Model Schema – Modellus Docs</title>
+    <meta name="description" content="JSON Schema reference for Modellus model files: structure, properties, shape definitions, and agent guidance." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/editor.html">Editor</a></li>
+                    <li><a href="/marketplace.html">Marketplace</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/editor.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="/docs/shapes/expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="/docs/shapes/table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="/docs/shapes/chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="/docs/shapes/body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="/docs/shapes/point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="/docs/shapes/line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="/docs/shapes/arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="/docs/shapes/vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="/docs/shapes/slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="/docs/shapes/gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="/docs/shapes/value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="/docs/shapes/media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="/docs/shapes/text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="/docs/shapes/ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="/docs/shapes/protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="/docs/shapes/referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="/docs/shapes/question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+        </ul>
+        <h5>Marketplace</h5>
+        <ul>
+            <li><a href="/docs/marketplace/index.html"><i class="fa-light fa-store"></i> Marketplace</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html" class="active"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <a href="/docs/ai/reference.html">AI Agents</a> <span class="sep">/</span>
+            <span>Model Schema</span>
+        </div>
+
+        <h1>Model Schema</h1>
+        <p class="page-desc">The canonical JSON Schema defining the structure of a Modellus model file. Use this schema for validation, code generation, and as the authoritative reference when building or interpreting models.</p>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-download"></i>
+            <span><a href="/resources/models/model-schema.json">View the full Model Schema JSON</a> — JSON Schema (Draft-07), 1686 lines.</span>
+        </div>
+
+        <h2>Top-Level Structure</h2>
+        <p>A model file is a JSON object with two required fields and several optional ones:</p>
+        <table class="docs-table">
+            <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><code>properties</code></td><td>ModelProperties</td><td>Simulation settings: independent variable, initial values, cases, angle unit, metadata</td></tr>
+                <tr><td><code>board</code></td><td>Board</td><td>Array of shapes placed on the canvas</td></tr>
+                <tr><td><code>preloadedData</code></td><td>PreloadedData</td><td>External CSV data loaded into calculator terms</td></tr>
+                <tr><td><code>outlierIterations</code></td><td>OutlierIterations</td><td>Iterations flagged as outliers during analysis</td></tr>
+                <tr><td><code>regressionTerms</code></td><td>RegressionTerms</td><td>Regression results computed from table selections</td></tr>
+            </tbody>
+        </table>
+
+        <h2>ModelProperties</h2>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><code>name</code></td><td>string</td><td>Model title</td></tr>
+                <tr><td><code>description</code></td><td>string</td><td>Brief description of the model's purpose</td></tr>
+                <tr><td><code>instructions</code></td><td>string</td><td>Markdown instructions shown to users</td></tr>
+                <tr><td><code>independent</code></td><td>object</td><td><code>{ name, start, end, step }</code> — the simulation variable and its range</td></tr>
+                <tr><td><code>angleUnit</code></td><td>"radians" | "degrees"</td><td>Unit for all trigonometric functions</td></tr>
+                <tr><td><code>casesCount</code></td><td>integer</td><td>Number of independent simulation cases</td></tr>
+                <tr><td><code>initialValuesByCase</code></td><td>object</td><td>Map of case number → { termName: initialValue } for differential terms</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Board &amp; Shapes</h2>
+        <p>The <code>board</code> field is an array of shape objects. Each shape has:</p>
+        <table class="docs-table">
+            <thead><tr><th>Field</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><code>type</code></td><td>Shape class name (e.g., "ExpressionShape", "ChartShape")</td></tr>
+                <tr><td><code>id</code></td><td>UUID uniquely identifying the shape</td></tr>
+                <tr><td><code>properties</code></td><td>Shape-specific configuration (position, terms, display settings)</td></tr>
+                <tr><td><code>parent</code></td><td>Parent shape ID (for children of ReferentialShape)</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Agent Guidance Sections</h2>
+        <p>The schema includes documentation-only sections under <code>agentGuidance</code> that provide step-by-step instructions for AI agents:</p>
+        <table class="docs-table">
+            <thead><tr><th>Section</th><th>Purpose</th></tr></thead>
+            <tbody>
+                <tr><td><code>readingAModel</code></td><td>8-step walkthrough for interpreting an existing model file</td></tr>
+                <tr><td><code>identifyingTheScience</code></td><td>Pattern-matching guide to infer scientific principles from ODE structure</td></tr>
+                <tr><td><code>buildingAModel</code></td><td>7-step procedure for constructing a new model from a science intent</td></tr>
+                <tr><td><code>stepSizeGuidance</code></td><td>How to choose the integration step for numerical stability</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Shape Roles</h2>
+        <p>The <code>shapeRoles</code> section documents the semantic purpose and configuration of each shape type — what properties to set and how they interact with the calculator system.</p>
+
+        <h2>Model Templates</h2>
+        <p>The <code>modelTemplates</code> section provides complete specifications for common STEM problems (free fall, projectile motion, SHM, Lotka-Volterra, SIR model, etc.) that agents can use as construction blueprints.</p>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

@@ -15,7 +15,7 @@ var modellus = {
         addExpression: name => shell.commands.addShape("ExpressionShape", name),
         remove: name => shell.commands.removeShape(name),
         select: name => shell.commands.selectShape(name),
-        deselect: () => shell.commands.deselectShape(),
+        deselect: () => shell.board.selection.deselect(),
         setProperties: (name, properties) => shell.commands.setShapeProperties(name, properties),
         getProperties: name => shell.board.shapes.getByName(name)?.properties
     },

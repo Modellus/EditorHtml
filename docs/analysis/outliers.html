@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Outlier Detection – Modellus Docs</title>
+    <meta name="description" content="How outlier detection works in Modellus charts and how to interpret outlier markers in regression analysis." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/editor.html">Editor</a></li>
+                    <li><a href="/marketplace.html">Marketplace</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/editor.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="/docs/shapes/expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="/docs/shapes/table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="/docs/shapes/chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="/docs/shapes/body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="/docs/shapes/point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="/docs/shapes/line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="/docs/shapes/arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="/docs/shapes/vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="/docs/shapes/slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="/docs/shapes/gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="/docs/shapes/value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="/docs/shapes/media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="/docs/shapes/text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="/docs/shapes/ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="/docs/shapes/protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="/docs/shapes/referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="/docs/shapes/question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="outliers.html" class="active"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>Marketplace</h5>
+        <ul>
+            <li><a href="/docs/marketplace/index.html"><i class="fa-light fa-store"></i> Marketplace</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <a href="/docs/index.html">Data Analysis</a> <span class="sep">/</span>
+            <span>Outliers</span>
+        </div>
+
+        <h1>Outlier Detection</h1>
+        <p class="page-desc">Modellus automatically identifies data points that deviate significantly from the regression curve, helping you spot measurement errors or interesting phenomena.</p>
+
+        <h2>Overview</h2>
+        <p>When you perform a regression on table data, Modellus evaluates each data point against the fitted curve. Points that fall significantly far from the curve are flagged as outliers. These are visually marked in Chart shapes to help you interpret your data.</p>
+
+        <h2>How Outlier Detection Works</h2>
+        <div class="screenshot-placeholder">
+            <i class="fa-light fa-image"></i>
+            Screenshot: Chart with normal points and outlier points visually distinguished
+        </div>
+
+        <p>The detection process:</p>
+        <ol>
+            <li>A regression is computed on the selected data (linear or quadratic)</li>
+            <li>For each data point, the residual (distance from the curve) is calculated</li>
+            <li>Points with residuals exceeding a statistical threshold are flagged</li>
+            <li>The <code>isOutlierIteration</code> method marks these iterations</li>
+            <li>Charts render outlier points with a distinct visual style</li>
+        </ol>
+
+        <h2>Visual Appearance in Charts</h2>
+        <div class="screenshot-placeholder">
+            <i class="fa-light fa-image"></i>
+            Screenshot: Close-up of chart showing the difference between normal and outlier point styles
+        </div>
+
+        <table class="docs-table">
+            <thead><tr><th>Point Type</th><th>Appearance</th><th>Meaning</th></tr></thead>
+            <tbody>
+                <tr><td>Normal</td><td>Filled circle, series color</td><td>Data point consistent with the regression model</td></tr>
+                <tr><td>Outlier</td><td>Different marker style (hollow or contrasting color)</td><td>Data point far from the fitted curve</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Interpreting Outliers</h2>
+        <p>An outlier point may indicate:</p>
+        <ul>
+            <li><strong>Measurement error</strong> — The data point was incorrectly recorded</li>
+            <li><strong>Experimental anomaly</strong> — Something unusual happened during that measurement</li>
+            <li><strong>Model limitation</strong> — The chosen regression model (linear/quadratic) doesn't capture the full behavior</li>
+            <li><strong>Interesting phenomenon</strong> — A genuinely different behavior worth investigating</li>
+        </ul>
+
+        <div class="callout callout-tip">
+            <i class="fa-light fa-lightbulb"></i>
+            <span>Don't automatically discard outliers. Investigate why they're different — they may reveal something important about the phenomenon you're studying.</span>
+        </div>
+
+        <h2>Working with Outliers</h2>
+
+        <h3>Excluding outliers from regression</h3>
+        <p>If you determine that certain points are measurement errors, you can exclude them by selecting a narrower range of cells in the Table before applying regression. Only the selected cells participate in the curve fitting.</p>
+
+        <h3>Comparing regressions</h3>
+        <p>Try both linear and quadratic regression on the same data. If the linear model produces many outliers but the quadratic model doesn't, the relationship may be non-linear — consider upgrading your theoretical model.</p>
+
+        <h2>Technical Details</h2>
+        <p>The outlier detection is performed per-iteration by the calculation engine's <code>isOutlierIteration</code> method. The Chart shape queries this for each Y-series data point during rendering, applying the outlier visual style to flagged iterations.</p>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>Outlier detection is only active when a regression term exists for the plotted data series. Without regression, all points are rendered normally.</span>
+        </div>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>
