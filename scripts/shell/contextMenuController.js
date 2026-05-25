@@ -27,6 +27,7 @@ class ContextMenuController {
     _create() {
         const isMac = /mac/i.test(navigator.platform);
         const mod = isMac ? "⌘" : "Ctrl+";
+        const canSave = this.shell.modelsApiClient && !this.shell.isAnonymous();
         const menuItems = window.modellusReadOnly ? this._readOnlyMenuItems(mod) : [
             {
                 text: this.shell.board.translations.get("Clear"),
@@ -35,6 +36,7 @@ class ContextMenuController {
                 name: "Clear",
                 action: _ => this.shell.clearKeepIdentity()
             },
+            ...(canSave ? [
             {
                 text: this.shell.board.translations.get("Save") + "...",
                 icon: "fa-light fa-cloud-arrow-down",
@@ -48,7 +50,7 @@ class ContextMenuController {
                 shortcut: `${mod}⇧S`,
                 name: "SaveAs",
                 action: _ => this.shell.saveAsModel()
-            },
+            }] : []),
             {
                 text: this.shell.board.translations.get("Duplicate") + "...",
                 icon: "fa-light fa-clone",

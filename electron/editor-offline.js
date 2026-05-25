@@ -8,11 +8,4 @@ var shell = null;
     shell.saveToApi = () => shell.exportToFile();
     shell.saveAsModel = () => shell.exportToFile();
     shell.duplicateModel = () => {};
-    const menuInstance = $("#context-menu").dxContextMenu("instance");
-    if (menuInstance) {
-        const filteredItems = menuInstance.option("items").filter(item =>
-            item.name !== "Save" && item.name !== "SaveAs" && item.name !== "Models"
-        );
-        menuInstance.option("items", filteredItems);
-    }
 })();
