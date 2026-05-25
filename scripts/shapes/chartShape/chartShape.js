@@ -271,6 +271,7 @@ class ChartShape extends BaseShape {
             borderColor: this.getBorderColor(),
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
+            precision: this.board.calculator.getPrecision(),
             onDomainChanged: domain => this.onDomainChanged(domain),
             onTickDragStarted: () => this.onTickDragStarted(),
             onTickDragEnded: () => this.onTickDragEnded()
@@ -461,7 +462,8 @@ class ChartShape extends BaseShape {
                 dataAreaColor: config.dataAreaColor,
                 borderColor: config.border,
                 argumentTitle: config.argTitle,
-                valueTitle: config.valTitle
+                valueTitle: config.valTitle,
+                precision: this.board.calculator.getPrecision()
             });
             if (dataChanged)
                 this.resetChartValues();

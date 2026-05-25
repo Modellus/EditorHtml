@@ -917,7 +917,7 @@ class BodyShape extends ChildShape {
         this.centerDot.setAttribute("cy", position.y);
         this.centerDot.setAttribute("r", dotRadius);
         this.centerDot.setAttribute("fill", this.properties.foregroundColor);
-        this.centerDot.setAttribute("stroke", this.board.theme.getContrastColor?.(this.properties.foregroundColor) ?? "white");
+        this.centerDot.setAttribute("stroke", Utils.getContrastColor(this.properties.foregroundColor));
         this.centerDot.setAttribute("stroke-width", 1);
     }
 

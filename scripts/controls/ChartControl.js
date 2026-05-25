@@ -40,6 +40,7 @@ class ChartControl {
             termFontWeight: 400,
             iconFontFamily: "Font Awesome 7 Pro",
             equalScales: false,
+            precision: 2,
             tangentColor: "#00000000",
             fontSize: 13,
             titleFontSize: 16,
@@ -416,6 +417,13 @@ class ChartControl {
             return value.toExponential(2);
         const roundedValue = Math.round(value * 1000) / 1000;
         return String(roundedValue);
+    }
+
+    formatCrosshairValue(value) {
+        if (!Number.isFinite(value))
+            return "";
+        const precision = Number.isFinite(this.options.precision) ? this.options.precision : 2;
+        return value.toFixed(precision);
     }
 
     isCaseIconCharacter(character) {
@@ -856,6 +864,16 @@ class ChartControl {
             <line x1="${layout.plotLeft}" y1="${layout.plotTop}" x2="${layout.plotRight}" y2="${layout.plotTop}" stroke="${this.options.axisColor}" stroke-width="1.2" />
             <line x1="${layout.plotRight}" y1="${layout.plotTop}" x2="${layout.plotRight}" y2="${layout.plotBottom}" stroke="${this.options.axisColor}" stroke-width="1.2" />
         `);
+        const zeroY = yScale(0);
+        if (zeroY > layout.plotTop && zeroY < layout.plotBottom)
+            this.appendSvgMarkup(this.axisLayer, `
+                <line x1="${layout.plotLeft}" y1="${zeroY}" x2="${layout.plotRight}" y2="${zeroY}" stroke="${this.options.borderColor}" stroke-width="1.2" />
+            `);
+        const zeroX = xScale(0);
+        if (zeroX > layout.plotLeft && zeroX < layout.plotRight)
+            this.appendSvgMarkup(this.axisLayer, `
+                <line x1="${zeroX}" y1="${layout.plotTop}" x2="${zeroX}" y2="${layout.plotBottom}" stroke="${this.options.borderColor}" stroke-width="1.2" />
+            `);
         for (let index = 0; index < xMinorTicks.length; index++)
             this.renderXAxisMinorTick(layout, xScale, xMinorTicks[index]);
         for (let index = 0; index < yMinorTicks.length; index++)
@@ -1590,12 +1608,13 @@ class ChartControl {
         const firstSeries = state.series.length > 0 ? this.getNearestSeriesPoint(state.series[0], argumentValue) : null;
         const snappedX = firstSeries ? firstSeries.xValue : argumentValue;
         const axisLabelX = xScale(snappedX);
-        const axisLabelText = this.formatAxisValue(snappedX);
+        const axisLabelText = this.formatCrosshairValue(snappedX);
         const axisLabelWidth = this.estimateTextWidth(axisLabelText, 10) + 8;
+        const xLabelContrastColor = Utils.getContrastColor(this.options.foregroundColor);
         let crosshairMarkup = `
             <line x1="${crosshairX}" y1="${layout.plotTop}" x2="${crosshairX}" y2="${layout.plotBottom}" stroke="${this.options.foregroundColor}" stroke-width="1" stroke-opacity="0.5" />
             <rect x="${axisLabelX - axisLabelWidth / 2}" y="${layout.plotBottom + 4}" width="${axisLabelWidth}" height="16" rx="3" fill="${this.options.foregroundColor}" fill-opacity="0.85" />
-            <text x="${axisLabelX}" y="${layout.plotBottom + 16}" text-anchor="middle" font-family="${this.options.fontFamily}" font-size="10" fill="${this.options.backgroundColor || "#ffffff"}">${this.escapeMarkupText(axisLabelText)}</text>
+            <text x="${axisLabelX}" y="${layout.plotBottom + 16}" text-anchor="middle" font-family="${this.options.fontFamily}" font-size="10" fill="${xLabelContrastColor}">${this.escapeMarkupText(axisLabelText)}</text>
         `;
         for (let seriesIndex = 0; seriesIndex < state.series.length; seriesIndex++) {
             const series = state.series[seriesIndex];
@@ -1606,9 +1625,14 @@ class ChartControl {
             const pointY = yScale(nearestPoint.yValue);
             if (!Number.isFinite(pointX) || !Number.isFinite(pointY))
                 continue;
+            const yLabelText = this.formatCrosshairValue(nearestPoint.yValue);
+            const yLabelWidth = this.estimateTextWidth(yLabelText, 10) + 8;
+            const yLabelContrastColor = Utils.getContrastColor(series.color);
             crosshairMarkup += `
                 <circle cx="${pointX}" cy="${pointY}" r="4" fill="${series.color}" stroke="#ffffff" stroke-width="1.5" />
-                <text x="${pointX + 6}" y="${pointY - 6}" font-family="${this.options.fontFamily}" font-size="11" fill="${series.color}">${this.escapeMarkupText(this.formatAxisValue(nearestPoint.yValue))}</text>
+                <line x1="${layout.plotLeft}" y1="${pointY}" x2="${layout.plotRight}" y2="${pointY}" stroke="${series.color}" stroke-width="1" stroke-opacity="0.3" />
+                <rect x="${layout.plotLeft - yLabelWidth - 4}" y="${pointY - 8}" width="${yLabelWidth}" height="16" rx="3" fill="${series.color}" fill-opacity="0.85" />
+                <text x="${layout.plotLeft - yLabelWidth / 2 - 4}" y="${pointY + 4}" text-anchor="middle" font-family="${this.options.fontFamily}" font-size="10" fill="${yLabelContrastColor}">${this.escapeMarkupText(yLabelText)}</text>
             `;
         }
         this.appendSvgMarkup(this.crosshairLayer, crosshairMarkup);

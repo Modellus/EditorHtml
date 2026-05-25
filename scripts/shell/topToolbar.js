@@ -490,19 +490,16 @@ class TopToolbar {
         const backgroundColor = this.shell.properties.backgroundColor;
         const isTransparent = !backgroundColor || backgroundColor === "transparent" || (backgroundColor.length === 9 && backgroundColor.slice(7) === "00");
         const hex = isTransparent ? "#FFFFFF" : backgroundColor;
-        const red = parseInt(hex.slice(1, 3), 16);
-        const green = parseInt(hex.slice(3, 5), 16);
-        const blue = parseInt(hex.slice(5, 7), 16);
-        const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
-        const isLight = luminance > 0.5;
+        const contrastColor = Utils.getContrastColor(hex);
+        const isLight = contrastColor === "#000000";
         const nameLabel = document.getElementById("model-name-label");
         if (nameLabel) {
-            nameLabel.style.color = isLight ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)";
+            nameLabel.style.color = contrastColor;
             nameLabel.style.webkitTextStroke = `2px ${hex}`;
         }
         const saveIcon = document.getElementById("auto-save-icon");
         if (saveIcon) {
-            saveIcon.style.color = isLight ? "rgb(0, 0, 0)" : "rgb(255, 255, 255)";
+            saveIcon.style.color = contrastColor;
             saveIcon.style.webkitTextStroke = `2px ${hex}`;
         }
         const creatorLabel = container.querySelector(".model-creator");
@@ -510,7 +507,6 @@ class TopToolbar {
             creatorLabel.style.color = isLight ? "rgba(0, 0, 0, 0.5)" : "rgba(255, 255, 255, 0.5)";
             creatorLabel.style.webkitTextStroke = `1.5px ${hex}`;
         }
-
     }
 
     update() {

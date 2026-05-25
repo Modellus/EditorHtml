@@ -742,7 +742,7 @@ class TableControl {
 
     renderHeaderCellContent(layout, column, cellGeometry, columnIndex) {
         const headerBackgroundColor = this.getColumnHeaderBackgroundColor(column);
-        const headerTextColor = this.getContrastTextColor(headerBackgroundColor);
+        const headerTextColor = Utils.getContrastColor(headerBackgroundColor);
         const titleText = column.title ?? "";
         const titleMathValue = this.getHeaderTitleMathValue(titleText);
         const titleForeignObject = this.createSvgElement("foreignObject");
@@ -776,90 +776,6 @@ class TableControl {
         if (this.isTransparentColor(normalizedColumnColor))
             return this.options.headerBackgroundColor;
         return normalizedColumnColor;
-    }
-
-    getContrastTextColor(backgroundColor) {
-        const rgbColor = this.parseColorToRgb(backgroundColor);
-        if (!rgbColor)
-            return "#000000";
-        const luminance = this.getRelativeLuminance(rgbColor.red, rgbColor.green, rgbColor.blue);
-        const contrastWithBlack = (luminance + 0.05) / 0.05;
-        const contrastWithWhite = 1.05 / (luminance + 0.05);
-        if (contrastWithWhite > contrastWithBlack)
-            return "#ffffff";
-        return "#000000";
-    }
-
-    parseColorToRgb(colorValue) {
-        const normalizedValue = String(colorValue ?? "").trim();
-        if (normalizedValue === "")
-            return null;
-        if (normalizedValue.startsWith("#"))
-            return this.parseHexColor(normalizedValue);
-        if (normalizedValue.startsWith("rgb"))
-            return this.parseRgbColor(normalizedValue);
-        return null;
-    }
-
-    parseHexColor(colorValue) {
-        const hexValue = colorValue.slice(1);
-        if (hexValue.length === 3)
-            return {
-                red: parseInt(hexValue[0] + hexValue[0], 16),
-                green: parseInt(hexValue[1] + hexValue[1], 16),
-                blue: parseInt(hexValue[2] + hexValue[2], 16)
-            };
-        if (hexValue.length === 4)
-            return {
-                red: parseInt(hexValue[0] + hexValue[0], 16),
-                green: parseInt(hexValue[1] + hexValue[1], 16),
-                blue: parseInt(hexValue[2] + hexValue[2], 16)
-            };
-        if (hexValue.length === 6 || hexValue.length === 8)
-            return {
-                red: parseInt(hexValue.slice(0, 2), 16),
-                green: parseInt(hexValue.slice(2, 4), 16),
-                blue: parseInt(hexValue.slice(4, 6), 16)
-            };
-        return null;
-    }
-
-    parseRgbColor(colorValue) {
-        const match = colorValue.match(/^rgba?\(([^)]+)\)$/i);
-        if (!match)
-            return null;
-        const channelValues = match[1].split(",").map(value => Number(value.trim()));
-        if (channelValues.length < 3)
-            return null;
-        const red = this.clampColorChannel(channelValues[0]);
-        const green = this.clampColorChannel(channelValues[1]);
-        const blue = this.clampColorChannel(channelValues[2]);
-        if (red == null || green == null || blue == null)
-            return null;
-        return { red: red, green: green, blue: blue };
-    }
-
-    clampColorChannel(value) {
-        if (!Number.isFinite(value))
-            return null;
-        if (value < 0)
-            return 0;
-        if (value > 255)
-            return 255;
-        return Math.round(value);
-    }
-
-    getRelativeLuminance(red, green, blue) {
-        const linearRed = this.toLinearColorChannel(red / 255);
-        const linearGreen = this.toLinearColorChannel(green / 255);
-        const linearBlue = this.toLinearColorChannel(blue / 255);
-        return 0.2126 * linearRed + 0.7152 * linearGreen + 0.0722 * linearBlue;
-    }
-
-    toLinearColorChannel(channelValue) {
-        if (channelValue <= 0.03928)
-            return channelValue / 12.92;
-        return ((channelValue + 0.055) / 1.055) ** 2.4;
     }
 
     renderBody(layout, columns, geometry, columnValueRanges) {
