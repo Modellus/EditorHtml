@@ -135,6 +135,18 @@ class ExpressionShape extends BaseShape {
                 this.insert('\\lor');
                 return;
             }
+            if (key === '/' || key === '÷' || keydownEvent.code === 'Slash') {
+                keydownEvent.preventDefault();
+                keydownEvent.stopImmediatePropagation();
+                this.insert('\\frac{dx}{dt}');
+                return;
+            }
+            if (key === '_' || key === '-' || key === '–' || key === '—' || key === '−' || (keydownEvent.code === 'Minus' && keydownEvent.shiftKey)) {
+                keydownEvent.preventDefault();
+                keydownEvent.stopImmediatePropagation();
+                this.insert('\\left\\lfloor\\placeholder{}\\right\\rfloor');
+                return;
+            }
         }
         if (this.handleEnterKeydown(keydownEvent))
             return;
@@ -332,11 +344,16 @@ class ExpressionShape extends BaseShape {
     getExpressionFunctionShortcuts() {
         return [
             { shortcutText: "cosec", functionLatex: "\\cosec" },
+            { shortcutText: "arccos", functionLatex: "\\arccos" },
+            { shortcutText: "arctan", functionLatex: "\\arctan" },
+            { shortcutText: "arcsin", functionLatex: "\\arcsin" },
+            { shortcutText: "cosh", functionLatex: "\\cosh" },
+            { shortcutText: "tanh", functionLatex: "\\tanh" },
+            { shortcutText: "sinh", functionLatex: "\\sinh" },
             { shortcutText: "sqrt", functionLatex: "\\sqrt" },
             { shortcutText: "frac", functionLatex: "\\frac" },
             { shortcutText: "cdot", functionLatex: "\\cdot" },
             { shortcutText: "sign", functionLatex: "sign" },
-            { shortcutText: "int", functionLatex: "int" },
             { shortcutText: "round", functionLatex: "round" },
             { shortcutText: "irnd", functionLatex: "irnd" },
             { shortcutText: "rnd", functionLatex: "rnd" },

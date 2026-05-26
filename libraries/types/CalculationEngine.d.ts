@@ -682,6 +682,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitDeltaName?: (ctx: DeltaNameContext) => void;
     /**
+     * Enter a parse tree produced by the `Factorial`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterFactorial?: (ctx: FactorialContext) => void;
+    /**
+     * Exit a parse tree produced by the `Factorial`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitFactorial?: (ctx: FactorialContext) => void;
+    /**
      * Enter a parse tree produced by the `Maximum`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -1425,6 +1437,13 @@ declare class DeltaNameContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class FactorialContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class MaximumContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext[];
@@ -1961,6 +1980,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitDeltaName?: (ctx: DeltaNameContext) => Result;
     /**
+     * Visit a parse tree produced by the `Factorial`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitFactorial?: (ctx: FactorialContext) => Result;
+    /**
      * Visit a parse tree produced by the `Maximum`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -2217,6 +2243,7 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     private readonly expander;
     constructor(system: System, variable: string);
     private eval;
+    private numericalDerivative;
     private constant;
     private addB;
     private subB;
@@ -2243,6 +2270,7 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitFraction: (context: FractionContext) => Branch;
     visitFractionDigits: (context: FractionDigitsContext) => Branch;
     visitPower: (context: PowerContext) => Branch;
+    visitFactorial: (context: FactorialContext) => Branch;
     visitNegation: (context: NegationContext) => Branch;
     visitSine: (context: SineContext) => Branch;
     visitCosine: (context: CosineContext) => Branch;
@@ -2422,6 +2450,8 @@ declare class SingularitiesDetector implements SystemProcessor {
     getSingularityType(termName: string, iteration: number, caseNumber?: number): SingularityType;
     getSingularities(): readonly Singularity[];
     private detectValueSingularities;
+    private hasInvalidFactorialDomain;
+    private containsInvalidFactorial;
     private detectDiscontinuities;
 }
 
@@ -2439,6 +2469,7 @@ declare class SingularitiesDetector implements SystemProcessor {
  *   mul:  x*0 → 0,  0*x → 0,  x*1 → x,  1*x → x
  *   div:  0/x → 0,  x/1 → x
  *   pow:  x^0 → 1,  x^1 → x,  1^x → 1
+ *   fac:  n! (constant n) → constant factorial(n)
  *   neg:  neg(0) → 0,  neg(neg(x)) → x
  *   constant folding: any node whose direct children are all constants
  */
@@ -2447,6 +2478,7 @@ declare class Simplifier {
     private readonly rules;
     private readonly rebuilders;
     constructor();
+    private factorial;
     /** Total number of passes executed during the last call to `simplify`. */
     get passCount(): number;
     /**
@@ -2476,6 +2508,7 @@ declare class Simplifier {
     private simplifyDiv;
     private simplifyPow;
     private simplifyNeg;
+    private simplifyFac;
 }
 
 declare class Visitor extends LatexMathVisitor<Branch> {
@@ -2500,6 +2533,8 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitFunctionSubscriptDigit: (context: FunctionSubscriptDigitContext) => Branch;
     visitFunctionIndependent: (context: FunctionIndependentContext) => Branch;
     visitPower: (context: PowerContext) => Branch;
+    private factorial;
+    visitFactorial: (context: FactorialContext) => Branch;
     visitDivision: (context: DivisionContext) => Branch;
     visitMultiplication: (context: MultiplicationContext) => Branch;
     visitMultiplicationDigit: (context: MultiplicationDigitContext) => Branch;

@@ -156,9 +156,13 @@
                 <tr><td>2</td><td><code>=</code>, <code>></code>, <code><</code>, <code>\ge</code>, <code>\le</code>, <code>\neq</code></td><td>Left</td></tr>
                 <tr><td>3</td><td><code>+</code>, <code>-</code></td><td>Left</td></tr>
                 <tr><td>4</td><td><code>\cdot</code>, <code>/</code>, implicit multiplication</td><td>Left</td></tr>
-                <tr><td>5 (highest)</td><td><code>^{}</code>, <code>\sqrt{}</code></td><td>Right</td></tr>
+                <tr><td>5 (highest)</td><td><code>^{}</code>, <code>!</code> (factorial), <code>\sqrt{}</code></td><td>Right</td></tr>
             </tbody>
         </table>
+
+        <p><strong>Factorial:</strong> Use postfix notation (<code>n!</code>). Factorial is intended for non-negative integer values.</p>
+
+        <p><strong>Integral notation:</strong> LaTeX integral forms such as <code>\int_{a}^{b} f\left(x\right)\,\mathrm{d}x</code> are valid expression syntax. For integer-part behavior, use <code>int(x)</code>.</p>
 
         <h2>LaTeX Templates</h2>
         <p>The schema includes a <code>latexTemplates</code> section providing ready-to-use LaTeX strings for common patterns that agents can emit directly into <code>expression</code> fields.</p>

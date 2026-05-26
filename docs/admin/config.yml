@@ -1,0 +1,55 @@
+backend:
+  name: github
+  repo: Modellus/EditorHtml
+  branch: main
+  base_url: https://app.modellus.science
+  auth_endpoint: /docs/admin/auth
+
+media_folder: docs/screenshots
+public_folder: /docs/screenshots
+
+collections:
+  - name: shapes
+    label: Shape Pages
+    files:
+      - { label: Expression, name: expression, file: docs/shapes/expression.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Table, name: table, file: docs/shapes/table.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Chart, name: chart, file: docs/shapes/chart.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Body, name: body, file: docs/shapes/body.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Point, name: point, file: docs/shapes/point.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Line, name: line, file: docs/shapes/line.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Arc, name: arc, file: docs/shapes/arc.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Vector, name: vector, file: docs/shapes/vector.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Slider, name: slider, file: docs/shapes/slider.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Gauge, name: gauge, file: docs/shapes/gauge.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Value, name: value, file: docs/shapes/value.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Media, name: media, file: docs/shapes/media.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Text, name: text, file: docs/shapes/text.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Ruler, name: ruler, file: docs/shapes/ruler.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Protractor, name: protractor, file: docs/shapes/protractor.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Referential, name: referential, file: docs/shapes/referential.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Question, name: question, file: docs/shapes/question.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+
+  - name: analysis
+    label: Analysis Pages
+    files:
+      - { label: Regression, name: regression, file: docs/analysis/regression.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Outliers, name: outliers, file: docs/analysis/outliers.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+
+  - name: marketplace
+    label: Marketplace
+    files:
+      - { label: Marketplace, name: marketplace, file: docs/marketplace/index.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+
+  - name: ai
+    label: AI Agent Pages
+    files:
+      - { label: AI Reference, name: reference, file: docs/ai/reference.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Model Schema, name: model-schema, file: docs/ai/model-schema.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+      - { label: Expression Schema, name: expression-schema, file: docs/ai/expression-schema.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+
+  - name: home
+    label: Home & Index
+    files:
+      - { label: Docs Home, name: docs-index, file: docs/index.html, fields: [{ label: Content, name: body, widget: code, default_language: html, output_code_only: true }] }
+

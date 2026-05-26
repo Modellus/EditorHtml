@@ -148,8 +148,10 @@ Two-arg:   \max(a,b), \min(a,b), \mod(a,b)
 Utility:   sign(x), rnd(x), irnd(x), int(x), round(x)
 Other:     \det(x), \sqrt{x}</code></pre>
 
+        <p><strong>Integral notation:</strong> expressions may include LaTeX forms such as <code>\int_{a}^{b} f\left(x\right)\,\mathrm{d}x</code>. For integer-part behavior, use <code>int(x)</code>.</p>
+
         <h3>Operators</h3>
-        <pre><code>Arithmetic: +  -  \cdot  /  \frac{}{}  ^{}  \sqrt{}
+        <pre><code>Arithmetic: +  -  \cdot  /  \frac{}{}  ^{}  !  \sqrt{}
 Comparison: =  >  <  \ge  \le  \neq
 Logical:    \lor (OR)  \land (AND)
 Special:    \Delta (finite difference)</code></pre>
@@ -157,6 +159,15 @@ Special:    \Delta (finite difference)</code></pre>
         <h3>Constants</h3>
         <pre><code>\pi = 3.14159...
 e (or \E) = 2.71828...</code></pre>
+
+        <h3>Editor Shortcuts</h3>
+        <table class="docs-table">
+            <thead><tr><th>Action</th><th>macOS</th><th>Windows</th></tr></thead>
+            <tbody>
+                <tr><td>Differential template (<code>\frac{dx}{dt}</code>)</td><td><code>Option+/</code></td><td><code>Alt+/</code></td></tr>
+                <tr><td>Floor template (<code>\left\lfloor x\right\rfloor</code>)</td><td><code>Option+_</code></td><td><code>Alt+_</code></td></tr>
+            </tbody>
+        </table>
 
         <h2>Model JSON Structure</h2>
         <pre><code>{
