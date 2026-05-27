@@ -1030,6 +1030,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitSign?: (ctx: SignContext) => void;
     /**
+     * Enter a parse tree produced by the `Ceil`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterCeil?: (ctx: CeilContext) => void;
+    /**
+     * Exit a parse tree produced by the `Ceil`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitCeil?: (ctx: CeilContext) => void;
+    /**
      * Enter a parse tree produced by the `IRnd`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -1655,6 +1667,13 @@ declare class SignContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class CeilContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class IRndContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
@@ -2183,6 +2202,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitSign?: (ctx: SignContext) => Result;
     /**
+     * Visit a parse tree produced by the `Ceil`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitCeil?: (ctx: CeilContext) => Result;
+    /**
      * Visit a parse tree produced by the `IRnd`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -2295,6 +2321,7 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitRnd: (context: RndContext) => Branch;
     visitIRnd: (context: IRndContext) => Branch;
     visitInt: (context: IntContext) => Branch;
+    visitCeil: (context: CeilContext) => Branch;
     visitRound: (context: RoundContext) => Branch;
     visitParenthesis: (context: ParenthesisContext) => Branch;
     visitBraces: (context: BracesContext) => Branch;
@@ -2572,6 +2599,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitRnd: (context: RndContext) => Branch;
     visitIRnd: (context: IRndContext) => Branch;
     visitInt: (context: IntContext) => Branch;
+    visitCeil: (context: CeilContext) => Branch;
     visitRound: (context: RoundContext) => Branch;
     visitSubscript: (context: SubscriptContext) => Branch;
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;

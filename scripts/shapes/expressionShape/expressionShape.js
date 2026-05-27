@@ -115,6 +115,39 @@ class ExpressionShape extends BaseShape {
         this.mathfield.inlineShortcutTimeout = 0;
     }
 
+    getTemplateShortcuts() {
+        const independentTermName = this.board.calculator.properties?.independent?.name ?? "t";
+        const previewTermName = independentTermName === "x" ? "y" : "x";
+        return [
+            { name: "Differential", text: `\\frac{d${previewTermName}}{d${independentTermName}}`, insertText: `\\frac{d\\placeholder{}}{d${independentTermName}}`, shortcutMac: "⌥/", shortcutWindows: "Alt+/" },
+            { name: "Power", text: `${previewTermName}^2`, insertText: "\\placeholder{}^2", shortcut: "^" },
+            { name: "Squareroot", text: `\\sqrt{${previewTermName}}`, insertText: "\\sqrt{\\placeholder{}}", shortcut: "#" },
+            { name: "Index", text: `${previewTermName}_{${independentTermName}-1}`, insertText: `\\placeholder{}_{${independentTermName}-1}`, shortcut: "_" },
+            { name: "Condition", text: `\\begin{cases} 2 & ${independentTermName}=0 \\\\ 4 & ${independentTermName}\\ge2\\end{cases}`, insertText: `\\begin{cases}\\placeholder{} & ${independentTermName}=0 \\\\ \\placeholder{} & ${independentTermName}\\ge2\\end{cases}`, shortcut: "\\" },
+            { name: "Floor", text: `\\lfloor ${previewTermName}\\rfloor`, insertText: "\\lfloor\\placeholder{}\\rfloor", shortcutMac: "⌥_", shortcutWindows: "Alt+_" },
+            { name: "Ceil", text: `\\lceil ${previewTermName}\\rceil`, insertText: "\\lceil\\placeholder{}\\rceil", shortcutMac: "⌘_", shortcutWindows: "" }
+        ];
+    }
+
+    getTemplateShortcut(name) {
+        const templateShortcuts = this.getTemplateShortcuts();
+        for (let templateShortcutIndex = 0; templateShortcutIndex < templateShortcuts.length; templateShortcutIndex++) {
+            const templateShortcut = templateShortcuts[templateShortcutIndex];
+            if (templateShortcut.name === name)
+                return templateShortcut;
+        }
+        return null;
+    }
+
+    isSlashShortcutKey(keydownEvent) {
+        return keydownEvent.key === '/' || (keydownEvent.code === 'Slash' && !keydownEvent.shiftKey) || (keydownEvent.code === 'Digit7' && keydownEvent.shiftKey);
+    }
+
+    isUnderscoreShortcutKey(keydownEvent) {
+        const key = keydownEvent.key;
+        return key === '_' || key === '-' || key === '–' || key === '—' || key === '−' || (keydownEvent.code === 'Minus' && keydownEvent.shiftKey);
+    }
+
     onKeyDown(keydownEvent) {
         if (keydownEvent.key === "'") {
             keydownEvent.preventDefault();
@@ -124,7 +157,7 @@ class ExpressionShape extends BaseShape {
         if (keydownEvent.key === "\\") {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
-            this.insert("\\begin{cases}\\placeholder{} & \\placeholder{}\\end{cases}");
+            this.insert(this.getTemplateShortcut("Condition").insertText);
             return;
         }
         if (keydownEvent.altKey && !keydownEvent.ctrlKey && !keydownEvent.metaKey) {
@@ -135,18 +168,24 @@ class ExpressionShape extends BaseShape {
                 this.insert('\\lor');
                 return;
             }
-            if (key === '/' || key === '÷' || keydownEvent.code === 'Slash') {
+            if (this.isUnderscoreShortcutKey(keydownEvent)) {
                 keydownEvent.preventDefault();
                 keydownEvent.stopImmediatePropagation();
-                this.insert('\\frac{dx}{dt}');
+                this.insert(this.getTemplateShortcut("Floor").insertText);
                 return;
             }
-            if (key === '_' || key === '-' || key === '–' || key === '—' || key === '−' || (keydownEvent.code === 'Minus' && keydownEvent.shiftKey)) {
+            if (this.isSlashShortcutKey(keydownEvent)) {
                 keydownEvent.preventDefault();
                 keydownEvent.stopImmediatePropagation();
-                this.insert('\\left\\lfloor\\placeholder{}\\right\\rfloor');
+                this.insert(this.getTemplateShortcut("Differential").insertText);
                 return;
             }
+        }
+        if (keydownEvent.metaKey && !keydownEvent.ctrlKey && !keydownEvent.altKey && this.isUnderscoreShortcutKey(keydownEvent)) {
+            keydownEvent.preventDefault();
+            keydownEvent.stopImmediatePropagation();
+            this.insert(this.getTemplateShortcut("Ceil").insertText);
+            return;
         }
         if (this.handleEnterKeydown(keydownEvent))
             return;
@@ -586,8 +625,13 @@ class ExpressionShape extends BaseShape {
     }
 
     insert(text) {
+        if (document.activeElement !== this.mathfield)
+            this.mathfield.focus();
         this.mathfield.executeCommand("insert", text);
-        this.mathfield.focus();
+        const placeholderMatches = text.match(/\\placeholder\{\}/g);
+        const placeholdersCount = placeholderMatches ? placeholderMatches.length : 0;
+        for (let placeholderIndex = 0; placeholderIndex < placeholdersCount; placeholderIndex++)
+            this.mathfield.executeCommand("moveToPreviousPlaceholder");
     }
 }
 

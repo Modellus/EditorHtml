@@ -56,14 +56,7 @@ Object.assign(ExpressionShape.prototype, {
         const itemMargin = 2;
         const horizontalStep = baseItemWidth + itemMargin * 2;
         const verticalStep = baseItemHeight + itemMargin * 2;
-        const shortcutItems = [
-            { name: "Differential", text: "\\frac{dx}{dt}", shortcutMac: "⌥/", shortcutWindows: "Alt+/" },
-            { name: "Power", text: "x^2", shortcut: "^" },
-            { name: "Squareroot", text: "\\sqrt{x}", shortcut: "#" },
-            { name: "Index", text: "x_{t-1}", shortcut: "_" },
-            { name: "Condition", text: "\\begin{cases}1 & t=0 \\\\ y & t\\ge2\\end{cases}", shortcut: "\\" },
-            { name: "Floor", text: "\\left\\lfloor x\\right\\rfloor", insertText: "\\left\\lfloor\\placeholder{}\\right\\rfloor", shortcutMac: "⌥_", shortcutWindows: "Alt+_" }
-        ];
+        const shortcutItems = this.getTemplateShortcuts();
         const rows = Math.ceil(shortcutItems.length / columns);
         $(contentElement).empty();
         const container = $('<div class="mdl-shortcuts-picker-grid"></div>');
@@ -83,7 +76,20 @@ Object.assign(ExpressionShape.prototype, {
                 $(element).append(cell);
             },
             onItemClick: e => {
-                this.insert(e.itemData.insertText ?? e.itemData.text);
+                this.board.suppressNextFocusSelect = true;
+                const enteredEditMode = this.enterEditMode();
+                if (!enteredEditMode)
+                    this.board.suppressNextFocusSelect = false;
+                else {
+                    this.board.selection.deselect();
+                    this.board.selection.clearHover();
+                    this.board.selection.applyEditModeHighlight(this);
+                    setTimeout(() => {
+                        if (this.board.suppressNextFocusSelect)
+                            this.board.suppressNextFocusSelect = false;
+                    }, 150);
+                }
+                this.insert(e.itemData.insertText);
                 this._shortcutsPicker?.dxDropDownButton("instance")?.close();
             }
         });
