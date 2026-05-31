@@ -34,17 +34,18 @@ class ExpressionShape extends BaseShape {
         $(div).css({ width: "100%", height: "100%", "background-color": "transparent" });
         foreignObject.appendChild(div);
         this.mathfield = new MathfieldElement();
+        this.mathfield.style.setProperty("--contains-highlight-background-color", "transparent");
         this.mathfield.popoverPolicy = "off";
         this.mathfield.virtualKeyboardMode = "off";
         this.mathfield.mathVirtualKeyboardPolicy = "manual";
         this.mathfield.smartMode = false;
         this.mathfield.multiline = true;
         this.mathfield.returnKeyAction = "none";
-        this.installMathfieldValueNormalization();
         MathfieldElement.soundsDirectory = null;
         this.mathfield.addEventListener("input", inputEvent => this.onInput(inputEvent));
         this.mathfield.addEventListener("change", _ => this.onChange());
         this.mathfield.addEventListener("focus", _ => this.onFocus());
+        this.mathfield.addEventListener("blur", _ => this.onBlur());
         this.mathfield.addEventListener("mount", _ => this.onMount());
         div.appendChild(this.mathfield);
         $(div).dxScrollView({
@@ -53,32 +54,49 @@ class ExpressionShape extends BaseShape {
             scrollByContent: true,
             scrollByThumb: true
         });
-        this.mathfield.value = this.normalizeExpression(this.properties.expression ?? "\\displaylines{}");
+        this.mathfield.value = this.flattenNestedDisplaylines(this.properties.expression ?? "\\displaylines{}");
         return foreignObject;
-    }
-
-    installMathfieldValueNormalization() {
-        const mathfieldPrototype = Object.getPrototypeOf(this.mathfield);
-        const valueDescriptor = Object.getOwnPropertyDescriptor(mathfieldPrototype, "value");
-        if (!valueDescriptor?.get || !valueDescriptor?.set)
-            return;
-        Object.defineProperty(this.mathfield, "value", {
-            configurable: true,
-            enumerable: valueDescriptor.enumerable ?? false,
-            get: () => valueDescriptor.get.call(this.mathfield),
-            set: value => valueDescriptor.set.call(this.mathfield, this.normalizeExpression(value))
-        });
     }
 
     onMount() {
         this.removeExpressionInlineShortcuts();
-        this.caretController = new MathfieldCaretController(this.mathfield);
-        this.caretController.install();
+        this.installExpressionKeybindings();
+        this.mathliveController = new MathliveController(this.mathfield);
         this.mathfield.addEventListener("keydown", keydownEvent => this.onKeyDown(keydownEvent), true);
-        this.interceptDeadKeySuperscript();
+        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+        sink.addEventListener('keydown', e => console.log("[ExprShape] SINK keydown", { key: e.key, code: e.code, defaultPrevented: e.defaultPrevented }), true);
+        sink.addEventListener('beforeinput', e => console.log("[ExprShape] SINK beforeinput", { inputType: e.inputType, data: e.data }), true);
+        sink.addEventListener('input', e => console.log("[ExprShape] SINK input", { inputType: e.inputType, data: e.data }), true);
         if (this.board.selection.selectedShape === this)
             this.mathfield.focus();
         this.syncHandwrittenStyle();
+    }
+
+    installExpressionKeybindings() {
+        this.mathfield.keybindings = [
+            ...this.mathfield.keybindings,
+            { key: "shift+[Digit6]", ifMode: "math", command: "moveToSuperscript" },
+            { key: "[BracketLeft]", ifLayout: ["apple.french"], ifMode: "math", command: "moveToSuperscript" }
+        ];
+    }
+
+    getDeadKeyAction(keydownEvent) {
+        if (keydownEvent.altKey) {
+            if (keydownEvent.code === 'BracketLeft')
+                return ["insert", "\\land"];
+            if (keydownEvent.code === 'KeyI')
+                return ["moveToSuperscript"];
+            if (keydownEvent.code === 'KeyN')
+                return ["insert", "\\neg"];
+            return null;
+        }
+        if (keydownEvent.code === 'BracketLeft')
+            return ["moveToSuperscript"];
+        if (keydownEvent.code === 'Quote' && keydownEvent.shiftKey)
+            return ["moveToSuperscript"];
+        if (keydownEvent.code === 'Quote' && !keydownEvent.shiftKey)
+            return ["insert", "\\neg"];
+        return null;
     }
 
     syncHandwrittenStyle() {
@@ -106,6 +124,7 @@ class ExpressionShape extends BaseShape {
         inlineShortcutMap["#"] = "\\sqrt{#0}";
         inlineShortcutMap["%"] = "\\Delta";
         inlineShortcutMap["|"] = "\\left|#0\\right|";
+        inlineShortcutMap["~"] = "\\neg";
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];
@@ -119,11 +138,14 @@ class ExpressionShape extends BaseShape {
         const independentTermName = this.board.calculator.properties?.independent?.name ?? "t";
         const previewTermName = independentTermName === "x" ? "y" : "x";
         return [
-            { name: "Differential", text: `\\frac{d${previewTermName}}{d${independentTermName}}`, insertText: `\\frac{d\\placeholder{}}{d${independentTermName}}`, shortcutMac: "⌥/", shortcutWindows: "Alt+/" },
+            { name: "Differential", text: `\\frac{\\mathrm{d}${previewTermName}}{\\mathrm{d}${independentTermName}}`, insertText: `\\frac{\\mathrm{d}\\placeholder{}}{\\mathrm{d}${independentTermName}}`, shortcutMac: "⌥/", shortcutWindows: "Alt+/" },
             { name: "Power", text: `${previewTermName}^2`, insertText: "\\placeholder{}^2", shortcut: "^" },
             { name: "Squareroot", text: `\\sqrt{${previewTermName}}`, insertText: "\\sqrt{\\placeholder{}}", shortcut: "#" },
             { name: "Index", text: `${previewTermName}_{${independentTermName}-1}`, insertText: `\\placeholder{}_{${independentTermName}-1}`, shortcut: "_" },
             { name: "Condition", text: `\\begin{cases} 2 & ${independentTermName}=0 \\\\ 4 & ${independentTermName}\\ge2\\end{cases}`, insertText: `\\begin{cases}\\placeholder{} & ${independentTermName}=0 \\\\ \\placeholder{} & ${independentTermName}\\ge2\\end{cases}`, shortcut: "\\" },
+            { name: "Not", text: `\\neg ${previewTermName}`, insertText: "\\neg", shortcut: "~" },
+            { name: "Or", text: `${previewTermName}>0 \\lor ${previewTermName}<5`, insertText: "\\lor", shortcutMac: "⌥v", shortcutWindows: "Alt+v" },
+            { name: "And", text: `${previewTermName}>0 \\land ${previewTermName}<5`, insertText: "\\land", shortcutMac: "⌥^", shortcutWindows: "Alt+^" },
             { name: "Floor", text: `\\lfloor ${previewTermName}\\rfloor`, insertText: "\\lfloor\\placeholder{}\\rfloor", shortcutMac: "⌥_", shortcutWindows: "Alt+_" },
             { name: "Ceil", text: `\\lceil ${previewTermName}\\rceil`, insertText: "\\lceil\\placeholder{}\\rceil", shortcutMac: "⌘_", shortcutWindows: "" }
         ];
@@ -149,6 +171,19 @@ class ExpressionShape extends BaseShape {
     }
 
     onKeyDown(keydownEvent) {
+        console.log("[ExprShape] onKeyDown", { key: keydownEvent.key, code: keydownEvent.code, altKey: keydownEvent.altKey, shiftKey: keydownEvent.shiftKey, target: keydownEvent.target.tagName, composed: keydownEvent.composedPath().map(el => el.tagName || el.constructor.name).slice(0, 4) });
+        if (keydownEvent.key === "Dead") {
+            keydownEvent.preventDefault();
+            keydownEvent.stopImmediatePropagation();
+            const action = this.getDeadKeyAction(keydownEvent);
+            console.log("[ExprShape] Dead key action:", action);
+            if (action)
+                this.mathfield.executeCommand(...action);
+            const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+            sink.removeAttribute('contenteditable');
+            requestAnimationFrame(() => sink.setAttribute('contenteditable', 'true'));
+            return;
+        }
         if (keydownEvent.key === "'") {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
@@ -187,90 +222,23 @@ class ExpressionShape extends BaseShape {
             this.insert(this.getTemplateShortcut("Ceil").insertText);
             return;
         }
-        if (this.handleEnterKeydown(keydownEvent))
-            return;
         if (this.handleSpaceKeydown(keydownEvent))
             return;
-        if (this.caretController.handleBackspaceKeydown(keydownEvent))
+        if (this.mathliveController?.handleBackspaceKeydown(keydownEvent))
             return;
-        this.caretController.handleDeleteKeydown(keydownEvent);
-    }
-
-    interceptDeadKeySuperscript() {
-        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.addEventListener('keydown', (keydownEvent) => {
-            this._lastKeydownAlt = keydownEvent.altKey;
-        }, true);
-        sink.addEventListener('compositionstart', () => {
-            this._preCompositionValue = this.mathfield.getValue();
-            this._preCompositionPosition = this.mathfield.position;
-            this._compositionStartedWithAlt = this._lastKeydownAlt;
-        }, true);
-        sink.addEventListener('compositionupdate', (compositionEvent) => {
-            const data = compositionEvent.data;
-            if (data === '^' || data === '\u02C6') {
-                if (this._compositionStartedWithAlt)
-                    this._deadKeyComposition = 'land';
-                else
-                    this._deadKeyComposition = '^';
-            } else if (data === '~') {
-                this._deadKeyComposition = '~';
-            } else if (!this._deadKeyComposition) {
-                this._deadKeyComposition = 'blocked';
-            }
-        }, true);
-    }
-
-    fixDeadKeySuperscript() {
-        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '^', bubbles: true }));
-        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
-        this.mathfield.position = this._preCompositionPosition;
-        this.mathfield.executeCommand("moveToSuperscript");
-    }
-
-    fixDeadKeyLand() {
-        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '^', bubbles: true }));
-        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
-        this.mathfield.position = this._preCompositionPosition;
-        this.mathfield.insert('\\land');
-    }
-
-    fixDeadKeyTilde() {
-        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '~', bubbles: true }));
-        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
-        this.mathfield.position = this._preCompositionPosition;
-        this.mathfield.insert('\\lnot');
-    }
-
-    fixDeadKeyBlocked() {
-        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '', bubbles: true }));
-        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
-        this.mathfield.position = this._preCompositionPosition;
+        this.mathliveController?.handleDeleteKeydown(keydownEvent);
     }
 
     onInput(inputEvent) {
-        if (this._deadKeyComposition === 'land') {
-            this._deadKeyComposition = null;
-            this.fixDeadKeyLand();
-        } else if (this._deadKeyComposition === '^') {
-            this._deadKeyComposition = null;
-            this.fixDeadKeySuperscript();
-        } else if (this._deadKeyComposition === '~') {
-            this._deadKeyComposition = null;
-            this.fixDeadKeyTilde();
-        } else if (this._deadKeyComposition === 'blocked') {
-            this._deadKeyComposition = null;
-            this.fixDeadKeyBlocked();
+        try {
+            this.mathliveController?.handleInput(inputEvent);
+        } catch (_) {
         }
         this.deferFixContentOutsideDisplaylines();
         const shortcutApplied = this.applyExpressionFunctionShortcuts();
         if (!shortcutApplied && this.shouldDeferRelationalShortcut(inputEvent))
             this.deferRelationalShortcutHandling();
-        this.syncExpression();
+        this.syncExpressionFromMathfield();
     }
 
     shouldDeferRelationalShortcut(inputEvent) {
@@ -285,6 +253,23 @@ class ExpressionShape extends BaseShape {
             if (this.applyExpressionFunctionShortcuts())
                 this.syncExpression();
         });
+    }
+
+    flattenNestedDisplaylines(expression) {
+        const prefix = "\\displaylines{";
+        if (!expression?.startsWith(prefix + prefix))
+            return expression;
+        let depth = 0;
+        for (let i = prefix.length; i < expression.length; i++) {
+            if (expression[i] === '{')
+                depth++;
+            else if (expression[i] === '}') {
+                depth--;
+                if (depth === 0)
+                    return i === expression.length - 2 ? expression.slice(prefix.length, -1) : expression;
+            }
+        }
+        return expression;
     }
 
     deferFixContentOutsideDisplaylines() {
@@ -317,13 +302,14 @@ class ExpressionShape extends BaseShape {
         const savedPosition = this.mathfield.position;
         this.mathfield.value = `${prefix}${inside}${leaked}}`;
         this.mathfield.position = Math.min(savedPosition, this.mathfield.lastOffset);
+        this.syncExpressionFromMathfield();
     }
 
     applyExpressionFunctionShortcuts() {
-        if (this.caretController.hasSelection())
+        if (this.mathliveController.hasSelection())
             return false;
-        const caretPosition = this.caretController.getCaretPosition();
-        const groupStart = this.caretController.getCurrentGroupStartPosition();
+        const caretPosition = this.mathliveController.getCaretPosition();
+        const groupStart = this.mathliveController.getCurrentGroupStartPosition();
         const typedLength = caretPosition - groupStart;
         if (typedLength < 2)
             return false;
@@ -347,7 +333,7 @@ class ExpressionShape extends BaseShape {
             const shortcutStart = caretPosition - shortcut.shortcutText.length;
             if (shortcutStart < groupStart)
                 continue;
-            const typedShortcut = this.caretController.getTextRange(shortcutStart, caretPosition);
+            const typedShortcut = this.mathliveController.getTextRange(shortcutStart, caretPosition);
             if (typedShortcut !== shortcut.shortcutText)
                 continue;
             this.mathfield.selection = { ranges: [[shortcutStart, caretPosition]], direction: "forward" };
@@ -369,10 +355,10 @@ class ExpressionShape extends BaseShape {
         const shortcutStart = caretPosition - shortcutText.length;
         if (shortcutStart < groupStart)
             return false;
-        const typedShortcut = this.caretController.getTextRange(shortcutStart, caretPosition);
+        const typedShortcut = this.mathliveController.getTextRange(shortcutStart, caretPosition);
         if (typedShortcut !== shortcutText)
             return false;
-        const previousCharacter = shortcutStart > groupStart ? this.caretController.getTextRange(shortcutStart - 1, shortcutStart) : "";
+        const previousCharacter = shortcutStart > groupStart ? this.mathliveController.getTextRange(shortcutStart - 1, shortcutStart) : "";
         if (previousCharacter === "\\" || this.isAsciiLetter(previousCharacter))
             return false;
         this.mathfield.selection = { ranges: [[shortcutStart, caretPosition]], direction: "forward" };
@@ -435,7 +421,7 @@ class ExpressionShape extends BaseShape {
     handleSpaceKeydown(keydownEvent) {
         if (keydownEvent.key !== " ")
             return false;
-        if (this.caretController.hasSelection())
+        if (this.mathliveController.hasSelection())
             return false;
         keydownEvent.preventDefault();
         keydownEvent.stopImmediatePropagation();
@@ -446,83 +432,29 @@ class ExpressionShape extends BaseShape {
         return true;
     }
 
-    handleEnterKeydown(keydownEvent) {
-        if (keydownEvent.key !== "Enter" || keydownEvent.shiftKey)
-            return false;
-        keydownEvent.preventDefault();
-        keydownEvent.stopImmediatePropagation();
-        this.splitCurrentLineAtCaret();
-        return true;
-    }
-
-    splitCurrentLineAtCaret() {
-        if (this.caretController.hasSelection())
-            this.mathfield.executeCommand("deleteBackward");
-        const caretPosition = this.caretController.getCaretPosition();
-        const lineEnd = this.caretController.getCurrentGroupEndPosition();
-        const currentLineTailLatex = this.caretController.getTextRange(caretPosition, lineEnd);
-        if (lineEnd > caretPosition)
-            this.caretController.deleteTextRange(caretPosition, lineEnd);
-        this.mathfield.executeCommand("addRowAfter");
-        const newLineStartPosition = this.caretController.getCurrentGroupStartPosition();
-        if (currentLineTailLatex)
-            this.mathfield.executeCommand("insert", currentLineTailLatex);
-        this.mathfield.position = newLineStartPosition;
-    }
-
     setProperties(properties) {
         super.setProperties(properties);
         if (properties.expression != undefined) {
-            const normalizedExpression = this.normalizeExpression(properties.expression);
-            this.mathfield.value = normalizedExpression;
-            this.caretController?.ensureCaretIsClamped();
-            this.properties.expression = normalizedExpression;
-            this._committedExpression = normalizedExpression;
+            this.mathfield.value = this.flattenNestedDisplaylines(properties.expression);
+            this.properties.expression = properties.expression;
+            this._committedExpression = properties.expression;
         }
         this.onChange();
     }
 
     syncExpression() {
         cancelAnimationFrame(this._syncFrame);
-        this._syncFrame = requestAnimationFrame(() => this.onChange());
+        this._syncFrame = requestAnimationFrame(() => this.syncExpressionFromMathfield());
     }
 
-    normalizeExpression(expression) {
-        const derivativeNormalizedExpression = this.normalizeDerivativeFractions(expression);
-        return this.normalizeRelationalAliases(derivativeNormalizedExpression);
-    }
-
-    normalizeDerivativeFractions(expression) {
-        return expression.replace(/\\frac\{d([^{}]+)\}\{d([^{}]+)\}/g, (_match, numeratorVariable, denominatorVariable) => `\\frac{\\mathrm{d}${numeratorVariable}}{\\mathrm{d}${denominatorVariable}}`);
-    }
-
-    normalizeRelationalAliases(expression) {
-        return expression
-            .replaceAll(">=", "\\ge ")
-            .replaceAll("=>", "\\ge ")
-            .replaceAll("<=", "\\le ")
-            .replaceAll("=<", "\\le ")
-            .replaceAll("<>", "\\ne ");
-    }
-
-    applyNormalizedExpressionIfNeeded() {
+    syncExpressionFromMathfield() {
         const expression = this.mathfield.getValue();
-        const normalizedExpression = this.normalizeExpression(expression);
-        if (normalizedExpression === expression)
-            return expression;
-        const savedPosition = this.mathfield.position;
-        this.mathfield.value = normalizedExpression;
-        this.mathfield.position = Math.min(savedPosition, this.mathfield.lastOffset);
-        return normalizedExpression;
-    }
-
-    onChange() {
-        const expression = this.applyNormalizedExpressionIfNeeded();
         if (expression === this.properties.expression)
             return;
         if (this._committedExpression === undefined)
             this._committedExpression = this.properties.expression;
         this.properties.expression = expression;
+        this.dispatchEvent("changed", { expression: this.properties.expression });
         clearTimeout(this._changeTimer);
         this._changeTimer = setTimeout(() => {
             const previousExpression = this._committedExpression;
@@ -534,8 +466,11 @@ class ExpressionShape extends BaseShape {
                 command.previousProperties.expression = previousExpression;
                 this.board.invoker.record(command);
             }
-            this.dispatchEvent("changed", { expression: this.properties.expression });
         }, 300);
+    }
+
+    onChange() {
+        this.syncExpressionFromMathfield();
     }
 
     onFocus() {
@@ -545,6 +480,9 @@ class ExpressionShape extends BaseShape {
             this.focusDispatchFrame = null;
             this.dispatchEvent("focused", {});
         });
+    }
+
+    onBlur() {
     }
 
     enterEditMode() {

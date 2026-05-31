@@ -27,9 +27,9 @@ Object.assign(ExpressionShape.prototype, {
         return items;
     },
     createShortcutsPickerButton() {
-        const baseItemWidth = 88;
-        const baseItemHeight = 56;
-        const columns = 4;
+        const baseItemWidth = 110;
+        const baseItemHeight = 70;
+        const columns = 3;
         const itemMargin = 2;
         const horizontalStep = baseItemWidth + itemMargin * 2;
         const popupPadding = 6;
@@ -50,9 +50,9 @@ Object.assign(ExpressionShape.prototype, {
         return this._shortcutsPicker;
     },
     createShortcutsPickerGrid(contentElement) {
-        const baseItemWidth = 88;
-        const baseItemHeight = 56;
-        const columns = 4;
+        const baseItemWidth = 110;
+        const baseItemHeight = 70;
+        const columns = 3;
         const itemMargin = 2;
         const horizontalStep = baseItemWidth + itemMargin * 2;
         const verticalStep = baseItemHeight + itemMargin * 2;

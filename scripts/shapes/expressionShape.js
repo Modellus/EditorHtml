@@ -33,9 +33,9 @@ class ExpressionShape extends BaseShape {
     }
 
     createShortcutsPickerButton() {
-        const baseItemWidth = 88;
-        const baseItemHeight = 56;
-        const columns = 4;
+        const baseItemWidth = 110;
+        const baseItemHeight = 70;
+        const columns = 3;
         const itemMargin = 2;
         const horizontalStep = baseItemWidth + itemMargin * 2;
         const popupPadding = 6;
@@ -57,17 +57,20 @@ class ExpressionShape extends BaseShape {
     }
 
     createShortcutsPickerGrid(contentElement) {
-        const baseItemWidth = 88;
-        const baseItemHeight = 56;
-        const columns = 4;
+        const baseItemWidth = 110;
+        const baseItemHeight = 70;
+        const columns = 3;
         const itemMargin = 2;
         const horizontalStep = baseItemWidth + itemMargin * 2;
         const verticalStep = baseItemHeight + itemMargin * 2;
         const shortcutItems = [
-            { name: "Differential", text: "\\frac{dx}{dt}" },
+            { name: "Differential", text: "\\frac{\\mathrm{d}x}{\\mathrm{d}t}" },
             { name: "Power", text: "x^2" },
             { name: "Squareroot", text: "\\sqrt{x}" },
             { name: "Index", text: "x_{t-1}" },
+            { name: "Not", text: "\\neg x" },
+            { name: "Or", text: "x>0 \\lor x<5" },
+            { name: "And", text: "x>0 \\land x<5" },
             { name: "Condition", text: "\\begin{cases}1 & t=0 \\\\ y & t\\ge2\\end{cases}" }
         ];
         const rows = Math.ceil(shortcutItems.length / columns);
@@ -162,13 +165,40 @@ class ExpressionShape extends BaseShape {
 
     onMount() {
         this.removeExpressionInlineShortcuts();
+        this.installExpressionKeybindings();
         this.caretController = new MathfieldCaretController(this.mathfield);
         this.caretController.install();
         this.mathfield.addEventListener("keydown", keydownEvent => this.onKeyDown(keydownEvent), true);
-        this.interceptDeadKeySuperscript();
         if (this.board.selection.selectedShape === this)
             this.mathfield.focus();
         this.syncHandwrittenStyle();
+    }
+
+    installExpressionKeybindings() {
+        this.mathfield.keybindings = [
+            ...this.mathfield.keybindings,
+            { key: "shift+[Digit6]", ifMode: "math", command: "moveToSuperscript" },
+            { key: "[BracketLeft]", ifLayout: ["apple.french"], ifMode: "math", command: "moveToSuperscript" }
+        ];
+    }
+
+    getDeadKeyAction(keydownEvent) {
+        if (keydownEvent.altKey) {
+            if (keydownEvent.code === 'BracketLeft')
+                return ["insert", "\\land"];
+            if (keydownEvent.code === 'KeyI')
+                return ["moveToSuperscript"];
+            if (keydownEvent.code === 'KeyN')
+                return ["insert", "\\neg"];
+            return null;
+        }
+        if (keydownEvent.code === 'BracketLeft')
+            return ["moveToSuperscript"];
+        if (keydownEvent.code === 'Quote' && keydownEvent.shiftKey)
+            return ["moveToSuperscript"];
+        if (keydownEvent.code === 'Quote' && !keydownEvent.shiftKey)
+            return ["insert", "\\neg"];
+        return null;
     }
 
     syncHandwrittenStyle() {
@@ -196,6 +226,7 @@ class ExpressionShape extends BaseShape {
         inlineShortcutMap["#"] = "\\sqrt{#0}";
         inlineShortcutMap["%"] = "\\Delta";
         inlineShortcutMap["|"] = "\\left|#0\\right|";
+        inlineShortcutMap["~"] = "\\neg";
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];
@@ -206,6 +237,17 @@ class ExpressionShape extends BaseShape {
     }
 
     onKeyDown(keydownEvent) {
+        if (keydownEvent.key === "Dead") {
+            keydownEvent.preventDefault();
+            keydownEvent.stopImmediatePropagation();
+            const action = this.getDeadKeyAction(keydownEvent);
+            if (action)
+                this.mathfield.executeCommand(...action);
+            const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+            sink.removeAttribute('contenteditable');
+            requestAnimationFrame(() => sink.setAttribute('contenteditable', 'true'));
+            return;
+        }
         if (keydownEvent.key === "'") {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
@@ -226,8 +268,6 @@ class ExpressionShape extends BaseShape {
                 return;
             }
         }
-        if (this.handleEnterKeydown(keydownEvent))
-            return;
         if (this.handleSpaceKeydown(keydownEvent))
             return;
         if (this.caretController.handleBackspaceKeydown(keydownEvent))
@@ -235,76 +275,8 @@ class ExpressionShape extends BaseShape {
         this.caretController.handleDeleteKeydown(keydownEvent);
     }
 
-    interceptDeadKeySuperscript() {
-        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.addEventListener('keydown', (keydownEvent) => {
-            this._lastKeydownAlt = keydownEvent.altKey;
-        }, true);
-        sink.addEventListener('compositionstart', () => {
-            this._preCompositionValue = this.mathfield.getValue();
-            this._preCompositionPosition = this.mathfield.position;
-            this._compositionStartedWithAlt = this._lastKeydownAlt;
-        }, true);
-        sink.addEventListener('compositionupdate', (compositionEvent) => {
-            const data = compositionEvent.data;
-            if (data === '^' || data === '\u02C6') {
-                if (this._compositionStartedWithAlt)
-                    this._deadKeyComposition = 'land';
-                else
-                    this._deadKeyComposition = '^';
-            } else if (data === '~') {
-                this._deadKeyComposition = '~';
-            } else if (!this._deadKeyComposition) {
-                this._deadKeyComposition = 'blocked';
-            }
-        }, true);
-    }
-
-    fixDeadKeySuperscript() {
-        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '^', bubbles: true }));
-        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
-        this.mathfield.position = this._preCompositionPosition;
-        this.mathfield.executeCommand("moveToSuperscript");
-    }
-
-    fixDeadKeyLand() {
-        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '^', bubbles: true }));
-        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
-        this.mathfield.position = this._preCompositionPosition;
-        this.mathfield.insert('\\land');
-    }
-
-    fixDeadKeyTilde() {
-        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '~', bubbles: true }));
-        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
-        this.mathfield.position = this._preCompositionPosition;
-        this.mathfield.insert('\\lnot');
-    }
-
-    fixDeadKeyBlocked() {
-        const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.dispatchEvent(new CompositionEvent('compositionend', { data: '', bubbles: true }));
-        this.mathfield.setValue(this._preCompositionValue, { silenceNotifications: true });
-        this.mathfield.position = this._preCompositionPosition;
-    }
-
     onInput(inputEvent) {
-        if (this._deadKeyComposition === 'land') {
-            this._deadKeyComposition = null;
-            this.fixDeadKeyLand();
-        } else if (this._deadKeyComposition === '^') {
-            this._deadKeyComposition = null;
-            this.fixDeadKeySuperscript();
-        } else if (this._deadKeyComposition === '~') {
-            this._deadKeyComposition = null;
-            this.fixDeadKeyTilde();
-        } else if (this._deadKeyComposition === 'blocked') {
-            this._deadKeyComposition = null;
-            this.fixDeadKeyBlocked();
-        }
+        this.mathliveController?.handleInput(inputEvent);
         this.deferFixContentOutsideDisplaylines();
         const shortcutApplied = this.applyExpressionFunctionShortcuts();
         if (!shortcutApplied && this.shouldDeferRelationalShortcut(inputEvent))
@@ -480,30 +452,6 @@ class ExpressionShape extends BaseShape {
         return true;
     }
 
-    handleEnterKeydown(keydownEvent) {
-        if (keydownEvent.key !== "Enter" || keydownEvent.shiftKey)
-            return false;
-        keydownEvent.preventDefault();
-        keydownEvent.stopImmediatePropagation();
-        this.splitCurrentLineAtCaret();
-        return true;
-    }
-
-    splitCurrentLineAtCaret() {
-        if (this.caretController.hasSelection())
-            this.mathfield.executeCommand("deleteBackward");
-        const caretPosition = this.caretController.getCaretPosition();
-        const lineEnd = this.caretController.getCurrentGroupEndPosition();
-        const currentLineTailLatex = this.caretController.getTextRange(caretPosition, lineEnd);
-        if (lineEnd > caretPosition)
-            this.caretController.deleteTextRange(caretPosition, lineEnd);
-        this.mathfield.executeCommand("addRowAfter");
-        const newLineStartPosition = this.caretController.getCurrentGroupStartPosition();
-        if (currentLineTailLatex)
-            this.mathfield.executeCommand("insert", currentLineTailLatex);
-        this.mathfield.position = newLineStartPosition;
-    }
-
     setProperties(properties) {
         super.setProperties(properties);
         if (properties.expression != undefined) {
@@ -522,8 +470,26 @@ class ExpressionShape extends BaseShape {
     }
 
     normalizeExpression(expression) {
-        const derivativeNormalizedExpression = this.normalizeDerivativeFractions(expression);
+        const flattenedExpression = this.flattenNestedDisplaylines(expression);
+        const derivativeNormalizedExpression = this.normalizeDerivativeFractions(flattenedExpression);
         return this.normalizeRelationalAliases(derivativeNormalizedExpression);
+    }
+
+    flattenNestedDisplaylines(expression) {
+        const prefix = "\\displaylines{";
+        if (!expression?.startsWith(prefix + prefix))
+            return expression;
+        let depth = 0;
+        for (let i = prefix.length; i < expression.length; i++) {
+            if (expression[i] === '{')
+                depth++;
+            else if (expression[i] === '}') {
+                depth--;
+                if (depth === 0)
+                    return i === expression.length - 2 ? expression.slice(prefix.length, -1) : expression;
+            }
+        }
+        return expression;
     }
 
     normalizeDerivativeFractions(expression) {

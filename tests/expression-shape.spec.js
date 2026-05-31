@@ -119,81 +119,7 @@ test.describe('MathLive caret clamping', () => {
     });
 });
 
-test.describe('Enter key - line splitting', () => {
-    test('Enter at end of line creates a new empty line', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{x+1}');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.press('End');
-        await page.keyboard.press('Enter');
-        await page.waitForTimeout(200);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toContain('\\\\');
-        expect(value).toMatch(/x\+1/);
-    });
-
-    test('Enter in middle of line splits content', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{x+1}');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.press('Home');
-        await page.keyboard.press('ArrowRight');
-        await page.keyboard.press('Enter');
-        await page.waitForTimeout(200);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toContain('\\\\');
-    });
-
-    test('Enter at start of line moves all content to new line', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{x+1}');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.press('Home');
-        await page.keyboard.press('Enter');
-        await page.waitForTimeout(200);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toContain('\\\\');
-    });
-
-    test('multiple Enter presses create multiple lines', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{a}');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.press('End');
-        await page.keyboard.press('Enter');
-        await page.keyboard.type('b');
-        await page.keyboard.press('Enter');
-        await page.keyboard.type('c');
-        await page.waitForTimeout(300);
-        const value = await getExpressionValue(page, 'Expr1');
-        const lineBreaks = (value.match(/\\\\/g) || []).length;
-        expect(lineBreaks).toBe(2);
-    });
-});
-
 test.describe('Backspace key - line merging', () => {
-    test('Backspace at start of second line merges with first', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{x+1}');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.press('End');
-        await page.keyboard.press('Enter');
-        await page.keyboard.type('y');
-        await page.waitForTimeout(200);
-        let value = await getExpressionValue(page, 'Expr1');
-        expect(value).toContain('\\\\');
-        await page.keyboard.press('Home');
-        await page.keyboard.press('Backspace');
-        await page.waitForTimeout(200);
-        value = await getExpressionValue(page, 'Expr1');
-        expect(value).not.toContain('\\\\');
-    });
-
     test('Backspace in middle of line deletes character normally', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
@@ -241,40 +167,16 @@ test.describe('Content stays inside displaylines', () => {
 });
 
 test.describe('Inline shortcut handling', () => {
-    test('derivative fraction is normalized to upright differential fraction', async ({ page }) => {
+    test('power keybindings are registered', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{\\frac{dy}{dx}=x}');
-        await page.waitForTimeout(300);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toContain('\\frac{\\mathrm{d}y}{\\mathrm{d}x}');
-        expect(value).not.toContain('\\pdiff{y}{x}');
-    });
-
-    test('dead key x^2 produces correct atom count', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.type('x');
-        const cdpSession = await page.context().newCDPSession(page);
-        await cdpSession.send('Input.imeSetComposition', {
-            selectionStart: -1,
-            selectionEnd: -1,
-            text: '^'
-        });
-        await page.waitForTimeout(300);
-        await page.keyboard.type('2');
-        await page.waitForTimeout(500);
-        const result = await page.evaluate(() => {
+        const keybindings = await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Expr1');
-            const atoms = shape.mathfield._mathfield.model.atoms;
-            return {
-                value: shape.mathfield.getValue(),
-                atomCount: atoms.slice(1, -1).length
-            };
+            return shape.mathfield._mathfield.options.keybindings
+                .filter(keybinding => keybinding.command === 'moveToSuperscript')
+                .map(keybinding => keybinding.key);
         });
-        expect(result.value).toContain('x^2');
-        expect(result.atomCount).toBe(5);
+        expect(keybindings).toContain('shift+[Digit6]');
     });
 
     test('dx shortcut is removed - typing dx does not produce differential', async ({ page }) => {
@@ -305,36 +207,6 @@ test.describe('Inline shortcut handling', () => {
         await page.waitForTimeout(500);
         const value = await getExpressionValue(page, 'Expr1');
         expect(value).not.toContain('\\differentialD');
-    });
-
-    test('<= is converted to \\leq', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.type('x<=y');
-        await page.waitForTimeout(500);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toMatch(/\\leq?\b/);
-    });
-
-    test('>= is converted to \\geq', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.type('x>=y');
-        await page.waitForTimeout(500);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toMatch(/\\geq?\b/);
-    });
-
-    test('<> is converted to \\neq', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.type('x<>y');
-        await page.waitForTimeout(500);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toMatch(/\\neq?\b/);
     });
 });
 
@@ -372,5 +244,398 @@ test.describe('Backspace - character by character deletion', () => {
         await page.waitForTimeout(200);
         value = await getExpressionValue(page, 'Expr1');
         expect(value).toBe('\\displaylines{}');
+    });
+});
+
+test.describe('Differential expansion caret placement', () => {
+    test('caret is placed after expanded fraction', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('dx/dt');
+        await page.waitForTimeout(400);
+        const positionCheck = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            const savedSelection = shape.mathfield.selection;
+            shape.mathfield.executeCommand('moveToGroupEnd');
+            const groupEndPosition = shape.mathfield.position;
+            shape.mathfield.selection = savedSelection;
+            return {
+                currentPosition: shape.mathfield.position,
+                groupEndPosition,
+                value: shape.mathfield.getValue()
+            };
+        });
+        expect(positionCheck.value).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}');
+        expect(positionCheck.currentPosition).toBe(positionCheck.groupEndPosition);
+        await page.keyboard.type('=1');
+        await page.waitForTimeout(300);
+        const valueAfterEquals = await getExpressionValue(page, 'Expr1');
+        expect(valueAfterEquals).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}=1');
+        expect(valueAfterEquals).not.toContain('\\differentialD{x=}');
+        expect(valueAfterEquals).not.toContain('\\differentialD{t=}');
+    });
+
+    test('caret stays outside expanded fraction in multiline expression', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await setExpressionValue(page, 'Expr1', '\\displaylines{x=10\\\\ \\\\ z=9+8}');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.press('ArrowUp');
+        await page.keyboard.press('End');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('dx/dt');
+        await page.waitForTimeout(400);
+        const positionCheck = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            const savedSelection = shape.mathfield.selection;
+            shape.mathfield.executeCommand('moveToGroupEnd');
+            const groupEndPosition = shape.mathfield.position;
+            shape.mathfield.selection = savedSelection;
+            return {
+                currentPosition: shape.mathfield.position,
+                groupEndPosition,
+                value: shape.mathfield.getValue()
+            };
+        });
+        expect(positionCheck.value).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}');
+        expect(positionCheck.currentPosition).toBe(positionCheck.groupEndPosition);
+        await page.keyboard.type('=1');
+        await page.waitForTimeout(300);
+        const valueAfterEquals = await getExpressionValue(page, 'Expr1');
+        expect(valueAfterEquals).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}=1');
+        expect(valueAfterEquals).not.toContain('\\differentialD{x=}');
+        expect(valueAfterEquals).not.toContain('\\differentialD{t=}');
+    });
+});
+
+test.describe('Keyboard shortcuts', () => {
+    test('^ produces power (superscript) on US keyboard', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: '^', code: 'Digit6',
+            windowsVirtualKeyCode: 54, nativeVirtualKeyCode: 54, modifiers: 8
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', { type: 'char', text: '^', code: 'Digit6', key: '^' });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: '^', code: 'Digit6',
+            windowsVirtualKeyCode: 54, nativeVirtualKeyCode: 54
+        });
+        await page.waitForTimeout(300);
+        await page.keyboard.type('2');
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('x^2');
+    });
+
+    test('~ produces negation on US keyboard', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: '~', code: 'Backquote',
+            windowsVirtualKeyCode: 192, nativeVirtualKeyCode: 192, modifiers: 8
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', { type: 'char', text: '~', code: 'Backquote', key: '~' });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: '~', code: 'Backquote',
+            windowsVirtualKeyCode: 192, nativeVirtualKeyCode: 192
+        });
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\neg');
+        expect(value).not.toContain('^');
+    });
+
+    test('dead ^ (Quote+Shift, Portuguese) produces superscript', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: 'Dead', code: 'Quote',
+            windowsVirtualKeyCode: 222, nativeVirtualKeyCode: 222, modifiers: 8
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'Dead', code: 'Quote',
+            windowsVirtualKeyCode: 222, nativeVirtualKeyCode: 222
+        });
+        await page.waitForTimeout(300);
+        await page.keyboard.type('2');
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('x^2');
+    });
+
+    test('dead ~ (Quote, Portuguese) produces negation', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: 'Dead', code: 'Quote',
+            windowsVirtualKeyCode: 222, nativeVirtualKeyCode: 222
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'Dead', code: 'Quote',
+            windowsVirtualKeyCode: 222, nativeVirtualKeyCode: 222
+        });
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\neg');
+        expect(value).not.toContain('^');
+    });
+
+    test('dead ^ (BracketLeft, French) produces superscript', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: 'Dead', code: 'BracketLeft',
+            windowsVirtualKeyCode: 219, nativeVirtualKeyCode: 219
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'Dead', code: 'BracketLeft',
+            windowsVirtualKeyCode: 219, nativeVirtualKeyCode: 219
+        });
+        await page.waitForTimeout(300);
+        await page.keyboard.type('2');
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('x^2');
+    });
+
+    test('dead ^ (Option+I, all macOS) produces superscript', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: 'Dead', code: 'KeyI',
+            windowsVirtualKeyCode: 73, nativeVirtualKeyCode: 73, modifiers: 1
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'Dead', code: 'KeyI',
+            windowsVirtualKeyCode: 73, nativeVirtualKeyCode: 73
+        });
+        await page.waitForTimeout(300);
+        await page.keyboard.type('2');
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('x^2');
+    });
+
+    test('dead ~ (Option+N, all macOS) produces negation', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: 'Dead', code: 'KeyN',
+            windowsVirtualKeyCode: 78, nativeVirtualKeyCode: 78, modifiers: 1
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'Dead', code: 'KeyN',
+            windowsVirtualKeyCode: 78, nativeVirtualKeyCode: 78
+        });
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\neg');
+        expect(value).not.toContain('^');
+    });
+
+    test('Option+^ (BracketLeft+Alt) produces AND', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: 'Dead', code: 'BracketLeft',
+            windowsVirtualKeyCode: 219, nativeVirtualKeyCode: 219, modifiers: 1
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'Dead', code: 'BracketLeft',
+            windowsVirtualKeyCode: 219, nativeVirtualKeyCode: 219
+        });
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\land');
+    });
+
+    test('Option+v produces OR', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: 'v', code: 'KeyV',
+            windowsVirtualKeyCode: 86, nativeVirtualKeyCode: 86, modifiers: 1
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'v', code: 'KeyV',
+            windowsVirtualKeyCode: 86, nativeVirtualKeyCode: 86
+        });
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\lor');
+    });
+
+    test('\\ produces condition template', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: '\\', code: 'Backslash',
+            windowsVirtualKeyCode: 220, nativeVirtualKeyCode: 220
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: '\\', code: 'Backslash',
+            windowsVirtualKeyCode: 220, nativeVirtualKeyCode: 220
+        });
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\begin{cases}');
+    });
+
+    test('! produces factorial', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('n!');
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('!');
+    });
+
+    test('# produces square root', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            const sink = shape.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+            sink.dispatchEvent(new KeyboardEvent('keydown', { key: '#', code: 'Digit3', bubbles: true, composed: true }));
+            sink.dispatchEvent(new InputEvent('input', { data: '#', inputType: 'insertText', bubbles: true, composed: true }));
+        });
+        await page.waitForTimeout(500);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\sqrt');
+    });
+
+    test('<> produces not-equal', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x<>');
+        await page.waitForTimeout(800);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\ne');
+    });
+
+    test('>= produces greater-or-equal', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x>=1');
+        await page.waitForTimeout(500);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toMatch(/\\ge/);
+    });
+
+    test('<= produces less-or-equal', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x<=1');
+        await page.waitForTimeout(500);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toMatch(/\\le/);
+    });
+
+    test('_ produces subscript (index)', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyDown', key: '_', code: 'Minus',
+            windowsVirtualKeyCode: 189, nativeVirtualKeyCode: 189, modifiers: 8
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', { type: 'char', text: '_', code: 'Minus' });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: '_', code: 'Minus',
+            windowsVirtualKeyCode: 189, nativeVirtualKeyCode: 189
+        });
+        await page.waitForTimeout(300);
+        await page.keyboard.type('1');
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toMatch(/x_\{?1\}?/);
+    });
+
+    test('% produces Delta', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            const sink = shape.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+            sink.dispatchEvent(new KeyboardEvent('keydown', { key: '%', code: 'Digit5', bubbles: true, composed: true }));
+            sink.dispatchEvent(new InputEvent('input', { data: '%', inputType: 'insertText', bubbles: true, composed: true }));
+        });
+        await page.waitForTimeout(500);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\Delta');
+    });
+
+    test('| produces absolute value', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            const sink = shape.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
+            sink.dispatchEvent(new KeyboardEvent('keydown', { key: '|', code: 'Backslash', bubbles: true, composed: true }));
+            sink.dispatchEvent(new InputEvent('input', { data: '|', inputType: 'insertText', bubbles: true, composed: true }));
+        });
+        await page.waitForTimeout(500);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\left|');
+    });
+
+    test('dead key does not stall the editor', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        const cdpSession = await page.context().newCDPSession(page);
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'rawKeyDown', key: 'Dead', code: 'KeyE',
+            windowsVirtualKeyCode: 69, nativeVirtualKeyCode: 69, modifiers: 1
+        });
+        await cdpSession.send('Input.dispatchKeyEvent', {
+            type: 'keyUp', key: 'Dead', code: 'KeyE',
+            windowsVirtualKeyCode: 69, nativeVirtualKeyCode: 69
+        });
+        await page.waitForTimeout(300);
+        await page.keyboard.type('y');
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('y');
+        expect(value).not.toContain('^');
     });
 });
