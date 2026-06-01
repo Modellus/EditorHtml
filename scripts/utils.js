@@ -106,76 +106,20 @@ class Utils {
         return Math.round(value * factor) / factor;
     }
 
-    static getContrastColor(color) {
-        const rgb = Utils.parseColorToRgb(color);
-        if (!rgb)
-            return "#ffffff";
-        const linearRed = Utils.toLinearColorChannel(rgb.red / 255);
-        const linearGreen = Utils.toLinearColorChannel(rgb.green / 255);
-        const linearBlue = Utils.toLinearColorChannel(rgb.blue / 255);
-        const luminance = 0.2126 * linearRed + 0.7152 * linearGreen + 0.0722 * linearBlue;
-        const contrastWithBlack = (luminance + 0.05) / 0.05;
-        const contrastWithWhite = 1.05 / (luminance + 0.05);
-        if (contrastWithWhite > contrastWithBlack)
-            return "#ffffff";
-        return "#000000";
-    }
-
-    static parseColorToRgb(colorValue) {
-        const normalizedValue = String(colorValue ?? "").trim();
-        if (normalizedValue === "")
-            return null;
-        if (normalizedValue.startsWith("#"))
-            return Utils.parseHexColor(normalizedValue);
-        if (normalizedValue.startsWith("rgb"))
-            return Utils.parseRgbColor(normalizedValue);
-        return null;
-    }
-
-    static parseHexColor(colorValue) {
-        const hexValue = colorValue.slice(1);
-        if (hexValue.length === 3 || hexValue.length === 4)
-            return {
-                red: parseInt(hexValue[0] + hexValue[0], 16),
-                green: parseInt(hexValue[1] + hexValue[1], 16),
-                blue: parseInt(hexValue[2] + hexValue[2], 16)
-            };
-        if (hexValue.length === 6 || hexValue.length === 8)
-            return {
-                red: parseInt(hexValue.slice(0, 2), 16),
-                green: parseInt(hexValue.slice(2, 4), 16),
-                blue: parseInt(hexValue.slice(4, 6), 16)
-            };
-        return null;
-    }
-
-    static parseRgbColor(colorValue) {
-        const match = colorValue.match(/^rgba?\(([^)]+)\)$/i);
-        if (!match)
-            return null;
-        const channelValues = match[1].split(",").map(value => Number(value.trim()));
-        if (channelValues.length < 3)
-            return null;
-        const red = Utils.clampColorChannel(channelValues[0]);
-        const green = Utils.clampColorChannel(channelValues[1]);
-        const blue = Utils.clampColorChannel(channelValues[2]);
-        if (red == null || green == null || blue == null)
-            return null;
-        return { red, green, blue };
-    }
-
-    static clampColorChannel(value) {
-        if (!Number.isFinite(value))
-            return null;
-        if (value < 0)
-            return 0;
-        if (value > 255)
-            return 255;
-        return Math.round(value);
+    static getContrastColor(backgroundHex) {
+        const hex = backgroundHex.replace("#", "");
+        const red = parseInt(hex.substring(0, 2), 16) / 255;
+        const green = parseInt(hex.substring(2, 4), 16) / 255;
+        const blue = parseInt(hex.substring(4, 6), 16) / 255;
+        const luminance =
+            0.2126 * Utils.toLinearColorChannel(red) +
+            0.7152 * Utils.toLinearColorChannel(green) +
+            0.0722 * Utils.toLinearColorChannel(blue);
+        return luminance <= 0.4 ? "#ffffff" : "#000000";
     }
 
     static toLinearColorChannel(channelValue) {
-        if (channelValue <= 0.03928)
+        if (channelValue <= 0.04045)
             return channelValue / 12.92;
         return ((channelValue + 0.055) / 1.055) ** 2.4;
     }
