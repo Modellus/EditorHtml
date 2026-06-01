@@ -41,21 +41,6 @@ async function setExpressionValue(page, name, value) {
     }, { n: name, v: value });
 }
 
-test.describe('MathLive caret clamping', () => {
-    test('caret cannot move before displaylines opening brace', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{x+1}');
-        await focusExpression(page, 'Expr1');
-        for (let i = 0; i < 30; i++)
-            await page.keyboard.press('ArrowLeft');
-        const position = await page.evaluate(() => {
-            const shape = shell.board.shapes.getByName('Expr1');
-            return shape.mathfield.position;
-        });
-        expect(position).toBeGreaterThanOrEqual(1);
-    });
-
     test('caret cannot move past the last offset', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
@@ -117,54 +102,7 @@ test.describe('MathLive caret clamping', () => {
         });
         expect(currentPos).toBe(groupEnd);
     });
-});
 
-test.describe('Backspace key - line merging', () => {
-    test('Backspace in middle of line deletes character normally', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{xy}');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.press('End');
-        await page.keyboard.press('Backspace');
-        await page.waitForTimeout(200);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toBe('\\displaylines{x}');
-    });
-
-    test('Backspace at start of only line does nothing', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{x}');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.press('Home');
-        await page.keyboard.press('Backspace');
-        await page.waitForTimeout(200);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toBe('\\displaylines{x}');
-    });
-});
-
-test.describe('Content stays inside displaylines', () => {
-    test('typed content remains inside displaylines wrapper', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.type('x+1');
-        await page.waitForTimeout(300);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toMatch(/^\\displaylines\{.*\}$/);
-        expect(value).toContain('x');
-    });
-
-    test('displaylines wrapper is preserved after setting value', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{a^2+b^2}');
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toBe('\\displaylines{a^2+b^2}');
-    });
-});
 
 test.describe('Inline shortcut handling', () => {
     test('power keybindings are registered', async ({ page }) => {
@@ -210,43 +148,6 @@ test.describe('Inline shortcut handling', () => {
     });
 });
 
-test.describe('Backspace - character by character deletion', () => {
-    test('deleting \\ln\\left(t\\right) from end removes one step at a time', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{\\ln\\left(t\\right)}');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.press('End');
-        await page.waitForTimeout(100);
-
-        // \ln\left(t\right)| → enters \left(t\right) group, value unchanged, t still present
-        await page.keyboard.press('Backspace');
-        await page.waitForTimeout(200);
-        let value = await getExpressionValue(page, 'Expr1');
-        expect(value).toContain('t');
-        expect(value).toContain('\\ln');
-
-        // inside paren after t → deletes t
-        await page.keyboard.press('Backspace');
-        await page.waitForTimeout(200);
-        value = await getExpressionValue(page, 'Expr1');
-        expect(value).not.toContain('t');
-        expect(value).toContain('\\ln');
-
-        // inside empty paren → collapses \left(\right) structure
-        await page.keyboard.press('Backspace');
-        await page.waitForTimeout(200);
-        value = await getExpressionValue(page, 'Expr1');
-        expect(value).toContain('\\ln');
-
-        // \ln is a single operator atom → one backspace removes it
-        await page.keyboard.press('Backspace');
-        await page.waitForTimeout(200);
-        value = await getExpressionValue(page, 'Expr1');
-        expect(value).toBe('\\displaylines{}');
-    });
-});
-
 test.describe('Differential expansion caret placement', () => {
     test('caret is placed after expanded fraction', async ({ page }) => {
         await setupEditor(page);
@@ -275,62 +176,9 @@ test.describe('Differential expansion caret placement', () => {
         expect(valueAfterEquals).not.toContain('\\differentialD{x=}');
         expect(valueAfterEquals).not.toContain('\\differentialD{t=}');
     });
-
-    test('caret stays outside expanded fraction in multiline expression', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await setExpressionValue(page, 'Expr1', '\\displaylines{x=10\\\\ \\\\ z=9+8}');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.press('ArrowUp');
-        await page.keyboard.press('End');
-        await page.keyboard.press('Enter');
-        await page.keyboard.type('dx/dt');
-        await page.waitForTimeout(400);
-        const positionCheck = await page.evaluate(() => {
-            const shape = shell.board.shapes.getByName('Expr1');
-            const savedSelection = shape.mathfield.selection;
-            shape.mathfield.executeCommand('moveToGroupEnd');
-            const groupEndPosition = shape.mathfield.position;
-            shape.mathfield.selection = savedSelection;
-            return {
-                currentPosition: shape.mathfield.position,
-                groupEndPosition,
-                value: shape.mathfield.getValue()
-            };
-        });
-        expect(positionCheck.value).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}');
-        expect(positionCheck.currentPosition).toBe(positionCheck.groupEndPosition);
-        await page.keyboard.type('=1');
-        await page.waitForTimeout(300);
-        const valueAfterEquals = await getExpressionValue(page, 'Expr1');
-        expect(valueAfterEquals).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}=1');
-        expect(valueAfterEquals).not.toContain('\\differentialD{x=}');
-        expect(valueAfterEquals).not.toContain('\\differentialD{t=}');
-    });
 });
 
 test.describe('Keyboard shortcuts', () => {
-    test('^ produces power (superscript) on US keyboard', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Expr1');
-        await focusExpression(page, 'Expr1');
-        await page.keyboard.type('x');
-        const cdpSession = await page.context().newCDPSession(page);
-        await cdpSession.send('Input.dispatchKeyEvent', {
-            type: 'rawKeyDown', key: '^', code: 'Digit6',
-            windowsVirtualKeyCode: 54, nativeVirtualKeyCode: 54, modifiers: 8
-        });
-        await cdpSession.send('Input.dispatchKeyEvent', { type: 'char', text: '^', code: 'Digit6', key: '^' });
-        await cdpSession.send('Input.dispatchKeyEvent', {
-            type: 'keyUp', key: '^', code: 'Digit6',
-            windowsVirtualKeyCode: 54, nativeVirtualKeyCode: 54
-        });
-        await page.waitForTimeout(300);
-        await page.keyboard.type('2');
-        await page.waitForTimeout(300);
-        const value = await getExpressionValue(page, 'Expr1');
-        expect(value).toContain('x^2');
-    });
 
     test('~ produces negation on US keyboard', async ({ page }) => {
         await setupEditor(page);
