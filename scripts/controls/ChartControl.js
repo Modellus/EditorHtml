@@ -1188,16 +1188,42 @@ class ChartControl {
         const yPosition = yScale(nearestPoint.yValue);
         if (!Number.isFinite(xPosition) || !Number.isFinite(yPosition))
             return;
-        let markerMarkup = `
+        this.appendSvgMarkup(this.focusLayer, `
             <circle cx="${xPosition}" cy="${yPosition}" r="3.5" fill="${series.color}" stroke="#ffffff" stroke-width="1" />
-        `;
-        if (series.showLabel) {
-            const labelText = this.escapeMarkupText(`${series.name} = ${this.formatAxisValue(nearestPoint.yValue)}`);
-            markerMarkup += `
-                <text x="${xPosition}" y="${yPosition - 8}" text-anchor="middle" font-family="Katex_Main" font-size="${this.options.fontSize}" fill="${series.color}">${labelText}</text>
-            `;
-        }
-        this.appendSvgMarkup(this.focusLayer, markerMarkup);
+        `);
+        if (series.showLabel)
+            this.renderFocusMarkerLabel(xPosition, yPosition, series, nearestPoint.yValue);
+    }
+
+    renderFocusMarkerLabel(xPosition, yPosition, series, yValue) {
+        const fontSize = this.options.fontSize;
+        const contrastColor = Utils.getContrastColor(series.color);
+        const termName = series.name ?? "";
+        const valueSuffix = ` = ${this.formatAxisValue(yValue)}`;
+        const nameWidth = this.estimateTitleTextSegmentWidth(termName, fontSize);
+        const suffixWidth = this.estimateTextWidth(valueSuffix, fontSize);
+        const horizontalPadding = 6;
+        const labelHeight = Math.max(22, fontSize * 1.8);
+        const labelWidth = nameWidth + suffixWidth + horizontalPadding * 2;
+        const labelLeft = xPosition - labelWidth / 2;
+        const labelTop = yPosition - labelHeight - 10;
+        const labelGroup = this.createSvgElement("g");
+        this.focusLayer.appendChild(labelGroup);
+        labelGroup.insertAdjacentHTML("beforeend", `<rect x="${labelLeft}" y="${labelTop}" width="${labelWidth}" height="${labelHeight}" rx="3" fill="${series.color}" fill-opacity="0.9" />`);
+        const foreignObject = this.createSvgElement("foreignObject");
+        foreignObject.setAttribute("x", `${labelLeft}`);
+        foreignObject.setAttribute("y", `${labelTop}`);
+        foreignObject.setAttribute("width", `${labelWidth}`);
+        foreignObject.setAttribute("height", `${labelHeight}`);
+        foreignObject.setAttribute("pointer-events", "none");
+        const container = document.createElement("div");
+        container.style.cssText = `width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0 ${horizontalPadding}px;box-sizing:border-box;pointer-events:none`;
+        if (this.isMathTitleText(termName))
+            container.innerHTML = `<math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;color:${contrastColor};font-size:${fontSize}px">${termName}</math-field><span style="font-family:${this.options.fontFamily};font-size:${fontSize}px;color:${contrastColor};white-space:nowrap">${this.escapeMarkupText(valueSuffix)}</span>`;
+        else
+            container.innerHTML = `<span style="font-family:${this.options.termFontFamily};font-size:${fontSize}px;color:${contrastColor};white-space:nowrap">${this.escapeMarkupText(Utils.convertGreekLetters(termName) + valueSuffix)}</span>`;
+        foreignObject.appendChild(container);
+        labelGroup.appendChild(foreignObject);
     }
 
     getNearestSeriesPoint(series, focusArgumentValue) {
