@@ -1592,7 +1592,8 @@ class BaseShape {
         const normalizedTermText = String(termText ?? "").trim();
         if (normalizedTermText === "")
             return "";
-        return `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text"><math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;pointer-events:none">${normalizedTermText}</math-field></span></span>`;
+        const mathFieldValue = BaseShape.escapeMathTermName(normalizedTermText);
+        return `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text"><math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;pointer-events:none">${mathFieldValue}</math-field></span></span>`;
     }
 
     buildTermDisplayLabel(entry) {
