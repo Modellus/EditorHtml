@@ -439,9 +439,11 @@ class ExpressionShape extends BaseShape {
     setProperties(properties) {
         super.setProperties(properties);
         if (properties.expression != undefined) {
-            this.mathfield.value = this.flattenNestedDisplaylines(properties.expression);
-            this.properties.expression = properties.expression;
-            this._committedExpression = properties.expression;
+            const flattened = this.flattenNestedDisplaylines(properties.expression);
+            const ensured = flattened?.startsWith("\\displaylines{") ? flattened : `\\displaylines{${flattened ?? ""}}`;
+            this.mathfield.value = ensured;
+            this.properties.expression = ensured;
+            this._committedExpression = ensured;
         }
         this.onChange();
     }
@@ -452,7 +454,8 @@ class ExpressionShape extends BaseShape {
     }
 
     syncExpressionFromMathfield() {
-        const expression = this.mathfield.getValue();
+        const rawExpression = this.mathfield.getValue();
+        const expression = rawExpression.startsWith("\\displaylines{") ? rawExpression : `\\displaylines{${rawExpression}}`;
         if (expression === this.properties.expression)
             return;
         if (this._committedExpression === undefined)

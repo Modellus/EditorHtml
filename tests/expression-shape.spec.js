@@ -486,4 +486,42 @@ test.describe('Keyboard shortcuts', () => {
         expect(value).toContain('y');
         expect(value).not.toContain('^');
     });
+
+    test('mathfield starts with \\displaylines{} by default', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        const expression = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            return shape.properties.expression;
+        });
+        expect(expression).toBe('\\displaylines{}');
+    });
+
+    test('mathfield wraps typed content inside \\displaylines{}', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        await page.waitForTimeout(500);
+        const expression = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            return shape.properties.expression;
+        });
+        expect(expression).toBe('\\displaylines{x}');
+    });
+
+    test('mathfield restores \\displaylines{} when cleared', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            shape.setProperties({ expression: '' });
+        });
+        await page.waitForTimeout(200);
+        const expression = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            return shape.properties.expression;
+        });
+        expect(expression).toBe('\\displaylines{}');
+    });
 });
