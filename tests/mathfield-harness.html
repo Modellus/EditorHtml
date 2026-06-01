@@ -25,33 +25,39 @@
             delete inlineShortcutMap.dx;
             delete inlineShortcutMap.dy;
             delete inlineShortcutMap.dt;
+            delete inlineShortcutMap.in;
             inlineShortcutMap["#"] = "\\sqrt{#0}";
             inlineShortcutMap["%"] = "\\Delta";
             inlineShortcutMap["|"] = "\\left|#0\\right|";
             const shortcuts = getExpressionFunctionShortcuts();
-            for (const s of shortcuts)
+            for (const s of shortcuts) {
+                if (s.requiresParenthesis) {
+                    delete inlineShortcutMap[s.shortcutText];
+                    continue;
+                }
                 inlineShortcutMap[s.shortcutText] = s.functionLatex;
+            }
             mf.inlineShortcuts = inlineShortcutMap;
             mf.inlineShortcutTimeout = 0;
         }
 
         function getExpressionFunctionShortcuts() {
             return [
-                { shortcutText: "cosec", functionLatex: "\\cosec" },
+                { shortcutText: "cosec", functionLatex: "\\cosec", requiresParenthesis: true },
                 { shortcutText: "sqrt", functionLatex: "\\sqrt" },
                 { shortcutText: "frac", functionLatex: "\\frac" },
                 { shortcutText: "cdot", functionLatex: "\\cdot" },
-                { shortcutText: "sign", functionLatex: "sign" },
-                { shortcutText: "int", functionLatex: "int" },
-                { shortcutText: "round", functionLatex: "round" },
-                { shortcutText: "irnd", functionLatex: "irnd" },
-                { shortcutText: "rnd", functionLatex: "rnd" },
-                { shortcutText: "sin", functionLatex: "\\sin" },
-                { shortcutText: "cos", functionLatex: "\\cos" },
-                { shortcutText: "tan", functionLatex: "\\tan" },
-                { shortcutText: "sec", functionLatex: "\\sec" },
-                { shortcutText: "cot", functionLatex: "\\cot" },
-                { shortcutText: "log", functionLatex: "\\log" },
+                { shortcutText: "sign", functionLatex: "sign", requiresParenthesis: true },
+                { shortcutText: "int", functionLatex: "int", requiresParenthesis: true },
+                { shortcutText: "round", functionLatex: "round", requiresParenthesis: true },
+                { shortcutText: "irnd", functionLatex: "irnd", requiresParenthesis: true },
+                { shortcutText: "rnd", functionLatex: "rnd", requiresParenthesis: true },
+                { shortcutText: "sin", functionLatex: "\\sin", requiresParenthesis: true },
+                { shortcutText: "cos", functionLatex: "\\cos", requiresParenthesis: true },
+                { shortcutText: "tan", functionLatex: "\\tan", requiresParenthesis: true },
+                { shortcutText: "sec", functionLatex: "\\sec", requiresParenthesis: true },
+                { shortcutText: "cot", functionLatex: "\\cot", requiresParenthesis: true },
+                { shortcutText: "log", functionLatex: "\\log", requiresParenthesis: true },
                 { shortcutText: "epsilon", functionLatex: "\\epsilon" },
                 { shortcutText: "lambda", functionLatex: "\\lambda" },
                 { shortcutText: "Lambda", functionLatex: "\\Lambda" },

@@ -125,6 +125,7 @@ class ExpressionShape extends BaseShape {
         delete inlineShortcutMap.dx;
         delete inlineShortcutMap.dy;
         delete inlineShortcutMap.dt;
+        delete inlineShortcutMap.in;
         inlineShortcutMap["#"] = "\\sqrt{#0}";
         inlineShortcutMap["%"] = "\\Delta";
         inlineShortcutMap["|"] = "\\left|#0\\right|";
@@ -132,6 +133,10 @@ class ExpressionShape extends BaseShape {
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];
+            if (functionShortcut.requiresParenthesis) {
+                delete inlineShortcutMap[functionShortcut.shortcutText];
+                continue;
+            }
             inlineShortcutMap[functionShortcut.shortcutText] = functionShortcut.functionLatex;
         }
         this.mathfield.inlineShortcuts = inlineShortcutMap;
@@ -224,6 +229,10 @@ class ExpressionShape extends BaseShape {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
             this.insert(this.getTemplateShortcut("Ceil").insertText);
+            return;
+        }
+        if (keydownEvent.key === "(" && !keydownEvent.altKey && !keydownEvent.ctrlKey && !keydownEvent.metaKey) {
+            this.applyParenthesisFunctionShortcuts();
             return;
         }
         if (this.handleSpaceKeydown(keydownEvent))
@@ -320,6 +329,26 @@ class ExpressionShape extends BaseShape {
         this.syncExpressionFromMathfield();
     }
 
+    applyParenthesisFunctionShortcuts() {
+        if (this.mathliveController.hasSelection())
+            return;
+        const caretPosition = this.mathliveController.getCaretPosition();
+        const groupStart = this.mathliveController.getCurrentGroupStartPosition();
+        const typedLength = caretPosition - groupStart;
+        if (typedLength < 2)
+            return;
+        const functionShortcuts = this.getExpressionFunctionShortcuts();
+        for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
+            const functionShortcut = functionShortcuts[functionShortcutIndex];
+            if (!functionShortcut.requiresParenthesis)
+                continue;
+            if (functionShortcut.shortcutText.length > typedLength)
+                continue;
+            if (this.applyFunctionShortcut(functionShortcut.shortcutText, functionShortcut.functionLatex, caretPosition, groupStart))
+                return;
+        }
+    }
+
     applyExpressionFunctionShortcuts() {
         if (this.mathliveController.hasSelection())
             return false;
@@ -333,6 +362,8 @@ class ExpressionShape extends BaseShape {
         const functionShortcuts = this.getExpressionFunctionShortcuts();
         for (let functionShortcutIndex = 0; functionShortcutIndex < functionShortcuts.length; functionShortcutIndex++) {
             const functionShortcut = functionShortcuts[functionShortcutIndex];
+            if (functionShortcut.requiresParenthesis)
+                continue;
             if (functionShortcut.shortcutText.length > typedLength)
                 continue;
             if (this.applyFunctionShortcut(functionShortcut.shortcutText, functionShortcut.functionLatex, caretPosition, groupStart))
@@ -383,27 +414,27 @@ class ExpressionShape extends BaseShape {
 
     getExpressionFunctionShortcuts() {
         return [
-            { shortcutText: "cosec", functionLatex: "\\cosec" },
-            { shortcutText: "arccos", functionLatex: "\\arccos" },
-            { shortcutText: "arctan", functionLatex: "\\arctan" },
-            { shortcutText: "arcsin", functionLatex: "\\arcsin" },
-            { shortcutText: "cosh", functionLatex: "\\cosh" },
-            { shortcutText: "tanh", functionLatex: "\\tanh" },
-            { shortcutText: "sinh", functionLatex: "\\sinh" },
+            { shortcutText: "cosec", functionLatex: "\\cosec", requiresParenthesis: true },
+            { shortcutText: "arccos", functionLatex: "\\arccos", requiresParenthesis: true },
+            { shortcutText: "arctan", functionLatex: "\\arctan", requiresParenthesis: true },
+            { shortcutText: "arcsin", functionLatex: "\\arcsin", requiresParenthesis: true },
+            { shortcutText: "cosh", functionLatex: "\\cosh", requiresParenthesis: true },
+            { shortcutText: "tanh", functionLatex: "\\tanh", requiresParenthesis: true },
+            { shortcutText: "sinh", functionLatex: "\\sinh", requiresParenthesis: true },
             { shortcutText: "sqrt", functionLatex: "\\sqrt" },
             { shortcutText: "frac", functionLatex: "\\frac" },
             { shortcutText: "cdot", functionLatex: "\\cdot" },
-            { shortcutText: "sign", functionLatex: "sign" },
-            { shortcutText: "round", functionLatex: "round" },
-            { shortcutText: "irnd", functionLatex: "irnd" },
-            { shortcutText: "rnd", functionLatex: "rnd" },
-            { shortcutText: "sin", functionLatex: "\\sin" },
-            { shortcutText: "cos", functionLatex: "\\cos" },
-            { shortcutText: "tan", functionLatex: "\\tan" },
-            { shortcutText: "sec", functionLatex: "\\sec" },
-            { shortcutText: "cot", functionLatex: "\\cot" },
-            { shortcutText: "log", functionLatex: "\\log" },
-            { shortcutText: "ln", functionLatex: "\\ln" },
+            { shortcutText: "sign", functionLatex: "sign", requiresParenthesis: true },
+            { shortcutText: "round", functionLatex: "round", requiresParenthesis: true },
+            { shortcutText: "irnd", functionLatex: "irnd", requiresParenthesis: true },
+            { shortcutText: "rnd", functionLatex: "rnd", requiresParenthesis: true },
+            { shortcutText: "sin", functionLatex: "\\sin", requiresParenthesis: true },
+            { shortcutText: "cos", functionLatex: "\\cos", requiresParenthesis: true },
+            { shortcutText: "tan", functionLatex: "\\tan", requiresParenthesis: true },
+            { shortcutText: "sec", functionLatex: "\\sec", requiresParenthesis: true },
+            { shortcutText: "cot", functionLatex: "\\cot", requiresParenthesis: true },
+            { shortcutText: "log", functionLatex: "\\log", requiresParenthesis: true },
+            { shortcutText: "ln", functionLatex: "\\ln", requiresParenthesis: true },
             { shortcutText: "epsilon", functionLatex: "\\epsilon" },
             { shortcutText: "lambda", functionLatex: "\\lambda" },
             { shortcutText: "Lambda", functionLatex: "\\Lambda" },

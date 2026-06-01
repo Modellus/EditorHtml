@@ -525,3 +525,46 @@ test.describe('Keyboard shortcuts', () => {
         expect(expression).toBe('\\displaylines{}');
     });
 });
+
+test.describe('Function shortcut requires parenthesis', () => {
+    test('typing "constant" does not convert "cos" to function', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('constant');
+        await page.waitForTimeout(500);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).not.toContain('\\cos');
+        expect(value).toContain('constant');
+    });
+
+    test('typing "cos(" converts to \\cos function', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('cos(');
+        await page.waitForTimeout(500);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\cos');
+    });
+
+    test('typing "sinx" does not convert "sin" to function', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('sinx');
+        await page.waitForTimeout(500);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).not.toContain('\\sin');
+    });
+
+    test('typing "sin(" converts to \\sin function', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('sin(');
+        await page.waitForTimeout(500);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\sin');
+    });
+});
