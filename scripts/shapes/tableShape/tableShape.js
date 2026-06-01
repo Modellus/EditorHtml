@@ -456,11 +456,11 @@ class TableShape extends BaseShape {
             return "";
         const isRegression = this.isRegressionTermName(normalizedTermName);
         if (!isRegression)
-            return normalizedTermName;
+            return BaseShape.escapeMathTermName(this.formatTermForDisplay(normalizedTermName));
         const sourceTermName = this.getRegressionSourceTermName(normalizedTermName);
         if (sourceTermName === "")
-            return normalizedTermName;
-        return `\\widehat{${sourceTermName}}`;
+            return BaseShape.escapeMathTermName(this.formatTermForDisplay(normalizedTermName));
+        return BaseShape.escapeMathTermName(`\\widehat{${sourceTermName}}`);
     }
 
     resolveFocusedRowsIterationRange(focusedRows) {

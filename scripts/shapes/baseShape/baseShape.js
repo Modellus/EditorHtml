@@ -1583,6 +1583,11 @@ class BaseShape {
         return this.formatModelValue(numeric);
     }
 
+    static escapeMathTermName(text) {
+        const normalizedText = String(text ?? "");
+        return normalizedText.replace(/(^|[^\\])_/g, "$1\\_");
+    }
+
     createNameButtonTermMarkup(termText) {
         const normalizedTermText = String(termText ?? "").trim();
         if (normalizedTermText === "")

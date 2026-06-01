@@ -1135,7 +1135,7 @@ class TermControl {
             parentIdExpr: "parentId",
             displayExpr: "text",
             itemTemplate: (itemData, _, element) => {
-                const itemText = String(itemData?.text ?? "");
+                const itemText = BaseShape.escapeMathTermName(String(itemData?.text ?? ""));
                 element[0].innerHTML = `<div class="mdl-variable-selector"><math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block">${itemText}</math-field></div>`;
             },
             selectionMode: "single",
@@ -1195,7 +1195,7 @@ class TermControl {
 
     syncTermEditorMathField(component, fallbackValue, system) {
         const selectedValue = component.option("value") ?? fallbackValue;
-        const selectedText = String(Utils.getDisplayedTerm(selectedValue, system));
+        const selectedText = BaseShape.escapeMathTermName(String(Utils.getDisplayedTerm(selectedValue, system)));
         const inputContainer = this.getTermEditorInputContainer(component);
         if (!inputContainer?.length)
             return;
@@ -1231,7 +1231,7 @@ class TermControl {
             elementAttr: { class: "mdl-variable-selector" },
             fieldAddons: {
                 before: data => {
-                    const selectedText = this.resolveTermEditorDisplayedText(data, termValue, system);
+                    const selectedText = BaseShape.escapeMathTermName(this.resolveTermEditorDisplayedText(data, termValue, system));
                     const mathField = $("<math-field read-only class='form-math-field' style='height:auto;width:auto;display:inline-block'></math-field>");
                     this.setMathFieldValue(mathField[0], selectedText);
                     return mathField;
