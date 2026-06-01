@@ -477,19 +477,30 @@ class ExpressionShape extends BaseShape {
 
     flattenNestedDisplaylines(expression) {
         const prefix = "\\displaylines{";
-        if (!expression?.startsWith(prefix + prefix))
+        if (!expression?.startsWith(prefix))
             return expression;
-        let depth = 0;
-        for (let i = prefix.length; i < expression.length; i++) {
-            if (expression[i] === '{')
-                depth++;
-            else if (expression[i] === '}') {
-                depth--;
-                if (depth === 0)
-                    return i === expression.length - 2 ? expression.slice(prefix.length, -1) : expression;
+        let content = expression.slice(prefix.length, -1);
+        let index = content.indexOf(prefix);
+        while (index !== -1) {
+            let depth = 1;
+            let closeIndex = -1;
+            for (let i = index + prefix.length; i < content.length; i++) {
+                if (content[i] === '{')
+                    depth++;
+                else if (content[i] === '}') {
+                    depth--;
+                    if (depth === 0) {
+                        closeIndex = i;
+                        break;
+                    }
+                }
             }
+            if (closeIndex === -1)
+                break;
+            content = content.substring(0, index) + content.substring(index + prefix.length, closeIndex) + content.substring(closeIndex + 1);
+            index = content.indexOf(prefix, index);
         }
-        return expression;
+        return prefix + content + "}";
     }
 
     normalizeDerivativeFractions(expression) {
