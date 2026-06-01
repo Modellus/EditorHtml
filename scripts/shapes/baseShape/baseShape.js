@@ -561,17 +561,19 @@ class BaseShape {
                 if (probeEvent.defaultPrevented) {
                     event.stopPropagation();
                     event.preventDefault();
-                    const now = Date.now();
-                    if (this._lastPassthroughTime && now - this._lastPassthroughTime < 400) {
-                        this._lastPassthroughTime = 0;
-                        handle.dispatchEvent(new MouseEvent("dblclick", {
-                            bubbles: true, cancelable: true,
-                            clientX: event.clientX, clientY: event.clientY
-                        }));
-                        return;
+                    if (this.isPassthroughDoubleClickSelectionEnabled()) {
+                        const now = Date.now();
+                        if (this._lastPassthroughTime && now - this._lastPassthroughTime < 400) {
+                            this._lastPassthroughTime = 0;
+                            handle.dispatchEvent(new MouseEvent("dblclick", {
+                                bubbles: true, cancelable: true,
+                                clientX: event.clientX, clientY: event.clientY
+                            }));
+                            return;
+                        }
+                        this._lastPassthroughTime = now;
+                        this.board.selection.select(this);
                     }
-                    this._lastPassthroughTime = now;
-                    this.board.selection.select(this);
                     handle.style.pointerEvents = "none";
                     const clickTarget = underlying;
                     const clickEvent = event;
@@ -838,6 +840,10 @@ class BaseShape {
     }
 
     enterEditMode() {
+        return false;
+    }
+
+    isPassthroughDoubleClickSelectionEnabled() {
         return false;
     }
 

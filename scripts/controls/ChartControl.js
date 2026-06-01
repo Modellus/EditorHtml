@@ -1461,8 +1461,6 @@ class ChartControl {
     onZoomPointerDown(event) {
         if (event.button !== 0)
             return;
-        event.stopPropagation();
-        event.preventDefault();
         if (this._tickDragState)
             return;
         const state = this.renderState;
@@ -1474,6 +1472,20 @@ class ChartControl {
         const layout = state.layout;
         if (localPoint.x < layout.plotLeft || localPoint.x > layout.plotRight || localPoint.y < layout.plotTop || localPoint.y > layout.plotBottom)
             return;
+        const currentPointerDownTime = Number(event.timeStamp) || performance.now();
+        const previousPointerDown = this._lastZoomPointerDown;
+        const isDoubleClick = !!previousPointerDown
+            && currentPointerDownTime - previousPointerDown.time <= 300
+            && Math.abs(localPoint.x - previousPointerDown.x) <= 6
+            && Math.abs(localPoint.y - previousPointerDown.y) <= 6;
+        this._lastZoomPointerDown = { time: currentPointerDownTime, x: localPoint.x, y: localPoint.y };
+        if (isDoubleClick) {
+            this._lastZoomPointerDown = null;
+            this.onDataAreaDoubleClick(event);
+            return;
+        }
+        event.stopPropagation();
+        event.preventDefault();
         const startX = this.clampToPlotBounds(localPoint.x, layout.plotLeft, layout.plotRight);
         const startY = this.clampToPlotBounds(localPoint.y, layout.plotTop, layout.plotBottom);
         this._zoomDragState = {
@@ -1486,7 +1498,6 @@ class ChartControl {
             currentY: startY
         };
         this.clearCrosshair();
-        this.renderZoomSelectionRectangle(this._zoomDragState);
         if (typeof this.options.onTickDragStarted === "function")
             this.options.onTickDragStarted();
         window.addEventListener("pointermove", this._onZoomPointerMove);
@@ -1547,6 +1558,40 @@ class ChartControl {
             this.options.onDomainChanged({ ...this.domainOverride });
     }
 
+    onDataAreaDoubleClick(event) {
+        if (this._tickDragState)
+            return;
+        if (this._zoomDragState)
+            return;
+        const state = this.renderState;
+        if (!state)
+            return;
+        const localPoint = this.getLocalPointerPoint(event);
+        if (!localPoint)
+            return;
+        const layout = state.layout;
+        if (localPoint.x < layout.plotLeft || localPoint.x > layout.plotRight || localPoint.y < layout.plotTop || localPoint.y > layout.plotBottom)
+            return;
+        event.stopPropagation();
+        event.preventDefault();
+        const domain = state.domain;
+        const horizontalRange = domain.xMax - domain.xMin;
+        const verticalRange = domain.yMax - domain.yMin;
+        if (!Number.isFinite(horizontalRange) || !Number.isFinite(verticalRange) || horizontalRange <= 0 || verticalRange <= 0)
+            return;
+        const dataX = domain.xMin + (localPoint.x - layout.plotLeft) / layout.plotWidth * horizontalRange;
+        const dataY = domain.yMin + (layout.plotBottom - localPoint.y) / layout.plotHeight * verticalRange;
+        if (!Number.isFinite(dataX) || !Number.isFinite(dataY))
+            return;
+        this.domainOverride.xMin = domain.xMin - dataX;
+        this.domainOverride.xMax = domain.xMax - dataX;
+        this.domainOverride.yMin = domain.yMin - dataY;
+        this.domainOverride.yMax = domain.yMax - dataY;
+        this.render();
+        if (typeof this.options.onDomainChanged === "function")
+            this.options.onDomainChanged({ ...this.domainOverride });
+    }
+
     resetDomainOverride() {
         this.domainOverride = { xMin: null, xMax: null, yMin: null, yMax: null };
         this.render();
@@ -1561,6 +1606,7 @@ class ChartControl {
         hitArea.setAttribute("fill", "transparent");
         hitArea.setAttribute("style", "pointer-events: all");
         hitArea.addEventListener("pointerdown", e => this.onZoomPointerDown(e));
+        hitArea.addEventListener("dblclick", e => this.onDataAreaDoubleClick(e));
         hitArea.addEventListener("pointermove", e => this.onCrosshairPointerMove(e));
         hitArea.addEventListener("pointerleave", () => this.clearCrosshair());
         this.crosshairInteractionLayer.appendChild(hitArea);

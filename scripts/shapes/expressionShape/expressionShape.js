@@ -4,6 +4,10 @@ class ExpressionShape extends BaseShape {
         this.focusDispatchFrame = null;
     }
 
+    isPassthroughDoubleClickSelectionEnabled() {
+        return true;
+    }
+
     getCopySubMenuItems() {
         return [
             ...super.getCopySubMenuItems(),

@@ -6,6 +6,10 @@ class QuestionShape extends BaseShape {
         this.submitted = false;
     }
 
+    isPassthroughDoubleClickSelectionEnabled() {
+        return true;
+    }
+
     isClickOutsideEditArea(target) {
         return super.isClickOutsideEditArea(target) && !$(target).closest(".shape-context-toolbar").length;
     }
