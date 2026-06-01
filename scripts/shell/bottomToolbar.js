@@ -211,7 +211,7 @@ class BottomToolbar {
                     location: "after",
                     widget: "dxButton",
                     options: {
-                        icon: "fa-light fa-robot",
+                        icon: "fa-light fa-message-dots",
                         elementAttr: {
                             id: "chat-button"
                         },

@@ -144,6 +144,45 @@ body.read-only #model-info-label {
     justify-content: center;
 }
 
+.mdl-chat-popup .dx-popup-content {
+    padding: 0;
+    overflow: hidden;
+}
+
+.mdl-chat-popup .dx-popup-content > .dx-template-wrapper,
+.mdl-chat-popup .mdl-chat-host,
+.mdl-chat-popup .dx-chat,
+.mdl-chat-popup .dx-chat-alertlist,
+.mdl-chat-popup .dx-chat-messagelist,
+.mdl-chat-popup .dx-scrollview,
+.mdl-chat-popup .dx-scrollable,
+.mdl-chat-popup .dx-scrollable-wrapper,
+.mdl-chat-popup .dx-scrollable-container,
+.mdl-chat-popup .dx-scrollable-content {
+    min-height: 0;
+    min-width: 0;
+}
+
+.mdl-chat-popup .mdl-chat-host,
+.mdl-chat-popup .dx-chat {
+    height: 100%;
+}
+
+.mdl-chat-popup .dx-chat-messagebox-textarea-container {
+    min-width: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.mdl-chat-popup .dx-chat-messagebox-textarea-container > .dx-chat-textarea {
+    min-width: 0;
+    flex-shrink: 0;
+}
+
+.mdl-chat-popup .dx-chat-messagebox {
+    flex-shrink: 0;
+}
+
 .handle {
     fill: white;
     stroke: #4039d7;

@@ -20,14 +20,58 @@ class ChatController {
         this._create();
     }
 
+    _saveGeometry() {
+        const overlayContent = this.popup.$content()[0].closest(".dx-overlay-content");
+        if (!overlayContent)
+            return;
+        const rect = overlayContent.getBoundingClientRect();
+        const geometry = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+        localStorage.setItem("mdl.chat.geometry", JSON.stringify(geometry));
+    }
+
+    _loadGeometry() {
+        try {
+            const stored = localStorage.getItem("mdl.chat.geometry");
+            return stored ? JSON.parse(stored) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    getMinimumPopupWidth() {
+        return 320;
+    }
+
+    getMinimumPopupHeight() {
+        return 420;
+    }
+
+    handlePopupResize() {
+        this.instance?.repaint();
+    }
+
     _create() {
+        const savedGeometry = this._loadGeometry();
+        const minimumPopupWidth = this.getMinimumPopupWidth();
+        const minimumPopupHeight = this.getMinimumPopupHeight();
+        const popupWidth = Math.max(savedGeometry?.width ?? 300, minimumPopupWidth);
+        const popupHeight = Math.max(savedGeometry?.height ?? 500, minimumPopupHeight);
+        const popupPosition = savedGeometry
+            ? { my: "top left", at: "top left", of: window, offset: `${savedGeometry.left} ${savedGeometry.top}` }
+            : { my: "bottom right", at: "top right", of: "#chat-button", offset: "0 -20" };
         $("#chat-popup").dxPopup({
-            width: 300,
-            height: 500,
+            width: popupWidth,
+            height: popupHeight,
+            minWidth: minimumPopupWidth,
+            minHeight: minimumPopupHeight,
+            wrapperAttr: {
+                class: "mdl-chat-popup"
+            },
             shading: false,
             showTitle: true,
-            title: this.shell.board.translations.get("Chat Title"),
-            dragEnabled: false,
+            title: "Chat",
+            dragEnabled: true,
+            resizeEnabled: true,
             hideOnOutsideClick: true,
             animation: null,
             toolbarItems: [{
@@ -40,12 +84,15 @@ class ChatController {
                     onClick: () => this.clear()
                 }
             }],
+            onDragEnd: () => this._saveGeometry(),
+            onResize: () => this.handlePopupResize(),
+            onResizeEnd: () => this._saveGeometry(),
             onDisposing: () => this.disposeAdapter(),
-            contentTemplate: () => {
+            contentTemplate: contentElement => {
                 const firstUser = { id: "1", name: "User" };
                 const secondUser = { id: "2", name: "Modellus", avatarUrl: "/scripts/themes/modellus bot.svg" };
                 const initialMessages = this.getInitialMessages();
-                const $chat = $("<div>").appendTo("#chat-popup");
+                const $chat = $("<div class='mdl-chat-host'>").appendTo(contentElement);
                 const chat = $chat.dxChat({
                     width: "100%",
                     height: "100%",
@@ -57,13 +104,7 @@ class ChatController {
                 this.createAdapter(this.instance, firstUser, secondUser, initialMessages);
                 return $chat;
             },
-            target: "#toolbar",
-            position: {
-                my: "bottom right",
-                at: "top right",
-                of: "#chat-button",
-                offset: "0 -20"
-            }
+            position: popupPosition
         });
         this.popup = $("#chat-popup").dxPopup("instance");
     }
