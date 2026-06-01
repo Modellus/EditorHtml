@@ -79,8 +79,13 @@ class ChatController {
                 location: "after",
                 widget: "dxButton",
                 options: {
-                    icon: "fa-regular fa-trash-can",
                     stylingMode: "text",
+                    focusStateEnabled: false,
+                    activeStateEnabled: false,
+                    tabIndex: -1,
+                    template: (_, element) => {
+                        element[0].innerHTML = `<span class="mdl-focused-toolbar-button"><i class="fa-light fa-trash-can trash"></i><i class="fa-solid fa-trash-can trash-hover"></i></span>`;
+                    },
                     onClick: () => this.clear()
                 }
             }],
