@@ -50,6 +50,10 @@ function extractModelPayload(model) {
 
 function applyModelMetadata(shell, model) {
     if (!shell || !model) return;
+    if (typeof model.title === "string")
+        shell.properties.name = model.title;
+    if (typeof model.description === "string")
+        shell.properties.description = model.description;
     if (typeof model.thumbnail === "string" && model.thumbnail.trim())
         shell.properties.thumbnailUrl = model.thumbnail.trim();
     if (model.user_id)

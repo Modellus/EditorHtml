@@ -34,7 +34,7 @@ class ContextMenuController {
                 icon: "fa-light fa-file",
                 shortcut: `${mod}N`,
                 name: "Clear",
-                action: _ => this.shell.clearKeepIdentity()
+                action: _ => this.shell.confirmClearKeepIdentity()
             },
             ...(canSave ? [
             {

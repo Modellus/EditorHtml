@@ -288,6 +288,31 @@ class Shell  {
         if (this.settingsController.form)
             this.settingsController.form.updateData(this.properties);
     }
+
+    async confirmClearKeepIdentity() {
+        const translations = this.board.translations;
+        const dialog = DevExpress.ui.dialog.custom({
+            title: translations.get("Clear Confirmation Title"),
+            messageHtml: `<div style="line-height:1.45">${translations.get("Clear Confirmation Message").replace(/\n/g, "<br>")}</div>`,
+            buttons: [
+                {
+                    text: translations.get("Cancel"),
+                    type: "normal",
+                    stylingMode: "outlined",
+                    onClick: () => false
+                },
+                {
+                    text: translations.get("Clear Confirmation Confirm"),
+                    type: "danger",
+                    stylingMode: "contained",
+                    onClick: () => true
+                }
+            ]
+        });
+        const confirmed = await dialog.show();
+        if (confirmed)
+            this.clearKeepIdentity();
+    }
     
     reset() {
         this.restoreUserPermissions();
