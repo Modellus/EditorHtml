@@ -1624,6 +1624,8 @@ class ChartControl {
             const pointY = yScale(nearestPoint.yValue);
             if (!Number.isFinite(pointX) || !Number.isFinite(pointY))
                 continue;
+            if (pointY < layout.plotTop || pointY > layout.plotBottom)
+                continue;
             const yLabelText = this.formatCrosshairValue(nearestPoint.yValue);
             const yLabelWidth = this.estimateTextWidth(yLabelText, 10) + 8;
             crosshairMarkup += `
