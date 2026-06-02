@@ -134,7 +134,7 @@ class ChartShape extends BaseShape {
         const normalizedTerm = this.normalizeYTermValue(term);
         if (normalizedTerm === "")
             return normalizedTerm;
-        const displayedTerm = BaseShape.escapeMathTermName(this.formatTermForDisplay(normalizedTerm));
+        const displayedTerm = this.formatTermForDisplay(normalizedTerm);
         if (!this.shouldShowCaseLabelForTerm(normalizedTerm))
             return displayedTerm;
         const normalizedCaseNumber = TermControl.getShapeCaseNumber(this, normalizedTerm, caseNumber, value => this.normalizeYTermValue(value));

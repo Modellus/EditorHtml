@@ -1659,14 +1659,27 @@ class BaseShape {
             const sibling = this.termDisplayLabelsLayer.children[index] ?? null;
             this.termDisplayLabelsLayer.insertBefore(labelGroup, sibling);
         }
-        let caseIconHost = labelGroup.children[0];
+        let backgroundRect = labelGroup.children[0];
+        if (!backgroundRect || backgroundRect.tagName?.toLowerCase() != "rect") {
+            if (backgroundRect)
+                labelGroup.removeChild(backgroundRect);
+            backgroundRect = this.board.createSvgElement("rect");
+            backgroundRect.setAttribute("class", "shape-term-label-bg");
+            backgroundRect.setAttribute("rx", "3");
+            backgroundRect.setAttribute("fill-opacity", "0.85");
+            if (labelGroup.firstChild)
+                labelGroup.insertBefore(backgroundRect, labelGroup.firstChild);
+            else
+                labelGroup.appendChild(backgroundRect);
+        }
+        let caseIconHost = labelGroup.children[1];
         if (!caseIconHost || caseIconHost.tagName?.toLowerCase() != "foreignobject") {
             if (caseIconHost)
                 labelGroup.removeChild(caseIconHost);
             caseIconHost = this.board.createSvgElement("foreignObject");
             caseIconHost.setAttribute("class", "shape-term-case-icon-host");
-            if (labelGroup.firstChild)
-                labelGroup.insertBefore(caseIconHost, labelGroup.firstChild);
+            if (labelGroup.children[1])
+                labelGroup.insertBefore(caseIconHost, labelGroup.children[1]);
             else
                 labelGroup.appendChild(caseIconHost);
         }
@@ -1681,7 +1694,7 @@ class BaseShape {
             icon.setAttribute("class", "shape-term-case-icon");
             iconContainer.replaceChildren(icon);
         }
-        let labelText = labelGroup.children[1];
+        let labelText = labelGroup.children[2];
         if (!labelText || labelText.tagName?.toLowerCase() != "text") {
             if (labelText)
                 labelGroup.removeChild(labelText);
@@ -1689,7 +1702,7 @@ class BaseShape {
             labelText.setAttribute("class", "shape-term-label");
             labelGroup.appendChild(labelText);
         }
-        return { group: labelGroup, caseIconHost: caseIconHost, caseIconElement: caseIconHost.firstChild.firstChild, labelText: labelText };
+        return { group: labelGroup, backgroundRect: backgroundRect, caseIconHost: caseIconHost, caseIconElement: caseIconHost.firstChild.firstChild, labelText: labelText };
     }
 
     getTermCaseIconLayout(label, labelText) {
@@ -1910,6 +1923,7 @@ class BaseShape {
             this.termDisplayLabelsLayer.removeChild(this.termDisplayLabelsLayer.lastChild);
         if (labels.length == 0)
             return;
+        const contrastColor = Utils.getContrastColor(color);
         for (let i = 0; i < labels.length; i++) {
             const labelElements = this.ensureTermLabelElements(i);
             const label = labels[i];
@@ -1917,12 +1931,40 @@ class BaseShape {
             labelText.setAttribute("x", label.x);
             labelText.setAttribute("y", label.y);
             labelText.setAttribute("text-anchor", label.anchor);
-            labelText.setAttribute("fill", color);
+            labelText.setAttribute("fill", contrastColor);
             this.setTermLabelText(labelText, label);
             const iconLayout = this.getTermCaseIconLayout(label, labelText);
             labelText.setAttribute("x", iconLayout.textX);
             this.applyTermCaseIcon(labelElements.caseIconHost, labelElements.caseIconElement, label.caseNumber, iconLayout);
+            this.applyTermLabelBackground(labelElements.backgroundRect, labelText, color, label.anchor);
         }
+    }
+
+    applyTermLabelBackground(backgroundRect, labelText, color, anchor) {
+        const paddingX = 4;
+        const paddingY = 2;
+        let textWidth = 0;
+        let textHeight = 12;
+        let textX = 0;
+        let textY = 0;
+        if (labelText?.getBBox)
+            try {
+                const bbox = labelText.getBBox();
+                textWidth = bbox.width;
+                textHeight = bbox.height;
+                textX = bbox.x;
+                textY = bbox.y;
+            } catch (_) {}
+        if (textWidth <= 0) {
+            backgroundRect.setAttribute("display", "none");
+            return;
+        }
+        backgroundRect.removeAttribute("display");
+        backgroundRect.setAttribute("x", textX - paddingX);
+        backgroundRect.setAttribute("y", textY - paddingY);
+        backgroundRect.setAttribute("width", textWidth + paddingX * 2);
+        backgroundRect.setAttribute("height", textHeight + paddingY * 2);
+        backgroundRect.setAttribute("fill", color);
     }
 
     addTerm(termProperty, property, title, isInverted = false, isEditable = true, colSpan = 1, scaleProperty = null) {

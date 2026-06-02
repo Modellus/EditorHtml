@@ -1188,42 +1188,18 @@ class ChartControl {
         const yPosition = yScale(nearestPoint.yValue);
         if (!Number.isFinite(xPosition) || !Number.isFinite(yPosition))
             return;
-        this.appendSvgMarkup(this.focusLayer, `
+        let markerMarkup = `
             <circle cx="${xPosition}" cy="${yPosition}" r="3.5" fill="${series.color}" stroke="#ffffff" stroke-width="1" />
-        `);
-        if (series.showLabel)
-            this.renderFocusMarkerLabel(xPosition, yPosition, series, nearestPoint.yValue);
-    }
-
-    renderFocusMarkerLabel(xPosition, yPosition, series, yValue) {
-        const fontSize = this.options.fontSize;
-        const contrastColor = Utils.getContrastColor(series.color);
-        const termName = series.name ?? "";
-        const valueSuffix = ` = ${this.formatAxisValue(yValue)}`;
-        const nameWidth = this.estimateTitleTextSegmentWidth(termName, fontSize);
-        const suffixWidth = this.estimateTextWidth(valueSuffix, fontSize);
-        const horizontalPadding = 6;
-        const labelHeight = Math.max(22, fontSize * 1.8);
-        const labelWidth = nameWidth + suffixWidth + horizontalPadding * 2;
-        const labelLeft = xPosition - labelWidth / 2;
-        const labelTop = yPosition - labelHeight - 10;
-        const labelGroup = this.createSvgElement("g");
-        this.focusLayer.appendChild(labelGroup);
-        labelGroup.insertAdjacentHTML("beforeend", `<rect x="${labelLeft}" y="${labelTop}" width="${labelWidth}" height="${labelHeight}" rx="3" fill="${series.color}" fill-opacity="0.9" />`);
-        const foreignObject = this.createSvgElement("foreignObject");
-        foreignObject.setAttribute("x", `${labelLeft}`);
-        foreignObject.setAttribute("y", `${labelTop}`);
-        foreignObject.setAttribute("width", `${labelWidth}`);
-        foreignObject.setAttribute("height", `${labelHeight}`);
-        foreignObject.setAttribute("pointer-events", "none");
-        const container = document.createElement("div");
-        container.style.cssText = `width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:0 ${horizontalPadding}px;box-sizing:border-box;pointer-events:none`;
-        if (this.isMathTitleText(termName))
-            container.innerHTML = `<math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;color:${contrastColor};font-size:${fontSize}px">${termName}</math-field><span style="font-family:${this.options.fontFamily};font-size:${fontSize}px;color:${contrastColor};white-space:nowrap">${this.escapeMarkupText(valueSuffix)}</span>`;
-        else
-            container.innerHTML = `<span style="font-family:${this.options.termFontFamily};font-size:${fontSize}px;color:${contrastColor};white-space:nowrap">${this.escapeMarkupText(Utils.convertGreekLetters(termName) + valueSuffix)}</span>`;
-        foreignObject.appendChild(container);
-        labelGroup.appendChild(foreignObject);
+        `;
+        if (series.showLabel) {
+            const valueText = `${series.name} = ${this.formatCrosshairValue(nearestPoint.yValue)}`;
+            markerMarkup += Utils.valueBadgeSvgMarkup(valueText, xPosition, yPosition - 12, {
+                fontSize: 10,
+                fontFamily: this.options.fontFamily,
+                backgroundColor: series.color
+            });
+        }
+        this.appendSvgMarkup(this.focusLayer, markerMarkup);
     }
 
     getNearestSeriesPoint(series, focusArgumentValue) {
@@ -1487,6 +1463,8 @@ class ChartControl {
     onZoomPointerDown(event) {
         if (event.button !== 0)
             return;
+        event.stopPropagation();
+        event.preventDefault();
         if (this._tickDragState)
             return;
         const state = this.renderState;
@@ -1498,20 +1476,6 @@ class ChartControl {
         const layout = state.layout;
         if (localPoint.x < layout.plotLeft || localPoint.x > layout.plotRight || localPoint.y < layout.plotTop || localPoint.y > layout.plotBottom)
             return;
-        const currentPointerDownTime = Number(event.timeStamp) || performance.now();
-        const previousPointerDown = this._lastZoomPointerDown;
-        const isDoubleClick = !!previousPointerDown
-            && currentPointerDownTime - previousPointerDown.time <= 300
-            && Math.abs(localPoint.x - previousPointerDown.x) <= 6
-            && Math.abs(localPoint.y - previousPointerDown.y) <= 6;
-        this._lastZoomPointerDown = { time: currentPointerDownTime, x: localPoint.x, y: localPoint.y };
-        if (isDoubleClick) {
-            this._lastZoomPointerDown = null;
-            this.onDataAreaDoubleClick(event);
-            return;
-        }
-        event.stopPropagation();
-        event.preventDefault();
         const startX = this.clampToPlotBounds(localPoint.x, layout.plotLeft, layout.plotRight);
         const startY = this.clampToPlotBounds(localPoint.y, layout.plotTop, layout.plotBottom);
         this._zoomDragState = {
@@ -1524,6 +1488,7 @@ class ChartControl {
             currentY: startY
         };
         this.clearCrosshair();
+        this.renderZoomSelectionRectangle(this._zoomDragState);
         if (typeof this.options.onTickDragStarted === "function")
             this.options.onTickDragStarted();
         window.addEventListener("pointermove", this._onZoomPointerMove);
@@ -1584,40 +1549,6 @@ class ChartControl {
             this.options.onDomainChanged({ ...this.domainOverride });
     }
 
-    onDataAreaDoubleClick(event) {
-        if (this._tickDragState)
-            return;
-        if (this._zoomDragState)
-            return;
-        const state = this.renderState;
-        if (!state)
-            return;
-        const localPoint = this.getLocalPointerPoint(event);
-        if (!localPoint)
-            return;
-        const layout = state.layout;
-        if (localPoint.x < layout.plotLeft || localPoint.x > layout.plotRight || localPoint.y < layout.plotTop || localPoint.y > layout.plotBottom)
-            return;
-        event.stopPropagation();
-        event.preventDefault();
-        const domain = state.domain;
-        const horizontalRange = domain.xMax - domain.xMin;
-        const verticalRange = domain.yMax - domain.yMin;
-        if (!Number.isFinite(horizontalRange) || !Number.isFinite(verticalRange) || horizontalRange <= 0 || verticalRange <= 0)
-            return;
-        const dataX = domain.xMin + (localPoint.x - layout.plotLeft) / layout.plotWidth * horizontalRange;
-        const dataY = domain.yMin + (layout.plotBottom - localPoint.y) / layout.plotHeight * verticalRange;
-        if (!Number.isFinite(dataX) || !Number.isFinite(dataY))
-            return;
-        this.domainOverride.xMin = domain.xMin - dataX;
-        this.domainOverride.xMax = domain.xMax - dataX;
-        this.domainOverride.yMin = domain.yMin - dataY;
-        this.domainOverride.yMax = domain.yMax - dataY;
-        this.render();
-        if (typeof this.options.onDomainChanged === "function")
-            this.options.onDomainChanged({ ...this.domainOverride });
-    }
-
     resetDomainOverride() {
         this.domainOverride = { xMin: null, xMax: null, yMin: null, yMax: null };
         this.render();
@@ -1632,7 +1563,6 @@ class ChartControl {
         hitArea.setAttribute("fill", "transparent");
         hitArea.setAttribute("style", "pointer-events: all");
         hitArea.addEventListener("pointerdown", e => this.onZoomPointerDown(e));
-        hitArea.addEventListener("dblclick", e => this.onDataAreaDoubleClick(e));
         hitArea.addEventListener("pointermove", e => this.onCrosshairPointerMove(e));
         hitArea.addEventListener("pointerleave", () => this.clearCrosshair());
         this.crosshairInteractionLayer.appendChild(hitArea);
@@ -1681,12 +1611,9 @@ class ChartControl {
         const snappedX = firstSeries ? firstSeries.xValue : argumentValue;
         const axisLabelX = xScale(snappedX);
         const axisLabelText = this.formatCrosshairValue(snappedX);
-        const axisLabelWidth = this.estimateTextWidth(axisLabelText, 10) + 8;
-        const xLabelContrastColor = Utils.getContrastColor(this.options.foregroundColor);
         let crosshairMarkup = `
             <line x1="${crosshairX}" y1="${layout.plotTop}" x2="${crosshairX}" y2="${layout.plotBottom}" stroke="${this.options.foregroundColor}" stroke-width="1" stroke-opacity="0.5" />
-            <rect x="${axisLabelX - axisLabelWidth / 2}" y="${layout.plotBottom + 4}" width="${axisLabelWidth}" height="16" rx="3" fill="${this.options.foregroundColor}" fill-opacity="0.85" />
-            <text x="${axisLabelX}" y="${layout.plotBottom + 16}" text-anchor="middle" font-family="${this.options.fontFamily}" font-size="10" fill="${xLabelContrastColor}">${this.escapeMarkupText(axisLabelText)}</text>
+            ${Utils.valueBadgeSvgMarkup(axisLabelText, axisLabelX, layout.plotBottom + 12, { fontSize: 10, fontFamily: this.options.fontFamily, backgroundColor: this.options.foregroundColor })}
         `;
         for (let seriesIndex = 0; seriesIndex < state.series.length; seriesIndex++) {
             const series = state.series[seriesIndex];
@@ -1699,12 +1626,10 @@ class ChartControl {
                 continue;
             const yLabelText = this.formatCrosshairValue(nearestPoint.yValue);
             const yLabelWidth = this.estimateTextWidth(yLabelText, 10) + 8;
-            const yLabelContrastColor = Utils.getContrastColor(series.color);
             crosshairMarkup += `
                 <circle cx="${pointX}" cy="${pointY}" r="4" fill="${series.color}" stroke="#ffffff" stroke-width="1.5" />
                 <line x1="${layout.plotLeft}" y1="${pointY}" x2="${layout.plotRight}" y2="${pointY}" stroke="${series.color}" stroke-width="1" stroke-opacity="0.3" />
-                <rect x="${layout.plotLeft - yLabelWidth - 4}" y="${pointY - 8}" width="${yLabelWidth}" height="16" rx="3" fill="${series.color}" fill-opacity="0.85" />
-                <text x="${layout.plotLeft - yLabelWidth / 2 - 4}" y="${pointY + 4}" text-anchor="middle" font-family="${this.options.fontFamily}" font-size="10" fill="${yLabelContrastColor}">${this.escapeMarkupText(yLabelText)}</text>
+                ${Utils.valueBadgeSvgMarkup(yLabelText, layout.plotLeft - yLabelWidth / 2 - 4, pointY, { fontSize: 10, fontFamily: this.options.fontFamily, backgroundColor: series.color })}
             `;
         }
         this.appendSvgMarkup(this.crosshairLayer, crosshairMarkup);

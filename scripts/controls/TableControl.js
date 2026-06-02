@@ -244,7 +244,10 @@ class TableControl {
     }
 
     getHeaderTitleMathValue(titleText) {
-        return String(titleText ?? "");
+        const normalizedTitleText = String(titleText ?? "");
+        if (normalizedTitleText.includes("\\"))
+            return normalizedTitleText;
+        return Utils.convertGreekLetters(normalizedTitleText);
     }
 
     setMathFieldValue(mathFieldElement, mathValue) {
