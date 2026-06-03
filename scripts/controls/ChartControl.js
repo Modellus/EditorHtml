@@ -43,8 +43,6 @@ class ChartControl {
             equalScales: false,
             precision: 2,
             tangentColor: "#00000000",
-            originX: 0,
-            originY: 0,
             fontSize: 13,
             titleFontSize: 16,
             fontWeight: 900
@@ -241,12 +239,12 @@ class ChartControl {
         let maxXTickWidth = 0;
         let maxYTickWidth = 0;
         for (let index = 0; index < xTicks.length; index++) {
-            const labelWidth = this.estimateTextWidth(this.formatAxisValue(xTicks[index] - this.options.originX), tickFontSize);
+            const labelWidth = this.estimateTextWidth(this.formatAxisValue(xTicks[index]), tickFontSize);
             if (labelWidth > maxXTickWidth)
                 maxXTickWidth = labelWidth;
         }
         for (let index = 0; index < yTicks.length; index++) {
-            const labelWidth = this.estimateTextWidth(this.formatAxisValue(yTicks[index] - this.options.originY), tickFontSize);
+            const labelWidth = this.estimateTextWidth(this.formatAxisValue(yTicks[index]), tickFontSize);
             if (labelWidth > maxYTickWidth)
                 maxYTickWidth = labelWidth;
         }
@@ -325,9 +323,9 @@ class ChartControl {
             return types.includes("bar") || types.includes("area");
         });
         if (hasBaselineType)
-            yValues.push(this.options.originY);
-        xValues.push(this.options.originX);
-        yValues.push(this.options.originY);
+            yValues.push(0);
+        xValues.push(0);
+        yValues.push(0);
         if (xValues.length === 0)
             xValues.push(0, 1);
         if (yValues.length === 0)
@@ -767,9 +765,9 @@ class ChartControl {
             return;
         this.renderBackground(width, height);
         const rawDomain = this.getDomain(this.options.argumentField, this.options.series);
-        const preliminaryTicks = this.buildTicks(rawDomain.xMin, rawDomain.xMax, 5);
+        const preliminaryXTicks = this.buildTicks(rawDomain.xMin, rawDomain.xMax, 5);
         const preliminaryYTicks = this.buildTicks(rawDomain.yMin, rawDomain.yMax, 5);
-        const preliminaryLayout = this.getLayout(width, height, preliminaryTicks, preliminaryYTicks);
+        const preliminaryLayout = this.getLayout(width, height, preliminaryXTicks, preliminaryYTicks);
         const domain = this.options.equalScales
             ? this.equalizeDomain(rawDomain, preliminaryLayout.plotWidth, preliminaryLayout.plotHeight)
             : rawDomain;
@@ -869,15 +867,15 @@ class ChartControl {
             <line x1="${layout.plotLeft}" y1="${layout.plotTop}" x2="${layout.plotRight}" y2="${layout.plotTop}" stroke="${this.options.axisColor}" stroke-width="1.2" />
             <line x1="${layout.plotRight}" y1="${layout.plotTop}" x2="${layout.plotRight}" y2="${layout.plotBottom}" stroke="${this.options.axisColor}" stroke-width="1.2" />
         `);
-        const originY = yScale(this.options.originY);
-        if (originY > layout.plotTop && originY < layout.plotBottom)
+        const originYPixel = yScale(0);
+        if (originYPixel > layout.plotTop && originYPixel < layout.plotBottom)
             this.appendSvgMarkup(this.axisLayer, `
-                <line x1="${layout.plotLeft}" y1="${originY}" x2="${layout.plotRight}" y2="${originY}" stroke="${this.options.borderColor}" stroke-width="1.2" />
+                <line x1="${layout.plotLeft}" y1="${originYPixel}" x2="${layout.plotRight}" y2="${originYPixel}" stroke="${this.options.borderColor}" stroke-width="1.2" />
             `);
-        const originX = xScale(this.options.originX);
-        if (originX > layout.plotLeft && originX < layout.plotRight)
+        const originXPixel = xScale(0);
+        if (originXPixel > layout.plotLeft && originXPixel < layout.plotRight)
             this.appendSvgMarkup(this.axisLayer, `
-                <line x1="${originX}" y1="${layout.plotTop}" x2="${originX}" y2="${layout.plotBottom}" stroke="${this.options.borderColor}" stroke-width="1.2" />
+                <line x1="${originXPixel}" y1="${layout.plotTop}" x2="${originXPixel}" y2="${layout.plotBottom}" stroke="${this.options.borderColor}" stroke-width="1.2" />
             `);
         for (let index = 0; index < xMinorTicks.length; index++)
             this.renderXAxisMinorTick(layout, xScale, xMinorTicks[index]);
@@ -911,7 +909,7 @@ class ChartControl {
             anchor = "end";
             labelX = xPosition - 2;
         }
-        const labelText = this.escapeMarkupText(this.formatAxisValue(xValue - this.options.originX));
+        const labelText = this.escapeMarkupText(this.formatAxisValue(xValue));
         this.appendSvgMarkup(this.axisLayer, `
             <g clip-path="url(#${this.xTicksClipId})">
                 <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 4}" stroke="${this.options.axisColor}" stroke-width="1" />
@@ -923,7 +921,7 @@ class ChartControl {
 
     renderYAxisTick(layout, yScale, yValue) {
         const yPosition = yScale(yValue);
-        const labelText = this.escapeMarkupText(this.formatAxisValue(yValue - this.options.originY));
+        const labelText = this.escapeMarkupText(this.formatAxisValue(yValue));
         this.appendSvgMarkup(this.axisLayer, `
             <g clip-path="url(#${this.yTicksClipId})">
                 <line x1="${layout.plotLeft - 4}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
@@ -948,20 +946,22 @@ class ChartControl {
         let effectiveRowIndex = 0;
         for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
             const row = this.dataRows[rowIndex];
-            const xValue = this.getNumericValue(row, this.options.argumentField);
-            const yValue = this.getNumericValue(row, series.valueField);
-            if (xValue == null || yValue == null) {
+            const rawXValue = this.getNumericValue(row, this.options.argumentField);
+            const rawYValue = this.getNumericValue(row, series.valueField);
+            if (rawXValue == null || rawYValue == null) {
                 effectiveRowIndex++;
                 continue;
             }
             if (row[`singularity_${series.valueField}`] === true)
                 effectiveRowIndex++;
+            const pixelX = xScale(rawXValue);
+            const pixelY = yScale(rawYValue);
             points.push({
                 rowIndex: effectiveRowIndex,
-                xValue: xValue,
-                yValue: yValue,
-                x: xScale(xValue),
-                y: yScale(yValue),
+                xValue: rawXValue,
+                yValue: rawYValue,
+                x: pixelX,
+                y: pixelY,
                 isOutlier: row[`outlier_${series.valueField}`] === true
             });
             effectiveRowIndex++;
@@ -970,7 +970,7 @@ class ChartControl {
     }
 
     renderSeries(layout, xScale, yScale) {
-        const areaBaseY = Math.min(Math.max(yScale(this.options.originY), layout.plotTop), layout.plotBottom);
+        const areaBaseY = Math.min(Math.max(yScale(0), layout.plotTop), layout.plotBottom);
         const barSeriesList = this.options.series.filter(series => (series.chartTypes ?? ["line"]).includes("bar"));
         if (barSeriesList.length > 0)
             this.renderBarSeries(layout, xScale, yScale, barSeriesList);
@@ -1048,10 +1048,10 @@ class ChartControl {
             return;
         const xValues = [];
         for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
-            const xValue = this.getNumericValue(this.dataRows[rowIndex], this.options.argumentField);
-            if (xValue == null)
+            const rawXValue = this.getNumericValue(this.dataRows[rowIndex], this.options.argumentField);
+            if (rawXValue == null)
                 continue;
-            xValues.push(xValue);
+            xValues.push(rawXValue);
         }
         const uniqueXValues = [...new Set(xValues)].sort((leftValue, rightValue) => leftValue - rightValue);
         let stepPixels = layout.plotWidth / Math.max(1, uniqueXValues.length + 1);
@@ -1061,7 +1061,7 @@ class ChartControl {
                 stepPixels = Math.min(stepPixels, diff);
         }
         const barWidth = Math.max(2, Math.min(24, stepPixels / Math.max(1, barSeriesList.length + 1)));
-        const baselineY = yScale(this.options.originY);
+        const baselineY = yScale(0);
         let barsMarkup = "";
         const outlierPointsBySeries = [];
         for (let seriesIndex = 0; seriesIndex < barSeriesList.length; seriesIndex++) {
@@ -1070,16 +1070,16 @@ class ChartControl {
             const seriesOutlierPoints = [];
             for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
                 const row = this.dataRows[rowIndex];
-                const xValue = this.getNumericValue(row, this.options.argumentField);
-                const yValue = this.getNumericValue(row, series.valueField);
-                if (xValue == null || yValue == null)
+                const rawXValue = this.getNumericValue(row, this.options.argumentField);
+                const rawYValue = this.getNumericValue(row, series.valueField);
+                if (rawXValue == null || rawYValue == null)
                     continue;
                 if (row[`outlier_${series.valueField}`] === true) {
-                    seriesOutlierPoints.push({ x: xScale(xValue), y: yScale(yValue) });
+                    seriesOutlierPoints.push({ x: xScale(rawXValue), y: yScale(rawYValue) });
                     continue;
                 }
-                const xPosition = xScale(xValue) + offset - barWidth * 0.45;
-                const yPosition = yScale(yValue);
+                const xPosition = xScale(rawXValue) + offset - barWidth * 0.45;
+                const yPosition = yScale(rawYValue);
                 barsMarkup += `
                     <rect x="${xPosition}" y="${Math.min(yPosition, baselineY)}" width="${barWidth * 0.9}" height="${Math.max(1, Math.abs(yPosition - baselineY))}" fill="${series.color}" fill-opacity="0.8" />
                 `;
@@ -1197,7 +1197,7 @@ class ChartControl {
             <circle cx="${xPosition}" cy="${yPosition}" r="3.5" fill="${series.color}" stroke="#ffffff" stroke-width="1" />
         `;
         if (series.showLabel) {
-            const valueText = `${series.name} = ${this.formatCrosshairValue(nearestPoint.yValue - this.options.originY)}`;
+            const valueText = `${series.name} = ${this.formatCrosshairValue(nearestPoint.yValue)}`;
             markerMarkup += Utils.valueBadgeSvgMarkup(valueText, xPosition, yPosition - 12, {
                 fontSize: 10,
                 fontFamily: this.options.fontFamily,
@@ -1212,15 +1212,15 @@ class ChartControl {
         let nearestDistance = Number.POSITIVE_INFINITY;
         for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
             const row = this.dataRows[rowIndex];
-            const xValue = this.getNumericValue(row, this.renderState.argumentField);
-            const yValue = this.getNumericValue(row, series.valueField);
-            if (xValue == null || yValue == null)
+            const rawXValue = this.getNumericValue(row, this.renderState.argumentField);
+            const rawYValue = this.getNumericValue(row, series.valueField);
+            if (rawXValue == null || rawYValue == null)
                 continue;
-            const distance = Math.abs(xValue - focusArgumentValue);
+            const distance = Math.abs(rawXValue - focusArgumentValue);
             if (distance >= nearestDistance)
                 continue;
             nearestDistance = distance;
-            nearestPoint = { xValue: xValue, yValue: yValue };
+            nearestPoint = { xValue: rawXValue, yValue: rawYValue };
         }
         return nearestPoint;
     }
@@ -1230,11 +1230,11 @@ class ChartControl {
         let nearestIndex = -1;
         let nearestDistance = Infinity;
         for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
-            const xValue = this.getNumericValue(this.dataRows[rowIndex], argumentField);
-            const yValue = this.getNumericValue(this.dataRows[rowIndex], series.valueField);
-            if (xValue == null || yValue == null)
+            const rawXValue = this.getNumericValue(this.dataRows[rowIndex], argumentField);
+            const rawYValue = this.getNumericValue(this.dataRows[rowIndex], series.valueField);
+            if (rawXValue == null || rawYValue == null)
                 continue;
-            const distance = Math.abs(xValue - this.focusArgumentValue);
+            const distance = Math.abs(rawXValue - this.focusArgumentValue);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
                 nearestIndex = rowIndex;
@@ -1243,24 +1243,28 @@ class ChartControl {
         if (nearestIndex < 0)
             return null;
         const currentRow = this.dataRows[nearestIndex];
-        const currentX = this.getNumericValue(currentRow, argumentField);
-        const currentY = this.getNumericValue(currentRow, series.valueField);
+        const rawCurrentX = this.getNumericValue(currentRow, argumentField);
+        const rawCurrentY = this.getNumericValue(currentRow, series.valueField);
+        if (rawCurrentX == null || rawCurrentY == null)
+            return null;
+        const currentX = rawCurrentX;
+        const currentY = rawCurrentY;
         let prevX = null, prevY = null, nextX = null, nextY = null;
         for (let i = nearestIndex - 1; i >= 0; i--) {
-            const x = this.getNumericValue(this.dataRows[i], argumentField);
-            const y = this.getNumericValue(this.dataRows[i], series.valueField);
-            if (x != null && y != null) {
-                prevX = x;
-                prevY = y;
+            const rawX = this.getNumericValue(this.dataRows[i], argumentField);
+            const rawY = this.getNumericValue(this.dataRows[i], series.valueField);
+            if (rawX != null && rawY != null) {
+                prevX = rawX;
+                prevY = rawY;
                 break;
             }
         }
         for (let i = nearestIndex + 1; i < this.dataRows.length; i++) {
-            const x = this.getNumericValue(this.dataRows[i], argumentField);
-            const y = this.getNumericValue(this.dataRows[i], series.valueField);
-            if (x != null && y != null) {
-                nextX = x;
-                nextY = y;
+            const rawX = this.getNumericValue(this.dataRows[i], argumentField);
+            const rawY = this.getNumericValue(this.dataRows[i], series.valueField);
+            if (rawX != null && rawY != null) {
+                nextX = rawX;
+                nextY = rawY;
                 break;
             }
         }
@@ -1661,7 +1665,7 @@ class ChartControl {
         const firstSeries = state.series.length > 0 ? this.getNearestSeriesPoint(state.series[0], argumentValue) : null;
         const snappedX = firstSeries ? firstSeries.xValue : argumentValue;
         const axisLabelX = xScale(snappedX);
-        const axisLabelText = this.formatCrosshairValue(snappedX - this.options.originX);
+        const axisLabelText = this.formatCrosshairValue(snappedX);
         let crosshairMarkup = `
             <line x1="${crosshairX}" y1="${layout.plotTop}" x2="${crosshairX}" y2="${layout.plotBottom}" stroke="${this.options.foregroundColor}" stroke-width="1" stroke-opacity="0.5" />
             ${Utils.valueBadgeSvgMarkup(axisLabelText, axisLabelX, layout.plotBottom + 12, { fontSize: 10, fontFamily: this.options.fontFamily, backgroundColor: this.options.foregroundColor })}
@@ -1677,7 +1681,7 @@ class ChartControl {
                 continue;
             if (pointY < layout.plotTop || pointY > layout.plotBottom)
                 continue;
-            const yLabelText = this.formatCrosshairValue(nearestPoint.yValue - this.options.originY);
+            const yLabelText = this.formatCrosshairValue(nearestPoint.yValue);
             const yLabelWidth = this.estimateTextWidth(yLabelText, 10) + 8;
             crosshairMarkup += `
                 <circle cx="${pointX}" cy="${pointY}" r="4" fill="${series.color}" stroke="#ffffff" stroke-width="1.5" />
