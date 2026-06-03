@@ -235,6 +235,8 @@ class ChartShape extends BaseShape {
         this.properties.autoScale = true;
         this.properties.equalScales = false;
         this.properties.tangentColor = "#00000000";
+        this.properties.originX = 0;
+        this.properties.originY = 0;
         this.properties.xTerm = this.board.calculator.properties.independent.name;
         this.properties.yTerms = [{ term: this.board.calculator.getDefaultTerm(), case: 1, color: "", showLabel: false, chartTypes: ["line"] }];
         this.properties.domainOverride = this.getDefaultDomainOverride();
@@ -271,10 +273,13 @@ class ChartShape extends BaseShape {
             borderColor: this.getBorderColor(),
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
+            originX: this.properties.originX ?? 0,
+            originY: this.properties.originY ?? 0,
             precision: this.board.calculator.getPrecision(),
             onDomainChanged: domain => this.onDomainChanged(domain),
             onTickDragStarted: () => this.onTickDragStarted(),
-            onTickDragEnded: () => this.onTickDragEnded()
+            onTickDragEnded: () => this.onTickDragEnded(),
+            onDataAreaDoubleClick: (originX, originY) => this.onDataAreaDoubleClick(originX, originY)
         };
     }
 
@@ -282,6 +287,17 @@ class ChartShape extends BaseShape {
         this.properties.autoScale = false;
         this.properties.domainOverride = domain;
         this._autoScaleSwitchInstance?.option("value", false);
+        this.refreshDomainBoxes();
+        this.board.markDirty(this);
+    }
+
+    onDataAreaDoubleClick(originX, originY) {
+        this.properties.originX = originX;
+        this.properties.originY = originY;
+        this.chart.setOptions({
+            originX: originX,
+            originY: originY
+        });
         this.refreshDomainBoxes();
         this.board.markDirty(this);
     }
@@ -430,6 +446,8 @@ class ChartShape extends BaseShape {
         const config = {
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
+            originX: this.properties.originX ?? 0,
+            originY: this.properties.originY ?? 0,
             argField: argumentField,
             series: ySeries.map(series => ({
                 valueField: series.valueField,
@@ -455,6 +473,8 @@ class ChartShape extends BaseShape {
             this.chart.setOptions({
                 equalScales: config.equalScales,
                 tangentColor: config.tangentColor,
+                originX: config.originX,
+                originY: config.originY,
                 argumentField: config.argField,
                 series: config.series,
                 foregroundColor: config.color,

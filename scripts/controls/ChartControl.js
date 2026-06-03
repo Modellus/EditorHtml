@@ -16,6 +16,7 @@ class ChartControl {
         this._onPointerUp = e => this.onTickPointerUp(e);
         this._onZoomPointerMove = e => this.onZoomPointerMove(e);
         this._onZoomPointerUp = e => this.onZoomPointerUp(e);
+        this._lastPlotClick = null;
         this.initializeRoot();
         this.ensureCaseIconsLoaded();
         this.setOptions(options);
@@ -42,6 +43,8 @@ class ChartControl {
             equalScales: false,
             precision: 2,
             tangentColor: "#00000000",
+            originX: 0,
+            originY: 0,
             fontSize: 13,
             titleFontSize: 16,
             fontWeight: 900
@@ -238,12 +241,12 @@ class ChartControl {
         let maxXTickWidth = 0;
         let maxYTickWidth = 0;
         for (let index = 0; index < xTicks.length; index++) {
-            const labelWidth = this.estimateTextWidth(this.formatAxisValue(xTicks[index]), tickFontSize);
+            const labelWidth = this.estimateTextWidth(this.formatAxisValue(xTicks[index] - this.options.originX), tickFontSize);
             if (labelWidth > maxXTickWidth)
                 maxXTickWidth = labelWidth;
         }
         for (let index = 0; index < yTicks.length; index++) {
-            const labelWidth = this.estimateTextWidth(this.formatAxisValue(yTicks[index]), tickFontSize);
+            const labelWidth = this.estimateTextWidth(this.formatAxisValue(yTicks[index] - this.options.originY), tickFontSize);
             if (labelWidth > maxYTickWidth)
                 maxYTickWidth = labelWidth;
         }
@@ -322,7 +325,9 @@ class ChartControl {
             return types.includes("bar") || types.includes("area");
         });
         if (hasBaselineType)
-            yValues.push(0);
+            yValues.push(this.options.originY);
+        xValues.push(this.options.originX);
+        yValues.push(this.options.originY);
         if (xValues.length === 0)
             xValues.push(0, 1);
         if (yValues.length === 0)
@@ -864,15 +869,15 @@ class ChartControl {
             <line x1="${layout.plotLeft}" y1="${layout.plotTop}" x2="${layout.plotRight}" y2="${layout.plotTop}" stroke="${this.options.axisColor}" stroke-width="1.2" />
             <line x1="${layout.plotRight}" y1="${layout.plotTop}" x2="${layout.plotRight}" y2="${layout.plotBottom}" stroke="${this.options.axisColor}" stroke-width="1.2" />
         `);
-        const zeroY = yScale(0);
-        if (zeroY > layout.plotTop && zeroY < layout.plotBottom)
+        const originY = yScale(this.options.originY);
+        if (originY > layout.plotTop && originY < layout.plotBottom)
             this.appendSvgMarkup(this.axisLayer, `
-                <line x1="${layout.plotLeft}" y1="${zeroY}" x2="${layout.plotRight}" y2="${zeroY}" stroke="${this.options.borderColor}" stroke-width="1.2" />
+                <line x1="${layout.plotLeft}" y1="${originY}" x2="${layout.plotRight}" y2="${originY}" stroke="${this.options.borderColor}" stroke-width="1.2" />
             `);
-        const zeroX = xScale(0);
-        if (zeroX > layout.plotLeft && zeroX < layout.plotRight)
+        const originX = xScale(this.options.originX);
+        if (originX > layout.plotLeft && originX < layout.plotRight)
             this.appendSvgMarkup(this.axisLayer, `
-                <line x1="${zeroX}" y1="${layout.plotTop}" x2="${zeroX}" y2="${layout.plotBottom}" stroke="${this.options.borderColor}" stroke-width="1.2" />
+                <line x1="${originX}" y1="${layout.plotTop}" x2="${originX}" y2="${layout.plotBottom}" stroke="${this.options.borderColor}" stroke-width="1.2" />
             `);
         for (let index = 0; index < xMinorTicks.length; index++)
             this.renderXAxisMinorTick(layout, xScale, xMinorTicks[index]);
@@ -906,7 +911,7 @@ class ChartControl {
             anchor = "end";
             labelX = xPosition - 2;
         }
-        const labelText = this.escapeMarkupText(this.formatAxisValue(xValue));
+        const labelText = this.escapeMarkupText(this.formatAxisValue(xValue - this.options.originX));
         this.appendSvgMarkup(this.axisLayer, `
             <g clip-path="url(#${this.xTicksClipId})">
                 <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 4}" stroke="${this.options.axisColor}" stroke-width="1" />
@@ -918,7 +923,7 @@ class ChartControl {
 
     renderYAxisTick(layout, yScale, yValue) {
         const yPosition = yScale(yValue);
-        const labelText = this.escapeMarkupText(this.formatAxisValue(yValue));
+        const labelText = this.escapeMarkupText(this.formatAxisValue(yValue - this.options.originY));
         this.appendSvgMarkup(this.axisLayer, `
             <g clip-path="url(#${this.yTicksClipId})">
                 <line x1="${layout.plotLeft - 4}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
@@ -965,7 +970,7 @@ class ChartControl {
     }
 
     renderSeries(layout, xScale, yScale) {
-        const areaBaseY = Math.min(Math.max(yScale(0), layout.plotTop), layout.plotBottom);
+        const areaBaseY = Math.min(Math.max(yScale(this.options.originY), layout.plotTop), layout.plotBottom);
         const barSeriesList = this.options.series.filter(series => (series.chartTypes ?? ["line"]).includes("bar"));
         if (barSeriesList.length > 0)
             this.renderBarSeries(layout, xScale, yScale, barSeriesList);
@@ -1056,7 +1061,7 @@ class ChartControl {
                 stepPixels = Math.min(stepPixels, diff);
         }
         const barWidth = Math.max(2, Math.min(24, stepPixels / Math.max(1, barSeriesList.length + 1)));
-        const baselineY = yScale(0);
+        const baselineY = yScale(this.options.originY);
         let barsMarkup = "";
         const outlierPointsBySeries = [];
         for (let seriesIndex = 0; seriesIndex < barSeriesList.length; seriesIndex++) {
@@ -1192,7 +1197,7 @@ class ChartControl {
             <circle cx="${xPosition}" cy="${yPosition}" r="3.5" fill="${series.color}" stroke="#ffffff" stroke-width="1" />
         `;
         if (series.showLabel) {
-            const valueText = `${series.name} = ${this.formatCrosshairValue(nearestPoint.yValue)}`;
+            const valueText = `${series.name} = ${this.formatCrosshairValue(nearestPoint.yValue - this.options.originY)}`;
             markerMarkup += Utils.valueBadgeSvgMarkup(valueText, xPosition, yPosition - 12, {
                 fontSize: 10,
                 fontFamily: this.options.fontFamily,
@@ -1485,12 +1490,10 @@ class ChartControl {
             startX: startX,
             startY: startY,
             currentX: startX,
-            currentY: startY
+            currentY: startY,
+            isDragging: false
         };
         this.clearCrosshair();
-        this.renderZoomSelectionRectangle(this._zoomDragState);
-        if (typeof this.options.onTickDragStarted === "function")
-            this.options.onTickDragStarted();
         window.addEventListener("pointermove", this._onZoomPointerMove);
         window.addEventListener("pointerup", this._onZoomPointerUp);
         window.addEventListener("pointercancel", this._onZoomPointerUp);
@@ -1508,6 +1511,15 @@ class ChartControl {
             return;
         zoomDragState.currentX = this.clampToPlotBounds(localPoint.x, zoomDragState.layout.plotLeft, zoomDragState.layout.plotRight);
         zoomDragState.currentY = this.clampToPlotBounds(localPoint.y, zoomDragState.layout.plotTop, zoomDragState.layout.plotBottom);
+        if (!zoomDragState.isDragging) {
+            const deltaX = Math.abs(zoomDragState.currentX - zoomDragState.startX);
+            const deltaY = Math.abs(zoomDragState.currentY - zoomDragState.startY);
+            if (deltaX < 3 && deltaY < 3)
+                return;
+            zoomDragState.isDragging = true;
+            if (typeof this.options.onTickDragStarted === "function")
+                this.options.onTickDragStarted();
+        }
         this.renderZoomSelectionRectangle(zoomDragState);
     }
 
@@ -1517,13 +1529,19 @@ class ChartControl {
             return;
         if (event.pointerId !== zoomDragState.pointerId)
             return;
+        event.stopPropagation();
+        event.preventDefault();
         window.removeEventListener("pointermove", this._onZoomPointerMove);
         window.removeEventListener("pointerup", this._onZoomPointerUp);
         window.removeEventListener("pointercancel", this._onZoomPointerUp);
         this._zoomDragState = null;
         this.clearLayer(this.zoomLayer);
-        if (typeof this.options.onTickDragEnded === "function")
+        if (zoomDragState.isDragging && typeof this.options.onTickDragEnded === "function")
             this.options.onTickDragEnded();
+        if (!zoomDragState.isDragging) {
+            this.onPlotClick(zoomDragState.currentX, zoomDragState.currentY);
+            return;
+        }
         const left = Math.min(zoomDragState.startX, zoomDragState.currentX);
         const right = Math.max(zoomDragState.startX, zoomDragState.currentX);
         const top = Math.min(zoomDragState.startY, zoomDragState.currentY);
@@ -1552,6 +1570,39 @@ class ChartControl {
     resetDomainOverride() {
         this.domainOverride = { xMin: null, xMax: null, yMin: null, yMax: null };
         this.render();
+    }
+
+    getDataPointFromPlotPoint(plotX, plotY) {
+        const state = this.renderState;
+        if (!state)
+            return null;
+        const layout = state.layout;
+        if (plotX < layout.plotLeft || plotX > layout.plotRight || plotY < layout.plotTop || plotY > layout.plotBottom)
+            return null;
+        const domain = state.domain;
+        const dataX = domain.xMin + (plotX - layout.plotLeft) / layout.plotWidth * (domain.xMax - domain.xMin);
+        const dataY = domain.yMin + (layout.plotBottom - plotY) / layout.plotHeight * (domain.yMax - domain.yMin);
+        if (!Number.isFinite(dataX) || !Number.isFinite(dataY))
+            return null;
+        return { x: dataX, y: dataY };
+    }
+
+    onPlotClick(plotX, plotY) {
+        const now = Date.now();
+        const previousClick = this._lastPlotClick;
+        this._lastPlotClick = { time: now, x: plotX, y: plotY };
+        if (!previousClick)
+            return;
+        if (now - previousClick.time > 400)
+            return;
+        if (Math.abs(plotX - previousClick.x) > 8 || Math.abs(plotY - previousClick.y) > 8)
+            return;
+        this._lastPlotClick = null;
+        const dataPoint = this.getDataPointFromPlotPoint(plotX, plotY);
+        if (!dataPoint)
+            return;
+        if (typeof this.options.onDataAreaDoubleClick === "function")
+            this.options.onDataAreaDoubleClick(dataPoint.x, dataPoint.y);
     }
 
     renderCrosshairHitArea(layout) {
@@ -1610,7 +1661,7 @@ class ChartControl {
         const firstSeries = state.series.length > 0 ? this.getNearestSeriesPoint(state.series[0], argumentValue) : null;
         const snappedX = firstSeries ? firstSeries.xValue : argumentValue;
         const axisLabelX = xScale(snappedX);
-        const axisLabelText = this.formatCrosshairValue(snappedX);
+        const axisLabelText = this.formatCrosshairValue(snappedX - this.options.originX);
         let crosshairMarkup = `
             <line x1="${crosshairX}" y1="${layout.plotTop}" x2="${crosshairX}" y2="${layout.plotBottom}" stroke="${this.options.foregroundColor}" stroke-width="1" stroke-opacity="0.5" />
             ${Utils.valueBadgeSvgMarkup(axisLabelText, axisLabelX, layout.plotBottom + 12, { fontSize: 10, fontFamily: this.options.fontFamily, backgroundColor: this.options.foregroundColor })}
@@ -1626,7 +1677,7 @@ class ChartControl {
                 continue;
             if (pointY < layout.plotTop || pointY > layout.plotBottom)
                 continue;
-            const yLabelText = this.formatCrosshairValue(nearestPoint.yValue);
+            const yLabelText = this.formatCrosshairValue(nearestPoint.yValue - this.options.originY);
             const yLabelWidth = this.estimateTextWidth(yLabelText, 10) + 8;
             crosshairMarkup += `
                 <circle cx="${pointX}" cy="${pointY}" r="4" fill="${series.color}" stroke="#ffffff" stroke-width="1.5" />
