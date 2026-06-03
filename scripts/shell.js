@@ -373,6 +373,7 @@ class Shell  {
         this.reset();
         this.topToolbar.showWhatsNewIfNeeded();
         this.calculator.stop();
+        this.board.resetShapeValues();
         this.calculator.calculate();
         this.board.refresh();
         this.chatController.reset();

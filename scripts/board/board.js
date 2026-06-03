@@ -212,8 +212,8 @@ class Board {
         this.refresh();
     }
 
-    resetChartData() {
-        this.shapes.shapes.forEach(shape => shape.resetChartValues?.());
+    resetShapeValues() {
+        this.shapes.shapes.forEach(shape => shape.resetValues?.());
         this.forceRefresh();
     }
 

@@ -783,7 +783,7 @@ class TableShape extends BaseShape {
         if (this.table)
             this.table.selectedCell = null;
         this.table?.render();
-        this.board.resetChartData();
+        this.board.resetShapeValues();
     }
 
     restoreFocusedCellsFromOutliers() {
@@ -806,7 +806,7 @@ class TableShape extends BaseShape {
         if (this.table)
             this.table.selectedCell = null;
         this.table?.render();
-        this.board.resetChartData();
+        this.board.resetShapeValues();
     }
 
     createFocusedDeleteButton(itemElement) {

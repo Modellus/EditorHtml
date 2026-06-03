@@ -98,7 +98,7 @@ class ChartShape extends BaseShape {
             }
         }
         if (hadStale) {
-            this.resetChartValues();
+            this.resetValues();
             this.update();
         }
     }
@@ -339,7 +339,7 @@ class ChartShape extends BaseShape {
         const lastIteration = system.lastIteration;
         const lastCalculatedIteration = system.lastCalculatedIteration;
         if (this.lastSyncedIteration > lastIteration)
-            this.resetChartValues();
+            this.resetValues();
         let hasChanges = false;
         if (lastCalculatedIteration > this.lastSyncedCalculatedIteration) {
             const recalcStart = this.lastSyncedCalculatedIteration + 1;
@@ -391,7 +391,7 @@ class ChartShape extends BaseShape {
         return NaN;
     }
 
-    resetChartValues() {
+    resetValues() {
         this.lastSyncedIteration = 0;
         this.lastSyncedCalculatedIteration = 0;
         this.chartRows = [];
@@ -489,7 +489,7 @@ class ChartShape extends BaseShape {
                 precision: this.board.calculator.getPrecision()
             });
             if (dataChanged)
-                this.resetChartValues();
+                this.resetValues();
             this._appliedConfig = config;
             this._appliedDataConfig = dataConfig;
         }
