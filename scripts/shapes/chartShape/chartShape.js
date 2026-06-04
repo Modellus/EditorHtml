@@ -202,6 +202,13 @@ class ChartShape extends BaseShape {
             iconHtml: this.menuIconHtml("fa-chart-area", !!this.properties.dataAreaColor),
             buildControl: $p => $p.append(this._dataAreaColorPicker)
         });
+        const axisLabel = this.board.translations.get("Axis") ?? "Axis";
+        this._axisColorPicker = this.createColorPickerEditor("axisColor");
+        sections[0].items.push({
+            text: axisLabel,
+            iconHtml: this.menuIconHtml("fa-axis-x", !!this.properties.axisColor),
+            buildControl: $p => $p.append(this._axisColorPicker)
+        });
     }
 
     refreshDomainBoxes() {
@@ -235,6 +242,7 @@ class ChartShape extends BaseShape {
         this.properties.autoScale = true;
         this.properties.equalScales = false;
         this.properties.tangentColor = "#00000000";
+        this.properties.axisColor = "";
         this.properties.originX = 0;
         this.properties.originY = 0;
         this.properties.xTerm = this.board.calculator.properties.independent.name;
@@ -271,6 +279,7 @@ class ChartShape extends BaseShape {
             backgroundColor: this.properties.backgroundColor,
             dataAreaColor: this.properties.dataAreaColor,
             borderColor: this.getBorderColor(),
+            ...(this.properties.axisColor ? { axisColor: this.properties.axisColor } : {}),
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
             precision: this.board.calculator.getPrecision(),
@@ -464,6 +473,7 @@ class ChartShape extends BaseShape {
             color: this.properties.foregroundColor,
             bg: this.properties.backgroundColor,
             dataAreaColor: this.properties.dataAreaColor,
+            axisColor: this.properties.axisColor || undefined,
             border: this.getBorderColor(),
             argTitle: this.getTermLabelWithCase(xTerm, xCase),
             valTitle: ySeries.map(series => series.name).join(", ")
@@ -483,6 +493,7 @@ class ChartShape extends BaseShape {
                 foregroundColor: config.color,
                 backgroundColor: config.bg,
                 dataAreaColor: config.dataAreaColor,
+                axisColor: config.axisColor,
                 borderColor: config.border,
                 argumentTitle: config.argTitle,
                 valueTitle: config.valTitle,

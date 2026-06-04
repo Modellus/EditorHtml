@@ -199,9 +199,10 @@ class ChartControl {
 
     setOptions(options) {
         const normalizedOptions = options ?? {};
+        const definedOptions = Object.fromEntries(Object.entries(normalizedOptions).filter(([, value]) => value !== undefined));
         this.options = {
             ...this.options,
-            ...normalizedOptions,
+            ...definedOptions,
             series: this.normalizeSeries(normalizedOptions.series ?? this.options.series)
         };
         this.render();
@@ -870,12 +871,12 @@ class ChartControl {
         const originYPixel = yScale(0);
         if (originYPixel > layout.plotTop && originYPixel < layout.plotBottom)
             this.appendSvgMarkup(this.axisLayer, `
-                <line x1="${layout.plotLeft}" y1="${originYPixel}" x2="${layout.plotRight}" y2="${originYPixel}" stroke="${this.options.borderColor}" stroke-width="1.2" />
+                <line x1="${layout.plotLeft}" y1="${originYPixel}" x2="${layout.plotRight}" y2="${originYPixel}" stroke="${this.options.axisColor}" stroke-width="1.2" />
             `);
         const originXPixel = xScale(0);
         if (originXPixel > layout.plotLeft && originXPixel < layout.plotRight)
             this.appendSvgMarkup(this.axisLayer, `
-                <line x1="${originXPixel}" y1="${layout.plotTop}" x2="${originXPixel}" y2="${layout.plotBottom}" stroke="${this.options.borderColor}" stroke-width="1.2" />
+                <line x1="${originXPixel}" y1="${layout.plotTop}" x2="${originXPixel}" y2="${layout.plotBottom}" stroke="${this.options.axisColor}" stroke-width="1.2" />
             `);
         for (let index = 0; index < xMinorTicks.length; index++)
             this.renderXAxisMinorTick(layout, xScale, xMinorTicks[index]);
