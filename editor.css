@@ -883,9 +883,8 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
 }
 
 .dx-slider-tooltip-position-top .dx-popup-content {
-    font-family: KaTeX_Math, serif !important;
-    font-style: italic !important;
-    font-size: 17px !important;
+    font-family: KaTeX_Main, serif !important;
+    font-size: 16px !important;
 }
 
 .tooltip {

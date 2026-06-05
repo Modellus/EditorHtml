@@ -439,7 +439,7 @@ class BottomToolbar {
         this.playHead.option("max", finalIteration);
         this.playHead.option("value", iteration);
         const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
-        const valueStyle = 'font-family: KaTeX_Math, serif; font-style: italic; font-size: 17px;';
+        const valueStyle = 'font-family: KaTeX_Main, serif; font-size: 15px;';
         this.$playHeadMin.html(`<span style="${valueStyle}">${this.shell.calculator.getStart().toFixed(precision)}</span>`);
         if (this.shell.calculator.properties.independent.noLimit)
             this.$playHeadMax.html('<i class="fa-light fa-infinity" style="font-size:14px; font-weight:400; padding-top:3px"></i>');
