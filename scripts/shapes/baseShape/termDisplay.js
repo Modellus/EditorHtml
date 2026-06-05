@@ -1,43 +1,68 @@
-Object.assign(BaseShape.prototype, {
-    initializeTermDisplayLayer() {
-        this.termDisplayLayer = null;
-        this.termDisplayGuidesLayer = null;
-        this.termDisplayLabelsLayer = null;
-        if (!this.element)
+class TermDisplay {
+    constructor(shape) {
+        this.shape = shape;
+        this.layer = null;
+        this.guidesLayer = null;
+        this.labelsLayer = null;
+    }
+
+    get board() {
+        return this.shape.board;
+    }
+
+    get properties() {
+        return this.shape.properties;
+    }
+
+    get entries() {
+        return this.shape.termDisplayEntries;
+    }
+
+    initializeLayer() {
+        this.layer = null;
+        this.guidesLayer = null;
+        this.labelsLayer = null;
+        const element = this.shape.element;
+        if (!element)
             return;
-        if (this.element.tagName?.toLowerCase() != "g")
+        if (element.tagName?.toLowerCase() != "g")
             return;
-        this.termDisplayLayer = this.board.createSvgElement("g");
-        this.termDisplayLayer.setAttribute("pointer-events", "none");
-        this.termDisplayGuidesLayer = this.board.createSvgElement("g");
-        this.termDisplayLabelsLayer = this.board.createSvgElement("g");
-        this.termDisplayLayer.appendChild(this.termDisplayGuidesLayer);
-        this.termDisplayLayer.appendChild(this.termDisplayLabelsLayer);
-        if (this.element.firstChild)
-            this.element.insertBefore(this.termDisplayLayer, this.element.firstChild);
+        this.layer = this.board.createSvgElement("g");
+        this.layer.setAttribute("pointer-events", "none");
+        this.guidesLayer = this.board.createSvgElement("g");
+        this.labelsLayer = this.board.createSvgElement("g");
+        this.layer.appendChild(this.guidesLayer);
+        this.layer.appendChild(this.labelsLayer);
+        if (element.firstChild)
+            element.insertBefore(this.layer, element.firstChild);
         else
-            this.element.appendChild(this.termDisplayLayer);
-    },
-    getTermDisplayModeProperty(term) {
+            element.appendChild(this.layer);
+    }
+
+    getDisplayModeProperty(term) {
         return `${term}DisplayMode`;
-    },
-    isTermDisplayVisible(mode) {
+    }
+
+    isDisplayVisible(mode) {
         if (mode === false || mode === "none")
             return false;
         return true;
-    },
+    }
+
     normalizeTermValue(value) {
         if (value && typeof value === "object")
             return value.term ?? value.text ?? value.value;
         return value;
-    },
-    getTermCaseNumber(caseProperty) {
+    }
+
+    getCaseNumber(caseProperty) {
         const rawCaseNumber = this.properties[caseProperty] ?? 1;
         const caseNumber = Number.isFinite(rawCaseNumber) ? rawCaseNumber : parseInt(rawCaseNumber, 10);
         if (!Number.isFinite(caseNumber) || caseNumber < 1)
             return 1;
         return caseNumber;
-    },
+    }
+
     formatModelValue(value) {
         const numericValue = Number(value);
         if (numericValue === Infinity)
@@ -46,13 +71,14 @@ Object.assign(BaseShape.prototype, {
             return "-∞";
         if (!Number.isFinite(numericValue))
             return "\u2014";
-        const precision = this.getModelPrecision();
+        const precision = this.shape.getModelPrecision();
         const rounded = Utils.roundToPrecision(numericValue, precision);
         const normalized = Object.is(rounded, -0) ? 0 : rounded;
         if (precision > 0)
             return normalized.toFixed(precision);
         return normalized.toString();
-    },
+    }
+
     formatTermForDisplay(term) {
         if (term == null || term === "")
             return "";
@@ -69,17 +95,18 @@ Object.assign(BaseShape.prototype, {
             return Utils.getDisplayedTerm(termText);
         }
         return this.formatModelValue(numeric);
-    },
-    buildTermDisplayLabel(entry) {
-        const modeProperty = this.getTermDisplayModeProperty(entry.term);
-        if (!this.isTermDisplayVisible(this.properties[modeProperty] ?? "none"))
+    }
+
+    buildLabel(entry) {
+        const modeProperty = this.getDisplayModeProperty(entry.term);
+        if (!this.isDisplayVisible(this.properties[modeProperty] ?? "none"))
             return null;
         const rawTerm = this.normalizeTermValue(this.properties[entry.term]);
         if (rawTerm == null || rawTerm === "")
             return null;
         const termName = String(rawTerm);
         const calculator = this.board.calculator;
-        const caseNumber = this.getTermCaseNumber(entry.caseProperty);
+        const caseNumber = this.getCaseNumber(entry.caseProperty);
         const isTerm = calculator.isTerm(termName);
         const value = isTerm ? calculator.getByName(termName, caseNumber) : Number(termName);
         const valueText = isTerm ? this.formatModelValue(value) : this.formatTermForDisplay(termName);
@@ -95,21 +122,24 @@ Object.assign(BaseShape.prototype, {
             valueText: valueText,
             text: `${displayedTermText} = ${valueText}`
         };
-    },
-    isTermCaseIndicatorVisible(entry) {
-        const modeProperty = this.getTermDisplayModeProperty(entry.term);
-        if (!this.isTermDisplayVisible(this.properties[modeProperty] ?? "none"))
+    }
+
+    isCaseIndicatorVisible(entry) {
+        const modeProperty = this.getDisplayModeProperty(entry.term);
+        if (!this.isDisplayVisible(this.properties[modeProperty] ?? "none"))
             return false;
         const termValue = this.normalizeTermValue(this.properties[entry.term]);
-        return TermControl.shouldShowCaseSelectionForTerm(termValue, TermControl.getBaseShapeCaseVisibilityConfig(this));
-    },
-    getTermCaseIndicatorNumber(entry) {
-        if (!this.isTermCaseIndicatorVisible(entry))
+        return TermControl.shouldShowCaseSelectionForTerm(termValue, TermControl.getBaseShapeCaseVisibilityConfig(this.shape));
+    }
+
+    getCaseIndicatorNumber(entry) {
+        if (!this.isCaseIndicatorVisible(entry))
             return null;
-        const caseNumber = this.getTermCaseNumber(entry.caseProperty);
-        return this.getClampedCaseNumber(caseNumber);
-    },
-    createTermLabelDefinition(entry, labelData, x, y, anchor) {
+        const caseNumber = this.getCaseNumber(entry.caseProperty);
+        return this.shape.getClampedCaseNumber(caseNumber);
+    }
+
+    createLabelDefinition(entry, labelData, x, y, anchor) {
         return {
             text: labelData?.text ?? "",
             termText: labelData?.termText ?? "",
@@ -117,17 +147,19 @@ Object.assign(BaseShape.prototype, {
             x: x,
             y: y,
             anchor: anchor,
-            caseNumber: this.getTermCaseIndicatorNumber(entry)
+            caseNumber: this.getCaseIndicatorNumber(entry),
+            color: entry.color ?? null
         };
-    },
-    ensureTermLabelElements(index) {
-        let labelGroup = this.termDisplayLabelsLayer.children[index];
+    }
+
+    ensureLabelElements(index) {
+        let labelGroup = this.labelsLayer.children[index];
         if (!labelGroup || labelGroup.tagName?.toLowerCase() != "g") {
             if (labelGroup)
-                this.termDisplayLabelsLayer.removeChild(labelGroup);
+                this.labelsLayer.removeChild(labelGroup);
             labelGroup = this.board.createSvgElement("g");
-            const sibling = this.termDisplayLabelsLayer.children[index] ?? null;
-            this.termDisplayLabelsLayer.insertBefore(labelGroup, sibling);
+            const sibling = this.labelsLayer.children[index] ?? null;
+            this.labelsLayer.insertBefore(labelGroup, sibling);
         }
         let backgroundRect = labelGroup.children[0];
         if (!backgroundRect || backgroundRect.tagName?.toLowerCase() != "rect") {
@@ -173,11 +205,12 @@ Object.assign(BaseShape.prototype, {
             labelGroup.appendChild(labelText);
         }
         return { group: labelGroup, backgroundRect: backgroundRect, caseIconHost: caseIconHost, caseIconElement: caseIconHost.firstChild.firstChild, labelText: labelText };
-    },
-    getTermCaseIconLayout(label, labelText) {
+    }
+
+    getCaseIconLayout(label, labelText) {
         const iconSize = 9;
         const gap = 3;
-        const y = label.y + 1;
+        const y = label.y - iconSize / 2;
         if (!label.caseNumber)
             return { visible: false, iconSize: iconSize, iconX: 0, iconY: y, textX: label.x };
         if (label.anchor == "start")
@@ -192,8 +225,9 @@ Object.assign(BaseShape.prototype, {
         const textX = label.x;
         const iconX = labelLeft - gap - iconSize;
         return { visible: true, iconSize: iconSize, iconX: iconX, iconY: y, textX: textX };
-    },
-    applyTermCaseIcon(caseIconHost, caseIconElement, caseNumber, layout) {
+    }
+
+    applyCaseIcon(caseIconHost, caseIconElement, caseNumber, layout) {
         if (!caseIconHost || !caseIconElement)
             return;
         if (!layout.visible) {
@@ -211,8 +245,9 @@ Object.assign(BaseShape.prototype, {
         const iconColor = TermControl.getCaseIconColor(caseNumber);
         if (caseIconElement.style.color != iconColor)
             caseIconElement.style.color = iconColor;
-    },
-    setTermLabelText(labelText, label) {
+    }
+
+    setLabelText(labelText, label) {
         while (labelText.firstChild)
             labelText.removeChild(labelText.firstChild);
         if (!label) {
@@ -226,62 +261,43 @@ Object.assign(BaseShape.prototype, {
             return;
         }
         if (termText === "") {
-            const valueSpan = this.board.createSvgElement("tspan");
-            valueSpan.setAttribute("font-family", "Katex_Main");
-            valueSpan.textContent = valueText;
-            labelText.appendChild(valueSpan);
-            return;
-        }
-        if (label.anchor === "middle") {
-            const equalsGap = 3;
-            const termSpan = this.board.createSvgElement("tspan");
-            termSpan.setAttribute("font-family", "Katex_Math");
-            termSpan.setAttribute("x", label.x - equalsGap);
-            termSpan.setAttribute("text-anchor", "end");
-            termSpan.textContent = Utils.convertGreekLetters(termText);
-            labelText.appendChild(termSpan);
-            const valueSpan = this.board.createSvgElement("tspan");
-            valueSpan.setAttribute("font-family", "Katex_Main");
-            valueSpan.setAttribute("x", label.x + equalsGap);
-            valueSpan.setAttribute("text-anchor", "start");
-            valueSpan.textContent = `= ${valueText}`;
-            labelText.appendChild(valueSpan);
+            labelText.setAttribute("font-family", "Katex_Main");
+            labelText.textContent = valueText;
             return;
         }
         const termSpan = this.board.createSvgElement("tspan");
         termSpan.setAttribute("font-family", "Katex_Math");
+        termSpan.setAttribute("dominant-baseline", "central");
         termSpan.textContent = Utils.convertGreekLetters(termText);
         labelText.appendChild(termSpan);
-        const separatorSpan = this.board.createSvgElement("tspan");
-        separatorSpan.setAttribute("font-family", "Katex_Main");
-        separatorSpan.textContent = " = ";
-        labelText.appendChild(separatorSpan);
         const valueSpan = this.board.createSvgElement("tspan");
         valueSpan.setAttribute("font-family", "Katex_Main");
-        valueSpan.textContent = valueText;
+        valueSpan.setAttribute("dominant-baseline", "central");
+        valueSpan.textContent = ` = ${valueText}`;
         labelText.appendChild(valueSpan);
-    },
-    getTermLabelAnchor() {
-        const position = this.getBoardPosition?.();
-        if (!position)
-            return null;
-        const radius = Number(this.properties.radius);
-        if (Number.isFinite(radius))
-            return { x: position.x + radius, y: position.y + radius * 2 + 4 };
-        const width = Number(this.properties.width);
-        const height = Number(this.properties.height);
-        if (Number.isFinite(width) && Number.isFinite(height))
-            return { x: position.x + width / 2, y: position.y + height + 4 };
-        return { x: position.x, y: position.y + 4 };
-    },
+    }
+
+    getLabelAnchor() {
+        return this.shape.getTermLabelAnchor();
+    }
+
     clearLayerChildren(layer) {
         if (!layer)
             return;
         while (layer.firstChild)
             layer.removeChild(layer.firstChild);
-    },
+    }
+
+    getEntryLabelPosition(entry, index) {
+        return this.shape.getTermEntryLabelPosition(entry, index);
+    }
+
+    getEntryLabelColor(entry, index) {
+        return this.shape.getTermEntryLabelColor(entry, index);
+    }
+
     getShapeCenterPosition() {
-        const position = this.getBoardPosition?.();
+        const position = this.shape.getBoardPosition?.();
         if (!position)
             return null;
         const radius = Number(this.properties.radius);
@@ -289,15 +305,16 @@ Object.assign(BaseShape.prototype, {
             return { x: position.x, y: position.y };
         const width = Number(this.properties.width);
         const height = Number(this.properties.height);
-        const hasCenteredImageBounds = !!this.image && !this.container && !this.path && Number.isFinite(width) && Number.isFinite(height);
+        const hasCenteredImageBounds = !!this.shape.image && !this.shape.container && !this.shape.path && Number.isFinite(width) && Number.isFinite(height);
         if (hasCenteredImageBounds)
             return { x: position.x, y: position.y };
         if (Number.isFinite(width) && Number.isFinite(height))
             return { x: position.x + width / 2, y: position.y + height / 2 };
         return { x: position.x, y: position.y };
-    },
+    }
+
     getReferentialAxesPosition() {
-        const referential = this.getReferentialParent();
+        const referential = this.shape.getReferentialParent();
         if (!referential)
             return null;
         const referentialPosition = referential.getBoardPosition?.();
@@ -306,9 +323,10 @@ Object.assign(BaseShape.prototype, {
         const axisX = referentialPosition.x + Number(referential.properties.originX ?? 0);
         const axisY = referentialPosition.y + Number(referential.properties.originY ?? 0);
         return { x: axisX, y: axisY };
-    },
+    }
+
     getTermAxis(termProperty) {
-        const mapping = this.termsMapping.find(termMapping => termMapping.termProperty == termProperty);
+        const mapping = this.shape.termsMapping.find(termMapping => termMapping.termProperty == termProperty);
         if (!mapping)
             return null;
         if (mapping.scaleProperty == "x" || mapping.scaleProperty == "y")
@@ -316,8 +334,9 @@ Object.assign(BaseShape.prototype, {
         if (mapping.property == "x" || mapping.property == "y")
             return mapping.property;
         return null;
-    },
-    getAxisTermLabelPosition(axis, shapeCenterPosition, axesPosition, axisLabelIndex) {
+    }
+
+    getAxisLabelPosition(axis, shapeCenterPosition, axesPosition, axisLabelIndex) {
         if (axis == "x") {
             if (shapeCenterPosition.y <= axesPosition.y)
                 return { x: shapeCenterPosition.x, y: axesPosition.y + 12 + axisLabelIndex * 12, anchor: "middle" };
@@ -326,9 +345,10 @@ Object.assign(BaseShape.prototype, {
         if (shapeCenterPosition.x <= axesPosition.x)
             return { x: axesPosition.x + 6, y: shapeCenterPosition.y + axisLabelIndex * 12, anchor: "start" };
         return { x: axesPosition.x - 6, y: shapeCenterPosition.y + axisLabelIndex * 12, anchor: "end" };
-    },
-    createTermGuideLine(axis, shapeCenterPosition, axesPosition, color) {
-        if (!this.termDisplayGuidesLayer)
+    }
+
+    createGuideLine(axis, shapeCenterPosition, axesPosition, color) {
+        if (!this.guidesLayer)
             return;
         const line = this.board.createSvgElement("line");
         line.setAttribute("class", "shape-term-guide-line");
@@ -346,14 +366,15 @@ Object.assign(BaseShape.prototype, {
             line.setAttribute("x2", axesPosition.x);
             line.setAttribute("y2", shapeCenterPosition.y);
         }
-        this.termDisplayGuidesLayer.appendChild(line);
-    },
-    drawTermDisplayLabels() {
-        if (!this.termDisplayLayer || !this.termDisplayLabelsLayer || !this.termDisplayGuidesLayer)
+        this.guidesLayer.appendChild(line);
+    }
+
+    draw() {
+        if (!this.layer || !this.labelsLayer || !this.guidesLayer)
             return;
-        const color = this.getShapeNameColor();
+        const color = this.shape.getShapeNameColor();
         const labels = [];
-        const fallbackAnchor = this.getTermLabelAnchor();
+        const fallbackAnchor = this.getLabelAnchor();
         const axesPosition = this.getReferentialAxesPosition();
         const shapeCenterPosition = this.getShapeCenterPosition();
         let fallbackLabelIndex = 0;
@@ -361,28 +382,28 @@ Object.assign(BaseShape.prototype, {
         let yAxisLabelIndex = 0;
         let hasXGuide = false;
         let hasYGuide = false;
-        this.clearLayerChildren(this.termDisplayGuidesLayer);
-        for (let i = 0; i < this.termDisplayEntries.length; i++) {
-            const entry = this.termDisplayEntries[i];
-            const labelData = this.buildTermDisplayLabel(entry);
+        this.clearLayerChildren(this.guidesLayer);
+        for (let i = 0; i < this.entries.length; i++) {
+            const entry = this.entries[i];
+            const labelData = this.buildLabel(entry);
             if (!labelData)
                 continue;
             if (axesPosition && shapeCenterPosition) {
                 const axis = this.getTermAxis(entry.term);
                 if (axis == "x" || axis == "y") {
                     const axisLabelIndex = axis == "x" ? xAxisLabelIndex : yAxisLabelIndex;
-                    const labelPosition = this.getAxisTermLabelPosition(axis, shapeCenterPosition, axesPosition, axisLabelIndex);
-                    labels.push(this.createTermLabelDefinition(entry, labelData, labelPosition.x, labelPosition.y, labelPosition.anchor));
+                    const labelPosition = this.getAxisLabelPosition(axis, shapeCenterPosition, axesPosition, axisLabelIndex);
+                    labels.push(this.createLabelDefinition(entry, labelData, labelPosition.x, labelPosition.y, labelPosition.anchor));
                     if (axis == "x") {
                         xAxisLabelIndex++;
                         if (!hasXGuide) {
-                            this.createTermGuideLine("x", shapeCenterPosition, axesPosition, color);
+                            this.createGuideLine("x", shapeCenterPosition, axesPosition, color);
                             hasXGuide = true;
                         }
                     } else {
                         yAxisLabelIndex++;
                         if (!hasYGuide) {
-                            this.createTermGuideLine("y", shapeCenterPosition, axesPosition, color);
+                            this.createGuideLine("y", shapeCenterPosition, axesPosition, color);
                             hasYGuide = true;
                         }
                     }
@@ -391,30 +412,39 @@ Object.assign(BaseShape.prototype, {
             }
             if (!fallbackAnchor)
                 continue;
-            labels.push(this.createTermLabelDefinition(entry, labelData, fallbackAnchor.x, fallbackAnchor.y + fallbackLabelIndex * 12, "middle"));
+            const entryColor = this.getEntryLabelColor(entry, fallbackLabelIndex);
+            const coloredEntry = entryColor ? { ...entry, color: entryColor } : entry;
+            const entryPosition = this.getEntryLabelPosition(entry, fallbackLabelIndex);
+            if (entryPosition)
+                labels.push(this.createLabelDefinition(coloredEntry, labelData, entryPosition.x, entryPosition.y, entryPosition.anchor ?? "middle"));
+            else
+                labels.push(this.createLabelDefinition(coloredEntry, labelData, fallbackAnchor.x, fallbackAnchor.y + fallbackLabelIndex * 12, fallbackAnchor.anchor ?? "middle"));
             fallbackLabelIndex++;
         }
-        while (this.termDisplayLabelsLayer.children.length > labels.length)
-            this.termDisplayLabelsLayer.removeChild(this.termDisplayLabelsLayer.lastChild);
+        while (this.labelsLayer.children.length > labels.length)
+            this.labelsLayer.removeChild(this.labelsLayer.lastChild);
         if (labels.length == 0)
             return;
-        const contrastColor = Utils.getContrastColor(color);
         for (let i = 0; i < labels.length; i++) {
-            const labelElements = this.ensureTermLabelElements(i);
+            const labelElements = this.ensureLabelElements(i);
             const label = labels[i];
+            const labelColor = label.color ?? color;
+            const labelContrastColor = Utils.getContrastColor(labelColor);
             const labelText = labelElements.labelText;
             labelText.setAttribute("x", label.x);
             labelText.setAttribute("y", label.y);
             labelText.setAttribute("text-anchor", label.anchor);
-            labelText.setAttribute("fill", contrastColor);
-            this.setTermLabelText(labelText, label);
-            const iconLayout = this.getTermCaseIconLayout(label, labelText);
+            labelText.setAttribute("dominant-baseline", "central");
+            labelText.setAttribute("fill", labelContrastColor);
+            this.setLabelText(labelText, label);
+            const iconLayout = this.getCaseIconLayout(label, labelText);
             labelText.setAttribute("x", iconLayout.textX);
-            this.applyTermCaseIcon(labelElements.caseIconHost, labelElements.caseIconElement, label.caseNumber, iconLayout);
-            this.applyTermLabelBackground(labelElements.backgroundRect, labelText, color, label.anchor);
+            this.applyCaseIcon(labelElements.caseIconHost, labelElements.caseIconElement, label.caseNumber, iconLayout);
+            this.applyLabelBackground(labelElements.backgroundRect, labelText, labelColor, label.anchor);
         }
-    },
-    applyTermLabelBackground(backgroundRect, labelText, color, anchor) {
+    }
+
+    applyLabelBackground(backgroundRect, labelText, color, anchor) {
         const paddingX = 4;
         const paddingY = 2;
         let textWidth = 0;
@@ -440,7 +470,7 @@ Object.assign(BaseShape.prototype, {
         backgroundRect.setAttribute("height", textHeight + paddingY * 2);
         backgroundRect.setAttribute("fill", color);
     }
-});
+}
 
 if (typeof module !== "undefined" && module.exports)
-    module.exports = BaseShape;
+    module.exports = TermDisplay;

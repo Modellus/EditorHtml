@@ -340,6 +340,12 @@ class ChartShape extends BaseShape {
         return element;
     }
 
+    initializeTermDisplayLayer() {
+        BaseShape.prototype.initializeTermDisplayLayer.call(this);
+        if (this.termDisplayLayer && this.element)
+            this.element.appendChild(this.termDisplayLayer);
+    }
+
     updateValues() {
         const chartDataConfig = this.chartDataConfig;
         if (!chartDataConfig)
@@ -518,6 +524,45 @@ class ChartShape extends BaseShape {
         }
         this.updateValues();
         this.updateFocus();
+        this.syncYTermDisplayEntries(selectedYTerms);
+    }
+
+    syncYTermDisplayEntries(selectedYTerms) {
+        this.termDisplayEntries = this.termDisplayEntries.filter(entry => !entry.term.startsWith("_yTerm"));
+        for (let i = 0; i < selectedYTerms.length; i++) {
+            const yTerm = selectedYTerms[i];
+            const termProperty = `_yTerm${i}`;
+            const caseProperty = `${termProperty}Case`;
+            const displayModeProperty = `${termProperty}DisplayMode`;
+            this.properties[termProperty] = yTerm.term;
+            this.properties[caseProperty] = yTerm.case ?? 1;
+            this.properties[displayModeProperty] = "visible";
+            if (!this.termDisplayEntries.some(entry => entry.term === termProperty))
+                this.termDisplayEntries.push({ term: termProperty, caseProperty: caseProperty });
+        }
+    }
+
+    getTermLabelAnchor() {
+        const width = Number(this.properties.width);
+        const height = Number(this.properties.height);
+        if (Number.isFinite(width) && Number.isFinite(height))
+            return { x: width - 8, y: 20, anchor: "end" };
+        return { x: 0, y: 20, anchor: "end" };
+    }
+
+    getTermEntryLabelPosition(entry, index) {
+        const focusPositions = this.chart.getFocusPositions();
+        const position = focusPositions[index];
+        if (!position)
+            return null;
+        return { x: position.x, y: position.y - 12, anchor: "middle" };
+    }
+
+    getTermEntryLabelColor(entry, index) {
+        const series = this.chart.renderState?.series;
+        if (!series || index >= series.length)
+            return null;
+        return series[index].color;
     }
 
     draw() {
@@ -538,5 +583,6 @@ class ChartShape extends BaseShape {
             this._lastFocusTs = now;
         }
         super.tick();
+        this.board.markDirty(this);
     }
 }

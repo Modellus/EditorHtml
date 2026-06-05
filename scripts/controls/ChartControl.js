@@ -1185,6 +1185,31 @@ class ChartControl {
         return points;
     }
 
+    getFocusPositions() {
+        if (!this.renderState || !Number.isFinite(this.focusArgumentValue))
+            return [];
+        const xScale = this.renderState.xScale;
+        const yScale = this.renderState.yScale;
+        const layout = this.renderState.layout;
+        const positions = [];
+        for (let seriesIndex = 0; seriesIndex < this.renderState.series.length; seriesIndex++) {
+            const series = this.renderState.series[seriesIndex];
+            const nearestPoint = this.getNearestSeriesPoint(series, this.focusArgumentValue);
+            if (!nearestPoint) {
+                positions.push(null);
+                continue;
+            }
+            const xPosition = xScale(nearestPoint.xValue);
+            const yPosition = yScale(nearestPoint.yValue);
+            if (!Number.isFinite(xPosition) || !Number.isFinite(yPosition) || yPosition < layout.plotTop || yPosition > layout.plotBottom) {
+                positions.push(null);
+                continue;
+            }
+            positions.push({ x: xPosition, y: yPosition });
+        }
+        return positions;
+    }
+
     renderFocusMarker(seriesIndex, xScale, yScale) {
         const series = this.renderState.series[seriesIndex];
         const nearestPoint = this.getNearestSeriesPoint(series, this.focusArgumentValue);
@@ -1197,14 +1222,6 @@ class ChartControl {
         let markerMarkup = `
             <circle cx="${xPosition}" cy="${yPosition}" r="3.5" fill="${series.color}" stroke="#ffffff" stroke-width="1" />
         `;
-        if (series.showLabel) {
-            const valueText = `${series.name} = ${this.formatCrosshairValue(nearestPoint.yValue)}`;
-            markerMarkup += Utils.valueBadgeSvgMarkup(valueText, xPosition, yPosition - 12, {
-                fontSize: 10,
-                fontFamily: this.options.fontFamily,
-                backgroundColor: series.color
-            });
-        }
         this.appendSvgMarkup(this.focusLayer, markerMarkup);
     }
 
