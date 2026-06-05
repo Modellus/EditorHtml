@@ -454,8 +454,12 @@ class SliderShape extends BaseShape {
         const width = Number(this.properties.width);
         const height = Number(this.properties.height);
         if (Number.isFinite(width) && Number.isFinite(height))
-            return { x: width / 2, y: height + 4 };
+            return { x: width / 2, y: height + 12 };
         return super.getTermLabelAnchor();
+    }
+
+    getTermEntryLabelColor(entry, index) {
+        return this.properties.foregroundColor;
     }
 
     tick() {
