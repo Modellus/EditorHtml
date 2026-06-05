@@ -107,6 +107,9 @@ class ValueShape extends BaseShape {
         return super.buildTermDisplayLabel(entry);
     }
 
+    drawTermDisplayLabels() {
+    }
+
     getContentClipId() {
         return `clip-value-${this.id}`;
     }
@@ -198,7 +201,7 @@ class ValueShape extends BaseShape {
         this.properties.fontSizeTerm = "14";
         this.properties.fontBold = false;
         this.properties.fontItalic = false;
-        this.properties.termDisplayMode = "nameValue";
+        this.properties.termDisplayMode = "none";
         this.properties.soundInstrument = "none";
     }
 
