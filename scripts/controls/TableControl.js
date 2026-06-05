@@ -753,7 +753,7 @@ class TableControl {
         titleForeignObject.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
         titleForeignObject.setAttribute("pointer-events", "none");
         const titleContainer = document.createElement("div");
-        titleContainer.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none";
+        titleContainer.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:flex-start;text-align:left;overflow:hidden;pointer-events:none";
         titleContainer.innerHTML = `<math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;color:${headerTextColor};font-size:${this.options.headerFontSize}px"></math-field>`;
         const titleMathField = titleContainer.querySelector("math-field");
         this.setMathFieldValue(titleMathField, titleMathValue);
