@@ -674,8 +674,12 @@ class ChartControl {
         const series = this.options.series;
         if (!series || series.length === 0)
             return;
-        const foregroundColor = this.options.foregroundColor;
+        const backgroundColor = this.options.backgroundColor || "#ffffff";
+        const contrastColor = Utils.getContrastColor(backgroundColor);
         const separatorText = ", ";
+        const indicatorWidth = 14;
+        const indicatorGap = 4;
+        const indicatorTotalWidth = indicatorWidth + indicatorGap;
         let totalWidth = 0;
         const entries = [];
         for (let index = 0; index < series.length; index++) {
@@ -686,8 +690,10 @@ class ChartControl {
             }
             const segments = this.parseCaseIconSegments(series[index].name ?? "");
             const segmentsWidth = this.estimateTitleSegmentsWidth(segments, fontSize);
-            entries.push({ type: "series", segments: segments, color: series[index].color || foregroundColor, width: segmentsWidth });
-            totalWidth += segmentsWidth;
+            const seriesColor = series[index].color || contrastColor;
+            const chartTypes = series[index].chartTypes ?? ["line"];
+            entries.push({ type: "series", segments: segments, color: seriesColor, chartTypes: chartTypes, width: indicatorTotalWidth + segmentsWidth });
+            totalWidth += indicatorTotalWidth + segmentsWidth;
         }
         const centerX = layout.axisTitleLeft;
         const centerY = layout.axisTitleY;
@@ -702,10 +708,12 @@ class ChartControl {
         for (let index = 0; index < entries.length; index++) {
             const entry = entries[index];
             if (entry.type === "separator") {
-                this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, foregroundColor, separatorText);
+                this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, contrastColor, separatorText);
                 cursorX += entry.width;
                 continue;
             }
+            this.renderLegendIndicator(hostGroup, cursorX, centerY, fontSize, entry.color, entry.chartTypes, indicatorWidth);
+            cursorX += indicatorTotalWidth;
             for (let segmentIndex = 0; segmentIndex < entry.segments.length; segmentIndex++) {
                 const segment = entry.segments[segmentIndex];
                 if (segment.type === "icon") {
@@ -713,10 +721,35 @@ class ChartControl {
                     cursorX += this.getCaseIconSize(segment.caseNumber, fontSize).width;
                     continue;
                 }
-                this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, entry.color, segment.value);
+                this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, contrastColor, segment.value);
                 cursorX += this.estimateTitleTextSegmentWidth(segment.value, fontSize);
             }
         }
+    }
+
+    renderLegendIndicator(layer, xPosition, yPosition, fontSize, color, chartTypes, indicatorWidth) {
+        const types = chartTypes ?? ["line"];
+        const centerY = yPosition - fontSize * 0.35;
+        let indicatorMarkup = "";
+        if (types.includes("area"))
+            indicatorMarkup = `
+                <rect x="${xPosition}" y="${centerY - 3}" width="${indicatorWidth}" height="6" fill="${color}" fill-opacity="0.22" />
+                <line x1="${xPosition}" y1="${centerY}" x2="${xPosition + indicatorWidth}" y2="${centerY}" stroke="${color}" stroke-width="2" />
+            `;
+        else if (types.includes("line"))
+            indicatorMarkup = `
+                <line x1="${xPosition}" y1="${centerY}" x2="${xPosition + indicatorWidth}" y2="${centerY}" stroke="${color}" stroke-width="2" />
+            `;
+        else if (types.includes("scatter"))
+            indicatorMarkup = `
+                <circle cx="${xPosition + indicatorWidth / 2}" cy="${centerY}" r="3" fill="${color}" />
+            `;
+        else if (types.includes("bar"))
+            indicatorMarkup = `
+                <rect x="${xPosition + 2}" y="${centerY - 4}" width="${indicatorWidth - 4}" height="8" fill="${color}" fill-opacity="0.8" />
+            `;
+        if (indicatorMarkup)
+            this.appendSvgMarkup(layer, indicatorMarkup);
     }
 
     getScales(layout, domain) {
