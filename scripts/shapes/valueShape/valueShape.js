@@ -574,7 +574,6 @@ class ValueShape extends BaseShape {
         this.container.setAttribute("y", position.y);
         this.container.setAttribute("width", width);
         this.container.setAttribute("height", height);
-        this.container.setAttribute("rx", 4);
         this.container.setAttribute("fill", this.properties.backgroundColor);
         this.applyBorderStroke(this.container, 1);
         this.contentClipRect.setAttribute("x", position.x);

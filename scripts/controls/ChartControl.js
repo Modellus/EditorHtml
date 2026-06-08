@@ -818,6 +818,7 @@ class ChartControl {
         this.shapeClipRect.setAttribute("y", "0");
         this.shapeClipRect.setAttribute("width", `${width}`);
         this.shapeClipRect.setAttribute("height", `${height}`);
+        this.shapeClipRect.setAttribute("rx", `${this.options.borderRadius ?? 4}`);
         this.xTicksClipRect.setAttribute("x", `${layout.plotLeft}`);
         this.xTicksClipRect.setAttribute("y", "0");
         this.xTicksClipRect.setAttribute("width", `${layout.plotWidth}`);
@@ -848,8 +849,9 @@ class ChartControl {
     }
 
     renderBackground(width, height) {
+        const borderRadius = this.options.borderRadius ?? 4;
         this.appendSvgMarkup(this.backgroundLayer, `
-            <rect x="0" y="0" width="${width}" height="${height}" fill="${this.options.backgroundColor}" stroke="${this.options.borderColor}" stroke-width="1" />
+            <rect x="0" y="0" width="${width}" height="${height}" rx="${borderRadius}" fill="${this.options.backgroundColor}" stroke="${this.options.borderColor}" stroke-width="1" />
         `);
     }
 

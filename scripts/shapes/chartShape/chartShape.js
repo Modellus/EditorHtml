@@ -279,6 +279,7 @@ class ChartShape extends BaseShape {
             backgroundColor: this.properties.backgroundColor,
             dataAreaColor: this.properties.dataAreaColor,
             borderColor: this.getBorderColor(),
+            borderRadius: this.getBorderRadius(),
             ...(this.properties.axisColor ? { axisColor: this.properties.axisColor } : {}),
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",

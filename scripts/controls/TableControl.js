@@ -460,6 +460,7 @@ class TableControl {
         this.tableClipRect.setAttribute("y", "0");
         this.tableClipRect.setAttribute("width", `${layout.bodyWidth}`);
         this.tableClipRect.setAttribute("height", `${layout.height}`);
+        this.tableClipRect.setAttribute("rx", `${this.options.borderRadius ?? 4}`);
     }
 
     updateColumnClipPaths(geometry) {
@@ -675,6 +676,7 @@ class TableControl {
         rect.setAttribute("y", "0");
         rect.setAttribute("width", `${layout.width}`);
         rect.setAttribute("height", `${layout.height}`);
+        rect.setAttribute("rx", `${this.options.borderRadius ?? 4}`);
         rect.setAttribute("fill", this.options.backgroundColor);
         rect.setAttribute("stroke", this.options.borderColor);
         rect.setAttribute("stroke-width", "1");

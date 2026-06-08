@@ -1440,12 +1440,18 @@ class BaseShape {
         return this.properties.borderColor ?? this.properties.foregroundColor ?? "#000000";
     }
 
+    getBorderRadius() {
+        return 4;
+    }
+
     applyBorderStroke(element, strokeWidth = null) {
         if (!element)
             return;
         element.setAttribute("stroke", this.getBorderColor());
         if (strokeWidth != null)
             element.setAttribute("stroke-width", `${strokeWidth}`);
+        if (element.tagName === "rect")
+            element.setAttribute("rx", this.getBorderRadius());
     }
 
     applyBorderStyle(element, borderWidth = 1) {
@@ -1453,6 +1459,7 @@ class BaseShape {
             return;
         element.style.border = `${borderWidth}px solid ${this.getBorderColor()}`;
         element.style.boxSizing = "border-box";
+        element.style.borderRadius = `${this.getBorderRadius()}px`;
     }
 
     isShapeNameVisible() {

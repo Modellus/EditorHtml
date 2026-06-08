@@ -619,6 +619,7 @@ class TableShape extends BaseShape {
             backgroundColor: this.properties.backgroundColor,
             headerBackgroundColor: this.getHeaderBackgroundColor(),
             borderColor: this.getBorderColor(),
+            borderRadius: this.getBorderRadius(),
             precision: this.board.calculator.getPrecision(),
             onCellValueChanged: payload => this.onTableCellValueChanged(payload),
             onColumnWidthChanged: payload => this.onTableColumnWidthChanged(payload),

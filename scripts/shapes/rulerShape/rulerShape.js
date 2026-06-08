@@ -74,7 +74,6 @@ class RulerShape extends BaseShape {
         this.container.setAttribute("y", geometry.y);
         this.container.setAttribute("width", geometry.width);
         this.container.setAttribute("height", geometry.height);
-        this.container.setAttribute("rx", 3);
         this.container.setAttribute("fill", this.properties.backgroundColor);
         this.applyBorderStroke(this.container, 1);
     }

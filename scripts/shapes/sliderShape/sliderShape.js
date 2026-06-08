@@ -409,6 +409,7 @@ class SliderShape extends BaseShape {
         this.container.setAttribute("y", 0);
         this.container.setAttribute("width", sliderWidth);
         this.container.setAttribute("height", sliderHeight);
+        this.container.setAttribute("rx", this.getBorderRadius());
         this.splitter.setAttribute("x1", trackX);
         this.splitter.setAttribute("y1", splitterY);
         this.splitter.setAttribute("x2", trackX + trackWidth);
