@@ -4082,6 +4082,7 @@ class ModelsApp {
     };
     const notificationsStore = new DevExpress.data.CustomStore({
       key: "id",
+      loadMode: "raw",
       load: () => this.apiClient.fetchNotifications(),
       byKey: notificationId => this.apiClient.fetchNotificationById(notificationId),
       update: (notificationId, values) => this.apiClient.updateNotification(notificationId, values),
@@ -4097,11 +4098,11 @@ class ModelsApp {
         columnAutoWidth: true,
         selection: { mode: "single" },
         editing: { mode: "cell", allowUpdating: true, allowDeleting: true, confirmDelete: true },
-        paging: { enabled: true, pageSize: 20 },
-        pager: { showPageSizeSelector: true, allowedPageSizes: [20, 50, 100], showInfo: true },
+        paging: { enabled: false },
         searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search...") },
         sorting: { mode: "multiple" },
         filterRow: { visible: true },
+        headerFilter: { visible: true },
         export: { enabled: true },
         onExporting: event => this.exportGridToExcel(event, this.translations.get("Notifications")),
         columns: [
