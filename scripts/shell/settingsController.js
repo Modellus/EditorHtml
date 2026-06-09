@@ -123,18 +123,6 @@ class SettingsController {
                                 stylingMode: "filled",
                                 elementAttr: { class: "mdl-math-input" }
                             }
-                        },
-                        {
-                            colSpan: 2,
-                            dataField: "iterationDuration",
-                            label: { text: "Iteration Duration (seconds)" },
-                            editorType: "dxNumberBox",
-                            editorOptions: {
-                                stylingMode: "filled",
-                                min: 0,
-                                showClearButton: true,
-                                inputAttr: { style: "font-family: Atma, sans-serif" }
-                            }
                         }
                     ]
                 },
