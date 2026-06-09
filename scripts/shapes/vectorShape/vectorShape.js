@@ -383,7 +383,7 @@ class VectorShape extends ChildShape {
             const value = mapping.isInverted ? -rawValue : rawValue;
             const referentialAxisScale = referentialAxisScales[mapping.scaleProperty] ?? 1;
             if ((mapping.property === "width" || mapping.property === "height") && this.properties.scaleX != null) {
-                const vectorAxisScale = mapping.scaleProperty === "x" ? this.properties.scaleX : this.properties.scaleY;
+                const vectorAxisScale = (mapping.scaleProperty === "x" ? this.properties.scaleX : this.properties.scaleY) ?? 1;
                 this.properties[mapping.property] = Number.isFinite(value) ? (referentialAxisScale !== 0 ? value / referentialAxisScale * vectorAxisScale : 0) : 0;
             } else {
                 this.properties[mapping.property] = Number.isFinite(value) ? (referentialAxisScale !== 0 ? value / referentialAxisScale : 0) : 0;
@@ -399,7 +399,7 @@ class VectorShape extends ChildShape {
             return super.delta(property, pixelDelta);
         if (this.isTermLocked(termMapping.termProperty))
             return this.properties[property];
-        const vectorAxisScale = termMapping.scaleProperty === "x" ? this.properties.scaleX : this.properties.scaleY;
+        const vectorAxisScale = (termMapping.scaleProperty === "x" ? this.properties.scaleX : this.properties.scaleY) ?? 1;
         if (vectorAxisScale === 0)
             return this.properties[property];
         const referentialAxisScales = this.getScale();
