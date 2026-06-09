@@ -20,8 +20,8 @@ class SettingsController {
 
     _createPopup() {
         $("#settings-popup").dxPopup({
-            width: 400,
-            height: 400,
+            width: 480,
+            height: 560,
             dragEnabled: false,
             shading: false,
             title: this.shell.board.translations.get("Settings Title"),
@@ -94,6 +94,14 @@ class SettingsController {
                     }
                 },
                 {
+                    colSpan: 2,
+                    dataField: "backgroundId",
+                    label: {
+                        text: this.shell.board.translations.get("Background") ?? "Background"
+                    },
+                    template: (data, itemElement) => this._createBackgroundPicker(itemElement)
+                },
+                {
                     itemType: "group",
                     colSpan: 2,
                     colCount: 4,
@@ -144,6 +152,34 @@ class SettingsController {
         return $form;
     }
 
+    _createBackgroundPicker(itemElement) {
+        const container = document.createElement("div");
+        container.className = "mdl-bg-picker";
+        const currentId = this.shell.properties.backgroundId || "";
+        const noneSelected = !currentId ? " selected" : "";
+        container.innerHTML = `
+            <div class="mdl-bg-picker-card${noneSelected}" data-bg-id="">
+                <div class="mdl-bg-picker-thumb mdl-bg-picker-none"><i class="fa-light fa-xmark"></i></div>
+                <div class="mdl-bg-picker-label">None</div>
+            </div>
+            ${BACKGROUNDS.map(bg => {
+                const selected = bg.id === currentId ? " selected" : "";
+                return `<div class="mdl-bg-picker-card${selected}" data-bg-id="${bg.id}">
+                    <div class="mdl-bg-picker-thumb">${bg.thumbnail_svg}</div>
+                    <div class="mdl-bg-picker-label">${bg.title}</div>
+                </div>`;
+            }).join("")}`;
+        container.addEventListener("click", event => {
+            const card = event.target.closest(".mdl-bg-picker-card");
+            if (!card)
+                return;
+            container.querySelectorAll(".mdl-bg-picker-card").forEach(c => c.classList.remove("selected"));
+            card.classList.add("selected");
+            this.shell.setPropertyCommand("backgroundId", card.dataset.bgId);
+        });
+        $(itemElement).append(container);
+    }
+
     _initPillButtonGroup(element) {
         const pill = document.createElement("div");
         pill.className = "mdl-pill";
@@ -169,6 +205,17 @@ class SettingsController {
             this.form.formData = null;
             this.form.updateData(this.shell.properties);
         }
+        this._refreshBackgroundPickerSelection();
         this.popup.show();
+    }
+
+    _refreshBackgroundPickerSelection() {
+        const container = this.popup.content().find(".mdl-bg-picker")[0];
+        if (!container)
+            return;
+        const currentId = this.shell.properties.backgroundId || "";
+        container.querySelectorAll(".mdl-bg-picker-card").forEach(card => {
+            card.classList.toggle("selected", card.dataset.bgId === currentId);
+        });
     }
 }

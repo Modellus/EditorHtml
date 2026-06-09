@@ -68,15 +68,65 @@ class Shell  {
         this.properties.educationLevel = "university";
         this.properties.gridSize = 20;
         this.properties.snapToGrid = false;
+        this.properties.backgroundId = "";
         this.applySvgBackgroundColor();
         this.applyEducationLevel();
         this.applyGrid();
+        this.applyBackground();
     }
 
     applySvgBackgroundColor() {
         if (!this.board?.svg)
             return;
         this.board.svg.style.backgroundColor = this.properties.backgroundColor;
+    }
+
+    applyBackground() {
+        if (!this.board?.svg)
+            return;
+        const existingDefs = this.board.svg.querySelector("#mdl-bg-defs");
+        const existingRect = this.board.svg.querySelector("#mdl-bg-rect");
+        const existingOverlay = this.board.svg.querySelector("#mdl-bg-overlay");
+        if (existingDefs) existingDefs.remove();
+        if (existingRect) existingRect.remove();
+        if (existingOverlay) existingOverlay.remove();
+        const backgroundId = this.properties.backgroundId;
+        if (!backgroundId) {
+            this.board.svg.style.backgroundColor = this.properties.backgroundColor;
+            return;
+        }
+        const background = BACKGROUNDS.find(b => b.id === backgroundId);
+        if (!background?.pattern)
+            return;
+        if (background.backgroundColor)
+            this.board.svg.style.backgroundColor = background.backgroundColor;
+        const pattern = background.pattern;
+        const defs = this.board.createSvgElement("defs");
+        defs.id = "mdl-bg-defs";
+        const patternElement = this.board.createSvgElement("pattern");
+        patternElement.id = "mdl-bg-pattern";
+        patternElement.setAttribute("patternUnits", "userSpaceOnUse");
+        patternElement.setAttribute("width", pattern.width);
+        patternElement.setAttribute("height", pattern.height);
+        patternElement.innerHTML = pattern.content;
+        defs.appendChild(patternElement);
+        const rect = this.board.createSvgElement("rect");
+        rect.id = "mdl-bg-rect";
+        rect.setAttribute("x", "-1e6");
+        rect.setAttribute("y", "-1e6");
+        rect.setAttribute("width", "2e6");
+        rect.setAttribute("height", "2e6");
+        rect.setAttribute("fill", "url(#mdl-bg-pattern)");
+        rect.setAttribute("pointer-events", "none");
+        this.board.svg.insertBefore(defs, this.board.svg.firstChild);
+        defs.after(rect);
+        if (background.overlay) {
+            const overlayGroup = this.board.createSvgElement("g");
+            overlayGroup.id = "mdl-bg-overlay";
+            overlayGroup.setAttribute("pointer-events", "none");
+            overlayGroup.innerHTML = background.overlay;
+            rect.after(overlayGroup);
+        }
     }
 
     applyEducationLevel() {
@@ -127,6 +177,7 @@ class Shell  {
         this.applySvgBackgroundColor();
         this.applyEducationLevel();
         this.applyGrid();
+        this.applyBackground();
         this.topToolbar?.updateModelName();
     }
     
@@ -147,6 +198,8 @@ class Shell  {
             this.applyEducationLevel();
         if (name === "gridSize" || name === "snapToGrid")
             this.applyGrid();
+        if (name === "backgroundId")
+            this.applyBackground();
         if (name === "snapToGrid")
             this.bottomToolbar?.updateSnapToGridButton();
         if (name === "name")

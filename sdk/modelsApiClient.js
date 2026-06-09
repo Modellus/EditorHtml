@@ -854,4 +854,8 @@ export class ModelsApiClient {
     });
     if (!response.ok) throw new Error(`Delete character animation frame failed (${response.status})`);
   }
+
+  async fetchBackgrounds() {
+    return BACKGROUNDS;
+  }
 }
