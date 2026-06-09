@@ -343,8 +343,10 @@ class ChartShape extends BaseShape {
 
     initializeTermDisplayLayer() {
         BaseShape.prototype.initializeTermDisplayLayer.call(this);
-        if (this.termDisplayLayer && this.element)
+        if (this.termDisplayLayer && this.element) {
+            this.termDisplayLayer.setAttribute("clip-path", `url(#${this.chart.plotClipId})`);
             this.element.appendChild(this.termDisplayLayer);
+        }
     }
 
     updateValues() {
