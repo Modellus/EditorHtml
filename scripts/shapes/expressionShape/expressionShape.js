@@ -68,9 +68,6 @@ class ExpressionShape extends BaseShape {
         this.mathliveController = new MathliveController(this.mathfield);
         this.mathfield.addEventListener("keydown", keydownEvent => this.onKeyDown(keydownEvent), true);
         const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
-        sink.addEventListener('keydown', e => console.log("[ExprShape] SINK keydown", { key: e.key, code: e.code, defaultPrevented: e.defaultPrevented }), true);
-        sink.addEventListener('beforeinput', e => console.log("[ExprShape] SINK beforeinput", { inputType: e.inputType, data: e.data }), true);
-        sink.addEventListener('input', e => console.log("[ExprShape] SINK input", { inputType: e.inputType, data: e.data }), true);
         if (this.board.selection.selectedShape === this)
             this.mathfield.focus();
         this.syncHandwrittenStyle();
@@ -180,12 +177,10 @@ class ExpressionShape extends BaseShape {
     }
 
     onKeyDown(keydownEvent) {
-        console.log("[ExprShape] onKeyDown", { key: keydownEvent.key, code: keydownEvent.code, altKey: keydownEvent.altKey, shiftKey: keydownEvent.shiftKey, target: keydownEvent.target.tagName, composed: keydownEvent.composedPath().map(el => el.tagName || el.constructor.name).slice(0, 4) });
         if (keydownEvent.key === "Dead") {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
             const action = this.getDeadKeyAction(keydownEvent);
-            console.log("[ExprShape] Dead key action:", action);
             if (action)
                 this.mathfield.executeCommand(...action);
             const sink = this.mathfield.shadowRoot.querySelector('.ML__keyboard-sink');
