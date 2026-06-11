@@ -539,19 +539,11 @@ class ChartControl {
     }
 
     normalizeTitleTextForWidth(textValue) {
-        const normalizedTextValue = String(textValue ?? "");
-        const simplifiedTextValue = normalizedTextValue
-            .replace(/\\widehat\s*\{([^}]*)\}/g, "$1")
-            .replace(/\\hat\s*\{([^}]*)\}/g, "$1")
-            .replace(/\\[a-zA-Z]+/g, "")
-            .replace(/[{}]/g, "");
-        if (simplifiedTextValue !== "")
-            return Utils.convertGreekLetters(simplifiedTextValue);
-        return Utils.convertGreekLetters(normalizedTextValue);
+        return Utils.normalizeMathTermForWidth(textValue);
     }
 
     isMathTitleText(textValue) {
-        return String(textValue ?? "").includes("\\");
+        return Utils.isMathTermText(textValue);
     }
 
     getTitleMathPadding(fontSize, textValue) {
@@ -595,7 +587,7 @@ class ChartControl {
         foreignObject.setAttribute("pointer-events", "none");
         const container = document.createElement("div");
         container.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:flex-start;overflow:visible;pointer-events:none";
-        container.innerHTML = `<math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;color:${fill};font-size:${fontSize}px">${String(textValue ?? "")}</math-field>`;
+        container.innerHTML = Utils.buildReadOnlyMathFieldMarkup(textValue, `height:auto;width:auto;display:inline-block;color:${fill};font-size:${fontSize}px`);
         foreignObject.appendChild(container);
         layer.appendChild(foreignObject);
     }

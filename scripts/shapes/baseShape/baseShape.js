@@ -1519,16 +1519,15 @@ class BaseShape {
     }
 
     static escapeMathTermName(text) {
-        const normalizedText = String(text ?? "");
-        return normalizedText.replace(/(^|[^\\])_/g, "$1\\_");
+        return Utils.formatMathTermName(text);
     }
 
     createNameButtonTermMarkup(termText) {
         const normalizedTermText = String(termText ?? "").trim();
         if (normalizedTermText === "")
             return "";
-        const mathFieldValue = BaseShape.escapeMathTermName(normalizedTermText);
-        return `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text"><math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;pointer-events:none">${mathFieldValue}</math-field></span></span>`;
+        const mathFieldMarkup = Utils.buildReadOnlyMathFieldMarkup(normalizedTermText, "height:auto;width:auto;display:inline-block;pointer-events:none");
+        return `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${mathFieldMarkup}</span></span>`;
     }
 
     addTerm(termProperty, property, title, isInverted = false, isEditable = true, colSpan = 1, scaleProperty = null) {

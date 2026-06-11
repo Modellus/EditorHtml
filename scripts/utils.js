@@ -78,6 +78,55 @@ class Utils {
         return terms.map(t => ({ text: Utils.getDisplayedTerm(t, system), term: t }));
     }
 
+    static escapeMathTermName(text) {
+        const normalizedText = String(text ?? "");
+        return normalizedText.replace(/(^|[^\\])_/g, "$1\\_");
+    }
+
+    static isMathTermText(text) {
+        return String(text ?? "").includes("\\");
+    }
+
+    static normalizeMathTermForWidth(text) {
+        const normalizedText = String(text ?? "");
+        const simplifiedText = normalizedText
+            .replace(/\\widehat\s*\{([^}]*)\}/g, "$1")
+            .replace(/\\hat\s*\{([^}]*)\}/g, "$1")
+            .replace(/\\[a-zA-Z]+/g, "")
+            .replace(/[{}]/g, "");
+        if (simplifiedText !== "")
+            return Utils.convertGreekLetters(simplifiedText);
+        return Utils.convertGreekLetters(normalizedText);
+    }
+
+    static convertMathTermToPlainText(text) {
+        const normalizedText = String(text ?? "");
+        const withHatText = normalizedText
+            .replace(/\\widehat\s*\{([^}]*)\}/g, (_, innerText) => `${innerText}\u0302`)
+            .replace(/\\hat\s*\{([^}]*)\}/g, (_, innerText) => `${innerText}\u0302`);
+        return Utils.convertGreekLetters(withHatText);
+    }
+
+    static formatMathTermName(text) {
+        return Utils.escapeMathTermName(String(text ?? ""));
+    }
+
+    static buildReadOnlyMathFieldMarkup(mathText, styleText = "") {
+        const normalizedStyle = String(styleText ?? "").trim();
+        const styleAttribute = normalizedStyle === "" ? "" : ` style=\"${normalizedStyle}\"`;
+        return `<math-field read-only class=\"form-math-field\"${styleAttribute}>${Utils.formatMathTermName(mathText)}</math-field>`;
+    }
+
+    static setMathFieldValue(mathFieldElement, mathValue) {
+        if (!mathFieldElement)
+            return;
+        const normalizedValue = Utils.formatMathTermName(mathValue);
+        if (typeof mathFieldElement.setValue === "function")
+            mathFieldElement.setValue(normalizedValue);
+        else
+            mathFieldElement.value = normalizedValue;
+    }
+
     static throttle(func, delay) {
         let timeoutId;
         let lastArgs;

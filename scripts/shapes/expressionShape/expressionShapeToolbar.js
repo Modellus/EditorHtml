@@ -71,7 +71,7 @@ Object.assign(ExpressionShape.prototype, {
             width: columns * horizontalStep,
             itemTemplate: (itemData, index, element) => {
                 const cell = $('<div class="mdl-shortcuts-picker-item" style="display:flex;align-items:center;justify-content:center;height:100%;width:100%"></div>');
-                cell.html(`<math-field read-only class="form-math-field" style="height:auto;width:auto">${itemData.text}</math-field>`);
+                cell.html(Utils.buildReadOnlyMathFieldMarkup(itemData.text, "height:auto;width:auto"));
                 this.createShortcutTooltip(cell, itemData);
                 $(element).append(cell);
             },

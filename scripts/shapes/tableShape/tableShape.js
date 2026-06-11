@@ -454,13 +454,8 @@ class TableShape extends BaseShape {
         const normalizedTermName = this.normalizeColumnValue(termName);
         if (normalizedTermName === "")
             return "";
-        const isRegression = this.isRegressionTermName(normalizedTermName);
-        if (!isRegression)
-            return BaseShape.escapeMathTermName(this.formatTermForDisplay(normalizedTermName));
-        const sourceTermName = this.getRegressionSourceTermName(normalizedTermName);
-        if (sourceTermName === "")
-            return BaseShape.escapeMathTermName(this.formatTermForDisplay(normalizedTermName));
-        return BaseShape.escapeMathTermName(`\\widehat{${sourceTermName}}`);
+        const displayedTerm = Utils.getDisplayedTerm(normalizedTermName, this.board.calculator.system);
+        return Utils.formatMathTermName(displayedTerm);
     }
 
     resolveFocusedRowsIterationRange(focusedRows) {
@@ -982,7 +977,7 @@ class TableShape extends BaseShape {
             return;
         const sourceTermName = this.getRegressionSourceTermName(termName);
         const hattedSourceTermName = sourceTermName !== "" ? `\\widehat{${sourceTermName}}` : "";
-        this._focusedRegressionTermElement[0].innerHTML = hattedSourceTermName !== "" ? `<span class="mdl-focused-term-name">${hattedSourceTermName}</span>` : "";
+        this._focusedRegressionTermElement[0].innerHTML = hattedSourceTermName !== "" ? `<span class="mdl-focused-term-name">${Utils.buildReadOnlyMathFieldMarkup(hattedSourceTermName, "height:auto;width:auto;display:inline-block")}</span>` : "";
     }
 
     onTableFocusedCellsChanged(payload) {

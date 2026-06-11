@@ -1135,8 +1135,8 @@ class TermControl {
             parentIdExpr: "parentId",
             displayExpr: "text",
             itemTemplate: (itemData, _, element) => {
-                const itemText = BaseShape.escapeMathTermName(String(itemData?.text ?? ""));
-                element[0].innerHTML = `<div class="mdl-variable-selector"><math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block">${itemText}</math-field></div>`;
+                const itemText = String(itemData?.text ?? "");
+                element[0].innerHTML = `<div class="mdl-variable-selector">${Utils.buildReadOnlyMathFieldMarkup(itemText, "height:auto;width:auto;display:inline-block")}</div>`;
             },
             selectionMode: "single",
             selectByClick: true,
@@ -1171,12 +1171,7 @@ class TermControl {
     }
 
     setMathFieldValue(mathFieldElement, mathValue) {
-        if (!mathFieldElement)
-            return;
-        if (typeof mathFieldElement.setValue === "function")
-            mathFieldElement.setValue(mathValue);
-        else
-            mathFieldElement.value = mathValue;
+        Utils.setMathFieldValue(mathFieldElement, mathValue);
     }
 
     getTermEditorInputContainer(component) {
@@ -1195,7 +1190,7 @@ class TermControl {
 
     syncTermEditorMathField(component, fallbackValue, system) {
         const selectedValue = component.option("value") ?? fallbackValue;
-        const selectedText = BaseShape.escapeMathTermName(String(Utils.getDisplayedTerm(selectedValue, system)));
+        const selectedText = Utils.formatMathTermName(String(Utils.getDisplayedTerm(selectedValue, system)));
         const inputContainer = this.getTermEditorInputContainer(component);
         if (!inputContainer?.length)
             return;
@@ -1231,7 +1226,7 @@ class TermControl {
             elementAttr: { class: "mdl-variable-selector" },
             fieldAddons: {
                 before: data => {
-                    const selectedText = BaseShape.escapeMathTermName(this.resolveTermEditorDisplayedText(data, termValue, system));
+                    const selectedText = Utils.formatMathTermName(this.resolveTermEditorDisplayedText(data, termValue, system));
                     const mathField = $("<math-field read-only class='form-math-field' style='height:auto;width:auto;display:inline-block'></math-field>");
                     this.setMathFieldValue(mathField[0], selectedText);
                     return mathField;
@@ -1255,7 +1250,7 @@ class TermControl {
     createDefaultTermItemTemplate() {
         return (data, _, element) => {
             const itemText = String(data?.text ?? "");
-            element[0].innerHTML = `<div class="mdl-variable-selector"><math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block">${itemText}</math-field></div>`;
+            element[0].innerHTML = `<div class="mdl-variable-selector">${Utils.buildReadOnlyMathFieldMarkup(itemText, "height:auto;width:auto;display:inline-block")}</div>`;
             return element;
         };
     }

@@ -471,7 +471,7 @@ class ValueShape extends BaseShape {
         }
         const termSpan = this.board.createSvgElement("tspan");
         termSpan.setAttribute("font-family", "Katex_Math");
-        termSpan.textContent = Utils.convertGreekLetters(termText);
+        termSpan.textContent = Utils.convertMathTermToPlainText(termText);
         this.valueText.appendChild(termSpan);
         const separatorSpan = this.board.createSvgElement("tspan");
         separatorSpan.setAttribute("font-family", "Katex_Main");

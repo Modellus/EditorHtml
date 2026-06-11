@@ -268,7 +268,7 @@ class TermDisplay {
         const termSpan = this.board.createSvgElement("tspan");
         termSpan.setAttribute("font-family", "Katex_Math");
         termSpan.setAttribute("dominant-baseline", "central");
-        termSpan.textContent = Utils.convertGreekLetters(termText);
+        termSpan.textContent = Utils.convertMathTermToPlainText(termText);
         labelText.appendChild(termSpan);
         const valueSpan = this.board.createSvgElement("tspan");
         valueSpan.setAttribute("font-family", "Katex_Main");

@@ -233,30 +233,18 @@ class TableControl {
     }
 
     normalizeHeaderTitleForWidth(titleText) {
-        const normalizedTitleText = String(titleText ?? "");
-        const simplifiedTitleText = normalizedTitleText
-            .replace(/\\hat\s*\{([^}]*)\}/g, "$1")
-            .replace(/\\[a-zA-Z]+/g, "")
-            .replace(/[{}]/g, "");
-        if (simplifiedTitleText !== "")
-            return simplifiedTitleText;
-        return normalizedTitleText;
+        return Utils.normalizeMathTermForWidth(titleText);
     }
 
     getHeaderTitleMathValue(titleText) {
         const normalizedTitleText = String(titleText ?? "");
-        if (normalizedTitleText.includes("\\"))
+        if (Utils.isMathTermText(normalizedTitleText))
             return normalizedTitleText;
         return Utils.convertGreekLetters(normalizedTitleText);
     }
 
     setMathFieldValue(mathFieldElement, mathValue) {
-        if (!mathFieldElement)
-            return;
-        if (typeof mathFieldElement.setValue === "function")
-            mathFieldElement.setValue(mathValue);
-        else
-            mathFieldElement.value = mathValue;
+        Utils.setMathFieldValue(mathFieldElement, mathValue);
     }
 
     getHeaderCaseIconSize(caseNumber) {
@@ -756,7 +744,7 @@ class TableControl {
         titleForeignObject.setAttribute("pointer-events", "none");
         const titleContainer = document.createElement("div");
         titleContainer.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:flex-start;text-align:left;overflow:hidden;pointer-events:none";
-        titleContainer.innerHTML = `<math-field read-only class="form-math-field" style="height:auto;width:auto;display:inline-block;color:${headerTextColor};font-size:${this.options.headerFontSize}px"></math-field>`;
+        titleContainer.innerHTML = Utils.buildReadOnlyMathFieldMarkup("", `height:auto;width:auto;display:inline-block;color:${headerTextColor};font-size:${this.options.headerFontSize}px`);
         const titleMathField = titleContainer.querySelector("math-field");
         this.setMathFieldValue(titleMathField, titleMathValue);
         titleForeignObject.appendChild(titleContainer);
@@ -1719,7 +1707,7 @@ class TableControl {
         this.headerTooltip = this.headerTooltipHost.dxTooltip({
             target: this.rootElement,
             contentTemplate: contentElement => {
-                contentElement.append($("<div class=\"tooltip\" style=\"white-space:nowrap\"><math-field read-only class=\"form-math-field\" style=\"height:auto;width:auto;display:inline-block\"></math-field></div>"));
+                contentElement.append($(`<div class="tooltip" style="white-space:nowrap">${Utils.buildReadOnlyMathFieldMarkup("", "height:auto;width:auto;display:inline-block")}</div>`));
             },
             onShowing: tooltipEvent => {
                 this.applyHeaderTooltipMath(tooltipEvent.component?.$content?.()?.[0]);
