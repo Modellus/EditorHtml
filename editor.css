@@ -2308,6 +2308,11 @@ math-field {
     padding: 4px 0;
 }
 
+.mdl-question-list-host .dx-list-reorder-handle-container,
+.mdl-question-list-host .dx-list-reorder-handle {
+    display: none !important;
+}
+
 .mdl-question-list-item {
     display: flex;
     align-items: center;

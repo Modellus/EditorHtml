@@ -158,6 +158,7 @@ class QuestionShape extends BaseShape {
         if (this.isInEditMode) {
             listOptions.itemDragging = {
                 allowReordering: true,
+                showDragIcons: false,
                 onReorder: e => {
                     const updatedItems = [...(this.properties.answerItems ?? [])];
                     const moved = updatedItems.splice(e.fromIndex, 1)[0];
