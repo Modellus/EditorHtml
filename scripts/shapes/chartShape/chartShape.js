@@ -539,7 +539,7 @@ class ChartShape extends BaseShape {
             const displayModeProperty = `${termProperty}DisplayMode`;
             this.properties[termProperty] = yTerm.term;
             this.properties[caseProperty] = yTerm.case ?? 1;
-            this.properties[displayModeProperty] = "visible";
+            this.properties[displayModeProperty] = yTerm.showLabel === true ? "nameValue" : "none";
             if (!this.termDisplayEntries.some(entry => entry.term === termProperty))
                 this.termDisplayEntries.push({ term: termProperty, caseProperty: caseProperty });
         }
