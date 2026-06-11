@@ -171,7 +171,7 @@ class TableControl {
     }
 
     getCaseIconAssetPath(caseNumber) {
-        return `libraries/fontawesome/svgs/solid/square-${caseNumber}.svg`;
+        return `../../libraries/fontawesome/svgs/solid/square-${caseNumber}.svg`;
     }
 
     ensureCaseIconsLoaded() {
