@@ -562,6 +562,8 @@ class Calculator extends EventTarget {
                     continue;
                 if (term === this.properties.iterationTerm)
                     continue;
+                if (this.system.getTerm(term)?.type === Modellus.TermType.PRELOADED)
+                    continue;
                 const value = values[term];
                 if (!Number.isFinite(value))
                     continue;
@@ -591,6 +593,8 @@ class Calculator extends EventTarget {
             for (let j = 0; j < termValuesEntries.length; j++) {
                 const term = termValuesEntries[j][0];
                 if (!this.system.isTerm(term))
+                    continue;
+                if (this.system.getTerm(term)?.type === Modellus.TermType.PRELOADED)
                     continue;
                 const rawValue = termValuesEntries[j][1];
                 const value = Number(rawValue);
