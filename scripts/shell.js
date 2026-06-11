@@ -488,7 +488,7 @@ class Shell  {
     async saveToApi() {
         if (this.isAnonymous()) {
             this.saveToSessionStorage();
-            window.location.href = "/login.html";
+            window.location.href = "/pages/login/index.html";
             return;
         }
         const modelId = this.getCurrentModelId();
@@ -527,7 +527,7 @@ class Shell  {
         const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
         if (!session?.token) {
             this.saveToSessionStorage();
-            window.location.href = "/login.html";
+            window.location.href = "/pages/login/index.html";
             return;
         }
         const metadata = await this.saveFormController.promptDuplicateMetadata();
@@ -562,7 +562,7 @@ class Shell  {
                 headers,
                 body: JSON.stringify(savePayload)
             });
-            window.location.href = `/editor.html?model_id=${newModel.id}`;
+            window.location.href = `/pages/editor/index.html?model_id=${newModel.id}`;
         } catch (error) {
             alert("Failed to duplicate model.");
         }
@@ -571,7 +571,7 @@ class Shell  {
     async saveAsModel() {
         if (this.isAnonymous()) {
             this.saveToSessionStorage();
-            window.location.href = "/login.html";
+            window.location.href = "/pages/login/index.html";
             return;
         }
         const metadata = await this.saveFormController.promptSaveAsMetadata();
@@ -607,7 +607,7 @@ class Shell  {
                 body: JSON.stringify(savePayload)
             });
             this._hasChanges = false;
-            window.location.href = `/editor.html?model_id=${newModel.id}`;
+            window.location.href = `/pages/editor/index.html?model_id=${newModel.id}`;
         } catch (error) {
             alert("Failed to save model.");
         }
@@ -796,12 +796,12 @@ class Shell  {
             await this.autoSaveModel();
         else
             this._hasChanges = false;
-        window.location.href = "/marketplace.html";
+        window.location.href = "/pages/marketplace/index.html";
     }
 
     async exitEditor() {
         if (!this._hasChanges) {
-            window.location.href = "/marketplace.html";
+            window.location.href = "/pages/marketplace/index.html";
             return;
         }
         const result = await this.saveFormController.promptSaveBeforeExit();
@@ -809,11 +809,11 @@ class Shell  {
             return;
         if (result === "save") {
             await this.autoSaveModel();
-            window.location.href = "/marketplace.html";
+            window.location.href = "/pages/marketplace/index.html";
             return;
         }
         this._hasChanges = false;
-        window.location.href = "/marketplace.html";
+        window.location.href = "/pages/marketplace/index.html";
     }
 
     getModel() {

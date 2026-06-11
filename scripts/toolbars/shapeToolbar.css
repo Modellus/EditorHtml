@@ -1,0 +1,11 @@
+#toolbar .dx-toolbar.mdl-shape-toolbar .dx-button {
+    border-radius: 6px;
+}
+
+#toolbar .dx-toolbar.mdl-shape-toolbar .dx-button-content {
+    min-width: 20px;
+}
+
+#toolbar .dx-toolbar.mdl-shape-toolbar .toolbar-separator {
+    margin: 8px 10px;
+}

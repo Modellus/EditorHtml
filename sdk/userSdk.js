@@ -1,5 +1,5 @@
 export class UserSdk {
-  constructor(sessionKey, userKey, loginPath, tokenStorageKey = "modellus_id_token", appHome = "/marketplace.html", refreshTokenStorageKey = "modellus_refresh_token") {
+  constructor(sessionKey, userKey, loginPath, tokenStorageKey = "modellus_id_token", appHome = "/pages/marketplace/index.html", refreshTokenStorageKey = "modellus_refresh_token") {
     this.sessionKey = sessionKey;
     this.userKey = userKey;
     this.loginPath = loginPath;
@@ -352,7 +352,7 @@ export class UserSdk {
       this.saveRefreshToken(authPayload.refreshToken);
     const promotedModelId = await this.promoteAnonymousModel(session, apiBaseUrl);
     if (promotedModelId) {
-      window.location.href = `/editor.html?model_id=${encodeURIComponent(promotedModelId)}`;
+      window.location.href = `/pages/editor/index.html?model_id=${encodeURIComponent(promotedModelId)}`;
       return;
     }
     this.startSessionRefresh(apiBaseUrl);

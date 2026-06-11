@@ -19,6 +19,9 @@ class NotebookEditor {
 
     _createTopToolbar() {
         $("#toolbar").dxToolbar({
+            elementAttr: {
+                class: "mdl-shape-toolbar"
+            },
             items: [
                 {
                     location: "before",
@@ -28,81 +31,7 @@ class NotebookEditor {
                         onClick: () => window.history.back()
                     }
                 },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-heading",
-                        hint: "Header",
-                        onClick: () => this.addBlock("header")
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-text",
-                        hint: "Text",
-                        onClick: () => this.addBlock("text")
-                    }
-                },
-                {
-                    location: "center",
-                    template() {
-                        return $(`<div class="toolbar-separator">|</div>`);
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-function",
-                        hint: "Expression",
-                        onClick: () => this.addBlock("expression")
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-chart-line",
-                        hint: "Chart",
-                        onClick: () => this.addBlock("chart")
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-shapes",
-                        hint: "Simulation",
-                        onClick: () => this.addBlock("simulation")
-                    }
-                },
-                {
-                    location: "center",
-                    template() {
-                        return $(`<div class="toolbar-separator">|</div>`);
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-slider",
-                        hint: "Slider",
-                        onClick: () => this.addBlock("slider")
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-photo-film-music",
-                        hint: "Media",
-                        onClick: () => this.addBlock("media")
-                    }
-                }
+                ...ModellusShapeToolbar.notebookItems(this)
             ]
         });
     }
@@ -116,83 +45,27 @@ class NotebookEditor {
         this.isPlaying = false;
 
         $("#bottom-toolbar").dxToolbar({
-            items: [
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-play",
-                        elementAttr: { id: "playPauseButton" },
-                        onClick: () => this._playPausePressed()
-                    }
+            elementAttr: {
+                class: "mdl-player-toolbar"
+            },
+            items: ModellusPlayerToolbar.createPlayerItems({
+                onPlayPause: () => this._playPausePressed(),
+                onStop: () => this._stopPressed(),
+                onStepBackward: () => this._stepBackward(),
+                onStepForward: () => this._stepForward(),
+                onReplay: () => this._replayPressed(),
+                sliderMinimum: 1,
+                sliderMaximum: this.iterationCount || 1,
+                sliderValue: 1,
+                sliderWidth: 400,
+                sliderTooltipFormatter: value => {
+                    const currentValue = this.independentStart + (value - 1) * this.independentStep;
+                    return currentValue.toFixed(2);
                 },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-stop",
-                        elementAttr: { id: "stopButton" },
-                        onClick: () => this._stopPressed()
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-backward-step",
-                        elementAttr: { id: "stepBackwardButton" },
-                        onClick: () => this._stepBackward()
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxSlider",
-                    cssClass: "slider",
-                    options: {
-                        min: 1,
-                        max: this.iterationCount || 1,
-                        value: 1,
-                        width: 400,
-                        elementAttr: { id: "playHeadSlider" },
-                        tooltip: {
-                            enabled: true,
-                            format: value => {
-                                const currentValue = this.independentStart + (value - 1) * this.independentStep;
-                                return currentValue.toFixed(2);
-                            },
-                            showMode: "always",
-                            position: "top"
-                        },
-                        onValueChanged: e => {
-                            this.currentIteration = e.value;
-                        }
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-forward-step",
-                        elementAttr: { id: "stepForwardButton" },
-                        onClick: () => this._stepForward()
-                    }
-                },
-                {
-                    location: "center",
-                    template() {
-                        return $(`<div class="toolbar-separator">|</div>`);
-                    }
-                },
-                {
-                    location: "center",
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-repeat",
-                        elementAttr: { id: "replayButton" },
-                        onClick: () => this._replayPressed()
-                    }
+                onSliderValueChanged: value => {
+                    this.currentIteration = value;
                 }
-            ]
+            })
         });
     }
 
@@ -259,7 +132,6 @@ class NotebookEditor {
             repaintChangesOnly: true,
             itemDragging: {
                 allowReordering: true,
-                showDragIcons: false,
                 handle: ".notebook-block-drag-handle",
                 data: this.blocks,
                 onDragStart: e => {

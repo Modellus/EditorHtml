@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-const EDITOR_URL = '/editor.html';
+const EDITOR_URL = '/pages/editor/index.html';
 
 async function setupEditor(page) {
     await page.addInitScript(() => {

@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Modellus – Sign in</title>
-    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
-    <link rel="stylesheet" href="libraries/css/dx.fluent.blue.light.compact.css" />
-    <script src="libraries/scripts/jquery.min.js"></script>
-    <script src="libraries/scripts/dx.all.js"></script>
+    <link rel="icon" type="image/svg+xml" href="../../scripts/themes/modellus.svg" />
+    <link rel="stylesheet" href="../../libraries/css/dx.fluent.blue.light.compact.css" />
+    <script src="../../libraries/scripts/jquery.min.js"></script>
+    <script src="../../libraries/scripts/dx.all.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin />
@@ -26,7 +26,7 @@
         content: "";
         position: fixed;
         inset: 0;
-        background: url("/resources/backgrounds/Education.png") center/cover
+        background: url("../../resources/backgrounds/Education.png") center/cover
           no-repeat;
         z-index: -2;
       }
@@ -92,12 +92,12 @@
   <body>
     <div id="login-card" style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
       <div style="display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
-        <img src="/scripts/themes/modellus.svg" alt="Modellus logo" style="width: 48px; height: 48px" />
+        <img src="../../scripts/themes/modellus.svg" alt="Modellus logo" style="width: 48px; height: 48px" />
         <h2 style="margin: 0">Sign in to Modellus</h2>
       </div>
       <div id="google-login-btn"></div>
       <p style="margin: 0">Access to the app requires a Google account</p>
     </div>
-    <script type="module" src="/login.js"></script>
+    <script type="module" src="login.js"></script>
   </body>
 </html>

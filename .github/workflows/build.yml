@@ -6,12 +6,12 @@ on:
       - main
     paths:
       - "scripts/**"
-      - "editor*.html"
+      - "pages/editor/*.html"
       - "electron/**"
       - "package.json"
       - "modellus.js"
       - "common.css"
-      - "editor.css"
+      - "pages/editor/editor.css"
       - "libraries/**"
       - ".github/workflows/**"
   workflow_dispatch:

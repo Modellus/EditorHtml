@@ -24,7 +24,7 @@ class BaseShape {
 
     static buildShapeTreeItem(shape) {
         const children = (shape.children ?? []).map(child => BaseShape.buildShapeTreeItem(child));
-        const characterImage = shape.character ? `resources/characters/${shape.character.folder}/${shape.character.image}` : null;
+        const characterImage = shape.character ? `../../resources/characters/${shape.character.folder}/${shape.character.image}` : null;
         return {
             id: shape.id,
             text: shape.properties.name ?? "",
@@ -50,22 +50,22 @@ class BaseShape {
 
     static async loadEmbeddedFonts() {
         const fonts = [
-            { family: "KaTeX_Main", url: "libraries/css/fonts/KaTeX_Main-Regular.woff2", weight: "400", style: "normal" },
-            { family: "KaTeX_Main", url: "libraries/css/fonts/KaTeX_Main-Italic.woff2", weight: "400", style: "italic" },
-            { family: "KaTeX_Main", url: "libraries/css/fonts/KaTeX_Main-Bold.woff2", weight: "700", style: "normal" },
-            { family: "KaTeX_Main", url: "libraries/css/fonts/KaTeX_Main-BoldItalic.woff2", weight: "700", style: "italic" },
-            { family: "KaTeX_Math", url: "libraries/css/fonts/KaTeX_Math-Italic.woff2", weight: "400", style: "italic" },
-            { family: "KaTeX_Math", url: "libraries/css/fonts/KaTeX_Math-BoldItalic.woff2", weight: "700", style: "italic" },
-            { family: "KaTeX_Size1", url: "libraries/css/fonts/KaTeX_Size1-Regular.woff2", weight: "400", style: "normal" },
-            { family: "KaTeX_Size2", url: "libraries/css/fonts/KaTeX_Size2-Regular.woff2", weight: "400", style: "normal" },
-            { family: "KaTeX_Size3", url: "libraries/css/fonts/KaTeX_Size3-Regular.woff2", weight: "400", style: "normal" },
-            { family: "KaTeX_Size4", url: "libraries/css/fonts/KaTeX_Size4-Regular.woff2", weight: "400", style: "normal" },
-            { family: "KaTeX_AMS", url: "libraries/css/fonts/KaTeX_AMS-Regular.woff2", weight: "400", style: "normal" },
-            { family: "KaTeX_Caligraphic", url: "libraries/css/fonts/KaTeX_Caligraphic-Regular.woff2", weight: "400", style: "normal" },
-            { family: "KaTeX_Fraktur", url: "libraries/css/fonts/KaTeX_Fraktur-Regular.woff2", weight: "400", style: "normal" },
-            { family: "KaTeX_SansSerif", url: "libraries/css/fonts/KaTeX_SansSerif-Regular.woff2", weight: "400", style: "normal" },
-            { family: "KaTeX_Script", url: "libraries/css/fonts/KaTeX_Script-Regular.woff2", weight: "400", style: "normal" },
-            { family: "KaTeX_Typewriter", url: "libraries/css/fonts/KaTeX_Typewriter-Regular.woff2", weight: "400", style: "normal" }
+            { family: "KaTeX_Main", url: "../../libraries/css/fonts/KaTeX_Main-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Main", url: "../../libraries/css/fonts/KaTeX_Main-Italic.woff2", weight: "400", style: "italic" },
+            { family: "KaTeX_Main", url: "../../libraries/css/fonts/KaTeX_Main-Bold.woff2", weight: "700", style: "normal" },
+            { family: "KaTeX_Main", url: "../../libraries/css/fonts/KaTeX_Main-BoldItalic.woff2", weight: "700", style: "italic" },
+            { family: "KaTeX_Math", url: "../../libraries/css/fonts/KaTeX_Math-Italic.woff2", weight: "400", style: "italic" },
+            { family: "KaTeX_Math", url: "../../libraries/css/fonts/KaTeX_Math-BoldItalic.woff2", weight: "700", style: "italic" },
+            { family: "KaTeX_Size1", url: "../../libraries/css/fonts/KaTeX_Size1-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Size2", url: "../../libraries/css/fonts/KaTeX_Size2-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Size3", url: "../../libraries/css/fonts/KaTeX_Size3-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Size4", url: "../../libraries/css/fonts/KaTeX_Size4-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_AMS", url: "../../libraries/css/fonts/KaTeX_AMS-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Caligraphic", url: "../../libraries/css/fonts/KaTeX_Caligraphic-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Fraktur", url: "../../libraries/css/fonts/KaTeX_Fraktur-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_SansSerif", url: "../../libraries/css/fonts/KaTeX_SansSerif-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Script", url: "../../libraries/css/fonts/KaTeX_Script-Regular.woff2", weight: "400", style: "normal" },
+            { family: "KaTeX_Typewriter", url: "../../libraries/css/fonts/KaTeX_Typewriter-Regular.woff2", weight: "400", style: "normal" }
         ];
         const rules = [];
         const fontDataByFilename = {};
@@ -78,7 +78,7 @@ class BaseShape {
             rules.push(`@font-face { font-family: "${font.family}"; src: url("data:font/woff2;base64,${base64}") format("woff2"); font-weight: ${font.weight}; font-style: ${font.style}; }`);
         }
         BaseShape.embeddedFontStyles = rules.join("\n");
-        const cssResponse = await fetch("libraries/css/mathlive-static.css");
+        const cssResponse = await fetch("../../libraries/css/mathlive-static.css");
         const cssText = await cssResponse.text();
         BaseShape.embeddedMathStyles = cssText.replace(/url\(fonts\/([^)]+)\)/g, (match, filename) => {
             const data = fontDataByFilename[filename];

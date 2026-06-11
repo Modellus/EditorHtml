@@ -105,51 +105,51 @@ async function downloadKatex() {
 }
 
 function buildOfflineHtml() {
-    let html = fs.readFileSync(path.join(rootDir, "editor.html"), "utf8");
+    let html = fs.readFileSync(path.join(rootDir, "pages", "editor", "index.html"), "utf8");
     html = html.replace(/\s*<script type="importmap">[\s\S]*?<\/script>/, "");
     const removeScriptSrcs = [
-        "libraries/scripts/agentChatAdapter.js",
-        "libraries/scripts/agentToolBridge.js",
-        "sdk/aiSdk.js",
-        "scripts/shell/chatController.js",
-        "scripts/shell/collabChannel.js"
+        "../../libraries/scripts/agentChatAdapter.js",
+        "../../libraries/scripts/agentToolBridge.js",
+        "../../sdk/aiSdk.js",
+        "../../scripts/shell/chatController.js",
+        "../../scripts/shell/collabChannel.js"
     ];
     for (const src of removeScriptSrcs)
         html = html.replace(`\n    <script src="${src}"></script>`, "");
     html = html.replace(
-        `<script src="scripts/shell.js"></script>`,
-        `<script src="electron/offline-stubs.js"></script>\n    <script src="scripts/shell.js"></script>`
+        `<script src="../../scripts/shell.js"></script>`,
+        `<script src="../../electron/offline-stubs.js"></script>\n    <script src="../../scripts/shell.js"></script>`
     );
     let googleFontsReplaced = false;
     html = html.replace(/<link\s[^>]*href="https:\/\/fonts\.googleapis\.com[^"]*"[^>]*\/?>/g, () => {
         if (googleFontsReplaced)
             return "";
         googleFontsReplaced = true;
-        return `<link rel="stylesheet" href="libraries/css/google-fonts.css">`;
+        return `<link rel="stylesheet" href="../../libraries/css/google-fonts.css">`;
     });
     html = html.replace(
         `<link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/25.2.3/css/dx.fluent.blue.light.compact.css">`,
-        `<link rel="stylesheet" href="libraries/css/1dx.fluent.blue.light.compact.css">`
+        `<link rel="stylesheet" href="../../libraries/css/1dx.fluent.blue.light.compact.css">`
     );
     html = html.replace(
         `<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css">`,
-        `<link rel="stylesheet" href="libraries/css/katex.min.css">`
+        `<link rel="stylesheet" href="../../libraries/css/katex.min.css">`
     );
     html = html.replace(
         `<script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>`,
-        `<script src="libraries/scripts/katex.min.js"></script>`
+        `<script src="../../libraries/scripts/katex.min.js"></script>`
     );
     html = html.replace(
         `<script src="https://cdn3.devexpress.com/jslib/25.2.3/js/dx.all.js"></script>`,
-        `<script src="libraries/scripts/dx.all.js"></script>`
+        `<script src="../../libraries/scripts/dx.all.js"></script>`
     );
     html = html.replace(
         `<script src="editor.js"></script>`,
-        `<script src="electron/editor-offline.js"></script>`
+        `<script src="../../electron/editor-offline.js"></script>`
     );
     html = html.replace(/\s*<div id="chat-popup"><\/div>/, "");
-    fs.writeFileSync(path.join(rootDir, "editor-offline.html"), html);
-    console.log("Generated: editor-offline.html");
+    fs.writeFileSync(path.join(rootDir, "pages", "editor", "editor-offline.html"), html);
+    console.log("Generated: pages/editor/editor-offline.html");
 }
 
 async function main() {

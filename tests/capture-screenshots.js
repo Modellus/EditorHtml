@@ -8,7 +8,7 @@ async function setupEditor(page) {
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
     });
-    await page.goto(`${BASE_URL}/editor.html`);
+    await page.goto(`${BASE_URL}/pages/editor/index.html`);
     await page.waitForFunction(() => typeof shell !== 'undefined' && shell !== null && shell.board !== null, null, { timeout: 15000 });
     await page.waitForTimeout(1000);
 }
@@ -233,7 +233,7 @@ async function captureFullModel(page) {
 
 async function captureMarketplace(page) {
     console.log('Capturing marketplace...');
-    await page.goto(`${BASE_URL}/marketplace.html`);
+    await page.goto(`${BASE_URL}/pages/marketplace/index.html`);
     await page.waitForTimeout(3000);
 
     await screenshot(page, 'marketplace-overview');

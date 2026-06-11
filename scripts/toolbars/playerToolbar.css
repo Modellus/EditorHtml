@@ -1,0 +1,13 @@
+#bottom-toolbar .dx-toolbar.mdl-player-toolbar .dx-button {
+    border-radius: 6px;
+}
+
+#bottom-toolbar .dx-toolbar.mdl-player-toolbar .slider {
+    min-width: 220px;
+}
+
+@media (max-width: 900px) {
+    #bottom-toolbar .dx-toolbar.mdl-player-toolbar .slider {
+        min-width: 140px;
+    }
+}

@@ -104,12 +104,12 @@ function clearAuthState() {
 }
 
 function redirectToLogin() {
-    window.location.href = "/login.html";
+    window.location.href = "/pages/login/index.html";
 }
 
 (async () => {
-    const { ModelsApiClient } = await import("./sdk/modelsApiClient.js");
-    const { UserSdk } = await import("./sdk/userSdk.js");
+    const { ModelsApiClient } = await import("../../sdk/modelsApiClient.js");
+    const { UserSdk } = await import("../../sdk/userSdk.js");
     const modelsApiClient = new ModelsApiClient(
         apiBase,
         () => getCurrentSession(),
@@ -118,7 +118,7 @@ function redirectToLogin() {
             return currentSession?.userId || "";
         }
     );
-    const userSdk = new UserSdk("mp.session", "mp.user", "/login.html", "modellus_id_token", "/marketplace.html");
+    const userSdk = new UserSdk("mp.session", "mp.user", "/pages/login/index.html", "modellus_id_token", "/pages/marketplace/index.html");
     if (!hasValidSession())
         await userSdk.refreshSession(apiBase);
     if (hasValidSession())
@@ -176,7 +176,7 @@ function redirectToLogin() {
         if (!hasValidSession()) {
             clearAuthState();
             if (modelName) {
-                const response = await fetch(`resources/models/${modelName}.json`);
+                const response = await fetch(`../../resources/models/${modelName}.json`);
                 const payload = await response.text();
                 shell = new Shell(payload, modelsApiClient);
                 return;
@@ -186,7 +186,7 @@ function redirectToLogin() {
             return;
         }
         if (modelName) {
-            const response = await fetch(`resources/models/${modelName}.json`);
+            const response = await fetch(`../../resources/models/${modelName}.json`);
             const payload = await response.text();
             shell = new Shell(payload, modelsApiClient);
             return;

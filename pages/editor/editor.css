@@ -353,42 +353,42 @@ svg:active.pan-available {
 
 @font-face {
     font-family: "LatinModernMath";
-    src: url("ibraries/css/font/latinmodern-math.otf") format("opentype");
+    src: url("../../libraries/css/font/latinmodern-math.otf") format("opentype");
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
     font-family: "KatexMainRegular";
-    src: url("libraries/css/font/KaTeX_Main-Regular.woff2") format("woff2");
+    src: url("../../libraries/css/font/KaTeX_Main-Regular.woff2") format("woff2");
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
     font-family: "Katex_Main";
-    src: url("libraries/css/font/KaTeX_Main-Regular.woff2") format("woff2");
+    src: url("../../libraries/css/font/KaTeX_Main-Regular.woff2") format("woff2");
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
     font-family: "KatexMainItalic";
-    src: url("libraries/css/font/KaTeX_Main-Italic.woff2") format("woff2");
+    src: url("../../libraries/css/font/KaTeX_Main-Italic.woff2") format("woff2");
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
     font-family: "Katex_Math";
-    src: url("libraries/css/fonts/KaTeX_Math-Italic.woff2") format("woff2");
+    src: url("../../libraries/css/fonts/KaTeX_Math-Italic.woff2") format("woff2");
     font-weight: 400;
     font-style: italic;
 }
 
 @font-face {
     font-family: "Katex_Math";
-    src: url("libraries/css/fonts/KaTeX_Math-BoldItalic.woff2") format("woff2");
+    src: url("../../libraries/css/fonts/KaTeX_Math-BoldItalic.woff2") format("woff2");
     font-weight: 700;
     font-style: italic;
 }

@@ -14,6 +14,9 @@ class BottomToolbar {
 
     _create() {
         $("#bottom-toolbar").dxToolbar({
+            elementAttr: {
+                class: "mdl-player-toolbar"
+            },
             onItemClick: () => this.shell.deselectShape(),
             items: [
                 {
@@ -79,116 +82,51 @@ class BottomToolbar {
                         return container;
                     }
                 },
-            {
-                location: "center",
-                template: () => $(`<div class="toolbar-separator">|</div>`)
-            },
-                {
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-play",
-                        elementAttr: {
-                            id: "playPauseButton"
-                        },
-                        onClick: _ => this.shell.playPausePressed(),
-                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Play Pause Tooltip", 280)
-                    },
-                    location: "center"
-                },
-                {
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-stop",
-                        elementAttr: {
-                            id: "stopButton"
-                        },
-                        onClick: _ => this.shell.stopPressed(),
-                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Stop Tooltip", 280)
-                    },
-                    location: "center"
-                },
                 {
                     location: "center",
-                    template: () => {
-                        const container = $('<div>');
-                        this.createStartDropDown(container);
-                        return container;
-                    }
+                    template: () => $("<div class='toolbar-separator'>|</div>")
                 },
-                {
-                    widget: "dxSlider",
-                    cssClass: "slider",
-                    options: {
-                        min: 1,
-                        max: 1,
-                        value: 1,
-                        width: 400,
-                        elementAttr: {
-                            id: "playHeadSlider"
-                        },
-                        tooltip: {
-                            enabled: true,
-                            format: v => {
-                                const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
-                                return this.shell.calculator.getIndependentValue(v).toFixed(precision);
-                            },
-                            showMode: "always",
-                            position: "top",
-                        },
-                        onValueChanged: e => this.shell.iterationChanged(e.value)
+                ...ModellusPlayerToolbar.createPlayerItems({
+                    onPlayPause: () => this.shell.playPausePressed(),
+                    onStop: () => this.shell.stopPressed(),
+                    onStepBackward: () => this.shell.stepBackwardPressed(),
+                    onStepForward: () => this.shell.stepForwardPressed(),
+                    onReplay: () => this.shell.replayPressed(),
+                    onPlayPauseInitialized: event => this.shell.createTranslatedTooltip(event, "Play Pause Tooltip", 280),
+                    onStopInitialized: event => this.shell.createTranslatedTooltip(event, "Stop Tooltip", 280),
+                    onStepBackwardInitialized: event => this.shell.createTranslatedTooltip(event, "Step Backward Tooltip", 280),
+                    onStepForwardInitialized: event => this.shell.createTranslatedTooltip(event, "Step Forward Tooltip", 280),
+                    onReplayInitialized: event => this.shell.createTranslatedTooltip(event, "Replay Tooltip", 280),
+                    sliderMinimum: 1,
+                    sliderMaximum: 1,
+                    sliderValue: 1,
+                    sliderWidth: 400,
+                    sliderTooltipFormatter: value => {
+                        const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
+                        return this.shell.calculator.getIndependentValue(value).toFixed(precision);
                     },
-                    location: "center"
-                },
-                {
-                    location: "center",
-                    template: () => {
-                        const container = $('<div>');
-                        this.createEndDropDown(container);
-                        return container;
-                    }
-                },
-                {
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-backward-step",
-                        elementAttr: {
-                            id: "stepBackwardButton"
-                        },
-                        onClick: _ => this.shell.stepBackwardPressed(),
-                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Step Backward Tooltip", 280)
-                    },
-                    location: "center"
-                },
-                {
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-forward-step",
-                        elementAttr: {
-                            id: "stepForwardButton"
-                        },
-                        onClick: _ => this.shell.stepForwardPressed(),
-                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Step Forward Tooltip", 280)
-                    },
-                    location: "center"
-                },
-                {
-                    location: "center",
-                    template() {
-                        return $("<div id='representation-tools-separator' class='toolbar-separator'>|</div>");
-                    }
-                },
-                {
-                    widget: "dxButton",
-                    options: {
-                        icon: "fa-light fa-repeat",
-                        elementAttr: {
-                            id: "replayButton"
-                        },
-                        onClick: _ => this.shell.replayPressed(),
-                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Replay Tooltip", 280)
-                    },
-                    location: "center"
-                },
+                    onSliderValueChanged: value => this.shell.iterationChanged(value),
+                    itemsBeforeSlider: [
+                        {
+                            location: "center",
+                            template: () => {
+                                const container = $('<div>');
+                                this.createStartDropDown(container);
+                                return container;
+                            }
+                        }
+                    ],
+                    itemsAfterSlider: [
+                        {
+                            location: "center",
+                            template: () => {
+                                const container = $('<div>');
+                                this.createEndDropDown(container);
+                                return container;
+                            }
+                        }
+                    ]
+                }),
                 {
                     widget: "dxButton",
                     options: {
