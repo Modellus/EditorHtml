@@ -699,8 +699,8 @@ class ChartControl {
             <g clip-path="url(#${this.xTicksClipId})">
                 <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 4}" stroke="${this.options.axisColor}" stroke-width="1" />
                 <line x1="${xPosition}" y1="${layout.plotTop}" x2="${xPosition}" y2="${layout.plotTop - 4}" stroke="${this.options.axisColor}" stroke-width="1" />
-                <text class="shape-tick-label" x="${labelX}" y="${layout.plotBottom + 18}" text-anchor="${anchor}" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
             </g>
+            <text class="shape-tick-label" x="${labelX}" y="${layout.plotBottom + 18}" text-anchor="${anchor}" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
         `);
     }
 
@@ -711,8 +711,8 @@ class ChartControl {
             <g clip-path="url(#${this.yTicksClipId})">
                 <line x1="${layout.plotLeft - 4}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
                 <line x1="${layout.plotRight}" y1="${yPosition}" x2="${layout.plotRight + 4}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
-                <text class="shape-tick-label" x="${layout.plotLeft - 7}" y="${yPosition + 3}" text-anchor="end" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
             </g>
+            <text class="shape-tick-label" x="${layout.plotLeft - 7}" y="${yPosition + 3}" text-anchor="end" fill="${this.options.foregroundColor}" font-family="${this.options.fontFamily}" font-size="10">${labelText}</text>
         `);
     }
 
