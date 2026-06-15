@@ -8,8 +8,6 @@ class ChartControl {
         this.domainOverride = { xMin: null, xMax: null, yMin: null, yMax: null };
         this.width = 0;
         this.height = 0;
-        this.caseIconData = {};
-        this.caseIconsLoadingPromise = null;
         this._tickDragState = null;
         this._zoomDragState = null;
         this._onPointerMove = e => this.onTickPointerMove(e);
@@ -18,7 +16,7 @@ class ChartControl {
         this._onZoomPointerUp = e => this.onZoomPointerUp(e);
         this._lastPlotClick = null;
         this.initializeRoot();
-        this.ensureCaseIconsLoaded();
+        Utils.ensureCaseIconsLoaded(() => this.render());
         this.setOptions(options);
     }
 
@@ -39,12 +37,11 @@ class ChartControl {
             termFontFamily: "Katex_Math",
             termFontStyle: "italic",
             termFontWeight: 400,
-            iconFontFamily: "Font Awesome 7 Pro",
             equalScales: false,
             precision: 2,
             tangentColor: "#00000000",
             fontSize: 13,
-            titleFontSize: 16,
+            titleFontSize: 14,
             fontWeight: 900
         };
     }
@@ -430,238 +427,6 @@ class ChartControl {
         return value.toFixed(precision);
     }
 
-    isCaseIconCharacter(character) {
-        if (!character || character.length === 0)
-            return false;
-        const codePoint = character.codePointAt(0);
-        if (!Number.isFinite(codePoint))
-            return false;
-        return codePoint >= 0xe256 && codePoint <= 0xe25e;
-    }
-
-    getCaseIconNumberFromCharacter(character) {
-        if (!this.isCaseIconCharacter(character))
-            return null;
-        return character.codePointAt(0) - 0xe255;
-    }
-
-    parseCaseIconSegments(textValue) {
-        const value = String(textValue ?? "");
-        const segments = [];
-        if (value === "")
-            return segments;
-        let textBuffer = "";
-        for (let index = 0; index < value.length; index++) {
-            const character = value[index];
-            const caseNumber = this.getCaseIconNumberFromCharacter(character);
-            if (caseNumber == null) {
-                textBuffer += character;
-                continue;
-            }
-            if (textBuffer !== "") {
-                segments.push({ type: "text", value: textBuffer });
-                textBuffer = "";
-            }
-            segments.push({ type: "icon", caseNumber: caseNumber, rawValue: character });
-        }
-        if (textBuffer !== "")
-            segments.push({ type: "text", value: textBuffer });
-        return segments;
-    }
-
-    getCaseIconAssetPath(caseNumber) {
-        return `../../libraries/fontawesome/svgs/solid/square-${caseNumber}.svg`;
-    }
-
-    ensureCaseIconsLoaded() {
-        if (this.caseIconsLoadingPromise)
-            return this.caseIconsLoadingPromise;
-        this.caseIconsLoadingPromise = this.loadCaseIcons();
-        return this.caseIconsLoadingPromise;
-    }
-
-    async loadCaseIcons() {
-        const loaders = [];
-        for (let caseNumber = 1; caseNumber <= 9; caseNumber++)
-            loaders.push(this.loadCaseIcon(caseNumber));
-        await Promise.all(loaders);
-        this.render();
-    }
-
-    async loadCaseIcon(caseNumber) {
-        const iconPath = this.getCaseIconAssetPath(caseNumber);
-        try {
-            const response = await fetch(iconPath);
-            if (!response.ok)
-                return;
-            const svgText = await response.text();
-            const parser = new DOMParser();
-            const document = parser.parseFromString(svgText, "image/svg+xml");
-            const svgElement = document.querySelector("svg");
-            const pathElement = document.querySelector("path");
-            const pathData = pathElement?.getAttribute("d");
-            if (!pathData)
-                return;
-            const viewBox = this.parseViewBox(svgElement?.getAttribute("viewBox"));
-            this.caseIconData[caseNumber] = {
-                width: viewBox.width,
-                height: viewBox.height,
-                pathData: pathData
-            };
-        } catch (_) {
-        }
-    }
-
-    parseViewBox(viewBoxText) {
-        const rawValue = String(viewBoxText ?? "").trim();
-        if (rawValue === "")
-            return { width: 448, height: 512 };
-        const values = rawValue.split(/\s+/).map(value => Number(value));
-        if (values.length !== 4)
-            return { width: 448, height: 512 };
-        const width = Number(values[2]);
-        const height = Number(values[3]);
-        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
-            return { width: 448, height: 512 };
-        return { width: width, height: height };
-    }
-
-    getCaseIconSize(caseNumber, fontSize) {
-        const iconData = this.caseIconData[caseNumber];
-        const baseHeight = fontSize * 0.9;
-        const iconWidth = iconData?.width ?? 448;
-        const iconHeight = iconData?.height ?? 512;
-        const ratio = iconWidth / iconHeight;
-        return {
-            width: baseHeight * ratio,
-            height: baseHeight
-        };
-    }
-
-    normalizeTitleTextForWidth(textValue) {
-        return Utils.normalizeMathTermForWidth(textValue);
-    }
-
-    isMathTitleText(textValue) {
-        return Utils.isMathTermText(textValue);
-    }
-
-    getTitleMathPadding(fontSize, textValue) {
-        const normalizedFontSize = Number(fontSize) || 16;
-        let padding = normalizedFontSize * 0.35;
-        if (String(textValue ?? "").includes("\\widehat"))
-            padding += normalizedFontSize * 0.45;
-        return padding;
-    }
-
-    estimateTitleTextSegmentWidth(textValue, fontSize) {
-        const normalizedTextValue = this.normalizeTitleTextForWidth(textValue);
-        const baseWidth = this.estimateTextWidth(normalizedTextValue, fontSize);
-        if (!this.isMathTitleText(textValue))
-            return baseWidth;
-        const padding = this.getTitleMathPadding(fontSize, textValue);
-        return baseWidth + padding * 2;
-    }
-
-    estimateTitleSegmentsWidth(segments, fontSize) {
-        let totalWidth = 0;
-        for (let index = 0; index < segments.length; index++) {
-            const segment = segments[index];
-            if (segment.type === "icon") {
-                totalWidth += this.getCaseIconSize(segment.caseNumber, fontSize).width;
-                continue;
-            }
-            totalWidth += this.estimateTitleTextSegmentWidth(segment.value, fontSize);
-        }
-        return totalWidth;
-    }
-
-    renderTitleMathSegment(layer, xPosition, yPosition, fontSize, fill, textValue) {
-        const segmentWidth = this.estimateTitleTextSegmentWidth(textValue, fontSize);
-        const segmentHeight = Math.max(18, fontSize * 1.9);
-        const foreignObject = this.createSvgElement("foreignObject");
-        foreignObject.setAttribute("x", `${xPosition}`);
-        foreignObject.setAttribute("y", `${yPosition - segmentHeight * 0.78}`);
-        foreignObject.setAttribute("width", `${segmentWidth}`);
-        foreignObject.setAttribute("height", `${segmentHeight}`);
-        foreignObject.setAttribute("pointer-events", "none");
-        const container = document.createElement("div");
-        container.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:flex-start;overflow:visible;pointer-events:none";
-        container.innerHTML = Utils.buildReadOnlyMathFieldMarkup(textValue, `height:auto;width:auto;display:inline-block;color:${fill};font-size:${fontSize}px`);
-        foreignObject.appendChild(container);
-        layer.appendChild(foreignObject);
-    }
-
-    renderTitleTextSegment(layer, xPosition, yPosition, fontSize, fill, textValue) {
-        if (this.isMathTitleText(textValue)) {
-            this.renderTitleMathSegment(layer, xPosition, yPosition, fontSize, fill, textValue);
-            return;
-        }
-        const textElement = this.createSvgElement("text");
-        textElement.setAttribute("x", `${xPosition}`);
-        textElement.setAttribute("y", `${yPosition}`);
-        textElement.setAttribute("fill", fill);
-        textElement.setAttribute("font-family", this.options.termFontFamily);
-        textElement.setAttribute("font-style", `${this.options.termFontStyle}`);
-        textElement.setAttribute("font-weight", `${this.options.termFontWeight}`);
-        textElement.setAttribute("font-size", `${fontSize}`);
-        textElement.textContent = Utils.convertGreekLetters(textValue);
-        layer.appendChild(textElement);
-    }
-
-    renderTitleIconSegment(layer, xPosition, yPosition, fontSize, fill, caseNumber, fallbackCharacter) {
-        const size = this.getCaseIconSize(caseNumber, fontSize);
-        const iconData = this.caseIconData[caseNumber];
-        const caseIconColor = TermControl.getCaseIconColor(caseNumber);
-        if (!iconData?.pathData) {
-            const fallbackText = this.createSvgElement("text");
-            fallbackText.setAttribute("x", `${xPosition}`);
-            fallbackText.setAttribute("y", `${yPosition}`);
-            fallbackText.setAttribute("fill", caseIconColor);
-            fallbackText.setAttribute("font-family", this.options.iconFontFamily);
-            fallbackText.setAttribute("font-style", "normal");
-            fallbackText.setAttribute("font-weight", "900");
-            fallbackText.setAttribute("font-size", `${fontSize}`);
-            fallbackText.textContent = fallbackCharacter;
-            layer.appendChild(fallbackText);
-            return;
-        }
-        const scaleX = size.width / iconData.width;
-        const scaleY = size.height / iconData.height;
-        const topY = yPosition - size.height * 0.82;
-        const iconGroup = this.createSvgElement("g");
-        iconGroup.setAttribute("transform", `translate(${xPosition} ${topY}) scale(${scaleX} ${scaleY})`);
-        const iconPath = this.createSvgElement("path");
-        iconPath.setAttribute("d", iconData.pathData);
-        iconPath.setAttribute("fill", caseIconColor);
-        iconGroup.appendChild(iconPath);
-        layer.appendChild(iconGroup);
-    }
-
-    renderTitleWithCaseIcons(targetLayer, textValue, centerX, centerY, fontSize, fill, rotation = null, clipId = null) {
-        const segments = this.parseCaseIconSegments(textValue);
-        if (segments.length === 0)
-            return;
-        const hostGroup = this.createSvgElement("g");
-        if (rotation)
-            hostGroup.setAttribute("transform", `rotate(${rotation.angle} ${rotation.cx} ${rotation.cy})`);
-        if (clipId)
-            hostGroup.setAttribute("clip-path", `url(#${clipId})`);
-        targetLayer.appendChild(hostGroup);
-        const totalWidth = this.estimateTitleSegmentsWidth(segments, fontSize);
-        let cursorX = centerX - totalWidth / 2;
-        for (let index = 0; index < segments.length; index++) {
-            const segment = segments[index];
-            if (segment.type === "icon") {
-                this.renderTitleIconSegment(hostGroup, cursorX, centerY, fontSize, fill, segment.caseNumber, segment.rawValue);
-                cursorX += this.getCaseIconSize(segment.caseNumber, fontSize).width;
-                continue;
-            }
-            this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, fill, segment.value);
-            cursorX += this.estimateTitleTextSegmentWidth(segment.value, fontSize);
-        }
-    }
-
     renderValueTitleLegend(targetLayer, layout, fontSize, clipId = null) {
         const series = this.options.series;
         if (!series || series.length === 0)
@@ -680,12 +445,12 @@ class ChartControl {
                 entries.push({ type: "separator", width: separatorWidth });
                 totalWidth += separatorWidth;
             }
-            const segments = this.parseCaseIconSegments(series[index].name ?? "");
-            const segmentsWidth = this.estimateTitleSegmentsWidth(segments, fontSize);
+            const seriesName = series[index].name ?? {};
+            const seriesLabelWidth = Utils.estimateCaseTermWidth(seriesName.caseNumber, seriesName.termLatex ?? "", fontSize);
             const seriesColor = series[index].color || contrastColor;
             const chartTypes = series[index].chartTypes ?? ["line"];
-            entries.push({ type: "series", segments: segments, color: seriesColor, chartTypes: chartTypes, width: indicatorTotalWidth + segmentsWidth });
-            totalWidth += indicatorTotalWidth + segmentsWidth;
+            entries.push({ type: "series", name: seriesName, color: seriesColor, chartTypes: chartTypes, width: indicatorTotalWidth + seriesLabelWidth });
+            totalWidth += indicatorTotalWidth + seriesLabelWidth;
         }
         const centerX = layout.axisTitleLeft;
         const centerY = layout.axisTitleY;
@@ -700,22 +465,14 @@ class ChartControl {
         for (let index = 0; index < entries.length; index++) {
             const entry = entries[index];
             if (entry.type === "separator") {
-                this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, contrastColor, separatorText);
+                this.appendSvgMarkup(hostGroup, `<text x="${cursorX}" y="${centerY}" fill="${contrastColor}" font-family="${this.options.termFontFamily}" font-size="${fontSize}">${separatorText}</text>`);
                 cursorX += entry.width;
                 continue;
             }
             this.renderLegendIndicator(hostGroup, cursorX, centerY, fontSize, entry.color, entry.chartTypes, indicatorWidth);
             cursorX += indicatorTotalWidth;
-            for (let segmentIndex = 0; segmentIndex < entry.segments.length; segmentIndex++) {
-                const segment = entry.segments[segmentIndex];
-                if (segment.type === "icon") {
-                    this.renderTitleIconSegment(hostGroup, cursorX, centerY, fontSize, entry.color, segment.caseNumber, segment.rawValue);
-                    cursorX += this.getCaseIconSize(segment.caseNumber, fontSize).width;
-                    continue;
-                }
-                this.renderTitleTextSegment(hostGroup, cursorX, centerY, fontSize, contrastColor, segment.value);
-                cursorX += this.estimateTitleTextSegmentWidth(segment.value, fontSize);
-            }
+            Utils.appendCaseTermSvg(hostGroup, cursorX, centerY, fontSize, contrastColor, entry.name.caseNumber, entry.name.termLatex ?? "");
+            cursorX += entry.width - indicatorTotalWidth;
         }
     }
 
@@ -1157,7 +914,15 @@ class ChartControl {
     renderTitles(layout, width, height) {
         this.updateTitleClipRects(layout, height);
         const titleFontSize = Number(this.options.titleFontSize) || 16;
-        this.renderTitleWithCaseIcons(this.axisLayer, this.options.argumentTitle ?? "", layout.plotLeft + layout.plotWidth / 2, layout.axisTitleX, titleFontSize, this.options.foregroundColor, null, this.xTitleClipId);
+        const argTitle = this.options.argumentTitle;
+        if (argTitle?.termLatex) {
+            const hostGroup = this.createSvgElement("g");
+            hostGroup.setAttribute("clip-path", `url(#${this.xTitleClipId})`);
+            this.axisLayer.appendChild(hostGroup);
+            const totalWidth = Utils.estimateCaseTermWidth(argTitle.caseNumber, argTitle.termLatex, titleFontSize);
+            const startX = layout.plotLeft + layout.plotWidth / 2 - totalWidth / 2;
+            Utils.appendCaseTermSvg(hostGroup, startX, layout.axisTitleX, titleFontSize, this.options.foregroundColor, argTitle.caseNumber, argTitle.termLatex);
+        }
         this.renderValueTitleLegend(this.axisLayer, layout, titleFontSize, this.yTitleClipId);
         this.appendSvgMarkup(this.axisLayer, `
             <rect x="0" y="0" width="${width}" height="${layout.plotBottom + 22}" fill="none" stroke="none" />

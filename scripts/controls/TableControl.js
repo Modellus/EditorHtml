@@ -22,8 +22,6 @@ class TableControl {
         this.horizontalScrollbarDrag = null;
         this.columnResizeDrag = null;
         this.columnClipPaths = null;
-        this.caseIconData = {};
-        this.caseIconsLoadingPromise = null;
         this.headerTooltip = null;
         this.headerTooltipHost = null;
         this.headerTooltipHoverTimer = null;
@@ -35,7 +33,7 @@ class TableControl {
         this.outlierStripePatternId = `shape-svg-table-outlier-stripe-${crypto.randomUUID()}`;
         this.initializeRoot();
         this.bindEvents();
-        this.ensureCaseIconsLoaded();
+        Utils.ensureCaseIconsLoaded(() => this.render());
         this.setOptions(options);
     }
 
@@ -57,7 +55,7 @@ class TableControl {
             termFontFamily: "Katex_Math",
             numberFontFamily: "Katex_Main",
             fontSize: 12,
-            headerFontSize: 16,
+            headerFontSize: 14,
             rowHeight: 24,
             headerHeight: 28,
             scrollbarWidth: 10,
@@ -170,123 +168,9 @@ class TableControl {
         return document.createElementNS("http://www.w3.org/2000/svg", name);
     }
 
-    getCaseIconAssetPath(caseNumber) {
-        return `../../libraries/fontawesome/svgs/solid/square-${caseNumber}.svg`;
-    }
-
-    ensureCaseIconsLoaded() {
-        if (this.caseIconsLoadingPromise)
-            return this.caseIconsLoadingPromise;
-        this.caseIconsLoadingPromise = this.loadCaseIcons();
-        return this.caseIconsLoadingPromise;
-    }
-
-    async loadCaseIcons() {
-        const loaders = [];
-        for (let caseNumber = 1; caseNumber <= 9; caseNumber++)
-            loaders.push(this.loadCaseIcon(caseNumber));
-        await Promise.all(loaders);
-        this.render();
-    }
-
-    async loadCaseIcon(caseNumber) {
-        const iconPath = this.getCaseIconAssetPath(caseNumber);
-        try {
-            const response = await fetch(iconPath);
-            if (!response.ok)
-                return;
-            const svgText = await response.text();
-            const parser = new DOMParser();
-            const document = parser.parseFromString(svgText, "image/svg+xml");
-            const svgElement = document.querySelector("svg");
-            const pathElement = document.querySelector("path");
-            const pathData = pathElement?.getAttribute("d");
-            if (!pathData)
-                return;
-            const viewBox = this.parseViewBox(svgElement?.getAttribute("viewBox"));
-            this.caseIconData[caseNumber] = {
-                width: viewBox.width,
-                height: viewBox.height,
-                pathData: pathData
-            };
-        } catch (_) {
-        }
-    }
-
-    parseViewBox(viewBoxText) {
-        const rawValue = String(viewBoxText ?? "").trim();
-        if (rawValue === "")
-            return { width: 448, height: 512 };
-        const values = rawValue.split(/\s+/).map(value => Number(value));
-        if (values.length !== 4)
-            return { width: 448, height: 512 };
-        const width = Number(values[2]);
-        const height = Number(values[3]);
-        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
-            return { width: 448, height: 512 };
-        return { width: width, height: height };
-    }
-
     estimateTextWidth(textValue, fontSize) {
         const value = String(textValue ?? "");
         return value.length * fontSize * 0.58;
-    }
-
-    normalizeHeaderTitleForWidth(titleText) {
-        return Utils.normalizeMathTermForWidth(titleText);
-    }
-
-    getHeaderTitleMathValue(titleText) {
-        const normalizedTitleText = String(titleText ?? "");
-        if (Utils.isMathTermText(normalizedTitleText))
-            return normalizedTitleText;
-        return Utils.convertGreekLetters(normalizedTitleText);
-    }
-
-    setMathFieldValue(mathFieldElement, mathValue) {
-        Utils.setMathFieldValue(mathFieldElement, mathValue);
-    }
-
-    getHeaderCaseIconSize(caseNumber) {
-        const iconData = this.caseIconData[caseNumber];
-        const baseHeight = Math.max(8, Number(this.options.headerFontSize) - 3);
-        const iconWidth = iconData?.width ?? 448;
-        const iconHeight = iconData?.height ?? 512;
-        const ratio = iconWidth / iconHeight;
-        return {
-            width: baseHeight * ratio,
-            height: baseHeight
-        };
-    }
-
-    renderHeaderCaseIcon(caseNumber, xPosition, yPosition, columnIndex) {
-        const size = this.getHeaderCaseIconSize(caseNumber);
-        const iconData = this.caseIconData[caseNumber];
-        const caseIconColor = TermControl.getCaseIconColor(caseNumber);
-        const clipPathRef = `url(#${this.rowsClipId}-col-${columnIndex})`;
-        if (!iconData?.pathData) {
-            const fallbackText = this.createSvgElement("text");
-            fallbackText.setAttribute("x", `${xPosition}`);
-            fallbackText.setAttribute("y", `${yPosition}`);
-            fallbackText.setAttribute("fill", caseIconColor);
-            fallbackText.setAttribute("font-family", this.options.numberFontFamily);
-            fallbackText.setAttribute("font-size", `${Math.max(8, Number(this.options.headerFontSize) - 3)}`);
-            fallbackText.setAttribute("clip-path", clipPathRef);
-            fallbackText.textContent = `${caseNumber}`;
-            this.headerGeometryLayer.appendChild(fallbackText);
-            return;
-        }
-        const scaleX = size.width / iconData.width;
-        const scaleY = size.height / iconData.height;
-        const topY = yPosition - size.height * 0.82;
-        const iconGroup = this.createSvgElement("g");
-        iconGroup.setAttribute("transform", `translate(${xPosition} ${topY}) scale(${scaleX} ${scaleY})`);
-        iconGroup.setAttribute("clip-path", clipPathRef);
-        const iconPath = this.createSvgElement("path");
-        iconPath.setAttribute("d", iconData.pathData);
-        iconPath.setAttribute("fill", caseIconColor);
-        iconGroup.appendChild(iconPath);
-        this.headerGeometryLayer.appendChild(iconGroup);
     }
 
     clearLayer(layerElement) {
@@ -555,10 +439,10 @@ class TableControl {
 
     getAutoColumnWidth(column) {
         const title = String(column?.title ?? "");
-        const titleWidth = this.estimateTextWidth(this.normalizeHeaderTitleForWidth(title), Number(this.options.headerFontSize) || 16);
+        const titleWidth = this.estimateTextWidth(Utils.normalizeMathTermForWidth(title), Number(this.options.headerFontSize) || 16);
         let caseIconWidth = 0;
         if (column?.showCase === true)
-            caseIconWidth = this.getHeaderCaseIconSize(column.caseNumber).width + 8;
+            caseIconWidth = Utils.getCaseIconSize(column.caseNumber, Number(this.options.headerFontSize) || 16).width + 8;
         const paddingWidth = 18;
         return Math.max(this.getMinColumnWidth(), Math.ceil(titleWidth + caseIconWidth + paddingWidth));
     }
@@ -588,7 +472,7 @@ class TableControl {
 
     getHeaderGeometryKey(layout, columns) {
         const columnWidths = columns.map(column => column.width ?? "auto").join(",");
-        return `${layout.bodyWidth}|${layout.headerHeight}|${this.options.gridColor}|${columnWidths}`;
+        return `${layout.bodyWidth}|${layout.headerHeight}|${this.options.gridColor}|${this.scrollLeft}|${columnWidths}`;
     }
 
     render() {
@@ -709,15 +593,6 @@ class TableControl {
         headerRect.setAttribute("height", `${layout.headerHeight}`);
         headerRect.setAttribute("fill", headerBackgroundColor);
         this.headerGeometryLayer.appendChild(headerRect);
-        if (column.showCase === true) {
-            const centerX = cellGeometry.x + cellGeometry.width / 2;
-            const centerY = layout.headerHeight / 2 + 4;
-            const titleText = column.title ?? "";
-            const titleWidth = this.estimateTextWidth(this.normalizeHeaderTitleForWidth(titleText), Number(this.options.headerFontSize) || 16);
-            const iconX = centerX + titleWidth / 2 + 2;
-            const iconY = centerY - 1;
-            this.renderHeaderCaseIcon(column.caseNumber, iconX, iconY, columnIndex);
-        }
         if (isLastColumn)
             return;
         const columnLine = this.createSvgElement("line");
@@ -734,30 +609,27 @@ class TableControl {
         const headerBackgroundColor = this.getColumnHeaderBackgroundColor(column);
         const headerTextColor = Utils.getContrastColor(headerBackgroundColor);
         const titleText = column.title ?? "";
-        const titleMathValue = this.getHeaderTitleMathValue(titleText);
-        const titleForeignObject = this.createSvgElement("foreignObject");
-        titleForeignObject.setAttribute("x", `${cellGeometry.x}`);
-        titleForeignObject.setAttribute("y", "0");
-        titleForeignObject.setAttribute("width", `${cellGeometry.width}`);
-        titleForeignObject.setAttribute("height", `${layout.headerHeight}`);
-        titleForeignObject.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
-        titleForeignObject.setAttribute("pointer-events", "none");
-        const titleContainer = document.createElement("div");
-        titleContainer.style.cssText = "width:100%;height:100%;display:flex;align-items:center;justify-content:flex-start;text-align:left;overflow:hidden;pointer-events:none";
-        titleContainer.innerHTML = Utils.buildReadOnlyMathFieldMarkup("", `height:auto;width:auto;display:inline-block;color:${headerTextColor};font-size:${this.options.headerFontSize}px`);
-        const titleMathField = titleContainer.querySelector("math-field");
-        this.setMathFieldValue(titleMathField, titleMathValue);
-        titleForeignObject.appendChild(titleContainer);
-        this.headerContentLayer.appendChild(titleForeignObject);
-        return titleForeignObject;
+        const fontSize = Number(this.options.headerFontSize) || 16;
+        const paddingLeft = 9;
+        const baselineY = layout.headerHeight / 2 + fontSize * 0.35;
+        const clipGroup = this.createSvgElement("g");
+        clipGroup.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
+        clipGroup.setAttribute("pointer-events", "none");
+        this.headerContentLayer.appendChild(clipGroup);
+        const translateGroup = this.createSvgElement("g");
+        translateGroup.setAttribute("transform", `translate(${cellGeometry.x}, 0)`);
+        clipGroup.appendChild(translateGroup);
+        Utils.appendCaseTermSvg(translateGroup, paddingLeft, baselineY, fontSize, headerTextColor, column.showCase ? column.caseNumber : null, titleText);
+        return clipGroup;
     }
 
     updateHeaderContentGeometry(columns, geometry, layout) {
         for (let index = 0; index < this._headerContentForeignObjects.length && index < geometry.length; index++) {
-            const foreignObject = this._headerContentForeignObjects[index];
-            foreignObject.setAttribute("x", `${geometry[index].x}`);
-            foreignObject.setAttribute("width", `${geometry[index].width}`);
-            foreignObject.setAttribute("height", `${layout.headerHeight}`);
+            const clipGroup = this._headerContentForeignObjects[index];
+            clipGroup.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${index})`);
+            const translateGroup = clipGroup.firstElementChild;
+            if (translateGroup)
+                translateGroup.setAttribute("transform", `translate(${geometry[index].x}, 0)`);
         }
     }
 
@@ -1759,7 +1631,7 @@ class TableControl {
         const mathFieldElement = tooltipContentElement.querySelector("math-field");
         if (!mathFieldElement)
             return;
-        this.setMathFieldValue(mathFieldElement, this.headerTooltipLatex);
+        Utils.setMathFieldValue(mathFieldElement, this.headerTooltipLatex);
     }
 
     scheduleHeaderTooltip(columnIndex, target) {

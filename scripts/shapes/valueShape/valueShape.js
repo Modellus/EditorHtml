@@ -300,15 +300,8 @@ class ValueShape extends BaseShape {
         this.valueText = this.board.createSvgElement("text");
         this.valueText.setAttribute("text-anchor", "middle");
         this.valueText.setAttribute("dominant-baseline", "middle");
-        this.caseIconHost = this.board.createSvgElement("foreignObject");
-        this.caseIconHost.setAttribute("class", "shape-term-case-icon-host");
-        const iconContainer = this.board.createElement("div");
-        iconContainer.setAttribute("class", "shape-term-case-icon-container");
-        const icon = this.board.createElement("i");
-        icon.setAttribute("class", "shape-term-case-icon");
-        iconContainer.appendChild(icon);
-        this.caseIconHost.appendChild(iconContainer);
-        this.caseIconElement = icon;
+        this.caseIconGroup = this.board.createSvgElement("g");
+        this.caseIconGroup.setAttribute("class", "shape-term-case-icon-host");
         const defs = this.board.createSvgElement("defs");
         const clipPath = this.board.createSvgElement("clipPath");
         clipPath.setAttribute("id", this.getContentClipId());
@@ -319,7 +312,7 @@ class ValueShape extends BaseShape {
         const clippedContent = this.board.createSvgElement("g");
         clippedContent.setAttribute("clip-path", `url(#${this.getContentClipId()})`);
         clippedContent.appendChild(this.valueText);
-        clippedContent.appendChild(this.caseIconHost);
+        clippedContent.appendChild(this.caseIconGroup);
         this.valueEditorHost = this.board.createSvgElement("foreignObject");
         this.valueEditorHost.setAttribute("display", "none");
         this.valueEditorHost.setAttribute("class", "value-shape-editor-host");
@@ -460,43 +453,15 @@ class ValueShape extends BaseShape {
     }
 
     setValueTextContent(termText, valueText) {
-        while (this.valueText.firstChild)
-            this.valueText.removeChild(this.valueText.firstChild);
-        if (termText === "") {
-            const emptySpan = this.board.createSvgElement("tspan");
-            emptySpan.setAttribute("font-family", "Katex_Main");
-            emptySpan.textContent = valueText;
-            this.valueText.appendChild(emptySpan);
-            return;
-        }
-        const termSpan = this.board.createSvgElement("tspan");
-        termSpan.setAttribute("font-family", "Katex_Math");
-        termSpan.textContent = Utils.convertMathTermToPlainText(termText);
-        this.valueText.appendChild(termSpan);
-        const separatorSpan = this.board.createSvgElement("tspan");
-        separatorSpan.setAttribute("font-family", "Katex_Main");
-        separatorSpan.textContent = " = ";
-        this.valueText.appendChild(separatorSpan);
-        const valueSpan = this.board.createSvgElement("tspan");
-        valueSpan.setAttribute("font-family", "Katex_Main");
-        valueSpan.textContent = valueText;
-        this.valueText.appendChild(valueSpan);
+        Utils.setTermValueTextContent(this.valueText, termText, valueText);
     }
 
     updateCaseIcon(caseNumber, termText, showCaseIcon) {
-        if (!showCaseIcon || termText === "") {
-            this.caseIconHost.setAttribute("display", "none");
-            return;
-        }
-        this.caseIconHost.removeAttribute("display");
-        const iconClass = `${TermControl.getCaseNumberIconClass(caseNumber)} shape-term-case-icon`;
-        if (this.caseIconElement.getAttribute("class") != iconClass)
-            this.caseIconElement.setAttribute("class", iconClass);
-        this.caseIconElement.style.color = TermControl.getCaseIconColor(caseNumber);
+        Utils.applyCaseIconSvg(this.caseIconGroup, 0, 0, 10, showCaseIcon && termText !== "" ? caseNumber : null);
     }
 
     placeCaseIcon(position, width, height) {
-        if (this.caseIconHost.getAttribute("display") == "none")
+        if (!this.caseIconGroup.firstChild)
             return;
         let textRight = position.x + width / 2;
         try {
@@ -506,10 +471,7 @@ class ValueShape extends BaseShape {
         const iconSize = 10;
         const iconX = Math.min(position.x + width - iconSize - 4, textRight + 4);
         const iconY = position.y + (height - iconSize) / 2;
-        this.caseIconHost.setAttribute("x", `${iconX}`);
-        this.caseIconHost.setAttribute("y", `${iconY}`);
-        this.caseIconHost.setAttribute("width", `${iconSize}`);
-        this.caseIconHost.setAttribute("height", `${iconSize + 1}`);
+        this.caseIconGroup.setAttribute("transform", `translate(${iconX} ${iconY})`);
     }
 
     placeValueEditor(position, width, height) {

@@ -1,4 +1,4 @@
-class TermDisplay {
+    class TermDisplay {
     constructor(shape) {
         this.shape = shape;
         this.layer = null;
@@ -174,27 +174,16 @@ class TermDisplay {
             else
                 labelGroup.appendChild(backgroundRect);
         }
-        let caseIconHost = labelGroup.children[1];
-        if (!caseIconHost || caseIconHost.tagName?.toLowerCase() != "foreignobject") {
-            if (caseIconHost)
-                labelGroup.removeChild(caseIconHost);
-            caseIconHost = this.board.createSvgElement("foreignObject");
-            caseIconHost.setAttribute("class", "shape-term-case-icon-host");
+        let caseIconGroup = labelGroup.children[1];
+        if (!caseIconGroup || caseIconGroup.tagName?.toLowerCase() != "g") {
+            if (caseIconGroup)
+                labelGroup.removeChild(caseIconGroup);
+            caseIconGroup = this.board.createSvgElement("g");
+            caseIconGroup.setAttribute("class", "shape-term-case-icon-host");
             if (labelGroup.children[1])
-                labelGroup.insertBefore(caseIconHost, labelGroup.children[1]);
+                labelGroup.insertBefore(caseIconGroup, labelGroup.children[1]);
             else
-                labelGroup.appendChild(caseIconHost);
-        }
-        if (!caseIconHost.firstChild || caseIconHost.firstChild.tagName?.toLowerCase() != "div") {
-            const iconContainer = this.board.createElement("div");
-            iconContainer.setAttribute("class", "shape-term-case-icon-container");
-            caseIconHost.replaceChildren(iconContainer);
-        }
-        const iconContainer = caseIconHost.firstChild;
-        if (!iconContainer.firstChild || iconContainer.firstChild.tagName?.toLowerCase() != "i") {
-            const icon = this.board.createElement("i");
-            icon.setAttribute("class", "shape-term-case-icon");
-            iconContainer.replaceChildren(icon);
+                labelGroup.appendChild(caseIconGroup);
         }
         let labelText = labelGroup.children[2];
         if (!labelText || labelText.tagName?.toLowerCase() != "text") {
@@ -204,7 +193,7 @@ class TermDisplay {
             labelText.setAttribute("class", "shape-term-label");
             labelGroup.appendChild(labelText);
         }
-        return { group: labelGroup, backgroundRect: backgroundRect, caseIconHost: caseIconHost, caseIconElement: caseIconHost.firstChild.firstChild, labelText: labelText };
+        return { group: labelGroup, backgroundRect: backgroundRect, caseIconGroup: caseIconGroup, labelText: labelText };
     }
 
     getCaseIconLayout(label, labelText) {
@@ -227,54 +216,12 @@ class TermDisplay {
         return { visible: true, iconSize: iconSize, iconX: iconX, iconY: y, textX: textX };
     }
 
-    applyCaseIcon(caseIconHost, caseIconElement, caseNumber, layout) {
-        if (!caseIconHost || !caseIconElement)
-            return;
-        if (!layout.visible) {
-            caseIconHost.setAttribute("display", "none");
-            return;
-        }
-        caseIconHost.removeAttribute("display");
-        caseIconHost.setAttribute("x", `${layout.iconX}`);
-        caseIconHost.setAttribute("y", `${layout.iconY}`);
-        caseIconHost.setAttribute("width", `${layout.iconSize}`);
-        caseIconHost.setAttribute("height", `${layout.iconSize + 1}`);
-        const iconClass = `${TermControl.getCaseNumberIconClass(caseNumber)} shape-term-case-icon`;
-        if (caseIconElement.getAttribute("class") != iconClass)
-            caseIconElement.setAttribute("class", iconClass);
-        const iconColor = TermControl.getCaseIconColor(caseNumber);
-        if (caseIconElement.style.color != iconColor)
-            caseIconElement.style.color = iconColor;
+    applyCaseIcon(caseIconGroup, caseNumber, layout) {
+        Utils.applyCaseIconSvg(caseIconGroup, layout.iconX, layout.iconY, layout.iconSize, layout.visible ? caseNumber : null);
     }
 
     setLabelText(labelText, label) {
-        while (labelText.firstChild)
-            labelText.removeChild(labelText.firstChild);
-        if (!label) {
-            labelText.textContent = "";
-            return;
-        }
-        const termText = label.termText ?? "";
-        const valueText = label.valueText ?? "";
-        if (termText === "" && valueText === "") {
-            labelText.textContent = label.text ?? "";
-            return;
-        }
-        if (termText === "") {
-            labelText.setAttribute("font-family", "Katex_Main");
-            labelText.textContent = valueText;
-            return;
-        }
-        const termSpan = this.board.createSvgElement("tspan");
-        termSpan.setAttribute("font-family", "Katex_Math");
-        termSpan.setAttribute("dominant-baseline", "central");
-        termSpan.textContent = Utils.convertMathTermToPlainText(termText);
-        labelText.appendChild(termSpan);
-        const valueSpan = this.board.createSvgElement("tspan");
-        valueSpan.setAttribute("font-family", "Katex_Main");
-        valueSpan.setAttribute("dominant-baseline", "central");
-        valueSpan.textContent = ` = ${valueText}`;
-        labelText.appendChild(valueSpan);
+        Utils.setTermValueTextContent(labelText, label?.termText ?? "", label?.valueText ?? label?.text ?? "");
     }
 
     getLabelAnchor() {
@@ -439,36 +386,13 @@ class TermDisplay {
             this.setLabelText(labelText, label);
             const iconLayout = this.getCaseIconLayout(label, labelText);
             labelText.setAttribute("x", iconLayout.textX);
-            this.applyCaseIcon(labelElements.caseIconHost, labelElements.caseIconElement, label.caseNumber, iconLayout);
+            this.applyCaseIcon(labelElements.caseIconGroup, label.caseNumber, iconLayout);
             this.applyLabelBackground(labelElements.backgroundRect, labelText, labelColor, label.anchor);
         }
     }
 
     applyLabelBackground(backgroundRect, labelText, color, anchor) {
-        const paddingX = 4;
-        const paddingY = 2;
-        let textWidth = 0;
-        let textHeight = 12;
-        let textX = 0;
-        let textY = 0;
-        if (labelText?.getBBox)
-            try {
-                const bbox = labelText.getBBox();
-                textWidth = bbox.width;
-                textHeight = bbox.height;
-                textX = bbox.x;
-                textY = bbox.y;
-            } catch (_) {}
-        if (textWidth <= 0) {
-            backgroundRect.setAttribute("display", "none");
-            return;
-        }
-        backgroundRect.removeAttribute("display");
-        backgroundRect.setAttribute("x", textX - paddingX);
-        backgroundRect.setAttribute("y", textY - paddingY);
-        backgroundRect.setAttribute("width", textWidth + paddingX * 2);
-        backgroundRect.setAttribute("height", textHeight + paddingY * 2);
-        backgroundRect.setAttribute("fill", color);
+        Utils.applyTermLabelBackground(backgroundRect, labelText, color, anchor);
     }
 }
 

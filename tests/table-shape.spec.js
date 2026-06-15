@@ -267,6 +267,38 @@ test.describe('Table shape editing', () => {
         expect(state.selectedShapeId).not.toBe(state.tableShapeId);
     });
 
+    test('header names are positioned within the table bounds, not at the top-left of the page', async ({ page }) => {
+        await setupEditor(page);
+        await addTable(page, 'Table1');
+        await setupPreloadedTable(page);
+
+        const positions = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Table1');
+            const table = tableShape?.table;
+            if (!table)
+                return null;
+            const shapeRect = tableShape.element.getBoundingClientRect();
+            const headerElements = Array.from(table.headerContentLayer.querySelectorAll('g'));
+            const headerRects = headerElements.map(el => el.getBoundingClientRect()).map(rect => ({
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height
+            }));
+            return {
+                shapeRect: { top: shapeRect.top, left: shapeRect.left, width: shapeRect.width, height: shapeRect.height },
+                headerRects
+            };
+        });
+
+        expect(positions).toBeTruthy();
+        expect(positions.headerRects.length).toBeGreaterThan(0);
+        for (const headerRect of positions.headerRects) {
+            expect(headerRect.top).toBeGreaterThanOrEqual(positions.shapeRect.top - 2);
+            expect(headerRect.top).toBeLessThan(positions.shapeRect.top + 50);
+        }
+    });
+
     test('SHIFT click selects PRELOADED cell range', async ({ page }) => {
         await setupEditor(page);
         await addTable(page, 'Table1');

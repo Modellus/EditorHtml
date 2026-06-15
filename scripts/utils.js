@@ -107,6 +107,234 @@ class Utils {
         return Utils.convertGreekLetters(withHatText);
     }
 
+    static parseMathTermLatex(latexValue) {
+        let remaining = String(latexValue ?? "").trim();
+        let hat = null;
+        const widehatMatch = remaining.match(/^\\widehat\{([\s\S]*)\}$/);
+        const hatMatch = remaining.match(/^\\hat\{([\s\S]*)\}$/);
+        if (widehatMatch) {
+            hat = "wide";
+            remaining = widehatMatch[1];
+        } else if (hatMatch) {
+            hat = "narrow";
+            remaining = hatMatch[1];
+        }
+        let base = remaining;
+        let subscript = null;
+        let superscript = null;
+        const subMatch = remaining.match(/^([\s\S]+?)\\_(\{[^}]*\}|[^\\])/);
+        if (subMatch) {
+            base = remaining.slice(0, subMatch.index + subMatch[1].length);
+            const rawSub = remaining.slice(subMatch.index + subMatch[1].length + 2);
+            subscript = rawSub.startsWith("{") && rawSub.includes("}") ? rawSub.slice(1, rawSub.indexOf("}")) : rawSub.replace(/\\_/g, "_");
+        } else {
+            const supMatch = remaining.match(/^([\s\S]+?)\^(\{[^}]*\}|.)/);
+            if (supMatch) {
+                base = supMatch[1];
+                const rawSup = supMatch[2];
+                superscript = rawSup.startsWith("{") ? rawSup.slice(1, -1) : rawSup;
+            }
+        }
+        base = Utils.convertGreekLetters(base);
+        if (subscript !== null)
+            subscript = Utils.convertGreekLetters(subscript);
+        if (superscript !== null)
+            superscript = Utils.convertGreekLetters(superscript);
+        return { base, subscript, superscript, hat };
+    }
+
+    static _caseIconData = {};
+    static _caseIconsLoadingPromise = null;
+    static _caseIconsLoadedCallbacks = [];
+
+    static getCaseIconColor(caseNumber) {
+        const caseColors = [
+            "#E53935", "#FB8C00", "#F9A825", "#43A047", "#1E88E5",
+            "#8E24AA", "#00897B", "#6D4C41", "#546E7A"
+        ];
+        const normalizedCaseNumber = Math.max(1, Math.min(9, parseInt(caseNumber, 10) || 1));
+        return caseColors[normalizedCaseNumber - 1];
+    }
+
+    static getCaseIconSize(caseNumber, fontSize) {
+        const iconData = Utils._caseIconData[caseNumber];
+        const baseHeight = Math.max(8, fontSize * 0.85);
+        const iconWidth = iconData?.width ?? 448;
+        const iconHeight = iconData?.height ?? 512;
+        return { width: baseHeight * (iconWidth / iconHeight), height: baseHeight };
+    }
+
+    static estimateCaseTermWidth(caseNumber, termLatex, fontSize) {
+        const termWidth = Utils.estimateMathTermWidth(termLatex, fontSize);
+        if (caseNumber == null)
+            return termWidth;
+        return termWidth + 3 + Utils.getCaseIconSize(caseNumber, fontSize).width;
+    }
+
+    static ensureCaseIconsLoaded(onLoaded) {
+        if (onLoaded)
+            Utils._caseIconsLoadedCallbacks.push(onLoaded);
+        if (!Utils._caseIconsLoadingPromise)
+            Utils._caseIconsLoadingPromise = Utils._loadAllCaseIcons();
+        return Utils._caseIconsLoadingPromise;
+    }
+
+    static async _loadAllCaseIcons() {
+        const loaders = [];
+        for (let caseNumber = 1; caseNumber <= 9; caseNumber++)
+            loaders.push(Utils._loadCaseIcon(caseNumber));
+        await Promise.all(loaders);
+        const callbacks = Utils._caseIconsLoadedCallbacks.splice(0);
+        for (const callback of callbacks)
+            callback();
+    }
+
+    static async _loadCaseIcon(caseNumber) {
+        try {
+            const response = await fetch(`../../libraries/fontawesome/svgs/solid/square-${caseNumber}.svg`);
+            if (!response.ok)
+                return;
+            const svgText = await response.text();
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
+            const pathData = svgDoc.querySelector("path")?.getAttribute("d");
+            if (!pathData)
+                return;
+            const viewBoxText = String(svgDoc.querySelector("svg")?.getAttribute("viewBox") ?? "").trim();
+            const viewBoxValues = viewBoxText.split(/\s+/).map(Number);
+            const viewBoxWidth = viewBoxValues.length === 4 && Number.isFinite(viewBoxValues[2]) && viewBoxValues[2] > 0 ? viewBoxValues[2] : 448;
+            const viewBoxHeight = viewBoxValues.length === 4 && Number.isFinite(viewBoxValues[3]) && viewBoxValues[3] > 0 ? viewBoxValues[3] : 512;
+            Utils._caseIconData[caseNumber] = { width: viewBoxWidth, height: viewBoxHeight, pathData };
+        } catch (_) {
+        }
+    }
+
+    static appendCaseTermSvg(layer, x, baselineY, fontSize, fill, caseNumber, termLatex) {
+        const svgNs = "http://www.w3.org/2000/svg";
+        const group = document.createElementNS(svgNs, "g");
+        layer.appendChild(group);
+        if (caseNumber != null) {
+            const iconData = Utils._caseIconData[caseNumber];
+            if (iconData?.pathData) {
+                const iconSize = Utils.getCaseIconSize(caseNumber, fontSize);
+                const termWidth = Utils.estimateMathTermWidth(termLatex, fontSize);
+                const iconX = x + termWidth + 3;
+                const topY = baselineY - iconSize.height * 0.82;
+                const scaleX = iconSize.width / iconData.width;
+                const scaleY = iconSize.height / iconData.height;
+                const iconGroup = document.createElementNS(svgNs, "g");
+                iconGroup.setAttribute("transform", `translate(${iconX} ${topY}) scale(${scaleX} ${scaleY})`);
+                const iconPath = document.createElementNS(svgNs, "path");
+                iconPath.setAttribute("d", iconData.pathData);
+                iconPath.setAttribute("fill", Utils.getCaseIconColor(caseNumber));
+                iconGroup.appendChild(iconPath);
+                group.appendChild(iconGroup);
+            }
+        }
+        MathJax.startup.promise
+            .then(() => MathJax.tex2svgPromise(String(termLatex ?? "")))
+            .then(svgNode => {
+                if (!group.isConnected)
+                    return;
+                const svgElement = svgNode.querySelector("svg");
+                const cloned = svgElement.cloneNode(true);
+                const exValue = parseFloat(cloned.getAttribute("width")) || 1;
+                const svgWidth = exValue * fontSize * 0.5;
+                const svgHeight = svgWidth * (parseFloat(cloned.getAttribute("height")) / exValue);
+                const topY = baselineY - svgHeight * 0.82;
+                cloned.setAttribute("width", `${svgWidth}`);
+                cloned.setAttribute("height", `${svgHeight}`);
+                cloned.style.color = fill;
+                cloned.style.overflow = "visible";
+                const wrapper = document.createElementNS(svgNs, "g");
+                wrapper.setAttribute("transform", `translate(${x}, ${topY})`);
+                wrapper.appendChild(cloned);
+                group.appendChild(wrapper);
+            });
+        return group;
+    }
+
+    static estimateMathTermWidth(latexValue, fontSize) {
+        const parsed = Utils.parseMathTermLatex(latexValue);
+        const baseWidth = String(parsed.base).length * fontSize * 0.58;
+        if (parsed.subscript === null && parsed.superscript === null)
+            return baseWidth;
+        const scriptFontSize = Math.ceil(fontSize * 0.65);
+        const scriptText = parsed.subscript ?? parsed.superscript;
+        return baseWidth + 1 + String(scriptText).length * scriptFontSize * 0.58;
+    }
+
+    static setTermValueTextContent(textElement, termLatex, valueText) {
+        while (textElement.firstChild)
+            textElement.removeChild(textElement.firstChild);
+        const svgNs = "http://www.w3.org/2000/svg";
+        if (!termLatex) {
+            const valueSpan = document.createElementNS(svgNs, "tspan");
+            valueSpan.setAttribute("font-family", "Katex_Main");
+            valueSpan.setAttribute("dominant-baseline", "central");
+            valueSpan.textContent = valueText;
+            textElement.appendChild(valueSpan);
+            return;
+        }
+        const termSpan = document.createElementNS(svgNs, "tspan");
+        termSpan.setAttribute("font-family", "Katex_Math");
+        termSpan.setAttribute("dominant-baseline", "central");
+        termSpan.textContent = Utils.convertMathTermToPlainText(termLatex);
+        textElement.appendChild(termSpan);
+        const restSpan = document.createElementNS(svgNs, "tspan");
+        restSpan.setAttribute("font-family", "Katex_Main");
+        restSpan.setAttribute("dominant-baseline", "central");
+        restSpan.textContent = ` = ${valueText}`;
+        textElement.appendChild(restSpan);
+    }
+
+    static applyCaseIconSvg(group, iconX, iconY, iconSize, caseNumber) {
+        while (group.firstChild)
+            group.removeChild(group.firstChild);
+        if (caseNumber == null)
+            return;
+        const iconData = Utils._caseIconData[caseNumber];
+        if (!iconData?.pathData)
+            return;
+        const svgNs = "http://www.w3.org/2000/svg";
+        const scaleX = iconSize / iconData.width;
+        const scaleY = iconSize / iconData.height;
+        const iconGroup = document.createElementNS(svgNs, "g");
+        iconGroup.setAttribute("transform", `translate(${iconX} ${iconY}) scale(${scaleX} ${scaleY})`);
+        const iconPath = document.createElementNS(svgNs, "path");
+        iconPath.setAttribute("d", iconData.pathData);
+        iconPath.setAttribute("fill", Utils.getCaseIconColor(caseNumber));
+        iconGroup.appendChild(iconPath);
+        group.appendChild(iconGroup);
+    }
+
+    static applyTermLabelBackground(backgroundRect, textElement, color, anchor) {
+        const paddingX = 4;
+        const paddingY = 2;
+        let textWidth = 0;
+        let textHeight = 12;
+        let textX = 0;
+        let textY = 0;
+        if (textElement?.getBBox)
+            try {
+                const bbox = textElement.getBBox();
+                textWidth = bbox.width;
+                textHeight = bbox.height;
+                textX = bbox.x;
+                textY = bbox.y;
+            } catch (_) {}
+        if (textWidth <= 0) {
+            backgroundRect.setAttribute("display", "none");
+            return;
+        }
+        backgroundRect.removeAttribute("display");
+        backgroundRect.setAttribute("x", textX - paddingX);
+        backgroundRect.setAttribute("y", textY - paddingY);
+        backgroundRect.setAttribute("width", textWidth + paddingX * 2);
+        backgroundRect.setAttribute("height", textHeight + paddingY * 2);
+        backgroundRect.setAttribute("fill", color);
+    }
+
     static formatMathTermName(text) {
         return Utils.escapeMathTermName(String(text ?? ""));
     }

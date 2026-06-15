@@ -133,12 +133,12 @@ class ChartShape extends BaseShape {
     getTermLabelWithCase(term, caseNumber = 1) {
         const normalizedTerm = this.normalizeYTermValue(term);
         if (normalizedTerm === "")
-            return normalizedTerm;
+            return { termLatex: "", caseNumber: null };
         const displayedTerm = this.formatTermForDisplay(normalizedTerm);
         if (!this.shouldShowCaseLabelForTerm(normalizedTerm))
-            return displayedTerm;
+            return { termLatex: displayedTerm, caseNumber: null };
         const normalizedCaseNumber = TermControl.getShapeCaseNumber(this, normalizedTerm, caseNumber, value => this.normalizeYTermValue(value));
-        return `${displayedTerm} ${TermControl.getCaseIconText(normalizedCaseNumber)}`;
+        return { termLatex: displayedTerm, caseNumber: normalizedCaseNumber };
     }
 
     getSeriesValueFieldName(index) {
@@ -484,8 +484,7 @@ class ChartShape extends BaseShape {
             dataAreaColor: this.properties.dataAreaColor,
             axisColor: this.properties.axisColor || undefined,
             border: this.getBorderColor(),
-            argTitle: this.getTermLabelWithCase(xTerm, xCase),
-            valTitle: ySeries.map(series => series.name).join(", ")
+            argTitle: this.getTermLabelWithCase(xTerm, xCase)
         };
         const dataConfig = {
             argField: config.argField,
@@ -505,7 +504,6 @@ class ChartShape extends BaseShape {
                 axisColor: config.axisColor,
                 borderColor: config.border,
                 argumentTitle: config.argTitle,
-                valueTitle: config.valTitle,
                 precision: this.board.calculator.getPrecision()
             });
             if (dataChanged)
