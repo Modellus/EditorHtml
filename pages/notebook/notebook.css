@@ -182,10 +182,22 @@ html, body {
 }
 
 .block-type-expression .notebook-block-content {
-    font-family: "KaTeX_Main", serif;
-    font-size: 18px;
-    color: #333;
-    padding: 8px 0;
+    padding: 0;
+}
+
+.notebook-expression-control {
+    min-height: 72px;
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.notebook-expression-control math-field {
+    width: 100%;
+    min-height: 56px;
+    background-color: transparent;
 }
 
 .block-type-chart .notebook-block-content {

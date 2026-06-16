@@ -3,6 +3,7 @@ DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImN
 class NotebookEditor {
     constructor() {
         this.blocks = [];
+        this.expressionControls = new Map();
         this.nextBlockId = 1;
         this.title = "";
         this.subtitle = "";
@@ -214,24 +215,41 @@ class NotebookEditor {
         const block = {
             id: this.nextBlockId++,
             type: type,
-            content: ""
+            content: type === "expression" ? "\\displaylines{}" : ""
         };
         this.blocks.push(block);
-        this.listInstance.option("dataSource", this.blocks);
-        this.listInstance.reload();
+        this._reloadBlockList();
         this._updateLastModified();
     }
 
     removeBlock(blockId) {
+        this._disposeExpressionControl(blockId);
         this.blocks = this.blocks.filter(block => block.id !== blockId);
-        this.listInstance.option("dataSource", this.blocks);
-        this.listInstance.reload();
+        this._reloadBlockList();
         this._updateLastModified();
     }
 
     _renderBlocks() {
+        this._reloadBlockList();
+    }
+
+    _reloadBlockList() {
+        this._disposeExpressionControls();
         this.listInstance.option("dataSource", this.blocks);
         this.listInstance.reload();
+    }
+
+    _disposeExpressionControl(blockId) {
+        const expressionControl = this.expressionControls.get(blockId);
+        if (!expressionControl)
+            return;
+        expressionControl.dispose();
+        this.expressionControls.delete(blockId);
+    }
+
+    _disposeExpressionControls() {
+        this.expressionControls.forEach(expressionControl => expressionControl.dispose());
+        this.expressionControls.clear();
     }
 
     _renderBlockHtml(block) {
@@ -279,7 +297,7 @@ class NotebookEditor {
             case "header":
                 return `<div contenteditable="true" data-placeholder="Heading">${block.content}</div>`;
             case "expression":
-                return `<div contenteditable="true" data-placeholder="Enter an expression...">${block.content}</div>`;
+                return `<div id="expression-block-${block.id}" class="notebook-expression-control"></div>`;
             case "chart":
                 return `<i class="fa-light fa-chart-line" style="font-size: 32px"></i><span style="margin-left: 12px">Chart block</span>`;
             case "simulation":
@@ -315,6 +333,24 @@ class NotebookEditor {
                     value: 50,
                     tooltip: { enabled: true, showMode: "always", position: "top" }
                 });
+        }
+
+        if (block.type === "expression") {
+            const expressionContainer = element.querySelector(`#expression-block-${block.id}`);
+            if (expressionContainer) {
+                const expressionControl = new ExpressionControl({
+                    multiline: true,
+                    useScrollView: true,
+                    value: block.content || "\\displaylines{}",
+                    onInput: () => {
+                        block.content = expressionControl.getValue();
+                        this._updateLastModified();
+                    }
+                });
+                expressionControl.create(expressionContainer);
+                expressionControl.syncHandwrittenStyle();
+                this.expressionControls.set(block.id, expressionControl);
+            }
         }
 
         const editable = blockElement.querySelector("[contenteditable]");
