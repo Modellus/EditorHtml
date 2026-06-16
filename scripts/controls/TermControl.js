@@ -57,20 +57,7 @@ class TermControl {
     }
 
     static getCaseIconColor(caseNumber = 1) {
-        const parsedCaseNumber = parseInt(caseNumber, 10);
-        const normalizedCaseNumber = !Number.isFinite(parsedCaseNumber) ? 1 : Math.max(1, Math.min(9, parsedCaseNumber));
-        const caseColors = [
-            "#E53935",
-            "#FB8C00",
-            "#F9A825",
-            "#43A047",
-            "#1E88E5",
-            "#8E24AA",
-            "#00897B",
-            "#6D4C41",
-            "#546E7A"
-        ];
-        return caseColors[normalizedCaseNumber - 1];
+        return Utils.getCaseIconColor(caseNumber);
     }
 
     static getVisibilityIconClass(value) {
@@ -541,6 +528,7 @@ class TermControl {
         const normalizeTermValue = options.normalizeTermValue ?? (value => TermControl.normalizeTermValue(value));
         const normalizeColorValue = options.normalizeColorValue ?? (value => TermControl.normalizeColorValue(value));
         const includeColor = options.includeColor === true;
+        const configuredColorSelection = options.colorSelection ?? {};
         const caseVisibility = TermControl.getShapeCaseVisibilityConfig(shape, normalizeTermValue);
         const caseFieldAddonRenderer = TermControl.createCaseFieldAddonRenderer();
         const mutationOptions = {
@@ -607,14 +595,17 @@ class TermControl {
                 })
             },
             colorSelection: includeColor ? {
-                width: "42px",
-                show: item => normalizeTermValue(item?.term) !== "",
-                getValue: item => normalizeColorValue(item?.color),
+                width: configuredColorSelection.width ?? "42px",
+                show: configuredColorSelection.show ?? (item => normalizeTermValue(item?.term) !== ""),
+                getValue: configuredColorSelection.getValue ?? (item => normalizeColorValue(item?.color)),
                 onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                     if (!items[index])
                         return;
                     items[index].color = normalizeColorValue(value);
-                })
+                }),
+                editorOptions: configuredColorSelection.editorOptions,
+                control: configuredColorSelection.control,
+                controlOptions: configuredColorSelection.controlOptions
             } : null,
             visibility: options.includeVisibility ? {
                 width: "24px",

@@ -190,8 +190,7 @@ class ChartControl {
     normalizeColor(colorValue, index) {
         if (colorValue != null && String(colorValue).trim() !== "")
             return String(colorValue).trim();
-        const palette = ["#1E88E5", "#E53935", "#43A047", "#FB8C00", "#8E24AA", "#00897B", "#6D4C41", "#546E7A", "#F4511E"];
-        return palette[index % palette.length];
+        return Utils.getColorByIndex(index);
     }
 
     setOptions(options) {

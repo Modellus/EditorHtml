@@ -559,6 +559,50 @@ class Utils {
             return `background-color:${base};background-image:linear-gradient(${accent} 1px,transparent 1px),linear-gradient(90deg,${accent} 1px,transparent 1px);background-size:16px 16px`;
         return `background:linear-gradient(135deg,${base},${accent})`;
     }
+
+    static getColorPalette() {
+        return [
+            "#00000000", "#FFFFFF", "#F5F5F5", "#E0E0E0", "#9E9E9E", "#000000",
+            "#FFEBEE", "#FFCDD2", "#EF9A9A", "#E57373", "#EF5350", "#C62828",
+            "#FFF3E0", "#FFE0B2", "#FFCC80", "#FFB74D", "#FFA726", "#EF6C00",
+            "#E8F5E9", "#C8E6C9", "#A5D6A7", "#81C784", "#66BB6A", "#2E7D32",
+            "#E3F2FD", "#BBDEFB", "#90CAF9", "#64B5F6", "#42A5F5", "#1565C0",
+            "#F3E5F5", "#E1BEE7", "#CE93D8", "#BA68C8", "#AB47BC", "#6A1B9A"
+        ];
+    }
+
+    static getColorPickerPalette() {
+        return Utils.getColorPalette();
+    }
+
+    static getChartColorPalette() {
+        return ["#C62828", "#1565C0", "#2E7D32", "#EF6C00", "#6A1B9A", "#00695C", "#4E342E", "#37474F", "#F57F17"];
+    }
+
+    static getColorByIndex(index) {
+        const palette = Utils.getChartColorPalette();
+        if (palette.length === 0)
+            return "#000000";
+        const paletteIndex = Math.max(0, Number(index) || 0) % palette.length;
+        return palette[paletteIndex];
+    }
+
+    static getCaseIconColor(caseNumber = 1) {
+        const parsedCaseNumber = parseInt(caseNumber, 10);
+        const normalizedCaseNumber = !Number.isFinite(parsedCaseNumber) ? 1 : Math.max(1, Math.min(9, parsedCaseNumber));
+        const caseColors = [
+            "#E53935",
+            "#FB8C00",
+            "#F9A825",
+            "#43A047",
+            "#1E88E5",
+            "#8E24AA",
+            "#00897B",
+            "#6D4C41",
+            "#546E7A"
+        ];
+        return caseColors[normalizedCaseNumber - 1];
+    }
 }
 
 if (typeof module !== "undefined" && module.exports)

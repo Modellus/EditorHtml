@@ -25,6 +25,9 @@ class ChartShape extends BaseShape {
             dragHandleClassName: "shape-term-drag-handle chart-yterm-drag-handle",
             includeColor: true,
             includeVisibility: true,
+            colorSelection: {
+                getValue: (item, index) => this.getYTermControlDisplayColor(item, index)
+            },
             normalizeTermValue: value => this.normalizeYTermValue(value),
             normalizeColorValue: value => this.normalizeYTermColor(value),
             normalizeItem: (sourceItem, normalizedItem) => {
@@ -163,6 +166,16 @@ class ChartShape extends BaseShape {
 
     normalizeYTermColor(value) {
         return TermControl.normalizeColorValue(value);
+    }
+
+    getYTermControlDisplayColor(item, index) {
+        const explicitColor = this.normalizeYTermColor(item?.color);
+        if (explicitColor !== "")
+            return explicitColor;
+        const renderedColor = this.chart?.renderState?.series?.[index]?.color;
+        if (renderedColor)
+            return renderedColor;
+        return Utils.getColorByIndex(index);
     }
 
     populateTermsMenuSections(listItems) {
