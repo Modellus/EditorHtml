@@ -383,7 +383,26 @@ class Utils {
         return Math.round(value * factor) / factor;
     }
 
+    static isTransparentColor(color) {
+        const normalizedColor = String(color ?? "").trim().toLowerCase();
+        if (normalizedColor === "transparent")
+            return true;
+        if (/^#[0-9a-f]{6}00$/.test(normalizedColor))
+            return true;
+        if (/^#[0-9a-f]{3}0$/.test(normalizedColor))
+            return true;
+        const rgbaMatch = normalizedColor.match(/^rgba\s*\(([^)]+)\)$/);
+        if (rgbaMatch) {
+            const parts = rgbaMatch[1].split(",");
+            if (parts.length === 4 && Number(parts[3].trim()) === 0)
+                return true;
+        }
+        return false;
+    }
+
     static getContrastColor(color) {
+        if (Utils.isTransparentColor(color))
+            return "#000000";
         const rgb = Utils.parseColorToRgb(color);
         if (!rgb)
             return "#ffffff";
