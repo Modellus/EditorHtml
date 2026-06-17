@@ -118,36 +118,42 @@ html, body {
     padding: 12px 16px;
     margin-bottom: 4px;
     border-radius: 6px;
-    border: 1px solid transparent;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    border: 1px solid var(--block-border-color, #e8e8e8);
+    background-color: var(--block-bg-color, transparent);
+    transition: box-shadow 0.15s;
 }
 
 .notebook-block:hover {
-    border-color: #e0e0e0;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.06);
 }
 
 .notebook-block.selected {
-    border-color: #0f6cbd;
-    box-shadow: 0 0 0 2px rgba(15, 108, 189, 0.12);
+    box-shadow: 0 0 0 2px #0f6cbd, 0 0 0 4px rgba(15, 108, 189, 0.12);
 }
 
 .notebook-block-drag-handle {
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
+    width: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    align-self: center;
-    color: #ccc;
-    cursor: grab;
+    align-self: flex-start;
+    padding-top: 2px;
     opacity: 0;
     transition: opacity 0.15s;
-    font-size: 12px;
 }
 
-.notebook-block:hover .notebook-block-drag-handle {
+.notebook-block:hover .notebook-block-drag-handle,
+.notebook-block-drag-handle.is-open {
     opacity: 1;
+}
+
+.notebook-block-color-button {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .notebook-block-body {
@@ -157,6 +163,21 @@ html, body {
 
 .notebook-block-content {
     min-height: 32px;
+}
+
+.notebook-block-content [data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: #ccc;
+    pointer-events: none;
+}
+
+.notebook-block-placeholder {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #bbb;
+    font-size: 15px;
+    padding: 8px 0;
 }
 
 .notebook-block-type-label {

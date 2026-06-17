@@ -215,7 +215,9 @@ class NotebookEditor {
         const block = {
             id: this.nextBlockId++,
             type: type,
-            content: type === "expression" ? "\\displaylines{}" : ""
+            content: type === "expression" ? "\\displaylines{}" : "",
+            borderColor: "#e8e8e8",
+            backgroundColor: "transparent"
         };
         this.blocks.push(block);
         this._reloadBlockList();
@@ -252,38 +254,61 @@ class NotebookEditor {
         this.expressionControls.clear();
     }
 
+    _initBlockColorButton(block, blockElement, buttonContainer) {
+        const colorControl = new ColorControl();
+        const borderColorPicker = colorControl.createEditor(block.borderColor || "#e8e8e8", value => {
+            block.borderColor = value;
+            blockElement.style.setProperty("--block-border-color", value);
+            this._updateLastModified();
+        });
+        const backgroundColorPicker = colorControl.createEditor(block.backgroundColor || "transparent", value => {
+            block.backgroundColor = value;
+            blockElement.style.setProperty("--block-bg-color", value);
+            this._updateLastModified();
+        });
+        const dragHandle = blockElement.querySelector(".notebook-block-drag-handle");
+        const dropdownElement = $('<div class="notebook-block-color-selector">').appendTo(buttonContainer);
+        dropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            template: (data, element) => {
+                element[0].innerHTML = `<i class="fa-light fa-grip-dots-vertical"></i>`;
+            },
+            onOpened: () => dragHandle.classList.add("is-open"),
+            onClosed: () => dragHandle.classList.remove("is-open"),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-shape-overlay-popup notebook-block-color-menu" },
+                width: "auto",
+                contentTemplate: contentElement => {
+                    const items = [
+                        { text: "Background", buildControl: $p => $p.append(backgroundColorPicker) },
+                        { text: "Border", buildControl: $p => $p.append(borderColorPicker) }
+                    ];
+                    $(contentElement).empty();
+                    $('<div>').appendTo(contentElement).dxList({
+                        dataSource: items,
+                        scrollingEnabled: false,
+                        itemTemplate: (data, _, el) => {
+                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                            data.buildControl($(el).find(".mdl-dropdown-list-control"));
+                        }
+                    });
+                }
+            }
+        });
+    }
+
     _renderBlockHtml(block) {
-        const typeLabels = {
-            text: "Text",
-            header: "Header",
-            expression: "Expression",
-            chart: "Chart",
-            simulation: "Simulation",
-            slider: "Slider",
-            media: "Media"
-        };
-
-        const typeIcons = {
-            text: "fa-light fa-text",
-            header: "fa-light fa-heading",
-            expression: "fa-light fa-function",
-            chart: "fa-light fa-chart-line",
-            simulation: "fa-light fa-shapes",
-            slider: "fa-light fa-slider",
-            media: "fa-light fa-photo-film-music"
-        };
-
         const contentHtml = this._renderBlockContent(block);
 
         return `
             <div class="notebook-block block-type-${block.type}" data-block-id="${block.id}">
                 <div class="notebook-block-drag-handle">
-                    <i class="fa-light fa-grip-dots-vertical"></i>
+                    <div class="notebook-block-color-button"></div>
                 </div>
                 <div class="notebook-block-body">
-                    <div class="notebook-block-type-label">
-                        <i class="${typeIcons[block.type]}"></i> ${typeLabels[block.type]}
-                    </div>
                     <div class="notebook-block-content">${contentHtml}</div>
                 </div>
             </div>
@@ -299,13 +324,13 @@ class NotebookEditor {
             case "expression":
                 return `<div id="expression-block-${block.id}" class="notebook-expression-control"></div>`;
             case "chart":
-                return `<i class="fa-light fa-chart-line" style="font-size: 32px"></i><span style="margin-left: 12px">Chart block</span>`;
+                return `<div class="notebook-block-placeholder"><i class="fa-light fa-chart-line"></i><span>Chart</span></div>`;
             case "simulation":
-                return `<i class="fa-light fa-shapes" style="font-size: 32px"></i><span style="margin-left: 12px">Simulation block</span>`;
+                return `<div class="notebook-block-placeholder"><i class="fa-light fa-shapes"></i><span>Simulation</span></div>`;
             case "slider":
-                return `<div id="slider-block-${block.id}"></div>`;
+                return `<div class="notebook-block-placeholder" id="slider-block-${block.id}"><i class="fa-light fa-slider"></i><span>Slider</span></div>`;
             case "media":
-                return `<i class="fa-light fa-photo-film-music" style="font-size: 32px"></i><span style="margin-left: 12px">Media block</span>`;
+                return `<div class="notebook-block-placeholder"><i class="fa-light fa-photo-film-music"></i><span>Media</span></div>`;
             default:
                 return "";
         }
@@ -313,6 +338,12 @@ class NotebookEditor {
 
     _attachSingleBlockEvents(element, block) {
         const blockElement = element.querySelector(".notebook-block");
+        blockElement.style.setProperty("--block-border-color", block.borderColor || "#e8e8e8");
+        blockElement.style.setProperty("--block-bg-color", block.backgroundColor || "transparent");
+
+        const colorButtonContainer = blockElement.querySelector(".notebook-block-color-button");
+        if (colorButtonContainer)
+            this._initBlockColorButton(block, blockElement, colorButtonContainer);
 
         blockElement.addEventListener("click", () => {
             document.querySelectorAll(".notebook-block.selected").forEach(el => el.classList.remove("selected"));
@@ -320,7 +351,7 @@ class NotebookEditor {
         });
 
         blockElement.addEventListener("keydown", event => {
-            if (event.key === "Backspace" && blockElement.querySelector("[contenteditable]")?.textContent === "")
+            if (event.key === "Backspace" && blockElement.querySelector("[contenteditable]")?.textContent === "" && !blockElement.contains(document.activeElement))
                 this.removeBlock(block.id);
         });
 
