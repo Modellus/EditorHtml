@@ -6,26 +6,12 @@ html, body {
     background-color: #fafafa;
 }
 
-#toolbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 100;
-    background: white;
-    border-bottom: 1px solid #e8e8e8;
-}
 
-.toolbar-separator {
-    color: #DDD;
-    margin: 10px;
-    cursor: default;
-}
 
 #notebook-container {
     max-width: 800px;
     margin: 0 auto;
-    padding: 80px 40px 120px;
+    padding: 80px 40px 80px;
 }
 
 #notebook-header {
@@ -255,49 +241,7 @@ html, body {
     color: #999;
 }
 
-#bottom-toolbar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    z-index: 100;
-    background: white;
-    border-top: 1px solid #e8e8e8;
-}
 
-.dx-toolbar-after,
-.dx-toolbar-before,
-.dx-toolbar-center {
-    top: 0;
-    display: table;
-    height: 100%;
-    background-color: #fff;
-    border-radius: 4px;
-    padding-left: 10px;
-    padding-right: 10px;
-    box-shadow: rgba(0,0,0,.12) 0 2px 7.2px 0,rgba(0,0,0,.14) 0 8px 16px 0;
-}
-
-.dx-popup-title .dx-toolbar-after,
-.dx-popup-title .dx-toolbar-before,
-.dx-popup-title .dx-toolbar-center {
-    box-shadow: none;
-    background-color: transparent;
-}
-
-.dx-popup-bottom .dx-toolbar-after,
-.dx-popup-bottom .dx-toolbar-before,
-.dx-popup-bottom .dx-toolbar-center {
-    box-shadow: none;
-    background-color: transparent;
-}
-
-.dx-chat .dx-toolbar-after,
-.dx-chat .dx-toolbar-before,
-.dx-chat .dx-toolbar-center {
-    box-shadow: none;
-    background-color: transparent;
-}
 
 .dx-sortable-dragging .notebook-block {
     background: white;

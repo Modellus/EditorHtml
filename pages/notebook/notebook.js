@@ -23,17 +23,30 @@ class NotebookEditor {
             elementAttr: {
                 class: "mdl-shape-toolbar"
             },
+            onItemClick: () => {},
             items: [
                 {
                     location: "before",
+                    cssClass: "mdl-menu-button-item",
                     widget: "dxButton",
                     options: {
-                        icon: "fa-light fa-arrow-left",
-                        onClick: () => window.history.back()
+                        icon: "fa-light fa-bars",
+                        hint: "",
+                        elementAttr: {
+                            id: "menu-button",
+                            title: ""
+                        },
+                        onClick: () => this._menuController.show()
                     }
                 },
                 ...ModellusShapeToolbar.notebookItems(this)
             ]
+        });
+        this._menuController = new MenuController({
+            type: "notebook",
+            isReadOnly: false,
+            canSave: false,
+            exit: () => window.history.back()
         });
     }
 
@@ -49,6 +62,7 @@ class NotebookEditor {
             elementAttr: {
                 class: "mdl-player-toolbar"
             },
+            onItemClick: () => {},
             items: ModellusPlayerToolbar.createPlayerItems({
                 onPlayPause: () => this._playPausePressed(),
                 onStop: () => this._stopPressed(),
@@ -65,9 +79,169 @@ class NotebookEditor {
                 },
                 onSliderValueChanged: value => {
                     this.currentIteration = value;
-                }
+                },
+                itemsBeforeSlider: [
+                    {
+                        location: "center",
+                        template: () => {
+                            const container = $('<div>');
+                            this._createStartDropDown(container);
+                            return container;
+                        }
+                    }
+                ],
+                itemsAfterSlider: [
+                    {
+                        location: "center",
+                        template: () => {
+                            const container = $('<div>');
+                            this._createEndDropDown(container);
+                            return container;
+                        }
+                    }
+                ]
             })
         });
+    }
+
+    _createStartDropDown(container) {
+        const dropdownElement = $('<div id="startDropDown">');
+        dropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            template: (data, element) => {
+                const span = $('<span>').css({ fontFamily: "KaTeX_Main, serif", fontSize: "15px" });
+                this._startLabel = span[0];
+                this._updateStartLabel();
+                element[0].appendChild(span[0]);
+            },
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-independent-dropdown" },
+                width: "auto",
+                contentTemplate: contentElement => this._buildStartMenuContent(contentElement)
+            }
+        });
+        dropdownElement.appendTo(container);
+    }
+
+    _buildStartMenuContent(contentElement) {
+        const listItems = [
+            {
+                text: "Start",
+                buildControl: $container => {
+                    $('<div>').dxNumberBox({
+                        value: this.independentStart,
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" },
+                        onValueChanged: event => this._setIndependentStart(event.value)
+                    }).appendTo($container);
+                }
+            },
+            {
+                text: "Step",
+                buildControl: $container => {
+                    $('<div>').dxNumberBox({
+                        value: this.independentStep,
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" },
+                        onValueChanged: event => this._setIndependentStep(event.value)
+                    }).appendTo($container);
+                }
+            }
+        ];
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                data.buildControl($(el).find(".mdl-dropdown-list-control"));
+            }
+        });
+    }
+
+    _createEndDropDown(container) {
+        const dropdownElement = $('<div id="endDropDown">');
+        dropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            template: (data, element) => {
+                const span = $('<span>').css({ fontFamily: "KaTeX_Main, serif", fontSize: "15px" });
+                this._endLabel = span[0];
+                this._updateEndLabel();
+                element[0].appendChild(span[0]);
+            },
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-independent-dropdown" },
+                width: "auto",
+                contentTemplate: contentElement => this._buildEndMenuContent(contentElement)
+            }
+        });
+        dropdownElement.appendTo(container);
+    }
+
+    _buildEndMenuContent(contentElement) {
+        const listItems = [
+            {
+                text: "End",
+                buildControl: $container => {
+                    $('<div>').dxNumberBox({
+                        value: this.independentEnd,
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" },
+                        onValueChanged: event => this._setIndependentEnd(event.value)
+                    }).appendTo($container);
+                }
+            }
+        ];
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                data.buildControl($(el).find(".mdl-dropdown-list-control"));
+            }
+        });
+    }
+
+    _setIndependentStart(value) {
+        this.independentStart = value;
+        this._updateIterationCount();
+        this._updateStartLabel();
+    }
+
+    _setIndependentEnd(value) {
+        this.independentEnd = value;
+        this._updateIterationCount();
+        this._updateEndLabel();
+    }
+
+    _setIndependentStep(value) {
+        this.independentStep = value;
+        this._updateIterationCount();
+        this._updateStartLabel();
+    }
+
+    _updateIterationCount() {
+        this.iterationCount = Math.max(1, Math.round((this.independentEnd - this.independentStart) / this.independentStep));
+        this.currentIteration = 1;
+        $("#playHeadSlider").dxSlider("instance").option("max", this.iterationCount);
+        $("#playHeadSlider").dxSlider("instance").option("value", 1);
+    }
+
+    _updateStartLabel() {
+        if (this._startLabel)
+            this._startLabel.textContent = this.independentStart.toFixed(2);
+    }
+
+    _updateEndLabel() {
+        if (this._endLabel)
+            this._endLabel.textContent = this.independentEnd.toFixed(2);
     }
 
     _playPausePressed() {

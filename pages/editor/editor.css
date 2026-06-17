@@ -31,19 +31,7 @@ svg {
     z-index: 10;
 }
 
-#toolbar {
-    position: fixed;
-    top: 20px;
-    left: 20px;
-    width: calc(100% - 40px);
-    z-index: 10;
-}
 
-.toolbar-separator {
-    color: #DDD;
-    margin: 10px;
-    cursor: default;
-}
 
 #model-info-label {
     position: fixed;
@@ -115,13 +103,7 @@ body.read-only #model-info-label {
     display: none;
 }
 
-#bottom-toolbar {
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    width: calc(100% - 40px);
-    z-index: 10;
-}
+
 
 .dx-overlay-wrapper {
     font-size: 15px;
@@ -393,40 +375,6 @@ svg:active.pan-available {
     font-style: italic;
 }
 
-
-.dx-toolbar-after,
-.dx-toolbar-before,
-.dx-toolbar-center {
-    top: 0;
-    display: table;
-    height: 100%;
-    background-color: #fff;
-    border-radius: 4px;
-    padding-left: 10px;
-    padding-right: 10px;
-    box-shadow: rgba(0,0,0,.12) 0 2px 7.2px 0,rgba(0,0,0,.14) 0 8px 16px 0;
-}
-
-.dx-popup-title .dx-toolbar-after,
-.dx-popup-title .dx-toolbar-before,
-.dx-popup-title .dx-toolbar-center {
-    box-shadow: none;
-    background-color: transparent;
-}
-
-.dx-popup-bottom .dx-toolbar-after,
-.dx-popup-bottom .dx-toolbar-before,
-.dx-popup-bottom .dx-toolbar-center {
-    box-shadow: none;
-    background-color: transparent;
-}
-
-.dx-chat .dx-toolbar-after,
-.dx-chat .dx-toolbar-before,
-.dx-chat .dx-toolbar-center {
-    box-shadow: none;
-    background-color: transparent;
-}
 
 body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-before .dx-item:not(.mdl-menu-button-item),
 body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-center,
@@ -876,15 +824,6 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
 .mdl-preloaded-data-grid .dx-data-row td {
     font-family: "KaTeX_Main";
     font-size: 12px;
-}
-
-.dx-slider-tooltip-position-top {
-    padding-top: 0 !important;
-}
-
-.dx-slider-tooltip-position-top .dx-popup-content {
-    font-family: KaTeX_Main, serif !important;
-    font-size: 16px !important;
 }
 
 .tooltip {
