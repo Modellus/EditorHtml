@@ -25,6 +25,7 @@ class Calculator extends EventTarget {
         this.properties = this.createDefaultProperties();
         this.preloadedRegressionTerms = null;
         this.preloadedOutlierIterations = null;
+        this.recalculationRevision = 0;
     }
 
     normalizeCasesCount(value = 1) {
@@ -86,6 +87,7 @@ class Calculator extends EventTarget {
     }
 
     calculate() {
+        this.recalculationRevision = (this.recalculationRevision ?? 0) + 1;
         this.system.calculateFunctions();
         this.emit("iterate", { calculator: this });
     }
@@ -155,6 +157,7 @@ class Calculator extends EventTarget {
         this.physicalEngine.bodies = [];
         this.physicalEngine.physicsConstantsRegistered = false;
         this.status = STATUS.STOPPED;
+        this.recalculationRevision = 0;
         this.clearHook();
     }
 

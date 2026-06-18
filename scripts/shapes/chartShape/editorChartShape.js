@@ -347,6 +347,7 @@ class ChartShape extends BaseShape {
         this.chartRows = [];
         this.lastSyncedIteration = 0;
         this.lastSyncedCalculatedIteration = 0;
+        this.lastSyncedRecalculationRevision = 0;
         this.chartDataConfig = null;
         this.chart = new ChartControl(element, this.getChartControlOptions());
         this._appliedConfig = {};
@@ -390,6 +391,19 @@ class ChartShape extends BaseShape {
         if (lastIteration > this.lastSyncedIteration)
             hasChanges = true;
         this.lastSyncedIteration = lastIteration;
+        const calculator = this.board.calculator;
+        const recalculationRevision = calculator.recalculationRevision ?? 0;
+        if (recalculationRevision !== this.lastSyncedRecalculationRevision) {
+            const currentIteration = system.iteration;
+            for (let rowIndex = 0; rowIndex < this.chartRows.length; rowIndex++) {
+                if (this.chartRows[rowIndex].iteration === currentIteration) {
+                    this.chartRows[rowIndex] = this.createChartDataItem(currentIteration, chartDataConfig);
+                    hasChanges = true;
+                    break;
+                }
+            }
+            this.lastSyncedRecalculationRevision = recalculationRevision;
+        }
         if (!hasChanges)
             return;
         this.chart.setData(this.chartRows);
@@ -425,6 +439,7 @@ class ChartShape extends BaseShape {
     resetValues() {
         this.lastSyncedIteration = 0;
         this.lastSyncedCalculatedIteration = 0;
+        this.lastSyncedRecalculationRevision = 0;
         this.chartRows = [];
         if (this.chart)
             this.chart.setData(this.chartRows);
