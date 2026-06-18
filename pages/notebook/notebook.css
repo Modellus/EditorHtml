@@ -142,6 +142,25 @@ html, body {
     justify-content: center;
 }
 
+.notebook-block-grip-button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    color: inherit;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.notebook-block-grip-button:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
 .notebook-block-body {
     flex: 1;
     min-width: 0;
@@ -211,10 +230,14 @@ html, body {
     height: 240px;
     background: #f5f7fa;
     border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #999;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.notebook-chart-control {
+    width: 100%;
+    height: 100%;
+    display: block;
 }
 
 .block-type-simulation .notebook-block-content {
@@ -235,10 +258,14 @@ html, body {
     height: 200px;
     background: #f5f7fa;
     border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #999;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.notebook-media-control,
+.notebook-media-control .shape-image-dropzone {
+    width: 100%;
+    height: 100%;
 }
 
 
@@ -251,4 +278,35 @@ html, body {
 
 .dx-list-reorder-handle {
     display: none !important;
+}
+
+.dx-context-menu .dx-menu-items-container {
+    display: table;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.mdl-dropdown-list-item {
+    display: table-row;
+}
+
+.mdl-dropdown-list-icon,
+.mdl-dropdown-list-label,
+.mdl-dropdown-list-control {
+    display: table-cell;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.mdl-dropdown-list-icon {
+    padding-right: 8px;
+    text-align: center;
+}
+
+.mdl-dropdown-list-label {
+    padding-right: 12px;
+}
+
+.mdl-dropdown-list-control {
+    text-align: right;
 }

@@ -3,7 +3,7 @@ DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImN
 class NotebookEditor {
     constructor() {
         this.blocks = [];
-        this.expressionControls = new Map();
+        this.shapeInstances = new Map();
         this.nextBlockId = 1;
         this.title = "";
         this.subtitle = "";
@@ -386,20 +386,14 @@ class NotebookEditor {
     }
 
     addBlock(type) {
-        const block = {
-            id: this.nextBlockId++,
-            type: type,
-            content: type === "expression" ? "\\displaylines{}" : "",
-            borderColor: "#e8e8e8",
-            backgroundColor: "transparent"
-        };
+        const block = NotebookShapesFactory.createDefaultBlock(type, this.nextBlockId++);
         this.blocks.push(block);
         this._reloadBlockList();
         this._updateLastModified();
     }
 
     removeBlock(blockId) {
-        this._disposeExpressionControl(blockId);
+        this._disposeShapeInstance(blockId);
         this.blocks = this.blocks.filter(block => block.id !== blockId);
         this._reloadBlockList();
         this._updateLastModified();
@@ -410,68 +404,42 @@ class NotebookEditor {
     }
 
     _reloadBlockList() {
-        this._disposeExpressionControls();
+        this._disposeStaleShapeInstances();
         this.listInstance.option("dataSource", this.blocks);
         this.listInstance.reload();
     }
 
-    _disposeExpressionControl(blockId) {
-        const expressionControl = this.expressionControls.get(blockId);
-        if (!expressionControl)
+    _disposeShapeInstance(blockId) {
+        const shapeInstance = this.shapeInstances.get(blockId);
+        if (!shapeInstance)
             return;
-        expressionControl.dispose();
-        this.expressionControls.delete(blockId);
+        shapeInstance.unmount();
+        this.shapeInstances.delete(blockId);
     }
 
-    _disposeExpressionControls() {
-        this.expressionControls.forEach(expressionControl => expressionControl.dispose());
-        this.expressionControls.clear();
+    _disposeShapeInstances() {
+        this.shapeInstances.forEach(shapeInstance => shapeInstance.unmount());
+        this.shapeInstances.clear();
     }
 
-    _initBlockColorButton(block, blockElement, buttonContainer) {
-        const colorControl = new ColorControl();
-        const borderColorPicker = colorControl.createEditor(block.borderColor || "#e8e8e8", value => {
-            block.borderColor = value;
-            blockElement.style.setProperty("--block-border-color", value);
-            this._updateLastModified();
+    _disposeStaleShapeInstances() {
+        const activeBlockIds = new Set(this.blocks.map(block => block.id));
+        this.shapeInstances.forEach((shapeInstance, blockId) => {
+            if (activeBlockIds.has(blockId))
+                return;
+            shapeInstance.unmount();
+            this.shapeInstances.delete(blockId);
         });
-        const backgroundColorPicker = colorControl.createEditor(block.backgroundColor || "transparent", value => {
-            block.backgroundColor = value;
-            blockElement.style.setProperty("--block-bg-color", value);
-            this._updateLastModified();
-        });
-        const dragHandle = blockElement.querySelector(".notebook-block-drag-handle");
-        const dropdownElement = $('<div class="notebook-block-color-selector">').appendTo(buttonContainer);
-        dropdownElement.dxDropDownButton({
-            showArrowIcon: false,
-            stylingMode: "text",
-            useSelectMode: false,
-            template: (data, element) => {
-                element[0].innerHTML = `<i class="fa-light fa-grip-dots-vertical"></i>`;
-            },
-            onOpened: () => dragHandle.classList.add("is-open"),
-            onClosed: () => dragHandle.classList.remove("is-open"),
-            dropDownOptions: {
-                container: document.body,
-                wrapperAttr: { class: "mdl-shape-overlay-popup notebook-block-color-menu" },
-                width: "auto",
-                contentTemplate: contentElement => {
-                    const items = [
-                        { text: "Background", buildControl: $p => $p.append(backgroundColorPicker) },
-                        { text: "Border", buildControl: $p => $p.append(borderColorPicker) }
-                    ];
-                    $(contentElement).empty();
-                    $('<div>').appendTo(contentElement).dxList({
-                        dataSource: items,
-                        scrollingEnabled: false,
-                        itemTemplate: (data, _, el) => {
-                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
-                            data.buildControl($(el).find(".mdl-dropdown-list-control"));
-                        }
-                    });
-                }
-            }
-        });
+    }
+
+    _initBlockContextMenu(buttonContainer, shape) {
+        const dragHandle = shape.blockElement.querySelector(".notebook-block-drag-handle");
+        const gripButton = $('<button type="button" class="notebook-block-grip-button"><i class="fa-light fa-grip-dots-vertical"></i></button>').appendTo(buttonContainer);
+        gripButton.on("click", () => dragHandle.classList.add("is-open"));
+        shape.initContextMenu(gripButton[0]);
+        const contextMenuInstance = shape._contextMenuElement?.dxContextMenu("instance");
+        if (contextMenuInstance)
+            contextMenuInstance.on("hidden", () => dragHandle.classList.remove("is-open"));
     }
 
     _renderBlockHtml(block) {
@@ -490,24 +458,8 @@ class NotebookEditor {
     }
 
     _renderBlockContent(block) {
-        switch (block.type) {
-            case "text":
-                return `<div contenteditable="true" data-placeholder="Type something...">${block.content}</div>`;
-            case "header":
-                return `<div contenteditable="true" data-placeholder="Heading">${block.content}</div>`;
-            case "expression":
-                return `<div id="expression-block-${block.id}" class="notebook-expression-control"></div>`;
-            case "chart":
-                return `<div class="notebook-block-placeholder"><i class="fa-light fa-chart-line"></i><span>Chart</span></div>`;
-            case "simulation":
-                return `<div class="notebook-block-placeholder"><i class="fa-light fa-shapes"></i><span>Simulation</span></div>`;
-            case "slider":
-                return `<div class="notebook-block-placeholder" id="slider-block-${block.id}"><i class="fa-light fa-slider"></i><span>Slider</span></div>`;
-            case "media":
-                return `<div class="notebook-block-placeholder"><i class="fa-light fa-photo-film-music"></i><span>Media</span></div>`;
-            default:
-                return "";
-        }
+        const shape = NotebookShapesFactory.createShape(this, block);
+        return shape.renderContentHtml();
     }
 
     _attachSingleBlockEvents(element, block) {
@@ -515,9 +467,20 @@ class NotebookEditor {
         blockElement.style.setProperty("--block-border-color", block.borderColor || "#e8e8e8");
         blockElement.style.setProperty("--block-bg-color", block.backgroundColor || "transparent");
 
+        const contentElement = blockElement.querySelector(".notebook-block-content");
+        const dragHandleElement = blockElement.querySelector(".notebook-block-drag-handle");
+        const shape = NotebookShapesFactory.createShape(this, block);
+        const previousShape = this.shapeInstances.get(block.id);
+        if (previousShape)
+            previousShape.unmount();
+        this.shapeInstances.set(block.id, shape);
+
+        if (contentElement)
+            shape.mount(contentElement, dragHandleElement);
+
         const colorButtonContainer = blockElement.querySelector(".notebook-block-color-button");
         if (colorButtonContainer)
-            this._initBlockColorButton(block, blockElement, colorButtonContainer);
+            this._initBlockContextMenu(colorButtonContainer, shape);
 
         blockElement.addEventListener("click", () => {
             document.querySelectorAll(".notebook-block.selected").forEach(el => el.classList.remove("selected"));
@@ -528,42 +491,6 @@ class NotebookEditor {
             if (event.key === "Backspace" && blockElement.querySelector("[contenteditable]")?.textContent === "" && !blockElement.contains(document.activeElement))
                 this.removeBlock(block.id);
         });
-
-        if (block.type === "slider") {
-            const sliderContainer = element.querySelector(`#slider-block-${block.id}`);
-            if (sliderContainer)
-                $(sliderContainer).dxSlider({
-                    min: 0,
-                    max: 100,
-                    value: 50,
-                    tooltip: { enabled: true, showMode: "always", position: "top" }
-                });
-        }
-
-        if (block.type === "expression") {
-            const expressionContainer = element.querySelector(`#expression-block-${block.id}`);
-            if (expressionContainer) {
-                const expressionControl = new ExpressionControl({
-                    multiline: true,
-                    useScrollView: true,
-                    value: block.content || "\\displaylines{}",
-                    onInput: () => {
-                        block.content = expressionControl.getValue();
-                        this._updateLastModified();
-                    }
-                });
-                expressionControl.create(expressionContainer);
-                expressionControl.syncHandwrittenStyle();
-                this.expressionControls.set(block.id, expressionControl);
-            }
-        }
-
-        const editable = blockElement.querySelector("[contenteditable]");
-        if (editable)
-            editable.addEventListener("input", () => {
-                block.content = editable.textContent;
-                this._updateLastModified();
-            });
     }
 }
 

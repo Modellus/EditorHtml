@@ -51,9 +51,27 @@ class ModellusShapeToolbar {
                 location: "center",
                 widget: "dxButton",
                 options: {
+                    icon: "fa-light fa-table",
+                    hint: "Table",
+                    onClick: () => notebook.addBlock("table")
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
                     icon: "fa-light fa-shapes",
                     hint: "Simulation",
                     onClick: () => notebook.addBlock("simulation")
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-gauge",
+                    hint: "Gauge",
+                    onClick: () => notebook.addBlock("gauge")
                 }
             },
             {
@@ -73,9 +91,45 @@ class ModellusShapeToolbar {
                 location: "center",
                 widget: "dxButton",
                 options: {
+                    icon: "fa-light fa-input-numeric",
+                    hint: "Value",
+                    onClick: () => notebook.addBlock("value")
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
                     icon: "fa-light fa-photo-film-music",
                     hint: "Media",
                     onClick: () => notebook.addBlock("media")
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-clipboard-question",
+                    hint: "Question",
+                    onClick: () => notebook.addBlock("question")
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-ruler",
+                    hint: "Ruler",
+                    onClick: () => notebook.addBlock("ruler")
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-angle",
+                    hint: "Protractor",
+                    onClick: () => notebook.addBlock("protractor")
                 }
             }
         ];
