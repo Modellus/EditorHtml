@@ -598,6 +598,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitNaturalLogarithm?: (ctx: NaturalLogarithmContext) => void;
     /**
+     * Enter a parse tree produced by the `DerivativeDNoBraces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivativeDNoBraces?: (ctx: DerivativeDNoBracesContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativeDNoBraces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivativeDNoBraces?: (ctx: DerivativeDNoBracesContext) => void;
+    /**
      * Enter a parse tree produced by the `Cotangent`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -682,6 +694,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitArcTangent?: (ctx: ArcTangentContext) => void;
     /**
+     * Enter a parse tree produced by the `DerivativeDMixed`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivativeDMixed?: (ctx: DerivativeDMixedContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativeDMixed`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivativeDMixed?: (ctx: DerivativeDMixedContext) => void;
+    /**
      * Enter a parse tree produced by the `Derivative`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -765,6 +789,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitMinimum?: (ctx: MinimumContext) => void;
+    /**
+     * Enter a parse tree produced by the `DerivativeDMixedNoBraces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivativeDMixedNoBraces?: (ctx: DerivativeDMixedNoBracesContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativeDMixedNoBraces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivativeDMixedNoBraces?: (ctx: DerivativeDMixedNoBracesContext) => void;
     /**
      * Enter a parse tree produced by the `Variable`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1412,6 +1448,16 @@ declare class NaturalLogarithmContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class DerivativeDNoBracesContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext;
+    name(): NameContext;
+    ID(): antlr.TerminalNode[];
+    ID(i: number): antlr.TerminalNode | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class CotangentContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
@@ -1460,6 +1506,16 @@ declare class DeterminantContext extends ExpressionContext {
 declare class ArcTangentContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DerivativeDMixedContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    differentialMarker(): DifferentialMarkerContext;
+    expression(): ExpressionContext;
+    name(): NameContext;
+    ID(): antlr.TerminalNode | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1516,6 +1572,16 @@ declare class MinimumContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext[];
     expression(i: number): ExpressionContext | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DerivativeDMixedNoBracesContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    differentialMarker(): DifferentialMarkerContext;
+    expression(): ExpressionContext;
+    name(): NameContext;
+    ID(): antlr.TerminalNode | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1974,6 +2040,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitNaturalLogarithm?: (ctx: NaturalLogarithmContext) => Result;
     /**
+     * Visit a parse tree produced by the `DerivativeDNoBraces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativeDNoBraces?: (ctx: DerivativeDNoBracesContext) => Result;
+    /**
      * Visit a parse tree produced by the `Cotangent`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -2023,6 +2096,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitArcTangent?: (ctx: ArcTangentContext) => Result;
     /**
+     * Visit a parse tree produced by the `DerivativeDMixed`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativeDMixed?: (ctx: DerivativeDMixedContext) => Result;
+    /**
      * Visit a parse tree produced by the `Derivative`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -2071,6 +2151,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitMinimum?: (ctx: MinimumContext) => Result;
+    /**
+     * Visit a parse tree produced by the `DerivativeDMixedNoBraces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativeDMixedNoBraces?: (ctx: DerivativeDMixedNoBracesContext) => Result;
     /**
      * Visit a parse tree produced by the `Variable`
      * labeled alternative in `LatexMathParser.expression`.
@@ -2637,6 +2724,9 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
     visitDerivative: (context: DerivativeContext) => Branch;
     visitDerivativeD: (context: DerivativeDContext) => Branch;
+    visitDerivativeDMixed: (context: DerivativeDMixedContext) => Branch;
+    visitDerivativeDMixedNoBraces: (context: DerivativeDMixedNoBracesContext) => Branch;
+    visitDerivativeDNoBraces: (context: DerivativeDNoBracesContext) => Branch;
     visitDeltaName: (context: DeltaNameContext) => Branch;
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
