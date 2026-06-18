@@ -310,3 +310,12 @@ html, body {
 .mdl-dropdown-list-control {
     text-align: right;
 }
+
+.mdl-dropdown-list-submenu-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 12px;
+    color: #666;
+    font-size: 11px;
+}

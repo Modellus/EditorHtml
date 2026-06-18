@@ -47,7 +47,7 @@ class NotebookShape {
     syncSingleContextMenuColumnWidths(menuContainerElement) {
         if (menuContainerElement.getClientRects().length === 0)
             return;
-        const dropdownRowElements = Array.from(menuContainerElement.querySelectorAll(".mdl-dropdown-list-item"));
+        const dropdownRowElements = Array.from(menuContainerElement.querySelectorAll(".mdl-dropdown-list-item")).filter(dropdownRowElement => dropdownRowElement.closest(".dx-menu-items-container") === menuContainerElement);
         if (!dropdownRowElements.length)
             return;
         let maximumIconWidth = 0;
@@ -118,7 +118,8 @@ class NotebookShape {
             itemTemplate: (itemData, index, element) => {
                 const hasChildren = Array.isArray(itemData.items) && itemData.items.length > 0;
                 const iconMarkup = itemData.icon ? `<i class="${itemData.icon}"></i>` : "";
-                element[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-icon">${iconMarkup}</span><span class="mdl-dropdown-list-label">${itemData.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                const submenuIndicatorMarkup = hasChildren ? '<span class="mdl-dropdown-list-submenu-indicator"><i class="fa-light fa-chevron-right"></i></span>' : "";
+                element[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-icon">${iconMarkup}</span><span class="mdl-dropdown-list-label">${itemData.text}</span><span class="mdl-dropdown-list-control">${submenuIndicatorMarkup}</span></div>`;
                 if (hasChildren) {
                     this.requestContextMenuColumnsSync();
                     return;
