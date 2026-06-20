@@ -1,6 +1,6 @@
-Object.assign(ReferentialShape.prototype, {
+var ReferentialShapeToolbarMixin = {
     createToolbar() {
-        var items = Object.getPrototypeOf(ReferentialShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, ReferentialShapeToolbarMixin.createToolbar);
         items.push(
             {
                 location: "center",
@@ -282,4 +282,5 @@ Object.assign(ReferentialShape.prototype, {
         });
         return this._backgroundImageDropZoneControl.createHost();
     }
-});
+};
+if (typeof ReferentialShape !== "undefined") Object.assign(ReferentialShape.prototype, ReferentialShapeToolbarMixin);

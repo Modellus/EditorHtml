@@ -21,6 +21,7 @@ class ExpressionNotebookShape extends NotebookShape {
     onInput() {
         this.block.content = this.expressionControl.getValue();
         this.markChanged();
+        this.notebookEditor._reparseExpressions();
     }
 
     unmount() {

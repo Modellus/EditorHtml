@@ -1,6 +1,6 @@
-Object.assign(MediaShape.prototype, {
+var MediaShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(MediaShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, MediaShapeToolbarMixin.createToolbar);
         items.push(
             {
                 location: "center",
@@ -108,4 +108,5 @@ Object.assign(MediaShape.prototype, {
             }
         });
     }
-});
+};
+if (typeof MediaShape !== "undefined") Object.assign(MediaShape.prototype, MediaShapeToolbarMixin);

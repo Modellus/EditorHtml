@@ -1,14 +1,22 @@
-Object.assign(LineShape.prototype, {
+var ArcShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(LineShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, ArcShapeToolbarMixin.createToolbar);
         const formAdapter = { updateData: (field, value) => this.setPropertyCommand(field, value) };
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
         this._yDescriptor = yDescriptor;
-        const angleDisplayMode = this.getTermDisplayModeProperty("angleTerm");
-        const angleDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "angleTerm", "angleTermCase", true, angleDisplayMode, true);
-        this.termFormControls["angleTerm"] = { termControl: angleDescriptor.termControl };
-        this._angleDescriptor = angleDescriptor;
+        const radiusDisplayMode = this.getTermDisplayModeProperty("radiusTerm");
+        const radiusDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "radiusTerm", "radiusTermCase", true, radiusDisplayMode, true);
+        this.termFormControls["radiusTerm"] = { termControl: radiusDescriptor.termControl };
+        this._radiusDescriptor = radiusDescriptor;
+        const startAngleDisplayMode = this.getTermDisplayModeProperty("startAngleTerm");
+        const startAngleDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "startAngleTerm", "startAngleTermCase", true, startAngleDisplayMode, true);
+        this.termFormControls["startAngleTerm"] = { termControl: startAngleDescriptor.termControl };
+        this._startAngleDescriptor = startAngleDescriptor;
+        const endAngleDisplayMode = this.getTermDisplayModeProperty("endAngleTerm");
+        const endAngleDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "endAngleTerm", "endAngleTermCase", true, endAngleDisplayMode, true);
+        this.termFormControls["endAngleTerm"] = { termControl: endAngleDescriptor.termControl };
+        this._endAngleDescriptor = endAngleDescriptor;
         items.push(
             {
                 location: "center",
@@ -106,4 +114,5 @@ Object.assign(LineShape.prototype, {
         });
         this._lineWidthDropdownElement.appendTo(container);
     }
-});
+};
+if (typeof ArcShape !== "undefined") Object.assign(ArcShape.prototype, ArcShapeToolbarMixin);

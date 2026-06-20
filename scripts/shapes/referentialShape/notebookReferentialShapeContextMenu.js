@@ -1,38 +1,6 @@
 Object.assign(ReferentialNotebookShape.prototype, {
     createContextMenuItems() {
-        const items = NotebookShape.prototype.createContextMenuItems.call(this);
-        items.push({
-            text: "Add Shape",
-            icon: "fa-light fa-plus",
-            items: [
-                this.createAddShapeMenuItem("Body", "body"),
-                this.createAddShapeMenuItem("Point", "point"),
-                this.createAddShapeMenuItem("Vector", "vector"),
-                this.createAddShapeMenuItem("Line", "line"),
-                this.createAddShapeMenuItem("Arc", "arc")
-            ]
-        });
-        items.push({
-            text: "Settings",
-            icon: "fa-light fa-ruler-combined",
-            items: [
-                this.createDisplayToggleItem("Show horizontal axis", "showHorizontalAxis"),
-                this.createDisplayToggleItem("Show vertical axis", "showVerticalAxis"),
-                this.createDisplayToggleItem("Show ticks with values", "showTicksWithValues"),
-                this.createDisplayToggleItem("Show horizontal grid lines", "showHorizontalGrid"),
-                this.createDisplayToggleItem("Show vertical grid lines", "showVerticalGrid"),
-                this.createSwitchSettingItem("Auto Scale", "autoScale", true),
-                this.createNumberSettingItem("Horizontal Scale", "scaleX", 1),
-                this.createNumberSettingItem("Vertical Scale", "scaleY", 1),
-                this.createSwitchSettingItem("Equal Scales", "equalAxisScales", false),
-                this.createNumberSettingItem("Horizontal Min", "xMin", null),
-                this.createNumberSettingItem("Horizontal Max", "xMax", null),
-                this.createNumberSettingItem("Vertical Min", "yMin", null),
-                this.createNumberSettingItem("Vertical Max", "yMax", null),
-                this.createSwitchSettingItem("Snap to Ticks", "snapToTicks", false)
-            ]
-        });
-        return items;
+        return NotebookShape.prototype.createContextMenuItems.call(this);
     },
 
     createAddShapeMenuItem(labelText, type) {

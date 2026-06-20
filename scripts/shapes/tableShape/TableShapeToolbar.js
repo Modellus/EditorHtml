@@ -1,6 +1,6 @@
-Object.assign(TableShape.prototype, {
+var TableShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(TableShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, TableShapeToolbarMixin.createToolbar);
         this.normalizeColumns();
         items.push(
             {
@@ -43,4 +43,5 @@ Object.assign(TableShape.prototype, {
         );
         return items;
     }
-});
+};
+if (typeof TableShape !== "undefined") Object.assign(TableShape.prototype, TableShapeToolbarMixin);

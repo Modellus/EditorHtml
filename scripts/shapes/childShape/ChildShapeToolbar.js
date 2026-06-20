@@ -1,21 +1,21 @@
-Object.assign(TextShape.prototype, {
+var ChildShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(TextShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, ChildShapeToolbarMixin.createToolbar);
         items.push(
             {
                 location: "center",
                 template: () => {
                     const container = $('<div></div>');
-                    this.createShapeColorDropDownButton(container);
+                    this.createAddShapeDropDownButton(container);
                     return container;
                 }
             },
             {
                 location: "center",
                 template: () => $('<div class="toolbar-separator">|</div>')
-            },
-            this.createRemoveToolbarItem()
+            }
         );
         return items;
     }
-});
+};
+if (typeof ChildShape !== "undefined") Object.assign(ChildShape.prototype, ChildShapeToolbarMixin);

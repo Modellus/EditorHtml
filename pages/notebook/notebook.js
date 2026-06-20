@@ -12,10 +12,116 @@ class NotebookEditor {
         this.coverImageUrl = "";
         this.listInstance = null;
         this.sortableInstance = null;
+        this.bindShapeToolbars();
         this._createTopToolbar();
         this._createBottomToolbar();
         this._createBlockList();
         this._initHeader();
+        this._bindCalculatorEvents();
+        this._reparseExpressions();
+        this._bindSelectionDismissal();
+    }
+
+    getShell() {
+        if (window.shell)
+            return window.shell;
+        if (window.parent && window.parent !== window && window.parent.shell)
+            return window.parent.shell;
+        if (window.opener && window.opener.shell)
+            return window.opener.shell;
+        return null;
+    }
+
+    get calculator() {
+        return this.getShell()?.board?.calculator ?? null;
+    }
+
+    getIndependentStart() {
+        return Number(this.calculator?.properties?.independent?.start ?? 0);
+    }
+
+    getIndependentEnd() {
+        return Number(this.calculator?.properties?.independent?.end ?? 10);
+    }
+
+    getIndependentStep() {
+        return Number(this.calculator?.properties?.independent?.step ?? 0.1);
+    }
+
+    getIndependentName() {
+        return String(this.calculator?.properties?.independent?.name ?? "t");
+    }
+
+    getIterationCount() {
+        if (!this.calculator)
+            return 1;
+        return Math.max(1, this.calculator.getFinalIteration());
+    }
+
+    _bindCalculatorEvents() {
+        if (!this.calculator)
+            return;
+        this.calculator.off("iterate", this._calculatorIterateHandler);
+        this._calculatorIterateHandler = () => this._onCalculatorIterate();
+        this.calculator.on("iterate", this._calculatorIterateHandler);
+    }
+
+    bindShapeToolbars() {
+        if (window.__shapeToolbarBindingsApplied)
+            return;
+        Object.assign(NotebookShape.prototype, ShapeContextToolbarMixin, ShapeToolbarPresentationMixin, BaseShapeToolbarMixin);
+        NotebookShape.prototype.createToolbar = function() { return BaseShapeToolbarMixin.createToolbar.call(this); };
+        const toolbarAdapter = {
+            getBaseToolbarItems: shape => NotebookShape.prototype.createToolbar.call(shape),
+            getScreenAnchorPoint: shape => {
+                if (!shape.blockElement)
+                    return null;
+                const rect = shape.blockElement.getBoundingClientRect();
+                return {
+                    centerX: rect.left + rect.width / 2,
+                    bottomY: rect.bottom
+                };
+            },
+            bringToFront: shape => shape.notebookEditor.moveBlock(shape.id, shape.notebookEditor.blocks.length - 1),
+            bringForward: shape => shape.notebookEditor.moveBlock(shape.id, shape.notebookEditor.getBlockIndex(shape.id) + 1),
+            sendBackward: shape => shape.notebookEditor.moveBlock(shape.id, shape.notebookEditor.getBlockIndex(shape.id) - 1),
+            sendToBack: shape => shape.notebookEditor.moveBlock(shape.id, 0),
+            copyToClipboard: shape => shape.copyBlockToClipboard(),
+            pasteFromClipboard: shape => shape.pasteBlockFromClipboard(),
+            getCopySubMenuItems: () => []
+        };
+        const bindings = [
+            [ChartNotebookShape, ChartShapeToolbarMixin],
+            [ExpressionNotebookShape, ExpressionShapeToolbarMixin],
+            [SliderNotebookShape, SliderShapeToolbarMixin],
+            [GaugeNotebookShape, GaugeShapeToolbarMixin],
+            [ValueNotebookShape, ValueShapeToolbarMixin],
+            [MediaNotebookShape, MediaShapeToolbarMixin],
+            [TableNotebookShape, TableShapeToolbarMixin],
+            [ReferentialNotebookShape, ReferentialShapeToolbarMixin],
+            [QuestionNotebookShape, QuestionShapeToolbarMixin],
+            [RulerNotebookShape, RulerShapeToolbarMixin],
+            [ProtractorNotebookShape, ProtractorShapeToolbarMixin],
+            [TextNotebookShape, TextShapeToolbarMixin]
+        ];
+        for (const [shapeClass, toolbarMixin] of bindings) {
+            shapeClass.prototype.toolbarAdapter = toolbarAdapter;
+            Object.assign(shapeClass.prototype, toolbarMixin);
+        }
+        window.__shapeToolbarBindingsApplied = true;
+    }
+
+    _bindSelectionDismissal() {
+        document.addEventListener("mousedown", event => {
+            const targetElement = event.target;
+            const clickedInsideBlock = $(targetElement).closest(".notebook-block").length > 0;
+            const clickedInsideToolbar = $(targetElement).closest(".shape-context-toolbar, .dx-toolbar, .dx-toolbar-item, .dx-button").length > 0;
+            const clickedInsideOverlay = $(targetElement).closest(".dx-overlay-wrapper, .dx-overlay-content, .dx-context-menu").length > 0;
+            if (clickedInsideBlock || clickedInsideToolbar || clickedInsideOverlay)
+                return;
+            document.querySelectorAll(".notebook-block.selected").forEach(element => element.classList.remove("selected"));
+            this.shapeInstances.forEach(shape => shape.hideContextToolbar?.());
+        });
     }
 
     _createTopToolbar() {
@@ -51,11 +157,6 @@ class NotebookEditor {
     }
 
     _createBottomToolbar() {
-        this.independentStart = 0;
-        this.independentEnd = 10;
-        this.independentStep = 0.1;
-        this.iterationCount = Math.round((this.independentEnd - this.independentStart) / this.independentStep);
-        this.currentIteration = 1;
         this.isPlaying = false;
 
         $("#bottom-toolbar").dxToolbar({
@@ -63,44 +164,114 @@ class NotebookEditor {
                 class: "mdl-player-toolbar"
             },
             onItemClick: () => {},
-            items: ModellusPlayerToolbar.createPlayerItems({
-                onPlayPause: () => this._playPausePressed(),
-                onStop: () => this._stopPressed(),
-                onStepBackward: () => this._stepBackward(),
-                onStepForward: () => this._stepForward(),
-                onReplay: () => this._replayPressed(),
-                sliderMinimum: 1,
-                sliderMaximum: this.iterationCount || 1,
-                sliderValue: 1,
-                sliderWidth: 400,
-                sliderTooltipFormatter: value => {
-                    const currentValue = this.independentStart + (value - 1) * this.independentStep;
-                    return currentValue.toFixed(2);
-                },
-                onSliderValueChanged: value => {
-                    this.currentIteration = value;
-                },
-                itemsBeforeSlider: [
-                    {
-                        location: "center",
-                        template: () => {
-                            const container = $('<div>');
-                            this._createStartDropDown(container);
-                            return container;
-                        }
+            items: [
+                {
+                    location: "center",
+                    template: () => {
+                        const container = $('<div>');
+                        this._createIndependentDropDown(container);
+                        return container;
                     }
-                ],
-                itemsAfterSlider: [
-                    {
-                        location: "center",
-                        template: () => {
-                            const container = $('<div>');
-                            this._createEndDropDown(container);
-                            return container;
+                },
+                {
+                    location: "center",
+                    template: () => $("<div class='toolbar-separator'>|</div>")
+                },
+                ...ModellusPlayerToolbar.createPlayerItems({
+                    onPlayPause: () => this._playPausePressed(),
+                    onStop: () => this._stopPressed(),
+                    onStepBackward: () => this._stepBackward(),
+                    onStepForward: () => this._stepForward(),
+                    onReplay: () => this._replayPressed(),
+                    sliderMinimum: 1,
+                    sliderMaximum: this.getIterationCount(),
+                    sliderValue: 1,
+                    sliderWidth: 400,
+                    sliderTooltipFormatter: value => {
+                        const currentValue = this.getIndependentStart() + (value - 1) * this.getIndependentStep();
+                        return currentValue.toFixed(2);
+                    },
+                    onSliderValueChanged: value => {
+                        this.calculator?.setIteration(value);
+                    },
+                    itemsBeforeSlider: [
+                        {
+                            location: "center",
+                            template: () => {
+                                const container = $('<div>');
+                                this._createStartDropDown(container);
+                                return container;
+                            }
                         }
-                    }
-                ]
-            })
+                    ],
+                    itemsAfterSlider: [
+                        {
+                            location: "center",
+                            template: () => {
+                                const container = $('<div>');
+                                this._createEndDropDown(container);
+                                return container;
+                            }
+                        }
+                    ]
+                })
+            ]
+        });
+    }
+
+    _createIndependentDropDown(container) {
+        const dropdownElement = $('<div id="independentDropDown">');
+        dropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            template: (data, element) => {
+                const span = $('<span>').css({
+                    fontFamily: "KaTeX_Math, serif",
+                    fontStyle: "italic",
+                    fontSize: "16px"
+                });
+                this._independentNameLabel = span[0];
+                this._updateIndependentNameLabel();
+                element[0].appendChild(span[0]);
+            },
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-independent-dropdown" },
+                width: "auto",
+                contentTemplate: contentElement => this._buildIndependentMenuContent(contentElement)
+            }
+        });
+        dropdownElement.appendTo(container);
+    }
+
+    _buildIndependentMenuContent(contentElement) {
+        const listItems = [
+            {
+                text: "Independent",
+                buildControl: $container => {
+                    $('<div>').dxTextBox({
+                        value: this.getIndependentName(),
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" },
+                        onValueChanged: event => {
+                            if (this.calculator)
+                                this.calculator.properties.independent.name = event.value;
+                            this._updateIndependentNameLabel();
+                            this._reparseExpressions();
+                        }
+                    }).appendTo($container);
+                }
+            }
+        ];
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                data.buildControl($(el).find(".mdl-dropdown-list-control"));
+            }
         });
     }
 
@@ -132,7 +303,7 @@ class NotebookEditor {
                 text: "Start",
                 buildControl: $container => {
                     $('<div>').dxNumberBox({
-                        value: this.independentStart,
+                        value: this.getIndependentStart(),
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: event => this._setIndependentStart(event.value)
@@ -143,7 +314,7 @@ class NotebookEditor {
                 text: "Step",
                 buildControl: $container => {
                     $('<div>').dxNumberBox({
-                        value: this.independentStep,
+                        value: this.getIndependentStep(),
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: event => this._setIndependentStep(event.value)
@@ -190,7 +361,7 @@ class NotebookEditor {
                 text: "End",
                 buildControl: $container => {
                     $('<div>').dxNumberBox({
-                        value: this.independentEnd,
+                        value: this.getIndependentEnd(),
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: event => this._setIndependentEnd(event.value)
@@ -210,38 +381,80 @@ class NotebookEditor {
     }
 
     _setIndependentStart(value) {
-        this.independentStart = value;
-        this._updateIterationCount();
+        if (this.calculator)
+            this.calculator.properties.independent.start = value;
+        this._reparseExpressions();
         this._updateStartLabel();
     }
 
     _setIndependentEnd(value) {
-        this.independentEnd = value;
-        this._updateIterationCount();
+        if (this.calculator)
+            this.calculator.properties.independent.end = value;
+        this._reparseExpressions();
         this._updateEndLabel();
     }
 
     _setIndependentStep(value) {
-        this.independentStep = value;
-        this._updateIterationCount();
+        if (this.calculator)
+            this.calculator.properties.independent.step = value;
+        this._reparseExpressions();
         this._updateStartLabel();
     }
 
-    _updateIterationCount() {
-        this.iterationCount = Math.max(1, Math.round((this.independentEnd - this.independentStart) / this.independentStep));
-        this.currentIteration = 1;
-        $("#playHeadSlider").dxSlider("instance").option("max", this.iterationCount);
-        $("#playHeadSlider").dxSlider("instance").option("value", 1);
+    _reparseExpressions() {
+        if (!this.calculator)
+            return;
+        this.calculator.reset();
+        this.calculator.setProperties({
+            precision: this.calculator.properties.precision ?? 2,
+            angleUnit: this.calculator.properties.angleUnit ?? "radians",
+            independent: {
+                name: this.calculator.properties?.independent?.name ?? "t",
+                start: this.getIndependentStart(),
+                end: this.getIndependentEnd(),
+                step: this.getIndependentStep(),
+                noLimit: false
+            },
+            iterationTerm: this.calculator.properties.iterationTerm ?? "n",
+            casesCount: this.calculator.properties.casesCount ?? 1,
+            initialValuesByCase: this.calculator.properties.initialValuesByCase ?? {}
+        });
+        for (const block of this.blocks) {
+            if (block.type === "expression" && block.content)
+                this.calculator.parse(block.content);
+        }
+        const sliderInstance = $("#playHeadSlider").dxSlider("instance");
+        if (sliderInstance) {
+            sliderInstance.option("max", this.getIterationCount());
+            sliderInstance.option("value", 1);
+        }
+        this._updateIndependentNameLabel();
+        this.calculator.calculate();
+    }
+
+    _onCalculatorIterate() {
+        if (!this.calculator)
+            return;
+        const iteration = this.calculator.getIteration();
+        const sliderInstance = $("#playHeadSlider").dxSlider("instance");
+        if (sliderInstance)
+            sliderInstance.option("value", iteration);
+        this.shapeInstances.forEach(shape => shape.onCalculatorIterate?.());
     }
 
     _updateStartLabel() {
         if (this._startLabel)
-            this._startLabel.textContent = this.independentStart.toFixed(2);
+            this._startLabel.textContent = this.getIndependentStart().toFixed(2);
     }
 
     _updateEndLabel() {
         if (this._endLabel)
-            this._endLabel.textContent = this.independentEnd.toFixed(2);
+            this._endLabel.textContent = this.getIndependentEnd().toFixed(2);
+    }
+
+    _updateIndependentNameLabel() {
+        if (this._independentNameLabel)
+            this._independentNameLabel.textContent = this.getIndependentName();
     }
 
     _playPausePressed() {
@@ -258,45 +471,40 @@ class NotebookEditor {
         this.isPlaying = false;
         $("#playPauseButton").dxButton("instance").option("icon", "fa-light fa-play");
         this._stopPlayback();
-        this.currentIteration = 1;
-        $("#playHeadSlider").dxSlider("instance").option("value", 1);
+        this._reparseExpressions();
     }
 
     _stepBackward() {
-        if (this.currentIteration > 1) {
-            this.currentIteration--;
-            $("#playHeadSlider").dxSlider("instance").option("value", this.currentIteration);
-        }
+        if (!this.calculator)
+            return;
+        this.calculator.stepBackward();
     }
 
     _stepForward() {
-        if (this.currentIteration < this.iterationCount) {
-            this.currentIteration++;
-            $("#playHeadSlider").dxSlider("instance").option("value", this.currentIteration);
-        }
+        if (!this.calculator)
+            return;
+        this.calculator.stepForward();
     }
 
     _replayPressed() {
-        this._stopPressed();
-        this._playPausePressed();
+        if (!this.calculator)
+            return;
+        this.isPlaying = true;
+        $("#playPauseButton").dxButton("instance").option("icon", "fa-light fa-pause");
+        this._reparseExpressions();
+        this.calculator.replay();
     }
 
     _startPlayback() {
-        this._playInterval = setInterval(() => {
-            if (this.currentIteration >= this.iterationCount) {
-                this._stopPressed();
-                return;
-            }
-            this.currentIteration++;
-            $("#playHeadSlider").dxSlider("instance").option("value", this.currentIteration);
-        }, 50);
+        if (!this.calculator)
+            return;
+        this.calculator.play();
     }
 
     _stopPlayback() {
-        if (this._playInterval) {
-            clearInterval(this._playInterval);
-            this._playInterval = null;
-        }
+        if (!this.calculator)
+            return;
+        this.calculator.pause();
     }
 
     _createBlockList() {
@@ -392,6 +600,33 @@ class NotebookEditor {
         this._updateLastModified();
     }
 
+    getBlockIndex(blockId) {
+        return this.blocks.findIndex(block => block.id === blockId);
+    }
+
+    moveBlock(blockId, targetIndex) {
+        const currentIndex = this.getBlockIndex(blockId);
+        if (currentIndex < 0)
+            return;
+        const normalizedTargetIndex = Math.max(0, Math.min(targetIndex, this.blocks.length - 1));
+        if (normalizedTargetIndex === currentIndex)
+            return;
+        const [block] = this.blocks.splice(currentIndex, 1);
+        this.blocks.splice(normalizedTargetIndex, 0, block);
+        this._reloadBlockList();
+        this._updateLastModified();
+    }
+
+    insertBlockAfter(blockId, blockData) {
+        const blockIndex = this.getBlockIndex(blockId);
+        const insertedBlock = Utils.cloneProperties(blockData);
+        insertedBlock.id = this.nextBlockId++;
+        const insertionIndex = blockIndex < 0 ? this.blocks.length : blockIndex + 1;
+        this.blocks.splice(insertionIndex, 0, insertedBlock);
+        this._reloadBlockList();
+        this._updateLastModified();
+    }
+
     removeBlock(blockId) {
         this._disposeShapeInstance(blockId);
         this.blocks = this.blocks.filter(block => block.id !== blockId);
@@ -432,14 +667,10 @@ class NotebookEditor {
         });
     }
 
-    _initBlockContextMenu(buttonContainer, shape) {
+    _initBlockGripButton(buttonContainer, shape) {
         const dragHandle = shape.blockElement.querySelector(".notebook-block-drag-handle");
         const gripButton = $('<button type="button" class="notebook-block-grip-button"><i class="fa-light fa-grip-dots-vertical"></i></button>').appendTo(buttonContainer);
-        gripButton.on("click", () => dragHandle.classList.add("is-open"));
-        shape.initContextMenu(gripButton[0]);
-        const contextMenuInstance = shape._contextMenuElement?.dxContextMenu("instance");
-        if (contextMenuInstance)
-            contextMenuInstance.on("hidden", () => dragHandle.classList.remove("is-open"));
+        gripButton.on("click", () => dragHandle.classList.toggle("is-open"));
     }
 
     _renderBlockHtml(block) {
@@ -480,11 +711,13 @@ class NotebookEditor {
 
         const colorButtonContainer = blockElement.querySelector(".notebook-block-color-button");
         if (colorButtonContainer)
-            this._initBlockContextMenu(colorButtonContainer, shape);
+            this._initBlockGripButton(colorButtonContainer, shape);
 
         blockElement.addEventListener("click", () => {
             document.querySelectorAll(".notebook-block.selected").forEach(el => el.classList.remove("selected"));
+            this.shapeInstances.forEach(shapeInstance => shapeInstance.hideContextToolbar?.());
             blockElement.classList.add("selected");
+            shape.showContextToolbar?.();
         });
 
         blockElement.addEventListener("keydown", event => {

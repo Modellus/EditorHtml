@@ -1,6 +1,6 @@
-Object.assign(RulerShape.prototype, {
+var RulerShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(RulerShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, RulerShapeToolbarMixin.createToolbar);
         items.push(
             {
                 location: "center",
@@ -36,4 +36,5 @@ Object.assign(RulerShape.prototype, {
         );
         return items;
     }
-});
+};
+if (typeof RulerShape !== "undefined") Object.assign(RulerShape.prototype, RulerShapeToolbarMixin);

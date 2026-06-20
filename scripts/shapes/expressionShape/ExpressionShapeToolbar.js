@@ -1,6 +1,6 @@
-Object.assign(ExpressionShape.prototype, {
+var ExpressionShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(ExpressionShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, ExpressionShapeToolbarMixin.createToolbar);
         items.push(
             {
                 location: "center",
@@ -118,4 +118,5 @@ Object.assign(ExpressionShape.prototype, {
                 width: 220
             });
     }
-});
+};
+if (typeof ExpressionShape !== "undefined") Object.assign(ExpressionShape.prototype, ExpressionShapeToolbarMixin);

@@ -4,6 +4,18 @@ class NotebookShape {
         this.block = block;
         this._contextMenuElement = null;
         this._contextMenuColumnsSyncFrameId = null;
+        const self = this;
+        this.board = {
+            translations: { get: key => key },
+            theme: { getColorPickerPalette: () => Utils.getColorPickerPalette() },
+            suppressNextFocusSelect: false,
+            selection: { deselect: () => {}, clearHover: () => {}, applyEditModeHighlight: () => {} },
+            markDirty: () => self.markChanged(),
+            get calculator() { return self.notebookEditor?.calculator ?? null; }
+        };
+        this.termDisplayEntries = [];
+        this.termFormControls = {};
+        this.initializeContextToolbar();
     }
 
     renderContentHtml() {
@@ -21,6 +33,11 @@ class NotebookShape {
             this._contextMenuElement.remove();
             this._contextMenuElement = null;
         }
+        if (this.contextToolbar) {
+            this.contextToolbar.remove();
+            this.contextToolbar = null;
+        }
+        this.contextToolbarInstance = null;
         if (this._contextMenuColumnsSyncFrameId)
             cancelAnimationFrame(this._contextMenuColumnsSyncFrameId);
         this._contextMenuColumnsSyncFrameId = null;
@@ -87,8 +104,278 @@ class NotebookShape {
         this.notebookEditor._updateLastModified();
     }
 
+    duplicateBlock() {
+        const duplicateBlock = Utils.cloneProperties(this.block);
+        duplicateBlock.id = this.notebookEditor.nextBlockId++;
+        const blockIndex = this.notebookEditor.blocks.findIndex(block => block.id === this.block.id);
+        this.notebookEditor.blocks.splice(blockIndex + 1, 0, duplicateBlock);
+        this.notebookEditor._reloadBlockList();
+        this.markChanged();
+    }
+
     getHostId() {
         return `notebook-shape-${this.block.type}-${this.block.id}`;
+    }
+
+    get properties() {
+        return this.block;
+    }
+
+    initializeContextToolbar() {
+        const toolbarItems = this.createToolbar?.() ?? [];
+        if (!toolbarItems.length || !window.DevExpress?.ui?.dxToolbar)
+            return;
+        const separator = { location: "center", template: () => $('<div class="toolbar-separator">|</div>') };
+        toolbarItems.splice(toolbarItems.length - 1, 0, this.createActionsToolbarItem(), separator);
+        const toolbarHost = document.createElement("div");
+        toolbarHost.className = "shape-context-toolbar";
+        document.body.appendChild(toolbarHost);
+        $(toolbarHost).dxToolbar({ items: toolbarItems, width: "auto" });
+        this.contextToolbar = toolbarHost;
+        this.contextToolbarInstance = $(toolbarHost).dxToolbar("instance");
+    }
+
+    createToolbar() {
+        return [];
+    }
+
+    showContextToolbar() {
+        if (this.contextToolbar)
+            this.contextToolbar.classList.add("visible");
+        requestAnimationFrame(() => requestAnimationFrame(() => this.positionContextToolbar()));
+    }
+
+    hideContextToolbar() {
+        if (this.contextToolbar)
+            this.contextToolbar.classList.remove("visible");
+    }
+
+    positionContextToolbar() {
+        if (!this.contextToolbar || !this.blockElement)
+            return;
+        const rect = this.blockElement.getBoundingClientRect();
+        const toolbarRect = this.contextToolbar.getBoundingClientRect();
+        const toolbarWidth = toolbarRect.width || this.contextToolbar.offsetWidth || 0;
+        const toolbarHeight = toolbarRect.height || this.contextToolbar.offsetHeight || 0;
+        const padding = 8;
+        let left = rect.left + rect.width / 2 - toolbarWidth / 2;
+        let top = rect.bottom + padding;
+        const maxLeft = window.innerWidth - toolbarWidth - padding;
+        const maxTop = window.innerHeight - toolbarHeight - padding;
+        left = Math.max(padding, Math.min(left, maxLeft));
+        top = Math.max(padding, Math.min(top, maxTop));
+        this.contextToolbar.style.left = `${left}px`;
+        this.contextToolbar.style.top = `${top}px`;
+    }
+
+    getShapeOverlayWrapperAttr(extraClass = "") {
+        const wrapperClassName = extraClass ? `mdl-shape-overlay-popup ${extraClass}` : "mdl-shape-overlay-popup";
+        return { class: wrapperClassName };
+    }
+
+    getShapeNestedOverlayWrapperAttr(extraClass = "") {
+        const wrapperClassName = extraClass ? `mdl-shape-overlay-popup mdl-shape-overlay-popup-nested ${extraClass}` : "mdl-shape-overlay-popup mdl-shape-overlay-popup-nested";
+        return { class: wrapperClassName };
+    }
+
+    getDropDownButtonInstance(element) {
+        const hostElement = element?.[0] ?? element;
+        if (!(hostElement instanceof Element))
+            return null;
+        return window.DevExpress?.ui?.dxDropDownButton?.getInstance(hostElement) ?? null;
+    }
+
+    setPropertyCommand(name, value) {
+        Utils.setProperty(name, value, this.block);
+        if (name === "backgroundColor")
+            this.blockElement?.style.setProperty("--block-bg-color", value);
+        if (name === "borderColor")
+            this.blockElement?.style.setProperty("--block-border-color", value);
+        this.markChanged();
+    }
+
+    remove() {
+        this.notebookEditor.removeBlock(this.block.id);
+    }
+
+    duplicate() {
+        this.duplicateBlock();
+    }
+
+    async copyBlockToClipboard() {
+        const payload = JSON.stringify({ type: "notebook-block", block: Utils.cloneProperties(this.block) });
+        await navigator.clipboard.writeText(payload);
+    }
+
+    async pasteBlockFromClipboard() {
+        let text = "";
+        try {
+            text = await navigator.clipboard.readText();
+        } catch {
+            return;
+        }
+        if (!text)
+            return;
+        let payload = null;
+        try {
+            payload = JSON.parse(text);
+        } catch {
+            return;
+        }
+        if (payload?.type !== "notebook-block" || !payload.block)
+            return;
+        this.notebookEditor.insertBlockAfter(this.block.id, payload.block);
+    }
+
+    resetToDefaults() {
+        const resetBlock = NotebookShapesFactory.createDefaultBlock(this.block.type, this.block.id);
+        const currentId = this.block.id;
+        const currentType = this.block.type;
+        for (const key of Object.keys(this.block)) {
+            if (key !== "id" && key !== "type")
+                delete this.block[key];
+        }
+        Object.assign(this.block, resetBlock);
+        this.block.id = currentId;
+        this.block.type = currentType;
+        this.notebookEditor._reloadBlockList();
+        this.markChanged();
+    }
+
+    get id() {
+        return this.block.id;
+    }
+
+    getColorControl() {
+        if (!this.colorControl)
+            this.colorControl = new ColorControl({ palette: this.board.theme.getColorPickerPalette() });
+        return this.colorControl;
+    }
+
+    createColorPickerEditor(dataField, options = {}) {
+        return this.getColorControl().createEditor(this.properties[dataField], value => this.setPropertyCommand(dataField, value), options);
+    }
+
+    getTermDisplayModeProperty(term) {
+        return `${term}DisplayMode`;
+    }
+
+    menuIconHtml(iconName, isSet) {
+        const weight = isSet ? "fa-solid" : "fa-light";
+        return `<i class="${weight} ${iconName} mdl-menu-icon"></i>`;
+    }
+
+    populateShapeColorMenuSections(sections) {
+    }
+
+    renderShapeColorButtonTemplate(element) {
+        element.innerHTML = `<span class="mdl-focused-toolbar-button"><i class="fa-light fa-palette"></i></span>`;
+    }
+
+    renderPermissionsButtonTemplate(element) {
+    }
+
+    refreshPermissionsButtonIcon() {
+    }
+
+    refreshTermsToolbarControl() {
+        if (!this._termsDropdownElement)
+            return;
+        const buttonContentElement = this._termsDropdownElement.find(".dx-button-content")[0];
+        if (buttonContentElement)
+            this.renderTermsButtonTemplate(buttonContentElement);
+    }
+
+    renderTermsButtonTemplate(element) {
+    }
+
+    populateTermsMenuSections(listItems) {
+    }
+
+    getPrecisionNumberEditorOptions(opts = {}) {
+        return Object.assign({ stylingMode: "filled", width: 90 }, opts);
+    }
+
+    refreshDomainBoxes() {
+    }
+
+    getDefaultDomainOverride() {
+        return { xMin: null, xMax: null, yMin: null, yMax: null };
+    }
+
+    enterEditMode() {
+        return true;
+    }
+
+    normalizeYTerms() {
+    }
+
+    refreshTermFormLayouts() {
+    }
+
+    formatTermForDisplay(term) {
+        if (term == null || term === "")
+            return "";
+        const calculator = this.notebookEditor?.calculator;
+        if (calculator?.isTerm?.(String(term)))
+            return Utils.getDisplayedTerm(String(term), calculator.system);
+        return Utils.getDisplayedTerm(String(term));
+    }
+
+    createNameButtonTermMarkup(termText) {
+        const normalized = String(termText ?? "").trim();
+        if (!normalized)
+            return "";
+        const mathMarkup = Utils.buildReadOnlyMathFieldMarkup(normalized, "height:auto;width:auto;display:inline-block;pointer-events:none");
+        return `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${mathMarkup}</span></span>`;
+    }
+
+    createTermControl(termProperty, title, showVisibilityToggle = true) {
+        const wrapper = $('<div style="width:160px"></div>');
+        this.createNotebookTermControl(wrapper, this.properties[termProperty] ?? "", value => {
+            this.setPropertyCommand(termProperty, value);
+        });
+        return wrapper;
+    }
+
+    createTermSelectorControl(formAdapter, termProperty, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true) {
+        const wrapper = $('<div style="width:160px"></div>');
+        this.createNotebookTermControl(wrapper, this.properties[termProperty] ?? "", value => {
+            formAdapter.updateData(termProperty, value);
+        });
+        return wrapper;
+    }
+
+    createShapeColorDropDownButton(itemElement) {
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        this._borderColorPicker = this.createColorPickerEditor("borderColor");
+        this._shapeColorDropdownElement = $('<div class="mdl-shape-color-selector">');
+        this._shapeColorDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            buttonTemplate: (data, element) => this.renderShapeColorButtonTemplate(element[0]),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: "auto",
+                contentTemplate: contentElement => {
+                    $(contentElement).empty();
+                    $('<div>').appendTo(contentElement).dxList({
+                        dataSource: [
+                            { text: "Background", buildControl: $container => $container.append(this._bgColorPicker) },
+                            { text: "Border", buildControl: $container => $container.append(this._borderColorPicker) }
+                        ],
+                        scrollingEnabled: false,
+                        itemTemplate: (data, _, element) => {
+                            element[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                            data.buildControl($(element).find(".mdl-dropdown-list-control"));
+                        }
+                    });
+                }
+            }
+        });
+        this._shapeColorDropdownElement.appendTo(itemElement);
     }
 
     initContextMenu(targetElement) {
@@ -141,7 +428,7 @@ class NotebookShape {
     }
 
     getNotebookTermItems() {
-        const calculator = window.shell?.board?.calculator;
+        const calculator = this.notebookEditor?.calculator ?? window.shell?.board?.calculator;
         if (!calculator)
             return [];
         const termNames = calculator.getTermsNames?.() ?? [];

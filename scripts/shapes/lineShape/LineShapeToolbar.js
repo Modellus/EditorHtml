@@ -1,22 +1,14 @@
-Object.assign(ArcShape.prototype, {
+var LineShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(ArcShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, LineShapeToolbarMixin.createToolbar);
         const formAdapter = { updateData: (field, value) => this.setPropertyCommand(field, value) };
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
         this._yDescriptor = yDescriptor;
-        const radiusDisplayMode = this.getTermDisplayModeProperty("radiusTerm");
-        const radiusDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "radiusTerm", "radiusTermCase", true, radiusDisplayMode, true);
-        this.termFormControls["radiusTerm"] = { termControl: radiusDescriptor.termControl };
-        this._radiusDescriptor = radiusDescriptor;
-        const startAngleDisplayMode = this.getTermDisplayModeProperty("startAngleTerm");
-        const startAngleDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "startAngleTerm", "startAngleTermCase", true, startAngleDisplayMode, true);
-        this.termFormControls["startAngleTerm"] = { termControl: startAngleDescriptor.termControl };
-        this._startAngleDescriptor = startAngleDescriptor;
-        const endAngleDisplayMode = this.getTermDisplayModeProperty("endAngleTerm");
-        const endAngleDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "endAngleTerm", "endAngleTermCase", true, endAngleDisplayMode, true);
-        this.termFormControls["endAngleTerm"] = { termControl: endAngleDescriptor.termControl };
-        this._endAngleDescriptor = endAngleDescriptor;
+        const angleDisplayMode = this.getTermDisplayModeProperty("angleTerm");
+        const angleDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "angleTerm", "angleTermCase", true, angleDisplayMode, true);
+        this.termFormControls["angleTerm"] = { termControl: angleDescriptor.termControl };
+        this._angleDescriptor = angleDescriptor;
         items.push(
             {
                 location: "center",
@@ -114,4 +106,5 @@ Object.assign(ArcShape.prototype, {
         });
         this._lineWidthDropdownElement.appendTo(container);
     }
-});
+};
+if (typeof LineShape !== "undefined") Object.assign(LineShape.prototype, LineShapeToolbarMixin);

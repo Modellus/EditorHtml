@@ -1,6 +1,6 @@
-Object.assign(VectorShape.prototype, {
+var VectorShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(VectorShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, VectorShapeToolbarMixin.createToolbar);
         const formAdapter = { updateData: (field, value) => this.setPropertyCommand(field, value) };
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
@@ -66,4 +66,5 @@ Object.assign(VectorShape.prototype, {
         );
         return items;
     }
-});
+};
+if (typeof VectorShape !== "undefined") Object.assign(VectorShape.prototype, VectorShapeToolbarMixin);

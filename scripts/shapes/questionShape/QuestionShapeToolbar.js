@@ -1,6 +1,6 @@
-Object.assign(QuestionShape.prototype, {
+var QuestionShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(QuestionShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, QuestionShapeToolbarMixin.createToolbar);
         items.push(
             {
                 location: "center",
@@ -101,4 +101,5 @@ Object.assign(QuestionShape.prototype, {
         });
         this._scoringDropdownElement.appendTo(itemElement);
     }
-});
+};
+if (typeof QuestionShape !== "undefined") Object.assign(QuestionShape.prototype, QuestionShapeToolbarMixin);

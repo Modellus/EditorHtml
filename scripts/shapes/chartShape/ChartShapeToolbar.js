@@ -1,6 +1,6 @@
-Object.assign(ChartShape.prototype, {
+var ChartShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(ChartShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, ChartShapeToolbarMixin.createToolbar);
         this.normalizeYTerms();
         this._xTermControl = this.createTermControl("xTerm", "Horizontal", false);
         items.push(
@@ -191,4 +191,5 @@ Object.assign(ChartShape.prototype, {
         }
         grid.appendTo($(contentElement).dxScrollView("instance").content());
     }
-});
+};
+if (typeof ChartShape !== "undefined") Object.assign(ChartShape.prototype, ChartShapeToolbarMixin);

@@ -1,6 +1,6 @@
-Object.assign(BodyShape.prototype, {
+var BodyShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(BodyShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, BodyShapeToolbarMixin.createToolbar);
         const formAdapter = { updateData: (field, value) => this.setPropertyCommand(field, value) };
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
@@ -123,4 +123,5 @@ Object.assign(BodyShape.prototype, {
         });
         return this.imageDropZoneControl.createHost();
     }
-});
+};
+if (typeof BodyShape !== "undefined") Object.assign(BodyShape.prototype, BodyShapeToolbarMixin);

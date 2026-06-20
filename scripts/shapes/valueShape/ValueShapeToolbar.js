@@ -1,6 +1,6 @@
-Object.assign(ValueShape.prototype, {
+var ValueShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(ValueShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, ValueShapeToolbarMixin.createToolbar);
         this._termControl = this.createTermControl("term", "Term", true);
         const fontSizeCaseProperty = "fontSizeTermCase";
         const fontSizeDisplayModeProperty = this.getTermDisplayModeProperty("fontSizeTerm");
@@ -70,4 +70,5 @@ Object.assign(ValueShape.prototype, {
         });
         this._fontDropdownElement.appendTo(itemElement);
     }
-});
+};
+if (typeof ValueShape !== "undefined") Object.assign(ValueShape.prototype, ValueShapeToolbarMixin);

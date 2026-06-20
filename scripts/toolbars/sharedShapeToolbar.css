@@ -1,0 +1,523 @@
+.mdl-shape-overlay-popup {
+    z-index: var(--mdl-shape-overlay-z-index) !important;
+}
+
+.mdl-shape-overlay-popup.mdl-shape-overlay-popup-nested {
+    z-index: var(--mdl-shape-overlay-nested-z-index) !important;
+}
+
+.mdl-focused-toolbar-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    color: #253047;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.mdl-focused-toolbar-button--method {
+    min-width: 32px;
+    justify-content: center;
+    padding: 4px 6px;
+}
+
+.mdl-focused-toolbar-button--term {
+    min-width: 180px;
+    justify-content: flex-start;
+}
+
+.mdl-permissions-selector .dx-button-content i {
+    font-size: 18px;
+}
+
+.mdl-permissions-icon-animate {
+    animation: mdl-permissions-pop 0.3s ease;
+}
+
+@keyframes mdl-permissions-pop {
+    0% { transform: scale(1); opacity: 1; }
+    40% { transform: scale(1.35); opacity: 0.6; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.dx-button .trash {
+    font-weight: 300;
+    color: red;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.dx-button:hover .trash {
+    display: none;
+}
+
+.dx-button:hover .trash-hover {
+    display: inline-block;
+    font-weight: 900;
+    color: red;
+}
+
+.trash-hover {
+    display: none;
+}
+
+.mdl-dropdown-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mdl-actions-menu {
+    padding: 4px 0;
+}
+
+.mdl-actions-menu [data-action-item] {
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.mdl-actions-menu [data-action-item]:hover {
+    background: var(--dx-color-accent-hover, rgba(0,0,0,0.06));
+}
+
+.mdl-actions-menu-separator {
+    height: 1px;
+    background: var(--dx-color-border, #e0e0e0);
+    margin: 4px 0;
+}
+
+.mdl-dropdown-list-label {
+    flex: 1;
+    white-space: nowrap;
+}
+
+.mdl-dropdown-list-control {
+    display: flex;
+    align-items: center;
+}
+
+.mdl-dropdown-list-suffix {
+    line-height: 1;
+    opacity: 0.7;
+}
+
+.mdl-permissions-menu {
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mdl-permissions-menu-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mdl-permissions-menu-label {
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.mdl-dropdown-list-item-stacked {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mdl-dropdown-list-stacked-label {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.mdl-dropdown-list-stacked-control {
+    width: 100%;
+}
+
+.mdl-dropdown-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 8px 12px;
+}
+
+.mdl-dropdown-grid-label {
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.mdl-dropdown-grid-control {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.mdl-name-btn-term {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    white-space: nowrap;
+}
+
+.mdl-name-btn-separator {
+    font-size: 6px;
+    line-height: 1;
+    margin: 0 4px;
+}
+
+.mdl-name-btn-term-text {
+    font-family: KaTeX_Math, serif;
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.mdl-name-btn-extra {
+    font-size: 10px;
+    line-height: 1;
+    padding: 1px 4px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.10);
+    margin-left: 2px;
+}
+
+.term-packed-control {
+    display: flex;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.term-packed-control__button {
+    width: 34px;
+    min-width: 34px;
+    max-width: 34px;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 34px;
+}
+
+.term-packed-control__select {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.term-packed-checkbox {
+    margin: 0;
+    padding: 0;
+    width: 34px;
+    min-width: 34px;
+    height: 32px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    background-color: #f5f5f5;
+}
+
+.term-packed-checkbox .dx-checkbox-container {
+    width: 34px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.term-packed-checkbox .dx-checkbox-icon {
+    width: 34px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.term-packed-checkbox.dx-state-focused .dx-checkbox-icon,
+.term-packed-checkbox.dx-state-hover .dx-checkbox-icon,
+.term-packed-checkbox.dx-checkbox-checked .dx-checkbox-icon,
+.term-packed-checkbox.dx-checkbox-checked.dx-state-focused .dx-checkbox-icon,
+.term-packed-checkbox.dx-checkbox-checked.dx-state-hover .dx-checkbox-icon,
+.term-packed-checkbox.dx-checkbox-checked.dx-state-active .dx-checkbox-icon {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.term-packed-checkbox .dx-checkbox-icon::before,
+.term-packed-checkbox .dx-checkbox-icon::after {
+    display: none;
+}
+
+.term-packed-checkbox .term-packed-checkbox-icon {
+    font-size: 14px !important;
+    line-height: 1;
+    color: #4d4d4d !important;
+}
+
+.term-packed-lock-checkbox {
+    margin: 0;
+    padding: 0;
+    width: 28px;
+    min-width: 28px;
+    height: 32px;
+    background-color: transparent;
+}
+
+.term-packed-lock-checkbox .dx-checkbox-container {
+    width: 28px;
+    height: 32px;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.term-packed-lock-checkbox .dx-checkbox-icon {
+    width: 28px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.term-packed-lock-checkbox.dx-state-focused .dx-checkbox-icon,
+.term-packed-lock-checkbox.dx-state-hover .dx-checkbox-icon,
+.term-packed-lock-checkbox.dx-checkbox-checked .dx-checkbox-icon,
+.term-packed-lock-checkbox.dx-checkbox-checked.dx-state-focused .dx-checkbox-icon,
+.term-packed-lock-checkbox.dx-checkbox-checked.dx-state-hover .dx-checkbox-icon,
+.term-packed-lock-checkbox.dx-checkbox-checked.dx-state-active .dx-checkbox-icon {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+.term-packed-lock-checkbox .dx-checkbox-icon::before,
+.term-packed-lock-checkbox .dx-checkbox-icon::after {
+    display: none;
+}
+
+.term-packed-lock-icon {
+    font-size: 13px !important;
+    line-height: 1;
+    color: #4d4d4d !important;
+    cursor: pointer;
+}
+
+.term-packed-control__select .dx-texteditor {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin: 0;
+}
+
+.term-packed-control--no-visibility .term-packed-control__select .dx-texteditor {
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+}
+
+.term-packed-control--physical {
+    align-items: center;
+    gap: 0;
+}
+
+.mdl-physical-term-label {
+    font-family: KaTeX_Math, serif;
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1;
+    padding-left: 6px;
+    color: inherit;
+    opacity: 0.8;
+}
+
+.term-packed-control__select .dx-field-item-content {
+    padding: 0;
+    margin: 0;
+}
+
+.term-packed-terms-control,
+.term-packed-terms-list {
+    width: 100%;
+}
+
+.term-packed-terms-list .dx-list-item,
+.term-packed-terms-list .dx-list-item-content {
+    padding: 0;
+}
+
+.term-packed-terms-list .dx-scrollview-content {
+    padding: 0;
+}
+
+.name-packed-control {
+    display: flex;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.name-packed-control__button {
+    width: 34px;
+    min-width: 34px;
+    max-width: 34px;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 34px;
+}
+
+.name-packed-control__color {
+    width: 34px;
+    min-width: 34px;
+    max-width: 34px;
+    margin: 0;
+    padding: 0;
+    flex: 0 0 34px;
+}
+
+.name-packed-control__input {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.name-packed-control__color .mdl-color-picker {
+    width: 100%;
+}
+
+.name-packed-control__color .dx-button {
+    min-height: 34px;
+    border-radius: 0;
+}
+
+.mdl-color-picker .dx-button {
+    width: 100%;
+    min-height: 32px;
+    padding: 0;
+    background: #f5f5f5;
+}
+
+.mdl-color-picker .dx-button-content {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mdl-color-picker-button-template {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mdl-color-picker-button-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.mdl-color-picker-menu .dx-popup-content {
+    padding: 6px;
+}
+
+.mdl-color-picker-tileview {
+    width: auto;
+    height: auto;
+}
+
+.mdl-color-picker-menu .dx-tile,
+.mdl-color-picker-menu .dx-tile-content {
+    padding: 0;
+}
+
+.mdl-color-picker-menu .dx-tileview-wrapper,
+.mdl-color-picker-menu .dx-scrollable-content {
+    margin: 0;
+    padding: 0;
+}
+
+.mdl-color-picker-menu .dx-tile {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.mdl-color-picker-item {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.mdl-color-picker-item-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.mdl-color-picker-menu .dx-tile.dx-state-hover .mdl-color-picker-item,
+.mdl-color-picker-menu .dx-tile.dx-state-active .mdl-color-picker-item {
+    background: #e8e8e8;
+}
+
+.mdl-formula-shortcut {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 36px;
+    padding: 4px 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #fafafa;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.mdl-formula-shortcut:hover {
+    background: #e8f0fe;
+    border-color: #0f6cbd;
+}
+
+.mdl-shortcuts .dx-button {
+    height: auto;
+}
+
+.mdl-shortcuts .dx-button-content {
+    display: flex;
+    align-items: center;
+    height: auto;
+    padding: 6px 10px;
+}
+
+.mdl-shortcuts .form-math-field {
+    display: inline-flex;
+    align-items: center;
+    height: auto;
+}
+
+.name-packed-control__input .dx-texteditor {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin: 0;
+}
+
+.name-packed-control__input .dx-field-item-content {
+    padding: 0;
+    margin: 0;
+}

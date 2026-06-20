@@ -1,6 +1,6 @@
-Object.assign(ProtractorShape.prototype, {
+var ProtractorShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(ProtractorShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, ProtractorShapeToolbarMixin.createToolbar);
         items.push(
             {
                 location: "center",
@@ -110,4 +110,5 @@ Object.assign(ProtractorShape.prototype, {
             onValueChanged: e => this.setPropertyCommand(propertyName, e.value)
         });
     }
-});
+};
+if (typeof ProtractorShape !== "undefined") Object.assign(ProtractorShape.prototype, ProtractorShapeToolbarMixin);

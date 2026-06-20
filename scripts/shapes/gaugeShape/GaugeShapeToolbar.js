@@ -1,6 +1,6 @@
-Object.assign(GaugeShape.prototype, {
+var GaugeShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(GaugeShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, GaugeShapeToolbarMixin.createToolbar);
         this._angleTermControl = this.createTermControl("angleTerm", "Angle");
         this._magnitudeTermControl = this.createTermControl("magnitudeTerm", "Magnitude");
         items.push(
@@ -157,4 +157,5 @@ Object.assign(GaugeShape.prototype, {
             }
         });
     }
-});
+};
+if (typeof GaugeShape !== "undefined") Object.assign(GaugeShape.prototype, GaugeShapeToolbarMixin);

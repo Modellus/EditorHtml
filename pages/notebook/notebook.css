@@ -6,6 +6,17 @@ html, body {
     background-color: #fafafa;
 }
 
+:root {
+    --mdl-shape-toolbar-z-index: 90000;
+    --mdl-shape-overlay-z-index: 91000;
+    --mdl-shape-overlay-nested-z-index: 92000;
+    --mdl-shape-toolbar-button-color: #253047;
+    --mdl-shape-toolbar-button-hover-color: #0f6cbd;
+    --mdl-shape-toolbar-button-hover-bg: rgba(15, 108, 189, 0.12);
+    --mdl-shape-toolbar-button-active-bg: rgba(15, 108, 189, 0.18);
+    --mdl-shape-toolbar-button-focus-ring: 0 0 0 2px rgba(15, 108, 189, 0.24);
+}
+
 
 
 #notebook-container {
@@ -286,36 +297,116 @@ html, body {
     border-spacing: 0;
 }
 
-.mdl-dropdown-list-item {
+.dx-context-menu .mdl-dropdown-list-item {
     display: table-row;
 }
 
-.mdl-dropdown-list-icon,
-.mdl-dropdown-list-label,
-.mdl-dropdown-list-control {
+.dx-context-menu .mdl-dropdown-list-icon,
+.dx-context-menu .mdl-dropdown-list-label,
+.dx-context-menu .mdl-dropdown-list-control {
     display: table-cell;
     vertical-align: middle;
     white-space: nowrap;
 }
 
-.mdl-dropdown-list-icon {
+.dx-context-menu .mdl-dropdown-list-icon {
     padding-right: 8px;
     text-align: center;
 }
 
-.mdl-dropdown-list-label {
+.dx-context-menu .mdl-dropdown-list-label {
     padding-right: 12px;
 }
 
-.mdl-dropdown-list-control {
+
+.dx-context-menu .mdl-dropdown-list-control {
     text-align: right;
 }
 
-.mdl-dropdown-list-submenu-indicator {
+.dx-context-menu .mdl-dropdown-list-submenu-indicator {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-width: 12px;
     color: #666;
     font-size: 11px;
+}
+
+.mdl-shape-overlay-popup {
+    z-index: var(--mdl-shape-overlay-z-index) !important;
+}
+
+.mdl-shape-overlay-popup.mdl-shape-overlay-popup-nested {
+    z-index: var(--mdl-shape-overlay-nested-z-index) !important;
+}
+
+.shape-context-toolbar {
+    position: fixed;
+    z-index: var(--mdl-shape-toolbar-z-index);
+    display: none;
+    padding: 4px 6px;
+    border-radius: 8px;
+    background: transparent;
+    width: max-content;
+}
+
+.shape-context-toolbar.visible {
+    display: block;
+}
+
+.shape-context-toolbar .dx-toolbar {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    width: auto;
+    display: inline-block;
+}
+
+.shape-context-toolbar .dx-toolbar-items-container {
+    gap: 4px;
+    overflow: visible;
+}
+
+.shape-context-toolbar .dx-toolbar-item,
+.shape-context-toolbar .dx-toolbar-item.dx-toolbar-button,
+.shape-context-toolbar .dx-toolbar-item-content,
+.shape-context-toolbar .dx-toolbar-item-auto-hide,
+.shape-context-toolbar .dx-toolbar-item .dx-button,
+.shape-context-toolbar .dx-toolbar-item .dx-button-content,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text {
+    box-shadow: none;
+    background: transparent;
+    border-color: transparent;
+}
+
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text {
+    color: var(--mdl-shape-toolbar-button-color);
+    border-radius: 8px;
+    transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-hover,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-selected {
+    background: var(--mdl-shape-toolbar-button-hover-bg);
+    border-color: transparent;
+    color: var(--mdl-shape-toolbar-button-hover-color);
+}
+
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-focused {
+    background: var(--mdl-shape-toolbar-button-hover-bg);
+    border-color: transparent;
+    color: var(--mdl-shape-toolbar-button-hover-color);
+    box-shadow: var(--mdl-shape-toolbar-button-focus-ring);
+}
+
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text.dx-state-active {
+    background: var(--mdl-shape-toolbar-button-active-bg);
+    border-color: transparent;
+    color: var(--mdl-shape-toolbar-button-hover-color);
+}
+
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text .dx-icon,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text .dx-button-text,
+.shape-context-toolbar .dx-toolbar-item .dx-button-mode-text .mdl-focused-toolbar-button {
+    color: inherit;
 }

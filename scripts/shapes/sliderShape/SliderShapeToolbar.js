@@ -1,6 +1,6 @@
-Object.assign(SliderShape.prototype, {
+var SliderShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(SliderShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, SliderShapeToolbarMixin.createToolbar);
         this._termControl = this.createTermControl("term", "Value");
         items.push(
             {
@@ -39,4 +39,5 @@ Object.assign(SliderShape.prototype, {
         );
         return items;
     }
-});
+};
+if (typeof SliderShape !== "undefined") Object.assign(SliderShape.prototype, SliderShapeToolbarMixin);

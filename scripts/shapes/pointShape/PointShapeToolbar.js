@@ -1,6 +1,6 @@
-Object.assign(PointShape.prototype, {
+var PointShapeToolbarMixin = {
     createToolbar() {
-        const items = Object.getPrototypeOf(PointShape.prototype).createToolbar.call(this);
+        const items = resolveShapeToolbarBaseItems(this, PointShapeToolbarMixin.createToolbar);
         const formAdapter = { updateData: (field, value) => this.setPropertyCommand(field, value) };
         const { xDescriptor, yDescriptor } = this.createTermPairFormControls(formAdapter);
         this._xDescriptor = xDescriptor;
@@ -46,4 +46,5 @@ Object.assign(PointShape.prototype, {
         );
         return items;
     }
-});
+};
+if (typeof PointShape !== "undefined") Object.assign(PointShape.prototype, PointShapeToolbarMixin);

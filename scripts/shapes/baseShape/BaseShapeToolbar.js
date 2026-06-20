@@ -1,4 +1,282 @@
-Object.assign(BaseShape.prototype, {
+function resolveShapeToolbarBaseItems(shape, currentCreateToolbar = null) {
+    const injectedBaseResolver = shape?.toolbarAdapter?.getBaseToolbarItems;
+    if (typeof injectedBaseResolver === "function")
+        return injectedBaseResolver(shape) ?? [];
+
+    let parentPrototype = null;
+    if (typeof currentCreateToolbar === "function") {
+        let ownerPrototype = Object.getPrototypeOf(shape);
+        while (ownerPrototype) {
+            const ownsCreateToolbar = Object.prototype.hasOwnProperty.call(ownerPrototype, "createToolbar");
+            if (ownsCreateToolbar && ownerPrototype.createToolbar === currentCreateToolbar)
+                break;
+            ownerPrototype = Object.getPrototypeOf(ownerPrototype);
+        }
+        parentPrototype = ownerPrototype ? Object.getPrototypeOf(ownerPrototype) : null;
+    }
+
+    if (!parentPrototype) {
+        const shapePrototype = Object.getPrototypeOf(shape);
+        parentPrototype = shapePrototype ? Object.getPrototypeOf(shapePrototype) : null;
+    }
+
+    const createToolbar = parentPrototype?.createToolbar;
+    if (typeof currentCreateToolbar === "function" && createToolbar === currentCreateToolbar)
+        return [];
+    if (typeof createToolbar !== "function")
+        return [];
+    return createToolbar.call(shape) ?? [];
+}
+
+const ShapeToolbarIconMap = {
+    BodyShape: "fa-light fa-circle",
+    PointShape: "fa-solid fa-dot",
+    VectorShape: "fa-light fa-arrow-right-long",
+    LineShape: "fa-light fa-slash-forward",
+    ArcShape: "fa-light fa-circle-half-stroke",
+    ChartShape: "fa-light fa-chart-line",
+    TableShape: "fa-light fa-table",
+    SliderShape: "fa-light fa-slider",
+    ValueShape: "fa-light fa-input-numeric",
+    MediaShape: "fa-light fa-photo-film-music",
+    ExpressionShape: "fa-light fa-function",
+    TextShape: "fa-light fa-text",
+    QuestionShape: "fa-light fa-clipboard-question",
+    RulerShape: "fa-light fa-ruler",
+    ProtractorShape: "fa-light fa-angle",
+    ReferentialShape: "fa-light fa-shapes",
+    GaugeShape: "fa-light fa-gauge",
+    BodyNotebookShape: "fa-light fa-circle",
+    PointNotebookShape: "fa-solid fa-dot",
+    VectorNotebookShape: "fa-light fa-arrow-right-long",
+    LineNotebookShape: "fa-light fa-slash-forward",
+    ArcNotebookShape: "fa-light fa-circle-half-stroke",
+    ChartNotebookShape: "fa-light fa-chart-line",
+    TableNotebookShape: "fa-light fa-table",
+    SliderNotebookShape: "fa-light fa-slider",
+    ValueNotebookShape: "fa-light fa-input-numeric",
+    MediaNotebookShape: "fa-light fa-photo-film-music",
+    ExpressionNotebookShape: "fa-light fa-function",
+    TextNotebookShape: "fa-light fa-text",
+    QuestionNotebookShape: "fa-light fa-clipboard-question",
+    RulerNotebookShape: "fa-light fa-ruler",
+    ProtractorNotebookShape: "fa-light fa-angle",
+    ReferentialNotebookShape: "fa-light fa-shapes",
+    GaugeNotebookShape: "fa-light fa-gauge"
+};
+
+function resolveShapeToolbarIcon(shape) {
+    const injectedIcon = shape?.toolbarAdapter?.getShapeIcon?.(shape);
+    if (injectedIcon)
+        return injectedIcon;
+    const baseShapeIcons = typeof BaseShape !== "undefined" ? BaseShape.shapeIcons : null;
+    return baseShapeIcons?.[shape.constructor.name] ?? ShapeToolbarIconMap[shape.constructor.name] ?? "fa-light fa-shapes";
+}
+
+function resolveShapeToolbarPaste(shape) {
+    const injectedPaste = shape?.toolbarAdapter?.pasteFromClipboard;
+    if (typeof injectedPaste === "function")
+        return () => injectedPaste(shape);
+    if (typeof BaseShape !== "undefined" && typeof BaseShape.pasteFromClipboard === "function")
+        return () => BaseShape.pasteFromClipboard(shape.board, shape.parent);
+    return () => {};
+}
+
+function resolveShapeToolbarAnchorPoint(shape) {
+    const injectedAnchorPoint = shape?.toolbarAdapter?.getScreenAnchorPoint;
+    if (typeof injectedAnchorPoint === "function")
+        return injectedAnchorPoint(shape);
+    if (shape.container?.getBoundingClientRect) {
+        const rect = shape.container.getBoundingClientRect();
+        return {
+            centerX: rect.left + rect.width / 2,
+            bottomY: rect.bottom
+        };
+    }
+    if (!shape.board?.svg)
+        return null;
+    const position = shape.getBoardPosition?.();
+    if (!position)
+        return null;
+    const properties = shape.properties ?? {};
+    const width = Number.isFinite(properties.width) ? properties.width : 0;
+    const height = Number.isFinite(properties.height) ? properties.height : 0;
+    const radius = Number.isFinite(properties.radius) ? properties.radius : null;
+    const ctm = shape.board.svg.getScreenCTM();
+    if (!ctm)
+        return null;
+    const centerX = radius != null ? position.x : position.x + width / 2;
+    const centerY = radius != null ? position.y : position.y + height / 2;
+    const bottomY = radius != null ? position.y + radius : position.y + height;
+    const centerPoint = new DOMPoint(centerX, centerY).matrixTransform(ctm);
+    const bottomPoint = new DOMPoint(centerX, bottomY).matrixTransform(ctm);
+    return {
+        centerX: centerPoint.x,
+        bottomY: bottomPoint.y
+    };
+}
+
+function resolveShapeToolbarBoardAction(shape, actionName) {
+    const injectedAction = shape?.toolbarAdapter?.[actionName];
+    if (typeof injectedAction === "function")
+        return () => injectedAction(shape);
+    if (typeof shape.board?.[actionName] === "function")
+        return () => shape.board[actionName](shape);
+    return () => {};
+}
+
+function resolveShapeToolbarCopyAction(shape) {
+    if (typeof shape.copyToClipboard === "function")
+        return () => shape.copyToClipboard();
+    const injectedCopy = shape?.toolbarAdapter?.copyToClipboard;
+    if (typeof injectedCopy === "function")
+        return () => injectedCopy(shape);
+    return () => {};
+}
+
+function finalizeShapeContextToolbarItems(shape, toolbarItems) {
+    const resolvedItems = toolbarItems ?? [];
+    if (!resolvedItems.length)
+        return resolvedItems;
+    const separator = { location: "center", template: () => $('<div class="toolbar-separator">|</div>') };
+    resolvedItems.splice(resolvedItems.length - 1, 0, shape.createActionsToolbarItem(), separator);
+    return resolvedItems;
+}
+
+var ShapeContextToolbarMixin = {
+    initializeContextToolbar() {
+        const toolbarItems = finalizeShapeContextToolbarItems(this, this.createToolbar?.() ?? []);
+        if (!toolbarItems.length || !window.DevExpress?.ui?.dxToolbar)
+            return;
+        const toolbarHost = document.createElement("div");
+        toolbarHost.className = "shape-context-toolbar";
+        document.body.appendChild(toolbarHost);
+        $(toolbarHost).dxToolbar({ items: toolbarItems, width: "auto" });
+        this.contextToolbar = toolbarHost;
+        this.contextToolbarInstance = $(toolbarHost).dxToolbar("instance");
+    },
+    showContextToolbar() {
+        this.refreshNameToolbarControl?.();
+        this.refreshShapeColorToolbarControl?.();
+        this.refreshTermControlVisibilities?.();
+        if (this.contextToolbar)
+            this.contextToolbar.classList.add("visible");
+        requestAnimationFrame(() => requestAnimationFrame(() => this.positionContextToolbar()));
+    },
+    hideContextToolbar() {
+        if (this.contextToolbar)
+            this.contextToolbar.classList.remove("visible");
+    },
+    positionContextToolbar() {
+        if (!this.contextToolbar)
+            return;
+        const anchorPoint = resolveShapeToolbarAnchorPoint(this);
+        if (!anchorPoint)
+            return;
+        const toolbarRect = this.contextToolbar.getBoundingClientRect();
+        const toolbarWidth = toolbarRect.width || this.contextToolbar.offsetWidth || 0;
+        const toolbarHeight = toolbarRect.height || this.contextToolbar.offsetHeight || 0;
+        const padding = 8;
+        let left = anchorPoint.centerX - toolbarWidth / 2;
+        let top = anchorPoint.bottomY + padding;
+        const maxLeft = window.innerWidth - toolbarWidth - padding;
+        const maxTop = window.innerHeight - toolbarHeight - padding;
+        left = Math.max(padding, Math.min(left, maxLeft));
+        top = Math.max(padding, Math.min(top, maxTop));
+        this.contextToolbar.style.left = `${left}px`;
+        this.contextToolbar.style.top = `${top}px`;
+    }
+};
+
+var ShapeToolbarPresentationMixin = {
+    getPermissionsIconClass() {
+        const hidden = !this.properties.visibleToUsers;
+        const locked = this.properties.lockedForUsers;
+        if (hidden && locked)
+            return "fa-solid fa-shield";
+        if (hidden || locked)
+            return "fa-solid fa-shield-halved";
+        return "fa-regular fa-shield";
+    },
+    renderPermissionsButtonTemplate(element) {
+        element.innerHTML = `<i class="${this.getPermissionsIconClass()} mdl-permissions-icon"></i>`;
+    },
+    refreshPermissionsButtonIcon() {
+        const icon = this._permissionsDropdownElement?.find(".mdl-permissions-icon")[0];
+        if (!icon)
+            return;
+        const newClass = this.getPermissionsIconClass();
+        if (icon.classList.contains(newClass.split(" ")[0]) && icon.classList.contains(newClass.split(" ")[1]))
+            return;
+        icon.classList.add("mdl-permissions-icon-animate");
+        icon.className = `${newClass} mdl-permissions-icon mdl-permissions-icon-animate`;
+        icon.addEventListener("animationend", () => icon.classList.remove("mdl-permissions-icon-animate"), { once: true });
+    },
+    refreshNameToolbarControl() {
+        this._nameTextBoxInstance?.option("value", this.properties.name);
+        if (this._nameColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._nameColorPicker, this.properties.nameColor);
+    },
+    renderShapeColorButtonTemplate(element) {
+        const name = this.properties.name ?? "";
+        const icon = resolveShapeToolbarIcon(this);
+        element.innerHTML = `<span class="mdl-shape-color-btn"><i class="${icon}"></i></span><span>${name}</span>`;
+    },
+    renderAddShapeButtonTemplate(element) {
+        element.innerHTML = `<span class="mdl-shape-color-btn"><i class="fa-light fa-circle-plus"></i></span>`;
+    },
+    getAddShapeMenuItems() {
+        const injectedItems = this?.toolbarAdapter?.getAddShapeMenuItems?.(this);
+        if (Array.isArray(injectedItems))
+            return injectedItems;
+        return [
+            { key: "BodyShape", type: "Body", icon: "fa-light fa-circle", text: this.board.translations.get("Body Name") },
+            { key: "PointShape", type: "Point", icon: "fa-solid fa-dot", text: this.board.translations.get("Point Name") },
+            { key: "VectorShape", type: "Vector", icon: "fa-light fa-arrow-right-long fa-rotate-by", text: this.board.translations.get("Vector Name") },
+            { key: "LineShape", type: "Line", icon: "fa-light fa-slash-forward", text: this.board.translations.get("Line Name") },
+            { key: "ArcShape", type: "Arc", icon: "fa-light fa-circle-half-stroke", text: this.board.translations.get("Arc Name") }
+        ];
+    },
+    menuIconHtml(iconName, isSet) {
+        const weight = isSet ? "fa-solid" : "fa-light";
+        return `<i class="${weight} ${iconName} mdl-menu-icon"></i>`;
+    },
+    populateShapeColorMenuSections(sections) {
+        const backgroundLabel = this.board.translations.get("Background Color") ?? "Background";
+        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
+        sections[0].items.push({
+            text: backgroundLabel,
+            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
+            buildControl: $container => $container.append(this._bgColorPicker)
+        });
+    },
+    refreshShapeColorToolbarControl() {
+        if (!this._shapeColorDropdownElement)
+            return;
+        const buttonContentElement = this._shapeColorDropdownElement.find(".dx-button-content")[0];
+        if (buttonContentElement)
+            this.renderShapeColorButtonTemplate(buttonContentElement);
+        if (this._fgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
+        if (this._borderColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
+        if (this._bgColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+    },
+    getCopySubMenuItems() {
+        const injectedItems = this?.toolbarAdapter?.getCopySubMenuItems?.(this);
+        if (Array.isArray(injectedItems))
+            return injectedItems;
+        const items = [];
+        if (typeof this.copyAsImage === "function")
+            items.push({ text: "Copy as Image", icon: "fa-light fa-image", shortcut: "", action: () => this.copyAsImage() });
+        if (typeof this.copyAsSvg === "function")
+            items.push({ text: "Copy as SVG", icon: "fa-light fa-vector-square", shortcut: "", action: () => this.copyAsSvg() });
+        return items;
+    }
+};
+
+var BaseShapeToolbarMixin = {
     createToolbar() {
         return [
             this.createPermissionsToolbarItem(),
@@ -166,7 +444,7 @@ Object.assign(BaseShape.prototype, {
         const fgColor = this.properties.foregroundColor ?? "";
         const borderColor = this.properties.borderColor ?? "";
         const hasBorder = borderColor && borderColor !== "transparent";
-        const shapeIconName = (BaseShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes").split(" ")[1];
+        const shapeIconName = resolveShapeToolbarIcon(this).split(" ")[1];
         const sections = [
             {
                 text: "Colors",
@@ -290,15 +568,15 @@ Object.assign(BaseShape.prototype, {
     buildActionsMenuContent(contentElement, mod) {
         const copySubItems = this.getCopySubMenuItems();
         const layerItems = [
-            { text: "Bring to Front", icon: "fa-light fa-bring-front", shortcut: "", action: () => this.board.bringToFront(this) },
-            { text: "Bring Forward", icon: "fa-light fa-bring-forward", shortcut: "", action: () => this.board.bringForward(this) },
-            { text: "Send Backward", icon: "fa-light fa-send-backward", shortcut: "", action: () => this.board.sendBackward(this) },
-            { text: "Send to Back", icon: "fa-light fa-send-back", shortcut: "", action: () => this.board.sendToBack(this) }
+            { text: "Bring to Front", icon: "fa-light fa-bring-front", shortcut: "", action: resolveShapeToolbarBoardAction(this, "bringToFront") },
+            { text: "Bring Forward", icon: "fa-light fa-bring-forward", shortcut: "", action: resolveShapeToolbarBoardAction(this, "bringForward") },
+            { text: "Send Backward", icon: "fa-light fa-send-backward", shortcut: "", action: resolveShapeToolbarBoardAction(this, "sendBackward") },
+            { text: "Send to Back", icon: "fa-light fa-send-back", shortcut: "", action: resolveShapeToolbarBoardAction(this, "sendToBack") }
         ];
         const actionItems = [
-            { text: "Copy", icon: "fa-light fa-copy", shortcut: `${mod}C`, action: () => this.copyToClipboard() },
+            { text: "Copy", icon: "fa-light fa-copy", shortcut: `${mod}C`, action: resolveShapeToolbarCopyAction(this) },
             ...copySubItems.map(subItem => ({ ...subItem, isSubItem: true })),
-            { text: "Paste", icon: "fa-light fa-paste", shortcut: `${mod}V`, action: () => BaseShape.pasteFromClipboard(this.board, this.parent) },
+            { text: "Paste", icon: "fa-light fa-paste", shortcut: `${mod}V`, action: resolveShapeToolbarPaste(this) },
             { text: "Duplicate", icon: "fa-light fa-clone", shortcut: `${mod}D`, action: () => this.duplicate() }
         ];
         const close = () => this.getDropDownButtonInstance(this._actionsDropdownElement)?.close();
@@ -372,4 +650,5 @@ Object.assign(BaseShape.prototype, {
         this.termFormControls["yTerm"] = { termControl: yDescriptor.termControl };
         return { xDescriptor, yDescriptor };
     }
-});
+};
+if (typeof BaseShape !== "undefined") Object.assign(BaseShape.prototype, ShapeContextToolbarMixin, ShapeToolbarPresentationMixin, BaseShapeToolbarMixin);
