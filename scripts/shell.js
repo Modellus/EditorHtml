@@ -36,6 +36,8 @@ class Shell  {
         this._resumeOnSpaceUp = false;
         this._hasChanges = false;
         this._autoSaveTimer = null;
+        this.initializeShapeInteractionController();
+        this.initializeBoardSelectionAdapter();
         window.addEventListener("keydown", e => this.onKeyDown(e));
         window.addEventListener("keyup", e => this.onKeyUp(e));
         window.addEventListener("beforeunload", e => this.onBeforeUnload(e));
@@ -933,7 +935,109 @@ class Shell  {
         this.bottomToolbar.zoom.option("text", `${Math.round(e.detail.zoom * 100)} %`);
     }
 
+    initializeShapeInteractionController() {
+        this.shapeInteractionController = new ShapeInteractionController({
+            isEditingTarget: target => target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable === true,
+            clearSelection: () => this.board.deselect(),
+            canRemoveSelectedItem: () => this.board.selection.selectedShape != null,
+            removeSelectedItem: () => {
+                const selectedShape = this.board.selection.selectedShape;
+                if (!selectedShape)
+                    return false;
+                selectedShape.remove();
+                return true;
+            },
+            selectPreviousItem: () => {
+                const selectedShape = this.board.selection.selectedShape;
+                if (!selectedShape)
+                    return null;
+                const previousShape = this.board.shapes.getPreviousShape(selectedShape);
+                if (!previousShape)
+                    return null;
+                this.board.selectShape(previousShape);
+                return previousShape;
+            },
+            selectNextItem: () => {
+                const selectedShape = this.board.selection.selectedShape;
+                if (!selectedShape)
+                    return null;
+                const nextShape = this.board.shapes.getNextShape(selectedShape);
+                if (!nextShape)
+                    return null;
+                this.board.selectShape(nextShape);
+                return nextShape;
+            }
+        });
+    }
+
+    initializeBoardSelectionAdapter() {
+        this.board.selection.setInteractionAdapter({
+            shouldDeselectOnClickOutside: (event, selection) => {
+                if (typeof shouldDeselectEditorOnClickOutside === "function")
+                    return shouldDeselectEditorOnClickOutside(event, selection);
+                return false;
+            },
+            resolveSelectedShape: (shape, point, event, selection) => {
+                if (typeof resolveEditorSelectedShapeTarget === "function")
+                    return resolveEditorSelectedShapeTarget(selection, shape, point);
+                return null;
+            },
+            resolveDoubleClickShape: (shape, event, selection) => {
+                if (typeof resolveEditorDoubleClickShapeTarget === "function")
+                    return resolveEditorDoubleClickShapeTarget(selection, shape, event);
+                return shape;
+            },
+            resolvePointerDown: (event, selection) => {
+                if (typeof resolveEditorPointerDown === "function")
+                    return resolveEditorPointerDown(event, selection);
+                return null;
+            },
+            shouldSkipPointerUp: (event, selection) => {
+                if (typeof shouldSkipEditorPointerUp === "function")
+                    return shouldSkipEditorPointerUp(event, selection);
+                return false;
+            },
+            resolvePointerMovement: (event, selection) => {
+                if (typeof resolveEditorPointerMovement === "function")
+                    return resolveEditorPointerMovement(event, selection);
+                return { dx: 0, dy: 0 };
+            },
+            shouldProcessPointerUpSelection: (pointerMovement, event, selection) => {
+                if (typeof shouldProcessEditorPointerUpSelection === "function")
+                    return shouldProcessEditorPointerUpSelection(pointerMovement, event, selection);
+                return false;
+            },
+            shouldSkipPointerMove: (event, selection) => {
+                if (typeof shouldSkipEditorPointerMove === "function")
+                    return shouldSkipEditorPointerMove(event, selection);
+                return false;
+            },
+            resolveHoveredShapeFromPointer: (shape, event, selection) => {
+                if (typeof resolveEditorHoveredShapeFromPointer === "function")
+                    return resolveEditorHoveredShapeFromPointer(shape, event, selection);
+                return shape;
+            },
+            resolveHighlightColor: (shape, selection) => {
+                if (typeof resolveEditorHighlightColor === "function")
+                    return resolveEditorHighlightColor(shape, selection);
+                return null;
+            },
+            shouldShowOutline: (shape, selection) => {
+                if (typeof shouldShowEditorOutline === "function")
+                    return shouldShowEditorOutline(shape, selection);
+                return true;
+            },
+            shouldApplyEditModeHighlight: (shape, selection) => {
+                if (typeof shouldApplyEditorEditModeHighlight === "function")
+                    return shouldApplyEditorEditModeHighlight(shape, selection);
+                return true;
+            }
+        });
+    }
+
     onKeyDown(e) {
+        if (this.shapeInteractionController?.handleRuntimeKeyDown(e) === true)
+            return;
         const isEditing = e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.isContentEditable;
         if ((e.ctrlKey || e.metaKey) && !isEditing) {
             const shape = this.board.selection.selectedShape;

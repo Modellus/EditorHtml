@@ -497,11 +497,13 @@ class Utils {
         return `<rect x="${rectX}" y="${rectY}" width="${width}" height="${height}" rx="3" fill="${backgroundColor}" fill-opacity="0.85" /><text x="${x}" y="${textY}" text-anchor="${anchor}" font-family="${fontFamily}" font-size="${fontSize}" fill="${textColor}">${escapedText}</text>`;
     }
 
-    static createTooltip(e, html, width, canShow) {
+    static createTooltip(e, html, width, canShow, wrapperClassName) {
+        const resolvedWrapperClassName = wrapperClassName ?? "mdl-shape-overlay-popup mdl-shape-overlay-popup-nested";
         return $('<div>')
             .appendTo('body')
             .dxTooltip({
                 target: e.component.element(),
+                wrapperAttr: { class: resolvedWrapperClassName },
                 contentTemplate: function (contentElement) {
                     contentElement.append(
                         $('<div class="tooltip"/>').html(html)
@@ -522,8 +524,8 @@ class Utils {
             .dxTooltip('instance');
     }
 
-    static createTranslatedTooltip(e, key, translations, width, canShow) {
-        return Utils.createTooltip(e, translations.get(key), width, canShow);
+    static createTranslatedTooltip(e, key, translations, width, canShow, wrapperClassName) {
+        return Utils.createTooltip(e, translations.get(key), width, canShow, wrapperClassName);
     }
 
     static async toHtml(markdownValue) {

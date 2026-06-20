@@ -1,6 +1,7 @@
 class Selection {
     constructor(board) {
         this.board = board;
+        this.interactionAdapter = null;
         this.selectedShape = null;
         this.hoveredShape = null;
         this.isDragging = false;
@@ -20,6 +21,14 @@ class Selection {
         this.board.svg.addEventListener("mousemove", (e) => this.onPointerMove(e));
         this.board.svg.addEventListener("dblclick", (e) => this.onDoubleClick(e));
         this.board.svg.addEventListener("mouseleave", () => this.clearHover());
+    }
+
+    setInteractionAdapter(interactionAdapter) {
+        this.interactionAdapter = interactionAdapter ?? null;
+    }
+
+    resolveInteractionAdapter() {
+        return this.interactionAdapter;
     }
 
     dispatchEvent(name, shape, modifiers = null) {
@@ -42,6 +51,7 @@ class Selection {
         this.applyHighlight(shape);
         if (shape.showContextToolbar)
             shape.showContextToolbar();
+        this.resolveInteractionAdapter()?.onShapeSelected?.(shape, modifiers, this);
         this.dispatchEvent("selected", this.selectedShape, modifiers);
     }
 
@@ -54,6 +64,7 @@ class Selection {
         }
         if (selectedShape?.hideContextToolbar)
             selectedShape.hideContextToolbar();
+        this.resolveInteractionAdapter()?.onShapeDeselected?.(selectedShape, this);
         if (selectedShape != null)
             this.dispatchEvent("deselected", selectedShape);
     }
@@ -61,37 +72,90 @@ class Selection {
     onClickOutside(event) {
         if (this._editModeShape)
             this.removeEditModeHighlight();
-        if (!event.target.classList.contains("handle") && !event.target.classList.contains("bounding-box") && !event.target.isSameNode(this.selectedShape?.element))
+        const shouldDeselect = this.resolveShouldDeselectOnClickOutside(event);
+        if (shouldDeselect)
             this.deselect();
     }
 
+    resolveShouldDeselectOnClickOutside(event) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.shouldDeselectOnClickOutside)
+            return interactionAdapter.shouldDeselectOnClickOutside(event, this) === true;
+        if (event.target.classList.contains("handle"))
+            return false;
+        if (event.target.classList.contains("bounding-box"))
+            return false;
+        if (event.target.isSameNode(this.selectedShape?.element))
+            return false;
+        return true;
+    }
+
     onPointerDown(event) {
-        if (event.defaultPrevented)
+        const pointerDown = this.resolvePointerDown(event);
+        if (!pointerDown)
             return;
-        this.pointerDown = {
+        this.pointerDown = pointerDown;
+    }
+
+    resolvePointerDown(event) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.resolvePointerDown) {
+            const adaptedPointerDown = interactionAdapter.resolvePointerDown(event, this);
+            if (adaptedPointerDown)
+                return adaptedPointerDown;
+            return null;
+        }
+        if (event.defaultPrevented)
+            return null;
+        return {
             x: event.clientX,
             y: event.clientY
         };
     }
 
     onPointerUp(event) {
-        if (event.defaultPrevented)
+        if (this.shouldSkipPointerUp(event))
             return;
-        if (this.board.pointerLocked)
-            return;
-        if (!this.pointerDown)
-            return;
-        const dx = event.clientX - this.pointerDown.x;
-        const dy = event.clientY - this.pointerDown.y;
+        const pointerMovement = this.resolvePointerMovement(event);
         this.pointerDown = null;
-        if (Math.hypot(dx, dy) > this.dragThreshold)
+        if (!this.shouldProcessPointerUpSelection(pointerMovement, event))
             return;
         this.onClickOutside(event);
         this.onSelectShape(event);
     }
 
+    shouldSkipPointerUp(event) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.shouldSkipPointerUp)
+            return interactionAdapter.shouldSkipPointerUp(event, this) === true;
+        if (event.defaultPrevented)
+            return true;
+        if (this.board.pointerLocked)
+            return true;
+        if (!this.pointerDown)
+            return true;
+        return false;
+    }
+
+    resolvePointerMovement(event) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.resolvePointerMovement)
+            return interactionAdapter.resolvePointerMovement(event, this) ?? { dx: 0, dy: 0 };
+        return {
+            dx: event.clientX - this.pointerDown.x,
+            dy: event.clientY - this.pointerDown.y
+        };
+    }
+
+    shouldProcessPointerUpSelection(pointerMovement, event) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.shouldProcessPointerUpSelection)
+            return interactionAdapter.shouldProcessPointerUpSelection(pointerMovement, event, this) === true;
+        return Math.hypot(pointerMovement.dx, pointerMovement.dy) <= this.dragThreshold;
+    }
+
     onPointerMove(event) {
-        if (!this.enabled || this.isDragging || this.board.pointerLocked)
+        if (this.shouldSkipPointerMove(event))
             return;
         const targetShape = this.resolveSelectionTarget(event);
         const shape = this.findShape(targetShape);
@@ -99,15 +163,35 @@ class Selection {
             this.clearHover();
             return;
         }
-        const point = this.board.getMouseToSvgPoint(event);
-        const childShape = this.findChildShapeAtPoint(shape, point);
-        const hoveredShape = childShape ?? shape;
+        const hoveredShape = this.resolveHoveredShapeFromPointer(shape, event);
         if (hoveredShape === this.selectedShape) {
             this.clearHover();
             return;
         }
         if (hoveredShape !== this.hoveredShape)
             this.setHover(hoveredShape);
+    }
+
+    shouldSkipPointerMove(event) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.shouldSkipPointerMove)
+            return interactionAdapter.shouldSkipPointerMove(event, this) === true;
+        if (!this.enabled)
+            return true;
+        if (this.isDragging)
+            return true;
+        if (this.board.pointerLocked)
+            return true;
+        return false;
+    }
+
+    resolveHoveredShapeFromPointer(shape, event) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.resolveHoveredShapeFromPointer)
+            return interactionAdapter.resolveHoveredShapeFromPointer(shape, event, this) ?? shape;
+        const point = this.board.getMouseToSvgPoint(event);
+        const childShape = this.findChildShapeAtPoint(shape, point);
+        return childShape ?? shape;
     }
 
     onDoubleClick(event) {
@@ -119,6 +203,9 @@ class Selection {
         let shape = this.findShape(targetShape);
         if (!shape && this.isOverlayElement(event.target))
             shape = this.selectedShape ?? this.hoveredShape;
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.resolveDoubleClickShape)
+            shape = interactionAdapter.resolveDoubleClickShape(shape, event, this) ?? shape;
         if (!shape)
             return;
         this.board.suppressNextFocusSelect = true;
@@ -132,6 +219,7 @@ class Selection {
         this.deselect();
         this.clearHover();
         this.applyEditModeHighlight(shape);
+        interactionAdapter?.onShapeEnterEditMode?.(shape, event, this);
         setTimeout(() => {
             if (this.board.suppressNextFocusSelect)
                 this.board.suppressNextFocusSelect = false;
@@ -146,10 +234,20 @@ class Selection {
         if (!shape)
             return;
         const point = this.board.getMouseToSvgPoint(event);
-        const childShape = this.findChildShapeAtPoint(shape, point);
-        const selectedShape = childShape ?? shape;
+        const selectedShape = this.resolveSelectedShape(shape, point, event);
         if (selectedShape !== this.selectedShape)
             this.select(selectedShape, { altKey: event.altKey === true });
+    }
+
+    resolveSelectedShape(shape, point, event) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.resolveSelectedShape) {
+            const adaptedShape = interactionAdapter.resolveSelectedShape(shape, point, event, this);
+            if (adaptedShape)
+                return adaptedShape;
+        }
+        const childShape = this.findChildShapeAtPoint(shape, point);
+        return childShape ?? shape;
     }
 
     resolveSelectionTarget(event) {
@@ -194,23 +292,37 @@ class Selection {
         this.clearHover();
         if (!shape)
             return;
+        const previousHoveredShape = this.hoveredShape;
         this.hoveredShape = shape;
         shape.createHandles();
         this.applyHighlight(shape);
+        this.resolveInteractionAdapter()?.onHoverShapeChanged?.(shape, previousHoveredShape, this);
     }
 
     clearHover() {
+        const previousHoveredShape = this.hoveredShape;
         if (this.hoveredShape) {
             this.hoveredShape.removeHandles();
             this.removeHighlight(this.hoveredShape);
         }
         this.hoveredShape = null;
+        this.resolveInteractionAdapter()?.onHoverShapeChanged?.(null, previousHoveredShape, this);
     }
 
     applyHighlight(shape) {
-        const borderColor = shape.properties?.borderColor ?? shape.properties?.foregroundColor;
-        const color = this.isTransparentColor(borderColor) ? "#000000" : borderColor;
+        const color = this.resolveHighlightColor(shape);
         this.addHighlightProxy(shape, color);
+    }
+
+    resolveHighlightColor(shape) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.resolveHighlightColor) {
+            const adaptedColor = interactionAdapter.resolveHighlightColor(shape, this);
+            if (adaptedColor)
+                return adaptedColor;
+        }
+        const borderColor = shape.properties?.borderColor ?? shape.properties?.foregroundColor;
+        return this.isTransparentColor(borderColor) ? "#000000" : borderColor;
     }
 
     isTransparentColor(color) {
@@ -265,6 +377,8 @@ class Selection {
     }
 
     applyEditModeHighlight(shape) {
+        if (!this.shouldApplyEditModeHighlight(shape))
+            return;
         this.removeEditModeHighlight();
         this._editModeShape = shape;
         const bounds = this.getOutlineBounds(shape);
@@ -286,6 +400,14 @@ class Selection {
         <rect x="-100000" y="-100000" width="200000" height="200000" fill="rgba(0,0,0,0.15)" mask="url(#mdl-edit-mode-mask)"/>`;
         this.board.svg.appendChild(proxy);
         this._editModeProxy = proxy;
+        this.resolveInteractionAdapter()?.onEditModeHighlightChanged?.(shape, true, this);
+    }
+
+    shouldApplyEditModeHighlight(shape) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.shouldApplyEditModeHighlight)
+            return interactionAdapter.shouldApplyEditModeHighlight(shape, this) === true;
+        return true;
     }
 
     removeEditModeHighlight() {
@@ -294,10 +416,14 @@ class Selection {
             this._editModeShape = null;
             shape.exitEditMode();
         }
+        let removedOverlay = false;
         if (this._editModeProxy) {
             this._editModeProxy.remove();
             this._editModeProxy = null;
+            removedOverlay = true;
         }
+        if (removedOverlay)
+            this.resolveInteractionAdapter()?.onEditModeHighlightChanged?.(shape, false, this);
     }
 
     setDragging(isDragging) {
@@ -315,7 +441,7 @@ class Selection {
     }
 
     updateOutline(outline, shape) {
-        if (this.isDragging || shape?.hideSelectionOutline) {
+        if (!this.shouldShowOutline(shape)) {
             outline.setAttribute("visibility", "hidden");
             outline.removeAttribute("transform");
             return;
@@ -334,6 +460,17 @@ class Selection {
         outline.setAttribute("height", bounds.height);
         this.applyOutlineRotation(outline, shape, bounds);
         outline.setAttribute("visibility", "visible");
+    }
+
+    shouldShowOutline(shape) {
+        const interactionAdapter = this.resolveInteractionAdapter();
+        if (interactionAdapter?.shouldShowOutline)
+            return interactionAdapter.shouldShowOutline(shape, this) === true;
+        if (this.isDragging)
+            return false;
+        if (shape?.hideSelectionOutline)
+            return false;
+        return true;
     }
 
     getOutlineRotationDegrees(shape) {

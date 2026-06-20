@@ -5,8 +5,9 @@ class NotebookShape {
         this._contextMenuElement = null;
         this._contextMenuColumnsSyncFrameId = null;
         const self = this;
+        const shellTranslations = this.notebookEditor?.getShell?.()?.board?.translations;
         this.board = {
-            translations: { get: key => key },
+            translations: shellTranslations ?? new BaseTranslations(shellTranslations?.language ?? "en-US"),
             theme: { getColorPickerPalette: () => Utils.getColorPickerPalette() },
             suppressNextFocusSelect: false,
             selection: { deselect: () => {}, clearHover: () => {}, applyEditModeHighlight: () => {} },

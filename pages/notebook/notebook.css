@@ -410,3 +410,7 @@ html, body {
 .shape-context-toolbar .dx-toolbar-item .dx-button-mode-text .mdl-focused-toolbar-button {
     color: inherit;
 }
+
+.tooltip {
+    text-wrap-mode: wrap;
+}

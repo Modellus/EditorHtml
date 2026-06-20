@@ -19,7 +19,7 @@ class NotebookEditor {
         this._initHeader();
         this._bindCalculatorEvents();
         this._reparseExpressions();
-        this._bindSelectionDismissal();
+        this._initializeShapeInteractionController();
     }
 
     getShell() {
@@ -111,17 +111,26 @@ class NotebookEditor {
         window.__shapeToolbarBindingsApplied = true;
     }
 
-    _bindSelectionDismissal() {
-        document.addEventListener("mousedown", event => {
-            const targetElement = event.target;
-            const clickedInsideBlock = $(targetElement).closest(".notebook-block").length > 0;
-            const clickedInsideToolbar = $(targetElement).closest(".shape-context-toolbar, .dx-toolbar, .dx-toolbar-item, .dx-button").length > 0;
-            const clickedInsideOverlay = $(targetElement).closest(".dx-overlay-wrapper, .dx-overlay-content, .dx-context-menu").length > 0;
-            if (clickedInsideBlock || clickedInsideToolbar || clickedInsideOverlay)
-                return;
-            document.querySelectorAll(".notebook-block.selected").forEach(element => element.classList.remove("selected"));
-            this.shapeInstances.forEach(shape => shape.hideContextToolbar?.());
+    _initializeShapeInteractionController() {
+        this.shapeInteractionController = new ShapeInteractionController({
+            blockSelector: ".notebook-block",
+            selectedClassName: "selected",
+            clearSelectedItems: () => this.clearBlockSelection(),
+            hideAllContextToolbars: () => this.hideAllShapeContextToolbars(),
+            removeItem: blockId => this.removeBlock(blockId)
         });
+        this.shapeInteractionController.bindGlobalDismissal();
+    }
+
+    clearBlockSelection() {
+        document.querySelectorAll(".notebook-block.selected").forEach(blockElement => {
+            blockElement.classList.remove("selected");
+            blockElement.setAttribute("aria-selected", "false");
+        });
+    }
+
+    hideAllShapeContextToolbars() {
+        this.shapeInstances.forEach(shape => shape.hideContextToolbar?.());
     }
 
     _createTopToolbar() {
@@ -630,6 +639,7 @@ class NotebookEditor {
     removeBlock(blockId) {
         this._disposeShapeInstance(blockId);
         this.blocks = this.blocks.filter(block => block.id !== blockId);
+        this.shapeInteractionController?.notifyItemRemoved(blockId);
         this._reloadBlockList();
         this._updateLastModified();
     }
@@ -712,18 +722,7 @@ class NotebookEditor {
         const colorButtonContainer = blockElement.querySelector(".notebook-block-color-button");
         if (colorButtonContainer)
             this._initBlockGripButton(colorButtonContainer, shape);
-
-        blockElement.addEventListener("click", () => {
-            document.querySelectorAll(".notebook-block.selected").forEach(el => el.classList.remove("selected"));
-            this.shapeInstances.forEach(shapeInstance => shapeInstance.hideContextToolbar?.());
-            blockElement.classList.add("selected");
-            shape.showContextToolbar?.();
-        });
-
-        blockElement.addEventListener("keydown", event => {
-            if (event.key === "Backspace" && blockElement.querySelector("[contenteditable]")?.textContent === "" && !blockElement.contains(document.activeElement))
-                this.removeBlock(block.id);
-        });
+        this.shapeInteractionController.attachItemInteractions(blockElement, block, shape);
     }
 }
 

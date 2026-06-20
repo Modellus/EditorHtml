@@ -83,29 +83,11 @@ class ChartNotebookShape extends NotebookShape {
     }
 
     renderTermsButtonTemplate(element) {
-        const xTerm = this.formatTermForDisplay(this.properties.xTerm);
-        const yTerms = Array.isArray(this.properties.yTerms) ? this.properties.yTerms.filter(y => y && (y.term || typeof y === "string")) : [];
-        const firstYTermName = yTerms.length > 0 ? (yTerms[0].term ?? yTerms[0]) : "";
-        const firstYTerm = firstYTermName ? this.formatTermForDisplay(String(firstYTermName)) : "";
-        const xPart = xTerm ? this.createNameButtonTermMarkup(xTerm) : "";
-        const separator = (xTerm && firstYTerm) ? `<i class="fa-light fa-x mdl-name-btn-separator"></i>` : "";
-        const yPart = firstYTerm ? this.createNameButtonTermMarkup(firstYTerm) : "";
-        const extraCount = yTerms.length - 1;
-        const extraPart = extraCount > 0 ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-extra">+${extraCount}</span></span>` : "";
-        if (!xPart && !yPart)
-            element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
-        else
-            element.innerHTML = `${xPart}${separator}${yPart}${extraPart}`;
+        renderChartTermsToolbarButton(this, element);
     }
 
     refreshDomainBoxes() {
-        const autoScale = this.properties.autoScale === true;
-        const equalScales = this.properties.equalScales === true;
-        const domain = autoScale ? this.chart?.renderState?.domain : this.properties.domainOverride;
-        this._xMinBoxInstance?.option({ value: domain?.xMin ?? null, disabled: autoScale });
-        this._xMaxBoxInstance?.option({ value: domain?.xMax ?? null, disabled: autoScale });
-        this._yMinBoxInstance?.option({ value: domain?.yMin ?? null, disabled: autoScale || equalScales });
-        this._yMaxBoxInstance?.option({ value: domain?.yMax ?? null, disabled: autoScale || equalScales });
+        refreshChartDomainEditorValues(this);
     }
 
     unmount() {
