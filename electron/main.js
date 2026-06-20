@@ -7,9 +7,9 @@ const webBase = "https://www.modellus.science";
 
 function loadInitialPage(win) {
     if (net.isOnline())
-           win.loadURL(`${webBase}/pages/editor/index.html`);
+    win.loadURL(`${webBase}/pages/board/index.html`);
     else
-        win.loadFile(path.join(appRoot, "pages", "editor", "editor-offline.html"));
+    win.loadFile(path.join(appRoot, "pages", "board", "board-offline.html"));
 }
 
 function createWindow() {
@@ -32,10 +32,10 @@ function createWindow() {
                 if (!normalizedPath.startsWith(appRootForward)) {
                     event.preventDefault();
                     let targetFilename = filename;
-                    if (targetFilename === "editor.html")
-                        targetFilename = "editor-offline.html";
-                    const targetPath = targetFilename === "editor-offline.html"
-                        ? path.join(appRoot, "pages", "editor", targetFilename)
+                    if (targetFilename === "editor.html" || targetFilename === "board.html")
+                        targetFilename = "board-offline.html";
+                    const targetPath = targetFilename === "board-offline.html"
+                        ? path.join(appRoot, "pages", "board", targetFilename)
                         : path.join(appRoot, targetFilename);
                     const targetUrl = pathToFileURL(targetPath).href;
                     const search = parsedUrl.search;
@@ -44,8 +44,8 @@ function createWindow() {
             }
         } catch (_) {}
     });
-        app.on("online", () => win.loadURL(`${webBase}/pages/editor/index.html`));
-        app.on("offline", () => win.loadFile(path.join(appRoot, "pages", "editor", "editor-offline.html")));
+    app.on("online", () => win.loadURL(`${webBase}/pages/board/index.html`));
+    app.on("offline", () => win.loadFile(path.join(appRoot, "pages", "board", "board-offline.html")));
     loadInitialPage(win);
 }
 

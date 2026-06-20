@@ -1,7 +1,9 @@
 DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjUyCn0=.WlJvwd9AewkKcLiqaZc3LVfKt9FGlzfDD16Zi6iEW4KIN+1MFccO3f68vdJoStCEqtYXdaUrX48WcQJMNg/7K+geEzM2ZVRCeJKxjXIi8OFVU8lXf6cvC+4b3MRFaijuN3c4ug==' });
 
-class NotebookEditor {
+class Notebook extends Workspace {
     constructor() {
+        super(null);
+        this._ownSession = null;
         this.blocks = [];
         this.shapeInstances = new Map();
         this.nextBlockId = 1;
@@ -15,6 +17,10 @@ class NotebookEditor {
         this.bindShapeToolbars();
         this._createTopToolbar();
         this._createBottomToolbar();
+        this.setWorkspaceSurfaceAdapter({
+            refresh: () => {},
+            forceRefresh: () => this._reloadBlockList()
+        });
         this._createBlockList();
         this._initHeader();
         this._bindCalculatorEvents();
@@ -22,24 +28,26 @@ class NotebookEditor {
         this._initializeShapeInteractionController();
     }
 
-    getShell() {
+    get session() {
         if (window.shell)
-            return window.shell;
+            return window.shell.session;
         if (window.parent && window.parent !== window && window.parent.shell)
-            return window.parent.shell;
-        if (window.opener && window.opener.shell)
-            return window.opener.shell;
-        return null;
+            return window.parent.shell.session;
+        if (window.opener?.shell)
+            return window.opener.shell.session;
+        if (!this._ownSession)
+            this._ownSession = new ModelSession(null);
+        return this._ownSession;
     }
 
     get calculator() {
-        return this.getShell()?.board?.calculator ?? null;
+        return this.session?.calculator ?? null;
     }
 
     createTranslatedTooltip(event, key, width, canShow) {
-        const shell = this.getShell();
-        if (shell?.createTranslatedTooltip)
-            return shell.createTranslatedTooltip(event, key, width, canShow);
+        const boardEditor = window.shell ?? window.parent?.shell ?? window.opener?.shell ?? null;
+        if (boardEditor?.createTranslatedTooltip)
+            return boardEditor.createTranslatedTooltip(event, key, width, canShow);
         if (!this.translations)
             this.translations = new BaseTranslations(navigator.language || "en-US");
         return Utils.createTranslatedTooltip(event, key, this.translations, width, canShow);
@@ -68,11 +76,7 @@ class NotebookEditor {
     }
 
     _bindCalculatorEvents() {
-        if (!this.calculator)
-            return;
-        this.calculator.off("iterate", this._calculatorIterateHandler);
-        this._calculatorIterateHandler = () => this._onCalculatorIterate();
-        this.calculator.on("iterate", this._calculatorIterateHandler);
+        this.bindWorkspaceIterate(() => this._onCalculatorIterate());
     }
 
     bindShapeToolbars() {
@@ -220,7 +224,7 @@ class NotebookEditor {
                         return currentValue.toFixed(2);
                     },
                     onSliderValueChanged: value => {
-                        this.calculator?.setIteration(value);
+                        this.calculatorSetIteration(value);
                     },
                     itemsBeforeSlider: [
                         {
@@ -244,6 +248,23 @@ class NotebookEditor {
                     ]
                 })
             ]
+        });
+        this.setPlayerViewAdapter({
+            setPlayPauseIcon: icon => {
+                const buttonInstance = $("#playPauseButton").dxButton("instance");
+                if (buttonInstance)
+                    buttonInstance.option("icon", icon);
+            },
+            setSliderValue: value => {
+                const sliderInstance = $("#playHeadSlider").dxSlider("instance");
+                if (sliderInstance)
+                    sliderInstance.option("value", value);
+            },
+            setSliderRange: maximum => {
+                const sliderInstance = $("#playHeadSlider").dxSlider("instance");
+                if (sliderInstance)
+                    sliderInstance.option("max", maximum);
+            }
         });
     }
 
@@ -283,8 +304,7 @@ class NotebookEditor {
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: event => {
-                            if (this.calculator)
-                                this.calculator.properties.independent.name = event.value;
+                            this.setIndependentName(event.value);
                             this._updateIndependentNameLabel();
                             this._reparseExpressions();
                         }
@@ -409,22 +429,19 @@ class NotebookEditor {
     }
 
     _setIndependentStart(value) {
-        if (this.calculator)
-            this.calculator.properties.independent.start = value;
+        this.setIndependentStart(value);
         this._reparseExpressions();
         this._updateStartLabel();
     }
 
     _setIndependentEnd(value) {
-        if (this.calculator)
-            this.calculator.properties.independent.end = value;
+        this.setIndependentEnd(value);
         this._reparseExpressions();
         this._updateEndLabel();
     }
 
     _setIndependentStep(value) {
-        if (this.calculator)
-            this.calculator.properties.independent.step = value;
+        this.setIndependentStep(value);
         this._reparseExpressions();
         this._updateStartLabel();
     }
@@ -451,22 +468,16 @@ class NotebookEditor {
             if (block.type === "expression" && block.content)
                 this.calculator.parse(block.content);
         }
-        const sliderInstance = $("#playHeadSlider").dxSlider("instance");
-        if (sliderInstance) {
-            sliderInstance.option("max", this.getIterationCount());
-            sliderInstance.option("value", 1);
-        }
+        this.updatePlayerSliderRange(this.getIterationCount());
+        this.updatePlayerSliderValue(1);
         this._updateIndependentNameLabel();
-        this.calculator.calculate();
+        this.reparseAndCalculateWorkspace();
     }
 
     _onCalculatorIterate() {
         if (!this.calculator)
             return;
-        const iteration = this.calculator.getIteration();
-        const sliderInstance = $("#playHeadSlider").dxSlider("instance");
-        if (sliderInstance)
-            sliderInstance.option("value", iteration);
+        this.syncPlayerIterationFromCalculator();
         this.shapeInstances.forEach(shape => shape.onCalculatorIterate?.());
     }
 
@@ -486,53 +497,28 @@ class NotebookEditor {
     }
 
     _playPausePressed() {
-        this.isPlaying = !this.isPlaying;
-        const icon = this.isPlaying ? "fa-light fa-pause" : "fa-light fa-play";
-        $("#playPauseButton").dxButton("instance").option("icon", icon);
-        if (this.isPlaying)
-            this._startPlayback();
-        else
-            this._stopPlayback();
+        const isPlaying = this.toggleCalculatorPlayback();
+        this.setPlayerUiState(isPlaying);
     }
 
     _stopPressed() {
-        this.isPlaying = false;
-        $("#playPauseButton").dxButton("instance").option("icon", "fa-light fa-play");
-        this._stopPlayback();
+        this.stopPlayerUiState();
+        this.calculatorPause();
         this._reparseExpressions();
     }
 
     _stepBackward() {
-        if (!this.calculator)
-            return;
-        this.calculator.stepBackward();
+        this.calculatorStepBackward();
     }
 
     _stepForward() {
-        if (!this.calculator)
-            return;
-        this.calculator.stepForward();
+        this.calculatorStepForward();
     }
 
     _replayPressed() {
-        if (!this.calculator)
-            return;
-        this.isPlaying = true;
-        $("#playPauseButton").dxButton("instance").option("icon", "fa-light fa-pause");
+        this.startPlayerUiState();
         this._reparseExpressions();
-        this.calculator.replay();
-    }
-
-    _startPlayback() {
-        if (!this.calculator)
-            return;
-        this.calculator.play();
-    }
-
-    _stopPlayback() {
-        if (!this.calculator)
-            return;
-        this.calculator.pause();
+        this.replayCalculatorPlayback();
     }
 
     _createBlockList() {
@@ -745,4 +731,4 @@ class NotebookEditor {
     }
 }
 
-const notebook = new NotebookEditor();
+const notebook = new Notebook();

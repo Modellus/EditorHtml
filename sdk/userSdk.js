@@ -352,7 +352,7 @@ export class UserSdk {
       this.saveRefreshToken(authPayload.refreshToken);
     const promotedModelId = await this.promoteAnonymousModel(session, apiBaseUrl);
     if (promotedModelId) {
-      window.location.href = `/pages/editor/index.html?model_id=${encodeURIComponent(promotedModelId)}`;
+      window.location.href = `/pages/board/index.html?model_id=${encodeURIComponent(promotedModelId)}`;
       return;
     }
     this.startSessionRefresh(apiBaseUrl);

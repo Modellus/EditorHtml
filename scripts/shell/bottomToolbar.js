@@ -453,15 +453,15 @@ class BottomToolbar {
         const icon = this.playPause.option("icon");
         const isRunning = this.shell.calculator.status == STATUS.PLAYING || this.shell.calculator.status == STATUS.REPLAYING;
         if (isRunning && icon != "fa-light fa-pause" || !isRunning && icon != "fa-light fa-play") {
-            this.playPause.option("icon", isRunning ? "fa-light fa-pause" : "fa-light fa-play");
+            this.shell.updatePlayerIcon(isRunning ? "fa-light fa-pause" : "fa-light fa-play");
             this.playPause.repaint();
         }
         this.stop.option("disabled", isRunning);
         this.replay.option("disabled", isRunning);
         this.stepBackward.option("disabled", isRunning || iteration == 1);
         this.stepForward.option("disabled", isRunning || iteration >= lastIteration);
-        this.playHead.option("max", finalIteration);
-        this.playHead.option("value", iteration);
+        this.shell.updatePlayerSliderRange(finalIteration);
+        this.shell.updatePlayerSliderValue(iteration);
         const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
         if (this._startLabel)
             this._startLabel.textContent = this.shell.calculator.getStart().toFixed(precision);

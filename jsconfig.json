@@ -11,7 +11,7 @@
   },
   "include": [
     "scripts/**/*.js",
-    "pages/editor/editor.js",
+    "pages/board/board.js",
     "modellus.js",
     "libraries/types/**/*.d.ts"
   ]

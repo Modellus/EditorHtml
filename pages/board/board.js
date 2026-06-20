@@ -119,6 +119,7 @@ function redirectToLogin() {
         }
     );
     const userSdk = new UserSdk("mp.session", "mp.user", "/pages/login/index.html", "modellus_id_token", "/pages/marketplace/index.html");
+    const modelSession = new ModelSession(modelsApiClient);
     if (!hasValidSession())
         await userSdk.refreshSession(apiBase);
     if (hasValidSession())
@@ -135,7 +136,7 @@ function redirectToLogin() {
                     try {
                         const model = await loadModel(modelId, getAuthHeaders());
                         const payload = extractModelPayload(model);
-                        shell = payload ? new Shell(payload, modelsApiClient) : new Shell(null, modelsApiClient);
+                        shell = new BoardApp(modelSession, payload || null);
                         applyModelMetadata(shell, model);
                         shell.setupCollab(modelId);
                         if (urlParams.get("new") === "1") {
@@ -155,7 +156,7 @@ function redirectToLogin() {
                 if (model && (model.is_public === true || model.is_public === 1)) {
                     enableReadOnlyMode();
                     const payload = extractModelPayload(model);
-                    shell = payload ? new Shell(payload, modelsApiClient) : new Shell(null, modelsApiClient);
+                    shell = new BoardApp(modelSession, payload || null);
                     applyModelMetadata(shell, model);
                     return;
                 }
@@ -167,7 +168,7 @@ function redirectToLogin() {
                     return;
                 }
                 if (isNetworkFetchError(error)) {
-                    shell = new Shell(null, modelsApiClient);
+                    shell = new BoardApp(modelSession, null);
                     return;
                 }
                 throw error;
@@ -178,20 +179,20 @@ function redirectToLogin() {
             if (modelName) {
                 const response = await fetch(`../../resources/models/${modelName}.json`);
                 const payload = await response.text();
-                shell = new Shell(payload, modelsApiClient);
+                shell = new BoardApp(modelSession, payload);
                 return;
             }
             const anonModel = sessionStorage.getItem("mp.anon.model");
-            shell = new Shell(anonModel || null, modelsApiClient);
+            shell = new BoardApp(modelSession, anonModel || null);
             return;
         }
         if (modelName) {
             const response = await fetch(`../../resources/models/${modelName}.json`);
             const payload = await response.text();
-            shell = new Shell(payload, modelsApiClient);
+            shell = new BoardApp(modelSession, payload);
             return;
         }
-        shell = new Shell(null, modelsApiClient);
+        shell = new BoardApp(modelSession, null);
     } catch (error) {
         if (isUnauthorizedError(error)) {
             clearAuthState();
@@ -200,7 +201,7 @@ function redirectToLogin() {
         }
         if (isNetworkFetchError(error)) {
             if (!shell)
-                shell = new Shell(null, modelsApiClient);
+                shell = new BoardApp(modelSession, null);
             return;
         }
         console.error(error);

@@ -105,7 +105,7 @@ async function downloadKatex() {
 }
 
 function buildOfflineHtml() {
-    let html = fs.readFileSync(path.join(rootDir, "pages", "editor", "index.html"), "utf8");
+    let html = fs.readFileSync(path.join(rootDir, "pages", "board", "index.html"), "utf8");
     html = html.replace(/\s*<script type="importmap">[\s\S]*?<\/script>/, "");
     const removeScriptSrcs = [
         "../../libraries/scripts/agentChatAdapter.js",
@@ -117,8 +117,8 @@ function buildOfflineHtml() {
     for (const src of removeScriptSrcs)
         html = html.replace(`\n    <script src="${src}"></script>`, "");
     html = html.replace(
-        `<script src="../../scripts/shell.js"></script>`,
-        `<script src="../../electron/offline-stubs.js"></script>\n    <script src="../../scripts/shell.js"></script>`
+        `<script src="../../scripts/ModelSession.js"></script>\n    <script src="../../scripts/Workspace.js"></script>\n    <script src="../../scripts/Board.js"></script>`,
+        `<script src="../../electron/offline-stubs.js"></script>\n    <script src="../../scripts/ModelSession.js"></script>\n    <script src="../../scripts/Workspace.js"></script>\n    <script src="../../scripts/Board.js"></script>`
     );
     let googleFontsReplaced = false;
     html = html.replace(/<link\s[^>]*href="https:\/\/fonts\.googleapis\.com[^"]*"[^>]*\/?>/g, () => {
@@ -144,12 +144,12 @@ function buildOfflineHtml() {
         `<script src="../../libraries/scripts/dx.all.js"></script>`
     );
     html = html.replace(
-        `<script src="editor.js"></script>`,
-        `<script src="../../electron/editor-offline.js"></script>`
+        `<script src="board.js"></script>`,
+        `<script src="../../electron/board-offline.js"></script>`
     );
     html = html.replace(/\s*<div id="chat-popup"><\/div>/, "");
-    fs.writeFileSync(path.join(rootDir, "pages", "editor", "editor-offline.html"), html);
-    console.log("Generated: pages/editor/editor-offline.html");
+    fs.writeFileSync(path.join(rootDir, "pages", "board", "board-offline.html"), html);
+    console.log("Generated: pages/board/board-offline.html");
 }
 
 async function main() {

@@ -2490,7 +2490,7 @@ class ModelsApp {
           if (event.row?.rowType !== "data")
             return;
           const model = event.row.data;
-          const modelUrl = new URL("/pages/editor/index.html", window.location.origin);
+          const modelUrl = new URL("/pages/board/index.html", window.location.origin);
           modelUrl.searchParams.set("model_id", model.id);
           const link = modelUrl.toString();
           event.items = [
@@ -3857,7 +3857,7 @@ class ModelsApp {
       this.setStatus(this.translations.get("Model created."));
       this.loadModels();
       if (created && created.id) {
-        const editorUrl = new URL("/pages/editor/index.html", window.location.origin);
+        const editorUrl = new URL("/pages/board/index.html", window.location.origin);
         editorUrl.searchParams.set("model_id", created.id);
         editorUrl.searchParams.set("new", "1");
         window.location.href = editorUrl.toString();
@@ -4015,7 +4015,7 @@ class ModelsApp {
   }
   openModel(model) {
     if (!model || !model.id) return;
-    const url = new URL("/pages/editor/index.html", window.location.origin);
+    const url = new URL("/pages/board/index.html", window.location.origin);
     url.searchParams.set("model_id", model.id);
     window.location.href = url.toString();
   }

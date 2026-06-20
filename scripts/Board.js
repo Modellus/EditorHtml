@@ -1,13 +1,11 @@
-class Shell  {
-    constructor(model, modelsApiClient = null) {
-        this.calculator = new Calculator();
-        this.board = new Board(document.getElementById("svg"), this.calculator);
+class BoardApp extends Workspace {
+    constructor(session, model) {
+        super(session);
+        this.board = new Board(document.getElementById("svg"), session.calculator);
         this.board.shell = this;
         this.board._isModelCreator = () => this.isModelCreator();
         this.commands = new Commands(this);
-        this.modelsApiClient = modelsApiClient;
-        this.board.assetManager = new AssetManager(modelsApiClient);
-        this.pendingInitialValuesByCase = null;
+        this.board.assetManager = new AssetManager(session.modelsApiClient);
         this.aiSdk = new AiSdk({
             host: "agent-modellus.interactivebook.workers.dev",
             agent: "ChatAgent",
@@ -15,7 +13,6 @@ class Shell  {
             getUserId: () => this.aiSdk.getCurrentUserId()
         });
         this.modelCreatorId = null;
-        this.properties = {};
         this.setDefaults();
         this.panAndZoom = new PanAndZoom(this.board);
         this.board.svg.addEventListener("zoom", e => this.onZoom(e));
@@ -25,12 +22,30 @@ class Shell  {
         this.topToolbar = new TopToolbar(this);
         this.chatController = new ChatController(this);
         this.bottomToolbar = new BottomToolbar(this);
+        this.setWorkspaceSurfaceAdapter({
+            refresh: () => this.board.refresh(),
+            forceRefresh: () => this.board.forceRefresh()
+        });
+        this.setPlayerViewAdapter({
+            setPlayPauseIcon: icon => {
+                if (this.bottomToolbar?.playPause)
+                    this.bottomToolbar.playPause.option("icon", icon);
+            },
+            setSliderValue: value => {
+                if (this.bottomToolbar?.playHead)
+                    this.bottomToolbar.playHead.option("value", value);
+            },
+            setSliderRange: maximum => {
+                if (this.bottomToolbar?.playHead)
+                    this.bottomToolbar.playHead.option("max", maximum);
+            }
+        });
         this.saveFormController = new SaveFormController(this);
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
         [BodyShape, PointShape, ExpressionShape, ValueShape, ChartShape, TableShape, SliderShape, GaugeShape, VectorShape, LineShape, ArcShape, MediaShape, ReferentialShape, TextShape, QuestionShape, RulerShape, ProtractorShape].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.commands.registerShapeAlias("ImageShape", MediaShape);
-        this.calculator.on("iterate", e => this.onIterate(e));
+        this.bindWorkspaceIterate(() => this.onIterate());
         if (model != undefined)
             this.openModel(model);
         this._resumeOnSpaceUp = false;
@@ -43,8 +58,7 @@ class Shell  {
         window.addEventListener("beforeunload", e => this.onBeforeUnload(e));
         window.addEventListener("popstate", e => this.onPopState(e));
         history.pushState(null, "");
-        this.reset();
-        this.calculator.calculate();
+        this.reparseAndCalculateWorkspace(() => this.reset());
         this.startAutoSave();
     }
 
@@ -55,22 +69,7 @@ class Shell  {
             if (preferredLanguage && preferredLanguage in this.board.translations.languages)
                 this.board.translations.language = preferredLanguage;
         } catch (_) {}
-        this.properties.name = "Model";
-        this.properties.description = "";
-        this.properties.backgroundColor = "#FFFFFF";
-        this.properties.precision = 2;
-        this.properties.angleUnit = "radians";
-        this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1, noLimit: false };
-        this.properties.iterationTerm = "n";
-        this.properties.casesCount = 1;
-        this.properties.initialValuesByCase = {};
-        this.properties.iterationDuration = null;
-        this.properties.thumbnailUrl = "";
-        this.properties.instructions = "";
-        this.properties.educationLevel = "university";
-        this.properties.gridSize = 20;
-        this.properties.snapToGrid = false;
-        this.properties.backgroundId = "";
+        this.session.setDefaults();
         this.applySvgBackgroundColor();
         this.applyEducationLevel();
         this.applyGrid();
@@ -170,12 +169,7 @@ class Shell  {
     }
 
     setProperties(properties) {
-        if (!properties)
-            properties = this.properties;
-        else
-            Utils.mergeProperties(properties, this.properties);
-        this.properties.casesCount = this.calculator.normalizeCasesCount(this.properties.casesCount);
-        this.calculator.setProperties(this.properties);
+        this.session.setProperties(properties);
         this.applySvgBackgroundColor();
         this.applyEducationLevel();
         this.applyGrid();
@@ -272,37 +266,33 @@ class Shell  {
         this.bottomToolbar.updatePlayer();
     }
 
+    onBeforePlayback() {
+        this.deselectShape();
+        this.applyUserPermissions();
+    }
+
     playPausePressed() {
-        if(this.calculator.status === STATUS.PLAYING)
-            this.calculator.pause();
-        else {
-            this.deselectShape();
-            this.applyUserPermissions();
-            this.calculator.play();
-        }
+        this.toggleCalculatorPlayback();
         this.bottomToolbar.updatePlayer();
         this.topToolbar.update();
     }
 
     stepBackwardPressed() {
-        this.calculator.stepBackward();
+        this.calculatorStepBackward();
         this.bottomToolbar.updatePlayer();
     }
 
     stepForwardPressed() {
-        this.calculator.stepForward();
+        this.calculatorStepForward();
         this.bottomToolbar.updatePlayer();
     }
     
     stopPressed() {
-        this.reset();
-        this.calculator.calculate();
+        this.reparseAndCalculateWorkspace(() => this.reset());
     }
     
     replayPressed() {
-        this.deselectShape();
-        this.applyUserPermissions();
-        this.calculator.replay();
+        this.replayCalculatorPlayback();
         this.bottomToolbar.updatePlayer();
     }
 
@@ -320,7 +310,7 @@ class Shell  {
     }
 
     iterationChanged(iteration) {
-        this.calculator.setIteration(iteration);
+        this.calculatorSetIteration(iteration);
     }
 
     openSettings() {
@@ -371,8 +361,8 @@ class Shell  {
     
     reset() {
         this.restoreUserPermissions();
-        const initialValuesByCase = this.pendingInitialValuesByCase ?? this.calculator.getInitialValuesByCase();
-        this.pendingInitialValuesByCase = null;
+        const initialValuesByCase = this.session.pendingInitialValuesByCase ?? this.calculator.getInitialValuesByCase();
+        this.session.pendingInitialValuesByCase = null;
         this.calculator.reset();
         this.board.shapes.shapes.forEach(shape => {
             if (shape.constructor.name == "ExpressionShape" && shape.properties.expression != undefined)
@@ -388,7 +378,7 @@ class Shell  {
         this.calculator.applyPreloadedRegressionTerms();
         this.calculator.applyInitialValuesByCase(initialValuesByCase);
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
-        this.board.forceRefresh();
+        this.forceRefreshWorkspaceSurface();
         this.bottomToolbar.updatePlayer();
         this.topToolbar.update();
         if (this.properties.instructions)
@@ -425,12 +415,12 @@ class Shell  {
     openModel(model) {
         this.board.enableSelection(true);
         this.deserialise(JSON.parse(model));
-        this.reset();
-        this.topToolbar.showWhatsNewIfNeeded();
-        this.calculator.stop();
-        this.board.resetShapeValues();
-        this.calculator.calculate();
-        this.board.refresh();
+        this.reparseCalculateAndRefreshWorkspace(() => {
+            this.reset();
+            this.topToolbar.showWhatsNewIfNeeded();
+            this.calculator.stop();
+            this.board.resetShapeValues();
+        });
         this.chatController.reset();
     }
     
@@ -457,29 +447,13 @@ class Shell  {
     }
 
     serialize() {
-        this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
-        const properties = Object.assign({}, this.properties);
-        delete properties.AIApiKey;
-        const result = {
-            properties,
-            board: this.board.serialize()
-        };
-        const outlierIterations = this.calculator.getOutlierIterations();
-        if (outlierIterations)
-            result.outlierIterations = outlierIterations;
-        const regressionTerms = this.calculator.getRegressionTermsData();
-        if (regressionTerms)
-            result.regressionTerms = regressionTerms;
-        return result;
+        return this.serializeWorkspace("board", () => this.board.serialize());
     }
 
     deserialise(model) {
-        this.pendingInitialValuesByCase = model?.properties?.initialValuesByCase ?? model?.properties?.initialValues ?? null;
-        this.setProperties(model.properties);
+        this.applySerializedSession(model, properties => this.setProperties(properties));
         this.board.deserialize(model.board);
         this.applyGrid();
-        this.calculator.loadOutlierIterations(model?.outlierIterations);
-        this.calculator.loadRegressionTerms(model?.regressionTerms);
     }
 
     async saveToPath(filePath) {
@@ -537,7 +511,7 @@ class Shell  {
             return;
         try {
             const now = new Date().toISOString();
-            const newModel = await this.modelsApiClient.createModel({
+                const newModel = await this.session.modelsApiClient.createModel({
                 title: metadata.name || "Untitled model",
                 description: metadata.description || "",
                 type: "model",
@@ -564,7 +538,7 @@ class Shell  {
                 headers,
                 body: JSON.stringify(savePayload)
             });
-            window.location.href = `/pages/editor/index.html?model_id=${newModel.id}`;
+            window.location.href = `/pages/board/index.html?model_id=${newModel.id}`;
         } catch (error) {
             alert("Failed to duplicate model.");
         }
@@ -581,7 +555,7 @@ class Shell  {
             return;
         try {
             const now = new Date().toISOString();
-            const newModel = await this.modelsApiClient.createModel({
+                const newModel = await this.session.modelsApiClient.createModel({
                 title: metadata.name || "Untitled model",
                 description: metadata.description || "",
                 type: "model",
@@ -609,7 +583,7 @@ class Shell  {
                 body: JSON.stringify(savePayload)
             });
             this._hasChanges = false;
-            window.location.href = `/pages/editor/index.html?model_id=${newModel.id}`;
+            window.location.href = `/pages/board/index.html?model_id=${newModel.id}`;
         } catch (error) {
             alert("Failed to save model.");
         }
@@ -776,10 +750,10 @@ class Shell  {
         try {
             this.board.enableSelection(true);
             this.deserialise(model);
-            this.reset();
-            this.calculator.stop();
-            this.calculator.calculate();
-            this.board.refresh();
+            this.reparseCalculateAndRefreshWorkspace(() => {
+                this.reset();
+                this.calculator.stop();
+            });
         } finally {
             this.collabChannel._applyingRemote = false;
         }
@@ -913,8 +887,7 @@ class Shell  {
         this._hasChanges = true;
         if (this.isAnonymous())
             this.saveToSessionStorage();
-        this.reset();
-        this.calculator.calculate();
+        this.reparseAndCalculateWorkspace(() => this.reset());
     }
 
     onIterate(e) {
@@ -927,7 +900,7 @@ class Shell  {
             }
         }
         this.board.shapes.shapes.forEach(s => s.tick());
-        this.board.refresh();
+        this.refreshWorkspaceSurface();
         this.bottomToolbar.updatePlayer();
     }    
 

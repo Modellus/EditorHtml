@@ -28,7 +28,7 @@ export async function onRequest(context) {
     const { request, next } = context;
     const url = new URL(request.url);
 
-    if (url.pathname !== "/pages/editor/index.html" && url.pathname !== "/editor") return next();
+    if (url.pathname !== "/pages/board/index.html" && url.pathname !== "/board" && url.pathname !== "/pages/editor/index.html" && url.pathname !== "/editor") return next();
 
     const modelId = url.searchParams.get("model_id");
     if (!modelId) return next();
@@ -44,7 +44,7 @@ export async function onRequest(context) {
     const title = model.title || "Modellus";
     const description = model.description || "Interactive mathematical model built with Modellus.";
     const thumbnail = model.thumbnail || model.thumbnail_url || "";
-    const pageUrl = `${url.origin}/pages/editor/index.html?model_id=${encodeURIComponent(modelId)}`;
+    const pageUrl = `${url.origin}/pages/board/index.html?model_id=${encodeURIComponent(modelId)}`;
 
     const ogTags = buildOgTags(pageUrl, title, description, thumbnail);
     const modifiedHtml = html.replace(

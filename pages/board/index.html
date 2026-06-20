@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="importmap">
+    {
+        "imports": {
+            "agents/client": "https://esm.sh/agents@0.7.5/client?bundle"
+        }
+    }
+    </script>
+
+    <script src="../../libraries/types/CalculationEngine.js"></script>
+    <script src="../../libraries/scripts/agentChatAdapter.js"></script>
+    <script src="../../libraries/scripts/agentToolBridge.js"></script>
+
+    <script src="../../scripts/utils.js"></script>
+    <script src="../../scripts/controls/TermControl.js"></script>
+    <script src="../../scripts/controls/ColorControl.js"></script>
+    <script src="../../scripts/controls/ImageControl.js"></script>
+    <script src="../../scripts/controls/ChartControl.js"></script>
+    <script src="../../scripts/controls/TableControl.js"></script>
+    <script src="../../scripts/controls/ExpressionControl.js"></script>
+
+    <script src="../../scripts/themes/baseTheme.js"></script>
+    <script src="../../scripts/themes/baseTranslations.js"></script>
+    <script src="../../scripts/calculator.js"></script>
+    <script src="../../scripts/board/board.js"></script>
+    <script src="../../scripts/shapes/shapes.js"></script>
+    <script src="../../scripts/board/selection.js"></script>
+    <script src="../../scripts/board/panAndZoom.js"></script>
+    <script src="../../scripts/board/miniMap.js"></script>
+    
+    <script src="../../scripts/commands/commandsInvoker.js"></script>
+    <script src="../../scripts/commands/commands.js"></script>
+    <script src="../../scripts/commands/command.js"></script>
+    <script src="../../scripts/commands/addShapeCommand.js"></script>
+    <script src="../../scripts/commands/removeShapeCommand.js"></script>
+    <script src="../../scripts/commands/selectShapeCommand.js"></script>
+    <script src="../../scripts/commands/setShapePropertiesCommand.js"></script>
+    <script src="../../scripts/commands/setPropertiesCommand.js"></script>
+    
+    <script src="../../scripts/AssetManager.js"></script>
+    <script src="../../scripts/shapes/baseShape/termDisplay.js"></script>
+    <script src="../../scripts/shapes/baseShape/editorBaseShape.js"></script>
+    <script src="../../scripts/shapes/baseShape/BaseShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/childShape/editorChildShape.js"></script>
+    <script src="../../scripts/shapes/childShape/ChildShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/pointShape/editorPointShape.js"></script>
+    <script src="../../scripts/shapes/pointShape/PointShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/bodyShape/editorBodyShape.js"></script>
+    <script src="../../scripts/shapes/bodyShape/BodyShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/shared/shapeInteractionPolicies.js"></script>
+    <script src="../../scripts/shapes/shared/shapeInteractionController.js"></script>
+    <script src="../../scripts/shapes/chartShape/chartToolbarPresentation.js"></script>
+    <script src="../../scripts/shapes/chartShape/ChartShape.js"></script>
+    <script src="../../scripts/shapes/chartShape/ChartShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/tableShape/editorTableShape.js"></script>
+    <script src="../../scripts/shapes/tableShape/TableShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/sliderShape/editorSliderShape.js"></script>
+    <script src="../../scripts/shapes/sliderShape/SliderShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/gaugeShape/editorGaugeShape.js"></script>
+    <script src="../../scripts/shapes/gaugeShape/GaugeShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/mediaShape/editorMediaShape.js"></script>
+    <script src="../../scripts/shapes/mediaShape/MediaShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/vectorShape/editorVectorShape.js"></script>
+    <script src="../../scripts/shapes/vectorShape/VectorShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/lineShape/editorLineShape.js"></script>
+    <script src="../../scripts/shapes/lineShape/LineShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/arcShape/editorArcShape.js"></script>
+    <script src="../../scripts/shapes/arcShape/ArcShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/referentialShape/editorReferentialShape.js"></script>
+    <script src="../../scripts/shapes/referentialShape/ReferentialShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/expressionShape/expressionTemplateShortcuts.js"></script>
+    <script src="../../scripts/shapes/expressionShape/mathliveController.js"></script>
+    <script src="../../scripts/shapes/expressionShape/ExpressionShape.js"></script>
+    <script src="../../scripts/shapes/expressionShape/ExpressionShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/valueShape/editorValueShape.js"></script>
+    <script src="../../scripts/shapes/valueShape/ValueShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/textShape/editorTextShape.js"></script>
+    <script src="../../scripts/shapes/textShape/TextShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/questionShape/editorQuestionShape.js"></script>
+    <script src="../../scripts/shapes/questionShape/QuestionShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/rulerShape/editorRulerShape.js"></script>
+    <script src="../../scripts/shapes/rulerShape/RulerShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/protractorShape/editorProtractorShape.js"></script>
+    <script src="../../scripts/shapes/protractorShape/ProtractorShapeToolbar.js"></script>
+
+    <script src="../../sdk/aiSdk.js"></script>
+    <script src="../../scripts/shell/backgrounds.js"></script>
+    <script src="../../scripts/shell/settingsController.js"></script>
+    <script src="../../scripts/shell/whatsNewPopup.js"></script>
+    <script src="../../scripts/toolbars/shapeToolbar.js"></script>
+    <script src="../../scripts/toolbars/playerToolbar.js"></script>
+    <script src="../../scripts/shell/topToolbar.js"></script>
+    <script src="../../scripts/shell/bottomToolbar.js"></script>
+    <script src="../../scripts/shell/menuController.js"></script>
+    <script src="../../scripts/shell/contextMenuController.js"></script>
+    <script src="../../scripts/shell/chatController.js"></script>
+    <script src="../../scripts/shell/modelSavePopup.js"></script>
+    <script src="../../scripts/shell/saveFormController.js"></script>
+    <script src="../../scripts/shell/collabChannel.js"></script>
+    <script src="../../scripts/ModelSession.js"></script>
+    <script src="../../scripts/Workspace.js"></script>
+    <script src="../../scripts/Board.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&family=Indie+Flower&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Atma:wght@400;600;700&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Nunito:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="../../libraries/fontawesome/css/all.min.css">
+    <script src="../../libraries/scripts/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/25.2.3/css/dx.fluent.blue.light.compact.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+    <script src="../../libraries/scripts/dx-quill.min.js"></script>
+    <script src="https://cdn3.devexpress.com/jslib/25.2.3/js/dx.all.js"></script>
+    <link rel="stylesheet" href="../../libraries/css/mathlive-static.css"></script>
+    <script src="../../libraries/scripts/mathlive.min.js"></script>
+    <script>MathJax = { startup: { typeset: false }, svg: { fontCache: "none" } };</script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    
+    <link rel="stylesheet" href="../../common.css">
+    <link rel="stylesheet" href="../../scripts/toolbars/sharedShapeToolbar.css">
+    <link rel="stylesheet" href="board.css">
+    <link rel="stylesheet" href="../../scripts/toolbars/shapeToolbar.css">
+    <link rel="stylesheet" href="../../scripts/toolbars/playerToolbar.css">
+    <script src="../../modellus.js"></script>
+    <link rel="icon" type="image/svg+xml" href="../../scripts/themes/modellus.svg">
+</head>
+<body>
+    <svg width="0" height="0" style="position:absolute;pointer-events:none">
+        <filter id="sketchy-line">
+            <feTurbulence type="turbulence" baseFrequency="0.04" numOctaves="1" seed="2" result="turbulence"/>
+            <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="0.6" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+    </svg>
+    <div id="svg-container">
+        <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div id="settings-popup"></div>
+    <div id="toolbar-container">
+        <div id="toolbar"></div>
+    </div>
+    <div id="context-menu"></div>
+    <div class="minimap-container" id="MinimapContainer">
+        <img class="minimap-image" id="MinimapImage" />
+        <div class="minimap-viewport" id="MinimapViewport"></div>
+    </div>
+    <div id="bottom-toolbar-container">
+        <div id="bottom-toolbar"></div>
+    </div>
+    <div id="chat-popup"></div>
+    <div id="toast"></div>
+    <script src="board.js"></script>
+</body>
+</html>

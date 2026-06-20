@@ -8,7 +8,7 @@ async function setupEditor(page) {
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
     });
-    await page.goto(`${BASE_URL}/pages/editor/index.html`);
+    await page.goto(`${BASE_URL}/pages/board/index.html`);
     await page.waitForFunction(() => typeof shell !== 'undefined' && shell !== null && shell.board !== null, null, { timeout: 15000 });
     await page.waitForTimeout(1000);
 }
