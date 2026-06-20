@@ -36,6 +36,15 @@ class NotebookEditor {
         return this.getShell()?.board?.calculator ?? null;
     }
 
+    createTranslatedTooltip(event, key, width, canShow) {
+        const shell = this.getShell();
+        if (shell?.createTranslatedTooltip)
+            return shell.createTranslatedTooltip(event, key, width, canShow);
+        if (!this.translations)
+            this.translations = new BaseTranslations(navigator.language || "en-US");
+        return Utils.createTranslatedTooltip(event, key, this.translations, width, canShow);
+    }
+
     getIndependentStart() {
         return Number(this.calculator?.properties?.independent?.start ?? 0);
     }
@@ -192,6 +201,7 @@ class NotebookEditor {
                     onStepBackward: () => this._stepBackward(),
                     onStepForward: () => this._stepForward(),
                     onReplay: () => this._replayPressed(),
+                    ...ModellusPlayerToolbar.createPlayerTooltipInitializers((event, key, width) => this.createTranslatedTooltip(event, key, width)),
                     sliderMinimum: 1,
                     sliderMaximum: this.getIterationCount(),
                     sliderValue: 1,

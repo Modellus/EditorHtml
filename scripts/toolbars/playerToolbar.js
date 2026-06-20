@@ -1,4 +1,14 @@
 class ModellusPlayerToolbar {
+    static createPlayerTooltipInitializers(createTooltip) {
+        return {
+            onPlayPauseInitialized: event => createTooltip(event, "Play Pause Tooltip", 280),
+            onStopInitialized: event => createTooltip(event, "Stop Tooltip", 280),
+            onStepBackwardInitialized: event => createTooltip(event, "Step Backward Tooltip", 280),
+            onStepForwardInitialized: event => createTooltip(event, "Step Forward Tooltip", 280),
+            onReplayInitialized: event => createTooltip(event, "Replay Tooltip", 280)
+        };
+    }
+
     static createPlayerItems(configuration) {
         const itemsBeforeSlider = configuration.itemsBeforeSlider || [];
         const itemsAfterSlider = configuration.itemsAfterSlider || [];
