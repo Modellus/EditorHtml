@@ -561,13 +561,17 @@ class NotebookShapesFactory {
         this.shapeDescriptors[type] = descriptor;
     }
 
+    static getDescriptor(type) {
+        return this.shapeDescriptors[type] ?? this.shapeDescriptors["text"];
+    }
+
     static createShape(notebookEditor, block) {
-        const descriptor = this.shapeDescriptors[block.type] ?? this.shapeDescriptors["text"];
+        const descriptor = this.getDescriptor(block.type);
         return descriptor.createShape(notebookEditor, block);
     }
 
     static createDefaultBlock(type, id) {
-        const descriptor = this.shapeDescriptors[type] ?? this.shapeDescriptors["text"];
+        const descriptor = this.getDescriptor(type);
         return {
             id,
             type,

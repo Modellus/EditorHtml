@@ -99,9 +99,16 @@ class NotebookEditor {
             pasteFromClipboard: shape => shape.pasteBlockFromClipboard(),
             getCopySubMenuItems: () => []
         };
+        const chartDescriptor = NotebookShapesFactory.getDescriptor("chart");
+        const expressionDescriptor = NotebookShapesFactory.getDescriptor("expression");
+        const resolveNotebookToolbarMixin = descriptor => {
+            if (typeof descriptor?.getNotebookToolbarMixin === "function")
+                return descriptor.getNotebookToolbarMixin();
+            return descriptor?.notebookToolbarMixin ?? null;
+        };
         const bindings = [
-            [ChartNotebookShape, ChartShapeToolbarMixin],
-            [ExpressionNotebookShape, ExpressionShapeToolbarMixin],
+            [chartDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(chartDescriptor)],
+            [expressionDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(expressionDescriptor)],
             [SliderNotebookShape, SliderShapeToolbarMixin],
             [GaugeNotebookShape, GaugeShapeToolbarMixin],
             [ValueNotebookShape, ValueShapeToolbarMixin],
@@ -114,6 +121,8 @@ class NotebookEditor {
             [TextNotebookShape, TextShapeToolbarMixin]
         ];
         for (const [shapeClass, toolbarMixin] of bindings) {
+            if (!shapeClass || !toolbarMixin)
+                continue;
             shapeClass.prototype.toolbarAdapter = toolbarAdapter;
             Object.assign(shapeClass.prototype, toolbarMixin);
         }
