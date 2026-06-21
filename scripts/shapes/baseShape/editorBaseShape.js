@@ -1007,8 +1007,7 @@ class BaseShape {
 
     getCopySubMenuItems() {
         return [
-            { text: "Copy as Image", icon: "fa-light fa-image", shortcut: "", action: () => this.copyAsImage() },
-            { text: "Copy as SVG", icon: "fa-light fa-vector-square", shortcut: "", action: () => this.copyAsSvg() }
+            { text: "Copy as Image", icon: "fa-light fa-image", shortcut: "", action: () => this.copyAsImage() }
         ];
     }
 

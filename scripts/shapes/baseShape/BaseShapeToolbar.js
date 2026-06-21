@@ -270,8 +270,6 @@ var ShapeToolbarPresentationMixin = {
         const items = [];
         if (typeof this.copyAsImage === "function")
             items.push({ text: "Copy as Image", icon: "fa-light fa-image", shortcut: "", action: () => this.copyAsImage() });
-        if (typeof this.copyAsSvg === "function")
-            items.push({ text: "Copy as SVG", icon: "fa-light fa-vector-square", shortcut: "", action: () => this.copyAsSvg() });
         return items;
     }
 };
@@ -567,6 +565,7 @@ var BaseShapeToolbarMixin = {
     },
     buildActionsMenuContent(contentElement, mod) {
         const copySubItems = this.getCopySubMenuItems();
+        const showCopySubItems = copySubItems.length > 1;
         const layerItems = [
             { text: "Bring to Front", icon: "fa-light fa-bring-front", shortcut: "", action: resolveShapeToolbarBoardAction(this, "bringToFront") },
             { text: "Bring Forward", icon: "fa-light fa-bring-forward", shortcut: "", action: resolveShapeToolbarBoardAction(this, "bringForward") },
@@ -575,7 +574,7 @@ var BaseShapeToolbarMixin = {
         ];
         const actionItems = [
             { text: "Copy", icon: "fa-light fa-copy", shortcut: `${mod}C`, action: resolveShapeToolbarCopyAction(this) },
-            ...copySubItems.map(subItem => ({ ...subItem, isSubItem: true })),
+            ...(showCopySubItems ? copySubItems.map(subItem => ({ ...subItem, isSubItem: true })) : []),
             { text: "Paste", icon: "fa-light fa-paste", shortcut: `${mod}V`, action: resolveShapeToolbarPaste(this) },
             { text: "Duplicate", icon: "fa-light fa-clone", shortcut: `${mod}D`, action: () => this.duplicate() }
         ];
