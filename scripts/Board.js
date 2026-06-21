@@ -62,6 +62,10 @@ class BoardApp extends Workspace {
         this.startAutoSave();
     }
 
+    get modelsApiClient() {
+        return this.session?.modelsApiClient ?? null;
+    }
+
     setDefaults() {
         try {
             const storedUser = JSON.parse(localStorage.getItem("mp.user") || "null");
