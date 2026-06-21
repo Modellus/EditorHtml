@@ -93,6 +93,7 @@ class ChartControl {
         this.axisLayer = this.createSvgElement("g");
         this.axisLayer.setAttribute("clip-path", `url(#${this.shapeClipId})`);
         this.focusLayer = this.createSvgElement("g");
+        this.focusLayer.setAttribute("class", "chart-focus-layer");
         this.focusLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
         this.zoomLayer = this.createSvgElement("g");
         this.zoomLayer.setAttribute("clip-path", `url(#${this.plotClipId})`);
@@ -956,11 +957,11 @@ class ChartControl {
             ? Math.min(...focusPoints.map(p => p.yPosition))
             : layout.plotBottom;
         let focusMarkup = `
-            <line x1="${focusX}" y1="${topY}" x2="${focusX}" y2="${layout.plotBottom}" stroke="#949494" stroke-width="1.4" stroke-dasharray="4 3" />
+            <line class="chart-focus-reference-line" x1="${focusX}" y1="${topY}" x2="${focusX}" y2="${layout.plotBottom}" stroke="#949494" stroke-width="1.4" stroke-dasharray="4 3" />
         `;
         for (const point of focusPoints) {
             focusMarkup += `
-                <line x1="${layout.plotLeft}" y1="${point.yPosition}" x2="${point.xPosition}" y2="${point.yPosition}" stroke="#949494" stroke-width="1.4" stroke-dasharray="4 3" />
+                <line class="chart-focus-reference-line" x1="${layout.plotLeft}" y1="${point.yPosition}" x2="${point.xPosition}" y2="${point.yPosition}" stroke="#949494" stroke-width="1.4" stroke-dasharray="4 3" />
             `;
         }
         this.appendSvgMarkup(this.focusLayer, focusMarkup);

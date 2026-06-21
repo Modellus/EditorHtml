@@ -1230,9 +1230,7 @@ class BaseShape {
         const height = Math.max(1, bbox.height + padding * 2);
         let content = "";
         for (const element of elements) {
-            const clone = element.cloneNode(true);
-            clone.removeAttribute("id");
-            clone.removeAttribute("clip-path");
+            const clone = this.createExportElementClone(element);
             content += clone.outerHTML;
         }
         const styleBlock = BaseShape.embeddedFontStyles ? `<defs><style>${BaseShape.embeddedFontStyles}</style></defs>` : "";
@@ -1298,6 +1296,13 @@ class BaseShape {
 
     collectSvgElements() {
         return [this.element];
+    }
+
+    createExportElementClone(element) {
+        const clone = element.cloneNode(true);
+        clone.removeAttribute("id");
+        clone.removeAttribute("clip-path");
+        return clone;
     }
 
     toImageBlob() {

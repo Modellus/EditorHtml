@@ -247,6 +247,23 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         return element;
     }
 
+    createExportElementClone(element) {
+        const clone = super.createExportElementClone(element);
+        clone.querySelectorAll(".chart-focus-layer").forEach(layerElement => layerElement.remove());
+        clone.querySelectorAll(".chart-focus-reference-line").forEach(lineElement => lineElement.remove());
+        clone.querySelectorAll(".shape-term-label").forEach(labelElement => {
+            const labelGroup = labelElement.closest("g");
+            if (labelGroup)
+                labelGroup.remove();
+            else
+                labelElement.remove();
+        });
+        clone.querySelectorAll(".shape-term-label-bg").forEach(backgroundElement => backgroundElement.remove());
+        clone.querySelectorAll(".shape-term-case-icon-host").forEach(caseIconElement => caseIconElement.remove());
+        clone.querySelectorAll(".shape-term-guide-line").forEach(guideElement => guideElement.remove());
+        return clone;
+    }
+
     initializeTermDisplayLayer() {
         BaseShape.prototype.initializeTermDisplayLayer.call(this);
         if (this.termDisplayLayer && this.element) {
