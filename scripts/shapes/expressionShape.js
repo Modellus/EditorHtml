@@ -175,11 +175,30 @@ class ExpressionShape extends BaseShape {
     }
 
     installExpressionKeybindings() {
-        this.mathfield.keybindings = [
-            ...this.mathfield.keybindings,
+        const additionalKeybindings = [
             { key: "shift+[Digit6]", ifMode: "math", command: "moveToSuperscript" },
             { key: "[BracketLeft]", ifLayout: ["apple.french"], ifMode: "math", command: "moveToSuperscript" }
         ];
+        const currentKeybindings = Array.isArray(this.mathfield.keybindings) ? this.mathfield.keybindings : [];
+        const uniqueKeybindingsBySignature = new Map();
+        for (let keybindingIndex = 0; keybindingIndex < currentKeybindings.length; keybindingIndex++) {
+            const currentKeybinding = currentKeybindings[keybindingIndex];
+            uniqueKeybindingsBySignature.set(this.getKeybindingSignature(currentKeybinding), currentKeybinding);
+        }
+        for (let keybindingIndex = 0; keybindingIndex < additionalKeybindings.length; keybindingIndex++) {
+            const additionalKeybinding = additionalKeybindings[keybindingIndex];
+            uniqueKeybindingsBySignature.set(this.getKeybindingSignature(additionalKeybinding), additionalKeybinding);
+        }
+        this.mathfield.keybindings = Array.from(uniqueKeybindingsBySignature.values());
+    }
+
+    getKeybindingSignature(keybinding) {
+        const keyboardKey = keybinding?.key ?? "";
+        const commandName = keybinding?.command ?? "";
+        const mode = keybinding?.ifMode ?? "";
+        const layoutValue = keybinding?.ifLayout;
+        const layout = Array.isArray(layoutValue) ? layoutValue.join("|") : (layoutValue ?? "");
+        return `${keyboardKey}::${commandName}::${mode}::${layout}`;
     }
 
     getDeadKeyAction(keydownEvent) {
