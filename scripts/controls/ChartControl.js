@@ -665,10 +665,19 @@ class ChartControl {
             this.renderXAxisMinorTick(layout, xScale, xMinorTicks[index]);
         for (let index = 0; index < yMinorTicks.length; index++)
             this.renderYAxisMinorTick(layout, yScale, yMinorTicks[index]);
-        for (let index = 0; index < xTicks.length; index++)
-            this.renderXAxisTick(layout, xScale, xTicks[index], index, xTicks.length);
-        for (let index = 0; index < yTicks.length; index++)
-            this.renderYAxisTick(layout, yScale, yTicks[index]);
+        const visibleXTicks = xTicks.filter(xValue => this.isTickPositionVisible(xScale(xValue), layout.plotLeft, layout.plotRight));
+        const visibleYTicks = yTicks.filter(yValue => this.isTickPositionVisible(yScale(yValue), layout.plotTop, layout.plotBottom));
+        for (let index = 0; index < visibleXTicks.length; index++)
+            this.renderXAxisTick(layout, xScale, visibleXTicks[index], index, visibleXTicks.length);
+        for (let index = 0; index < visibleYTicks.length; index++)
+            this.renderYAxisTick(layout, yScale, visibleYTicks[index]);
+    }
+
+    isTickPositionVisible(position, minimumPosition, maximumPosition) {
+        if (!Number.isFinite(position))
+            return false;
+        const tolerance = 0.01;
+        return position >= minimumPosition - tolerance && position <= maximumPosition + tolerance;
     }
 
     renderXAxisMinorTick(layout, xScale, xValue) {
