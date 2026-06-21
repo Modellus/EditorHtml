@@ -1445,21 +1445,22 @@ class ChartControl {
             return;
         const mouseX = localPoint.x;
         const mouseY = localPoint.y;
-        if (mouseX < state.layout.plotLeft || mouseX > state.layout.plotRight) {
+        if (mouseX < state.layout.plotLeft || mouseX > state.layout.plotRight || mouseY < state.layout.plotTop || mouseY > state.layout.plotBottom) {
             this.clearCrosshair();
             return;
         }
         const domain = state.domain;
         const layout = state.layout;
         const dataX = domain.xMin + (mouseX - layout.plotLeft) / layout.plotWidth * (domain.xMax - domain.xMin);
-        this.renderCrosshair(dataX, mouseY);
+        const dataY = domain.yMax - (mouseY - layout.plotTop) / layout.plotHeight * (domain.yMax - domain.yMin);
+        this.renderCrosshair(dataX, dataY, mouseY);
     }
 
     clearCrosshair() {
         this.clearLayer(this.crosshairLayer);
     }
 
-    renderCrosshair(argumentValue, mouseY) {
+    renderCrosshair(argumentValue, valueY, mouseY) {
         this.clearLayer(this.crosshairLayer);
         const state = this.renderState;
         if (!state)
@@ -1472,15 +1473,19 @@ class ChartControl {
             return;
         if (crosshairX < layout.plotLeft || crosshairX > layout.plotRight)
             return;
-        const crosshairColor = Utils.getContrastColor(this.options.backgroundColor || "#ffffff");
+        const crosshairColor = Utils.getContrastColor(this.options.backgroundColor);
+        const coordinateBackgroundColor = this.options.axisColor;
+        const coordinateTextColor = Utils.getContrastColor(coordinateBackgroundColor);
         const firstSeries = state.series.length > 0 ? this.getNearestSeriesPoint(state.series[0], argumentValue) : null;
         const snappedX = firstSeries ? firstSeries.xValue : argumentValue;
         const axisLabelX = xScale(snappedX);
         const axisLabelText = this.formatCrosshairValue(snappedX);
+        const coordinateText = `${this.formatCrosshairValue(argumentValue)}, ${this.formatCrosshairValue(valueY)}`;
         let crosshairMarkup = `
             <line x1="${crosshairX}" y1="${layout.plotTop}" x2="${crosshairX}" y2="${layout.plotBottom}" stroke="${crosshairColor}" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.25" />
             <line x1="${layout.plotLeft}" y1="${mouseY}" x2="${layout.plotRight}" y2="${mouseY}" stroke="${crosshairColor}" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.25" />
             ${Utils.valueBadgeSvgMarkup(axisLabelText, axisLabelX, layout.plotBottom + 12, { fontSize: 10, fontFamily: this.options.fontFamily, backgroundColor: this.options.foregroundColor })}
+            ${Utils.valueBadgeSvgMarkup(coordinateText, crosshairX, mouseY - 12, { fontSize: 10, fontFamily: this.options.fontFamily, backgroundColor: coordinateBackgroundColor, textColor: coordinateTextColor })}
         `;
         for (let seriesIndex = 0; seriesIndex < state.series.length; seriesIndex++) {
             const series = state.series[seriesIndex];
