@@ -1,4 +1,155 @@
+function getChartYTermDefaultTypes(shape) {
+    return [shape.properties?.chartType ?? shape.block?.chartType ?? "line"];
+}
+
+function normalizeChartYTermItem(shape, sourceItem, normalizedItem) {
+    normalizedItem.chartTypes = Array.isArray(sourceItem?.chartTypes) && sourceItem.chartTypes.length > 0 ? sourceItem.chartTypes : getChartYTermDefaultTypes(shape);
+}
+
+function getChartYTermsMutationOptions(shape) {
+    return {
+        includeColor: true,
+        normalizeTermValue: value => shape.normalizeYTermValue(value),
+        normalizeColorValue: value => shape.normalizeYTermColor(value),
+        normalizeItem: (sourceItem, normalizedItem) => normalizeChartYTermItem(shape, sourceItem, normalizedItem),
+        createEmptyItem: () => ({ chartTypes: getChartYTermDefaultTypes(shape) })
+    };
+}
+
+function getChartYTermTypeItems() {
+    return [
+        { value: "scatter", text: "Scatter", icon: "fa-light fa-chart-scatter" },
+        { value: "line", text: "Line", icon: "fa-light fa-chart-line" },
+        { value: "area", text: "Area", icon: "fa-light fa-chart-area" },
+        { value: "bar", text: "Bar", icon: "fa-light fa-chart-column" }
+    ];
+}
+
 var ChartShapeToolbarMixin = {
+    createYTermsControl() {
+        this.normalizeYTerms();
+        this._yTermsControl = TermControl.createShapeTermsCollectionControl(this, "yTerms", {
+            hostClassName: "shape-terms-control chart-yterms-control",
+            listClassName: "shape-terms-list chart-yterms-list",
+            rowClassName: "shape-term-row chart-yterm-row",
+            dragHandleClassName: "shape-term-drag-handle chart-yterm-drag-handle",
+            includeColor: true,
+            includeVisibility: true,
+            colorSelection: {
+                getValue: (item, index) => this.getYTermControlDisplayColor(item, index)
+            },
+            normalizeTermValue: value => this.normalizeYTermValue(value),
+            normalizeColorValue: value => this.normalizeYTermColor(value),
+            normalizeItem: (sourceItem, normalizedItem) => normalizeChartYTermItem(this, sourceItem, normalizedItem),
+            createEmptyItem: () => ({ chartTypes: getChartYTermDefaultTypes(this) }),
+            lock: {
+                width: "auto",
+                editorType: "dxDropDownButton",
+                valueExpr: "value",
+                getValue: item => item?.chartTypes ?? getChartYTermDefaultTypes(this),
+                getItems: () => getChartYTermTypeItems(),
+                buttonTemplate: element => {
+                    $(element).empty().append(`<div class="shape-term-secondary-button" style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fa-light fa-chart-mixed shape-term-secondary-icon"></i></div>`);
+                },
+                itemTemplate: (itemData, itemIndex, element, item) => {
+                    const selectedTypes = item?.chartTypes ?? getChartYTermDefaultTypes(this);
+                    const isSelected = selectedTypes.includes(itemData.value);
+                    const chartTypeIconsLight = { scatter: "fa-light fa-chart-scatter", line: "fa-light fa-chart-line", area: "fa-light fa-chart-area", bar: "fa-light fa-chart-column" };
+                    const chartTypeIconsSolid = { scatter: "fa-solid fa-chart-scatter", line: "fa-solid fa-chart-line", area: "fa-solid fa-chart-area", bar: "fa-solid fa-chart-column" };
+                    const iconClass = isSelected ? (chartTypeIconsSolid[itemData.value] ?? "fa-solid fa-chart-line") : (chartTypeIconsLight[itemData.value] ?? "fa-light fa-chart-line");
+                    $(element).empty().append(`<div class="shape-term-secondary-item" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;"><i class="${iconClass} shape-term-secondary-icon"></i><span>${itemData.text}</span></div>`);
+                },
+                dropDownOptions: { width: 140 },
+                onValueChanged: (index, clickedType) => {
+                    TermControl.applyShapeTermsCollectionMutation(this, "yTerms", getChartYTermsMutationOptions(this), items => {
+                        if (!items[index])
+                            return;
+                        const currentTypes = items[index].chartTypes ?? getChartYTermDefaultTypes(this);
+                        const typeIndex = currentTypes.indexOf(clickedType);
+                        if (typeIndex >= 0) {
+                            if (currentTypes.length > 1)
+                                items[index].chartTypes = currentTypes.filter(typeName => typeName !== clickedType);
+                        } else {
+                            items[index].chartTypes = [...currentTypes, clickedType];
+                        }
+                    });
+                }
+            }
+        });
+        return this._yTermsControl.createHost();
+    },
+    refreshYTermsControl() {
+        if (!this._yTermsControl)
+            return;
+        this._yTermsControl.refresh();
+    },
+    normalizeYTerms() {
+        const sourceYTerms = Array.isArray(this.properties.yTerms) ? this.properties.yTerms : (this.properties.yTerms ? [this.properties.yTerms] : []);
+        this.properties.yTerms = sourceYTerms.map(sourceItem => {
+            if (sourceItem && typeof sourceItem === "object") {
+                return {
+                    ...sourceItem,
+                    term: this.normalizeYTermValue(sourceItem.term),
+                    chartTypes: Array.isArray(sourceItem.chartTypes) && sourceItem.chartTypes.length > 0 ? sourceItem.chartTypes : getChartYTermDefaultTypes(this)
+                };
+            }
+            return {
+                term: this.normalizeYTermValue(sourceItem),
+                case: 1,
+                color: "",
+                chartTypes: getChartYTermDefaultTypes(this)
+            };
+        }).filter(item => item.term !== "");
+        TermControl.normalizeShapeTermsCollection(this, "yTerms", getChartYTermsMutationOptions(this));
+    },
+    getSelectedYTerms() {
+        return TermControl.getSelectedShapeTermsCollection(this, "yTerms", {
+            includeColor: true,
+            normalizeTermValue: value => this.normalizeYTermValue(value),
+            normalizeColorValue: value => this.normalizeYTermColor(value),
+            normalizeItem: (sourceItem, normalizedItem) => normalizeChartYTermItem(this, sourceItem, normalizedItem)
+        });
+    },
+    shouldShowCaseLabelForTerm(term) {
+        return TermControl.shouldShowCaseSelectionForShapeTerm(this, term, value => this.normalizeYTermValue(value));
+    },
+    getTermLabelWithCase(term, caseNumber = 1) {
+        const normalizedTerm = this.normalizeYTermValue(term);
+        if (normalizedTerm === "")
+            return { termLatex: "", caseNumber: null };
+        const displayedTerm = this.formatTermForDisplay(normalizedTerm);
+        if (!this.shouldShowCaseLabelForTerm(normalizedTerm))
+            return { termLatex: displayedTerm, caseNumber: null };
+        const normalizedCaseNumber = TermControl.getShapeCaseNumber(this, normalizedTerm, caseNumber, value => this.normalizeYTermValue(value));
+        return { termLatex: displayedTerm, caseNumber: normalizedCaseNumber };
+    },
+    getSeriesValueFieldName(index) {
+        return `series${index}`;
+    },
+    getSeriesName(yTerm) {
+        return this.getTermLabelWithCase(yTerm.term, yTerm.case);
+    },
+    getXTermName() {
+        return this.normalizeYTermValue(this.properties.xTerm);
+    },
+    getXTermCaseNumber() {
+        return TermControl.getShapeCaseNumber(this, this.getXTermName(), this.properties.xTermCase ?? 1, value => this.normalizeYTermValue(value));
+    },
+    normalizeYTermValue(value) {
+        return TermControl.normalizeTermValue(value);
+    },
+    normalizeYTermColor(value) {
+        return TermControl.normalizeColorValue(value);
+    },
+    getYTermControlDisplayColor(item, index) {
+        const explicitColor = this.normalizeYTermColor(item?.color);
+        if (explicitColor !== "")
+            return explicitColor;
+        const renderedColor = this.chart?.renderState?.series?.[index]?.color;
+        if (renderedColor)
+            return renderedColor;
+        return Utils.getColorByIndex(index);
+    },
     createToolbar() {
         const items = resolveShapeToolbarBaseItems(this, ChartShapeToolbarMixin.createToolbar);
         this.normalizeYTerms();
@@ -190,6 +341,29 @@ var ChartShapeToolbarMixin = {
             grid.append(control);
         }
         grid.appendTo($(contentElement).dxScrollView("instance").content());
+    },
+    populateTermsMenuSections(listItems) {
+        listItems.push(
+            { text: "Horizontal", stacked: true, buildControl: $container => $container.append(this._xTermControl) },
+            { text: "Vertical", stacked: true, buildControl: $container => $container.append(this.createYTermsControl()) }
+        );
+    },
+    renderTermsButtonTemplate(element) {
+        renderChartTermsToolbarButton(this, element);
+    },
+    refreshDomainBoxes() {
+        refreshChartDomainEditorValues(this);
+    },
+    showContextToolbar() {
+        this.termFormControls["xTerm"]?.termControl?.refresh();
+        this.refreshYTermsControl();
+        this.refreshTermsToolbarControl();
+        this.refreshDomainBoxes();
+        this._autoScaleSwitchInstance?.option("value", this.properties.autoScale === true);
+        this._equalScalesSwitchInstance?.option("value", this.properties.equalScales === true);
+        if (typeof BaseShape !== "undefined" && this instanceof BaseShape)
+            return BaseShape.prototype.showContextToolbar.call(this);
+        return NotebookShape.prototype.showContextToolbar.call(this);
     }
 };
 if (typeof ChartShape !== "undefined") Object.assign(ChartShape.prototype, ChartShapeToolbarMixin);

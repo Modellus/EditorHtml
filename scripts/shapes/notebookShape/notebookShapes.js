@@ -247,6 +247,22 @@ class NotebookShape {
         return this.block.id;
     }
 
+    getCasesCount() {
+        const rawCount = parseInt(this.board.calculator?.properties?.casesCount ?? 1, 10) || 1;
+        return this.getClampedCaseNumber(rawCount);
+    }
+
+    getClampedCaseNumber(caseNumber) {
+        const normalizedCaseNumber = parseInt(caseNumber, 10);
+        if (!Number.isFinite(normalizedCaseNumber))
+            return 1;
+        if (normalizedCaseNumber < 1)
+            return 1;
+        if (normalizedCaseNumber > 9)
+            return 9;
+        return normalizedCaseNumber;
+    }
+
     getColorControl() {
         if (!this.colorControl)
             this.colorControl = new ColorControl({ palette: this.board.theme.getColorPickerPalette() });
@@ -465,6 +481,10 @@ class NotebookShape {
             searchEnabled: true,
             stylingMode: "filled",
             width: width,
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeNestedOverlayWrapperAttr()
+            },
             onOpened: event => {
                 const activeSystem = options.system ?? this.board.calculator?.system;
                 event.component.option("dataSource", this.getNotebookTermItems(activeSystem));
@@ -513,6 +533,10 @@ class NotebookShape {
             hideSelectedItems: false,
             stylingMode: "filled",
             width: width,
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeNestedOverlayWrapperAttr()
+            },
             onOpened: event => {
                 const activeSystem = options.system ?? this.board.calculator?.system;
                 event.component.option("dataSource", this.getNotebookTermItems(activeSystem));
@@ -594,9 +618,16 @@ class NotebookShapesFactory {
         return this.shapeDescriptors[type] ?? this.shapeDescriptors["text"];
     }
 
-    static createShape(notebookEditor, block) {
+    static createShape(notebookEditor, block, hostElement = null) {
         const descriptor = this.getDescriptor(block.type);
-        return descriptor.createShape(notebookEditor, block);
+        return descriptor.createShape(notebookEditor, block, hostElement);
+    }
+
+    static renderContentHtml(notebookEditor, block) {
+        const descriptor = this.getDescriptor(block.type);
+        if (typeof descriptor.renderContentHtml === "function")
+            return descriptor.renderContentHtml(notebookEditor, block);
+        return descriptor.createShape(notebookEditor, block).renderContentHtml();
     }
 
     static createDefaultBlock(type, id) {

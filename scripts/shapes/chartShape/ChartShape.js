@@ -1,7 +1,67 @@
 var ChartShape;
 if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends BaseShape {
-    constructor(board, parent, id) {
-        super(board, null, id);
+    constructor(boardOrNotebookEditor, parentOrHostElement, id, options = {}) {
+        const notebookBlock = options.notebookBlock ?? null;
+        const notebookRuntime = notebookBlock ? ChartShape.createNotebookRuntime(boardOrNotebookEditor, parentOrHostElement) : null;
+        super(notebookRuntime?.board ?? boardOrNotebookEditor, null, id);
+        if (!notebookRuntime)
+            return;
+        this.notebookEditor = boardOrNotebookEditor;
+        this.block = notebookBlock;
+        this.container = parentOrHostElement;
+        this.contentElement = parentOrHostElement;
+        this.blockElement = parentOrHostElement?.closest?.(".notebook-block") ?? null;
+        const defaultProperties = Utils.cloneProperties(this.properties);
+        this.properties = this.block;
+        for (const [propertyName, propertyValue] of Object.entries(defaultProperties)) {
+            if (!Object.prototype.hasOwnProperty.call(this.properties, propertyName))
+                this.properties[propertyName] = propertyValue;
+        }
+        if (!this.properties.xTerm)
+            this.properties.xTerm = this.board.calculator?.properties?.independent?.name ?? "t";
+        if (this.properties.autoScale == null)
+            this.properties.autoScale = true;
+        if (this.properties.equalScales == null)
+            this.properties.equalScales = false;
+        if (!this.properties.domainOverride && (this.properties.xMin != null || this.properties.xMax != null || this.properties.yMin != null || this.properties.yMax != null)) {
+            this.properties.domainOverride = {
+                xMin: this.properties.xMin ?? null,
+                xMax: this.properties.xMax ?? null,
+                yMin: this.properties.yMin ?? null,
+                yMax: this.properties.yMax ?? null
+            };
+        }
+        this.draw();
+        this.update();
+        this._calculatorIterateHandler = () => this.onCalculatorIterate();
+        this.notebookEditor.calculator?.on("iterate", this._calculatorIterateHandler);
+    }
+
+    static createNotebookRuntime(notebookEditor, hostElement) {
+        const shellTranslations = notebookEditor?.getShell?.()?.board?.translations;
+        const theme = new BaseTheme();
+        return {
+            board: {
+                isNotebookSurface: true,
+                hostElement: hostElement,
+                svg: null,
+                translations: shellTranslations ?? new BaseTranslations(shellTranslations?.language ?? "en-US"),
+                theme: theme,
+                suppressNextFocusSelect: false,
+                pointerLocked: false,
+                selection: { deselect: () => {}, clearHover: () => {}, applyEditModeHighlight: () => {}, removeEditModeHighlight: () => {} },
+                markDirty: () => notebookEditor?._updateLastModified?.(),
+                createSvgElement: name => document.createElementNS("http://www.w3.org/2000/svg", name),
+                createElement: name => document.createElement(name),
+                getClientCenter: () => ({ x: 0, y: 0 }),
+                isModelCreator: () => true,
+                get calculator() { return notebookEditor?.calculator ?? null; }
+            }
+        };
+    }
+
+    isNotebookShape() {
+        return this.board?.isNotebookSurface === true;
     }
 
     enterEditMode() {
@@ -15,80 +75,6 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             return true;
         }
         return false;
-    }
-
-    createYTermsControl() {
-        this.normalizeYTerms();
-        this._yTermsControl = TermControl.createShapeTermsCollectionControl(this, "yTerms", {
-            hostClassName: "shape-terms-control chart-yterms-control",
-            listClassName: "shape-terms-list chart-yterms-list",
-            rowClassName: "shape-term-row chart-yterm-row",
-            dragHandleClassName: "shape-term-drag-handle chart-yterm-drag-handle",
-            includeColor: true,
-            includeVisibility: true,
-            colorSelection: {
-                getValue: (item, index) => this.getYTermControlDisplayColor(item, index)
-            },
-            normalizeTermValue: value => this.normalizeYTermValue(value),
-            normalizeColorValue: value => this.normalizeYTermColor(value),
-            normalizeItem: (sourceItem, normalizedItem) => {
-                normalizedItem.chartTypes = Array.isArray(sourceItem?.chartTypes) && sourceItem.chartTypes.length > 0 ? sourceItem.chartTypes : ["line"];
-            },
-            createEmptyItem: () => ({ chartTypes: ["line"] }),
-            lock: {
-                width: "auto",
-                editorType: "dxDropDownButton",
-                valueExpr: "value",
-                getValue: item => item?.chartTypes ?? ["line"],
-                getItems: () => [
-                    { value: "scatter", text: "Scatter", icon: "fa-light fa-chart-scatter" },
-                    { value: "line", text: "Line", icon: "fa-light fa-chart-line" },
-                    { value: "area", text: "Area", icon: "fa-light fa-chart-area" },
-                    { value: "bar", text: "Bar", icon: "fa-light fa-chart-column" }
-                ],
-                buttonTemplate: (element, item, index, selectedValue) => {
-                    $(element).empty().append(`<div class="shape-term-secondary-button" style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fa-light fa-chart-mixed shape-term-secondary-icon"></i></div>`);
-                },
-                itemTemplate: (itemData, itemIndex, element, item) => {
-                    const selectedTypes = item?.chartTypes ?? ["line"];
-                    const isSelected = selectedTypes.includes(itemData.value);
-                    const chartTypeIconsLight = { scatter: "fa-light fa-chart-scatter", line: "fa-light fa-chart-line", area: "fa-light fa-chart-area", bar: "fa-light fa-chart-column" };
-                    const chartTypeIconsSolid = { scatter: "fa-solid fa-chart-scatter", line: "fa-solid fa-chart-line", area: "fa-solid fa-chart-area", bar: "fa-solid fa-chart-column" };
-                    const iconClass = isSelected ? (chartTypeIconsSolid[itemData.value] ?? "fa-solid fa-chart-line") : (chartTypeIconsLight[itemData.value] ?? "fa-light fa-chart-line");
-                    $(element).empty().append(`<div class="shape-term-secondary-item" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;"><i class="${iconClass} shape-term-secondary-icon"></i><span>${itemData.text}</span></div>`);
-                },
-                dropDownOptions: { width: 140 },
-                onValueChanged: (index, clickedType) => {
-                    TermControl.applyShapeTermsCollectionMutation(this, "yTerms", {
-                        normalizeTermValue: value => this.normalizeYTermValue(value),
-                        normalizeColorValue: value => this.normalizeYTermColor(value),
-                        includeColor: true,
-                        normalizeItem: (sourceItem, normalizedItem) => {
-                            normalizedItem.chartTypes = Array.isArray(sourceItem?.chartTypes) && sourceItem.chartTypes.length > 0 ? sourceItem.chartTypes : ["line"];
-                        },
-                        createEmptyItem: () => ({ chartTypes: ["line"] })
-                    }, items => {
-                        if (!items[index])
-                            return;
-                        const currentTypes = items[index].chartTypes ?? ["line"];
-                        const typeIndex = currentTypes.indexOf(clickedType);
-                        if (typeIndex >= 0) {
-                            if (currentTypes.length > 1)
-                                items[index].chartTypes = currentTypes.filter(t => t !== clickedType);
-                        } else {
-                            items[index].chartTypes = [...currentTypes, clickedType];
-                        }
-                    });
-                }
-            }
-        });
-        return this._yTermsControl.createHost();
-    }
-
-    refreshYTermsControl() {
-        if (!this._yTermsControl)
-            return;
-        this._yTermsControl.refresh();
     }
 
     clearStaleTermCollectionReferences(staleTermNames) {
@@ -105,89 +91,6 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             this.resetValues();
             this.update();
         }
-    }
-
-    normalizeYTerms() {
-        TermControl.normalizeShapeTermsCollection(this, "yTerms", {
-            includeColor: true,
-            normalizeTermValue: value => this.normalizeYTermValue(value),
-            normalizeColorValue: value => this.normalizeYTermColor(value),
-            normalizeItem: (sourceItem, normalizedItem) => {
-                normalizedItem.chartTypes = Array.isArray(sourceItem?.chartTypes) && sourceItem.chartTypes.length > 0 ? sourceItem.chartTypes : ["line"];
-            },
-            createEmptyItem: () => ({ chartTypes: ["line"] })
-        });
-    }
-
-    getSelectedYTerms() {
-        return TermControl.getSelectedShapeTermsCollection(this, "yTerms", {
-            includeColor: true,
-            normalizeTermValue: value => this.normalizeYTermValue(value),
-            normalizeColorValue: value => this.normalizeYTermColor(value),
-            normalizeItem: (sourceItem, normalizedItem) => {
-                normalizedItem.chartTypes = Array.isArray(sourceItem?.chartTypes) && sourceItem.chartTypes.length > 0 ? sourceItem.chartTypes : ["line"];
-            }
-        });
-    }
-
-    shouldShowCaseLabelForTerm(term) {
-        return TermControl.shouldShowCaseSelectionForShapeTerm(this, term, value => this.normalizeYTermValue(value));
-    }
-
-    getTermLabelWithCase(term, caseNumber = 1) {
-        const normalizedTerm = this.normalizeYTermValue(term);
-        if (normalizedTerm === "")
-            return { termLatex: "", caseNumber: null };
-        const displayedTerm = this.formatTermForDisplay(normalizedTerm);
-        if (!this.shouldShowCaseLabelForTerm(normalizedTerm))
-            return { termLatex: displayedTerm, caseNumber: null };
-        const normalizedCaseNumber = TermControl.getShapeCaseNumber(this, normalizedTerm, caseNumber, value => this.normalizeYTermValue(value));
-        return { termLatex: displayedTerm, caseNumber: normalizedCaseNumber };
-    }
-
-    getSeriesValueFieldName(index) {
-        return `series${index}`;
-    }
-
-    getSeriesName(yTerm) {
-        return this.getTermLabelWithCase(yTerm.term, yTerm.case);
-    }
-
-    getXTermName() {
-        return this.normalizeYTermValue(this.properties.xTerm);
-    }
-
-    getXTermCaseNumber() {
-        return TermControl.getShapeCaseNumber(this, this.getXTermName(), this.properties.xTermCase ?? 1, value => this.normalizeYTermValue(value));
-    }
-
-    normalizeYTermValue(value) {
-        return TermControl.normalizeTermValue(value);
-    }
-
-    normalizeYTermColor(value) {
-        return TermControl.normalizeColorValue(value);
-    }
-
-    getYTermControlDisplayColor(item, index) {
-        const explicitColor = this.normalizeYTermColor(item?.color);
-        if (explicitColor !== "")
-            return explicitColor;
-        const renderedColor = this.chart?.renderState?.series?.[index]?.color;
-        if (renderedColor)
-            return renderedColor;
-        return Utils.getColorByIndex(index);
-    }
-
-    populateTermsMenuSections(listItems) {
-        listItems.push(
-            { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xTermControl) },
-            { text: "Vertical", stacked: true, buildControl: $p => $p.append(this.createYTermsControl()) }
-        );
-    }
-
-    renderTermsButtonTemplate(element) {
-        renderChartTermsToolbarButton(this, element);
     }
 
     populateShapeColorMenuSections(sections) {
@@ -212,20 +115,6 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             iconHtml: this.menuIconHtml("fa-axis-x", !!this.properties.axisColor),
             buildControl: $p => $p.append(this._axisColorPicker)
         });
-    }
-
-    refreshDomainBoxes() {
-        refreshChartDomainEditorValues(this);
-    }
-
-    showContextToolbar() {
-        this.termFormControls["xTerm"]?.termControl?.refresh();
-        this.refreshYTermsControl();
-        this.refreshTermsToolbarControl();
-        this.refreshDomainBoxes();
-        this._autoScaleSwitchInstance?.option("value", this.properties.autoScale === true);
-        this._equalScalesSwitchInstance?.option("value", this.properties.equalScales === true);
-        super.showContextToolbar();
     }
 
     setDefaults() {
@@ -327,6 +216,25 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
     }
 
     createElement() {
+        if (this.isNotebookShape()) {
+            this.board.hostElement.replaceChildren();
+            const element = this.board.createSvgElement("svg");
+            element.classList.add("notebook-chart-control");
+            element.setAttribute("width", "100%");
+            element.setAttribute("height", "100%");
+            this.board.hostElement.appendChild(element);
+            this.board.svg = element;
+            this.container = this.board.hostElement;
+            this.chartRows = [];
+            this.lastSyncedIteration = 0;
+            this.lastSyncedCalculatedIteration = 0;
+            this.lastSyncedRecalculationRevision = 0;
+            this.chartDataConfig = null;
+            this.chart = new ChartControl(element, this.getChartControlOptions());
+            this._appliedConfig = {};
+            this._appliedDomainConfig = null;
+            return element;
+        }
         const element = this.board.createSvgElement("g");
         this.chartRows = [];
         this.lastSyncedIteration = 0;
@@ -556,8 +464,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
     }
 
     getTermLabelAnchor() {
-        const width = Number(this.properties.width);
-        const height = Number(this.properties.height);
+        const width = Number(this.isNotebookShape() ? this._notebookRenderWidth : this.properties.width);
+        const height = Number(this.isNotebookShape() ? this._notebookRenderHeight : this.properties.height);
         if (Number.isFinite(width) && Number.isFinite(height))
             return { x: width - 8, y: 20, anchor: "end" };
         return { x: 0, y: 20, anchor: "end" };
@@ -579,6 +487,13 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
     }
 
     draw() {
+        if (this.isNotebookShape()) {
+            this._notebookRenderWidth = Math.max(240, this.container?.clientWidth || 720);
+            this._notebookRenderHeight = Math.max(160, this.container?.clientHeight || 240);
+            this.chart.setSize(this._notebookRenderWidth, this._notebookRenderHeight);
+            super.draw();
+            return;
+        }
         const x = this.properties.x;
         const y = this.properties.y;
         const width = this.properties.width;
@@ -598,141 +513,156 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         super.tick();
         this.board.markDirty(this);
     }
+
+    renderContentHtml() {
+        if (!this.isNotebookShape())
+            return "";
+        return "";
+    }
+
+    mount(contentElement, dragHandleElement) {
+        if (!this.isNotebookShape())
+            return;
+        this.contentElement = contentElement;
+        this.dragHandleElement = dragHandleElement;
+        this.blockElement = contentElement.closest(".notebook-block");
+        this.container = contentElement;
+    }
+
+    unmount() {
+        if (!this.isNotebookShape())
+            return;
+        if (this._calculatorIterateHandler) {
+            this.notebookEditor.calculator?.off("iterate", this._calculatorIterateHandler);
+            this._calculatorIterateHandler = null;
+        }
+        if (this.contextToolbar) {
+            this.contextToolbar.remove();
+            this.contextToolbar = null;
+        }
+        this.contextToolbarInstance = null;
+        this.board.hostElement?.replaceChildren();
+        this.board.svg = null;
+        this.contentElement = null;
+        this.dragHandleElement = null;
+        this.blockElement = null;
+        this.container = null;
+    }
+
+    onCalculatorIterate() {
+        if (!this.isNotebookShape())
+            return;
+        this.updateValues();
+        this.updateFocus();
+    }
+
+    markChanged() {
+        if (!this.isNotebookShape()) {
+            this.board.markDirty(this);
+            return;
+        }
+        this.notebookEditor._updateLastModified();
+    }
+
+    duplicateBlock() {
+        const duplicateBlock = Utils.cloneProperties(this.properties);
+        duplicateBlock.id = this.notebookEditor.nextBlockId++;
+        const blockIndex = this.notebookEditor.blocks.findIndex(block => block.id === this.id);
+        this.notebookEditor.blocks.splice(blockIndex + 1, 0, duplicateBlock);
+        this.notebookEditor._reloadBlockList();
+        this.markChanged();
+    }
+
+    async copyBlockToClipboard() {
+        if (!this.isNotebookShape())
+            return;
+        const payload = JSON.stringify({ type: "notebook-block", block: Utils.cloneProperties(this.properties) });
+        await navigator.clipboard.writeText(payload);
+    }
+
+    async pasteBlockFromClipboard() {
+        if (!this.isNotebookShape())
+            return;
+        let text = "";
+        try {
+            text = await navigator.clipboard.readText();
+        } catch {
+            return;
+        }
+        if (!text)
+            return;
+        let payload = null;
+        try {
+            payload = JSON.parse(text);
+        } catch {
+            return;
+        }
+        if (payload?.type !== "notebook-block" || !payload.block)
+            return;
+        this.notebookEditor.insertBlockAfter(this.id, payload.block);
+    }
+
+    setPropertyCommand(name, value) {
+        if (!this.isNotebookShape())
+            return super.setPropertyCommand(name, value);
+        Utils.setProperty(name, value, this.properties);
+        if (name === "backgroundColor")
+            this.blockElement?.style.setProperty("--block-bg-color", value);
+        if (name === "borderColor")
+            this.blockElement?.style.setProperty("--block-border-color", value);
+        this.draw();
+        this.update();
+        this.markChanged();
+    }
+
+    remove() {
+        if (!this.isNotebookShape())
+            return super.remove();
+        this.notebookEditor.removeBlock(this.id);
+    }
+
+    duplicate() {
+        if (!this.isNotebookShape())
+            return super.duplicate();
+        this.duplicateBlock();
+    }
+
+    resetToDefaults() {
+        if (!this.isNotebookShape())
+            return super.resetToDefaults();
+        const resetBlock = {
+            id: this.id,
+            type: "chart",
+            content: "",
+            borderColor: "#e8e8e8",
+            backgroundColor: "transparent",
+            autoScale: true,
+            equalScales: false,
+            tangentColor: "#00000000",
+            axisColor: "",
+            originX: 0,
+            originY: 0,
+            xTerm: this.board.calculator?.properties?.independent?.name ?? "t",
+            yTerms: [{ term: this.board.calculator?.getDefaultTerm?.() ?? "", case: 1, color: "", showLabel: false, chartTypes: ["line"] }],
+            domainOverride: this.getDefaultDomainOverride()
+        };
+        for (const key of Object.keys(this.properties)) {
+            if (key !== "id" && key !== "type")
+                delete this.properties[key];
+        }
+        Object.assign(this.properties, resetBlock);
+        this.draw();
+        this.update();
+        this.markChanged();
+    }
 };
 
 if (typeof NotebookShapesFactory !== "undefined") {
-    var ChartNotebookShape = class ChartNotebookShape extends NotebookShape {
-        renderContentHtml() {
-            return `<svg id="${this.getHostId()}" class="notebook-chart-control"></svg>`;
-        }
-
-        mount(contentElement, dragHandleElement) {
-            super.mount(contentElement, dragHandleElement);
-            const chartContainer = contentElement.querySelector(`#${this.getHostId()}`);
-            if (!chartContainer)
-                return;
-            const width = Math.max(240, contentElement.clientWidth || 720);
-            const height = 280;
-            this.chartControl = new ChartControl(chartContainer, {
-                chartType: this.block.chartType || "line",
-                argumentField: "x",
-                argumentTitle: this.block.xTitle || "",
-                valueTitle: this.block.yTitle || "",
-                series: this._buildSeriesFromYTerms(),
-                backgroundColor: "transparent",
-                axisColor: "#5a5a5a",
-                gridColor: "#dddddd"
-            });
-            this.chartControl.setSize(width, height);
-            this._calculatorIterateHandler = () => this.onCalculatorIterate();
-            this.notebookEditor.calculator?.on("iterate", this._calculatorIterateHandler);
-            this.onCalculatorIterate();
-            this._applyDomainOverride();
-        }
-
-        _buildSeriesFromYTerms() {
-            const yTermNames = this.getNotebookYTermNames();
-            const colors = ["#2f6db5", "#e67e22", "#2ecc71", "#e74c3c", "#9b59b6"];
-            if (yTermNames.length === 0)
-                return [{ valueField: "y", name: "y", color: colors[0], chartTypes: [this.block.chartType || "line"] }];
-            return yTermNames.map((termName, index) => ({
-                valueField: `series${index}`,
-                name: termName,
-                color: colors[index % colors.length],
-                chartTypes: [this.block.chartType || "line"]
-            }));
-        }
-
-        onCalculatorIterate() {
-            const calculator = this.notebookEditor.calculator;
-            if (!calculator || !this.chartControl)
-                return;
-            const yTermNames = this.getNotebookYTermNames();
-            if (yTermNames.length === 0)
-                return;
-            const xTermName = this.block.xTerm || calculator.properties.independent.name;
-            const series = this._buildSeriesFromYTerms();
-            this.chartControl.setOptions({ series, argumentField: "x" });
-            const lastIteration = calculator.system.lastIteration;
-            const rows = [];
-            for (let iteration = 1; iteration <= lastIteration; iteration++) {
-                const row = { x: calculator.system.getByNameOnIteration(iteration, xTermName, 1) };
-                for (let seriesIndex = 0; seriesIndex < yTermNames.length; seriesIndex++)
-                    row[`series${seriesIndex}`] = calculator.system.getByNameOnIteration(iteration, yTermNames[seriesIndex], 1);
-                rows.push(row);
-            }
-            this.chartControl.setData(rows);
-        }
-
-        get chart() {
-            return this.chartControl;
-        }
-
-        normalizeYTerms() {
-            this.block.yTerms = this.getNotebookYTermNames();
-        }
-
-        getNotebookYTermNames() {
-            const rawYTerms = Array.isArray(this.block.yTerms) ? this.block.yTerms : (this.block.yTerms ? [this.block.yTerms] : []);
-            const yTermNames = [];
-            for (const rawTerm of rawYTerms) {
-                const normalizedTerm = TermControl.normalizeTermValue(typeof rawTerm === "object" ? rawTerm?.term : rawTerm);
-                if (normalizedTerm !== "")
-                    yTermNames.push(normalizedTerm);
-            }
-            return yTermNames;
-        }
-
-        populateTermsMenuSections(listItems) {
-            listItems.push(
-                { text: "Horizontal", stacked: true, buildControl: $container => $container.append(this._xTermControl) },
-                { text: "Vertical", stacked: true, buildControl: $container => {
-                    const wrapper = $('<div style="width:160px"></div>');
-                    this.createNotebookTermsCollectionControl(wrapper, {
-                        propertyName: "yTerms",
-                        system: this.board.calculator?.system
-                    });
-                    $container.append(wrapper);
-                }}
-            );
-        }
-
-        renderTermsButtonTemplate(element) {
-            renderChartTermsToolbarButton(this, element);
-        }
-
-        refreshDomainBoxes() {
-            refreshChartDomainEditorValues(this);
-        }
-
-        _applyDomainOverride() {
-            if (!this.chartControl)
-                return;
-            this.chartControl.domainOverride = {
-                xMin: this.block.xMin ?? null,
-                xMax: this.block.xMax ?? null,
-                yMin: this.block.yMin ?? null,
-                yMax: this.block.yMax ?? null
-            };
-            this.chartControl.render();
-        }
-
-        unmount() {
-            if (this._calculatorIterateHandler) {
-                this.notebookEditor.calculator?.off("iterate", this._calculatorIterateHandler);
-                this._calculatorIterateHandler = null;
-            }
-            if (this.chartControl)
-                this.chartControl.dispose();
-            this.chartControl = null;
-            super.unmount();
-        }
-    };
-
     NotebookShapesFactory.register("chart", {
         defaultContent: "",
-        notebookShapeClass: ChartNotebookShape,
+        renderContentHtml: () => "",
+        notebookShapeClass: ChartShape,
         getNotebookToolbarMixin: () => typeof ChartShapeToolbarMixin !== "undefined" ? ChartShapeToolbarMixin : null,
-        createShape: (notebookEditor, block) => new ChartNotebookShape(notebookEditor, block)
+        createShape: (notebookEditor, block, hostElement) => new ChartShape(notebookEditor, hostElement, block.id, { notebookBlock: block })
     });
 }

@@ -1,3 +1,35 @@
+math-field::part(menu-toggle) {
+    display: none;
+}
+
+math-field::part(virtual-keyboard-toggle) {
+    display: none;
+}
+
+math-field::part(placeholder) {
+    color: #000;
+}
+
+math-field:focus-within {
+    outline: none;
+    user-select: text;
+}
+
+math-field {
+    border: 1px solid transparent;
+    width: 100%;
+    height: 100%;
+    display: block;
+    background-color: transparent;
+    --placeholder-color: #000;
+    --placeholder-opacity: 0.5;
+    font-size: 16px;
+}
+
+.form-math-field::part(container) {
+    pointer-events: none;
+}
+
 .mdl-shape-overlay-popup {
     z-index: var(--mdl-shape-overlay-z-index) !important;
 }

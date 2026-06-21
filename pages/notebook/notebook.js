@@ -704,8 +704,7 @@ class Notebook extends Workspace {
     }
 
     _renderBlockContent(block) {
-        const shape = NotebookShapesFactory.createShape(this, block);
-        return shape.renderContentHtml();
+        return NotebookShapesFactory.renderContentHtml(this, block);
     }
 
     _attachSingleBlockEvents(element, block) {
@@ -715,7 +714,7 @@ class Notebook extends Workspace {
 
         const contentElement = blockElement.querySelector(".notebook-block-content");
         const dragHandleElement = blockElement.querySelector(".notebook-block-drag-handle");
-        const shape = NotebookShapesFactory.createShape(this, block);
+        const shape = NotebookShapesFactory.createShape(this, block, contentElement);
         const previousShape = this.shapeInstances.get(block.id);
         if (previousShape)
             previousShape.unmount();
