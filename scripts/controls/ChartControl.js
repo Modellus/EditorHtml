@@ -422,7 +422,7 @@ class ChartControl {
     formatCrosshairValue(value) {
         if (!Number.isFinite(value))
             return "";
-        const precision = Number.isFinite(this.options.precision) ? this.options.precision : 2;
+        const precision = typeof this.options.getPrecision === "function" ? this.options.getPrecision() : (Number.isFinite(this.options.precision) ? this.options.precision : 2);
         return value.toFixed(precision);
     }
 

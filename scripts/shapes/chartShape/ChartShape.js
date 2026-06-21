@@ -169,7 +169,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             ...(this.properties.axisColor ? { axisColor: this.properties.axisColor } : {}),
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
-            precision: this.board.calculator.getPrecision(),
+            getPrecision: () => this.board.calculator.getPrecision(),
             onDomainChanged: domain => this.onDomainChanged(domain),
             onTickDragStarted: () => this.onTickDragStarted(),
             onTickDragEnded: () => this.onTickDragEnded(),
@@ -423,8 +423,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
                 dataAreaColor: config.dataAreaColor,
                 axisColor: config.axisColor,
                 borderColor: config.border,
-                argumentTitle: config.argTitle,
-                precision: this.board.calculator.getPrecision()
+                argumentTitle: config.argTitle
             });
             if (dataChanged)
                 this.resetValues();
