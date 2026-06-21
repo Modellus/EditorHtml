@@ -333,16 +333,24 @@ class NotebookShape {
 
     createTermControl(termProperty, title, showVisibilityToggle = true) {
         const wrapper = $('<div style="width:160px"></div>');
-        this.createNotebookTermControl(wrapper, this.properties[termProperty] ?? "", value => {
-            this.setPropertyCommand(termProperty, value);
+        this.createNotebookTermControl(wrapper, {
+            propertyName: termProperty,
+            system: this.board.calculator?.system,
+            onValueChanged: value => {
+                this.setPropertyCommand(termProperty, value);
+            }
         });
         return wrapper;
     }
 
     createTermSelectorControl(formAdapter, termProperty, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true) {
         const wrapper = $('<div style="width:160px"></div>');
-        this.createNotebookTermControl(wrapper, this.properties[termProperty] ?? "", value => {
-            formAdapter.updateData(termProperty, value);
+        this.createNotebookTermControl(wrapper, {
+            propertyName: termProperty,
+            system: this.board.calculator?.system,
+            onValueChanged: value => {
+                formAdapter.updateData(termProperty, value);
+            }
         });
         return wrapper;
     }
@@ -428,26 +436,28 @@ class NotebookShape {
         return [];
     }
 
-    getNotebookTermItems() {
+    getNotebookTermItems(system = null) {
         const calculator = this.notebookEditor?.calculator ?? window.shell?.board?.calculator;
         if (!calculator)
             return [];
         const termNames = calculator.getTermsNames?.() ?? [];
-        const system = calculator.system;
-        return Utils.getTerms(termNames, system);
+        const activeSystem = system ?? calculator.system;
+        return Utils.getTerms(termNames, activeSystem);
     }
 
     normalizeNotebookTermValue(value) {
         return TermControl.normalizeTermValue(value);
     }
 
-    createNotebookTermControl($container, value, onValueChanged, options = {}) {
-        const termItems = this.getNotebookTermItems();
-        const normalizedValue = this.normalizeNotebookTermValue(value);
+    createNotebookTermControl($container, options = {}) {
+        const propertyName = options.propertyName;
+        const system = options.system ?? this.board.calculator?.system;
+        const onValueChanged = options.onValueChanged;
+        const normalizedValue = this.normalizeNotebookTermValue(propertyName ? this.properties[propertyName] : options.value);
         const width = options.width ?? 120;
         const editor = $("<div>").appendTo($container);
         editor.dxSelectBox({
-            dataSource: termItems,
+            dataSource: this.getNotebookTermItems(system),
             valueExpr: "term",
             displayExpr: "text",
             value: normalizedValue,
@@ -455,12 +465,20 @@ class NotebookShape {
             searchEnabled: true,
             stylingMode: "filled",
             width: width,
+            onOpened: event => {
+                const activeSystem = options.system ?? this.board.calculator?.system;
+                event.component.option("dataSource", this.getNotebookTermItems(activeSystem));
+            },
             onCustomItemCreating: event => {
                 const customValue = this.normalizeNotebookTermValue(event.text);
                 event.customItem = { text: customValue, term: customValue };
             },
             onValueChanged: event => {
-                onValueChanged(this.normalizeNotebookTermValue(event.value));
+                const nextValue = this.normalizeNotebookTermValue(event.value);
+                if (propertyName)
+                    this.setPropertyCommand(propertyName, nextValue);
+                if (typeof onValueChanged === "function")
+                    onValueChanged(nextValue);
             }
         });
     }
@@ -477,13 +495,16 @@ class NotebookShape {
         return [];
     }
 
-    createNotebookTermsCollectionControl($container, values, onValueChanged, options = {}) {
-        const termItems = this.getNotebookTermItems();
-        const normalizedValues = this.normalizeNotebookTermList(values);
+    createNotebookTermsCollectionControl($container, options = {}) {
+        const propertyName = options.propertyName;
+        const system = options.system ?? this.board.calculator?.system;
+        const onValueChanged = options.onValueChanged;
+        const sourceValues = propertyName ? this.properties[propertyName] : options.values;
+        const normalizedValues = this.normalizeNotebookTermList(sourceValues);
         const width = options.width ?? 140;
         const editor = $("<div>").appendTo($container);
         editor.dxTagBox({
-            dataSource: termItems,
+            dataSource: this.getNotebookTermItems(system),
             valueExpr: "term",
             displayExpr: "text",
             value: normalizedValues,
@@ -492,12 +513,20 @@ class NotebookShape {
             hideSelectedItems: false,
             stylingMode: "filled",
             width: width,
+            onOpened: event => {
+                const activeSystem = options.system ?? this.board.calculator?.system;
+                event.component.option("dataSource", this.getNotebookTermItems(activeSystem));
+            },
             onCustomItemCreating: event => {
                 const customValue = this.normalizeNotebookTermValue(event.text);
                 event.customItem = { text: customValue, term: customValue };
             },
             onValueChanged: event => {
-                onValueChanged(this.normalizeNotebookTermList(event.value));
+                const nextValues = this.normalizeNotebookTermList(event.value);
+                if (propertyName)
+                    this.setPropertyCommand(propertyName, nextValues);
+                if (typeof onValueChanged === "function")
+                    onValueChanged(nextValues);
             }
         });
     }

@@ -256,6 +256,7 @@ class TermControl {
             getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term),
             getBoard: () => baseShape.board,
+            getSystem: () => baseShape.board?.calculator?.system,
             normalizeTermValue: value => TermControl.normalizeBaseShapeTermValue(value),
             onTermChanged: (_, value) => {
                 formInstance.updateData(term, value);
@@ -559,6 +560,7 @@ class TermControl {
             getStateKey: () => TermControl.getShapeTermsCollectionStateKey(shape, propertyName),
             getTermItems: item => TermControl.buildShapeTermsCollectionTermItems(shape, item?.term, normalizeTermValue),
             getBoard: () => shape.board,
+            getSystem: () => shape.board?.calculator?.system,
             normalizeTermValue: value => normalizeTermValue(value),
             onItemDeleting: index => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                 if (index < 0 || index >= items.length)
@@ -1202,7 +1204,7 @@ class TermControl {
             : providedOptions.acceptCustomValue === true;
         const termValue = this.getTermValue(item, index);
         const board = this.options.getBoard?.();
-        const system = board?.calculator?.system;
+        const system = this.getSystem();
         const flatItems = this.getTermItems(item, index);
         const treeItems = TermControl.buildTermTreeItems(board, flatItems);
         let dropDownBoxInstance = null;
@@ -1256,9 +1258,39 @@ class TermControl {
     }
 
     getTermItems(item, index) {
-        if (!this.options.getTermItems)
+        if (this.options.getTermItems)
+            return this.options.getTermItems(item, index);
+        return this.getInjectedTermItems(item, index);
+    }
+
+    getCalculator() {
+        if (typeof this.options.getCalculator === "function")
+            return this.options.getCalculator();
+        const board = this.options.getBoard?.();
+        return board?.calculator ?? null;
+    }
+
+    getSystem() {
+        if (typeof this.options.getSystem === "function")
+            return this.options.getSystem();
+        const board = this.options.getBoard?.();
+        return board?.calculator?.system ?? null;
+    }
+
+    getInjectedTermItems(item, index) {
+        const calculator = this.getCalculator();
+        const system = this.getSystem();
+        if (!calculator)
             return [];
-        return this.options.getTermItems(item, index);
+        const termNames = calculator.getTermsNames?.() ?? [];
+        const items = Utils.getTerms(termNames, system);
+        const selectedTerm = this.normalizeTermValue(this.getTermValue(item, index));
+        if (selectedTerm === "")
+            return items;
+        if (calculator.isTerm?.(selectedTerm))
+            return items;
+        items.unshift({ text: selectedTerm, term: selectedTerm });
+        return items;
     }
 
     normalizeTermValue(value) {

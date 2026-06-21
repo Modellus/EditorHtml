@@ -631,7 +631,7 @@ if (typeof NotebookShapesFactory !== "undefined") {
         }
 
         _buildSeriesFromYTerms() {
-            const yTermNames = Array.isArray(this.block.yTerms) ? this.block.yTerms : [];
+            const yTermNames = this.getNotebookYTermNames();
             const colors = ["#2f6db5", "#e67e22", "#2ecc71", "#e74c3c", "#9b59b6"];
             if (yTermNames.length === 0)
                 return [{ valueField: "y", name: "y", color: colors[0], chartTypes: [this.block.chartType || "line"] }];
@@ -647,7 +647,7 @@ if (typeof NotebookShapesFactory !== "undefined") {
             const calculator = this.notebookEditor.calculator;
             if (!calculator || !this.chartControl)
                 return;
-            const yTermNames = Array.isArray(this.block.yTerms) ? this.block.yTerms : [];
+            const yTermNames = this.getNotebookYTermNames();
             if (yTermNames.length === 0)
                 return;
             const xTermName = this.block.xTerm || calculator.properties.independent.name;
@@ -669,8 +669,18 @@ if (typeof NotebookShapesFactory !== "undefined") {
         }
 
         normalizeYTerms() {
-            if (!Array.isArray(this.block.yTerms))
-                this.block.yTerms = this.block.yTerms ? [this.block.yTerms] : [];
+            this.block.yTerms = this.getNotebookYTermNames();
+        }
+
+        getNotebookYTermNames() {
+            const rawYTerms = Array.isArray(this.block.yTerms) ? this.block.yTerms : (this.block.yTerms ? [this.block.yTerms] : []);
+            const yTermNames = [];
+            for (const rawTerm of rawYTerms) {
+                const normalizedTerm = TermControl.normalizeTermValue(typeof rawTerm === "object" ? rawTerm?.term : rawTerm);
+                if (normalizedTerm !== "")
+                    yTermNames.push(normalizedTerm);
+            }
+            return yTermNames;
         }
 
         populateTermsMenuSections(listItems) {
@@ -678,8 +688,9 @@ if (typeof NotebookShapesFactory !== "undefined") {
                 { text: "Horizontal", stacked: true, buildControl: $container => $container.append(this._xTermControl) },
                 { text: "Vertical", stacked: true, buildControl: $container => {
                     const wrapper = $('<div style="width:160px"></div>');
-                    this.createNotebookTermsCollectionControl(wrapper, this.properties.yTerms ?? [], values => {
-                        this.setPropertyCommand("yTerms", values);
+                    this.createNotebookTermsCollectionControl(wrapper, {
+                        propertyName: "yTerms",
+                        system: this.board.calculator?.system
                     });
                     $container.append(wrapper);
                 }}

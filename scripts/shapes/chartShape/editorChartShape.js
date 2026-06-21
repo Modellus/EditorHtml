@@ -678,8 +678,9 @@ if (typeof NotebookShapesFactory !== "undefined") {
                 { text: "Horizontal", stacked: true, buildControl: $container => $container.append(this._xTermControl) },
                 { text: "Vertical", stacked: true, buildControl: $container => {
                     const wrapper = $('<div style="width:160px"></div>');
-                    this.createNotebookTermsCollectionControl(wrapper, this.properties.yTerms ?? [], values => {
-                        this.setPropertyCommand("yTerms", values);
+                    this.createNotebookTermsCollectionControl(wrapper, {
+                        propertyName: "yTerms",
+                        system: this.board.calculator?.system
                     });
                     $container.append(wrapper);
                 }}
