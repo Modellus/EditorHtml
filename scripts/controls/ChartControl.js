@@ -1444,6 +1444,7 @@ class ChartControl {
         if (!localPoint)
             return;
         const mouseX = localPoint.x;
+        const mouseY = localPoint.y;
         if (mouseX < state.layout.plotLeft || mouseX > state.layout.plotRight) {
             this.clearCrosshair();
             return;
@@ -1451,14 +1452,14 @@ class ChartControl {
         const domain = state.domain;
         const layout = state.layout;
         const dataX = domain.xMin + (mouseX - layout.plotLeft) / layout.plotWidth * (domain.xMax - domain.xMin);
-        this.renderCrosshair(dataX);
+        this.renderCrosshair(dataX, mouseY);
     }
 
     clearCrosshair() {
         this.clearLayer(this.crosshairLayer);
     }
 
-    renderCrosshair(argumentValue) {
+    renderCrosshair(argumentValue, mouseY) {
         this.clearLayer(this.crosshairLayer);
         const state = this.renderState;
         if (!state)
@@ -1471,12 +1472,14 @@ class ChartControl {
             return;
         if (crosshairX < layout.plotLeft || crosshairX > layout.plotRight)
             return;
+        const crosshairColor = Utils.getContrastColor(this.options.backgroundColor || "#ffffff");
         const firstSeries = state.series.length > 0 ? this.getNearestSeriesPoint(state.series[0], argumentValue) : null;
         const snappedX = firstSeries ? firstSeries.xValue : argumentValue;
         const axisLabelX = xScale(snappedX);
         const axisLabelText = this.formatCrosshairValue(snappedX);
         let crosshairMarkup = `
-            <line x1="${crosshairX}" y1="${layout.plotTop}" x2="${crosshairX}" y2="${layout.plotBottom}" stroke="${this.options.foregroundColor}" stroke-width="1" stroke-opacity="0.5" />
+            <line x1="${crosshairX}" y1="${layout.plotTop}" x2="${crosshairX}" y2="${layout.plotBottom}" stroke="${crosshairColor}" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.25" />
+            <line x1="${layout.plotLeft}" y1="${mouseY}" x2="${layout.plotRight}" y2="${mouseY}" stroke="${crosshairColor}" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.25" />
             ${Utils.valueBadgeSvgMarkup(axisLabelText, axisLabelX, layout.plotBottom + 12, { fontSize: 10, fontFamily: this.options.fontFamily, backgroundColor: this.options.foregroundColor })}
         `;
         for (let seriesIndex = 0; seriesIndex < state.series.length; seriesIndex++) {
@@ -1494,7 +1497,6 @@ class ChartControl {
             const yLabelWidth = this.estimateTextWidth(yLabelText, 10) + 8;
             crosshairMarkup += `
                 <circle cx="${pointX}" cy="${pointY}" r="4" fill="${series.color}" stroke="#ffffff" stroke-width="1.5" />
-                <line x1="${layout.plotLeft}" y1="${pointY}" x2="${layout.plotRight}" y2="${pointY}" stroke="${series.color}" stroke-width="1" stroke-opacity="0.3" />
                 ${Utils.valueBadgeSvgMarkup(yLabelText, layout.plotLeft - yLabelWidth / 2 - 4, pointY, { fontSize: 10, fontFamily: this.options.fontFamily, backgroundColor: series.color })}
             `;
         }
