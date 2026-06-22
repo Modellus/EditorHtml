@@ -26,11 +26,11 @@
     <script src="../../scripts/themes/baseTheme.js"></script>
     <script src="../../scripts/themes/baseTranslations.js"></script>
     <script src="../../scripts/calculator.js"></script>
-    <script src="../../scripts/board/board.js"></script>
-    <script src="../../scripts/shapes/shapes.js"></script>
-    <script src="../../scripts/board/selection.js"></script>
-    <script src="../../scripts/board/panAndZoom.js"></script>
-    <script src="../../scripts/board/miniMap.js"></script>
+    <script src="../../scripts/editors/board/Canvas.js"></script>
+    <script src="../../scripts/editors/board/widgets/WidgetsRegistry.js"></script>
+    <script src="../../scripts/editors/board/CanvasSelection.js"></script>
+    <script src="../../scripts/editors/board/CanvasPanZoom.js"></script>
+    <script src="../../scripts/editors/board/CanvasMiniMap.js"></script>
     
     <script src="../../scripts/commands/commandsInvoker.js"></script>
     <script src="../../scripts/commands/commands.js"></script>
@@ -43,48 +43,50 @@
     
     <script src="../../scripts/AssetManager.js"></script>
     <script src="../../scripts/shapes/baseShape/termDisplay.js"></script>
-    <script src="../../scripts/shapes/baseShape/editorBaseShape.js"></script>
+    <script src="../../scripts/shapes/Shape.js"></script>
     <script src="../../scripts/shapes/baseShape/BaseShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/childShape/editorChildShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/ChildWidget.js"></script>
     <script src="../../scripts/shapes/childShape/ChildShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/pointShape/editorPointShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/PointWidget.js"></script>
     <script src="../../scripts/shapes/pointShape/PointShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/bodyShape/editorBodyShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/BodyWidget.js"></script>
     <script src="../../scripts/shapes/bodyShape/BodyShapeToolbar.js"></script>
     <script src="../../scripts/shapes/shared/shapeInteractionPolicies.js"></script>
     <script src="../../scripts/shapes/shared/shapeInteractionController.js"></script>
     <script src="../../scripts/shapes/chartShape/chartToolbarPresentation.js"></script>
     <script src="../../scripts/shapes/chartShape/ChartShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/ChartWidget.js"></script>
     <script src="../../scripts/shapes/chartShape/ChartShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/tableShape/editorTableShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/TableWidget.js"></script>
     <script src="../../scripts/shapes/tableShape/TableShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/sliderShape/editorSliderShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/SliderWidget.js"></script>
     <script src="../../scripts/shapes/sliderShape/SliderShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/gaugeShape/editorGaugeShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/GaugeWidget.js"></script>
     <script src="../../scripts/shapes/gaugeShape/GaugeShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/mediaShape/editorMediaShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/MediaWidget.js"></script>
     <script src="../../scripts/shapes/mediaShape/MediaShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/vectorShape/editorVectorShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/VectorWidget.js"></script>
     <script src="../../scripts/shapes/vectorShape/VectorShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/lineShape/editorLineShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/LineWidget.js"></script>
     <script src="../../scripts/shapes/lineShape/LineShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/arcShape/editorArcShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/ArcWidget.js"></script>
     <script src="../../scripts/shapes/arcShape/ArcShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/referentialShape/editorReferentialShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/ReferentialWidget.js"></script>
     <script src="../../scripts/shapes/referentialShape/ReferentialShapeToolbar.js"></script>
     <script src="../../scripts/shapes/expressionShape/expressionTemplateShortcuts.js"></script>
     <script src="../../scripts/shapes/expressionShape/mathliveController.js"></script>
     <script src="../../scripts/shapes/expressionShape/expressionShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/ExpressionWidget.js"></script>
     <script src="../../scripts/shapes/expressionShape/ExpressionShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/valueShape/editorValueShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/ValueWidget.js"></script>
     <script src="../../scripts/shapes/valueShape/ValueShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/textShape/editorTextShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/TextWidget.js"></script>
     <script src="../../scripts/shapes/textShape/TextShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/questionShape/editorQuestionShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/QuestionWidget.js"></script>
     <script src="../../scripts/shapes/questionShape/QuestionShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/rulerShape/editorRulerShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/RulerWidget.js"></script>
     <script src="../../scripts/shapes/rulerShape/RulerShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/protractorShape/editorProtractorShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/ProtractorWidget.js"></script>
     <script src="../../scripts/shapes/protractorShape/ProtractorShapeToolbar.js"></script>
 
     <script src="../../sdk/aiSdk.js"></script>
@@ -103,7 +105,8 @@
     <script src="../../scripts/shell/collabChannel.js"></script>
     <script src="../../scripts/ModelSession.js"></script>
     <script src="../../scripts/Workspace.js"></script>
-    <script src="../../scripts/Board.js"></script>
+    <script src="../../scripts/editors/board/BoardEditor.js"></script>
+    <script src="../../scripts/editors/board/BoardBootstrap.js"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&family=Indie+Flower&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Atma:wght@400;600;700&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Nunito:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet"/>

@@ -9,8 +9,6 @@ class BaseShape {
         LineShape: "fa-light fa-slash-forward",
         ArcShape: "fa-light fa-circle-half-stroke",
         ChartShape: "fa-light fa-chart-line",
-        ChartWidget: "fa-light fa-chart-line",
-        ChartBlock: "fa-light fa-chart-line",
         TableShape: "fa-light fa-table",
         SliderShape: "fa-light fa-slider",
         ValueShape: "fa-light fa-input-numeric",

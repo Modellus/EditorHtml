@@ -3,10 +3,5 @@ DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImN
 var shell = null;
 
 (async () => {
-    const storedModel = sessionStorage.getItem("mp.anon.model");
-    const session = new ModelSession(null);
-    shell = new BoardApp(session, storedModel || null);
-    shell.saveToApi = () => shell.exportToFile();
-    shell.saveAsModel = () => shell.exportToFile();
-    shell.duplicateModel = () => {};
+    shell = BoardBootstrap.startOffline();
 })();

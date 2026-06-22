@@ -117,8 +117,8 @@ function buildOfflineHtml() {
     for (const src of removeScriptSrcs)
         html = html.replace(`\n    <script src="${src}"></script>`, "");
     html = html.replace(
-        `<script src="../../scripts/ModelSession.js"></script>\n    <script src="../../scripts/Workspace.js"></script>\n    <script src="../../scripts/Board.js"></script>`,
-        `<script src="../../electron/offline-stubs.js"></script>\n    <script src="../../scripts/ModelSession.js"></script>\n    <script src="../../scripts/Workspace.js"></script>\n    <script src="../../scripts/Board.js"></script>`
+        `<script src="../../scripts/ModelSession.js"></script>\n    <script src="../../scripts/Workspace.js"></script>\n    <script src="../../scripts/editors/board/BoardEditor.js"></script>`,
+        `<script src="../../electron/offline-stubs.js"></script>\n    <script src="../../scripts/ModelSession.js"></script>\n    <script src="../../scripts/Workspace.js"></script>\n    <script src="../../scripts/editors/board/BoardEditor.js"></script>`
     );
     let googleFontsReplaced = false;
     html = html.replace(/<link\s[^>]*href="https:\/\/fonts\.googleapis\.com[^"]*"[^>]*\/?>/g, () => {

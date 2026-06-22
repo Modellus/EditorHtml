@@ -17,11 +17,11 @@
     <script src="../../scripts/themes/baseTheme.js"></script>
     <script src="../../scripts/themes/baseTranslations.js"></script>
     <script src="../../scripts/calculator.js"></script>
-    <script src="../../scripts/board/board.js"></script>
-    <script src="../../scripts/shapes/shapes.js"></script>
-    <script src="../../scripts/board/selection.js"></script>
-    <script src="../../scripts/board/panAndZoom.js"></script>
-    <script src="../../scripts/board/miniMap.js"></script>
+    <script src="../../scripts/editors/board/Canvas.js"></script>
+    <script src="../../scripts/editors/board/widgets/WidgetsRegistry.js"></script>
+    <script src="../../scripts/editors/board/CanvasSelection.js"></script>
+    <script src="../../scripts/editors/board/CanvasPanZoom.js"></script>
+    <script src="../../scripts/editors/board/CanvasMiniMap.js"></script>
     
     <script src="../../scripts/commands/commandsInvoker.js"></script>
     <script src="../../scripts/commands/commands.js"></script>
@@ -34,45 +34,51 @@
     
     <script src="../../scripts/AssetManager.js"></script>
     <script src="../../scripts/shapes/baseShape/termDisplay.js"></script>
-    <script src="../../scripts/shapes/baseShape/baseShape.js"></script>
-    <script src="../../scripts/shapes/baseShape/baseShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/childShape/childShape.js"></script>
-    <script src="../../scripts/shapes/childShape/childShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/pointShape/pointShape.js"></script>
-    <script src="../../scripts/shapes/pointShape/pointShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/bodyShape/bodyShape.js"></script>
-    <script src="../../scripts/shapes/bodyShape/bodyShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/chartShape/chartShape.js"></script>
-    <script src="../../scripts/shapes/chartShape/chartShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/tableShape/tableShape.js"></script>
-    <script src="../../scripts/shapes/tableShape/tableShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/sliderShape/sliderShape.js"></script>
-    <script src="../../scripts/shapes/sliderShape/sliderShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/gaugeShape/gaugeShape.js"></script>
-    <script src="../../scripts/shapes/gaugeShape/gaugeShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/mediaShape/mediaShape.js"></script>
-    <script src="../../scripts/shapes/mediaShape/mediaShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/vectorShape/vectorShape.js"></script>
-    <script src="../../scripts/shapes/vectorShape/vectorShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/lineShape/lineShape.js"></script>
-    <script src="../../scripts/shapes/lineShape/lineShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/arcShape/arcShape.js"></script>
-    <script src="../../scripts/shapes/arcShape/arcShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/referentialShape/referentialShape.js"></script>
-    <script src="../../scripts/shapes/referentialShape/referentialShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/Shape.js"></script>
+    <script src="../../scripts/shapes/baseShape/BaseShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/ChildWidget.js"></script>
+    <script src="../../scripts/shapes/childShape/ChildShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/PointWidget.js"></script>
+    <script src="../../scripts/shapes/pointShape/PointShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/BodyWidget.js"></script>
+    <script src="../../scripts/shapes/bodyShape/BodyShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/shared/shapeInteractionPolicies.js"></script>
+    <script src="../../scripts/shapes/shared/shapeInteractionController.js"></script>
+    <script src="../../scripts/shapes/chartShape/chartToolbarPresentation.js"></script>
+    <script src="../../scripts/shapes/chartShape/ChartShape.js"></script>
+    <script src="../../scripts/editors/board/widgets/ChartWidget.js"></script>
+    <script src="../../scripts/shapes/chartShape/ChartShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/TableWidget.js"></script>
+    <script src="../../scripts/shapes/tableShape/TableShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/SliderWidget.js"></script>
+    <script src="../../scripts/shapes/sliderShape/SliderShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/GaugeWidget.js"></script>
+    <script src="../../scripts/shapes/gaugeShape/GaugeShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/MediaWidget.js"></script>
+    <script src="../../scripts/shapes/mediaShape/MediaShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/VectorWidget.js"></script>
+    <script src="../../scripts/shapes/vectorShape/VectorShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/LineWidget.js"></script>
+    <script src="../../scripts/shapes/lineShape/LineShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/ArcWidget.js"></script>
+    <script src="../../scripts/shapes/arcShape/ArcShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/ReferentialWidget.js"></script>
+    <script src="../../scripts/shapes/referentialShape/ReferentialShapeToolbar.js"></script>
+    <script src="../../scripts/shapes/expressionShape/expressionTemplateShortcuts.js"></script>
     <script src="../../scripts/shapes/expressionShape/mathliveController.js"></script>
     <script src="../../scripts/shapes/expressionShape/expressionShape.js"></script>
-    <script src="../../scripts/shapes/expressionShape/expressionShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/valueShape/valueShape.js"></script>
-    <script src="../../scripts/shapes/valueShape/valueShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/textShape/textShape.js"></script>
-    <script src="../../scripts/shapes/textShape/textShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/questionShape/questionShape.js"></script>
-    <script src="../../scripts/shapes/questionShape/questionShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/rulerShape/rulerShape.js"></script>
-    <script src="../../scripts/shapes/rulerShape/rulerShapeToolbar.js"></script>
-    <script src="../../scripts/shapes/protractorShape/protractorShape.js"></script>
-    <script src="../../scripts/shapes/protractorShape/protractorShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/ExpressionWidget.js"></script>
+    <script src="../../scripts/shapes/expressionShape/ExpressionShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/ValueWidget.js"></script>
+    <script src="../../scripts/shapes/valueShape/ValueShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/TextWidget.js"></script>
+    <script src="../../scripts/shapes/textShape/TextShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/QuestionWidget.js"></script>
+    <script src="../../scripts/shapes/questionShape/QuestionShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/RulerWidget.js"></script>
+    <script src="../../scripts/shapes/rulerShape/RulerShapeToolbar.js"></script>
+    <script src="../../scripts/editors/board/widgets/ProtractorWidget.js"></script>
+    <script src="../../scripts/shapes/protractorShape/ProtractorShapeToolbar.js"></script>
 
     <script src="../../scripts/shell/backgrounds.js"></script>
     <script src="../../scripts/shell/settingsController.js"></script>
@@ -81,13 +87,15 @@
     <script src="../../scripts/toolbars/playerToolbar.js"></script>
     <script src="../../scripts/shell/topToolbar.js"></script>
     <script src="../../scripts/shell/bottomToolbar.js"></script>
+    <script src="../../scripts/shell/menuController.js"></script>
     <script src="../../scripts/shell/contextMenuController.js"></script>
     <script src="../../scripts/shell/modelSavePopup.js"></script>
     <script src="../../scripts/shell/saveFormController.js"></script>
     <script src="../../electron/offline-stubs.js"></script>
     <script src="../../scripts/ModelSession.js"></script>
     <script src="../../scripts/Workspace.js"></script>
-    <script src="../../scripts/Board.js"></script>
+    <script src="../../scripts/editors/board/BoardEditor.js"></script>
+    <script src="../../scripts/editors/board/BoardBootstrap.js"></script>
 
     <link rel="stylesheet" href="../../libraries/css/google-fonts.css">
     
@@ -100,8 +108,11 @@
     <script src="../../libraries/scripts/dx.all.js"></script>
     <link rel="stylesheet" href="../../libraries/css/mathlive-static.css"></script>
     <script src="../../libraries/scripts/mathlive.min.js"></script>
+    <script>MathJax = { startup: { typeset: false }, svg: { fontCache: "none" } };</script>
+    <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
     
     <link rel="stylesheet" href="../../common.css">
+    <link rel="stylesheet" href="../../scripts/toolbars/sharedShapeToolbar.css">
     <link rel="stylesheet" href="board.css">
     <link rel="stylesheet" href="../../scripts/toolbars/shapeToolbar.css">
     <link rel="stylesheet" href="../../scripts/toolbars/playerToolbar.css">
