@@ -1,42 +1,5 @@
 const defaultBoardApiBase = "https://modellus-api.interactivebook.workers.dev";
 
-function getCurrentBoardSession() {
-    return window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
-}
-
-function getBoardAuthHeaders() {
-    const currentSession = getCurrentBoardSession();
-    if (currentSession && currentSession.token)
-        return { Authorization: `Bearer ${currentSession.token}` };
-    return {};
-}
-
-function decodeBoardJwtPayload(token) {
-    try {
-        const payloadPart = token.split(".")[1];
-        const normalizedPayload = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-        const paddedPayload = normalizedPayload + "===".slice((normalizedPayload.length + 3) % 4);
-        return JSON.parse(atob(paddedPayload));
-    } catch {
-        return null;
-    }
-}
-
-function isBoardTokenValid(token) {
-    const payload = decodeBoardJwtPayload(token);
-    if (!payload?.exp)
-        return false;
-    const currentSeconds = Math.floor(Date.now() / 1000);
-    return payload.exp > currentSeconds + 30;
-}
-
-function hasBoardValidSession() {
-    const currentSession = getCurrentBoardSession();
-    if (!currentSession?.token)
-        return false;
-    return isBoardTokenValid(currentSession.token);
-}
-
 function extractBoardModelPayload(model) {
     if (!model)
         return null;
@@ -70,37 +33,11 @@ function enableBoardReadOnlyMode() {
     window.modellusReadOnly = true;
     document.body.classList.add("read-only");
 }
-
-async function loadBoardModel(apiBase, modelId, headers) {
-    const response = await fetch(`${apiBase}/models/${modelId}`, { headers });
-    if (!response.ok) {
-        const error = new Error(`Failed to load model (${response.status})`);
-        error.status = response.status;
-        throw error;
-    }
-    return response.json();
-}
-
-function isBoardUnauthorizedError(error) {
-    return Number(error?.status) === 401;
-}
-
 function isBoardNetworkFetchError(error) {
     if (!(error instanceof TypeError))
         return false;
     const message = String(error?.message ?? "");
     return message.toLowerCase().includes("fetch");
-}
-
-function clearBoardAuthState() {
-    try {
-        const sessionStorageKey = window.modellus?.auth?.sessionKey || "mp.session";
-        const userStorageKey = window.modellus?.auth?.userKey || "mp.user";
-        localStorage.removeItem(sessionStorageKey);
-        localStorage.removeItem(userStorageKey);
-        localStorage.removeItem("modellus_id_token");
-        localStorage.removeItem("modellus_refresh_token");
-    } catch (_) {}
 }
 
 function redirectBoardToLogin() {
@@ -122,69 +59,59 @@ async function createOnlineBoardEditor(options = {}) {
     const urlParameters = new URLSearchParams(window.location.search);
     const modelName = urlParameters.get("model");
     const modelId = urlParameters.get("model_id");
-    const { ModelsApiClient } = await import("../../sdk/modelsApiClient.js");
-    const { UserSdk } = await import("../../sdk/userSdk.js");
+    const { ModelsApiClient } = await import("../../../sdk/modelsApiClient.js");
+    const { UserSdk } = await import("../../../sdk/userSdk.js");
     const modelsApiClient = new ModelsApiClient(
         apiBase,
-        () => getCurrentBoardSession(),
+        () => ModelAccessBootstrap.getSession(),
         () => {
-            const currentSession = getCurrentBoardSession();
+            const currentSession = ModelAccessBootstrap.getSession();
             return currentSession?.userId || "";
         }
     );
     const userSdk = new UserSdk("mp.session", "mp.user", "/pages/login/index.html", "modellus_id_token", "/pages/marketplace/index.html");
     const modelSession = new ModelSession(modelsApiClient);
-    if (!hasBoardValidSession())
+    if (!ModelAccessBootstrap.hasValidSession())
         await userSdk.refreshSession(apiBase);
-    if (hasBoardValidSession())
+    if (ModelAccessBootstrap.hasValidSession())
         userSdk.startSessionRefresh(apiBase, () => redirectBoardToLogin());
     else
-        clearBoardAuthState();
+        ModelAccessBootstrap.clearAuthState();
     if (modelId) {
-        const currentSession = getCurrentBoardSession();
-        if (currentSession && currentSession.token) {
-            if (!hasBoardValidSession()) {
-                clearBoardAuthState();
-            } else {
-                try {
-                    const model = await loadBoardModel(apiBase, modelId, getBoardAuthHeaders());
-                    const payload = extractBoardModelPayload(model);
-                    const boardEditor = new BoardEditor(modelSession, payload || null);
-                    applyBoardModelMetadata(boardEditor, model);
-                    boardEditor.setupCollab(modelId);
-                    if (urlParameters.get("new") === "1") {
-                        boardEditor.properties.name = boardEditor.board.translations.get("New Model");
-                        boardEditor.topToolbar?.updateModelName();
-                    }
-                    return boardEditor;
-                } catch (error) {
-                    if (!isBoardUnauthorizedError(error))
-                        throw error;
-                    clearBoardAuthState();
-                }
-            }
-        }
         try {
-            const model = await loadBoardModel(apiBase, modelId, {});
-            if (model && (model.is_public === true || model.is_public === 1)) {
+            const accessResult = await ModelAccessBootstrap.resolveModelAccess(apiBase, modelId, refreshApiBase => userSdk.refreshSession(refreshApiBase));
+            if (accessResult.mode === "editable") {
+                const payload = extractBoardModelPayload(accessResult.model);
+                const boardEditor = new BoardEditor(modelSession, payload || null);
+                applyBoardModelMetadata(boardEditor, accessResult.model);
+                boardEditor.setupCollab(modelId);
+                if (urlParameters.get("new") === "1") {
+                    boardEditor.properties.name = boardEditor.board.translations.get("New Model");
+                    boardEditor.topToolbar?.updateModelName();
+                }
+                return boardEditor;
+            }
+            if (accessResult.mode === "readonly") {
                 enableBoardReadOnlyMode();
-                const payload = extractBoardModelPayload(model);
+                const payload = extractBoardModelPayload(accessResult.model);
                 return new BoardEditor(modelSession, payload || null);
             }
-            redirectBoardToLogin();
-            return null;
-        } catch (error) {
-            if (isBoardUnauthorizedError(error)) {
+            if (accessResult.mode === "login-required") {
                 redirectBoardToLogin();
                 return null;
             }
+            if (accessResult.mode === "error")
+                throw new Error(`Failed to load model (${accessResult.status})`);
+            redirectBoardToLogin();
+            return null;
+        } catch (error) {
             if (isBoardNetworkFetchError(error))
                 return new BoardEditor(modelSession, null);
             throw error;
         }
     }
-    if (!hasBoardValidSession()) {
-        clearBoardAuthState();
+    if (!ModelAccessBootstrap.hasValidSession()) {
+        ModelAccessBootstrap.clearAuthState();
         if (modelName) {
             const response = await fetch(`../../resources/models/${modelName}.json`);
             const payload = await response.text();

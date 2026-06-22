@@ -4,6 +4,8 @@ class NotebookEditor extends Workspace {
     constructor() {
         super(null);
         this._ownSession = null;
+        this._modelId = null;
+        this.collabCoordinator = null;
         this.blocks = [];
         this.shapeInstances = new Map();
         this.nextBlockId = 1;
@@ -27,6 +29,7 @@ class NotebookEditor extends Workspace {
         this._bindCalculatorEvents();
         this._reparseExpressions();
         this._initializeShapeInteractionController();
+        window.addEventListener("beforeunload", () => this.collabCoordinator?.destroy());
     }
 
     get session() {
@@ -184,6 +187,7 @@ class NotebookEditor extends Workspace {
             type: "notebook",
             isReadOnly: false,
             canSave: false,
+            save: () => this.saveToApi(),
             exit: () => window.history.back()
         });
     }
@@ -558,11 +562,13 @@ class NotebookEditor extends Workspace {
         titleElement.addEventListener("input", () => {
             this.title = titleElement.textContent;
             this._updateLastModified();
+            this.broadcastNotebookCollabUpdate();
         });
 
         subtitleElement.addEventListener("input", () => {
             this.subtitle = subtitleElement.textContent;
             this._updateLastModified();
+            this.broadcastNotebookCollabUpdate();
         });
 
         authorElement.textContent = this.author;
@@ -587,6 +593,7 @@ class NotebookEditor extends Workspace {
                 coverElement.style.backgroundImage = `url(${this.coverImageUrl})`;
                 coverElement.style.background = `url(${this.coverImageUrl}) center/cover no-repeat`;
                 this._updateLastModified();
+                this.broadcastNotebookCollabUpdate();
             };
             reader.readAsDataURL(file);
         };
@@ -613,6 +620,7 @@ class NotebookEditor extends Workspace {
         this.blocks.push(block);
         this._reloadBlockList();
         this._updateLastModified();
+        this.broadcastNotebookCollabUpdate();
     }
 
     getBlockIndex(blockId) {
@@ -630,6 +638,7 @@ class NotebookEditor extends Workspace {
         this.blocks.splice(normalizedTargetIndex, 0, block);
         this._reloadBlockList();
         this._updateLastModified();
+        this.broadcastNotebookCollabUpdate();
     }
 
     insertBlockAfter(blockId, blockData) {
@@ -640,6 +649,7 @@ class NotebookEditor extends Workspace {
         this.blocks.splice(insertionIndex, 0, insertedBlock);
         this._reloadBlockList();
         this._updateLastModified();
+        this.broadcastNotebookCollabUpdate();
     }
 
     removeBlock(blockId) {
@@ -648,6 +658,7 @@ class NotebookEditor extends Workspace {
         this.shapeInteractionController?.notifyItemRemoved(blockId);
         this._reloadBlockList();
         this._updateLastModified();
+        this.broadcastNotebookCollabUpdate();
     }
 
     _renderBlocks() {
@@ -728,6 +739,120 @@ class NotebookEditor extends Workspace {
         if (colorButtonContainer)
             this._initBlockGripButton(colorButtonContainer, shape);
         this.shapeInteractionController.attachItemInteractions(blockElement, block, shape);
+    }
+
+    serialize() {
+        const sessionData = this.session ? this.session.serialize() : {};
+        return Object.assign({}, sessionData, {
+            notebook: {
+                title: this.title,
+                subtitle: this.subtitle,
+                author: this.author,
+                coverImageUrl: this.coverImageUrl,
+                blocks: this.blocks
+            }
+        });
+    }
+
+    deserialize(definition) {
+        let parsed;
+        try {
+            parsed = typeof definition === "string" ? JSON.parse(definition) : definition;
+        } catch {
+            return;
+        }
+        if (!parsed) return;
+        if (parsed.properties)
+            this.session.deserialise(parsed);
+        const notebookData = parsed.notebook;
+        if (!notebookData) return;
+        if (typeof notebookData.title === "string") {
+            this.title = notebookData.title;
+            const titleElement = document.getElementById("notebook-title");
+            if (titleElement) titleElement.textContent = this.title;
+        }
+        if (typeof notebookData.subtitle === "string") {
+            this.subtitle = notebookData.subtitle;
+            const subtitleElement = document.getElementById("notebook-subtitle");
+            if (subtitleElement) subtitleElement.textContent = this.subtitle;
+        }
+        if (typeof notebookData.author === "string") {
+            this.author = notebookData.author;
+            const authorElement = document.getElementById("notebook-author");
+            if (authorElement) authorElement.textContent = this.author;
+        }
+        if (notebookData.coverImageUrl) {
+            this.coverImageUrl = notebookData.coverImageUrl;
+            const coverElement = document.getElementById("notebook-cover-image");
+            if (coverElement)
+                coverElement.style.background = `url(${this.coverImageUrl}) center/cover no-repeat`;
+        }
+        if (Array.isArray(notebookData.blocks)) {
+            this.blocks = notebookData.blocks;
+            const maxId = notebookData.blocks.reduce((accumulator, block) => Math.max(accumulator, block.id || 0), 0);
+            this.nextBlockId = maxId + 1;
+            this._reloadBlockList();
+        }
+        this._reparseExpressions();
+    }
+
+    async saveToApi() {
+        if (!this._modelId) return;
+        const notebookApiBase = "https://modellus-api.interactivebook.workers.dev";
+        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
+        const headers = { "Content-Type": "application/json" };
+        if (session?.token) headers.Authorization = `Bearer ${session.token}`;
+        try {
+            const payload = {
+                title: this.title || "Untitled notebook",
+                description: "",
+                definition: JSON.stringify(this.serialize())
+            };
+            const response = await fetch(`${notebookApiBase}/models/${this._modelId}`, {
+                method: "PUT",
+                headers,
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error(`Save failed (${response.status})`);
+        } catch (error) {
+            alert("Failed to save notebook.");
+        }
+    }
+
+    setupCollab(modelId) {
+        if (!modelId)
+            return;
+        this.collabCoordinator?.destroy();
+        this.collabCoordinator = new CollabCoordinator({
+            apiBase: "https://modellus-api.interactivebook.workers.dev",
+            modelId,
+            getToken: () => window.modellus?.auth?.getSession?.()?.token ?? "",
+            getSnapshot: () => this.serialize(),
+            onRemoteOp: op => this.applyRemoteNotebookOp(op),
+            onRemoteSnapshot: model => this.applyRemoteNotebookSnapshot(model)
+        });
+        this.collabCoordinator.start();
+    }
+
+    broadcastNotebookCollabUpdate() {
+        if (!this.collabCoordinator || this.collabCoordinator.isApplyingRemote())
+            return;
+        const serializedNotebook = this.serialize();
+        this.collabCoordinator.sendOp({ type: "setNotebookSnapshot", model: serializedNotebook });
+        this.collabCoordinator.sendSnapshot(serializedNotebook);
+    }
+
+    applyRemoteNotebookOp(op) {
+        if (!this.collabCoordinator)
+            return;
+        if (op.type === "setNotebookSnapshot" && op.model)
+            this.deserialize(op.model);
+    }
+
+    applyRemoteNotebookSnapshot(model) {
+        if (!model || !this.collabCoordinator)
+            return;
+        this.deserialize(model);
     }
 }
 

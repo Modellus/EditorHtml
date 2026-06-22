@@ -44,6 +44,23 @@ class BoardEditor extends Workspace {
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
         [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        this.commands.registerShapeAlias("BodyShape", BodyWidget);
+        this.commands.registerShapeAlias("PointShape", PointWidget);
+        this.commands.registerShapeAlias("ExpressionShape", ExpressionWidget);
+        this.commands.registerShapeAlias("ValueShape", ValueWidget);
+        this.commands.registerShapeAlias("ChartShape", ChartWidget);
+        this.commands.registerShapeAlias("TableShape", TableWidget);
+        this.commands.registerShapeAlias("SliderShape", SliderWidget);
+        this.commands.registerShapeAlias("GaugeShape", GaugeWidget);
+        this.commands.registerShapeAlias("VectorShape", VectorWidget);
+        this.commands.registerShapeAlias("LineShape", LineWidget);
+        this.commands.registerShapeAlias("ArcShape", ArcWidget);
+        this.commands.registerShapeAlias("MediaShape", MediaWidget);
+        this.commands.registerShapeAlias("ReferentialShape", ReferentialWidget);
+        this.commands.registerShapeAlias("TextShape", TextWidget);
+        this.commands.registerShapeAlias("QuestionShape", QuestionWidget);
+        this.commands.registerShapeAlias("RulerShape", RulerWidget);
+        this.commands.registerShapeAlias("ProtractorShape", ProtractorWidget);
         this.commands.registerShapeAlias("ImageShape", MediaWidget);
         this.bindWorkspaceIterate(() => this.onIterate());
         if (model != undefined)
@@ -369,13 +386,13 @@ class BoardEditor extends Workspace {
         this.session.pendingInitialValuesByCase = null;
         this.calculator.reset();
         this.board.shapes.shapes.forEach(shape => {
-            if (shape.constructor.name == "ExpressionShape" && shape.properties.expression != undefined)
+            if (shape.properties?.expression !== undefined)
                 this.calculator.parse(shape.properties.expression);
-            else if (shape.constructor.name == "BodyShape" && shape.properties.isPhysical)
+            else if (shape.properties?.isPhysical)
                 this.calculator.addPhysicalBody(shape.properties.name, shape.properties.mass ?? 1);
         });
         this.board.shapes.shapes.forEach(shape => {
-            if (shape.constructor.name === "TableShape" && shape.properties.externalData)
+            if (shape.properties?.externalData)
                 this.calculator.loadExternalData(shape.properties.externalData.names, shape.properties.externalData.values);
         });
         this.calculator.applyPreloadedOutlierIterations();
@@ -644,7 +661,7 @@ class BoardEditor extends Workspace {
 
     onBeforeUnload(event) {
         this.chatController.disposeAdapter();
-        this.collabChannel?.destroy();
+        this.collabCoordinator?.destroy();
         if (!this._hasChanges)
             return;
         event.preventDefault();
@@ -653,47 +670,49 @@ class BoardEditor extends Workspace {
     setupCollab(modelId) {
         if (!modelId)
             return;
-        if (this.collabChannel)
-            this.collabChannel.destroy();
-        this._pendingCollabSnapshot = true;
-        this.collabChannel = new CollabChannel({
+        this.collabCoordinator?.destroy();
+        this.collabCoordinator = new CollabCoordinator({
             apiBase: "https://modellus-api.interactivebook.workers.dev",
             modelId,
             getToken: () => window.modellus?.auth?.getSession?.()?.token ?? "",
             onOp: op => this.applyRemoteOp(op),
-            onSnapshot: model => this.applyRemoteSnapshot(model)
+            onSnapshot: model => this.applyRemoteSnapshot(model),
+            getSnapshot: () => this.serialize()
         });
+        if (this._collabShapeDragEndHandler)
+            this.board.svg.removeEventListener("shapeDragEnd", this._collabShapeDragEndHandler);
         this.commands.invoker.onExecute = command => this.broadcastCommand(command);
-        this.board.svg.addEventListener("shapeDragEnd", e => {
-            if (this.collabChannel?._applyingRemote)
+        this._collabShapeDragEndHandler = e => {
+            if (this.collabCoordinator?.isApplyingRemote())
                 return;
             const shape = e.detail.shape;
             if (!shape)
                 return;
-            this.collabChannel?.sendOp({
+            this.collabCoordinator?.sendOp({
                 type: "setShapeProperties",
                 shapeId: shape.id,
                 properties: Utils.cloneProperties(shape.properties)
             });
-        });
-        this.collabChannel.connect();
+        };
+        this.board.svg.addEventListener("shapeDragEnd", this._collabShapeDragEndHandler);
+        this.collabCoordinator.start();
     }
 
     broadcastCommand(command) {
-        if (!this.collabChannel || this.collabChannel._applyingRemote)
+        if (!this.collabCoordinator || this.collabCoordinator.isApplyingRemote())
             return;
         if (command instanceof AddShapeCommand) {
-            this.collabChannel.sendOp({ type: "addShape", shapeData: command.shape.serialize() });
-            this.collabChannel.sendSnapshot(this.serialize());
+            this.collabCoordinator.sendOp({ type: "addShape", shapeData: command.shape.serialize() });
+            this.collabCoordinator.sendSnapshot(this.serialize());
             return;
         }
         if (command instanceof RemoveShapeCommand) {
-            this.collabChannel.sendOp({ type: "removeShape", shapeId: command.shape.id });
-            this.collabChannel.sendSnapshot(this.serialize());
+            this.collabCoordinator.sendOp({ type: "removeShape", shapeId: command.shape.id });
+            this.collabCoordinator.sendSnapshot(this.serialize());
             return;
         }
         if (command instanceof SetShapePropertiesCommand) {
-            this.collabChannel.sendOp({
+            this.collabCoordinator.sendOp({
                 type: "setShapeProperties",
                 shapeId: command.shape.id,
                 properties: Utils.cloneProperties(command.shape.properties)
@@ -701,66 +720,51 @@ class BoardEditor extends Workspace {
             return;
         }
         if (command instanceof SetPropertiesCommand) {
-            this.collabChannel.sendOp({ type: "setModelProperties", properties: Utils.cloneProperties(this.properties) });
-            this.collabChannel.sendSnapshot(this.serialize());
+            this.collabCoordinator.sendOp({ type: "setModelProperties", properties: Utils.cloneProperties(this.properties) });
+            this.collabCoordinator.sendSnapshot(this.serialize());
         }
     }
 
     applyRemoteOp(op) {
-        if (!this.collabChannel)
+        if (!this.collabCoordinator)
             return;
-        this.collabChannel._applyingRemote = true;
-        try {
-            if (op.type === "addShape") {
-                const existingShape = this.board.shapes.getById(op.shapeData.id);
-                if (existingShape)
-                    return;
-                const parentShape = op.shapeData.parent ? this.board.shapes.getById(op.shapeData.parent) : null;
-                const newShape = this.board.createShape(op.shapeData.type, parentShape, op.shapeData.id);
-                newShape.setProperties(op.shapeData.properties);
-                this.board.addShape(newShape, false);
-                newShape.draw();
-                newShape.update();
+        if (op.type === "addShape") {
+            const existingShape = this.board.shapes.getById(op.shapeData.id);
+            if (existingShape)
                 return;
-            }
-            if (op.type === "removeShape") {
-                const targetShape = this.board.shapes.getById(op.shapeId);
-                if (targetShape)
-                    this.board.removeShape(targetShape);
-                return;
-            }
-            if (op.type === "setShapeProperties") {
-                const targetShape = this.board.shapes.getById(op.shapeId);
-                if (targetShape)
-                    this.board.setShapeProperties(targetShape, op.properties);
-                return;
-            }
-            if (op.type === "setModelProperties")
-                this.setProperties(op.properties);
-        } finally {
-            this.collabChannel._applyingRemote = false;
+            const parentShape = op.shapeData.parent ? this.board.shapes.getById(op.shapeData.parent) : null;
+            const newShape = this.board.createShape(op.shapeData.type, parentShape, op.shapeData.id);
+            newShape.setProperties(op.shapeData.properties);
+            this.board.addShape(newShape, false);
+            newShape.draw();
+            newShape.update();
+            return;
         }
+        if (op.type === "removeShape") {
+            const targetShape = this.board.shapes.getById(op.shapeId);
+            if (targetShape)
+                this.board.removeShape(targetShape);
+            return;
+        }
+        if (op.type === "setShapeProperties") {
+            const targetShape = this.board.shapes.getById(op.shapeId);
+            if (targetShape)
+                this.board.setShapeProperties(targetShape, op.properties);
+            return;
+        }
+        if (op.type === "setModelProperties")
+            this.setProperties(op.properties);
     }
 
     applyRemoteSnapshot(model) {
-        if (!model || !this.collabChannel)
+        if (!model || !this.collabCoordinator)
             return;
-        if (this._pendingCollabSnapshot) {
-            this._pendingCollabSnapshot = false;
-            this.collabChannel.sendSnapshot(this.serialize());
-            return;
-        }
-        this.collabChannel._applyingRemote = true;
-        try {
-            this.board.enableSelection(true);
-            this.deserialise(model);
-            this.reparseCalculateAndRefreshWorkspace(() => {
-                this.reset();
-                this.calculator.stop();
-            });
-        } finally {
-            this.collabChannel._applyingRemote = false;
-        }
+        this.board.enableSelection(true);
+        this.deserialise(model);
+        this.reparseCalculateAndRefreshWorkspace(() => {
+            this.reset();
+            this.calculator.stop();
+        });
     }
 
     async onPopState(event) {

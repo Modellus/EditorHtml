@@ -29,7 +29,17 @@ class MenuController {
     }
 
     _notebookItems(mod) {
+        const canSave = this.controller.canSave;
         return [
+            ...(canSave ? [
+                {
+                    text: this._t("Save") + "...",
+                    icon: "fa-light fa-cloud-arrow-down",
+                    shortcut: `${mod}S`,
+                    name: "Save",
+                    action: () => this.controller.save()
+                }
+            ] : []),
             {
                 text: this._t("More Models"),
                 icon: "fa-light fa-chevrons-left",
@@ -38,6 +48,11 @@ class MenuController {
                 action: () => this.controller.exit()
             }
         ];
+    }
+
+    refresh() {
+        if (this.instance)
+            this.instance.option("dataSource", this._buildItems());
     }
 
     _boardItems(mod) {

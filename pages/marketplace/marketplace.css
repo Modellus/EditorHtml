@@ -293,9 +293,35 @@ body {
   flex: 1 1 auto;
   min-height: 0;
 }
+.card-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
 .card-title {
   font-size: 1.125rem;
   margin: 0;
+  flex: 1 1 auto;
+}
+.card-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+.card-kind-badge--board {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.card-kind-badge--notebook {
+  background: #d1fae5;
+  color: #065f46;
 }
 .card-desc {
   color: var(--c-muted);

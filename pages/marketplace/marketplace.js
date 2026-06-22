@@ -281,6 +281,19 @@ class ModelsApp {
           widget: "dxButton",
           visible: isAuthenticated,
           options: {
+            elementAttr: { id: "nav-new-notebook", title: "Create Notebook" },
+            stylingMode: "text",
+            template: (_, contentElement) => {
+              const host = contentElement.get(0);
+              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-notebook mdl-nav-action-icon" style="color:#059669;font-size:1rem"></i><i class="fa-solid fa-notebook mdl-nav-action-icon-hover" style="color:#059669;font-size:1rem"></i><span>Create Notebook</span></span>`;
+            }
+          }
+        },
+        {
+          location: "after",
+          widget: "dxButton",
+          visible: isAuthenticated,
+          options: {
             elementAttr: { id: "nav-notifications", title: "Notifications" },
             stylingMode: "text",
             onClick: () => this.navigateToNotifications(),
@@ -340,6 +353,7 @@ class ModelsApp {
   }
   cacheNavElements() {
     this.elements.navNewModel = document.getElementById("nav-new-model");
+    this.elements.navNewNotebook = document.getElementById("nav-new-notebook");
     this.elements.navUploadVideo = document.getElementById("nav-upload-video");
     this.elements.navUploadData = document.getElementById("nav-upload-data");
     this.elements.navAddCharacter = document.getElementById("nav-add-character");
@@ -447,6 +461,10 @@ class ModelsApp {
         const creatorAvatar = data.creator_avatar || "";
         const createdDate = this.formatShortDate(data.created_at);
         const modifiedDate = this.formatShortDate(data.updated_at);
+        const modelKind = data.model_kind === "notebook" ? "notebook" : "board";
+        const kindIcon = modelKind === "notebook" ? "fa-light fa-notebook" : "fa-light fa-earth-africa";
+        const kindLabel = modelKind === "notebook" ? this.translations.get("Notebook") : this.translations.get("Board");
+        const kindBadgeMarkup = `<span class="card-kind-badge card-kind-badge--${modelKind}" title="${kindLabel}"><i class="${kindIcon}" aria-hidden="true"></i>${kindLabel}</span>`;
         const taxonomyDropDownMarkup = `
           <div class="card-thumb-dropdowns">
             <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
@@ -468,7 +486,10 @@ class ModelsApp {
               </button>` : ""}
             </div>
             <div class="card-body">
-              <h3 class="card-title">${this.escapeHtml(data.title) || this.translations.get("Untitled model")}</h3>
+              <div class="card-title-row">
+                <h3 class="card-title">${this.escapeHtml(data.title) || this.translations.get("Untitled model")}</h3>
+                ${kindBadgeMarkup}
+              </div>
               <p class="card-desc${hasDescription ? "" : " card-desc--empty"}">${escapedDescriptionLabel}</p>
               ${isDeleted ? "" : `<div class="card-meta-actions">
                 <button class="like-button${isLiked ? " is-liked" : ""}" aria-label="${isLiked ? this.translations.get("Unlike action") : this.translations.get("Like action")}">
@@ -3720,6 +3741,7 @@ class ModelsApp {
   }
   bindNav() {
     if (this.elements.navNewModel) this.elements.navNewModel.addEventListener("click", () => this.createModel());
+    if (this.elements.navNewNotebook) this.elements.navNewNotebook.addEventListener("click", () => this.createNotebook());
     if (this.elements.navUploadVideo) this.elements.navUploadVideo.addEventListener("click", () => this.showUploadVideoPopup());
     if (this.elements.navUploadData) this.elements.navUploadData.addEventListener("click", () => this.showDataPopup());
     if (this.elements.navAddCharacter) this.elements.navAddCharacter.addEventListener("click", () => this.showCharacterPopup());
@@ -3736,6 +3758,20 @@ class ModelsApp {
       return;
     }
     this.showTemplatePickerPopup();
+  }
+
+  async createNotebook() {
+    this.userSdk.refreshState(this.state);
+    if (!this.state.session || !this.state.session.token) {
+      this.setStatus(this.translations.get("Sign-in required to create a model."), true);
+      return;
+    }
+    const userId = this.userSdk.getUserId(this.state.session);
+    if (!userId) {
+      this.setStatus(this.translations.get("Missing user id for model creation."), true);
+      return;
+    }
+    this._doCreateModel(null, "notebook");
   }
 
   showTemplatePickerPopup() {
@@ -3845,19 +3881,22 @@ class ModelsApp {
     });
   }
 
-  async _doCreateModel(fromModelId) {
+  async _doCreateModel(fromModelId, modelKind = "board") {
     this.setStatus(this.translations.get("Creating model…"));
     try {
       const created = await this.apiClient.createModel({
         title: this.translations.get("New Model"),
         description: "",
         type: "model",
-        status: "draft"
+        status: "draft",
+        model_kind: modelKind
       }, fromModelId);
       this.setStatus(this.translations.get("Model created."));
       this.loadModels();
       if (created && created.id) {
-        const editorUrl = new URL("/pages/board/index.html", window.location.origin);
+        const isNotebook = modelKind === "notebook";
+        const editorPage = isNotebook ? "/pages/notebook/index.html" : "/pages/board/index.html";
+        const editorUrl = new URL(editorPage, window.location.origin);
         editorUrl.searchParams.set("model_id", created.id);
         editorUrl.searchParams.set("new", "1");
         window.location.href = editorUrl.toString();
@@ -4015,7 +4054,9 @@ class ModelsApp {
   }
   openModel(model) {
     if (!model || !model.id) return;
-    const url = new URL("/pages/board/index.html", window.location.origin);
+    const isNotebook = model.model_kind === "notebook";
+    const editorPage = isNotebook ? "/pages/notebook/index.html" : "/pages/board/index.html";
+    const url = new URL(editorPage, window.location.origin);
     url.searchParams.set("model_id", model.id);
     window.location.href = url.toString();
   }
