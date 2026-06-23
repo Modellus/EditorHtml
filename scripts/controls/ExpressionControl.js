@@ -460,7 +460,7 @@ class ExpressionControl {
 
     dispose() {
         if (this.containerElement) {
-            const scrollViewInstance = $(this.containerElement).dxScrollView("instance");
+            const scrollViewInstance = DevExpress.ui.dxScrollView.getInstance(this.containerElement);
             if (scrollViewInstance)
                 scrollViewInstance.dispose();
         }

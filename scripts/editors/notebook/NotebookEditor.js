@@ -12,7 +12,6 @@ class NotebookEditor extends Workspace {
         this.shapeInstances = new Map();
         this.nextBlockId = 1;
         this.title = "";
-        this.subtitle = "";
         this.author = "Author";
         this.lastModified = new Date();
         this.coverImageUrl = "";
@@ -570,13 +569,15 @@ class NotebookEditor extends Workspace {
                 allowReordering: true,
                 handle: ".notebook-block-drag-handle",
                 data: this.blocks,
-                onDragStart: e => {
-                    e.itemData = e.fromData[e.fromIndex];
+                onDragStart: event => {
+                    event.itemData = event.fromData[event.fromIndex];
                 },
-                onReorder: ({ fromIndex, toIndex, fromData, component }) => {
-                    const item = fromData.splice(fromIndex, 1)[0];
-                    fromData.splice(toIndex, 0, item);
-                    component.reload();
+                onReorder: event => {
+                    const [movedBlock] = event.fromData.splice(event.fromIndex, 1);
+                    event.fromData.splice(event.toIndex, 0, movedBlock);
+                    event.component.reload();
+                    this._updateLastModified();
+                    this.broadcastNotebookCollabUpdate();
                 }
             },
             itemTemplate: (block, index, element) => {
@@ -589,18 +590,11 @@ class NotebookEditor extends Workspace {
 
     _initHeader() {
         const titleElement = document.getElementById("notebook-title");
-        const subtitleElement = document.getElementById("notebook-subtitle");
         const authorElement = document.getElementById("notebook-author");
         const dateElement = document.getElementById("notebook-date");
 
         titleElement.addEventListener("input", () => {
             this.title = titleElement.textContent;
-            this._updateLastModified();
-            this.broadcastNotebookCollabUpdate();
-        });
-
-        subtitleElement.addEventListener("input", () => {
-            this.subtitle = subtitleElement.textContent;
             this._updateLastModified();
             this.broadcastNotebookCollabUpdate();
         });
@@ -697,6 +691,7 @@ class NotebookEditor extends Workspace {
     _reloadBlockList() {
         this._disposeStaleShapeInstances();
         this.listInstance.option("dataSource", this.blocks);
+        this.listInstance.option("itemDragging.data", this.blocks);
         this.listInstance.reload();
     }
 
@@ -775,7 +770,6 @@ class NotebookEditor extends Workspace {
         return Object.assign({}, sessionData, {
             notebook: {
                 title: this.title,
-                subtitle: this.subtitle,
                 author: this.author,
                 blocks: this.blocks
             }
@@ -798,11 +792,6 @@ class NotebookEditor extends Workspace {
             this.title = notebookData.title;
             const titleElement = document.getElementById("notebook-title");
             if (titleElement) titleElement.textContent = this.title;
-        }
-        if (typeof notebookData.subtitle === "string") {
-            this.subtitle = notebookData.subtitle;
-            const subtitleElement = document.getElementById("notebook-subtitle");
-            if (subtitleElement) subtitleElement.textContent = this.subtitle;
         }
         if (typeof notebookData.author === "string") {
             this.author = notebookData.author;
