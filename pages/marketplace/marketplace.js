@@ -3710,6 +3710,7 @@ class ModelsApp {
     const canAccess = this.canAccessMaintenance();
     const uploadVideoElement = this.elements.navUploadVideo;
     const uploadDataElement = this.elements.navUploadData;
+    const createNotebookElement = this.elements.navNewNotebook;
     if (uploadVideoElement) {
       const uploadVideoContainer = uploadVideoElement.closest(".dx-item");
       if (uploadVideoContainer)
@@ -3725,6 +3726,11 @@ class ModelsApp {
       const addCharacterContainer = addCharacterElement.closest(".dx-item");
       if (addCharacterContainer)
         addCharacterContainer.style.display = canAccess ? "" : "none";
+    }
+    if (createNotebookElement) {
+      const createNotebookContainer = createNotebookElement.closest(".dx-item");
+      if (createNotebookContainer)
+        createNotebookContainer.style.display = canAccess ? "" : "none";
     }
   }
 
@@ -3762,6 +3768,10 @@ class ModelsApp {
 
   async createNotebook() {
     this.userSdk.refreshState(this.state);
+    if (!this.canAccessMaintenance()) {
+      this.setStatus(this.translations.get("You do not have permission to create notebooks."), true);
+      return;
+    }
     if (!this.state.session || !this.state.session.token) {
       this.setStatus(this.translations.get("Sign-in required to create a model."), true);
       return;
