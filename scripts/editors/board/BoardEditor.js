@@ -500,26 +500,19 @@ class BoardEditor extends Workspace {
         const accepted = await this.saveFormController.promptModelMetadata();
         if (!accepted)
             return;
-        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
-        const headers = { "Content-Type": "application/json" };
-        if (session && session.token) headers.Authorization = `Bearer ${session.token}`;
+        const payload = {
+            title: this.properties.name || "Untitled model",
+            description: this.properties.description || "",
+            definition: JSON.stringify(this.serialize())
+        };
+        if (this.properties.thumbnailUrl)
+            payload.thumbnail_url = this.properties.thumbnailUrl;
         try {
-            const payload = {
-                title: this.properties.name || "Untitled model",
-                description: this.properties.description || "",
-                definition: JSON.stringify(this.serialize())
-            };
-            if (this.properties.thumbnailUrl)
-                payload.thumbnail_url = this.properties.thumbnailUrl;
-            const response = await fetch(`${apiBase}/models/${modelId}`, {
-                method: "PUT",
-                headers,
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) throw new Error(`Save failed (${response.status})`);
+            await this.session.modelsApiClient.saveModel(modelId, payload);
             this._hasChanges = false;
             this.topToolbar?.updateModelName();
         } catch (error) {
+            console.error("saveToApi failed:", error);
             alert("Failed to save model.");
         }
     }
@@ -548,9 +541,6 @@ class BoardEditor extends Workspace {
             const definition = this.serialize();
             definition.properties.name = metadata.name;
             definition.properties.description = metadata.description;
-            const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
-            const headers = { "Content-Type": "application/json" };
-            if (session?.token) headers.Authorization = `Bearer ${session.token}`;
             const savePayload = {
                 title: metadata.name || "Untitled model",
                 description: metadata.description || "",
@@ -558,11 +548,7 @@ class BoardEditor extends Workspace {
             };
             if (this.properties.thumbnailUrl)
                 savePayload.thumbnail_url = this.properties.thumbnailUrl;
-            await fetch(`${apiBase}/models/${newModel.id}`, {
-                method: "PUT",
-                headers,
-                body: JSON.stringify(savePayload)
-            });
+            await this.session.modelsApiClient.saveModel(newModel.id, savePayload);
             window.location.href = `/pages/board/index.html?model_id=${newModel.id}`;
         } catch (error) {
             alert("Failed to duplicate model.");
@@ -592,9 +578,6 @@ class BoardEditor extends Workspace {
             const definition = this.serialize();
             definition.properties.name = metadata.name;
             definition.properties.description = metadata.description;
-            const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
-            const headers = { "Content-Type": "application/json" };
-            if (session?.token) headers.Authorization = `Bearer ${session.token}`;
             const savePayload = {
                 title: metadata.name || "Untitled model",
                 description: metadata.description || "",
@@ -602,14 +585,11 @@ class BoardEditor extends Workspace {
             };
             if (this.properties.thumbnailUrl)
                 savePayload.thumbnail_url = this.properties.thumbnailUrl;
-            await fetch(`${apiBase}/models/${newModel.id}`, {
-                method: "PUT",
-                headers,
-                body: JSON.stringify(savePayload)
-            });
+            await this.session.modelsApiClient.saveModel(newModel.id, savePayload);
             this._hasChanges = false;
             window.location.href = `/pages/board/index.html?model_id=${newModel.id}`;
         } catch (error) {
+            console.error("saveAsModel failed:", error);
             alert("Failed to save model.");
         }
     }
@@ -633,25 +613,17 @@ class BoardEditor extends Workspace {
         const modelId = this.getCurrentModelId();
         if (!modelId)
             return;
-        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
-        const headers = { "Content-Type": "application/json" };
-        if (session?.token) headers.Authorization = `Bearer ${session.token}`;
         this.topToolbar?.showSavingIndicator();
+        const payload = {
+            title: this.properties.name || "Untitled model",
+            description: this.properties.description || "",
+            definition: JSON.stringify(this.serialize())
+        };
+        if (this.properties.thumbnailUrl)
+            payload.thumbnail_url = this.properties.thumbnailUrl;
         try {
-            const payload = {
-                title: this.properties.name || "Untitled model",
-                description: this.properties.description || "",
-                definition: JSON.stringify(this.serialize())
-            };
-            if (this.properties.thumbnailUrl)
-                payload.thumbnail_url = this.properties.thumbnailUrl;
-            const response = await fetch(`${apiBase}/models/${modelId}`, {
-                method: "PUT",
-                headers,
-                body: JSON.stringify(payload)
-            });
-            if (response.ok)
-                this._hasChanges = false;
+            await this.session.modelsApiClient.saveModel(modelId, payload);
+            this._hasChanges = false;
         } catch (_) {
         } finally {
             this.topToolbar?.hideSavingIndicator();

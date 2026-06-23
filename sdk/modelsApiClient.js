@@ -302,6 +302,15 @@ export class ModelsApiClient {
     return await response.json();
   }
 
+  async saveModel(modelId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Save failed (${response.status})`);
+  }
+
   async patchModel(modelId, payload) {
     const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}`, {
       method: "PATCH",

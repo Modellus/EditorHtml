@@ -812,26 +812,16 @@ class NotebookEditor extends Workspace {
 
     async saveToApi() {
         if (!this._modelId) return;
-        const notebookApiBase = "https://modellus-api.interactivebook.workers.dev";
-        const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
-        const headers = { "Content-Type": "application/json" };
-        if (session?.token) headers.Authorization = `Bearer ${session.token}`;
         try {
             await this.uploadCoverImageIfNeeded();
-            const serializedDefinition = JSON.stringify(this.serialize());
             const payload = {
                 title: this.title || "Untitled notebook",
                 description: "",
-                definition: serializedDefinition
+                definition: JSON.stringify(this.serialize())
             };
             if (this.coverImageUrl)
                 payload.thumbnail_url = this.coverImageUrl;
-            const response = await fetch(`${notebookApiBase}/models/${this._modelId}`, {
-                method: "PUT",
-                headers,
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) throw new Error(`Save failed (${response.status})`);
+            await this.modelsApiClient.saveModel(this._modelId, payload);
         } catch (error) {
             alert("Failed to save notebook.");
         }
