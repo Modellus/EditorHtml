@@ -1,9 +1,7 @@
 const defaultNotebookApiBase = "https://modellus-api.interactivebook.workers.dev";
 
-async function refreshNotebookSession(apiBase) {
-    const { UserSdk } = await import("../../../sdk/userSdk.js");
-    const userSdk = new UserSdk("mp.session", "mp.user", "/pages/login/index.html", "modellus_id_token", "/pages/marketplace/index.html");
-    return userSdk.refreshSession(apiBase);
+function redirectNotebookToLogin() {
+    window.location.href = "/pages/login/index.html";
 }
 
 function updateNotebookSaveCapability(notebookEditor, model) {
@@ -25,13 +23,24 @@ async function createOnlineNotebookEditor(options = {}) {
     const apiBase = options.apiBase || defaultNotebookApiBase;
     const urlParameters = new URLSearchParams(window.location.search);
     const modelId = urlParameters.get("model_id");
+    const sessionContext = await AuthenticatedEditorBootstrap.initializeSession(apiBase, () => redirectNotebookToLogin());
+    const { ModelsApiClient } = await import("../../../sdk/modelsApiClient.js");
+    const modelsApiClient = new ModelsApiClient(
+        apiBase,
+        () => ModelAccessBootstrap.getSession(),
+        () => {
+            const currentSession = ModelAccessBootstrap.getSession();
+            return currentSession?.userId || "";
+        }
+    );
     const notebookEditor = new NotebookEditor();
+    notebookEditor.setModelsApiClient(modelsApiClient);
     if (!modelId)
         return notebookEditor;
     try {
-        const accessResult = await ModelAccessBootstrap.resolveModelAccess(apiBase, modelId, refreshNotebookSession);
+        const accessResult = await AuthenticatedEditorBootstrap.resolveModelAccess(apiBase, modelId, sessionContext.userSdk);
         if (accessResult.mode === "login-required") {
-            window.location.href = "/pages/login/index.html";
+            redirectNotebookToLogin();
             return null;
         }
         if (accessResult.mode === "error")
@@ -39,6 +48,8 @@ async function createOnlineNotebookEditor(options = {}) {
         const model = accessResult.model;
         if (model?.definition)
             notebookEditor.deserialize(model.definition);
+        if (typeof model?.thumbnail_url === "string" && model.thumbnail_url.trim())
+            notebookEditor.setCoverImageUrl(model.thumbnail_url.trim());
         if (accessResult.mode === "editable")
             notebookEditor.setupCollab(modelId);
         updateNotebookSaveCapability(notebookEditor, accessResult.mode === "editable" ? model : null);

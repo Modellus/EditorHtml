@@ -5,7 +5,9 @@ class NotebookEditor extends Workspace {
         super(null);
         this._ownSession = null;
         this._modelId = null;
+        this.modelsApiClient = null;
         this.collabCoordinator = null;
+        this._coverImageFile = null;
         this.blocks = [];
         this.shapeInstances = new Map();
         this.nextBlockId = 1;
@@ -30,6 +32,38 @@ class NotebookEditor extends Workspace {
         this._reparseExpressions();
         this._initializeShapeInteractionController();
         window.addEventListener("beforeunload", () => this.collabCoordinator?.destroy());
+    }
+
+    setModelsApiClient(modelsApiClient) {
+        this.modelsApiClient = modelsApiClient;
+        if (!this._ownSession)
+            this._ownSession = new ModelSession(modelsApiClient);
+        else
+            this._ownSession.modelsApiClient = modelsApiClient;
+    }
+
+    setCoverImageUrl(coverImageUrl) {
+        if (typeof this.coverImageUrl === "string" && this.coverImageUrl.startsWith("blob:"))
+            URL.revokeObjectURL(this.coverImageUrl);
+        this.coverImageUrl = typeof coverImageUrl === "string" ? coverImageUrl.trim() : "";
+        const coverElement = document.getElementById("notebook-cover-image");
+        if (!coverElement)
+            return;
+        if (!this.coverImageUrl) {
+            coverElement.style.backgroundImage = "";
+            coverElement.style.background = "";
+            return;
+        }
+        coverElement.style.backgroundImage = `url(${this.coverImageUrl})`;
+        coverElement.style.background = `url(${this.coverImageUrl}) center/cover no-repeat`;
+    }
+
+    async uploadCoverImageIfNeeded() {
+        if (!this._coverImageFile)
+            return;
+        const coverImageUrl = await ModelThumbnailStorage.uploadThumbnail(this.modelsApiClient, this._modelId, this._coverImageFile);
+        this.setCoverImageUrl(coverImageUrl);
+        this._coverImageFile = null;
     }
 
     get session() {
@@ -586,16 +620,11 @@ class NotebookEditor extends Workspace {
         input.onchange = event => {
             const file = event.target.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = readerEvent => {
-                this.coverImageUrl = readerEvent.target.result;
-                const coverElement = document.getElementById("notebook-cover-image");
-                coverElement.style.backgroundImage = `url(${this.coverImageUrl})`;
-                coverElement.style.background = `url(${this.coverImageUrl}) center/cover no-repeat`;
-                this._updateLastModified();
-                this.broadcastNotebookCollabUpdate();
-            };
-            reader.readAsDataURL(file);
+            this._coverImageFile = file;
+            const previewObjectUrl = URL.createObjectURL(file);
+            this.setCoverImageUrl(previewObjectUrl);
+            this._updateLastModified();
+            this.broadcastNotebookCollabUpdate();
         };
         input.click();
     }
@@ -748,7 +777,6 @@ class NotebookEditor extends Workspace {
                 title: this.title,
                 subtitle: this.subtitle,
                 author: this.author,
-                coverImageUrl: this.coverImageUrl,
                 blocks: this.blocks
             }
         });
@@ -782,10 +810,7 @@ class NotebookEditor extends Workspace {
             if (authorElement) authorElement.textContent = this.author;
         }
         if (notebookData.coverImageUrl) {
-            this.coverImageUrl = notebookData.coverImageUrl;
-            const coverElement = document.getElementById("notebook-cover-image");
-            if (coverElement)
-                coverElement.style.background = `url(${this.coverImageUrl}) center/cover no-repeat`;
+            this.setCoverImageUrl(notebookData.coverImageUrl);
         }
         if (Array.isArray(notebookData.blocks)) {
             this.blocks = notebookData.blocks;
@@ -803,11 +828,15 @@ class NotebookEditor extends Workspace {
         const headers = { "Content-Type": "application/json" };
         if (session?.token) headers.Authorization = `Bearer ${session.token}`;
         try {
+            await this.uploadCoverImageIfNeeded();
+            const serializedDefinition = JSON.stringify(this.serialize());
             const payload = {
                 title: this.title || "Untitled notebook",
                 description: "",
-                definition: JSON.stringify(this.serialize())
+                definition: serializedDefinition
             };
+            if (this.coverImageUrl)
+                payload.thumbnail_url = this.coverImageUrl;
             const response = await fetch(`${notebookApiBase}/models/${this._modelId}`, {
                 method: "PUT",
                 headers,

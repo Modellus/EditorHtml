@@ -451,7 +451,6 @@ class Calculator extends EventTarget {
     }
 
     parse(text = "") {
-        debugger
         text = this.removeDisplaylinesWrappers(text);
         text = text.replace(/\\placeholder\{\}/g, '');
         const expressions = this.splitExpressions(text);

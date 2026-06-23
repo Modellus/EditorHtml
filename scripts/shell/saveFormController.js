@@ -16,7 +16,7 @@ class SaveFormController {
         this.shell.properties.name = result.name;
         this.shell.properties.description = result.description;
         if (result.thumbnailFile) {
-            const thumbnailUrl = await this.shell.uploadModelAsset(result.thumbnailFile, this.shell.createAssetId("thumbnail"));
+            const thumbnailUrl = await this.shell.uploadModelThumbnail(result.thumbnailFile);
             if (thumbnailUrl)
                 this.shell.properties.thumbnailUrl = thumbnailUrl;
         } else if (result.thumbnailCleared) {

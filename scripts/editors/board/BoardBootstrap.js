@@ -17,8 +17,8 @@ function applyBoardModelMetadata(boardEditor, model) {
         boardEditor.properties.name = model.title;
     if (typeof model.description === "string")
         boardEditor.properties.description = model.description;
-    if (typeof model.thumbnail === "string" && model.thumbnail.trim())
-        boardEditor.properties.thumbnailUrl = model.thumbnail.trim();
+    if (typeof model.thumbnail_url === "string" && model.thumbnail_url.trim())
+        boardEditor.properties.thumbnailUrl = model.thumbnail_url.trim();
     if (model.user_id)
         boardEditor.modelCreatorId = model.user_id;
     if (model.creator_name)
@@ -60,7 +60,6 @@ async function createOnlineBoardEditor(options = {}) {
     const modelName = urlParameters.get("model");
     const modelId = urlParameters.get("model_id");
     const { ModelsApiClient } = await import("../../../sdk/modelsApiClient.js");
-    const { UserSdk } = await import("../../../sdk/userSdk.js");
     const modelsApiClient = new ModelsApiClient(
         apiBase,
         () => ModelAccessBootstrap.getSession(),
@@ -69,17 +68,11 @@ async function createOnlineBoardEditor(options = {}) {
             return currentSession?.userId || "";
         }
     );
-    const userSdk = new UserSdk("mp.session", "mp.user", "/pages/login/index.html", "modellus_id_token", "/pages/marketplace/index.html");
     const modelSession = new ModelSession(modelsApiClient);
-    if (!ModelAccessBootstrap.hasValidSession())
-        await userSdk.refreshSession(apiBase);
-    if (ModelAccessBootstrap.hasValidSession())
-        userSdk.startSessionRefresh(apiBase, () => redirectBoardToLogin());
-    else
-        ModelAccessBootstrap.clearAuthState();
+    const sessionContext = await AuthenticatedEditorBootstrap.initializeSession(apiBase, () => redirectBoardToLogin());
     if (modelId) {
         try {
-            const accessResult = await ModelAccessBootstrap.resolveModelAccess(apiBase, modelId, refreshApiBase => userSdk.refreshSession(refreshApiBase));
+            const accessResult = await AuthenticatedEditorBootstrap.resolveModelAccess(apiBase, modelId, sessionContext.userSdk);
             if (accessResult.mode === "editable") {
                 const payload = extractBoardModelPayload(accessResult.model);
                 const boardEditor = new BoardEditor(modelSession, payload || null);
@@ -110,7 +103,7 @@ async function createOnlineBoardEditor(options = {}) {
             throw error;
         }
     }
-    if (!ModelAccessBootstrap.hasValidSession()) {
+    if (!sessionContext.hasValidSession) {
         ModelAccessBootstrap.clearAuthState();
         if (modelName) {
             const response = await fetch(`../../resources/models/${modelName}.json`);

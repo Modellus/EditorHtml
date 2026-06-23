@@ -189,6 +189,10 @@ class BoardEditor extends Workspace {
         return this.board.assetManager.uploadAsset(assetId, file);
     }
 
+    async uploadModelThumbnail(file) {
+        return ModelThumbnailStorage.uploadThumbnail(this.modelsApiClient, this.getCurrentModelId(), file);
+    }
+
     setProperties(properties) {
         this.session.setProperties(properties);
         this.applySvgBackgroundColor();
