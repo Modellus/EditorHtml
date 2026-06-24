@@ -108,6 +108,7 @@ class RulerShape extends BaseShape {
         const minorStepPixels = majorStepPixels / minorDivisions;
         const topY = geometry.y + 1;
         const minorBottomY = geometry.y + geometry.height * 0.38;
+        const middleMinorBottomY = geometry.y + geometry.height * 0.48;
         const majorBottomY = geometry.y + geometry.height * 0.58;
         const labelsY = geometry.y + geometry.height * 0.8;
         const minimum = Number.isFinite(Number(this.properties.minimum)) ? Number(this.properties.minimum) : 0;
@@ -122,7 +123,11 @@ class RulerShape extends BaseShape {
                 const minorX = majorX + minorIndex * minorStepPixels;
                 if (minorX >= geometry.right)
                     break;
-                this.addTickLine(this.minorTicksLayer, minorX, topY, minorBottomY, 1, 0.25);
+                const isMiddleMinorTick = minorIndex === minorDivisions / 2;
+                const tickBottomY = isMiddleMinorTick ? middleMinorBottomY : minorBottomY;
+                const tickWidth = isMiddleMinorTick ? 1.1 : 1;
+                const tickOpacity = isMiddleMinorTick ? 0.5 : 0.25;
+                this.addTickLine(this.minorTicksLayer, minorX, topY, tickBottomY, tickWidth, tickOpacity);
             }
         }
     }
