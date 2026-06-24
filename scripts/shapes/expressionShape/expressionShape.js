@@ -3,6 +3,9 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     constructor(board, parent, id) {
         super(board, null, id);
         this.focusDispatchFrame = null;
+        this.toolbarAdapter = {
+            pasteFromClipboard: shape => shape.pasteTextFromClipboard()
+        };
     }
 
     isPassthroughDoubleClickSelectionEnabled() {
@@ -281,6 +284,10 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         } catch (_) {
             await navigator.clipboard.writeText(json);
         }
+    }
+
+    async pasteTextFromClipboard() {
+        this.expressionControl.pasteFromClipboardUsingMathlive();
     }
 
     insert(text) {

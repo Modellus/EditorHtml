@@ -181,6 +181,20 @@ class ExpressionControl {
     }
 
     _onKeyDown(keydownEvent) {
+        if ((keydownEvent.ctrlKey || keydownEvent.metaKey) && keydownEvent.key === "c") {
+            keydownEvent.preventDefault();
+            keydownEvent.stopImmediatePropagation();
+            keydownEvent.stopPropagation();
+            this.copyToClipboardUsingMathlive();
+            return;
+        }
+        if ((keydownEvent.ctrlKey || keydownEvent.metaKey) && keydownEvent.key === "v") {
+            keydownEvent.preventDefault();
+            keydownEvent.stopImmediatePropagation();
+            keydownEvent.stopPropagation();
+            this.pasteFromClipboardUsingMathlive();
+            return;
+        }
         if (keydownEvent.key === "Dead") {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
@@ -427,6 +441,29 @@ class ExpressionControl {
         const placeholdersCount = placeholderMatches ? placeholderMatches.length : 0;
         for (let placeholderIndex = 0; placeholderIndex < placeholdersCount; placeholderIndex++)
             this.mathfield.executeCommand("moveToPreviousPlaceholder");
+    }
+
+    copyToClipboardUsingMathlive() {
+        const latex = this.mathfield.getValue("latex");
+        const strippedLatex = latex.replace(/^\\displaylines\{([\s\S]*)\}$/, "$1");
+        navigator.clipboard.writeText(strippedLatex);
+    }
+
+    async pasteFromClipboardUsingMathlive() {
+        try {
+            const clipboardText = await navigator.clipboard.readText();
+            if (!clipboardText)
+                return;
+            const expressionRows = clipboardText.split("\\\\");
+            this.mathfield.focus();
+            this.mathfield.executeCommand("insert", expressionRows[0] ?? "");
+            for (let rowIndex = 1; rowIndex < expressionRows.length; rowIndex++) {
+                this.mathfield.executeCommand("addRowAfter");
+                if (expressionRows[rowIndex])
+                    this.mathfield.executeCommand("insert", expressionRows[rowIndex]);
+            }
+        } catch (_) {
+        }
     }
 
     setValue(value) {

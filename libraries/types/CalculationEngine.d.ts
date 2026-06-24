@@ -141,6 +141,7 @@ declare class System {
     private differentialNames;
     private functionExpressionsWithCondition;
     private functionExpressionsWithoutCondition;
+    private readonly piecewiseTermNames;
     private readonly iterationValuesByKey;
     private _lastIteration;
     private _lastCalculatedIteration;
@@ -210,6 +211,7 @@ declare class System {
     set(term: Term, value: number, caseNumber?: number): void;
     setByExpression(expression: Expression, value: number, caseNumber?: number): void;
     getExpression(name: string): Expression | undefined;
+    markAsPiecewise(name: string): void;
     storeExpressionTree(name: string, tree: Branch): void;
     storeExpressionTreeWithCondition(name: string, expressionTree: Branch, conditionTree?: Branch): void;
     getExpressionTree(name: string): Branch | undefined;
@@ -2663,6 +2665,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     constructor(system: System);
     visitStatement: (context: StatementContext) => Branch;
     private getConditionEvaluator;
+    private buildConditionTree;
     private extractUnits;
     visitFractionDigits: (context: FractionDigitsContext) => Branch;
     visitFraction: (context: FractionContext) => Branch;
