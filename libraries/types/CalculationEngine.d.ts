@@ -2601,6 +2601,7 @@ declare class SingularitiesDetector implements SystemProcessor {
     private hasInvalidFactorialDomain;
     private containsInvalidFactorial;
     private detectDiscontinuities;
+    private getConditionalBranches;
 }
 
 /**
