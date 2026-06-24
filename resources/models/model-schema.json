@@ -1445,10 +1445,20 @@
             {
               "type": "object",
               "properties": {
-                "scale": {
+                "minimum": {
                   "type": "number",
-                  "default": 1,
-                  "description": "Pixel-to-unit scale factor for ruler tick labels."
+                  "default": 0,
+                  "description": "Start value shown at the ruler origin."
+                },
+                "maximum": {
+                  "type": "number",
+                  "default": 10,
+                  "description": "End value shown at the ruler end."
+                },
+                "majorTicks": {
+                  "type": "number",
+                  "default": 10,
+                  "description": "Number of major intervals used across the ruler."
                 }
               }
             }

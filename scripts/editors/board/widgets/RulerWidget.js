@@ -8,7 +8,6 @@ class RulerShape extends BaseShape {
     }
 
     showContextToolbar() {
-        this._scaleBoxInstance?.option("value", this.properties.scale);
         super.showContextToolbar();
     }
 
@@ -20,7 +19,9 @@ class RulerShape extends BaseShape {
         this.properties.y = center.y - 24;
         this.properties.width = 260;
         this.properties.height = 48;
-        this.properties.scale = 1;
+        this.properties.minimum = 0;
+        this.properties.maximum = 10;
+        this.properties.majorTicks = 10;
         this.properties.backgroundColor = "#FFFFFF";
         this.properties.foregroundColor = "#1E1E1E";
         this.properties.borderColor = this.properties.foregroundColor;
@@ -39,18 +40,11 @@ class RulerShape extends BaseShape {
         return element;
     }
 
-    normalizeScaleValue() {
-        const scaleValue = Number(this.properties.scale);
-        if (!Number.isFinite(scaleValue) || scaleValue <= 0)
-            return 1;
-        return scaleValue;
-    }
-
-    getMajorStepPixels(usableWidth) {
-        const normalizedWidth = Math.max(1, usableWidth);
-        const targetTicks = Math.max(4, Math.min(12, Math.round(normalizedWidth / 32)));
-        const step = normalizedWidth / targetTicks;
-        return Math.max(18, step);
+    getMajorTicksCount() {
+        const majorTicks = Number(this.properties.majorTicks);
+        if (!Number.isFinite(majorTicks) || majorTicks < 1)
+            return 10;
+        return Math.max(1, Math.round(majorTicks));
     }
 
     getRulerGeometry() {
@@ -78,7 +72,7 @@ class RulerShape extends BaseShape {
         this.applyBorderStroke(this.container, 1);
     }
 
-    addTickLine(layer, x, y1, y2, strokeWidth) {
+    addTickLine(layer, x, y1, y2, strokeWidth, strokeOpacity) {
         const line = this.board.createSvgElement("line");
         line.setAttribute("x1", x);
         line.setAttribute("y1", y1);
@@ -86,6 +80,8 @@ class RulerShape extends BaseShape {
         line.setAttribute("y2", y2);
         line.setAttribute("stroke", this.properties.foregroundColor);
         line.setAttribute("stroke-width", strokeWidth);
+        if (strokeOpacity !== undefined)
+            line.setAttribute("stroke-opacity", strokeOpacity);
         layer.appendChild(line);
     }
 
@@ -106,31 +102,28 @@ class RulerShape extends BaseShape {
         this.clearLayerChildren(this.minorTicksLayer);
         this.clearLayerChildren(this.majorTicksLayer);
         this.clearLayerChildren(this.labelsLayer);
-        const majorStepPixels = this.getMajorStepPixels(geometry.usableWidth);
-        const minorDivisions = 5;
+        const majorTicksCount = this.getMajorTicksCount();
+        const majorStepPixels = geometry.usableWidth / majorTicksCount;
+        const minorDivisions = 10;
         const minorStepPixels = majorStepPixels / minorDivisions;
         const topY = geometry.y + 1;
         const minorBottomY = geometry.y + geometry.height * 0.38;
         const majorBottomY = geometry.y + geometry.height * 0.58;
         const labelsY = geometry.y + geometry.height * 0.8;
-        const scaleValue = this.normalizeScaleValue();
-        const majorTicksCount = Math.floor(geometry.usableWidth / majorStepPixels);
+        const minimum = Number.isFinite(Number(this.properties.minimum)) ? Number(this.properties.minimum) : 0;
+        const maximum = Number.isFinite(Number(this.properties.maximum)) ? Number(this.properties.maximum) : 10;
+        const range = maximum - minimum;
         for (let majorIndex = 0; majorIndex <= majorTicksCount; majorIndex++) {
             const majorX = geometry.left + majorIndex * majorStepPixels;
+            const tickValue = minimum + (majorIndex * majorStepPixels / geometry.usableWidth) * range;
             this.addTickLine(this.majorTicksLayer, majorX, topY, majorBottomY, 1.2);
-            this.addTickLabel(majorX, labelsY, this.formatModelValue(majorIndex * scaleValue));
+            this.addTickLabel(majorX, labelsY, this.formatModelValue(tickValue));
             for (let minorIndex = 1; minorIndex < minorDivisions; minorIndex++) {
                 const minorX = majorX + minorIndex * minorStepPixels;
                 if (minorX >= geometry.right)
                     break;
-                this.addTickLine(this.minorTicksLayer, minorX, topY, minorBottomY, 1);
+                this.addTickLine(this.minorTicksLayer, minorX, topY, minorBottomY, 1, 0.25);
             }
-        }
-        const lastMajorX = geometry.left + majorTicksCount * majorStepPixels;
-        if (Math.abs(geometry.right - lastMajorX) > 0.5) {
-            const endValue = geometry.usableWidth / majorStepPixels * scaleValue;
-            this.addTickLine(this.majorTicksLayer, geometry.right, topY, majorBottomY, 1.2);
-            this.addTickLabel(geometry.right, labelsY, this.formatModelValue(endValue));
         }
     }
 
