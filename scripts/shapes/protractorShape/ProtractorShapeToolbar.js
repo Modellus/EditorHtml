@@ -49,9 +49,13 @@ var ProtractorShapeToolbarMixin = {
         this._scaleDropdownElement.appendTo(container);
     },
     buildScaleMenuContent(contentElement) {
-        const useRadians = this.board.calculator.properties.angleUnit === "radians";
+        const useRadians = this.getAngleUnit() === "radians";
         const angleMax = useRadians ? 2 : 360;
         const listItems = [
+            {
+                text: this.board.translations.get("AngleUnit"),
+                buildControl: $container => this.createAngleUnitButtonGroup($container)
+            },
             {
                 text: "Scale",
                 buildControl: $container => {
@@ -75,7 +79,7 @@ var ProtractorShapeToolbarMixin = {
             }
         ];
         $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 200, width: "100%" });
+        $(contentElement).dxScrollView({ height: 250, width: "100%" });
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
             dataSource: listItems,
             scrollingEnabled: false,
@@ -84,6 +88,46 @@ var ProtractorShapeToolbarMixin = {
                 data.buildControl($(element).find(".mdl-dropdown-list-control"));
             }
         });
+    },
+    createAngleUnitButtonGroup(container) {
+        $('<div>').dxButtonGroup({
+            items: [
+                { key: "radians", icon: "fa-light fa-pi", hint: "Radians" },
+                { key: "degrees", icon: "fa-light fa-dot", hint: "Degrees" }
+            ],
+            keyExpr: "key",
+            selectedItemKeys: [this.getAngleUnit()],
+            stylingMode: "outlined",
+            elementAttr: { class: "mdl-pill-group mdl-small-icon" },
+            buttonTemplate: (data, buttonContainer) => {
+                const style = data.key === "degrees" ? "font-size:20px; position:relative; top:-4px" : "";
+                buttonContainer[0].innerHTML = `<i class="dx-icon ${data.icon}" style="${style}"></i>`;
+            },
+            onContentReady: e => this.initAngleUnitPill(e.element[0]),
+            onSelectionChanged: e => {
+                if (e.addedItems.length > 0)
+                    this.setAngleUnitCommand(e.addedItems[0].key);
+                this.moveAngleUnitPill(e.component.element()[0]);
+                e.component.repaint();
+            }
+        }).appendTo(container);
+    },
+    initAngleUnitPill(element) {
+        const pill = document.createElement("div");
+        pill.className = "mdl-pill";
+        element.style.position = "relative";
+        element.appendChild(pill);
+        this.moveAngleUnitPill(element);
+    },
+    moveAngleUnitPill(element) {
+        const pill = element.querySelector(".mdl-pill");
+        if (!pill)
+            return;
+        const selected = element.querySelector(".dx-item-selected .dx-button");
+        if (!selected)
+            return;
+        pill.style.left = selected.offsetLeft + "px";
+        pill.style.width = selected.offsetWidth + "px";
     },
     applyAngleSuffix(numberBoxElement, angleSuffix) {
         const host = $(numberBoxElement);

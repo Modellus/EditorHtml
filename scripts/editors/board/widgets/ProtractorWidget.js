@@ -15,22 +15,39 @@ class ProtractorShape extends BaseShape {
     }
 
     onAngleUnitChanged(previousUnit) {
-        const previousIsRadians = previousUnit === "radians";
-        const storedStart = Number(this.properties.startAngle) || 0;
-        const storedEnd = Number(this.properties.endAngle) || 0;
-        if (previousIsRadians) {
-            this.properties.startAngle = storedStart * 180;
-            this.properties.endAngle = storedEnd * 180;
-        } else {
-            this.properties.startAngle = storedStart / 180;
-            this.properties.endAngle = storedEnd / 180;
+        return;
+    }
+
+    getAngleUnit() {
+        if (this.properties.angleUnit === "radians" || this.properties.angleUnit === "degrees")
+            return this.properties.angleUnit;
+        const modelAngleUnit = this.board.calculator.properties.angleUnit === "degrees" ? "degrees" : "radians";
+        this.properties.angleUnit = modelAngleUnit;
+        return modelAngleUnit;
+    }
+
+    setAngleUnitCommand(nextAngleUnit) {
+        const currentAngleUnit = this.getAngleUnit();
+        if (nextAngleUnit === currentAngleUnit)
+            return;
+        const storedStartAngle = Number(this.properties.startAngle) || 0;
+        const storedEndAngle = Number(this.properties.endAngle) || 0;
+        let convertedStartAngle = storedStartAngle;
+        let convertedEndAngle = storedEndAngle;
+        if (currentAngleUnit === "radians" && nextAngleUnit === "degrees") {
+            convertedStartAngle = storedStartAngle * 180;
+            convertedEndAngle = storedEndAngle * 180;
         }
-        if (this._scaleDropdownElement && this._scaleDropdownContainer) {
-            this._scaleDropdownElement.dxDropDownButton("instance")?.dispose();
-            this._scaleDropdownElement.remove();
-            this._scaleDropdownElement = null;
-            this.createScaleDropDownButton(this._scaleDropdownContainer);
+        if (currentAngleUnit === "degrees" && nextAngleUnit === "radians") {
+            convertedStartAngle = storedStartAngle / 180;
+            convertedEndAngle = storedEndAngle / 180;
         }
+        const command = new SetShapePropertiesCommand(this.board, this, {
+            angleUnit: nextAngleUnit,
+            startAngle: convertedStartAngle,
+            endAngle: convertedEndAngle
+        });
+        this.board.invoker.execute(command);
     }
 
     setDefaults() {
@@ -42,8 +59,9 @@ class ProtractorShape extends BaseShape {
         this.properties.width = 260;
         this.properties.height = 130;
         this.properties.scale = 1;
+        this.properties.angleUnit = this.board.calculator.properties.angleUnit === "degrees" ? "degrees" : "radians";
         this.properties.startAngle = 0;
-        this.properties.endAngle = this.board.calculator.properties.angleUnit === "radians" ? 1 : 180;
+        this.properties.endAngle = this.properties.angleUnit === "radians" ? 1 : 180;
         this.properties.backgroundColor = "#FFFFFF";
         this.properties.foregroundColor = "#1E1E1E";
         this.properties.borderColor = this.properties.foregroundColor;
@@ -244,13 +262,13 @@ class ProtractorShape extends BaseShape {
     }
 
     getStartAngleDegrees() {
-        const useRadians = this.board.calculator.properties.angleUnit === "radians";
+        const useRadians = this.getAngleUnit() === "radians";
         const storedStart = Number(this.properties.startAngle) || 0;
         return useRadians ? storedStart * 180 : storedStart;
     }
 
     getEndAngleDegrees() {
-        const useRadians = this.board.calculator.properties.angleUnit === "radians";
+        const useRadians = this.getAngleUnit() === "radians";
         const storedEnd = Number(this.properties.endAngle) || 0;
         return useRadians ? storedEnd * 180 : storedEnd;
     }
@@ -260,7 +278,7 @@ class ProtractorShape extends BaseShape {
         this.clearLayerChildren(this.majorTicksLayer);
         this.clearLayerChildren(this.labelsLayer);
         const scaleValue = this.normalizeScaleValue();
-        const useRadians = this.board.calculator.properties.angleUnit === "radians";
+        const useRadians = this.getAngleUnit() === "radians";
         const degreeSymbol = useRadians ? "" : "\u00ba";
         const storedStart = Number(this.properties.startAngle) || 0;
         const storedEnd = Number(this.properties.endAngle) || 0;
