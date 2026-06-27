@@ -85,6 +85,8 @@ class ProtractorShape extends BaseShape {
         this.minorTicksLayer.setAttribute("clip-path", `url(#${this.clipPathId})`);
         this.majorTicksLayer.setAttribute("clip-path", `url(#${this.clipPathId})`);
         this.labelsLayer.setAttribute("clip-path", `url(#${this.clipPathId})`);
+        this.crosshairLayer = this.board.createSvgElement("g");
+        this.crosshairLayer.setAttribute("pointer-events", "none");
         element.appendChild(this.clipDefs);
         element.appendChild(this.ringPath);
         element.appendChild(this.baseLine);
@@ -92,6 +94,9 @@ class ProtractorShape extends BaseShape {
         element.appendChild(this.minorTicksLayer);
         element.appendChild(this.majorTicksLayer);
         element.appendChild(this.labelsLayer);
+        element.appendChild(this.crosshairLayer);
+        element.addEventListener("pointermove", e => this._onPointerMove(e));
+        element.addEventListener("pointerleave", () => this.clearLayerChildren(this.crosshairLayer));
         return element;
     }
 
@@ -329,6 +334,67 @@ class ProtractorShape extends BaseShape {
                 }
             }
         }
+    }
+
+    formatPiFractionText(piMultiple) {
+        const rounded = Math.round(piMultiple * 1000000) / 1000000;
+        if (Math.abs(rounded) < 0.000001) return "0";
+        for (const d of [1, 2, 3, 4, 6, 8, 12]) {
+            const n = Math.round(rounded * d);
+            if (Math.abs(n / d - rounded) < 0.0001) {
+                const g = this.gcd(Math.abs(n), d);
+                const sn = n / g, sd = d / g;
+                const sign = sn < 0 ? "-" : "";
+                const absN = Math.abs(sn);
+                const piPart = absN === 1 ? "π" : `${absN}π`;
+                if (sd === 1) return `${sign}${piPart}`;
+                return `${sign}${piPart}/${sd}`;
+            }
+        }
+        return this.formatAngleValue(rounded * Math.PI, 2);
+    }
+
+    _onPointerMove(e) {
+        const geometry = this.getProtractorGeometry();
+        const svgPt = this.board.svg.createSVGPoint();
+        svgPt.x = e.clientX;
+        svgPt.y = e.clientY;
+        const localPt = svgPt.matrixTransform(this.element.getScreenCTM().inverse());
+
+        const cx = geometry.centerX;
+        const cy = geometry.centerY;
+        const dx = localPt.x - cx;
+        const dy = cy - localPt.y;  // invert Y: SVG y-down → math y-up
+        let mouseDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        const visualSpanDeg = this.getVisualSpanDegrees();
+        const visualStartDeg = this.getVisualStartDegrees();
+        let relDeg = ((mouseDeg - visualStartDeg) % 360 + 360) % 360;
+        if (visualSpanDeg < 360)
+            relDeg = Math.max(0, Math.min(visualSpanDeg, relDeg));
+        const visualAngle = visualStartDeg + relDeg;
+
+        const useRadians = this.getAngleUnit() === "radians";
+        const storedStart = Number(this.properties.startAngle) || 0;
+        const storedEnd = Number(this.properties.endAngle) || 0;
+        const totalStored = storedEnd > storedStart ? storedEnd - storedStart : (useRadians ? 1 : 180);
+        const storedValue = storedStart + (relDeg / visualSpanDeg) * totalStored;
+        const valueText = useRadians
+            ? this.formatPiFractionText(storedValue)
+            : this.formatAngleValue(storedValue, 0) + "º";
+
+        const fg = this.properties.foregroundColor;
+        const textColor = Utils.getContrastColor(fg);
+
+        const outerPoint = this.getArcPoint(cx, cy, geometry.outerRadius, visualAngle);
+        const badgeRadius = (geometry.innerRadius + geometry.outerRadius) / 2;
+        const badgePoint = this.getArcPoint(cx, cy, badgeRadius, visualAngle);
+
+        this.clearLayerChildren(this.crosshairLayer);
+        this.crosshairLayer.insertAdjacentHTML("beforeend",
+            Utils.crosshairLineSvgMarkup(cx, cy, outerPoint.x, outerPoint.y, fg) +
+            Utils.valueBadgeSvgMarkup(valueText, badgePoint.x, badgePoint.y, { backgroundColor: fg, textColor, fontSize: 10 })
+        );
     }
 
     draw() {

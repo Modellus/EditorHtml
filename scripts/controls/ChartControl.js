@@ -1492,8 +1492,8 @@ class ChartControl {
         const axisLabelText = this.formatCrosshairValue(snappedX);
         const coordinateText = `${this.formatCrosshairValue(argumentValue)}, ${this.formatCrosshairValue(valueY)}`;
         let crosshairMarkup = `
-            <line x1="${crosshairX}" y1="${layout.plotTop}" x2="${crosshairX}" y2="${layout.plotBottom}" stroke="${crosshairColor}" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.25" />
-            <line x1="${layout.plotLeft}" y1="${mouseY}" x2="${layout.plotRight}" y2="${mouseY}" stroke="${crosshairColor}" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.25" />
+            ${Utils.crosshairLineSvgMarkup(crosshairX, layout.plotTop, crosshairX, layout.plotBottom, crosshairColor)}
+            ${Utils.crosshairLineSvgMarkup(layout.plotLeft, mouseY, layout.plotRight, mouseY, crosshairColor)}
             ${Utils.valueBadgeSvgMarkup(axisLabelText, axisLabelX, layout.plotBottom + 12, { fontSize: 10, fontFamily: this.options.fontFamily, backgroundColor: this.options.foregroundColor })}
             ${Utils.valueBadgeSvgMarkup(coordinateText, crosshairX, mouseY - 12, { fontSize: 10, fontFamily: this.options.fontFamily, backgroundColor: coordinateBackgroundColor, textColor: coordinateTextColor })}
         `;

@@ -497,6 +497,10 @@ class Utils {
         return `<rect x="${rectX}" y="${rectY}" width="${width}" height="${height}" rx="3" fill="${backgroundColor}" fill-opacity="0.85" /><text x="${x}" y="${textY}" text-anchor="${anchor}" font-family="${fontFamily}" font-size="${fontSize}" fill="${textColor}">${escapedText}</text>`;
     }
 
+    static crosshairLineSvgMarkup(x1, y1, x2, y2, color) {
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.25" />`;
+    }
+
     static createTooltip(e, html, width, canShow, wrapperClassName) {
         const resolvedWrapperClassName = wrapperClassName ?? "mdl-shape-overlay-popup mdl-shape-overlay-popup-nested";
         return $('<div>')

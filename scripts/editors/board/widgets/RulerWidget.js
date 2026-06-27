@@ -44,10 +44,15 @@ class RulerShape extends BaseShape {
         this.minorTicksLayer.setAttribute("clip-path", clipUrl);
         this.majorTicksLayer.setAttribute("clip-path", clipUrl);
         this.labelsLayer.setAttribute("clip-path", clipUrl);
+        this.crosshairLayer = this.board.createSvgElement("g");
+        this.crosshairLayer.setAttribute("pointer-events", "none");
         element.appendChild(this.container);
         element.appendChild(this.minorTicksLayer);
         element.appendChild(this.majorTicksLayer);
         element.appendChild(this.labelsLayer);
+        element.appendChild(this.crosshairLayer);
+        element.addEventListener("pointermove", e => this._onPointerMove(e));
+        element.addEventListener("pointerleave", () => this.clearLayerChildren(this.crosshairLayer));
         return element;
     }
 
@@ -135,6 +140,42 @@ class RulerShape extends BaseShape {
         } else {
             this.drawLinearTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY);
         }
+    }
+
+    _onPointerMove(e) {
+        const geometry = this.getRulerGeometry();
+        const svgPt = this.board.svg.createSVGPoint();
+        svgPt.x = e.clientX;
+        svgPt.y = e.clientY;
+        const localPt = svgPt.matrixTransform(this.element.getScreenCTM().inverse());
+
+        const clampedX = Math.max(geometry.left, Math.min(geometry.right, localPt.x));
+        const t = (clampedX - geometry.left) / geometry.usableWidth;
+
+        let value;
+        if (this.isLogarithmic()) {
+            const minimum = Number(this.properties.minimum);
+            const maximum = Number(this.properties.maximum);
+            if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum <= 0 || maximum <= minimum)
+                return;
+            const logMin = Math.log10(minimum);
+            value = Math.pow(10, logMin + t * (Math.log10(maximum) - logMin));
+        } else {
+            const minimum = Number.isFinite(Number(this.properties.minimum)) ? Number(this.properties.minimum) : 0;
+            const maximum = Number.isFinite(Number(this.properties.maximum)) ? Number(this.properties.maximum) : 10;
+            value = minimum + t * (maximum - minimum);
+        }
+
+        const topY = geometry.y + 1;
+        const labelsY = geometry.y + geometry.height * 0.58 + 12;
+        const fg = this.properties.foregroundColor;
+        const textColor = Utils.getContrastColor(fg);
+
+        this.clearLayerChildren(this.crosshairLayer);
+        this.crosshairLayer.insertAdjacentHTML("beforeend",
+            Utils.crosshairLineSvgMarkup(clampedX, topY, clampedX, geometry.y + geometry.height - 1, fg) +
+            Utils.valueBadgeSvgMarkup(this.formatModelValue(value), clampedX, labelsY, { backgroundColor: fg, textColor, fontSize: 10 })
+        );
     }
 
     drawLinearTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY) {
