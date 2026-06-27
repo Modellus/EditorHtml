@@ -148,7 +148,9 @@ class BaseTranslations {
                 "Chart Type Tooltip": "<div style=\"text-align: center\"><b>Tipo de Gráfico</b></div><br /><div style=\"text-align: center\">Seleciona como os dados são apresentados neste gráfico.<br /><br />Clique para alternar entre dispersão, linha, área e barras.</div>",
                 "Image Settings Tooltip": "<div style=\"text-align: center\"><b>Imagem</b></div><br /><div style=\"text-align: center\">Configura a imagem apresentada por este objeto.<br /><br />Clique para carregar ou alterar a imagem e definir as proporções.</div>",
                 "Media Settings Tooltip": "<div style=\"text-align: center\"><b>Multimédia</b></div><br /><div style=\"text-align: center\">Configura a imagem, vídeo ou áudio deste objeto.<br /><br />Clique para carregar ou alterar o ficheiro, definir as proporções e o modo de sincronização.</div>",
-                "Slider Scale Tooltip": "<div style=\"text-align: center\"><b>Escala</b></div><br /><div style=\"text-align: center\">Configura o intervalo de valores e a precisão deste slider.<br /><br />Clique para definir escala automática, mínimo, máximo e precisão.</div>"
+                "Slider Scale Tooltip": "<div style=\"text-align: center\"><b>Escala</b></div><br /><div style=\"text-align: center\">Configura o intervalo de valores e a precisão deste slider.<br /><br />Clique para definir escala automática, mínimo, máximo e precisão.</div>",
+                "Scale Linear": "Linear",
+                "Scale Logarithmic": "Logarítmica"
             };
         this.languages["en-US"] =
             {
@@ -297,7 +299,9 @@ class BaseTranslations {
                 "Chart Type Tooltip": "<div style=\"text-align: center\"><b>Chart Type</b></div><br /><div style=\"text-align: center\">Selects how data is displayed in this chart.<br /><br />Click to toggle between scatter, line, area, and bar styles.</div>",
                 "Image Settings Tooltip": "<div style=\"text-align: center\"><b>Image</b></div><br /><div style=\"text-align: center\">Configures the image displayed by this object.<br /><br />Click to upload or change the image and set proportion settings.</div>",
                 "Media Settings Tooltip": "<div style=\"text-align: center\"><b>Media</b></div><br /><div style=\"text-align: center\">Configures the image, video or audio for this object.<br /><br />Click to upload or change the file, set proportions, and toggle sync mode.</div>",
-                "Slider Scale Tooltip": "<div style=\"text-align: center\"><b>Scale</b></div><br /><div style=\"text-align: center\">Configures the value range and precision of this slider.<br /><br />Click to set auto scale, minimum, maximum, and step precision.</div>"
+                "Slider Scale Tooltip": "<div style=\"text-align: center\"><b>Scale</b></div><br /><div style=\"text-align: center\">Configures the value range and precision of this slider.<br /><br />Click to set auto scale, minimum, maximum, and step precision.</div>",
+                "Scale Linear": "Linear",
+                "Scale Logarithmic": "Logarithmic"
             };
     }
 

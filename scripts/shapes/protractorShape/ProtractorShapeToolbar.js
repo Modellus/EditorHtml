@@ -57,15 +57,6 @@ var ProtractorShapeToolbarMixin = {
                 buildControl: $container => this.createAngleUnitButtonGroup($container)
             },
             {
-                text: "Scale",
-                buildControl: $container => {
-                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false, min: 0.000001 }), {
-                        value: this.properties.scale,
-                        onValueChanged: e => this.setPropertyCommand("scale", e.value)
-                    })).appendTo($container);
-                }
-            },
-            {
                 text: "Start angle",
                 buildControl: $container => {
                     $('<div>').dxNumberBox(this.getAngleNumberEditorOptions(useRadians, angleMax, this.properties.startAngle, "startAngle")).appendTo($container);

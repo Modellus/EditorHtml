@@ -33,11 +33,34 @@ class RulerShape extends BaseShape {
         this.minorTicksLayer = this.board.createSvgElement("g");
         this.majorTicksLayer = this.board.createSvgElement("g");
         this.labelsLayer = this.board.createSvgElement("g");
+        const defs = this.board.createSvgElement("defs");
+        const clipPath = this.board.createSvgElement("clipPath");
+        clipPath.setAttribute("id", `ruler-clip-${this.id}`);
+        this._clipRect = this.board.createSvgElement("rect");
+        clipPath.appendChild(this._clipRect);
+        defs.appendChild(clipPath);
+        element.appendChild(defs);
+        const clipUrl = `url(#ruler-clip-${this.id})`;
+        this.minorTicksLayer.setAttribute("clip-path", clipUrl);
+        this.majorTicksLayer.setAttribute("clip-path", clipUrl);
+        this.labelsLayer.setAttribute("clip-path", clipUrl);
         element.appendChild(this.container);
         element.appendChild(this.minorTicksLayer);
         element.appendChild(this.majorTicksLayer);
         element.appendChild(this.labelsLayer);
         return element;
+    }
+
+    isLogarithmic() {
+        return this.properties.scaleType === "logarithmic";
+    }
+
+    setScaleTypeCommand(scaleType) {
+        const updates = { scaleType };
+        if (scaleType === "logarithmic" && Number(this.properties.minimum) <= 0)
+            updates.minimum = 1;
+        const command = new SetShapePropertiesCommand(this.board, this, updates);
+        this.board.invoker.execute(command);
     }
 
     getMajorTicksCount() {
@@ -102,15 +125,23 @@ class RulerShape extends BaseShape {
         this.clearLayerChildren(this.minorTicksLayer);
         this.clearLayerChildren(this.majorTicksLayer);
         this.clearLayerChildren(this.labelsLayer);
-        const majorTicksCount = this.getMajorTicksCount();
-        const majorStepPixels = geometry.usableWidth / majorTicksCount;
-        const minorDivisions = 10;
-        const minorStepPixels = majorStepPixels / minorDivisions;
         const topY = geometry.y + 1;
         const minorBottomY = geometry.y + geometry.height * 0.38;
         const middleMinorBottomY = geometry.y + geometry.height * 0.48;
         const majorBottomY = geometry.y + geometry.height * 0.58;
-        const labelsY = geometry.y + geometry.height * 0.8;
+        const labelsY = majorBottomY + 12;
+        if (this.isLogarithmic()) {
+            this.drawLogarithmicTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY);
+        } else {
+            this.drawLinearTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY);
+        }
+    }
+
+    drawLinearTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY) {
+        const majorTicksCount = this.getMajorTicksCount();
+        const majorStepPixels = geometry.usableWidth / majorTicksCount;
+        const minorDivisions = 10;
+        const minorStepPixels = majorStepPixels / minorDivisions;
         const minimum = Number.isFinite(Number(this.properties.minimum)) ? Number(this.properties.minimum) : 0;
         const maximum = Number.isFinite(Number(this.properties.maximum)) ? Number(this.properties.maximum) : 10;
         const range = maximum - minimum;
@@ -132,10 +163,48 @@ class RulerShape extends BaseShape {
         }
     }
 
+    drawLogarithmicTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY) {
+        const minimum = Number(this.properties.minimum);
+        const maximum = Number(this.properties.maximum);
+        if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum <= 0 || maximum <= minimum)
+            return;
+        const logMin = Math.log10(minimum);
+        const logRange = Math.log10(maximum) - logMin;
+        // getMajorTicksCount() is the number of intervals; +1 gives the tick count
+        const ticks = getLogMajorTicks(minimum, maximum, this.getMajorTicksCount() + 1, geometry.usableWidth);
+        if (ticks.length === 0) return;
+        for (const tick of ticks) {
+            const majorX = geometry.left + tick.pixelPosition;
+            this.addTickLine(this.majorTicksLayer, majorX, topY, majorBottomY, 1.2);
+            this.addTickLabel(majorX, labelsY, tick.label);
+        }
+        const level2BottomY = minorBottomY + (middleMinorBottomY - minorBottomY) * 0.5;
+        const levelStyle = [
+            null,
+            { bottomY: middleMinorBottomY, width: 1.1, opacity: 0.50 },
+            { bottomY: level2BottomY,      width: 1.0, opacity: 0.35 },
+            { bottomY: minorBottomY,       width: 1.0, opacity: 0.20 },
+        ];
+        const minorTicks = getLogMinorTicks(ticks, minimum, maximum, geometry.usableWidth);
+        for (const minor of minorTicks) {
+            const style = levelStyle[minor.level] ?? levelStyle[3];
+            this.addTickLine(
+                this.minorTicksLayer,
+                geometry.left + minor.pixelPosition, topY,
+                style.bottomY, style.width, style.opacity
+            );
+        }
+    }
+
     draw() {
         super.draw();
         const geometry = this.getRulerGeometry();
         this.drawRulerBody(geometry);
+        const margin = 3;
+        this._clipRect.setAttribute("x", geometry.x + margin);
+        this._clipRect.setAttribute("y", geometry.y);
+        this._clipRect.setAttribute("width", geometry.width - 2 * margin);
+        this._clipRect.setAttribute("height", geometry.height);
         this.drawRulerTicks(geometry);
         this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${geometry.x + geometry.width / 2}, ${geometry.y + geometry.height / 2})`);
     }

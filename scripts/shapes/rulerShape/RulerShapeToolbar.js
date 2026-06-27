@@ -52,6 +52,10 @@ var RulerShapeToolbarMixin = {
     buildRulerSettingsMenuContent(contentElement) {
         const listItems = [
             {
+                text: "Scale",
+                buildControl: container => this.createScaleTypeButtonGroup(container)
+            },
+            {
                 text: "Minimum",
                 buildControl: container => {
                     $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
@@ -85,7 +89,7 @@ var RulerShapeToolbarMixin = {
             }
         ];
         $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 180, width: "100%" });
+        $(contentElement).dxScrollView({ height: 220, width: "100%" });
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
             dataSource: listItems,
             scrollingEnabled: false,
@@ -94,6 +98,42 @@ var RulerShapeToolbarMixin = {
                 data.buildControl($(element).find(".mdl-dropdown-list-control"));
             }
         });
+    },
+    createScaleTypeButtonGroup(container) {
+        const currentType = this.properties.scaleType || "linear";
+        const t = key => this.board.translations.get(key);
+        $('<div>').dxButtonGroup({
+            items: [
+                { key: "linear", text: t("Scale Linear") },
+                { key: "logarithmic", text: t("Scale Logarithmic") }
+            ],
+            keyExpr: "key",
+            selectedItemKeys: [currentType],
+            stylingMode: "outlined",
+            elementAttr: { class: "mdl-pill-group" },
+            onContentReady: e => this.initScaleTypePill(e.element[0]),
+            onSelectionChanged: e => {
+                if (e.addedItems.length > 0)
+                    this.setScaleTypeCommand(e.addedItems[0].key);
+                this.moveScaleTypePill(e.component.element()[0]);
+                e.component.repaint();
+            }
+        }).appendTo(container);
+    },
+    initScaleTypePill(element) {
+        const pill = document.createElement("div");
+        pill.className = "mdl-pill";
+        element.style.position = "relative";
+        element.appendChild(pill);
+        this.moveScaleTypePill(element);
+    },
+    moveScaleTypePill(element) {
+        const pill = element.querySelector(".mdl-pill");
+        if (!pill) return;
+        const selected = element.querySelector(".dx-item-selected .dx-button");
+        if (!selected) return;
+        pill.style.left = selected.offsetLeft + "px";
+        pill.style.width = selected.offsetWidth + "px";
     }
 };
 if (typeof RulerShape !== "undefined") Object.assign(RulerShape.prototype, RulerShapeToolbarMixin);

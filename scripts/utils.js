@@ -608,6 +608,22 @@ class Utils {
         return palette[paletteIndex];
     }
 
+    static createLatexLabel(latex, x, y, color, fontSize = 10) {
+        const markup = MathLive.convertLatexToMarkup(latex);
+        const w = 48, h = 18;
+        const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+        fo.setAttribute("x", x - w / 2);
+        fo.setAttribute("y", y - h / 2);
+        fo.setAttribute("width", w);
+        fo.setAttribute("height", h);
+        fo.setAttribute("overflow", "visible");
+        const div = document.createElementNS("http://www.w3.org/1999/xhtml", "div");
+        div.style.cssText = `display:flex;align-items:center;justify-content:center;width:${w}px;height:${h}px;color:${color};font-size:${fontSize}px;overflow:visible;white-space:nowrap;`;
+        div.innerHTML = markup;
+        fo.appendChild(div);
+        return fo;
+    }
+
     static getCaseIconColor(caseNumber = 1) {
         const parsedCaseNumber = parseInt(caseNumber, 10);
         const normalizedCaseNumber = !Number.isFinite(parsedCaseNumber) ? 1 : Math.max(1, Math.min(9, parsedCaseNumber));

@@ -102,6 +102,26 @@ class ProtractorShape extends BaseShape {
         return scaleValue;
     }
 
+    gcd(a, b) {
+        return b === 0 ? a : this.gcd(b, a % b);
+    }
+
+    formatPiFractionLatex(piMultiple) {
+        const rounded = Math.round(piMultiple * 1000000) / 1000000;
+        if (Math.abs(rounded) < 0.000001) return "0";
+        for (const d of [1, 2, 3, 4, 6, 8, 12]) {
+            const n = Math.round(rounded * d);
+            if (Math.abs(n / d - rounded) < 0.0001) {
+                const g = this.gcd(Math.abs(n), d);
+                const sn = n / g, sd = d / g;
+                if (sd === 1) return sn === 1 ? "\\pi" : sn === -1 ? "-\\pi" : `${sn}\\pi`;
+                const num = sn === 1 ? "\\pi" : sn === -1 ? "-\\pi" : `${sn}\\pi`;
+                return `\\frac{${num}}{${sd}}`;
+            }
+        }
+        return this.formatAngleValue(rounded * Math.PI, 2);
+    }
+
     formatAngleValue(value, decimalPlaces) {
         const numValue = Number(value) || 0;
         const factor = Math.pow(10, decimalPlaces ?? 0);
@@ -261,6 +281,11 @@ class ProtractorShape extends BaseShape {
         this.labelsLayer.appendChild(label);
     }
 
+    addLatexAngleLabel(x, y, latex) {
+        const fo = Utils.createLatexLabel(latex, x, y, this.properties.foregroundColor, 10);
+        this.labelsLayer.appendChild(fo);
+    }
+
     getStartAngleDegrees() {
         const useRadians = this.getAngleUnit() === "radians";
         const storedStart = Number(this.properties.startAngle) || 0;
@@ -277,14 +302,12 @@ class ProtractorShape extends BaseShape {
         this.clearLayerChildren(this.minorTicksLayer);
         this.clearLayerChildren(this.majorTicksLayer);
         this.clearLayerChildren(this.labelsLayer);
-        const scaleValue = this.normalizeScaleValue();
         const useRadians = this.getAngleUnit() === "radians";
         const degreeSymbol = useRadians ? "" : "\u00ba";
         const storedStart = Number(this.properties.startAngle) || 0;
         const storedEnd = Number(this.properties.endAngle) || 0;
         const visualSpanDeg = this.getVisualSpanDegrees();
         const totalStored = storedEnd > storedStart ? storedEnd - storedStart : (useRadians ? 1 : 180);
-        const labelDecimalPlaces = useRadians ? 2 : 0;
         const isFullCircle = visualSpanDeg >= 360;
         const visualStartDeg = this.getVisualStartDegrees();
         const tickUpperBound = isFullCircle ? 359 : Math.round(visualSpanDeg);
@@ -297,10 +320,13 @@ class ProtractorShape extends BaseShape {
             const innerPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius - tickLength, visualAngle);
             this.addTickLine(isMajorTick ? this.majorTicksLayer : this.minorTicksLayer, outerPoint.x, outerPoint.y, innerPoint.x, innerPoint.y, isMajorTick ? 1.2 : 1);
             if (isMajorTick) {
-                const labelPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius - tickLength - 10, visualAngle);
+                const labelPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius - tickLength - 16, visualAngle);
                 const mappedAngleValue = storedStart + (angle / visualSpanDeg) * totalStored;
-                const displayValue = useRadians ? mappedAngleValue * Math.PI : mappedAngleValue;
-                this.addAngleLabel(labelPoint.x, labelPoint.y, this.formatAngleValue(displayValue * scaleValue, labelDecimalPlaces) + degreeSymbol);
+                if (useRadians) {
+                    this.addLatexAngleLabel(labelPoint.x, labelPoint.y, this.formatPiFractionLatex(mappedAngleValue));
+                } else {
+                    this.addAngleLabel(labelPoint.x, labelPoint.y, this.formatAngleValue(mappedAngleValue, 0) + degreeSymbol);
+                }
             }
         }
     }
