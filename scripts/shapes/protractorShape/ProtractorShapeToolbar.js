@@ -59,13 +59,13 @@ var ProtractorShapeToolbarMixin = {
             {
                 text: "Start angle",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox(this.getAngleNumberEditorOptions(useRadians, angleMax, this.properties.startAngle, "startAngle")).appendTo($container);
+                    this._startAngleBox = $('<div>').dxNumberBox(this.getAngleNumberEditorOptions(useRadians, angleMax, this.properties.startAngle, "startAngle")).appendTo($container);
                 }
             },
             {
                 text: "End angle",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox(this.getAngleNumberEditorOptions(useRadians, angleMax, this.properties.endAngle, "endAngle")).appendTo($container);
+                    this._endAngleBox = $('<div>').dxNumberBox(this.getAngleNumberEditorOptions(useRadians, angleMax, this.properties.endAngle, "endAngle")).appendTo($container);
                 }
             }
         ];
@@ -100,6 +100,7 @@ var ProtractorShapeToolbarMixin = {
                     this.setAngleUnitCommand(e.addedItems[0].key);
                 this.moveAngleUnitPill(e.component.element()[0]);
                 e.component.repaint();
+                this._refreshAngleEditors();
             }
         }).appendTo(container);
     },
@@ -133,6 +134,19 @@ var ProtractorShapeToolbarMixin = {
         suffix.text(angleSuffix);
         suffix.css({ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: angleSuffix === "\u00ba" ? "20px" : "14px", lineHeight: "1", opacity: "0.8" });
         inputContainer.append(suffix);
+    },
+    _refreshAngleEditors() {
+        const useRadians = this.getAngleUnit() === "radians";
+        const angleMax = useRadians ? 2 : 360;
+        const angleSuffix = useRadians ? "π" : "º";
+        if (this._startAngleBox) {
+            this._startAngleBox.dxNumberBox("instance").option({ value: this.properties.startAngle, max: angleMax });
+            this.applyAngleSuffix(this._startAngleBox[0], angleSuffix);
+        }
+        if (this._endAngleBox) {
+            this._endAngleBox.dxNumberBox("instance").option({ value: this.properties.endAngle, max: angleMax });
+            this.applyAngleSuffix(this._endAngleBox[0], angleSuffix);
+        }
     },
     getAngleNumberEditorOptions(useRadians, angleMax, value, propertyName) {
         const angleSuffix = useRadians ? "\u03c0" : "\u00ba";
