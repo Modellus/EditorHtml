@@ -259,7 +259,7 @@ class NotebookEditor extends Workspace {
                     sliderWidth: 400,
                     sliderTooltipFormatter: value => {
                         const currentValue = this.getIndependentStart() + (value - 1) * this.getIndependentStep();
-                        return currentValue.toFixed(2);
+                        return Utils.formatNumber(currentValue, 2);
                     },
                     onSliderValueChanged: value => {
                         this.calculatorSetIteration(value);
@@ -521,12 +521,12 @@ class NotebookEditor extends Workspace {
 
     _updateStartLabel() {
         if (this._startLabel)
-            this._startLabel.textContent = this.getIndependentStart().toFixed(2);
+            this._startLabel.textContent = Utils.formatNumber(this.getIndependentStart(), 2);
     }
 
     _updateEndLabel() {
         if (this._endLabel)
-            this._endLabel.textContent = this.getIndependentEnd().toFixed(2);
+            this._endLabel.textContent = Utils.formatNumber(this.getIndependentEnd(), 2);
     }
 
     _updateIndependentNameLabel() {

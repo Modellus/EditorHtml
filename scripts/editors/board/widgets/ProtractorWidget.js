@@ -133,7 +133,10 @@ class ProtractorShape extends BaseShape {
         const rounded = Math.round(numValue * factor) / factor;
         if (Object.is(rounded, -0))
             return "0";
-        return decimalPlaces ? rounded.toFixed(decimalPlaces).replace(/\.?0+$/, "") : `${rounded}`;
+        const numStr = decimalPlaces ? rounded.toFixed(decimalPlaces).replace(/\.?0+$/, "") : `${rounded}`;
+        const [intPart, decPart] = numStr.split(".");
+        const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        return decPart !== undefined ? `${formattedInt}.${decPart}` : formattedInt;
     }
 
     getVisualSpanDegrees() {

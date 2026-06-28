@@ -92,19 +92,10 @@ function getClassicLogRulerTicks(minValue, maxValue, rulerLengthPx, majorTickCou
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Compact, human-readable label for a positive number.
- * 1000 → "1k"  |  2 500 000 → "2.5M"  |  0.005 → "0.005"
- */
 function _formatLogLabel(value) {
-    if (value >= 1e9) return _compact(value / 1e9) + "G";
-    if (value >= 1e6) return _compact(value / 1e6) + "M";
-    if (value >= 1e3) return _compact(value / 1e3) + "k";
-    return _compact(value);
-}
-
-/** Up to 4 significant figures, no trailing zeros. */
-function _compact(v) {
-    const r = parseFloat(v.toPrecision(4));
-    return r % 1 === 0 ? String(Math.round(r)) : String(r);
+    const r = parseFloat(value.toPrecision(4));
+    const numStr = r % 1 === 0 ? String(Math.round(r)) : String(r);
+    const [intPart, decPart] = numStr.split(".");
+    const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return decPart !== undefined ? `${formattedInt}.${decPart}` : formattedInt;
 }

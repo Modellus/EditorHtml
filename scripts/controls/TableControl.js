@@ -929,9 +929,7 @@ class TableControl {
         const normalizedPrecision = Number.isFinite(precision) ? Math.max(0, Math.floor(precision)) : 0;
         const roundedValue = Utils.roundToPrecision(value, normalizedPrecision);
         const normalizedValue = Object.is(roundedValue, -0) ? 0 : roundedValue;
-        if (normalizedPrecision > 0)
-            return normalizedValue.toFixed(normalizedPrecision);
-        return normalizedValue.toString();
+        return Utils.formatNumber(normalizedValue, normalizedPrecision);
     }
 
     renderResizeHandles(layout, geometry) {

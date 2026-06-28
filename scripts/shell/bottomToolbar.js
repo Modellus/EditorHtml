@@ -99,7 +99,7 @@ class BottomToolbar {
                     sliderWidth: 400,
                     sliderTooltipFormatter: value => {
                         const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
-                        return this.shell.calculator.getIndependentValue(value).toFixed(precision);
+                        return Utils.formatNumber(this.shell.calculator.getIndependentValue(value), precision);
                     },
                     onSliderValueChanged: value => this.shell.iterationChanged(value),
                     itemsBeforeSlider: [
@@ -464,12 +464,12 @@ class BottomToolbar {
         this.shell.updatePlayerSliderValue(iteration);
         const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
         if (this._startLabel)
-            this._startLabel.textContent = this.shell.calculator.getStart().toFixed(precision);
+            this._startLabel.textContent = Utils.formatNumber(this.shell.calculator.getStart(), precision);
         if (this._endLabel) {
             if (this.shell.calculator.properties.independent.noLimit)
                 this._endLabel.innerHTML = '<i class="fa-light fa-infinity" style="font-size:14px; font-weight:400; padding-top:3px"></i>';
             else
-                this._endLabel.textContent = this.shell.calculator.getEnd().toFixed(precision);
+                this._endLabel.textContent = Utils.formatNumber(this.shell.calculator.getEnd(), precision);
         }
         if (this._independentNameLabel)
             this._independentNameLabel.textContent = this.shell.calculator.properties.independent.name;

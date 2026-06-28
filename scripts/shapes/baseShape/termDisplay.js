@@ -74,9 +74,7 @@
         const precision = this.shape.getModelPrecision();
         const rounded = Utils.roundToPrecision(numericValue, precision);
         const normalized = Object.is(rounded, -0) ? 0 : rounded;
-        if (precision > 0)
-            return normalized.toFixed(precision);
-        return normalized.toString();
+        return Utils.formatNumber(normalized, precision);
     }
 
     formatTermForDisplay(term) {

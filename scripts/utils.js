@@ -383,6 +383,13 @@ class Utils {
         return Math.round(value * factor) / factor;
     }
 
+    static formatNumber(value, precision) {
+        const fixed = value.toFixed(precision);
+        const [intPart, decPart] = fixed.split(".");
+        const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+        return decPart !== undefined ? `${formattedInt}.${decPart}` : formattedInt;
+    }
+
     static isTransparentColor(color) {
         const normalizedColor = String(color ?? "").trim().toLowerCase();
         if (normalizedColor === "transparent")

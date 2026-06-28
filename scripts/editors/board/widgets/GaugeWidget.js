@@ -308,8 +308,9 @@ class GaugeShape extends BaseShape {
         const labelR = geo.outerR + 10;
         const lp = this.getArcPoint(geo.cx, geo.cy, labelR, angleDeg);
         const storedVal = useRadians ? angleDeg * Math.PI / 180 : angleDeg;
-        const formatted = parseFloat(storedVal.toFixed(2)).toString();
-        const displayText = formatted === "-0" ? "0" : formatted;
+        const rounded = parseFloat(storedVal.toFixed(2));
+        const rawStr = Object.is(rounded, -0) || rounded === 0 ? "0" : rounded.toString();
+        const displayText = rawStr.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
         const label = this.board.createSvgElement("text");
         label.setAttribute("class", "shape-tick-label");
         label.setAttribute("x", lp.x);

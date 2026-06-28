@@ -424,7 +424,7 @@ class ChartControl {
         if (!Number.isFinite(value))
             return "";
         const precision = typeof this.options.getPrecision === "function" ? this.options.getPrecision() : (Number.isFinite(this.options.precision) ? this.options.precision : 2);
-        return value.toFixed(precision);
+        return Utils.formatNumber(value, precision);
     }
 
     renderValueTitleLegend(targetLayer, layout, fontSize, clipId = null) {
