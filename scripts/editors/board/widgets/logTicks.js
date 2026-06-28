@@ -1,122 +1,96 @@
 /**
  * getClassicLogRulerTicks
  *
- * Generates a complete, sorted tick array for a classic logarithmic ruler
- * (slide-rule style).  Returns one flat array containing both major and
- * minor ticks; the renderer decides how to draw each based on tick.type.
+ * Generates the complete tick array for a logarithmic ruler, following the
+ * same structural rules as the linear ruler:
  *
- * Tick hierarchy
- * ──────────────
- *   Major ticks  — decade boundaries only: 1, 10, 100, 1000 …
- *                  minValue and maxValue are always included as major ticks
- *                  even when they are not exact powers of ten.
+ *   • Exactly majorTickCount major tick intervals (majorTickCount + 1 ticks),
+ *     evenly distributed in log space from minValue to maxValue.
  *
- *   Minor ticks  — digit ticks: k × 10^n for k ∈ {2,3,4,5,6,7,8,9}
- *                  Generated for every decade that overlaps [minValue, maxValue].
- *                  Only values strictly inside (minValue, maxValue) are kept.
- *                  These are NEVER promoted to major status.
+ *   • Between every pair of consecutive major ticks, exactly 9 minor ticks,
+ *     also evenly distributed in log space (equal pixel spacing within each
+ *     major interval).  The middle one (index 5 of 9) is flagged as
+ *     isMiddle = true so the renderer can draw it slightly taller, mirroring
+ *     the linear ruler's half-way tick.
  *
  * Positioning
  * ───────────
- *   Every tick position is computed with the exact logarithmic equation:
+ *   All positions are derived from the logarithmic formula:
  *
  *     normalizedPosition = (log10(v) − log10(min)) / (log10(max) − log10(min))
  *     pixelPosition      = normalizedPosition × rulerLengthPx
  *
- *   Spacing between adjacent digit ticks is therefore non-uniform and
- *   decreasing toward the end of each decade — exactly as on a slide rule.
+ *   Because major ticks are placed at equal log-space intervals, they are
+ *   also equally spaced in pixels.  Minor ticks subdivide each major interval
+ *   into 10 equal log-space (= pixel) sub-intervals.
  *
  * Labels
  * ──────
- *   tick.showLabel === true  → major ticks only; renderer should draw a label.
- *   tick.showLabel === false → minor ticks; label value is populated but hidden.
+ *   tick.showLabel === true  → major ticks only.
+ *   tick.showLabel === false → minor ticks; label field is populated but hidden.
  *
- * @param {number} minValue        Positive lower bound of the visible range.
+ * @param {number} minValue        Positive lower bound.
  * @param {number} maxValue        Positive upper bound (must be > minValue).
  * @param {number} rulerLengthPx   Physical ruler length in pixels.
- * @param {number} [maxMajorTicks] Maximum number of major ticks to display
- *                                 (including the two boundary ticks).  When the
- *                                 number of decade boundaries exceeds this limit,
- *                                 decades are thinned by increasing the step.
- *                                 Defaults to Infinity (show every decade).
- * @returns {Array<{value, label, type, showLabel, normalizedPosition, pixelPosition}>}
+ * @param {number} majorTickCount  Number of major tick intervals (i.e. the
+ *                                 value from the toolbar).  Produces
+ *                                 majorTickCount + 1 major ticks.
+ * @returns {Array<{value, label, type, showLabel, isMiddle, normalizedPosition, pixelPosition}>}
  */
-function getClassicLogRulerTicks(minValue, maxValue, rulerLengthPx, maxMajorTicks = Infinity) {
+function getClassicLogRulerTicks(minValue, maxValue, rulerLengthPx, majorTickCount) {
     if (
         !Number.isFinite(minValue) || !Number.isFinite(maxValue) ||
-        minValue <= 0 || maxValue <= minValue || rulerLengthPx <= 0
+        minValue <= 0 || maxValue <= minValue || rulerLengthPx <= 0 ||
+        !Number.isFinite(majorTickCount) || majorTickCount < 1
     ) return [];
 
     const logMin   = Math.log10(minValue);
-    const logMax   = Math.log10(maxValue);
-    const logRange = logMax - logMin;
+    const logRange = Math.log10(maxValue) - logMin;
 
-    const makeTick = (v, type) => {
-        const norm = Math.max(0, Math.min(1, (Math.log10(v) - logMin) / logRange));
-        return {
-            value: v,
-            label: _formatLogLabel(v),
-            type,
-            showLabel: type === "major",
-            normalizedPosition: norm,
-            pixelPosition: norm * rulerLengthPx,
-        };
-    };
+    const result = [];
 
-    const result   = [];
-    const seenKeys = new Set();
+    for (let i = 0; i <= majorTickCount; i++) {
+        const tMajor = i / majorTickCount;
+        const logV   = logMin + tMajor * logRange;
+        const v      = Math.pow(10, logV);
 
-    const add = (v, type) => {
-        const key = _logKey(v);
-        if (seenKeys.has(key)) return;
-        seenKeys.add(key);
-        result.push(makeTick(v, type));
-    };
+        result.push({
+            value:              v,
+            label:              _formatLogLabel(v),
+            type:               "major",
+            showLabel:          true,
+            isMiddle:           false,
+            normalizedPosition: tMajor,
+            pixelPosition:      tMajor * rulerLengthPx,
+        });
 
-    // ── Major ticks: boundary values + integer powers of 10 in range ────────
-    const nFirst      = Math.ceil(logMin + 1e-9);
-    const nLast       = Math.floor(logMax - 1e-9);
-    const decadeCount = Math.max(0, nLast - nFirst + 1);
+        if (i < majorTickCount) {
+            const vNext     = Math.pow(10, logMin + ((i + 1) / majorTickCount) * logRange);
+            const valueStep = (vNext - v) / 10;
 
-    // Thin decades when there are more than maxMajorTicks allows.
-    // The +2 accounts for the two boundary ticks (minValue and maxValue).
-    let step = 1;
-    if (Number.isFinite(maxMajorTicks) && maxMajorTicks >= 2)
-        while (decadeCount > 0 && Math.ceil(decadeCount / step) + 2 > maxMajorTicks)
-            step++;
+            for (let j = 1; j <= 9; j++) {
+                const minorV = v + j * valueStep;
+                const norm   = (Math.log10(minorV) - logMin) / logRange;
 
-    add(minValue, "major");
-    for (let n = nFirst; n <= nLast; n += step)
-        add(Math.pow(10, n), "major");
-    add(maxValue, "major");
-
-    // ── Minor ticks: k × 10^n, k ∈ {2…9}, for every decade in range ────────
-    const nStart = Math.floor(logMin);
-    const nEnd   = Math.ceil(logMax);
-
-    for (let n = nStart; n < nEnd; n++) {
-        const d = Math.pow(10, n);
-        for (const k of [2, 3, 4, 5, 6, 7, 8, 9]) {
-            const v = k * d;
-            if (v > minValue && v < maxValue)
-                add(v, "minor");
+                result.push({
+                    value:              minorV,
+                    label:              _formatLogLabel(minorV),
+                    type:               "minor",
+                    showLabel:          false,
+                    isMiddle:           j === 5,
+                    normalizedPosition: norm,
+                    pixelPosition:      norm * rulerLengthPx,
+                });
+            }
         }
     }
 
-    return result.sort((a, b) => a.value - b.value);
+    return result;
 }
 
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Stable integer key for deduplication in log10 space.
- * Rounds to 9 decimal places, handling all practical floating-point values.
- */
-function _logKey(v) {
-    return Math.round(Math.log10(v) * 1e9);
-}
 
 /**
  * Compact, human-readable label for a positive number.

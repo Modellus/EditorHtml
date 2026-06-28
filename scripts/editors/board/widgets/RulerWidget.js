@@ -209,16 +209,17 @@ class RulerShape extends BaseShape {
         const maximum = Number(this.properties.maximum);
         if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum <= 0 || maximum <= minimum)
             return;
-        const ticks = getClassicLogRulerTicks(minimum, maximum, geometry.usableWidth, this.getMajorTicksCount() + 1);
+        const ticks = getClassicLogRulerTicks(minimum, maximum, geometry.usableWidth, this.getMajorTicksCount());
         if (ticks.length === 0) return;
         for (const tick of ticks) {
             const x = geometry.left + tick.pixelPosition;
             if (tick.type === "major") {
                 this.addTickLine(this.majorTicksLayer, x, topY, majorBottomY, 1.2);
-                if (tick.showLabel)
-                    this.addTickLabel(x, labelsY, tick.label);
+                this.addTickLabel(x, labelsY, tick.label);
+            } else if (tick.isMiddle) {
+                this.addTickLine(this.minorTicksLayer, x, topY, middleMinorBottomY, 1.1, 0.50);
             } else {
-                this.addTickLine(this.minorTicksLayer, x, topY, middleMinorBottomY, 1.0, 0.50);
+                this.addTickLine(this.minorTicksLayer, x, topY, minorBottomY, 1.0, 0.25);
             }
         }
     }
