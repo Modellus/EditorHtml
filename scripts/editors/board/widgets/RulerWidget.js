@@ -209,31 +209,17 @@ class RulerShape extends BaseShape {
         const maximum = Number(this.properties.maximum);
         if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum <= 0 || maximum <= minimum)
             return;
-        const logMin = Math.log10(minimum);
-        const logRange = Math.log10(maximum) - logMin;
-        // getMajorTicksCount() is the number of intervals; +1 gives the tick count
-        const ticks = getLogMajorTicks(minimum, maximum, this.getMajorTicksCount() + 1, geometry.usableWidth);
+        const ticks = getClassicLogRulerTicks(minimum, maximum, geometry.usableWidth, this.getMajorTicksCount() + 1);
         if (ticks.length === 0) return;
         for (const tick of ticks) {
-            const majorX = geometry.left + tick.pixelPosition;
-            this.addTickLine(this.majorTicksLayer, majorX, topY, majorBottomY, 1.2);
-            this.addTickLabel(majorX, labelsY, tick.label);
-        }
-        const level2BottomY = minorBottomY + (middleMinorBottomY - minorBottomY) * 0.5;
-        const levelStyle = [
-            null,
-            { bottomY: middleMinorBottomY, width: 1.1, opacity: 0.50 },
-            { bottomY: level2BottomY,      width: 1.0, opacity: 0.35 },
-            { bottomY: minorBottomY,       width: 1.0, opacity: 0.20 },
-        ];
-        const minorTicks = getLogMinorTicks(ticks, minimum, maximum, geometry.usableWidth);
-        for (const minor of minorTicks) {
-            const style = levelStyle[minor.level] ?? levelStyle[3];
-            this.addTickLine(
-                this.minorTicksLayer,
-                geometry.left + minor.pixelPosition, topY,
-                style.bottomY, style.width, style.opacity
-            );
+            const x = geometry.left + tick.pixelPosition;
+            if (tick.type === "major") {
+                this.addTickLine(this.majorTicksLayer, x, topY, majorBottomY, 1.2);
+                if (tick.showLabel)
+                    this.addTickLabel(x, labelsY, tick.label);
+            } else {
+                this.addTickLine(this.minorTicksLayer, x, topY, middleMinorBottomY, 1.0, 0.50);
+            }
         }
     }
 
