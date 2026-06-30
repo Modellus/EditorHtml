@@ -367,18 +367,9 @@ class ChartControl {
             return ticks;
         const range = maxValue - minValue;
         const rawStep = range / Math.max(1, targetCount - 1);
-        const exponent = Math.floor(Math.log10(rawStep));
-        const magnitude = Math.pow(10, exponent);
-        const normalized = rawStep / magnitude;
-        let step;
-        if (normalized < 1.5)
-            step = magnitude;
-        else if (normalized < 3)
-            step = 2 * magnitude;
-        else if (normalized < 7)
-            step = 5 * magnitude;
-        else
-            step = 10 * magnitude;
+        const step = niceTickStep(rawStep);
+        if (!(step > 0))
+            return ticks;
         const firstTick = Math.floor(minValue / step) * step;
         for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
             ticks.push(Math.round(value * 1e10) / 1e10);
@@ -1179,15 +1170,18 @@ class ChartControl {
         const baseValue = axis === "x" ? domain.xMin : domain.yMin;
         const tickOffsetValue = tickValue - baseValue;
         const tickOffsetPixel = axis === "x" ? startPixel - axisStartPixel : axisStartPixel - startPixel;
-        const startClientX = event.clientX;
-        const startClientY = event.clientY;
         const axisLength = axis === "x" ? layout.plotWidth : layout.plotHeight;
         const started = this._axisTickDrag.start(event, {
             tickOffsetValue,
             tickOffsetPixel,
-            getPixelOffset: e => axis === "x"
-                ? tickOffsetPixel + (e.clientX - startClientX)
-                : tickOffsetPixel - (e.clientY - startClientY),
+            getPixelOffset: e => {
+                // Absolute cursor position in local coords (transform-correct), the
+                // same approach the referential and ruler use, so the tick tracks
+                // the cursor exactly under any board zoom/pan.
+                const point = this.getLocalPointerPoint(e);
+                if (!point) return NaN;
+                return axis === "x" ? point.x - axisStartPixel : axisStartPixel - point.y;
+            },
             onMove: newScale => {
                 if (axis === "x") {
                     this.domainOverride.xMin = baseValue;
