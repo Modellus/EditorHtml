@@ -50,7 +50,9 @@ class RulerShape extends BaseShape {
         this.labelsLayer.setAttribute("clip-path", clipUrl);
         this.crosshairLayer = this.board.createSvgElement("g");
         this.crosshairLayer.setAttribute("pointer-events", "none");
+        this.crosshairLayer.setAttribute("class", "ruler-export-exclude");
         this.tickInteractionLayer = this.board.createSvgElement("g");
+        this.tickInteractionLayer.setAttribute("class", "ruler-export-exclude");
         element.appendChild(this.container);
         element.appendChild(this.minorTicksLayer);
         element.appendChild(this.majorTicksLayer);
@@ -60,6 +62,12 @@ class RulerShape extends BaseShape {
         element.addEventListener("pointermove", e => this._onPointerMove(e));
         element.addEventListener("pointerleave", () => this.clearLayerChildren(this.crosshairLayer));
         return element;
+    }
+
+    createExportElementClone(element) {
+        const clone = super.createExportElementClone(element);
+        clone.querySelectorAll(".ruler-export-exclude").forEach(node => node.remove());
+        return clone;
     }
 
     isLogarithmic() {
