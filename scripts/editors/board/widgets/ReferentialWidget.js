@@ -514,6 +514,8 @@ class ReferentialShape extends BaseShape {
                 return axis === "x" ? pt.x - axisX : axisY - pt.y;
             },
             onMove: scale => {
+                // When equal scales is on, rescale both axes together to keep them
+                // equal; otherwise the drag only affects the axis being dragged.
                 if (axis === "x") {
                     this.properties.scaleX = scale;
                     if (this.properties.equalAxisScales === true)
