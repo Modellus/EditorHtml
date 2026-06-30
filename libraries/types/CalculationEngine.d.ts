@@ -540,6 +540,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitMultiplication?: (ctx: MultiplicationContext) => void;
     /**
+     * Enter a parse tree produced by the `FunctionApplication`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterFunctionApplication?: (ctx: FunctionApplicationContext) => void;
+    /**
+     * Exit a parse tree produced by the `FunctionApplication`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitFunctionApplication?: (ctx: FunctionApplicationContext) => void;
+    /**
      * Enter a parse tree produced by the `Rnd`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -1414,6 +1426,14 @@ declare class MultiplicationContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class FunctionApplicationContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    name(): NameContext;
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class RndContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
@@ -2006,6 +2026,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitMultiplication?: (ctx: MultiplicationContext) => Result;
+    /**
+     * Visit a parse tree produced by the `FunctionApplication`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitFunctionApplication?: (ctx: FunctionApplicationContext) => Result;
     /**
      * Visit a parse tree produced by the `Rnd`
      * labeled alternative in `LatexMathParser.expression`.
@@ -2682,6 +2709,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitFunctionSubscript: (context: FunctionSubscriptContext) => Branch;
     visitFunctionSubscriptDigit: (context: FunctionSubscriptDigitContext) => Branch;
     visitFunctionIndependent: (context: FunctionIndependentContext) => Branch;
+    visitFunctionApplication: (context: FunctionApplicationContext) => Branch;
     visitPower: (context: PowerContext) => Branch;
     private factorial;
     visitFactorial: (context: FactorialContext) => Branch;

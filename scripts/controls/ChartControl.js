@@ -8,10 +8,8 @@ class ChartControl {
         this.domainOverride = { xMin: null, xMax: null, yMin: null, yMax: null };
         this.width = 0;
         this.height = 0;
-        this._tickDragState = null;
+        this._axisTickDrag = new AxisTickDrag();
         this._zoomDragState = null;
-        this._onPointerMove = e => this.onTickPointerMove(e);
-        this._onPointerUp = e => this.onTickPointerUp(e);
         this._onZoomPointerMove = e => this.onZoomPointerMove(e);
         this._onZoomPointerUp = e => this.onZoomPointerUp(e);
         this._lastPlotClick = null;
@@ -1181,77 +1179,34 @@ class ChartControl {
         const baseValue = axis === "x" ? domain.xMin : domain.yMin;
         const tickOffsetValue = tickValue - baseValue;
         const tickOffsetPixel = axis === "x" ? startPixel - axisStartPixel : axisStartPixel - startPixel;
-        if (!Number.isFinite(tickOffsetValue) || Math.abs(tickOffsetValue) < 0.0001)
-            return;
-        if (!Number.isFinite(tickOffsetPixel) || Math.abs(tickOffsetPixel) < 0.0001)
-            return;
-        if (tickOffsetPixel * tickOffsetValue <= 0)
-            return;
-        this._tickDragState = {
-            axis,
-            tickValue,
-            startPixel,
-            layout: layout,
-            baseValue: baseValue,
-            tickOffsetValue: tickOffsetValue,
-            startX: event.clientX,
-            startY: event.clientY,
-            pointerId: event.pointerId
-        };
-        if (typeof this.options.onTickDragStarted === "function")
+        const startClientX = event.clientX;
+        const startClientY = event.clientY;
+        const axisLength = axis === "x" ? layout.plotWidth : layout.plotHeight;
+        const started = this._axisTickDrag.start(event, {
+            tickOffsetValue,
+            tickOffsetPixel,
+            getPixelOffset: e => axis === "x"
+                ? tickOffsetPixel + (e.clientX - startClientX)
+                : tickOffsetPixel - (e.clientY - startClientY),
+            onMove: newScale => {
+                if (axis === "x") {
+                    this.domainOverride.xMin = baseValue;
+                    this.domainOverride.xMax = baseValue + newScale * axisLength;
+                } else {
+                    this.domainOverride.yMin = baseValue;
+                    this.domainOverride.yMax = baseValue + newScale * axisLength;
+                }
+                this.render();
+            },
+            onEnd: () => {
+                if (typeof this.options.onTickDragEnded === "function")
+                    this.options.onTickDragEnded();
+                if (typeof this.options.onDomainChanged === "function")
+                    this.options.onDomainChanged({ ...this.domainOverride });
+            }
+        });
+        if (started && typeof this.options.onTickDragStarted === "function")
             this.options.onTickDragStarted();
-        window.addEventListener("pointermove", this._onPointerMove);
-        window.addEventListener("pointerup", this._onPointerUp);
-        window.addEventListener("pointercancel", this._onPointerUp);
-    }
-
-    onTickPointerMove(event) {
-        const drag = this._tickDragState;
-        if (!drag)
-            return;
-        if (event.pointerId !== drag.pointerId)
-            return;
-        event.preventDefault();
-        const layout = drag.layout;
-        if (drag.axis === "x") {
-            const pixelX = drag.startPixel + (event.clientX - drag.startX);
-            const pixelDistance = pixelX - layout.plotLeft;
-            if (Math.abs(pixelDistance) < 0.0001)
-                return;
-            if (pixelDistance * drag.tickOffsetValue <= 0)
-                return;
-            const scale = Math.abs(drag.tickOffsetValue / pixelDistance);
-            this.domainOverride.xMin = drag.baseValue;
-            this.domainOverride.xMax = drag.baseValue + scale * layout.plotWidth;
-        }
-        if (drag.axis === "y") {
-            const pixelY = drag.startPixel + (event.clientY - drag.startY);
-            const pixelDistance = layout.plotBottom - pixelY;
-            if (Math.abs(pixelDistance) < 0.0001)
-                return;
-            if (pixelDistance * drag.tickOffsetValue <= 0)
-                return;
-            const scale = Math.abs(drag.tickOffsetValue / pixelDistance);
-            this.domainOverride.yMin = drag.baseValue;
-            this.domainOverride.yMax = drag.baseValue + scale * layout.plotHeight;
-        }
-        this.render();
-    }
-
-    onTickPointerUp(event) {
-        const drag = this._tickDragState;
-        if (!drag)
-            return;
-        if (event.pointerId !== drag.pointerId)
-            return;
-        window.removeEventListener("pointermove", this._onPointerMove);
-        window.removeEventListener("pointerup", this._onPointerUp);
-        window.removeEventListener("pointercancel", this._onPointerUp);
-        this._tickDragState = null;
-        if (typeof this.options.onTickDragEnded === "function")
-            this.options.onTickDragEnded();
-        if (typeof this.options.onDomainChanged === "function")
-            this.options.onDomainChanged({ ...this.domainOverride });
     }
 
     getLocalPointerPoint(event) {
@@ -1293,7 +1248,7 @@ class ChartControl {
             return;
         event.stopPropagation();
         event.preventDefault();
-        if (this._tickDragState)
+        if (this._axisTickDrag.isDragging)
             return;
         const state = this.renderState;
         if (!state)
@@ -1443,7 +1398,7 @@ class ChartControl {
     }
 
     onCrosshairPointerMove(event) {
-        if (this._tickDragState)
+        if (this._axisTickDrag.isDragging)
             return;
         if (this._zoomDragState)
             return;

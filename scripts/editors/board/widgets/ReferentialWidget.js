@@ -3,8 +3,7 @@ class ReferentialShape extends BaseShape {
         super(board, null, id);
         this.isReferential = true;
         this._tickDragState = null;
-        this._onTickPointerMove = e => this.onTickPointerMove(e);
-        this._onTickPointerUp = e => this.onTickPointerUp(e);
+        this._axisTickDrag = new AxisTickDrag();
     }
 
     getHandles() {
@@ -505,65 +504,40 @@ class ReferentialShape extends BaseShape {
         const position = this.getBoardPosition();
         const axisX = position.x + this.properties.originX;
         const axisY = position.y + this.properties.originY;
-        this._tickDragState = {
-            axis: axis,
-            tickValue: tickValue,
-            axisX: axisX,
-            axisY: axisY,
-            pointerId: event.pointerId
-        };
+        const startPoint = this.board.getMouseToSvgPoint(event);
+        const tickOffsetPixel = axis === "x" ? startPoint.x - axisX : axisY - startPoint.y;
+        const started = this._axisTickDrag.start(event, {
+            tickOffsetValue: tickValue,
+            tickOffsetPixel,
+            getPixelOffset: e => {
+                const pt = this.board.getMouseToSvgPoint(e);
+                return axis === "x" ? pt.x - axisX : axisY - pt.y;
+            },
+            onMove: scale => {
+                if (axis === "x") {
+                    this.properties.scaleX = scale;
+                    if (this.properties.equalAxisScales === true)
+                        this.properties.scaleY = scale;
+                } else {
+                    this.properties.scaleY = scale;
+                    if (this.properties.equalAxisScales === true)
+                        this.properties.scaleX = scale;
+                }
+                this.properties.autoScale = false;
+                this.tick();
+                this.board.markDirty(this);
+            },
+            onEnd: () => {
+                this._tickDragState = null;
+                this.board.pointerLocked = false;
+            }
+        });
+        if (!started) return;
         this._handlePending = null;
         this._handlePendingStart = null;
         this._handleActivePointerId = null;
+        this._tickDragState = { axis, tickValue };
         this.board.pointerLocked = true;
-        window.addEventListener("pointermove", this._onTickPointerMove);
-        window.addEventListener("pointerup", this._onTickPointerUp);
-        window.addEventListener("pointercancel", this._onTickPointerUp);
-    }
-
-    onTickPointerMove(event) {
-        const drag = this._tickDragState;
-        if (!drag)
-            return;
-        if (event.pointerId !== drag.pointerId)
-            return;
-        event.preventDefault();
-        const point = this.board.getMouseToSvgPoint(event);
-        if (drag.axis === "x") {
-            const pixelDistance = point.x - drag.axisX;
-            if (Math.abs(pixelDistance) < 0.0001)
-                return;
-            if (pixelDistance * drag.tickValue <= 0)
-                return;
-            this.properties.scaleX = Math.abs(drag.tickValue / pixelDistance);
-            if (this.properties.equalAxisScales === true)
-                this.properties.scaleY = this.properties.scaleX;
-        } else {
-            const pixelDistance = drag.axisY - point.y;
-            if (Math.abs(pixelDistance) < 0.0001)
-                return;
-            if (pixelDistance * drag.tickValue <= 0)
-                return;
-            this.properties.scaleY = Math.abs(drag.tickValue / pixelDistance);
-            if (this.properties.equalAxisScales === true)
-                this.properties.scaleX = this.properties.scaleY;
-        }
-        this.properties.autoScale = false;
-        this.tick();
-        this.board.markDirty(this);
-    }
-
-    onTickPointerUp(event) {
-        const drag = this._tickDragState;
-        if (!drag)
-            return;
-        if (event.pointerId !== drag.pointerId)
-            return;
-        window.removeEventListener("pointermove", this._onTickPointerMove);
-        window.removeEventListener("pointerup", this._onTickPointerUp);
-        window.removeEventListener("pointercancel", this._onTickPointerUp);
-        this._tickDragState = null;
-        this.board.pointerLocked = false;
     }
 
     autoAdjustScales({ position, axisX, axisY }) {
@@ -832,18 +806,9 @@ class ReferentialShape extends BaseShape {
             return ticks;
         const range = maxValue - minValue;
         const rawStep = range / Math.max(1, targetCount - 1);
-        const exponent = Math.floor(Math.log10(rawStep));
-        const magnitude = Math.pow(10, exponent);
-        const normalized = rawStep / magnitude;
-        let step;
-        if (normalized < 1.5)
-            step = magnitude;
-        else if (normalized < 3)
-            step = 2 * magnitude;
-        else if (normalized < 7)
-            step = 5 * magnitude;
-        else
-            step = 10 * magnitude;
+        const step = niceTickStep(rawStep);
+        if (!(step > 0))
+            return ticks;
         const firstTick = Math.ceil(minValue / step) * step;
         for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
             ticks.push(Math.round(value * 1e10) / 1e10);
@@ -856,16 +821,7 @@ class ReferentialShape extends BaseShape {
         const maxTicks = this.getMaxMajorTickCount(axisLength);
         const range = axisLength * scale;
         const rawStep = range / Math.max(1, maxTicks - 1);
-        const exponent = Math.floor(Math.log10(rawStep));
-        const magnitude = Math.pow(10, exponent);
-        const normalized = rawStep / magnitude;
-        if (normalized < 1.5)
-            return magnitude;
-        if (normalized < 3)
-            return 2 * magnitude;
-        if (normalized < 7)
-            return 5 * magnitude;
-        return 10 * magnitude;
+        return niceTickStep(rawStep);
     }
 
     getTickPixelSpacing() {
