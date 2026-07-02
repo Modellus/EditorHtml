@@ -57,7 +57,7 @@ class QuestionShape extends BaseShape {
     }
 
     createElement() {
-        const foreignObject = this.board.createSvgElement("foreignObject");
+        const { group, foreignObject } = this.createForeignObjectGroup();
         const $wrapper = $("<div class='mdl-question-shape'>").appendTo(foreignObject);
         this.container = $wrapper.get(0);
         this.container.addEventListener("pointerdown", e => {
@@ -78,7 +78,7 @@ class QuestionShape extends BaseShape {
         this.$answerSection = $("<div class='mdl-question-answer-section'>").appendTo($wrapper);
         this.buildQuestionInput();
         this.buildAnswerContent();
-        return foreignObject;
+        return group;
     }
 
     buildQuestionInput() {
@@ -392,12 +392,8 @@ class QuestionShape extends BaseShape {
     }
 
     draw() {
+        this.applyForeignObjectLayout();
         super.draw();
-        this.element.setAttribute("x", this.properties.x);
-        this.element.setAttribute("y", this.properties.y);
-        this.element.setAttribute("width", this.properties.width);
-        this.element.setAttribute("height", this.properties.height);
-        this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, ${this.properties.y + this.properties.height / 2})`);
         const backgroundColor = this.properties.backgroundColor ?? "transparent";
         this.container.style.backgroundColor = backgroundColor;
         this.container.style.color = this.properties.foregroundColor ?? "#000000";

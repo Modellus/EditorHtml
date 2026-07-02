@@ -36,7 +36,7 @@ class TextShape extends BaseShape {
     }
 
     createElement() {
-        const foreignObject = this.board.createSvgElement("foreignObject");
+        const { group, foreignObject } = this.createForeignObjectGroup();
         const $wrapper = $("<div>").appendTo(foreignObject);
         this.container = $wrapper.get(0);
         $wrapper.css({ "width": "100%", "height": "100%", "display": "flex", "flex-direction": "column", "overflow": "hidden" });
@@ -81,7 +81,7 @@ class TextShape extends BaseShape {
             value: this.properties.text,
             onValueChanged: e => this.properties.text = e.value
         }).dxHtmlEditor("instance");
-        return foreignObject;
+        return group;
     }
 
     setProperties(properties) {
@@ -223,13 +223,8 @@ class TextShape extends BaseShape {
     }
 
     draw() {
+        this.applyForeignObjectLayout();
         super.draw();
-        this.element.setAttribute("x", this.properties.x);
-        this.element.setAttribute("y", this.properties.y);
-        this.element.setAttribute("width", this.properties.width);
-        this.element.setAttribute("height", this.properties.height);
-        this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
-            ${this.properties.y + this.properties.height / 2})`);
         if (this.$toolbarHost.is(":visible"))
             this.positionEditorToolbar();
         const backgroundColor = this.properties.backgroundColor ?? "transparent";

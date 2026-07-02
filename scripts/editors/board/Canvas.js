@@ -80,6 +80,7 @@ class Canvas {
             this.svg.insertBefore(shape.element, this.motionLayer);
         else
             this.svg.appendChild(shape.element);
+        shape.attachShapeNameLayer();
         this.shapes.add(shape);
         shape.element.addEventListener("focused", e => this.onShapeFocused(e));
         shape.element.addEventListener("changed", e => this.onExpressionChanged(e));
@@ -101,6 +102,7 @@ class Canvas {
         if (shape.motionGroup)
             this.motionLayer.removeChild(shape.motionGroup);
         this.svg.removeChild(shape.element);
+        shape.detachShapeNameLayer();
         this.shapes.remove(shape);
         this.selection.deselect(shape);
         this.dispatchShapeEvent("shapeRemoved", shape);

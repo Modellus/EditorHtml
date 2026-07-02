@@ -36,7 +36,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     }
 
     createElement() {
-        const foreignObject = this.board.createSvgElement("foreignObject");
+        const { group, foreignObject } = this.createForeignObjectGroup();
         const containerElement = this.board.createElement("div");
         foreignObject.appendChild(containerElement);
         this.expressionControl = new ExpressionControl({
@@ -70,7 +70,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         });
         this.container = this.expressionControl.create(containerElement);
         this.mathfield = this.expressionControl.mathfield;
-        return foreignObject;
+        return group;
     }
 
     syncHandwrittenStyle() {
@@ -219,7 +219,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     }
 
     update() {
-        this.element.style.backgroundColor = this.properties.backgroundColor;
+        this.foreignObject.style.backgroundColor = this.properties.backgroundColor;
         this.applyBorderStyle(this.container, 1);
         this.mathfield.style.color = this.properties.foregroundColor;
         this.mathfield.style.backgroundColor = this.properties.backgroundColor ?? "transparent";
@@ -227,12 +227,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     }
 
     draw() {
-        this.element.setAttribute("x", this.properties.x);
-        this.element.setAttribute("y", this.properties.y);
-        this.element.setAttribute("width", this.properties.width);
-        this.element.setAttribute("height", this.properties.height);
-        this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + this.properties.width / 2}, 
-            ${this.properties.y + this.properties.height / 2})`);
+        this.applyForeignObjectLayout();
         super.draw();
     }
 

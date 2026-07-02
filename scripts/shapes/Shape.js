@@ -1423,6 +1423,24 @@ class BaseShape {
         }, editorOptions);
     }
 
+    createForeignObjectGroup() {
+        const group = this.board.createSvgElement("g");
+        const foreignObject = this.board.createSvgElement("foreignObject");
+        group.appendChild(foreignObject);
+        this.foreignObject = foreignObject;
+        return { group, foreignObject };
+    }
+
+    applyForeignObjectLayout() {
+        if (!this.foreignObject)
+            return;
+        this.element.setAttribute("transform", `translate(${this.properties.x}, ${this.properties.y}) rotate(${this.properties.rotation}, ${this.properties.width / 2}, ${this.properties.height / 2})`);
+        this.foreignObject.setAttribute("x", 0);
+        this.foreignObject.setAttribute("y", 0);
+        this.foreignObject.setAttribute("width", this.properties.width);
+        this.foreignObject.setAttribute("height", this.properties.height);
+    }
+
     initializeShapeNameLayer() {
         this.shapeNameLayer = null;
         this.shapeNameText = null;
@@ -1430,10 +1448,22 @@ class BaseShape {
             return;
         this.shapeNameLayer = this.board.createSvgElement("g");
         this.shapeNameLayer.setAttribute("pointer-events", "none");
-        if (this.element.tagName?.toLowerCase() == "g")
+        this.attachShapeNameLayer();
+    }
+
+    attachShapeNameLayer() {
+        if (!this.shapeNameLayer)
+            return;
+        if (this.element?.tagName?.toLowerCase() == "g")
             this.element.appendChild(this.shapeNameLayer);
         else if (this.board?.svg)
             this.board.svg.appendChild(this.shapeNameLayer);
+        this.drawShapeNameLabel();
+    }
+
+    detachShapeNameLayer() {
+        if (this.shapeNameLayer?.parentNode)
+            this.shapeNameLayer.parentNode.removeChild(this.shapeNameLayer);
     }
 
     getShapeNameColor() {
