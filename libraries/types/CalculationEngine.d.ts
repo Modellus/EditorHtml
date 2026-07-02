@@ -948,6 +948,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitParenthesis?: (ctx: ParenthesisContext) => void;
     /**
+     * Enter a parse tree produced by the `ParenthesisPlain`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterParenthesisPlain?: (ctx: ParenthesisPlainContext) => void;
+    /**
+     * Exit a parse tree produced by the `ParenthesisPlain`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitParenthesisPlain?: (ctx: ParenthesisPlainContext) => void;
+    /**
      * Enter a parse tree produced by the `DeltaExpression`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -1687,6 +1699,13 @@ declare class ParenthesisContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class ParenthesisPlainContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class DeltaExpressionContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
@@ -2265,6 +2284,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitParenthesis?: (ctx: ParenthesisContext) => Result;
     /**
+     * Visit a parse tree produced by the `ParenthesisPlain`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitParenthesisPlain?: (ctx: ParenthesisPlainContext) => Result;
+    /**
      * Visit a parse tree produced by the `DeltaExpression`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -2471,6 +2497,7 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitCeil: (context: CeilContext) => Branch;
     visitRound: (context: RoundContext) => Branch;
     visitParenthesis: (context: ParenthesisContext) => Branch;
+    visitParenthesisPlain: (context: ParenthesisPlainContext) => Branch;
     visitBraces: (context: BracesContext) => Branch;
     visitSubscript: (context: SubscriptContext) => Branch;
     visitSubscriptDigit: (context: SubscriptDigitContext) => Branch;
@@ -2722,6 +2749,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitAddition: (context: AdditionContext) => Branch;
     visitAbsoluteValue: (context: AbsoluteValueContext) => Branch;
     visitParenthesis: (context: ParenthesisContext) => Branch;
+    visitParenthesisPlain: (context: ParenthesisPlainContext) => Branch;
     visitBraces: (context: BracesContext) => Branch;
     visitDifferential: (context: DifferentialContext) => Branch;
     private toRadians;
