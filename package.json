@@ -43,9 +43,9 @@
       "!playwright.config.js",
       "!pages/login/index.html",
       "!pages/login/login.js",
-      "!pages/marketplace/index.html",
-      "!pages/marketplace/marketplace.css",
-      "!pages/marketplace/marketplace.js",
+      "!pages/catalog/index.html",
+      "!pages/catalog/catalog.css",
+      "!pages/catalog/catalog.js",
       "!pages/home/home.html",
       "!CNAME",
       "!AGENTS.md"

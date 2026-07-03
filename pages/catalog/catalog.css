@@ -287,6 +287,28 @@ body {
   color: #16a34a;
   font-weight: 300;
 }
+.sample-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--c-border);
+  background: #fff;
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+}
+.sample-button i {
+  color: #a855f7;
+  font-weight: 300;
+}
+.sample-button.is-sample {
+  border-color: #a855f7;
+  background: #a855f7;
+}
+.sample-button.is-sample i {
+  color: #fff;
+}
 .card-tile.selected {
   border-color: var(--c-link);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);

@@ -1,5 +1,5 @@
 export class UserSdk {
-  constructor(sessionKey, userKey, loginPath, tokenStorageKey = "modellus_id_token", appHome = "/pages/marketplace/index.html", refreshTokenStorageKey = "modellus_refresh_token") {
+  constructor(sessionKey, userKey, loginPath, tokenStorageKey = "modellus_id_token", appHome = "/pages/catalog/index.html", refreshTokenStorageKey = "modellus_refresh_token") {
     this.sessionKey = sessionKey;
     this.userKey = userKey;
     this.loginPath = loginPath;

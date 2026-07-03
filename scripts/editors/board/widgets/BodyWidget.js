@@ -313,10 +313,10 @@ class BodyShape extends ChildShape {
 
     _buildCharacterPickerContent(contentElement) {
         const host = contentElement.get ? contentElement.get(0) : contentElement;
-        host.innerHTML = `<div class="mdl-marketplace-data-status"><i class="fa-light fa-spinner fa-spin"></i></div>`;
+        host.innerHTML = `<div class="mdl-catalog-data-status"><i class="fa-light fa-spinner fa-spin"></i></div>`;
         const apiClient = this.board.shell?.modelsApiClient;
         if (!apiClient) {
-            host.innerHTML = `<div class="mdl-marketplace-data-status">Characters unavailable.</div>`;
+            host.innerHTML = `<div class="mdl-catalog-data-status">Characters unavailable.</div>`;
             return;
         }
         Promise.all([
@@ -344,7 +344,7 @@ class BodyShape extends ChildShape {
                     <div class="mdl-char-picker-search-bar">
                         <input class="mdl-char-picker-search-input" type="text" placeholder="Search characters…" autocomplete="off">
                     </div>
-                    <div class="mdl-marketplace-data-scroll mdl-char-picker-scroll"><div class="mdl-char-picker-body"></div></div>
+                    <div class="mdl-catalog-data-scroll mdl-char-picker-scroll"><div class="mdl-char-picker-body"></div></div>
                 </div>`;
             const body = host.querySelector(".mdl-char-picker-body");
             const searchInput = host.querySelector(".mdl-char-picker-search-input");
@@ -353,23 +353,23 @@ class BodyShape extends ChildShape {
                 body.insertAdjacentHTML("beforeend", `
                     <div class="mdl-char-picker-group" id="${groupId}">
                         <div class="mdl-char-picker-group-label">${this._escapePickerHtml(group.name)}</div>
-                        <div class="mdl-marketplace-data-grid"></div>
+                        <div class="mdl-catalog-data-grid"></div>
                     </div>`);
-                const grid = body.querySelector(`#${groupId} .mdl-marketplace-data-grid`);
+                const grid = body.querySelector(`#${groupId} .mdl-catalog-data-grid`);
                 for (const character of group.characters) {
                     const cardId = `char-card-${CSS.escape(character.id)}`;
                     const isSelected = this._selectedCharacterKey === character.id;
                     const thumbHtml = character.thumbnail_url
-                        ? `<img class="mdl-marketplace-data-thumb" src="${this._escapePickerHtml(character.thumbnail_url)}" alt="${this._escapePickerHtml(character.title || "")}">`
-                        : `<div class="mdl-marketplace-data-thumb-placeholder"><i class="fa-light fa-person-running"></i></div>`;
+                        ? `<img class="mdl-catalog-data-thumb" src="${this._escapePickerHtml(character.thumbnail_url)}" alt="${this._escapePickerHtml(character.title || "")}">`
+                        : `<div class="mdl-catalog-data-thumb-placeholder"><i class="fa-light fa-person-running"></i></div>`;
                     grid.insertAdjacentHTML("beforeend", `
-                        <div class="mdl-marketplace-data-card${isSelected ? " selected" : ""}" id="${cardId}" data-character-id="${this._escapePickerHtml(character.id)}" data-character-title="${this._escapePickerHtml((character.title || "").toLowerCase())}">
+                        <div class="mdl-catalog-data-card${isSelected ? " selected" : ""}" id="${cardId}" data-character-id="${this._escapePickerHtml(character.id)}" data-character-title="${this._escapePickerHtml((character.title || "").toLowerCase())}">
                             ${thumbHtml}
-                            <div class="mdl-marketplace-data-title">${this._escapePickerHtml(character.title || "")}</div>
+                            <div class="mdl-catalog-data-title">${this._escapePickerHtml(character.title || "")}</div>
                         </div>`);
                     const card = grid.lastElementChild;
                     card.addEventListener("click", () => {
-                        host.querySelectorAll(".mdl-marketplace-data-card").forEach(c => c.classList.remove("selected"));
+                        host.querySelectorAll(".mdl-catalog-data-card").forEach(c => c.classList.remove("selected"));
                         card.classList.add("selected");
                         this._selectedCharacterKey = character.id;
                     });
@@ -392,7 +392,7 @@ class BodyShape extends ChildShape {
                 const query = event.target.value.toLowerCase().trim();
                 body.querySelectorAll(".mdl-char-picker-group:not([data-none-group])").forEach(group => {
                     let visibleCount = 0;
-                    group.querySelectorAll(".mdl-marketplace-data-card").forEach(card => {
+                    group.querySelectorAll(".mdl-catalog-data-card").forEach(card => {
                         const matches = !query || card.dataset.characterTitle.includes(query);
                         card.style.display = matches ? "" : "none";
                         if (matches) visibleCount++;

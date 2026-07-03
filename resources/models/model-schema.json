@@ -381,7 +381,7 @@
         "description": {
           "type": "string",
           "default": "",
-          "description": "Optional description shown in the marketplace."
+          "description": "Optional description shown in the catalog."
         },
         "backgroundColor": {
           "type": "string",

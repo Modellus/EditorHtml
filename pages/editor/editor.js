@@ -118,7 +118,7 @@ function redirectToLogin() {
             return currentSession?.userId || "";
         }
     );
-    const userSdk = new UserSdk("mp.session", "mp.user", "/pages/login/index.html", "modellus_id_token", "/pages/marketplace/index.html");
+    const userSdk = new UserSdk("mp.session", "mp.user", "/pages/login/index.html", "modellus_id_token", "/pages/catalog/index.html");
     const modelSession = new ModelSession(modelsApiClient);
     if (!hasValidSession())
         await userSdk.refreshSession(apiBase);

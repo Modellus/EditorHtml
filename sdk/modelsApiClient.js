@@ -513,6 +513,15 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`System template update failed (${response.status})`);
   }
 
+  async patchModelSample(modelId, isSample) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}`, {
+      method: "PATCH",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify({ is_sample: isSample })
+    });
+    if (!response.ok) throw new Error(`Sample update failed (${response.status})`);
+  }
+
   async fetchModelById(modelId) {
     const headers = this.buildAuthHeaders();
     const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}`, { headers });

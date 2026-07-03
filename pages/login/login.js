@@ -4,13 +4,13 @@ DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImN
 
 const googleClientId = "616832441203-a45kghte7c05vdkj5ri5ejp8qu81vcae.apps.googleusercontent.com";
 const tokenStorageKey = "modellus_id_token";
-const marketplaceSessionKey = "mp.session";
-const marketplaceUserKey = "mp.user";
+const catalogSessionKey = "mp.session";
+const catalogUserKey = "mp.user";
 const loginPath = "/pages/login/index.html";
-const appHome = "/pages/marketplace/index.html";
+const appHome = "/pages/catalog/index.html";
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
 
-const userSdk = new UserSdk(marketplaceSessionKey, marketplaceUserKey, loginPath, tokenStorageKey, appHome);
+const userSdk = new UserSdk(catalogSessionKey, catalogUserKey, loginPath, tokenStorageKey, appHome);
 
 window.handleCredentialResponse = async ({ credential }) => {
   await userSdk.handleCredentialResponse(credential, apiBase);

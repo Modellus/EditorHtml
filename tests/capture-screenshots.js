@@ -231,9 +231,9 @@ async function captureFullModel(page) {
     await screenshot(page, 'full-model-demo');
 }
 
-async function captureMarketplace(page) {
-    console.log('Capturing marketplace...');
-    await page.goto(`${BASE_URL}/pages/marketplace/index.html`);
+async function captureCatalog(page) {
+    console.log('Capturing catalog...');
+    await page.goto(`${BASE_URL}/pages/catalog/index.html`);
     await page.waitForTimeout(3000);
 
     await screenshot(page, 'marketplace-overview');
@@ -266,7 +266,7 @@ async function captureMarketplace(page) {
         await captureChartShape(page);
         await captureReferentialWithShapes(page);
         await captureFullModel(page);
-        await captureMarketplace(page);
+        await captureCatalog(page);
         console.log('\nAll screenshots captured successfully!');
     } catch (error) {
         console.error('Error capturing screenshots:', error.message);

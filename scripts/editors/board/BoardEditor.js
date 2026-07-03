@@ -756,12 +756,12 @@ class BoardEditor extends Workspace {
             await this.autoSaveModel();
         else
             this._hasChanges = false;
-        window.location.href = "/pages/marketplace/index.html";
+        window.location.href = "/pages/catalog/index.html";
     }
 
     async exitEditor() {
         if (!this._hasChanges) {
-            window.location.href = "/pages/marketplace/index.html";
+            window.location.href = "/pages/catalog/index.html";
             return;
         }
         const result = await this.saveFormController.promptSaveBeforeExit();
@@ -769,11 +769,11 @@ class BoardEditor extends Workspace {
             return;
         if (result === "save") {
             await this.autoSaveModel();
-            window.location.href = "/pages/marketplace/index.html";
+            window.location.href = "/pages/catalog/index.html";
             return;
         }
         this._hasChanges = false;
-        window.location.href = "/pages/marketplace/index.html";
+        window.location.href = "/pages/catalog/index.html";
     }
 
     getModel() {

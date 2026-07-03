@@ -1,8 +1,8 @@
 import { ModelsApiClient } from "../../sdk/modelsApiClient.js";
 import { UserSdk } from "../../sdk/userSdk.js";
-import { ProfileController } from "../../scripts/marketplace/profileController.js";
-import { countryItems } from "../../scripts/marketplace/profile.js";
-import { MarketplaceTranslations } from "../../scripts/marketplace/translations.js";
+import { ProfileController } from "../../scripts/catalog/profileController.js";
+import { countryItems } from "../../scripts/catalog/profile.js";
+import { CatalogTranslations } from "../../scripts/catalog/translations.js";
 
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
 const sessionKey = window.modellus?.auth?.sessionKey || "mp.session";
@@ -16,17 +16,22 @@ const treeNodeIds = {
   myDraft: "my-draft",
   myPublished: "my-published",
   myDeleted: "my-deleted",
-  marketplace: "marketplace",
-  marketplaceModels: "marketplace-models",
-  marketplaceModelsEducation: "market-education",
-  marketplaceModelsSciences: "market-sciences",
-  marketplaceVideos: "marketplace-videos",
-  marketplaceVideosEducation: "marketplace-videos-education",
-  marketplaceVideosSciences: "marketplace-videos-sciences",
-  marketplaceData: "marketplace-data",
-  marketplaceDataEducation: "marketplace-data-education",
-  marketplaceDataSciences: "marketplace-data-sciences",
-  marketplaceCharacters: "marketplace-characters",
+  catalog: "catalog",
+  catalogModels: "catalog-models",
+  catalogModelsEducation: "catalog-education",
+  catalogModelsSciences: "catalog-sciences",
+  catalogVideos: "catalog-videos",
+  catalogVideosEducation: "catalog-videos-education",
+  catalogVideosSciences: "catalog-videos-sciences",
+  catalogData: "catalog-data",
+  catalogDataEducation: "catalog-data-education",
+  catalogDataSciences: "catalog-data-sciences",
+  catalogCharacters: "catalog-characters",
+  samples: "samples",
+  samplesModels: "samples-models",
+  samplesEducation: "samples-education",
+  samplesSciences: "samples-sciences",
+  assets: "assets",
   maintenance: "maintenance",
   maintenanceModels: "maintenance-models",
   maintenanceEducation: "maintenance-education",
@@ -100,10 +105,10 @@ class ModelsApp {
     this.normalizeAuthenticationState();
     this.apiClient = new ModelsApiClient(apiBase, () => this.state.session, () => this.userSdk.getUserId(this.state.session));
     this.state.selectedTreeNodeId = this.getDefaultTreeNodeId();
-    this.translations = new MarketplaceTranslations(this.state.user?.preferredLanguage);
+    this.translations = new CatalogTranslations(this.state.user?.preferredLanguage);
     if (this.translations.language !== "en-US" && window.DevExpress?.localization) {
-      DevExpress.localization.loadMessages(MarketplaceTranslations.buildDevExtremeMessages());
-      DevExpress.localization.locale(MarketplaceTranslations.dxMessagesLocale);
+      DevExpress.localization.loadMessages(CatalogTranslations.buildDevExtremeMessages());
+      DevExpress.localization.locale(CatalogTranslations.dxMessagesLocale);
     }
     this.profileController = new ProfileController(this.apiClient, this.userSdk, this.state, this.translations);
     this.cardViewInstance = null;
@@ -181,22 +186,27 @@ class ModelsApp {
     const scienceItems = this.buildGroupedPublicItems("science");
     if (scienceItems.length)
       return scienceItems[0].id;
-    return treeNodeIds.marketplaceModels;
+    return treeNodeIds.catalogModels;
   }
 
   isNonSelectableTreeNodeId(nodeId) {
     return nodeId === treeNodeIds.myModels
-      || nodeId === treeNodeIds.marketplace
-      || nodeId === treeNodeIds.marketplaceModels
-      || nodeId === treeNodeIds.marketplaceModelsEducation
-      || nodeId === treeNodeIds.marketplaceModelsSciences
-      || nodeId === treeNodeIds.marketplaceVideos
-      || nodeId === treeNodeIds.marketplaceVideosEducation
-      || nodeId === treeNodeIds.marketplaceVideosSciences
-      || nodeId === treeNodeIds.marketplaceData
-      || nodeId === treeNodeIds.marketplaceDataEducation
-      || nodeId === treeNodeIds.marketplaceDataSciences
-      || nodeId === treeNodeIds.marketplaceCharacters
+      || nodeId === treeNodeIds.catalog
+      || nodeId === treeNodeIds.catalogModels
+      || nodeId === treeNodeIds.catalogModelsEducation
+      || nodeId === treeNodeIds.catalogModelsSciences
+      || nodeId === treeNodeIds.catalogVideos
+      || nodeId === treeNodeIds.catalogVideosEducation
+      || nodeId === treeNodeIds.catalogVideosSciences
+      || nodeId === treeNodeIds.catalogData
+      || nodeId === treeNodeIds.catalogDataEducation
+      || nodeId === treeNodeIds.catalogDataSciences
+      || nodeId === treeNodeIds.catalogCharacters
+      || nodeId === treeNodeIds.samples
+      || nodeId === treeNodeIds.samplesModels
+      || nodeId === treeNodeIds.samplesEducation
+      || nodeId === treeNodeIds.samplesSciences
+      || nodeId === treeNodeIds.assets
       || nodeId === treeNodeIds.maintenance;
   }
 
@@ -445,6 +455,8 @@ class ModelsApp {
         const isLiked = this.isLikedValue(data);
         const likesCount = data.likes_count || 0;
         const isPublic = data.is_public === true || data.is_public === 1;
+        const canManageSample = !isDeleted && this.canAccessMaintenance();
+        const isSample = this.isSampleValue(data);
         const thumbnailSrc = data.thumbnail_url || "";
         const educationLookupId = data.education_level_id;
         const scienceLookupId = data.science_id;
@@ -479,6 +491,7 @@ class ModelsApp {
             ${thumbnailMarkup}
             <div class="card-actions">
               ${isDeleted ? `<button class="recover-button" aria-label="${this.translations.get("Recover model")}"><i class="fa-light fa-rotate-left" aria-hidden="true"></i></button>` : ""}
+              ${canManageSample ? `<button class="sample-button${isSample ? " is-sample" : ""}" aria-label="${isSample ? this.translations.get("Remove from samples") : this.translations.get("Set as sample")}" title="${isSample ? this.translations.get("Sample") : this.translations.get("Set as sample")}"><i class="${isSample ? "fa-solid fa-flask-vial" : "fa-light fa-flask-vial"}" aria-hidden="true"></i></button>` : ""}
               ${canEdit ? `<button class="edit-button" aria-label="${this.translations.get("Edit model")}"><i class="fa-light fa-pen" aria-hidden="true"></i></button>` : ""}
               ${(canEdit || isDeleted) ? `<button class="delete-button" aria-label="${this.translations.get("Delete model")}">
                 <i class="fa-light fa-trash-can trash" aria-hidden="true"></i>
@@ -521,6 +534,7 @@ class ModelsApp {
         const editButton = host.querySelector(".edit-button");
         const deleteButton = host.querySelector(".delete-button");
         const recoverButton = host.querySelector(".recover-button");
+        const sampleButton = host.querySelector(".sample-button");
         const visibilityButton = host.querySelector(".visibility-button");
         const educationDropdownHost = host.querySelector(".education-dropdown-host");
         const scienceDropdownHost = host.querySelector(".science-dropdown-host");
@@ -541,6 +555,10 @@ class ModelsApp {
         if (recoverButton) recoverButton.addEventListener("click", event => {
           event.stopPropagation();
           this.recoverModel(data);
+        });
+        if (sampleButton) sampleButton.addEventListener("click", event => {
+          event.stopPropagation();
+          this.toggleSample(data);
         });
         if (visibilityButton) visibilityButton.addEventListener("click", event => {
           event.stopPropagation();
@@ -2949,42 +2967,46 @@ class ModelsApp {
       return this.publishedModels;
     if (nodeId === treeNodeIds.myDeleted)
       return this.deletedModels;
-    if (nodeId === treeNodeIds.marketplace || nodeId === treeNodeIds.marketplaceModels)
-      return this.publicModels;
-    if (typeof nodeId === "string" && nodeId.startsWith("market-education-item:")) {
-      const educationKey = nodeId.substring("market-education-item:".length);
-      if (educationKey.startsWith("id:")) {
-        const educationLookupId = decodeURIComponent(educationKey.substring("id:".length));
-        return this.publicModels.filter(model => model.education_level_id === educationLookupId);
-      }
-      if (educationKey.startsWith("label:")) {
-        const educationLabel = decodeURIComponent(educationKey.substring("label:".length));
-        return this.publicModels.filter(model => this.getEducationLabel(model) === educationLabel);
-      }
-      const educationLabel = decodeURIComponent(educationKey);
-      return this.publicModels.filter(model => this.getEducationLabel(model) === educationLabel);
-    }
-    if (typeof nodeId === "string" && nodeId.startsWith("market-science-item:")) {
-      const scienceKey = nodeId.substring("market-science-item:".length);
-      if (scienceKey.startsWith("id:")) {
-        const scienceLookupId = decodeURIComponent(scienceKey.substring("id:".length));
-        return this.publicModels.filter(model => model.science_id === scienceLookupId);
-      }
-      if (scienceKey.startsWith("label:")) {
-        const scienceLabel = decodeURIComponent(scienceKey.substring("label:".length));
-        return this.publicModels.filter(model => this.getScienceLabel(model) === scienceLabel);
-      }
-      const scienceLabel = decodeURIComponent(scienceKey);
-      return this.publicModels.filter(model => this.getScienceLabel(model) === scienceLabel);
-    }
+    const publicModels = Array.isArray(this.publicModels) ? this.publicModels : [];
+    const sampleModels = publicModels.filter(model => this.isSampleValue(model));
+    if (nodeId === treeNodeIds.catalog || nodeId === treeNodeIds.catalogModels)
+      return publicModels;
+    if (nodeId === treeNodeIds.samples || nodeId === treeNodeIds.samplesModels)
+      return sampleModels;
+    const catalogEducation = this.filterModelsByGroupNode(publicModels, nodeId, "catalog-education-item:", "education");
+    if (catalogEducation) return catalogEducation;
+    const catalogScience = this.filterModelsByGroupNode(publicModels, nodeId, "catalog-science-item:", "science");
+    if (catalogScience) return catalogScience;
+    const sampleEducation = this.filterModelsByGroupNode(sampleModels, nodeId, "samples-education-item:", "education");
+    if (sampleEducation) return sampleEducation;
+    const sampleScience = this.filterModelsByGroupNode(sampleModels, nodeId, "samples-science-item:", "science");
+    if (sampleScience) return sampleScience;
     return [];
   }
 
+  filterModelsByGroupNode(models, nodeId, prefix, dimension) {
+    if (typeof nodeId !== "string" || !nodeId.startsWith(prefix))
+      return null;
+    const key = nodeId.substring(prefix.length);
+    const idField = dimension === "education" ? "education_level_id" : "science_id";
+    const getLabel = dimension === "education"
+      ? model => this.getEducationLabel(model)
+      : model => this.getScienceLabel(model);
+    if (key.startsWith("id:")) {
+      const lookupId = decodeURIComponent(key.substring("id:".length));
+      return models.filter(model => model[idField] === lookupId);
+    }
+    const label = key.startsWith("label:")
+      ? decodeURIComponent(key.substring("label:".length))
+      : decodeURIComponent(key);
+    return models.filter(model => getLabel(model) === label);
+  }
+
   getVideosByTreeNodeId(nodeId) {
-    if (nodeId === treeNodeIds.marketplaceVideos)
+    if (nodeId === treeNodeIds.catalogVideos)
       return this.videosData;
-    if (typeof nodeId === "string" && nodeId.startsWith("market-video-education-item:")) {
-      const educationKey = nodeId.substring("market-video-education-item:".length);
+    if (typeof nodeId === "string" && nodeId.startsWith("catalog-video-education-item:")) {
+      const educationKey = nodeId.substring("catalog-video-education-item:".length);
       if (educationKey.startsWith("id:")) {
         const educationLookupId = decodeURIComponent(educationKey.substring("id:".length));
         return this.videosData.filter(video => video.education_level_id === educationLookupId);
@@ -2992,8 +3014,8 @@ class ModelsApp {
       const educationLabel = decodeURIComponent(educationKey.startsWith("label:") ? educationKey.substring("label:".length) : educationKey);
       return this.videosData.filter(video => this.getEducationLabel(video) === educationLabel);
     }
-    if (typeof nodeId === "string" && nodeId.startsWith("market-video-science-item:")) {
-      const scienceKey = nodeId.substring("market-video-science-item:".length);
+    if (typeof nodeId === "string" && nodeId.startsWith("catalog-video-science-item:")) {
+      const scienceKey = nodeId.substring("catalog-video-science-item:".length);
       if (scienceKey.startsWith("id:")) {
         const scienceLookupId = decodeURIComponent(scienceKey.substring("id:".length));
         return this.videosData.filter(video => video.science_id === scienceLookupId);
@@ -3005,10 +3027,10 @@ class ModelsApp {
   }
 
   getDataSetsByTreeNodeId(nodeId) {
-    if (nodeId === treeNodeIds.marketplaceData)
+    if (nodeId === treeNodeIds.catalogData)
       return this.dataSetData;
-    if (typeof nodeId === "string" && nodeId.startsWith("market-data-education-item:")) {
-      const educationKey = nodeId.substring("market-data-education-item:".length);
+    if (typeof nodeId === "string" && nodeId.startsWith("catalog-data-education-item:")) {
+      const educationKey = nodeId.substring("catalog-data-education-item:".length);
       if (educationKey.startsWith("id:")) {
         const educationLookupId = decodeURIComponent(educationKey.substring("id:".length));
         return this.dataSetData.filter(dataSet => dataSet.education_level_id === educationLookupId);
@@ -3016,8 +3038,8 @@ class ModelsApp {
       const educationLabel = decodeURIComponent(educationKey.startsWith("label:") ? educationKey.substring("label:".length) : educationKey);
       return this.dataSetData.filter(dataSet => this.getEducationLabel(dataSet) === educationLabel);
     }
-    if (typeof nodeId === "string" && nodeId.startsWith("market-data-science-item:")) {
-      const scienceKey = nodeId.substring("market-data-science-item:".length);
+    if (typeof nodeId === "string" && nodeId.startsWith("catalog-data-science-item:")) {
+      const scienceKey = nodeId.substring("catalog-data-science-item:".length);
       if (scienceKey.startsWith("id:")) {
         const scienceLookupId = decodeURIComponent(scienceKey.substring("id:".length));
         return this.dataSetData.filter(dataSet => dataSet.science_id === scienceLookupId);
@@ -3029,25 +3051,25 @@ class ModelsApp {
   }
 
   isVideoNodeId(nodeId) {
-    return nodeId === treeNodeIds.marketplaceVideos
-      || (typeof nodeId === "string" && (nodeId.startsWith("market-video-education-item:") || nodeId.startsWith("market-video-science-item:")));
+    return nodeId === treeNodeIds.catalogVideos
+      || (typeof nodeId === "string" && (nodeId.startsWith("catalog-video-education-item:") || nodeId.startsWith("catalog-video-science-item:")));
   }
 
   isDataNodeId(nodeId) {
-    return nodeId === treeNodeIds.marketplaceData
-      || (typeof nodeId === "string" && (nodeId.startsWith("market-data-education-item:") || nodeId.startsWith("market-data-science-item:")));
+    return nodeId === treeNodeIds.catalogData
+      || (typeof nodeId === "string" && (nodeId.startsWith("catalog-data-education-item:") || nodeId.startsWith("catalog-data-science-item:")));
   }
 
   isCharacterNodeId(nodeId) {
-    return nodeId === treeNodeIds.marketplaceCharacters
-      || (typeof nodeId === "string" && nodeId.startsWith("market-character-category-item:"));
+    return nodeId === treeNodeIds.catalogCharacters
+      || (typeof nodeId === "string" && nodeId.startsWith("catalog-character-category-item:"));
   }
 
   getCharactersByTreeNodeId(nodeId) {
-    if (nodeId === treeNodeIds.marketplaceCharacters)
+    if (nodeId === treeNodeIds.catalogCharacters)
       return this.charactersData;
-    if (typeof nodeId === "string" && nodeId.startsWith("market-character-category-item:")) {
-      const categoryKey = nodeId.substring("market-character-category-item:".length);
+    if (typeof nodeId === "string" && nodeId.startsWith("catalog-character-category-item:")) {
+      const categoryKey = nodeId.substring("catalog-character-category-item:".length);
       if (categoryKey.startsWith("id:")) {
         const categoryId = decodeURIComponent(categoryKey.substring("id:".length));
         return this.charactersData.filter(character => character.category_id === categoryId);
@@ -3080,9 +3102,13 @@ class ModelsApp {
     return this.userSdk.hasFeatureFlag(maintenanceAccessFeatureFlagKey);
   }
 
-  buildGroupedPublicItems(type) {
+  buildGroupedPublicItems(type, options = {}) {
+    const sourceModels = Array.isArray(options.models)
+      ? options.models
+      : (Array.isArray(this.publicModels) ? this.publicModels : []);
+    const prefixBase = options.prefixBase || "catalog";
     const grouped = new Map();
-    const publicModels = Array.isArray(this.publicModels) ? this.publicModels : [];
+    const publicModels = sourceModels;
     for (let index = 0; index < publicModels.length; index++) {
       const model = publicModels[index];
       const lookupId = type === "education" ? model.education_level_id : model.science_id;
@@ -3105,8 +3131,8 @@ class ModelsApp {
         const lookupColorById = isEducation ? this.educationLookupColorById : this.scienceLookupColorById;
         const iconClass = entry.lookupId ? lookupIconById.get(entry.lookupId) || defaultIconClass : defaultIconClass;
         const iconColor = entry.lookupId ? lookupColorById.get(entry.lookupId) || defaultIconColor : defaultIconColor;
-        const nodePrefix = isEducation ? "market-education-item:" : "market-science-item:";
-        const nodeType = isEducation ? "market-education-item" : "market-science-item";
+        const nodePrefix = isEducation ? `${prefixBase}-education-item:` : `${prefixBase}-science-item:`;
+        const nodeType = isEducation ? `${prefixBase}-education-item` : `${prefixBase}-science-item`;
         const nodeSuffix = entry.lookupId ? `id:${encodeURIComponent(entry.lookupId)}` : `label:${encodeURIComponent(entry.label)}`;
         return {
           id: `${nodePrefix}${nodeSuffix}`,
@@ -3144,8 +3170,8 @@ class ModelsApp {
         const lookupColorById = isEducation ? this.educationLookupColorById : this.scienceLookupColorById;
         const iconClass = entry.lookupId ? lookupIconById.get(entry.lookupId) || defaultIconClass : defaultIconClass;
         const iconColor = entry.lookupId ? lookupColorById.get(entry.lookupId) || defaultIconColor : defaultIconColor;
-        const nodePrefix = isEducation ? "market-video-education-item:" : "market-video-science-item:";
-        const nodeType = isEducation ? "market-video-education-item" : "market-video-science-item";
+        const nodePrefix = isEducation ? "catalog-video-education-item:" : "catalog-video-science-item:";
+        const nodeType = isEducation ? "catalog-video-education-item" : "catalog-video-science-item";
         const nodeSuffix = entry.lookupId ? `id:${encodeURIComponent(entry.lookupId)}` : `label:${encodeURIComponent(entry.label)}`;
         return {
           id: `${nodePrefix}${nodeSuffix}`,
@@ -3182,9 +3208,9 @@ class ModelsApp {
       .map(entry => {
         const nodeSuffix = entry.categoryId ? `id:${encodeURIComponent(entry.categoryId)}` : "uncategorized";
         return {
-          id: `market-character-category-item:${nodeSuffix}`,
+          id: `catalog-character-category-item:${nodeSuffix}`,
           text: `${entry.label} (${entry.count})`,
-          nodeType: "market-character-category-item",
+          nodeType: "catalog-character-category-item",
           iconClass: "fa-light fa-person-running",
           iconColor: "#7c3aed"
         };
@@ -3216,8 +3242,8 @@ class ModelsApp {
         const lookupColorById = isEducation ? this.educationLookupColorById : this.scienceLookupColorById;
         const iconClass = entry.lookupId ? lookupIconById.get(entry.lookupId) || defaultIconClass : defaultIconClass;
         const iconColor = entry.lookupId ? lookupColorById.get(entry.lookupId) || defaultIconColor : defaultIconColor;
-        const nodePrefix = isEducation ? "market-data-education-item:" : "market-data-science-item:";
-        const nodeType = isEducation ? "market-data-education-item" : "market-data-science-item";
+        const nodePrefix = isEducation ? "catalog-data-education-item:" : "catalog-data-science-item:";
+        const nodeType = isEducation ? "catalog-data-education-item" : "catalog-data-science-item";
         const nodeSuffix = entry.lookupId ? `id:${encodeURIComponent(entry.lookupId)}` : `label:${encodeURIComponent(entry.label)}`;
         return {
           id: `${nodePrefix}${nodeSuffix}`,
@@ -3238,6 +3264,10 @@ class ModelsApp {
     const dataEducationItems = this.buildGroupedDataItems("education");
     const dataScienceItems = this.buildGroupedDataItems("science");
     const characterCategoryItems = this.buildGroupedCharacterItems();
+    const publicModels = Array.isArray(this.publicModels) ? this.publicModels : [];
+    const sampleModels = publicModels.filter(model => this.isSampleValue(model));
+    const sampleEducationItems = this.buildGroupedPublicItems("education", { models: sampleModels, prefixBase: "samples" });
+    const sampleScienceItems = this.buildGroupedPublicItems("science", { models: sampleModels, prefixBase: "samples" });
     const treeData = [];
     if (this.isAuthenticated())
       treeData.push({
@@ -3293,23 +3323,23 @@ class ModelsApp {
         ]
       });
     treeData.push({
-        id: treeNodeIds.marketplace,
-        text: `${this.translations.get("Marketplace")} (${(Array.isArray(this.publicModels) ? this.publicModels.length : 0) + this.videosData.length + this.dataSetData.length + this.charactersData.length})`,
-        iconClass: "fa-light fa-store",
+        id: treeNodeIds.catalog,
+        text: `${this.translations.get("Community")} (${publicModels.length})`,
+        iconClass: "fa-light fa-users",
         iconColor: "#16a34a",
         expanded: false,
         selectable: false,
         items: [
           {
-            id: treeNodeIds.marketplaceModels,
-            text: `${this.translations.get("Models")} (${Array.isArray(this.publicModels) ? this.publicModels.length : 0})`,
+            id: treeNodeIds.catalogModels,
+            text: `${this.translations.get("Models")} (${publicModels.length})`,
             iconClass: "fa-light fa-cube",
             iconColor: "#16a34a",
             expanded: false,
             selectable: false,
             items: [
               {
-                id: treeNodeIds.marketplaceModelsEducation,
+                id: treeNodeIds.catalogModelsEducation,
                 text: `${this.translations.get("Education Levels")} (${educationItems.length})`,
                 iconClass: "fa-light fa-graduation-cap",
                 iconColor: "#8b5cf6",
@@ -3318,7 +3348,7 @@ class ModelsApp {
                 items: educationItems
               },
               {
-                id: treeNodeIds.marketplaceModelsSciences,
+                id: treeNodeIds.catalogModelsSciences,
                 text: `${this.translations.get("Sciences")} (${scienceItems.length})`,
                 iconClass: "fa-light fa-flask",
                 iconColor: "#0ea5e9",
@@ -3327,9 +3357,57 @@ class ModelsApp {
                 items: scienceItems
               }
             ]
-          },
+          }
+        ]
+      });
+    treeData.push({
+        id: treeNodeIds.samples,
+        text: `${this.translations.get("Samples")} (${sampleModels.length})`,
+        iconClass: "fa-light fa-flask-vial",
+        iconColor: "#a855f7",
+        expanded: false,
+        selectable: false,
+        items: [
           {
-            id: treeNodeIds.marketplaceVideos,
+            id: treeNodeIds.samplesModels,
+            text: `${this.translations.get("Models")} (${sampleModels.length})`,
+            iconClass: "fa-light fa-cube",
+            iconColor: "#a855f7",
+            expanded: false,
+            selectable: false,
+            items: [
+              {
+                id: treeNodeIds.samplesEducation,
+                text: `${this.translations.get("Education Levels")} (${sampleEducationItems.length})`,
+                iconClass: "fa-light fa-graduation-cap",
+                iconColor: "#8b5cf6",
+                expanded: false,
+                selectable: false,
+                items: sampleEducationItems
+              },
+              {
+                id: treeNodeIds.samplesSciences,
+                text: `${this.translations.get("Sciences")} (${sampleScienceItems.length})`,
+                iconClass: "fa-light fa-flask",
+                iconColor: "#0ea5e9",
+                expanded: false,
+                selectable: false,
+                items: sampleScienceItems
+              }
+            ]
+          }
+        ]
+      });
+    treeData.push({
+        id: treeNodeIds.assets,
+        text: `${this.translations.get("Assets")} (${this.videosData.length + this.dataSetData.length + this.charactersData.length})`,
+        iconClass: "fa-light fa-photo-film",
+        iconColor: "#d97706",
+        expanded: false,
+        selectable: false,
+        items: [
+          {
+            id: treeNodeIds.catalogVideos,
             text: `${this.translations.get("Videos")} (${this.videosData.length})`,
             iconClass: "fa-light fa-video",
             iconColor: "#e11d48",
@@ -3337,7 +3415,7 @@ class ModelsApp {
             selectable: false,
             items: [
               {
-                id: treeNodeIds.marketplaceVideosEducation,
+                id: treeNodeIds.catalogVideosEducation,
                 text: `${this.translations.get("Education Levels")} (${videoEducationItems.length})`,
                 iconClass: "fa-light fa-graduation-cap",
                 iconColor: "#8b5cf6",
@@ -3346,7 +3424,7 @@ class ModelsApp {
                 items: videoEducationItems
               },
               {
-                id: treeNodeIds.marketplaceVideosSciences,
+                id: treeNodeIds.catalogVideosSciences,
                 text: `${this.translations.get("Sciences")} (${videoScienceItems.length})`,
                 iconClass: "fa-light fa-flask",
                 iconColor: "#0ea5e9",
@@ -3357,7 +3435,7 @@ class ModelsApp {
             ]
           },
           {
-            id: treeNodeIds.marketplaceData,
+            id: treeNodeIds.catalogData,
             text: `${this.translations.get("Data")} (${this.dataSetData.length})`,
             iconClass: "fa-light fa-table",
             iconColor: "#d97706",
@@ -3365,7 +3443,7 @@ class ModelsApp {
             selectable: false,
             items: [
               {
-                id: treeNodeIds.marketplaceDataEducation,
+                id: treeNodeIds.catalogDataEducation,
                 text: `${this.translations.get("Education Levels")} (${dataEducationItems.length})`,
                 iconClass: "fa-light fa-graduation-cap",
                 iconColor: "#8b5cf6",
@@ -3374,7 +3452,7 @@ class ModelsApp {
                 items: dataEducationItems
               },
               {
-                id: treeNodeIds.marketplaceDataSciences,
+                id: treeNodeIds.catalogDataSciences,
                 text: `${this.translations.get("Sciences")} (${dataScienceItems.length})`,
                 iconClass: "fa-light fa-flask",
                 iconColor: "#0ea5e9",
@@ -3385,7 +3463,7 @@ class ModelsApp {
             ]
           },
           {
-            id: treeNodeIds.marketplaceCharacters,
+            id: treeNodeIds.catalogCharacters,
             text: `${this.translations.get("Characters")} (${this.charactersData.length})`,
             iconClass: "fa-light fa-person-running",
             iconColor: "#7c3aed",
@@ -3556,6 +3634,11 @@ class ModelsApp {
     return this.pickedModelIdSet.has(modelId);
   }
 
+  isSampleValue(modelData) {
+    if (!modelData) return false;
+    return modelData.is_sample === true || modelData.is_sample === 1;
+  }
+
   isLikedValue(modelData) {
     if (!modelData) return false;
     const flagValue = this.hasLikedFlag(modelData);
@@ -3651,6 +3734,25 @@ class ModelsApp {
       this.loadModels();
     } catch (error) {
       this.setStatus(error && error.message ? error.message : this.translations.get("Failed to update visibility."), true);
+    }
+  }
+
+  async toggleSample(modelData) {
+    if (!modelData || !modelData.id) return;
+    if (!this.canAccessMaintenance()) return;
+    this.userSdk.refreshState(this.state);
+    if (!this.state.session || !this.state.session.token) {
+      this.setStatus(this.translations.get("Sign-in required to update visibility."), true);
+      return;
+    }
+    const nextValue = !this.isSampleValue(modelData);
+    modelData.is_sample = nextValue;
+    try {
+      await this.apiClient.patchModelSample(modelData.id, nextValue);
+      this.loadModels();
+    } catch (error) {
+      modelData.is_sample = !nextValue;
+      this.setStatus(error && error.message ? error.message : this.translations.get("Failed to update model metadata."), true);
     }
   }
 

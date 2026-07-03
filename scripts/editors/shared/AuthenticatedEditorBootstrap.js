@@ -1,7 +1,7 @@
 var AuthenticatedEditorBootstrap = {
     createUserSdk: async function() {
         const { UserSdk } = await import("../../../sdk/userSdk.js");
-        return new UserSdk("mp.session", "mp.user", "/pages/login/index.html", "modellus_id_token", "/pages/marketplace/index.html");
+        return new UserSdk("mp.session", "mp.user", "/pages/login/index.html", "modellus_id_token", "/pages/catalog/index.html");
     },
 
     initializeSession: async function(apiBase, onLoginRequired) {

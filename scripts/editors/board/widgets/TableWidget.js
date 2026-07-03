@@ -85,9 +85,9 @@ class TableShape extends BaseShape {
                 action: () => this.importExternalDataFromUrl()
             },
             {
-                text: this.board.translations.get("Marketplace Data") ?? "Marketplace Data",
+                text: this.board.translations.get("Catalog Data") ?? "Catalog Data",
                 icon: "fa-light fa-globe",
-                action: () => this.importExternalDataFromMarketplace()
+                action: () => this.importExternalDataFromCatalog()
             }
         ];
         $(contentElement).empty();
@@ -126,51 +126,51 @@ class TableShape extends BaseShape {
         this.refreshDataToolbarControl();
     }
 
-    async importExternalDataFromMarketplace() {
-        const result = await this.showMarketplaceDataPopup();
+    async importExternalDataFromCatalog() {
+        const result = await this.showCatalogDataPopup();
         if (!result)
             return;
         this.applyExternalDataColumns(result.names);
         this.refreshDataToolbarControl();
     }
 
-    showMarketplaceDataPopup() {
+    showCatalogDataPopup() {
         return new Promise(resolve => {
-            this._marketplaceDataResolve = resolve;
-            this._selectedMarketplaceDataset = null;
+            this._catalogDataResolve = resolve;
+            this._selectedCatalogDataset = null;
             const buildContent = async (contentElement) => {
                 const host = contentElement.get ? contentElement.get(0) : contentElement;
-                host.innerHTML = `<div class="mdl-marketplace-data-status"><i class="fa-light fa-spinner fa-spin"></i></div>`;
+                host.innerHTML = `<div class="mdl-catalog-data-status"><i class="fa-light fa-spinner fa-spin"></i></div>`;
                 let datasets = [];
                 try {
                     datasets = await this.board.shell.modelsApiClient.fetchDataSets();
                 } catch (error) {
-                    host.innerHTML = `<div class="mdl-marketplace-data-status">${this.board.translations.get("Failed to load data") ?? "Failed to load data"}</div>`;
+                    host.innerHTML = `<div class="mdl-catalog-data-status">${this.board.translations.get("Failed to load data") ?? "Failed to load data"}</div>`;
                     return;
                 }
                 if (!datasets.length) {
-                    host.innerHTML = `<div class="mdl-marketplace-data-status">${this.board.translations.get("No data available") ?? "No data available"}</div>`;
+                    host.innerHTML = `<div class="mdl-catalog-data-status">${this.board.translations.get("No data available") ?? "No data available"}</div>`;
                     return;
                 }
                 host.innerHTML = `
-                    <div class="mdl-marketplace-data-scroll">
-                        <div class="mdl-marketplace-data-grid"></div>
+                    <div class="mdl-catalog-data-scroll">
+                        <div class="mdl-catalog-data-grid"></div>
                     </div>`;
-                const grid = host.querySelector(".mdl-marketplace-data-grid");
+                const grid = host.querySelector(".mdl-catalog-data-grid");
                 for (const dataset of datasets) {
                     const thumbHtml = dataset.thumbnail_url
-                        ? `<img class="mdl-marketplace-data-thumb" src="${dataset.thumbnail_url}" alt="">`
-                        : `<div class="mdl-marketplace-data-thumb-placeholder"><i class="fa-light fa-table"></i></div>`;
+                        ? `<img class="mdl-catalog-data-thumb" src="${dataset.thumbnail_url}" alt="">`
+                        : `<div class="mdl-catalog-data-thumb-placeholder"><i class="fa-light fa-table"></i></div>`;
                     grid.insertAdjacentHTML("beforeend", `
-                        <div class="mdl-marketplace-data-card" data-id="${dataset.id ?? ""}"> 
+                        <div class="mdl-catalog-data-card" data-id="${dataset.id ?? ""}"> 
                             ${thumbHtml}
-                            <div class="mdl-marketplace-data-title">${dataset.title ?? "Untitled"}</div>
+                            <div class="mdl-catalog-data-title">${dataset.title ?? "Untitled"}</div>
                         </div>`);
                     const cardElement = grid.lastElementChild;
                     cardElement.addEventListener("click", () => {
-                        grid.querySelectorAll(".mdl-marketplace-data-card").forEach(c => c.classList.remove("selected"));
+                        grid.querySelectorAll(".mdl-catalog-data-card").forEach(c => c.classList.remove("selected"));
                         cardElement.classList.add("selected");
-                        this._selectedMarketplaceDataset = dataset;
+                        this._selectedCatalogDataset = dataset;
                     });
                     if (dataset.description) {
                         $('<div>').appendTo('body').dxTooltip({
@@ -182,28 +182,28 @@ class TableShape extends BaseShape {
                             hideEvent: 'mouseleave',
                             position: 'top',
                             width: 260,
-                            wrapperAttr: { class: "mdl-marketplace-data-tooltip" }
+                            wrapperAttr: { class: "mdl-catalog-data-tooltip" }
                         });
                     }
                 }
             };
-            if (this._marketplaceDataPopupInstance) {
-                buildContent(this._marketplaceDataPopupInstance.content());
-                this._marketplaceDataPopupInstance.show();
+            if (this._catalogDataPopupInstance) {
+                buildContent(this._catalogDataPopupInstance.content());
+                this._catalogDataPopupInstance.show();
                 return;
             }
             const popupHost = document.createElement("div");
             document.body.appendChild(popupHost);
-            this._marketplaceDataPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+            this._catalogDataPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
                 visible: true,
                 showTitle: true,
-                title: this.board.translations.get("Marketplace Data") ?? "Marketplace Data",
+                title: this.board.translations.get("Catalog Data") ?? "Catalog Data",
                 width: 680,
                 height: 520,
                 dragEnabled: true,
                 hideOnOutsideClick: true,
                 showCloseButton: true,
-                wrapperAttr: this.getShapeOverlayWrapperAttr("mdl-marketplace-data-popup"),
+                wrapperAttr: this.getShapeOverlayWrapperAttr("mdl-catalog-data-popup"),
                 toolbarItems: [
                     {
                         widget: "dxButton",
@@ -213,7 +213,7 @@ class TableShape extends BaseShape {
                             text: this.board.translations.get("Load") ?? "Load",
                             type: "default",
                             stylingMode: "contained",
-                            onClick: () => this.onMarketplaceDataLoad()
+                            onClick: () => this.onCatalogDataLoad()
                         }
                     },
                     {
@@ -223,31 +223,31 @@ class TableShape extends BaseShape {
                         options: {
                             text: this.board.translations.get("Cancel") ?? "Cancel",
                             stylingMode: "text",
-                            onClick: () => this._marketplaceDataPopupInstance.hide()
+                            onClick: () => this._catalogDataPopupInstance.hide()
                         }
                     }
                 ],
                 onHidden: () => {
-                    this._marketplaceDataResolve?.(null);
-                    this._marketplaceDataResolve = null;
+                    this._catalogDataResolve?.(null);
+                    this._catalogDataResolve = null;
                 },
                 contentTemplate: contentElement => buildContent(contentElement)
             });
         });
     }
 
-    async onMarketplaceDataLoad() {
-        if (!this._selectedMarketplaceDataset)
+    async onCatalogDataLoad() {
+        if (!this._selectedCatalogDataset)
             return;
-        const dataset = this._selectedMarketplaceDataset;
+        const dataset = this._selectedCatalogDataset;
         const response = await fetch(dataset.asset_url);
         const text = await response.text();
         const { names, values } = this.board.shell.parseCsv(text);
         this.properties.externalData = { names, values };
         this.properties.originalExternalData = { names: [...names], values: values.map(row => [...row]) };
-        const resolveCallback = this._marketplaceDataResolve;
-        this._marketplaceDataResolve = null;
-        this._marketplaceDataPopupInstance.hide();
+        const resolveCallback = this._catalogDataResolve;
+        this._catalogDataResolve = null;
+        this._catalogDataPopupInstance.hide();
         this.applyExternalDataColumns(names);
         this.board.shell.reset();
         this.refreshDataToolbarControl();

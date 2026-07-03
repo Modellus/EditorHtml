@@ -1,4 +1,4 @@
-export class MarketplaceTranslations {
+export class CatalogTranslations {
   constructor(language = "en-US") {
     this.language = language in this._strings ? language : "en-US";
   }
@@ -8,7 +8,7 @@ export class MarketplaceTranslations {
   }
 
   get _strings() {
-    return MarketplaceTranslations._strings;
+    return CatalogTranslations._strings;
   }
 
   static get dxMessagesLocale() {
@@ -127,13 +127,19 @@ export class MarketplaceTranslations {
   }
 }
 
-MarketplaceTranslations._strings = {
+CatalogTranslations._strings = {
   "en-US": {
     "My Models": "My Models",
     "Personal": "Personal",
     "Favorite": "Favorite",
     "Library": "Library",
     "Marketplace": "Marketplace",
+    "Community": "Community",
+    "Samples": "Samples",
+    "Assets": "Assets",
+    "Sample": "Sample",
+    "Set as sample": "Set as sample",
+    "Remove from samples": "Remove from samples",
     "Education Levels": "Education Levels",
     "Sciences": "Sciences",
     "Maintenance": "Maintenance",
@@ -255,6 +261,12 @@ MarketplaceTranslations._strings = {
     "Favorite": "Favoritos",
     "Library": "Biblioteca",
     "Marketplace": "Mercado",
+    "Community": "Comunidade",
+    "Samples": "Exemplos",
+    "Assets": "Recursos",
+    "Sample": "Exemplo",
+    "Set as sample": "Definir como exemplo",
+    "Remove from samples": "Remover dos exemplos",
     "Education Levels": "Níveis de Ensino",
     "Sciences": "Ciências",
     "Maintenance": "Manutenção",
