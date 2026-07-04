@@ -24,6 +24,7 @@ class ModelSession {
         this.properties.gridSize = 20;
         this.properties.snapToGrid = false;
         this.properties.backgroundId = "";
+        this.properties.autoPlay = false;
     }
 
     setProperties(properties) {

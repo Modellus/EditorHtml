@@ -95,6 +95,18 @@ class SettingsController {
                 },
                 {
                     colSpan: 2,
+                    dataField: "autoPlay",
+                    label: {
+                        text: this.shell.board.translations.get("Auto Play") ?? "Auto Play"
+                    },
+                    editorType: "dxSwitch",
+                    editorOptions: {
+                        switchedOnText: this.shell.board.translations.get("On") ?? "On",
+                        switchedOffText: this.shell.board.translations.get("Off") ?? "Off"
+                    }
+                },
+                {
+                    colSpan: 2,
                     dataField: "backgroundId",
                     label: {
                         text: this.shell.board.translations.get("Background") ?? "Background"

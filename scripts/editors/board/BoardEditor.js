@@ -77,6 +77,7 @@ class BoardEditor extends Workspace {
         history.pushState(null, "");
         this.reparseAndCalculateWorkspace(() => this.reset());
         this.startAutoSave();
+        this.startAutoPlayIfEnabled();
     }
 
     get modelsApiClient() {
@@ -302,6 +303,14 @@ class BoardEditor extends Workspace {
         this.topToolbar.update();
     }
 
+    startAutoPlayIfEnabled() {
+        if (!this.properties.autoPlay)
+            return;
+        if (this.isCalculatorPlaying())
+            return;
+        this.playPausePressed();
+    }
+
     stepBackwardPressed() {
         this.calculatorStepBackward();
         this.bottomToolbar.updatePlayer();
@@ -447,6 +456,7 @@ class BoardEditor extends Workspace {
             this.board.resetShapeValues();
         });
         this.chatController.reset();
+        this.startAutoPlayIfEnabled();
     }
     
     async exportToFile() {
