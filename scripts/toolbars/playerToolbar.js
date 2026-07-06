@@ -60,7 +60,7 @@ class ModellusPlayerToolbar {
                         showMode: "always",
                         position: "top"
                     },
-                    onValueChanged: event => configuration.onSliderValueChanged(event.value)
+                    onValueChanged: event => configuration.onSliderValueChanged(event.value, !!event.event)
                 }
             },
             ...itemsAfterSlider,

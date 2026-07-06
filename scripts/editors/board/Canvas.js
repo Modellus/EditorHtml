@@ -149,7 +149,6 @@ class Canvas {
     onShapeDragEnd(e) {
         this.selection.setDragging(false);
         this.selectShape(e.detail.shape);
-        this.dispatchShapeEvent("shapeDragEnd", e.detail.shape);
     }
 
     bringForward(shape) {

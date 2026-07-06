@@ -91,9 +91,14 @@ class TopToolbar {
                 {
                     location: "after",
                     template: () => {
+                        const wrapper = $('<div class="mdl-collab-host"></div>');
+                        const facepile = $('<div id="collab-facepile" class="mdl-collab-facepile"></div>');
                         const collabContainer = $('<div id="collab-button-host"></div>');
                         this._createCollabDropDownButton(collabContainer);
-                        return collabContainer;
+                        wrapper.append(facepile).append(collabContainer);
+                        this._collabFacepileElement = facepile[0];
+                        this._renderCollabFacepile(this._collabPresenceList ?? []);
+                        return wrapper;
                     }
                 },
                 {
@@ -413,6 +418,11 @@ class TopToolbar {
             valueExpr: "id",
             searchExpr: ["name", "email"],
             dataSource: this._collabUsers ?? [],
+            itemTemplate: data => `
+                <div class="mdl-collab-option">
+                    <img class="mdl-collab-avatar" src="${data.avatar ?? ""}" alt="">
+                    <span class="mdl-collab-name">${data.name ?? data.email ?? ""}</span>
+                </div>`,
             onFocusIn: () => {
                 if (this._collabUsersLoaded)
                     return;
@@ -431,16 +441,47 @@ class TopToolbar {
         });
     }
 
+    // Live presence (who is currently connected) drives the facepile next to the
+    // collaboration button. The dropdown list below is the model's access list.
+    updateCollaboratorPresence(list) {
+        this._collabPresenceList = Array.isArray(list) ? list : [];
+        this._renderCollabFacepile(this._collabPresenceList);
+    }
+
     async _loadCollabData() {
         const modelId = this.shell.getCurrentModelId();
-        if (!modelId || !this._collabListInstance)
+        if (!modelId)
             return;
         try {
             const collaborators = await this.shell.modelsApiClient.fetchCollaborators(modelId);
-            this._collabListInstance.option("dataSource", Array.isArray(collaborators) ? collaborators : []);
+            const list = Array.isArray(collaborators) ? collaborators : [];
+            this._collabCollaborators = list;
+            this._collabListInstance?.option("dataSource", list);
         } catch (_) {
-            this._collabListInstance.option("dataSource", []);
+            this._collabCollaborators = [];
+            this._collabListInstance?.option("dataSource", []);
         }
+    }
+
+    _renderCollabFacepile(collaborators) {
+        const host = this._collabFacepileElement;
+        if (!host)
+            return;
+        const list = Array.isArray(collaborators) ? collaborators : [];
+        const maxVisible = 3;
+        const visible = list.slice(0, maxVisible);
+        const extra = list.length - visible.length;
+        const escape = value => String(value ?? "").replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+        const faces = visible.map(user => {
+            const title = escape(user.name ?? user.email ?? "");
+            if (user.avatar)
+                return `<img class="mdl-face" src="${escape(user.avatar)}" alt="" title="${title}">`;
+            const initial = escape((user.name ?? user.email ?? "?").trim().charAt(0).toUpperCase() || "?");
+            return `<span class="mdl-face mdl-face-initial" title="${title}">${initial}</span>`;
+        }).join("");
+        const more = extra > 0 ? `<span class="mdl-face mdl-face-more" title="${extra} more">+${extra}</span>` : "";
+        host.innerHTML = faces + more;
+        host.style.display = list.length ? "" : "none";
     }
 
     async _removeCollaborator(userId) {

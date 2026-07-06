@@ -23,6 +23,7 @@ class CommandsInvoker {
     record(command) {
         this.history.push(command);
         this.redoStack = [];
+        this.onRecord?.(command);
     }
 
     redo() {

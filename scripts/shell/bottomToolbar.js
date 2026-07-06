@@ -101,7 +101,7 @@ class BottomToolbar {
                         const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
                         return Utils.formatNumber(this.shell.calculator.getIndependentValue(value), precision);
                     },
-                    onSliderValueChanged: value => this.shell.iterationChanged(value),
+                    onSliderValueChanged: (value, isUserInitiated) => this.shell.iterationChanged(value, isUserInitiated),
                     itemsBeforeSlider: [
                         {
                             location: "center",

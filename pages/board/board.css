@@ -922,6 +922,54 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
+.mdl-collab-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mdl-collab-host {
+    display: flex;
+    align-items: center;
+}
+
+.mdl-collab-facepile {
+    display: flex;
+    align-items: center;
+    padding-left: 6px;
+}
+
+.mdl-collab-facepile .mdl-face {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--mdl-toolbar-bg, #ffffff);
+    background: #e0e0e0;
+    margin-left: -8px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ffffff;
+    text-transform: uppercase;
+    overflow: hidden;
+}
+
+.mdl-collab-facepile .mdl-face:first-child {
+    margin-left: 0;
+}
+
+.mdl-collab-facepile .mdl-face-initial {
+    background: #8777d9;
+}
+
+.mdl-collab-facepile .mdl-face-more {
+    background: #6b7280;
+}
+
 .mdl-dropdown-grid-full {
     grid-column: 1 / -1;
 }

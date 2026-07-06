@@ -298,9 +298,42 @@ class BoardEditor extends Workspace {
     }
 
     playPausePressed() {
-        this.toggleCalculatorPlayback();
+        const playing = this.toggleCalculatorPlayback();
         this.bottomToolbar.updatePlayer();
         this.topToolbar.update();
+        this.broadcastPlayback(playing ? "play" : "pause", this.calculator?.getIteration?.());
+    }
+
+    broadcastPlayback(action, iteration) {
+        if (!this.collabCoordinator || this.collabCoordinator.isApplyingRemote())
+            return;
+        this.collabCoordinator.sendOp({ type: "playback", action, iteration });
+    }
+
+    applyRemotePlayback(op) {
+        if (!this.calculator)
+            return;
+        if (op.action === "play") {
+            if (typeof op.iteration === "number")
+                this.calculatorSetIteration(op.iteration);
+            if (!this.isCalculatorPlaying()) {
+                this.onBeforePlayback();
+                this.calculatorPlay();
+            }
+        } else if (op.action === "pause") {
+            this.calculatorPause();
+            if (typeof op.iteration === "number")
+                this.calculatorSetIteration(op.iteration);
+        } else if (op.action === "stop") {
+            this.reparseAndCalculateWorkspace(() => this.reset());
+        } else if (op.action === "replay") {
+            this.replayCalculatorPlayback();
+        } else if (op.action === "setIteration") {
+            if (typeof op.iteration === "number")
+                this.calculatorSetIteration(op.iteration);
+        }
+        this.bottomToolbar?.updatePlayer();
+        this.topToolbar?.update();
     }
 
     startAutoPlayIfEnabled() {
@@ -314,20 +347,24 @@ class BoardEditor extends Workspace {
     stepBackwardPressed() {
         this.calculatorStepBackward();
         this.bottomToolbar.updatePlayer();
+        this.broadcastPlayback("setIteration", this.calculator?.getIteration?.());
     }
 
     stepForwardPressed() {
         this.calculatorStepForward();
         this.bottomToolbar.updatePlayer();
+        this.broadcastPlayback("setIteration", this.calculator?.getIteration?.());
     }
     
     stopPressed() {
         this.reparseAndCalculateWorkspace(() => this.reset());
+        this.broadcastPlayback("stop");
     }
-    
+
     replayPressed() {
         this.replayCalculatorPlayback();
         this.bottomToolbar.updatePlayer();
+        this.broadcastPlayback("replay");
     }
 
     miniMapPressed() {
@@ -343,8 +380,12 @@ class BoardEditor extends Workspace {
         this.chatController.open();
     }
 
-    iterationChanged(iteration) {
+    iterationChanged(iteration, isUserInitiated) {
         this.calculatorSetIteration(iteration);
+        // Only broadcast user scrubs; programmatic slider updates during playback
+        // fire this handler every frame and must not flood the channel.
+        if (isUserInitiated)
+            this.broadcastPlayback("setIteration", iteration);
     }
 
     openSettings() {
@@ -661,27 +702,135 @@ class BoardEditor extends Workspace {
             apiBase: "https://modellus-api.interactivebook.workers.dev",
             modelId,
             getToken: () => window.modellus?.auth?.getSession?.()?.token ?? "",
-            onOp: op => this.applyRemoteOp(op),
-            onSnapshot: model => this.applyRemoteSnapshot(model),
+            onRemoteOp: op => this.applyRemoteOp(op),
+            onRemoteSnapshot: model => this.applyRemoteSnapshot(model),
             getSnapshot: () => this.serialize()
         });
-        if (this._collabShapeDragEndHandler)
-            this.board.svg.removeEventListener("shapeDragEnd", this._collabShapeDragEndHandler);
+        // Broadcast both executed and recorded commands. Drag and expression-edit
+        // commits use invoker.record() (not execute()), so onRecord is required for
+        // those changes to reach other collaborators.
         this.commands.invoker.onExecute = command => this.broadcastCommand(command);
-        this._collabShapeDragEndHandler = e => {
-            if (this.collabCoordinator?.isApplyingRemote())
-                return;
-            const shape = e.detail.shape;
-            if (!shape)
-                return;
-            this.collabCoordinator?.sendOp({
-                type: "setShapeProperties",
-                shapeId: shape.id,
-                properties: Utils.cloneProperties(shape.properties)
-            });
-        };
-        this.board.svg.addEventListener("shapeDragEnd", this._collabShapeDragEndHandler);
+        this.commands.invoker.onRecord = command => this.broadcastCommand(command);
+        this.setupCollabCursors();
+        this.setupCollabPresence();
         this.collabCoordinator.start();
+    }
+
+    setupCollabPresence() {
+        this._collabPresence = new Map();
+        clearInterval(this._presenceHeartbeat);
+        clearInterval(this._presencePrune);
+        // Early one-shot sends cover the window before the socket finishes opening
+        // (the first immediate send is usually dropped); the interval sustains it.
+        this._sendPresence();
+        setTimeout(() => this._sendPresence(), 1200);
+        setTimeout(() => this._sendPresence(), 3000);
+        this._presenceHeartbeat = setInterval(() => this._sendPresence(), 5000);
+        this._presencePrune = setInterval(() => this._prunePresence(), 3000);
+        this._renderPresenceFacepile();
+    }
+
+    _sendPresence() {
+        if (!this.collabCoordinator)
+            return;
+        this.collabCoordinator.sendOp({
+            type: "presence",
+            clientId: this._collabClientId,
+            name: this._collabCursorName,
+            avatar: this._collabCursorAvatar,
+            color: this._collabCursorColor
+        });
+    }
+
+    applyRemotePresence(op) {
+        if (!op.clientId || op.clientId === this._collabClientId)
+            return;
+        if (op.gone) {
+            if (this._collabPresence?.delete(op.clientId))
+                this._renderPresenceFacepile();
+            return;
+        }
+        const isNew = !this._collabPresence?.has(op.clientId);
+        this._collabPresence?.set(op.clientId, {
+            name: op.name,
+            avatar: op.avatar,
+            color: op.color,
+            lastSeen: Date.now()
+        });
+        this._renderPresenceFacepile();
+        // A newcomer just announced itself — reply with our presence so it sees us
+        // immediately (deferred past the applying-remote guard on sendOp).
+        if (isNew)
+            setTimeout(() => this._sendPresence(), 0);
+    }
+
+    _prunePresence() {
+        if (!this._collabPresence)
+            return;
+        const now = Date.now();
+        let changed = false;
+        for (const [id, entry] of this._collabPresence) {
+            if (now - entry.lastSeen > 15000) {
+                this._collabPresence.delete(id);
+                changed = true;
+            }
+        }
+        if (changed)
+            this._renderPresenceFacepile();
+    }
+
+    _renderPresenceFacepile() {
+        const list = Array.from(this._collabPresence?.values() ?? []);
+        this.topToolbar?.updateCollaboratorPresence?.(list);
+    }
+
+    setupCollabCursors() {
+        this.collabCursors?.destroy();
+        this.collabCursors = new CollabCursors(this.board, {
+            getZoom: () => this.panAndZoom?.getZoom?.() ?? 1
+        });
+        const session = window.modellus?.auth?.getSession?.();
+        this._collabClientId = (crypto.randomUUID?.() ?? String(Math.random()).slice(2));
+        this._collabCursorName = session?.name || session?.email || "Guest";
+        this._collabCursorColor = CollabCursors.colorFor(session?.email || this._collabClientId);
+        this._collabCursorAvatar = session?.avatar || "";
+        if (this._collabCursorMoveHandler)
+            this.board.svg.removeEventListener("mousemove", this._collabCursorMoveHandler);
+        if (this._collabCursorLeaveHandler)
+            this.board.svg.removeEventListener("mouseleave", this._collabCursorLeaveHandler);
+        this._collabCursorMoveHandler = event => this.onCollabCursorMove(event);
+        this._collabCursorLeaveHandler = () => this.collabCoordinator?.sendOp({
+            type: "cursor",
+            clientId: this._collabClientId,
+            gone: true
+        });
+        this.board.svg.addEventListener("mousemove", this._collabCursorMoveHandler);
+        this.board.svg.addEventListener("mouseleave", this._collabCursorLeaveHandler);
+    }
+
+    onCollabCursorMove(event) {
+        if (!this.collabCoordinator || this.collabCoordinator.isApplyingRemote())
+            return;
+        this._pendingCursorEvent = event;
+        if (this._cursorSendFrame != null)
+            return;
+        this._cursorSendFrame = requestAnimationFrame(() => {
+            this._cursorSendFrame = null;
+            const now = performance.now();
+            if (now - (this._lastCursorSentAt ?? 0) < 40)
+                return;
+            this._lastCursorSentAt = now;
+            const point = this.board.getMouseToSvgPoint(this._pendingCursorEvent);
+            this.collabCoordinator.sendOp({
+                type: "cursor",
+                clientId: this._collabClientId,
+                name: this._collabCursorName,
+                color: this._collabCursorColor,
+                avatar: this._collabCursorAvatar,
+                x: point.x,
+                y: point.y
+            });
+        });
     }
 
     broadcastCommand(command) {
@@ -738,8 +887,20 @@ class BoardEditor extends Workspace {
                 this.board.setShapeProperties(targetShape, op.properties);
             return;
         }
-        if (op.type === "setModelProperties")
+        if (op.type === "setModelProperties") {
             this.setProperties(op.properties);
+            return;
+        }
+        if (op.type === "playback") {
+            this.applyRemotePlayback(op);
+            return;
+        }
+        if (op.type === "cursor") {
+            this.collabCursors?.update(op);
+            return;
+        }
+        if (op.type === "presence")
+            this.applyRemotePresence(op);
     }
 
     applyRemoteSnapshot(model) {
@@ -747,6 +908,7 @@ class BoardEditor extends Workspace {
             return;
         this.board.enableSelection(true);
         this.deserialise(model);
+        this.collabCursors?.reattach();
         this.reparseCalculateAndRefreshWorkspace(() => {
             this.reset();
             this.calculator.stop();
