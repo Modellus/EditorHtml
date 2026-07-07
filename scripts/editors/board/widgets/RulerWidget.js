@@ -227,7 +227,11 @@ class RulerShape extends BaseShape {
 
     _updateTickInteractionHandles(geometry) {
         const ticks = this._getAllTickData(geometry);
-        const hitWidth = 12;
+        const hitWidth = 8;
+        // Only cover the vertical band the ticks actually occupy (top ~58% of the
+        // ruler, matching majorBottomY in drawRulerTicks). The lower portion stays
+        // free so the ruler shape itself can still be grabbed and dragged.
+        const hitHeight = geometry.height * 0.58;
         while (this.tickInteractionLayer.children.length > ticks.length)
             this.tickInteractionLayer.removeChild(this.tickInteractionLayer.lastChild);
         for (let i = 0; i < ticks.length; i++) {
@@ -245,7 +249,7 @@ class RulerShape extends BaseShape {
             hitRect.setAttribute("x", x - hitWidth / 2);
             hitRect.setAttribute("y", geometry.y);
             hitRect.setAttribute("width", hitWidth);
-            hitRect.setAttribute("height", geometry.height);
+            hitRect.setAttribute("height", hitHeight);
             hitRect._tickValue = tick.value;
             hitRect._tickPixelFromLeft = tick.pixelFromLeft;
         }
