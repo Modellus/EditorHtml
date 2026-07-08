@@ -32,6 +32,14 @@ var QuestionShapeToolbarMixin = {
             },
             {
                 location: "center",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createQuestionImageDropDownButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
                 template: () => $('<div class="toolbar-separator">|</div>')
             },
             this.createRemoveToolbarItem()
@@ -64,6 +72,45 @@ var QuestionShapeToolbarMixin = {
             }
         });
         this._answerModeDropdownElement.appendTo(itemElement);
+    },
+    createQuestionImageDropDownButton(itemElement) {
+        this._imageDropdownElement = $('<div class="mdl-image-settings-selector">');
+        this._imageDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            icon: this.questionImageButtonIcon(),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: 280,
+                onShown: () => this.imageDropZoneControl?.activateDocumentPaste(),
+                onHidden: () => this.imageDropZoneControl?.deactivateDocumentPaste(),
+                contentTemplate: contentElement => {
+                    $(contentElement).empty();
+                    const container = $('<div class="mdl-question-image-dropdown">');
+                    container.append(this.createImageDropZoneEditor());
+                    $(contentElement).append(container);
+                }
+            }
+        });
+        this._imageDropdownElement.appendTo(itemElement);
+    },
+    questionImageButtonIcon() {
+        return this.getImageSource() ? "fa-solid fa-image" : "fa-light fa-image";
+    },
+    refreshImageToolbarButtonIcon() {
+        const instance = this._imageDropdownElement?.dxDropDownButton("instance");
+        instance?.option("icon", this.questionImageButtonIcon());
+    },
+    createImageDropZoneEditor() {
+        this.imageDropZoneControl = new ImageControl({
+            imageSource: this.getImageSource(),
+            onUploadFile: (file, onProgress) => this.board.assetManager.uploadAsset(this.id, file, file.name, onProgress),
+            onImageChanged: imageSource => this.onImageControlChanged(imageSource),
+            onImageCleared: () => this.onImageControlCleared()
+        });
+        return this.imageDropZoneControl.createHost();
     },
     createScoringToggle(itemElement) {
         this._scoringDropdownElement = $('<div>');

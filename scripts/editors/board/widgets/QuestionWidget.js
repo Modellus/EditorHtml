@@ -29,6 +29,7 @@ class QuestionShape extends BaseShape {
         this.properties.answerItems = [];
         this.properties.correctAnswer = "";
         this.properties.hasScoring = false;
+        this.properties.imageUrl = "";
     }
 
     enterEditMode() {
@@ -74,11 +75,36 @@ class QuestionShape extends BaseShape {
             }
         });
         $wrapper.css({ width: "100%", height: "100%", display: "flex", "flex-direction": "column", overflow: "hidden" });
+        this.$imageSection = $("<div class='mdl-question-image-section'>").appendTo($wrapper);
         this.$questionSection = $("<div class='mdl-question-section'>").appendTo($wrapper);
         this.$answerSection = $("<div class='mdl-question-answer-section'>").appendTo($wrapper);
+        this.buildQuestionImage();
         this.buildQuestionInput();
         this.buildAnswerContent();
         return group;
+    }
+
+    buildQuestionImage() {
+        this.$imageSection.empty();
+        const imageSource = this.getImageSource();
+        if (!imageSource) {
+            this.$imageSection.hide();
+            return;
+        }
+        this.$imageSection.show();
+        $("<img class='mdl-question-image' alt='Question image'>").attr("src", imageSource).appendTo(this.$imageSection);
+    }
+
+    getImageSource() {
+        return this.properties.imageUrl || "";
+    }
+
+    onImageControlChanged(imageSource) {
+        this.setPropertyCommand("imageUrl", imageSource);
+    }
+
+    onImageControlCleared() {
+        this.setPropertyCommand("imageUrl", "");
     }
 
     buildQuestionInput() {
@@ -360,6 +386,11 @@ class QuestionShape extends BaseShape {
             this._questionNumberInstance?.option("value", properties.questionNumber);
         if (properties.answerMode !== undefined || properties.answerItems !== undefined || properties.hasScoring !== undefined || properties.answersColor !== undefined)
             this.buildAnswerContent();
+        if (properties.imageUrl !== undefined) {
+            this.buildQuestionImage();
+            this.imageDropZoneControl?.setImageSource(properties.imageUrl);
+            this.refreshImageToolbarButtonIcon?.();
+        }
     }
 
     submitAnswer() {
