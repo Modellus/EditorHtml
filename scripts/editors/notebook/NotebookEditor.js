@@ -159,6 +159,7 @@ class NotebookEditor extends Workspace {
             [QuestionNotebookShape, QuestionShapeToolbarMixin],
             [RulerNotebookShape, RulerShapeToolbarMixin],
             [ProtractorNotebookShape, ProtractorShapeToolbarMixin],
+            [SlopeNotebookShape, SlopeShapeToolbarMixin],
             [TextNotebookShape, TextShapeToolbarMixin]
         ];
         for (const [shapeClass, toolbarMixin] of bindings) {

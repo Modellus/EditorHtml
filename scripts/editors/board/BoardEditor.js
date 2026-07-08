@@ -43,7 +43,7 @@ class BoardEditor extends Workspace {
         this.saveFormController = new SaveFormController(this);
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
-        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.commands.registerShapeAlias("BodyShape", BodyWidget);
         this.commands.registerShapeAlias("PointShape", PointWidget);
         this.commands.registerShapeAlias("ExpressionShape", ExpressionWidget);
@@ -61,6 +61,7 @@ class BoardEditor extends Workspace {
         this.commands.registerShapeAlias("QuestionShape", QuestionWidget);
         this.commands.registerShapeAlias("RulerShape", RulerWidget);
         this.commands.registerShapeAlias("ProtractorShape", ProtractorWidget);
+        this.commands.registerShapeAlias("SlopeShape", SlopeWidget);
         this.commands.registerShapeAlias("ImageShape", MediaWidget);
         this.bindWorkspaceIterate(() => this.onIterate());
         if (model != undefined)

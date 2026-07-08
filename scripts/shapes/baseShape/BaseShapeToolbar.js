@@ -44,6 +44,7 @@ const ShapeToolbarIconMap = {
     QuestionShape: "fa-light fa-clipboard-question",
     RulerShape: "fa-light fa-ruler",
     ProtractorShape: "fa-light fa-angle",
+    SlopeShape: "fa-light fa-ruler-triangle",
     ReferentialShape: "fa-light fa-shapes",
     GaugeShape: "fa-light fa-gauge",
     BodyNotebookShape: "fa-light fa-circle",
@@ -61,6 +62,7 @@ const ShapeToolbarIconMap = {
     QuestionNotebookShape: "fa-light fa-clipboard-question",
     RulerNotebookShape: "fa-light fa-ruler",
     ProtractorNotebookShape: "fa-light fa-angle",
+    SlopeNotebookShape: "fa-light fa-ruler-triangle",
     ReferentialNotebookShape: "fa-light fa-shapes",
     GaugeNotebookShape: "fa-light fa-gauge"
 };

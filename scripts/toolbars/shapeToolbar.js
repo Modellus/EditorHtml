@@ -131,6 +131,15 @@ class ModellusShapeToolbar {
                     hint: "Protractor",
                     onClick: () => notebook.addBlock("protractor")
                 }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-ruler-triangle",
+                    hint: "Slope",
+                    onClick: () => notebook.addBlock("slope")
+                }
             }
         ];
     }
@@ -301,6 +310,18 @@ class ModellusShapeToolbar {
                     },
                     onClick: _ => shell.commands.addShape("ProtractorShape", "Protractor"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Protractor Tooltip", 280)
+                }
+            },
+            {
+                location: "center",
+                widget: "dxButton",
+                options: {
+                    icon: "fa-light fa-ruler-triangle",
+                    elementAttr: {
+                        id: "slope-button"
+                    },
+                    onClick: _ => shell.commands.addShape("SlopeShape", "Slope"),
+                    onInitialized: event => shell.createTranslatedTooltip(event, "Slope Tooltip", 280)
                 }
             }
         ];

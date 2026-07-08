@@ -18,6 +18,7 @@ class BaseShape {
         QuestionShape: "fa-light fa-clipboard-question",
         RulerShape: "fa-light fa-ruler",
         ProtractorShape: "fa-light fa-angle",
+        SlopeShape: "fa-light fa-ruler-triangle",
         ReferentialShape: "fa-light fa-shapes",
         GaugeShape: "fa-light fa-gauge"
     };
