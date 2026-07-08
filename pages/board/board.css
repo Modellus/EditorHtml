@@ -1939,11 +1939,12 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
 
 .mdl-question-section {
     margin-bottom: 10px;
+    flex-shrink: 0;
 }
 
 .mdl-question-header-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
 }
 
@@ -1960,6 +1961,15 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
 .mdl-question-input-host {
     flex: 1;
     min-width: 0;
+}
+
+.mdl-question-text-label {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .mdl-question-answer-section {
@@ -2000,6 +2010,13 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
     padding: 4px 0;
 }
 
+.mdl-question-list-host .dx-list-item,
+.mdl-question-list-host .dx-list-item-content {
+    white-space: normal;
+    text-overflow: clip;
+    overflow: visible;
+}
+
 .mdl-question-list-host .dx-list-reorder-handle-container,
 .mdl-question-list-host .dx-list-reorder-handle {
     display: none !important;
@@ -2007,8 +2024,13 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
 
 .mdl-question-list-item {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
+}
+
+.mdl-question-item-correct-host,
+.mdl-question-item-check-host {
+    margin-top: 5px;
 }
 
 .mdl-question-item-name-host {
@@ -2108,7 +2130,7 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
 
 .mdl-question-item-label {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     flex: 1;
     min-width: 0;
@@ -2118,10 +2140,14 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
     font-weight: 600;
     font-size: 14px;
     min-width: 20px;
+    flex-shrink: 0;
 }
 
 .mdl-question-item-label .mdl-question-item-text {
     font-size: 14px;
+    min-width: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .mdl-question-item-score-badge {

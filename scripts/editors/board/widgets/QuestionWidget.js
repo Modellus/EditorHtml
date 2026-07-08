@@ -62,12 +62,12 @@ class QuestionShape extends BaseShape {
         const $wrapper = $("<div class='mdl-question-shape'>").appendTo(foreignObject);
         this.container = $wrapper.get(0);
         this.container.addEventListener("pointerdown", e => {
-            if (!this.isInEditMode && e.target.closest("input, .dx-checkbox, .dx-textarea"))
+            if (!this.isInEditMode && e.target.closest("input, textarea, .dx-checkbox, .dx-textarea"))
                 e.preventDefault();
         });
         this.container.addEventListener("click", e => {
             if (!this.isInEditMode) {
-                const textareaContainer = e.target.closest(".dx-textarea");
+                const textareaContainer = e.target.closest(".mdl-question-freetext-host");
                 if (textareaContainer) {
                     const input = textareaContainer.querySelector("textarea");
                     input?.focus();
@@ -124,22 +124,29 @@ class QuestionShape extends BaseShape {
             });
             this._questionNumberInstance = $numberHost.dxTextBox("instance");
         } else {
+            this._questionNumberInstance = null;
             const questionNumber = this.properties.questionNumber || "";
             if (questionNumber)
                 $row.append($(`<span class="mdl-question-number-label">${questionNumber}</span>`));
         }
-        const $questionHost = $("<div class='mdl-question-input-host'>").appendTo($row);
-        $questionHost.dxTextBox({
-            placeholder: "Type the question here...",
-            stylingMode: "underlined",
-            valueChangeEvent: "change",
-            value: this.properties.questionText || "",
-            onValueChanged: e => {
-                if (e.event)
-                    this.setPropertyCommand("questionText", e.value);
-            }
-        });
-        this._questionTextBoxInstance = $questionHost.dxTextBox("instance");
+        if (this.isInEditMode) {
+            const $questionHost = $("<div class='mdl-question-input-host'>").appendTo($row);
+            $questionHost.dxTextArea({
+                placeholder: "Type the question here...",
+                stylingMode: "underlined",
+                valueChangeEvent: "change",
+                autoResizeEnabled: true,
+                value: this.properties.questionText || "",
+                onValueChanged: e => {
+                    if (e.event)
+                        this.setPropertyCommand("questionText", e.value);
+                }
+            });
+            this._questionTextBoxInstance = $questionHost.dxTextArea("instance");
+        } else {
+            this._questionTextBoxInstance = null;
+            $("<div class='mdl-question-text-label'>").text(this.properties.questionText || "").appendTo($row);
+        }
     }
 
     buildAnswerContent() {
@@ -225,11 +232,12 @@ class QuestionShape extends BaseShape {
             }
         });
         const $textHost = $("<div class='mdl-question-item-text-host'>").appendTo($item);
-        $textHost.dxTextBox({
+        $textHost.dxTextArea({
             value: data.text,
             placeholder: "Answer text...",
             stylingMode: "filled",
             valueChangeEvent: "change",
+            autoResizeEnabled: true,
             onValueChanged: e => {
                 if (e.event)
                     this.updateAnswerItemField(index, "text", e.value);
@@ -380,10 +388,16 @@ class QuestionShape extends BaseShape {
 
     setProperties(properties) {
         super.setProperties(properties);
-        if (properties.questionText !== undefined)
-            this._questionTextBoxInstance?.option("value", properties.questionText);
-        if (properties.questionNumber !== undefined)
-            this._questionNumberInstance?.option("value", properties.questionNumber);
+        if (properties.questionText !== undefined || properties.questionNumber !== undefined) {
+            if (this.isInEditMode) {
+                if (properties.questionText !== undefined)
+                    this._questionTextBoxInstance?.option("value", properties.questionText);
+                if (properties.questionNumber !== undefined)
+                    this._questionNumberInstance?.option("value", properties.questionNumber);
+            } else {
+                this.buildQuestionInput();
+            }
+        }
         if (properties.answerMode !== undefined || properties.answerItems !== undefined || properties.hasScoring !== undefined || properties.answersColor !== undefined)
             this.buildAnswerContent();
         if (properties.imageUrl !== undefined) {
