@@ -962,10 +962,6 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
     margin-left: 0;
 }
 
-.mdl-collab-facepile .mdl-face-initial {
-    background: #8777d9;
-}
-
 .mdl-collab-facepile .mdl-face-more {
     background: #6b7280;
 }

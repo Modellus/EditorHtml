@@ -198,9 +198,7 @@ export function profilePopupOptions(translations) {
 }
 
 export function buildProfileHeaderMarkup(user) {
-  const avatarMarkup = user.avatar
-    ? `<img src="${user.avatar}" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid var(--c-border,#d1d5db);flex-shrink:0">`
-    : `<span style="width:52px;height:52px;border-radius:50%;background:#e5e7eb;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa-light fa-user" style="font-size:1.5rem;color:#6b7280"></i></span>`;
+  const avatarMarkup = Utils.buildAvatarMarkup(user.name || user.email, user.avatar, { size: 52 });
   return `
     <div style="display:flex;align-items:center;gap:0.75rem;padding-bottom:0.75rem;border-bottom:1px solid var(--c-border,#e5e7eb)">
       ${avatarMarkup}

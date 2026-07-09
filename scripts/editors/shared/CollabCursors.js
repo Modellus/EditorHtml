@@ -47,7 +47,7 @@ class CollabCursors {
         const color = cursor.color || CollabCursors.colorFor(cursor.clientId);
         entry.path.setAttribute("fill", color);
         entry.labelBg.setAttribute("fill", color);
-        this._applyAvatar(entry, cursor.avatar);
+        this._applyAvatar(entry, cursor.avatar, cursor.name || "Guest");
         this._applyLabel(entry, cursor.name || "Guest");
         this._position(entry, cursor.x, cursor.y);
         this._ensureOnTop();
@@ -96,7 +96,7 @@ class CollabCursors {
         labelBg.setAttribute("rx", "10");
         labelBg.setAttribute("height", "20");
 
-        // Circular avatar (hidden until a url arrives).
+        // Circular avatar: photo when a url arrives, colored initials otherwise.
         const clipId = "collab-avatar-" + Math.random().toString(36).slice(2);
         const clip = el("clipPath");
         clip.setAttribute("id", clipId);
@@ -112,6 +112,19 @@ class CollabCursors {
         avatar.setAttribute("height", "20");
         avatar.setAttribute("preserveAspectRatio", "xMidYMid slice");
         avatar.setAttribute("clip-path", `url(#${clipId})`);
+        const fallbackCircle = el("circle");
+        fallbackCircle.setAttribute("cx", "10");
+        fallbackCircle.setAttribute("cy", "10");
+        fallbackCircle.setAttribute("r", "10");
+        const fallbackText = el("text");
+        fallbackText.setAttribute("x", "10");
+        fallbackText.setAttribute("y", "10");
+        fallbackText.setAttribute("text-anchor", "middle");
+        fallbackText.setAttribute("dominant-baseline", "central");
+        fallbackText.setAttribute("fill", "#ffffff");
+        fallbackText.setAttribute("font-size", "8");
+        fallbackText.setAttribute("font-weight", "600");
+        fallbackText.setAttribute("font-family", "system-ui, sans-serif");
         const avatarRing = el("circle");
         avatarRing.setAttribute("cx", "10");
         avatarRing.setAttribute("cy", "10");
@@ -120,12 +133,13 @@ class CollabCursors {
         avatarRing.setAttribute("stroke", "#ffffff");
         avatarRing.setAttribute("stroke-width", "1.5");
         avatarGroup.appendChild(clip);
+        avatarGroup.appendChild(fallbackCircle);
+        avatarGroup.appendChild(fallbackText);
         avatarGroup.appendChild(avatar);
         avatarGroup.appendChild(avatarRing);
-        avatarGroup.style.display = "none";
 
         const text = el("text");
-        text.setAttribute("x", "20");
+        text.setAttribute("x", "40");
         text.setAttribute("y", "26.5");
         text.setAttribute("fill", "#ffffff");
         text.setAttribute("font-size", "12");
@@ -137,34 +151,34 @@ class CollabCursors {
         inner.appendChild(text);
         group.appendChild(inner);
         this.layer.appendChild(group);
-        return { group, inner, path, labelBg, avatarGroup, avatar, text, label: null, avatarUrl: null, hasAvatar: false, lastSeen: Date.now() };
+        return { group, inner, path, labelBg, avatarGroup, avatar, fallbackCircle, fallbackText, text, label: null, avatarUrl: null, lastSeen: Date.now() };
     }
 
-    _applyAvatar(entry, url) {
-        const hasAvatar = !!url;
+    _applyAvatar(entry, url, name) {
+        const hasImage = !!url;
         if (entry.avatarUrl !== url) {
             entry.avatarUrl = url;
-            if (hasAvatar) {
+            if (hasImage) {
                 entry.avatar.setAttribute("href", url);
                 entry.avatar.setAttributeNS("http://www.w3.org/1999/xlink", "href", url);
             }
         }
-        if (entry.hasAvatar !== hasAvatar) {
-            entry.hasAvatar = hasAvatar;
-            entry.avatarGroup.style.display = hasAvatar ? "" : "none";
-            entry.text.setAttribute("x", hasAvatar ? "40" : "20");
-            entry._relayout = true;
+        entry.avatar.style.display = hasImage ? "" : "none";
+        entry.fallbackCircle.style.display = hasImage ? "none" : "";
+        entry.fallbackText.style.display = hasImage ? "none" : "";
+        if (!hasImage) {
+            entry.fallbackCircle.setAttribute("fill", Utils.getAvatarColor(name));
+            entry.fallbackText.textContent = Utils.getAvatarInitials(name);
         }
     }
 
     _applyLabel(entry, label) {
-        if (entry.label === label && !entry._relayout)
+        if (entry.label === label)
             return;
         entry.label = label;
-        entry._relayout = false;
         entry.text.textContent = label;
         const textWidth = label.length * 7;
-        entry.labelBg.setAttribute("width", String((entry.hasAvatar ? 32 : 12) + textWidth));
+        entry.labelBg.setAttribute("width", String(32 + textWidth));
     }
 
     _position(entry, x, y) {

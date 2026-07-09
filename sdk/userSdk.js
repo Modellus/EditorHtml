@@ -132,9 +132,9 @@ export class UserSdk {
     const menuInstance = $(userMenuElement).dxDropDownButton("instance");
     if (menuInstance)
       menuInstance.option("disabled", !session);
-    const avatarElement = userMenuElement.querySelector(".user-menu-avatar");
-    if (avatarElement)
-      avatarElement.src = session?.avatar || "";
+    const avatarHost = userMenuElement.querySelector(".user-menu-avatar-host");
+    if (avatarHost)
+      avatarHost.innerHTML = Utils.buildAvatarMarkup(session?.name || session?.email, session?.avatar, { size: 24, className: "user-menu-avatar" });
   }
 
   redirectToLogin() {
@@ -252,7 +252,7 @@ export class UserSdk {
       id: session.userId,
       email: session.email || "",
       name: session.name || "User",
-      avatar: session.avatar || `${location.origin}/scripts/themes/modellus.svg`
+      avatar: session.avatar || ""
     };
   }
 

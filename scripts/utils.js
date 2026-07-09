@@ -390,6 +390,43 @@ class Utils {
         return decPart !== undefined ? `${formattedInt}.${decPart}` : formattedInt;
     }
 
+    static avatarPalette = ["#4C9AFF", "#F5515F", "#36B37E", "#FFAB00", "#8777D9", "#00B8D9", "#FF7452", "#57D9A3"];
+
+    static getAvatarColor(name) {
+        const text = String(name ?? "").trim();
+        let hash = 0;
+        for (let index = 0; index < text.length; index++)
+            hash = (hash * 31 + text.charCodeAt(index)) | 0;
+        return Utils.avatarPalette[Math.abs(hash) % Utils.avatarPalette.length];
+    }
+
+    static getAvatarInitials(name) {
+        const words = String(name ?? "").trim().split(/\s+/).filter(word => word.length > 0);
+        if (words.length === 0)
+            return "?";
+        if (words.length === 1)
+            return words[0].slice(0, 2).toUpperCase();
+        return (words[0][0] + words[1][0]).toUpperCase();
+    }
+
+    static escapeAvatarText(value) {
+        return String(value ?? "").replace(/[&<>"]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
+    }
+
+    // Shared avatar rendering: photo when available, otherwise a colored circle
+    // (palette color hashed from the name) with the person's initials.
+    static buildAvatarMarkup(name, avatarUrl, options = {}) {
+        const size = options.size ?? 24;
+        const className = options.className ? ` class="${Utils.escapeAvatarText(options.className)}"` : "";
+        const title = options.title ? ` title="${Utils.escapeAvatarText(options.title)}"` : "";
+        if (avatarUrl)
+            return `<img${className} src="${Utils.escapeAvatarText(avatarUrl)}" alt=""${title} style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;flex-shrink:0">`;
+        const color = Utils.getAvatarColor(name);
+        const initials = Utils.escapeAvatarText(Utils.getAvatarInitials(name));
+        const fontSize = Math.max(6, Math.round(size * 0.42));
+        return `<span${className}${title} style="width:${size}px;height:${size}px;border-radius:50%;background:${color};color:#ffffff;display:inline-flex;align-items:center;justify-content:center;font-size:${fontSize}px;font-weight:600;line-height:1;flex-shrink:0;user-select:none">${initials}</span>`;
+    }
+
     static isTransparentColor(color) {
         const normalizedColor = String(color ?? "").trim().toLowerCase();
         if (normalizedColor === "transparent")

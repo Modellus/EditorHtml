@@ -318,7 +318,7 @@ class TopToolbar {
         const creatorAvatar = this.shell.modelCreatorAvatar;
         if (!creatorName)
             return;
-        const avatarHtml = creatorAvatar ? `<img class="model-creator-avatar" src="${creatorAvatar}" alt="">` : "";
+        const avatarHtml = Utils.buildAvatarMarkup(creatorName, creatorAvatar, { size: 12, className: "model-creator-avatar" });
         container.insertAdjacentHTML("beforeend", `<span class="model-creator">${avatarHtml}<span class="model-creator-name">by ${creatorName}</span></span>`);
     }
 
@@ -394,7 +394,7 @@ class TopToolbar {
             noDataText: "No collaborators",
             itemTemplate: data => `
                 <div class="mdl-collab-list-item">
-                    <img class="mdl-collab-avatar" src="${data.avatar ?? ""}" alt="">
+                    ${Utils.buildAvatarMarkup(data.name ?? data.email, data.avatar, { size: 24, className: "mdl-collab-avatar" })}
                     <span class="mdl-collab-name">${data.name ?? data.email ?? ""}</span>
                     <div class="mdl-collab-remove-host"></div>
                 </div>`,
@@ -420,7 +420,7 @@ class TopToolbar {
             dataSource: this._collabUsers ?? [],
             itemTemplate: data => `
                 <div class="mdl-collab-option">
-                    <img class="mdl-collab-avatar" src="${data.avatar ?? ""}" alt="">
+                    ${Utils.buildAvatarMarkup(data.name ?? data.email, data.avatar, { size: 24, className: "mdl-collab-avatar" })}
                     <span class="mdl-collab-name">${data.name ?? data.email ?? ""}</span>
                 </div>`,
             onFocusIn: () => {
@@ -471,13 +471,9 @@ class TopToolbar {
         const maxVisible = 3;
         const visible = list.slice(0, maxVisible);
         const extra = list.length - visible.length;
-        const escape = value => String(value ?? "").replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
         const faces = visible.map(user => {
-            const title = escape(user.name ?? user.email ?? "");
-            if (user.avatar)
-                return `<img class="mdl-face" src="${escape(user.avatar)}" alt="" title="${title}">`;
-            const initial = escape((user.name ?? user.email ?? "?").trim().charAt(0).toUpperCase() || "?");
-            return `<span class="mdl-face mdl-face-initial" title="${title}">${initial}</span>`;
+            const displayName = user.name ?? user.email ?? "";
+            return Utils.buildAvatarMarkup(displayName, user.avatar, { size: 24, className: "mdl-face", title: displayName });
         }).join("");
         const more = extra > 0 ? `<span class="mdl-face mdl-face-more" title="${extra} more">+${extra}</span>` : "";
         host.innerHTML = faces + more;

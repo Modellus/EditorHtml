@@ -341,7 +341,7 @@ class ModelsApp {
             },
             template: (_, contentElement) => {
               const host = contentElement.get(0);
-              host.innerHTML = `<img class="user-menu-avatar" alt="User avatar">`;
+              host.innerHTML = `<span class="user-menu-avatar-host"></span>`;
             }
           }
         },
@@ -517,7 +517,7 @@ class ModelsApp {
                 </button>
               </div>`}
               <div class="card-meta">
-                ${creatorName ? `<div class="card-creator">${creatorAvatar ? `<img class="card-creator-avatar" src="${creatorAvatar}" alt="">` : ""}<span class="card-creator-name">${creatorName}</span></div>` : ""}
+                ${creatorName ? `<div class="card-creator">${Utils.buildAvatarMarkup(data.creator_name, creatorAvatar, { size: 18, className: "card-creator-avatar" })}<span class="card-creator-name">${creatorName}</span></div>` : ""}
                 ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
               </div>
             </div>
@@ -2304,7 +2304,7 @@ class ModelsApp {
               const avatar = cellInfo.data.creator_avatar || "";
               const host = cellElement.get(0);
               host.innerHTML = `<div style="display:flex;align-items:center;gap:6px;overflow:hidden">
-                ${avatar ? `<img src="${avatar}" alt="" style="width:20px;height:20px;border-radius:50%;flex-shrink:0">` : ""}
+                ${Utils.buildAvatarMarkup(cellInfo.data.creator_name, avatar, { size: 20 })}
                 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
               </div>`;
             }
@@ -2433,7 +2433,7 @@ class ModelsApp {
               const avatar = cellInfo.data.creator_avatar || "";
               const host = cellElement.get(0);
               host.innerHTML = `<div style="display:flex;align-items:center;gap:6px;overflow:hidden">
-                ${avatar ? `<img src="${avatar}" alt="" style="width:20px;height:20px;border-radius:50%;flex-shrink:0">` : ""}
+                ${Utils.buildAvatarMarkup(cellInfo.data.creator_name, avatar, { size: 20 })}
                 <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
               </div>`;
             }
@@ -2607,10 +2607,7 @@ class ModelsApp {
             allowFiltering: false,
             allowSorting: false,
             cellTemplate: (cellElement, cellInfo) => {
-              const avatar = cellInfo.value || "";
-              cellElement.get(0).innerHTML = avatar
-                ? `<img src="${this.escapeHtml(avatar)}" alt="" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--c-border)">`
-                : `<i class="fa-light fa-user-circle mdl-user-avatar-icon"></i>`;
+              cellElement.get(0).innerHTML = Utils.buildAvatarMarkup(cellInfo.data.name || cellInfo.data.email, cellInfo.value, { size: 24 });
             }
           },
           { dataField: "name", caption: this.translations.get("Name") },
