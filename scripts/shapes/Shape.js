@@ -111,6 +111,7 @@ class BaseShape {
         Object.assign(this.properties, properties);
         if (!hasBorderColor && hasForegroundColor)
             this.properties.borderColor = this.properties.foregroundColor;
+        this.applyShapeOpacity();
     }
 
     setDefaults() {
@@ -118,6 +119,7 @@ class BaseShape {
         this.properties.borderColor = this.properties.foregroundColor;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[2].color;
         this.properties.rotation = 0;
+        this.properties.opacity = 1;
         this.properties.showName = false;
         this.properties.nameColor = null;
         this.properties.visibleToUsers = true;
@@ -138,6 +140,7 @@ class BaseShape {
         this.initializeShapeNameLayer();
         this.draw();
         this.update();
+        this.applyShapeOpacity();
         this.initializeContextToolbar();
     }
 
@@ -1084,6 +1087,31 @@ class BaseShape {
 
     isLocked() {
         return this.properties.lockedForUsers === true;
+    }
+
+    getShapeOpacity() {
+        const opacity = parseFloat(this.properties.opacity);
+        if (!Number.isFinite(opacity))
+            return 1;
+        return Math.min(1, Math.max(0, opacity));
+    }
+
+    applyShapeOpacity() {
+        this.renderShapeOpacity(this.getShapeOpacity());
+    }
+
+    previewShapeOpacity(opacity) {
+        const normalized = parseFloat(opacity);
+        this.renderShapeOpacity(Number.isFinite(normalized) ? Math.min(1, Math.max(0, normalized)) : 1);
+    }
+
+    renderShapeOpacity(opacity) {
+        if (!this.element)
+            return;
+        const opacityStyle = opacity < 1 ? String(opacity) : "";
+        this.element.style.opacity = opacityStyle;
+        if (this.shapeNameLayer && this.shapeNameLayer.parentNode !== this.element)
+            this.shapeNameLayer.style.opacity = opacityStyle;
     }
 
     applyUserPermissions() {

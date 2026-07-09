@@ -158,7 +158,8 @@ class BaseTranslations {
                 "Media Settings Tooltip": "<div style=\"text-align: center\"><b>Multimédia</b></div><br /><div style=\"text-align: center\">Configura a imagem, vídeo ou áudio deste objeto.<br /><br />Clique para carregar ou alterar o ficheiro, definir as proporções e o modo de sincronização.</div>",
                 "Slider Scale Tooltip": "<div style=\"text-align: center\"><b>Escala</b></div><br /><div style=\"text-align: center\">Configura o intervalo de valores e a precisão deste slider.<br /><br />Clique para definir escala automática, mínimo, máximo e precisão.</div>",
                 "Scale Linear": "Linear",
-                "Scale Logarithmic": "Logarítmica"
+                "Scale Logarithmic": "Logarítmica",
+                "Opacity": "Opacidade"
             };
         this.languages["en-US"] =
             {
@@ -317,7 +318,8 @@ class BaseTranslations {
                 "Media Settings Tooltip": "<div style=\"text-align: center\"><b>Media</b></div><br /><div style=\"text-align: center\">Configures the image, video or audio for this object.<br /><br />Click to upload or change the file, set proportions, and toggle sync mode.</div>",
                 "Slider Scale Tooltip": "<div style=\"text-align: center\"><b>Scale</b></div><br /><div style=\"text-align: center\">Configures the value range and precision of this slider.<br /><br />Click to set auto scale, minimum, maximum, and step precision.</div>",
                 "Scale Linear": "Linear",
-                "Scale Logarithmic": "Logarithmic"
+                "Scale Logarithmic": "Logarithmic",
+                "Opacity": "Opacity"
             };
     }
 

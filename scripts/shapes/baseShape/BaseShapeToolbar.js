@@ -118,6 +118,13 @@ function resolveShapeToolbarAnchorPoint(shape) {
     };
 }
 
+function resolveShapeToolbarOpacity(shape) {
+    const opacity = parseFloat(shape?.properties?.opacity);
+    if (!Number.isFinite(opacity))
+        return 1;
+    return Math.min(1, Math.max(0, opacity));
+}
+
 function resolveShapeToolbarBoardAction(shape, actionName) {
     const injectedAction = shape?.toolbarAdapter?.[actionName];
     if (typeof injectedAction === "function")
@@ -264,6 +271,7 @@ var ShapeToolbarPresentationMixin = {
             this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
         if (this._bgColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        this._opacitySliderInstance?.option("value", Math.round(resolveShapeToolbarOpacity(this) * 100));
     },
     getCopySubMenuItems() {
         const injectedItems = this?.toolbarAdapter?.getCopySubMenuItems?.(this);
@@ -363,6 +371,43 @@ var BaseShapeToolbarMixin = {
     createColorPickerEditor(dataField, options = {}) {
         const onValueChanged = value => this.setPropertyCommand(dataField, value);
         return this.getColorControl().createEditor(this.properties[dataField], onValueChanged, options);
+    },
+    createOpacitySliderControl() {
+        const slider = $('<div class="mdl-opacity-slider">');
+        slider.dxSlider({
+            min: 0,
+            max: 100,
+            step: 5,
+            value: Math.round(resolveShapeToolbarOpacity(this) * 100),
+            width: 120,
+            tooltip: { enabled: true, showMode: "onHover", position: "top" },
+            onInitialized: e => { this._opacitySliderInstance = e.component; },
+            onValueChanged: event => {
+                if (!event.event)
+                    return;
+                const opacity = event.value / 100;
+                this.previewShapeOpacity?.(opacity);
+                this.scheduleOpacityPropertyCommand(opacity);
+            }
+        });
+        return slider;
+    },
+    scheduleOpacityPropertyCommand(opacity) {
+        if (this._opacityCommandTimer)
+            clearTimeout(this._opacityCommandTimer);
+        this._opacityCommandTimer = setTimeout(() => {
+            this._opacityCommandTimer = null;
+            if (opacity !== resolveShapeToolbarOpacity(this))
+                this.setPropertyCommand("opacity", opacity);
+        }, 300);
+    },
+    createOpacityMenuItem() {
+        const opacityLabel = this.board.translations.get("Opacity") ?? "Opacity";
+        return {
+            text: opacityLabel,
+            iconHtml: this.menuIconHtml("fa-circle-half-stroke", resolveShapeToolbarOpacity(this) < 1),
+            buildControl: $container => $container.append(this.createOpacitySliderControl())
+        };
     },
     createNameFormControl() {
         const control = $("<div>").addClass("name-packed-control");
@@ -469,6 +514,7 @@ var BaseShapeToolbarMixin = {
             }
         ];
         this.populateShapeColorMenuSections(sections);
+        sections[0].items.push(this.createOpacityMenuItem());
         const listItems = sections.flatMap(section => section.items);
         $(contentElement).empty();
         $(contentElement).dxScrollView({ height: 300, width: "100%" });
