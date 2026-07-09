@@ -278,9 +278,11 @@ class BaseShape {
     updateHandles() {
         if (!this.handleElements)
             return;
+        const locked = this.isLocked();
         this.handleElements.forEach(handle => {
             handle.update(handle);
             this.applyHandleRotation(handle);
+            handle.classList.toggle("locked", locked);
         });
     }
 
@@ -610,6 +612,8 @@ class BaseShape {
 
     onHandleDrag = event => {
         if (this._tickDragState)
+            return;
+        if (this.isLocked())
             return;
         if (this._handleActivePointerId != null && event.pointerId !== this._handleActivePointerId)
             return;
@@ -1078,10 +1082,14 @@ class BaseShape {
         this.board.invoker.execute(command);
     }
 
+    isLocked() {
+        return this.properties.lockedForUsers === true;
+    }
+
     applyUserPermissions() {
         if (!this.properties.visibleToUsers)
             this.element.style.display = "none";
-        if (this.properties.lockedForUsers)
+        if (this.isLocked())
             this.element.style.pointerEvents = "none";
         this.children.forEach(child => child.applyUserPermissions());
     }

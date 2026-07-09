@@ -252,6 +252,10 @@ line.handle.move {
     cursor: nwse-resize;
 }
 
+.handle.locked {
+    cursor: not-allowed;
+}
+
 .rotation-handle {
     fill: white;
     stroke: #4039d7;
