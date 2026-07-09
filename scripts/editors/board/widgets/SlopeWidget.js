@@ -293,24 +293,30 @@ class SlopeShape extends BaseShape {
         const endX = geometry.horizontalFarX;
         const endY = geometry.cornerY;
         const slope = this.getSlopeValue();
-        const angleDegrees = Math.atan(slope) * 180 / Math.PI;
         const middleX = (startX + endX) / 2;
         const middleY = (startY + endY) / 2;
         const deltaX = endX - startX;
         const deltaY = endY - startY;
         const length = Math.hypot(deltaX, deltaY) || 1;
-        const normalX = (deltaY / length) * 16;
-        const normalY = (-deltaX / length) * 16;
-        const degreesText = Number.isFinite(angleDegrees) ? `${this.formatModelValue(angleDegrees)}°` : "—";
-        const slopeText = this.formatModelValue(slope);
+        const normalX = (deltaY / length) * 26;
+        const normalY = (-deltaX / length) * 26;
         this.slopeLayer.insertAdjacentHTML("beforeend",
             `<polygon points="${startX},${startY} ${startX},${endY} ${endX},${endY}" fill="${foregroundColor}" fill-opacity="0.05" />` +
             Utils.crosshairLineSvgMarkup(startX, startY, startX, endY, foregroundColor) +
             Utils.crosshairLineSvgMarkup(startX, endY, endX, endY, foregroundColor) +
-            `<line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="${foregroundColor}" stroke-width="1.5" />` +
-            Utils.valueBadgeSvgMarkup(degreesText, middleX + normalX, middleY + normalY, { backgroundColor: foregroundColor, fontSize: 11 }) +
-            Utils.valueBadgeSvgMarkup(slopeText, middleX - normalX, middleY - normalY, { backgroundColor: foregroundColor, fontSize: 9 })
+            `<line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="${foregroundColor}" stroke-width="1.5" />`
         );
+        const slopeLatex = this.getSlopeLatex(slope);
+        this.slopeLayer.appendChild(Utils.createLatexLabel(slopeLatex, middleX + normalX, middleY + normalY, foregroundColor, 12));
+    }
+
+    getSlopeLatex(slope) {
+        const verticalRange = this.getAxisMaximum("vertical") - this.getAxisMinimum("vertical");
+        const horizontalRange = this.getAxisMaximum("horizontal") - this.getAxisMinimum("horizontal");
+        const slopeText = this.formatModelValue(slope);
+        const verticalText = this.formatModelValue(verticalRange);
+        const horizontalText = this.formatModelValue(horizontalRange);
+        return `${slopeText}=\\frac{${verticalText}}{${horizontalText}}`;
     }
 
     _getAxisTickData(axis, usableLength) {
