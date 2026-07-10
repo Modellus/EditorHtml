@@ -152,14 +152,16 @@ class SliderShape extends BaseShape {
     createElement() {
         const element = this.board.createSvgElement("g");
         this.topPart = this.board.createSvgElement("rect");
+        this.fillPart = this.board.createSvgElement("rect");
         this.bottomPart = this.board.createSvgElement("rect");
         this.container = this.board.createSvgElement("rect");
         this.splitter = this.board.createSvgElement("line");
         this.ticksGroup = this.board.createSvgElement("g");
         this.container.setAttribute("stroke-width", 1);
         this.splitter.setAttribute("stroke-width", 2);
-        element.appendChild(this.bottomPart);
         element.appendChild(this.topPart);
+        element.appendChild(this.fillPart);
+        element.appendChild(this.bottomPart);
         element.appendChild(this.ticksGroup);
         element.appendChild(this.container);
         element.appendChild(this.splitter);
@@ -287,6 +289,7 @@ class SliderShape extends BaseShape {
             maximum: range.maximum,
             value: normalizedValue,
             splitterOffset: this.getSplitterOffsetFromValue(normalizedValue, range.minimum, range.maximum),
+            zeroOffset: this.getSplitterOffsetFromValue(0, range.minimum, range.maximum),
             fillColor: fillColor,
             backgroundColor: this.properties.backgroundColor,
             borderColor: this.getBorderColor()
@@ -305,8 +308,12 @@ class SliderShape extends BaseShape {
             this.topPart.setAttribute("stroke", "none");
         }
         if (this.bottomPart) {
-            this.bottomPart.setAttribute("fill", config.fillColor);
+            this.bottomPart.setAttribute("fill", config.backgroundColor);
             this.bottomPart.setAttribute("stroke", "none");
+        }
+        if (this.fillPart) {
+            this.fillPart.setAttribute("fill", config.fillColor);
+            this.fillPart.setAttribute("stroke", "none");
         }
         if (this.splitter)
             this.splitter.setAttribute("stroke", config.borderColor);
@@ -334,6 +341,14 @@ class SliderShape extends BaseShape {
         const config = this._sliderConfig ?? this.buildSliderConfig();
         if (Number.isFinite(config?.splitterOffset))
             return config.splitterOffset;
+        const height = Math.max(1, Number(this.properties.height) || 1);
+        return height / 2;
+    }
+
+    getZeroOffset() {
+        const config = this._sliderConfig ?? this.buildSliderConfig();
+        if (Number.isFinite(config?.zeroOffset))
+            return config.zeroOffset;
         const height = Math.max(1, Number(this.properties.height) || 1);
         return height / 2;
     }
@@ -404,17 +419,25 @@ class SliderShape extends BaseShape {
         const trackWidth = Math.max(0, sliderWidth - inset * 2);
         const trackHeight = Math.max(0, sliderHeight - inset * 2);
         const splitterY = this.getSplitterOffset();
-        const topHeight = this.clamp(splitterY - trackY, 0, trackHeight);
-        const bottomY = trackY + topHeight;
-        const bottomHeight = trackHeight - topHeight;
-        this.bottomPart.setAttribute("x", trackX);
-        this.bottomPart.setAttribute("y", bottomY);
-        this.bottomPart.setAttribute("width", trackWidth);
-        this.bottomPart.setAttribute("height", bottomHeight);
+        const zeroY = this.clamp(this.getZeroOffset(), trackY, trackY + trackHeight);
+        const fillTop = Math.min(splitterY, zeroY);
+        const fillBottom = Math.max(splitterY, zeroY);
+        const topHeight = this.clamp(fillTop - trackY, 0, trackHeight);
+        const fillHeight = this.clamp(fillBottom - fillTop, 0, trackHeight - topHeight);
+        const bottomY = trackY + topHeight + fillHeight;
+        const bottomHeight = Math.max(0, trackHeight - topHeight - fillHeight);
         this.topPart.setAttribute("x", trackX);
         this.topPart.setAttribute("y", trackY);
         this.topPart.setAttribute("width", trackWidth);
         this.topPart.setAttribute("height", topHeight);
+        this.fillPart.setAttribute("x", trackX);
+        this.fillPart.setAttribute("y", fillTop);
+        this.fillPart.setAttribute("width", trackWidth);
+        this.fillPart.setAttribute("height", fillHeight);
+        this.bottomPart.setAttribute("x", trackX);
+        this.bottomPart.setAttribute("y", bottomY);
+        this.bottomPart.setAttribute("width", trackWidth);
+        this.bottomPart.setAttribute("height", bottomHeight);
         this.container.setAttribute("x", 0);
         this.container.setAttribute("y", 0);
         this.container.setAttribute("width", sliderWidth);
