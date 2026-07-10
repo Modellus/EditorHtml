@@ -101,6 +101,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             series: [],
             argumentTitle: "",
             valueTitle: "",
+            interactable: this.isInteractable(),
             foregroundColor: this.properties.foregroundColor,
             backgroundColor: this.properties.backgroundColor,
             dataAreaColor: this.properties.dataAreaColor,
@@ -329,6 +330,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         const config = {
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
+            interactable: this.isInteractable(),
             argField: argumentField,
             series: ySeries.map(series => ({
                 valueField: series.valueField,
@@ -354,6 +356,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             this.chart.setOptions({
                 equalScales: config.equalScales,
                 tangentColor: config.tangentColor,
+                interactable: config.interactable,
                 argumentField: config.argField,
                 series: config.series,
                 foregroundColor: config.color,

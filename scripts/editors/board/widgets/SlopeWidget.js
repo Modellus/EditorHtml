@@ -378,6 +378,8 @@ class SlopeShape extends BaseShape {
     }
 
     onAxisPointerDown(event, axis) {
+        if (!this.isInteractable())
+            return;
         event.stopPropagation();
         event.preventDefault();
         this._handlePending = null;

@@ -256,6 +256,8 @@ class RulerShape extends BaseShape {
     }
 
     onAxisPointerDown(event) {
+        if (!this.isInteractable())
+            return;
         event.stopPropagation();
         event.preventDefault();
         this._handlePending = null;

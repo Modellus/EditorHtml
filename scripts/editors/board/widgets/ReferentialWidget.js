@@ -495,6 +495,8 @@ class ReferentialShape extends BaseShape {
     }
 
     onTickPointerDown(event, hitArea) {
+        if (!this.isInteractable())
+            return;
         event.stopPropagation();
         event.preventDefault();
         const axis = hitArea.dataset.axis;

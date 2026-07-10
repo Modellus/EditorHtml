@@ -1,7 +1,8 @@
 class BaseShape {
-    
+
     static embeddedFontStyles = "";
     static embeddedMathStyles = "";
+    static interactiveHandleClasses = ["splitter", "gauge-pointer"];
     static shapeIcons = {
         BodyShape: "fa-light fa-circle",
         PointShape: "fa-solid fa-dot",
@@ -124,6 +125,7 @@ class BaseShape {
         this.properties.nameColor = null;
         this.properties.visibleToUsers = true;
         this.properties.lockedForUsers = false;
+        this.properties.interactableForUsers = true;
         var name = this.constructor.name.split(/(?=[A-Z])/)[0];
         this.properties.name = name;
     }
@@ -281,11 +283,10 @@ class BaseShape {
     updateHandles() {
         if (!this.handleElements)
             return;
-        const locked = this.isLocked();
         this.handleElements.forEach(handle => {
             handle.update(handle);
             this.applyHandleRotation(handle);
-            handle.classList.toggle("locked", locked);
+            handle.classList.toggle("locked", !this.isHandleDragAllowed(handle));
         });
     }
 
@@ -616,7 +617,7 @@ class BaseShape {
     onHandleDrag = event => {
         if (this._tickDragState)
             return;
-        if (this.isLocked())
+        if (!this.isHandleDragAllowed(this.draggedHandle ?? this._handlePending))
             return;
         if (this._handleActivePointerId != null && event.pointerId !== this._handleActivePointerId)
             return;
@@ -792,32 +793,6 @@ class BaseShape {
 
     createElement() {
         throw new Error("createElement should be implemented in subclasses.");
-    }
-
-    getPermissionsIconClass() {
-        const hidden = !this.properties.visibleToUsers;
-        const locked = this.properties.lockedForUsers;
-        if (hidden && locked)
-            return "fa-solid fa-shield";
-        if (hidden || locked)
-            return "fa-solid fa-shield-halved";
-        return "fa-regular fa-shield";
-    }
-
-    renderPermissionsButtonTemplate(element) {
-        element.innerHTML = `<i class="${this.getPermissionsIconClass()} mdl-permissions-icon"></i>`;
-    }
-
-    refreshPermissionsButtonIcon() {
-        const icon = this._permissionsDropdownElement?.find(".mdl-permissions-icon")[0];
-        if (!icon)
-            return;
-        const newClass = this.getPermissionsIconClass();
-        if (icon.classList.contains(newClass.split(" ")[0]) && icon.classList.contains(newClass.split(" ")[1]))
-            return;
-        icon.classList.add("mdl-permissions-icon-animate");
-        icon.className = `${newClass} mdl-permissions-icon mdl-permissions-icon-animate`;
-        icon.addEventListener("animationend", () => icon.classList.remove("mdl-permissions-icon-animate"), { once: true });
     }
 
     getShapeOverlayWrapperAttr(extraClass = "") {
@@ -1087,6 +1062,22 @@ class BaseShape {
 
     isLocked() {
         return this.properties.lockedForUsers === true;
+    }
+
+    isInteractable() {
+        return this.properties.interactableForUsers !== false;
+    }
+
+    isInteractiveHandle(handle) {
+        return BaseShape.interactiveHandleClasses.some(className => handle?.classList.contains(className));
+    }
+
+    isHandleDragAllowed(handle) {
+        if (!handle)
+            return false;
+        if (this.isInteractiveHandle(handle))
+            return this.isInteractable();
+        return !this.isLocked();
     }
 
     getShapeOpacity() {

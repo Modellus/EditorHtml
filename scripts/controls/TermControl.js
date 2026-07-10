@@ -66,10 +66,22 @@ class TermControl {
         return "fa-light fa-eye-closed";
     }
 
+    static getVisibilityLabel(value) {
+        if (value)
+            return "Visible";
+        return "Hidden";
+    }
+
     static getLockIconClass(locked) {
         if (locked)
             return "fa-light fa-lock";
         return "fa-light fa-lock-open";
+    }
+
+    static getLockLabel(locked) {
+        if (locked)
+            return "Locked";
+        return "Movable / Resizable";
     }
 
     static updateLockCheckboxIcon(checkboxInstance, iconClassName = "term-packed-lock-icon") {
@@ -92,6 +104,43 @@ class TermControl {
             onContentReady: e => TermControl.updateLockCheckboxIcon(e.component, iconClassName),
             onValueChanged: e => {
                 TermControl.updateLockCheckboxIcon(e.component, iconClassName);
+                onValueChanged(e.value === true);
+            }
+        }).dxCheckBox("instance");
+    }
+
+    static getInteractableIconClass(interactable) {
+        if (interactable)
+            return "fa-light fa-hand-pointer";
+        return "fa-light fa-hand";
+    }
+
+    static getInteractableLabel(interactable) {
+        if (interactable)
+            return "Interactable";
+        return "Not Interactable";
+    }
+
+    static updateInteractableCheckboxIcon(checkboxInstance, iconClassName = "term-packed-lock-icon") {
+        if (!checkboxInstance)
+            return;
+        const iconContainer = checkboxInstance.element().find(".dx-checkbox-icon");
+        if (iconContainer.length == 0)
+            return;
+        iconContainer.empty();
+        const iconClass = TermControl.getInteractableIconClass(checkboxInstance.option("value") === true);
+        $("<i>").addClass(`${iconClass} ${iconClassName}`).appendTo(iconContainer);
+    }
+
+    static createInteractableCheckbox(buttonHost, initialValue, onValueChanged, options = {}) {
+        const checkboxClassName = options.checkboxClassName ?? "term-packed-lock-checkbox";
+        const iconClassName = options.iconClassName ?? "term-packed-lock-icon";
+        return buttonHost.dxCheckBox({
+            value: initialValue === true,
+            elementAttr: { class: checkboxClassName },
+            onContentReady: e => TermControl.updateInteractableCheckboxIcon(e.component, iconClassName),
+            onValueChanged: e => {
+                TermControl.updateInteractableCheckboxIcon(e.component, iconClassName);
                 onValueChanged(e.value === true);
             }
         }).dxCheckBox("instance");

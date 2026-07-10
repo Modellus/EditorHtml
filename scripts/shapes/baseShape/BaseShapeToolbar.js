@@ -199,13 +199,17 @@ var ShapeContextToolbarMixin = {
 
 var ShapeToolbarPresentationMixin = {
     getPermissionsIconClass() {
-        const hidden = !this.properties.visibleToUsers;
-        const locked = this.properties.lockedForUsers;
-        if (hidden && locked)
+        const restrictions = [
+            !this.properties.visibleToUsers,
+            this.properties.lockedForUsers === true,
+            this.properties.interactableForUsers === false
+        ];
+        const restrictedCount = restrictions.filter(Boolean).length;
+        if (restrictedCount === 0)
+            return "fa-regular fa-shield";
+        if (restrictedCount === restrictions.length)
             return "fa-solid fa-shield";
-        if (hidden || locked)
-            return "fa-solid fa-shield-halved";
-        return "fa-regular fa-shield";
+        return "fa-solid fa-shield-halved";
     },
     renderPermissionsButtonTemplate(element) {
         element.innerHTML = `<i class="${this.getPermissionsIconClass()} mdl-permissions-icon"></i>`;
@@ -321,16 +325,27 @@ var BaseShapeToolbarMixin = {
     buildPermissionsMenuContent(contentElement) {
         const $content = $(contentElement);
         $content.empty();
+        const isVisible = this.properties.visibleToUsers;
+        const isLocked = this.properties.lockedForUsers === true;
+        const isInteractable = this.properties.interactableForUsers !== false;
         $content[0].innerHTML = `<div class="mdl-permissions-menu">
-            <div class="mdl-permissions-menu-row"><div class="mdl-permissions-visibility-host"></div><span class="mdl-permissions-menu-label">Visible</span></div>
-            <div class="mdl-permissions-menu-row"><div class="mdl-permissions-lock-host"></div><span class="mdl-permissions-menu-label">Locked</span></div>
+            <div class="mdl-permissions-menu-row"><div class="mdl-permissions-visibility-host"></div><span class="mdl-permissions-menu-label mdl-permissions-visibility-label">${TermControl.getVisibilityLabel(isVisible)}</span></div>
+            <div class="mdl-permissions-menu-row"><div class="mdl-permissions-lock-host"></div><span class="mdl-permissions-menu-label mdl-permissions-lock-label">${TermControl.getLockLabel(isLocked)}</span></div>
+            <div class="mdl-permissions-menu-row"><div class="mdl-permissions-interactable-host"></div><span class="mdl-permissions-menu-label mdl-permissions-interactable-label">${TermControl.getInteractableLabel(isInteractable)}</span></div>
         </div>`;
-        TermControl.createVisibilityCheckbox($content.find(".mdl-permissions-visibility-host"), this.properties.visibleToUsers, value => {
+        TermControl.createVisibilityCheckbox($content.find(".mdl-permissions-visibility-host"), isVisible, value => {
             this.setPropertyCommand("visibleToUsers", value);
+            $content.find(".mdl-permissions-visibility-label").text(TermControl.getVisibilityLabel(value));
             this.refreshPermissionsButtonIcon();
         });
-        TermControl.createLockCheckbox($content.find(".mdl-permissions-lock-host"), this.properties.lockedForUsers, value => {
+        TermControl.createLockCheckbox($content.find(".mdl-permissions-lock-host"), isLocked, value => {
             this.setPropertyCommand("lockedForUsers", value);
+            $content.find(".mdl-permissions-lock-label").text(TermControl.getLockLabel(value));
+            this.refreshPermissionsButtonIcon();
+        });
+        TermControl.createInteractableCheckbox($content.find(".mdl-permissions-interactable-host"), isInteractable, value => {
+            this.setPropertyCommand("interactableForUsers", value);
+            $content.find(".mdl-permissions-interactable-label").text(TermControl.getInteractableLabel(value));
             this.refreshPermissionsButtonIcon();
         });
     },

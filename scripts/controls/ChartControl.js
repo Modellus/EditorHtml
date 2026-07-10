@@ -36,6 +36,7 @@ class ChartControl {
             termFontStyle: "italic",
             termFontWeight: 400,
             equalScales: false,
+            interactable: true,
             precision: 2,
             tangentColor: "#00000000",
             fontSize: 13,
@@ -1155,6 +1156,8 @@ class ChartControl {
     }
 
     onTickPointerDown(event, hitArea) {
+        if (this.options.interactable === false)
+            return;
         event.stopPropagation();
         event.preventDefault();
         const axis = hitArea.dataset.axis;
@@ -1239,6 +1242,8 @@ class ChartControl {
 
     onZoomPointerDown(event) {
         if (event.button !== 0)
+            return;
+        if (this.options.interactable === false)
             return;
         event.stopPropagation();
         event.preventDefault();
