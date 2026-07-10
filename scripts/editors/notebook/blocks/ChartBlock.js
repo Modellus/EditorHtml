@@ -132,12 +132,7 @@ if (typeof BlocksRegistry !== "undefined" && typeof ChartShape !== "undefined") 
         }
 
         duplicateBlock() {
-            const duplicateBlock = Utils.cloneProperties(this.properties);
-            duplicateBlock.id = this.notebookEditor.nextBlockId++;
-            const blockIndex = this.notebookEditor.blocks.findIndex(block => block.id === this.id);
-            this.notebookEditor.blocks.splice(blockIndex + 1, 0, duplicateBlock);
-            this.notebookEditor._reloadBlockList();
-            this.markChanged();
+            this.notebookEditor.insertBlockAfter(this.id, this.properties);
         }
 
         async copyBlockToClipboard() {
@@ -166,6 +161,10 @@ if (typeof BlocksRegistry !== "undefined" && typeof ChartShape !== "undefined") 
         }
 
         setPropertyCommand(name, value) {
+            this.notebookEditor.setBlockPropertyCommand(this.id, name, value);
+        }
+
+        applyProperty(name, value) {
             Utils.setProperty(name, value, this.properties);
             if (name === "backgroundColor")
                 this.blockElement?.style.setProperty("--block-bg-color", value);
@@ -177,7 +176,7 @@ if (typeof BlocksRegistry !== "undefined" && typeof ChartShape !== "undefined") 
         }
 
         remove() {
-            this.notebookEditor.removeBlock(this.id);
+            this.notebookEditor.removeBlockCommand(this.id);
         }
 
         duplicate() {

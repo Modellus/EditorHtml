@@ -17,6 +17,7 @@ class NotebookEditor extends Workspace {
         this.coverImageUrl = "";
         this.listInstance = null;
         this.sortableInstance = null;
+        this.invoker = new CommandsInvoker();
         this.wall = new Wall(this, document.getElementById("notebook-container"), document.getElementById("notebook-blocks"));
         this.bindShapeToolbars();
         this._createTopToolbar();
@@ -30,6 +31,7 @@ class NotebookEditor extends Workspace {
         this._bindCalculatorEvents();
         this._reparseExpressions();
         this._initializeShapeInteractionController();
+        window.addEventListener("keydown", event => this.onKeyDown(event));
         window.addEventListener("beforeunload", () => this.collabCoordinator?.destroy());
     }
 
@@ -132,10 +134,10 @@ class NotebookEditor extends Workspace {
                     bottomY: rect.bottom
                 };
             },
-            bringToFront: shape => shape.notebookEditor.moveBlock(shape.id, shape.notebookEditor.blocks.length - 1),
-            bringForward: shape => shape.notebookEditor.moveBlock(shape.id, shape.notebookEditor.getBlockIndex(shape.id) + 1),
-            sendBackward: shape => shape.notebookEditor.moveBlock(shape.id, shape.notebookEditor.getBlockIndex(shape.id) - 1),
-            sendToBack: shape => shape.notebookEditor.moveBlock(shape.id, 0),
+            bringToFront: shape => shape.notebookEditor.moveBlockCommand(shape.id, shape.notebookEditor.blocks.length - 1),
+            bringForward: shape => shape.notebookEditor.moveBlockCommand(shape.id, shape.notebookEditor.getBlockIndex(shape.id) + 1),
+            sendBackward: shape => shape.notebookEditor.moveBlockCommand(shape.id, shape.notebookEditor.getBlockIndex(shape.id) - 1),
+            sendToBack: shape => shape.notebookEditor.moveBlockCommand(shape.id, 0),
             copyToClipboard: shape => shape.copyBlockToClipboard(),
             pasteFromClipboard: shape => shape.pasteBlockFromClipboard(),
             getCopySubMenuItems: () => []
@@ -177,9 +179,48 @@ class NotebookEditor extends Workspace {
             selectedClassName: "selected",
             clearSelectedItems: () => this.clearBlockSelection(),
             hideAllContextToolbars: () => this.hideAllShapeContextToolbars(),
-            removeItem: blockId => this.removeBlock(blockId)
+            removeItem: blockId => this.removeBlockCommand(blockId),
+            isEditingTarget: target => target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "MATH-FIELD" || target?.isContentEditable === true,
+            clearSelection: () => this.shapeInteractionController.clearSelection(),
+            canRemoveSelectedItem: () => this.shapeInteractionController.selectedItemId != null,
+            removeSelectedItem: () => {
+                const selectedBlockId = this.shapeInteractionController.selectedItemId;
+                if (selectedBlockId == null)
+                    return false;
+                this.removeBlockCommand(selectedBlockId);
+                return true;
+            }
         });
         this.shapeInteractionController.bindGlobalDismissal();
+    }
+
+    onKeyDown(event) {
+        if (this.shapeInteractionController?.handleRuntimeKeyDown(event) === true)
+            return;
+        const isEditing = event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA" || event.target.tagName === "MATH-FIELD" || event.target.isContentEditable;
+        if ((event.ctrlKey || event.metaKey) && !isEditing) {
+            if (event.key.toLowerCase() === "z") {
+                event.preventDefault();
+                if (event.shiftKey)
+                    this.redoPressed();
+                else
+                    this.undoPressed();
+                return;
+            }
+            if (event.key.toLowerCase() === "y") {
+                event.preventDefault();
+                this.redoPressed();
+                return;
+            }
+        }
+    }
+
+    undoPressed() {
+        this.invoker.undo();
+    }
+
+    redoPressed() {
+        this.invoker.redo();
     }
 
     clearBlockSelection() {
@@ -212,6 +253,24 @@ class NotebookEditor extends Workspace {
                             title: ""
                         },
                         onClick: () => this._menuController.show()
+                    }
+                },
+                {
+                    location: "before",
+                    widget: "dxButton",
+                    options: {
+                        icon: "fa-light fa-rotate-left",
+                        onClick: () => this.undoPressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Undo Tooltip", 280)
+                    }
+                },
+                {
+                    location: "before",
+                    widget: "dxButton",
+                    options: {
+                        icon: "fa-light fa-rotate-right",
+                        onClick: () => this.redoPressed(),
+                        onInitialized: e => this.createTranslatedTooltip(e, "Redo Tooltip", 280)
                     }
                 },
                 ...ModellusShapeToolbar.notebookItems(this)
@@ -579,6 +638,9 @@ class NotebookEditor extends Workspace {
                     event.component.reload();
                     this._updateLastModified();
                     this.broadcastNotebookCollabUpdate();
+                    // The drag already applied the move, so record (not execute)
+                    // the command to make it undoable.
+                    this.invoker.record(new MoveBlockCommand(this, movedBlock.id, event.fromIndex, event.toIndex));
                 }
             },
             itemTemplate: (block, index, element) => {
@@ -641,14 +703,60 @@ class NotebookEditor extends Workspace {
 
     addBlock(type) {
         const block = BlocksRegistry.createDefaultBlock(type, this.nextBlockId++);
-        this.blocks.push(block);
-        this._reloadBlockList();
-        this._updateLastModified();
-        this.broadcastNotebookCollabUpdate();
+        this.invoker.execute(new AddBlockCommand(this, block, this.blocks.length));
     }
 
     getBlockIndex(blockId) {
         return this.blocks.findIndex(block => block.id === blockId);
+    }
+
+    getBlockById(blockId) {
+        return this.blocks.find(block => block.id === blockId) ?? null;
+    }
+
+    removeBlockCommand(blockId) {
+        if (this.getBlockIndex(blockId) < 0)
+            return;
+        this.invoker.execute(new RemoveBlockCommand(this, blockId));
+    }
+
+    moveBlockCommand(blockId, targetIndex) {
+        const fromIndex = this.getBlockIndex(blockId);
+        if (fromIndex < 0)
+            return;
+        const toIndex = Math.max(0, Math.min(targetIndex, this.blocks.length - 1));
+        if (toIndex === fromIndex)
+            return;
+        this.invoker.execute(new MoveBlockCommand(this, blockId, fromIndex, toIndex));
+    }
+
+    setBlockPropertyCommand(blockId, name, value) {
+        if (this.getBlockIndex(blockId) < 0)
+            return;
+        this.invoker.execute(new SetBlockPropertyCommand(this, blockId, name, value));
+    }
+
+    applyBlockProperty(blockId, name, value) {
+        const shape = this.shapeInstances.get(blockId);
+        if (shape?.applyProperty) {
+            shape.applyProperty(name, value);
+            return;
+        }
+        const block = this.getBlockById(blockId);
+        if (!block)
+            return;
+        Utils.setProperty(name, value, block);
+        this._updateLastModified();
+    }
+
+    restoreBlockProperties(blockId, blockData) {
+        const blockIndex = this.getBlockIndex(blockId);
+        if (blockIndex < 0)
+            return;
+        this.blocks[blockIndex] = Utils.cloneProperties(blockData);
+        this._reloadBlockList();
+        this._updateLastModified();
+        this.broadcastNotebookCollabUpdate();
     }
 
     moveBlock(blockId, targetIndex) {
@@ -670,7 +778,12 @@ class NotebookEditor extends Workspace {
         const insertedBlock = Utils.cloneProperties(blockData);
         insertedBlock.id = this.nextBlockId++;
         const insertionIndex = blockIndex < 0 ? this.blocks.length : blockIndex + 1;
-        this.blocks.splice(insertionIndex, 0, insertedBlock);
+        this.invoker.execute(new AddBlockCommand(this, insertedBlock, insertionIndex));
+    }
+
+    insertBlockAt(block, index) {
+        const insertionIndex = Math.max(0, Math.min(index, this.blocks.length));
+        this.blocks.splice(insertionIndex, 0, block);
         this._reloadBlockList();
         this._updateLastModified();
         this.broadcastNotebookCollabUpdate();

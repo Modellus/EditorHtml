@@ -342,6 +342,7 @@ class Selection {
     addHighlightProxy(shape, color) {
         if (!shape.element)
             return;
+        this.removeHighlightProxy(shape);
         const bounds = this.getOutlineBounds(shape);
         if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height))
             return;

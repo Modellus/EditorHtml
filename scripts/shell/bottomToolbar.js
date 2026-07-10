@@ -17,7 +17,11 @@ class BottomToolbar {
             elementAttr: {
                 class: "mdl-player-toolbar"
             },
-            onItemClick: () => this.shell.deselectShape(),
+            onItemClick: e => {
+                if (e.itemData?.preserveSelectionOnClick)
+                    return;
+                this.shell.deselectShape();
+            },
             items: [
                 {
                     widget: "dxButton",
@@ -58,6 +62,7 @@ class BottomToolbar {
                 },
                 {
                     widget: "dxButton",
+                    preserveSelectionOnClick: true,
                     options: {
                         icon: "fa-light fa-rotate-left",
                         onClick: _ => this.shell.undoPressed(),
@@ -67,6 +72,7 @@ class BottomToolbar {
                 },
                 {
                     widget: "dxButton",
+                    preserveSelectionOnClick: true,
                     options: {
                         icon: "fa-light fa-rotate-right",
                         onClick: _ => this.shell.redoPressed(),

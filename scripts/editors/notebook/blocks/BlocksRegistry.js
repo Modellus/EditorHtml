@@ -43,12 +43,7 @@ class BlockShape {
     }
 
     duplicateBlock() {
-        const duplicateBlock = Utils.cloneProperties(this.block);
-        duplicateBlock.id = this.notebookEditor.nextBlockId++;
-        const blockIndex = this.notebookEditor.blocks.findIndex(block => block.id === this.block.id);
-        this.notebookEditor.blocks.splice(blockIndex + 1, 0, duplicateBlock);
-        this.notebookEditor._reloadBlockList();
-        this.markChanged();
+        this.notebookEditor.insertBlockAfter(this.block.id, this.block);
     }
 
     getHostId() {
@@ -124,6 +119,10 @@ class BlockShape {
     }
 
     setPropertyCommand(name, value) {
+        this.notebookEditor.setBlockPropertyCommand(this.block.id, name, value);
+    }
+
+    applyProperty(name, value) {
         Utils.setProperty(name, value, this.block);
         if (name === "backgroundColor")
             this.blockElement?.style.setProperty("--block-bg-color", value);
@@ -133,7 +132,7 @@ class BlockShape {
     }
 
     remove() {
-        this.notebookEditor.removeBlock(this.block.id);
+        this.notebookEditor.removeBlockCommand(this.block.id);
     }
 
     duplicate() {

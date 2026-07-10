@@ -82,11 +82,19 @@ class Canvas {
             this.svg.appendChild(shape.element);
         shape.attachShapeNameLayer();
         this.shapes.add(shape);
-        shape.element.addEventListener("focused", e => this.onShapeFocused(e));
-        shape.element.addEventListener("changed", e => this.onExpressionChanged(e));
-        shape.element.addEventListener("shapeChanged", e => this.onShapeChanged(e));
-        shape.element.addEventListener("shapeDragStart", e => this.onShapeDragStart(e));
-        shape.element.addEventListener("shapeDragEnd", e => this.onShapeDragEnd(e));
+        // A shape re-added after being removed (undo of a delete, redo of an
+        // add, ...) is the same instance with the same element, so guard
+        // against attaching a second copy of these listeners - duplicates
+        // would fire every handler twice per event, e.g. doubling up
+        // highlight-proxy creation on every drag.
+        if (!shape._canvasListenersBound) {
+            shape.element.addEventListener("focused", e => this.onShapeFocused(e));
+            shape.element.addEventListener("changed", e => this.onExpressionChanged(e));
+            shape.element.addEventListener("shapeChanged", e => this.onShapeChanged(e));
+            shape.element.addEventListener("shapeDragStart", e => this.onShapeDragStart(e));
+            shape.element.addEventListener("shapeDragEnd", e => this.onShapeDragEnd(e));
+            shape._canvasListenersBound = true;
+        }
         if (select)
             this.selectShape(shape);
         this.dispatchShapeEvent("shapeAdded", shape);
@@ -121,8 +129,18 @@ class Canvas {
         shape.tick();
         this.markDirty(shape);
         this.dispatchShapeEvent("shapeChanged", shape);
-        if (this.selection.selectedShape === shape)
+        if (this.selection.selectedShape === shape) {
             shape.showContextToolbar();
+            // Property commands (drag/resize commits, property-panel edits,
+            // and their undo/redo) move the shape without going through
+            // Selection.select()/setDragging(), which are the only other
+            // places the handle and highlight overlays get repositioned.
+            // Without this, undoing a drag snaps the shape back but leaves
+            // its selection handles and highlight rectangle at the
+            // pre-undo position.
+            shape.updateHandles();
+            this.selection.applyHighlight(shape);
+        }
     }
 
     onShapeFocused(e) {

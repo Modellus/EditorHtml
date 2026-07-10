@@ -47,6 +47,12 @@ class TextShape extends BaseShape {
         this.htmlEditor = this.$editorHost.dxHtmlEditor({
             valueType: "markdown",
             mediaResizing: { enabled: true },
+            // Stays read-only until enterEditMode() (double-click) turns it
+            // on, so a plain selection click can't leave the browser's
+            // default focus inside the editor - that would silently block
+            // shape-level keyboard shortcuts (Delete, undo/redo, copy) which
+            // treat any focused contenteditable as "the user is typing".
+            readOnly: true,
             toolbar: {
                 container: this.$toolbarHost[0],
                 multiline: false,
@@ -94,6 +100,7 @@ class TextShape extends BaseShape {
     enterEditMode() {
         if (!this.htmlEditor || typeof this.htmlEditor.focus !== "function")
             return super.enterEditMode();
+        this.htmlEditor.option("readOnly", false);
         this.container.style.cursor = "text";
         this.$toolbarHost.css({ "display": "", "width": this.properties.width + "px" });
         this.positionEditorToolbar();
@@ -110,6 +117,7 @@ class TextShape extends BaseShape {
         this.board.pointerLocked = false;
         super.exitEditMode();
         this.htmlEditor.blur();
+        this.htmlEditor.option("readOnly", true);
     }
 
     insertFormula() {

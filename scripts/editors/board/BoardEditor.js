@@ -712,6 +712,8 @@ class BoardEditor extends Workspace {
         // those changes to reach other collaborators.
         this.commands.invoker.onExecute = command => this.broadcastCommand(command);
         this.commands.invoker.onRecord = command => this.broadcastCommand(command);
+        this.commands.invoker.onRedo = command => this.broadcastCommand(command);
+        this.commands.invoker.onUndo = command => this.broadcastCommandUndo(command);
         this.setupCollabCursors();
         this.setupCollabPresence();
         this.collabCoordinator.start();
@@ -859,6 +861,26 @@ class BoardEditor extends Workspace {
             this.collabCoordinator.sendOp({ type: "setModelProperties", properties: Utils.cloneProperties(this.properties) });
             this.collabCoordinator.sendSnapshot(this.serialize());
         }
+    }
+
+    // Undoing a command must broadcast the inverse operation: add and remove
+    // swap, while property commands re-send the restored state and can reuse
+    // the forward broadcast.
+    broadcastCommandUndo(command) {
+        if (!this.collabCoordinator || this.collabCoordinator.isApplyingRemote())
+            return;
+        if (command instanceof AddShapeCommand) {
+            this.collabCoordinator.sendOp({ type: "removeShape", shapeId: command.shape.id });
+            this.collabCoordinator.sendSnapshot(this.serialize());
+            return;
+        }
+        if (command instanceof RemoveShapeCommand) {
+            for (const entry of command.removedShapes)
+                this.collabCoordinator.sendOp({ type: "addShape", shapeData: entry.shape.serialize() });
+            this.collabCoordinator.sendSnapshot(this.serialize());
+            return;
+        }
+        this.broadcastCommand(command);
     }
 
     applyRemoteOp(op) {
@@ -1067,7 +1089,7 @@ class BoardEditor extends Workspace {
 
     initializeShapeInteractionController() {
         this.shapeInteractionController = new ShapeInteractionController({
-            isEditingTarget: target => target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable === true,
+            isEditingTarget: target => target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "MATH-FIELD" || target?.isContentEditable === true,
             clearSelection: () => this.board.deselect(),
             canRemoveSelectedItem: () => this.board.selection.selectedShape != null,
             removeSelectedItem: () => {
@@ -1187,6 +1209,19 @@ class BoardEditor extends Workspace {
                     shape.duplicate();
                 else
                     this.duplicateModel();
+                return;
+            }
+            if (e.key.toLowerCase() === "z") {
+                e.preventDefault();
+                if (e.shiftKey)
+                    this.redoPressed();
+                else
+                    this.undoPressed();
+                return;
+            }
+            if (e.key.toLowerCase() === "y") {
+                e.preventDefault();
+                this.redoPressed();
                 return;
             }
         }

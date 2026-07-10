@@ -17,6 +17,7 @@ class CommandsInvoker {
             const command = this.history.pop();
             command.undo();
             this.redoStack.push(command);
+            this.onUndo?.(command);
         }
     }
     
@@ -31,6 +32,7 @@ class CommandsInvoker {
             const command = this.redoStack.pop();
             command.execute();
             this.history.push(command);
+            this.onRedo?.(command);
         }
     }
 }
