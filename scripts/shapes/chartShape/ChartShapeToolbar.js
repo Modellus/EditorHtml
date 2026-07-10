@@ -117,7 +117,7 @@ var ChartShapeToolbarMixin = {
         const normalizedTerm = this.normalizeYTermValue(term);
         if (normalizedTerm === "")
             return { termLatex: "", caseNumber: null };
-        const displayedTerm = this.formatTermForDisplay(normalizedTerm);
+        const displayedTerm = Utils.formatMathTermName(this.formatTermForDisplay(normalizedTerm));
         if (!this.shouldShowCaseLabelForTerm(normalizedTerm))
             return { termLatex: displayedTerm, caseNumber: null };
         const normalizedCaseNumber = TermControl.getShapeCaseNumber(this, normalizedTerm, caseNumber, value => this.normalizeYTermValue(value));
