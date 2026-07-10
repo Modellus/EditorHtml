@@ -145,6 +145,8 @@ class SliderShape extends BaseShape {
         this.properties.maximum = 10;
         this.properties.fillColor = this.board.theme.getBackgroundColors()[3].color;
         this.properties.precision = 0;
+        this.properties.positiveColor = this.properties.foregroundColor;
+        this.properties.negativeColor = "#C62828";
     }
 
     createElement() {
@@ -257,11 +259,18 @@ class SliderShape extends BaseShape {
         return height - ratio * height;
     }
 
+    getPositiveColor() {
+        return this.properties.positiveColor ?? this.properties.foregroundColor ?? "#000000";
+    }
+
+    getNegativeColor() {
+        return this.properties.negativeColor ?? this.getPositiveColor();
+    }
+
     buildSliderConfig() {
         const term = this.properties.term;
         const caseNumber = this.getCaseNumber();
         const isBoundTerm = !!term && this.board.calculator.isTerm(term);
-        const fillColor = this.properties.foregroundColor;
         let value = isBoundTerm ? this.getBoundTermValue(term, caseNumber) : Number(this.properties.value);
         if (!Number.isFinite(value))
             value = Number(this.properties.value);
@@ -270,6 +279,7 @@ class SliderShape extends BaseShape {
         const manualRange = this.getRange();
         const range = this.getAutoRange(term, caseNumber, value, manualRange);
         const normalizedValue = this.clamp(value, range.minimum, range.maximum);
+        const fillColor = normalizedValue < 0 ? this.getNegativeColor() : this.getPositiveColor();
         return {
             isBoundTerm,
             caseNumber,
