@@ -52,9 +52,10 @@ class TopToolbar {
                             icon: "fa-light fa-arrow-pointer",
                             showArrowIcon: false,
                             stylingMode: "text",
+                            hint: "Select Shape",
                             dropDownOptions: {
                                 container: document.body,
-                                wrapperAttr: { style: "z-index:99999" },
+                                wrapperAttr: { class: "mdl-shape-select-dropdown", style: "z-index:99999" },
                                 width: "auto",
                                 onShowing: () => {
                                     if (this._shapesTreeView)

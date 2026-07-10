@@ -40,10 +40,10 @@ class BaseShape {
 
     static renderShapeTreeItemHtml(data) {
         if (data.characterImage)
-            return `<img class="mdl-parent-tree-character" src="${data.characterImage}" alt="${data.text}"/>${data.text}`;
+            return `<img class="mdl-parent-tree-character" src="${data.characterImage}" alt="${data.text}" title="${data.text}"/><span title="${data.text}">${data.text}</span>`;
         const solidIcon = data.icon.replace("fa-light", "fa-solid");
         const colorPart = data.color ? `color:${data.color};` : "";
-        return `<i class="dx-icon ${solidIcon}" style="${colorPart}margin-right:8px"></i>${data.text}`;
+        return `<i class="dx-icon ${solidIcon}" style="${colorPart}margin-right:8px"></i><span title="${data.text}">${data.text}</span>`;
     }
 
     static setup() {

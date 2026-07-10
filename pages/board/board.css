@@ -2183,6 +2183,11 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
     padding: 4px;
 }
 
+.mdl-shape-select-dropdown .dx-treeview {
+    max-height: 320px !important;
+    overflow-y: auto;
+}
+
 .mdl-bg-picker-card {
     cursor: pointer;
     border: 2px solid transparent;
