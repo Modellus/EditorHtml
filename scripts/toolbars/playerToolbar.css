@@ -6,6 +6,18 @@
     min-width: 220px;
 }
 
+.mdl-player-toolbar .dx-slider-bar .mdl-slider-calculated {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+    background: #0f6cbd;
+    opacity: 0.35;
+    pointer-events: none;
+}
+
 @media (max-width: 900px) {
     #bottom-toolbar .dx-toolbar.mdl-player-toolbar .slider {
         min-width: 140px;

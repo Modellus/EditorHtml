@@ -468,6 +468,7 @@ class BottomToolbar {
         this.stepForward.option("disabled", isRunning || iteration >= lastIteration);
         this.shell.updatePlayerSliderRange(finalIteration);
         this.shell.updatePlayerSliderValue(iteration);
+        ModellusPlayerToolbar.updateCalculatedProgress(this.playHead, this.shell.calculator.getLastCalculatedIteration());
         const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
         if (this._startLabel)
             this._startLabel.textContent = Utils.formatNumber(this.shell.calculator.getStart(), precision);

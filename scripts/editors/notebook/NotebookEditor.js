@@ -576,6 +576,7 @@ class NotebookEditor extends Workspace {
         if (!this.calculator)
             return;
         this.syncPlayerIterationFromCalculator();
+        ModellusPlayerToolbar.updateCalculatedProgress($("#playHeadSlider").dxSlider("instance"), this.calculator.getLastCalculatedIteration());
         this.shapeInstances.forEach(shape => shape.onCalculatorIterate?.());
     }
 

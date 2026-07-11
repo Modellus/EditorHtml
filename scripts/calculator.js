@@ -480,6 +480,10 @@ class Calculator extends EventTarget {
         return this.system.lastIteration;
     }
 
+    getLastCalculatedIteration() {
+        return this.system.lastCalculatedIteration;
+    }
+
     getIndependentValue(iteration = this.system.iteration) {
         return this.system.getIndependentOnIteration(Math.max(1, Math.min(iteration, this.system.lastIteration)));
     }

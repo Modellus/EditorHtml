@@ -9,6 +9,26 @@ class ModellusPlayerToolbar {
         };
     }
 
+    static updateCalculatedProgress(sliderInstance, calculatedIteration) {
+        if (!sliderInstance)
+            return;
+        const element = sliderInstance.element();
+        const bar = (element.jquery ? element[0] : element).querySelector(".dx-slider-bar");
+        if (!bar)
+            return;
+        let progressElement = bar.querySelector(".mdl-slider-calculated");
+        if (!progressElement) {
+            progressElement = document.createElement("div");
+            progressElement.className = "mdl-slider-calculated";
+            bar.insertBefore(progressElement, bar.firstChild);
+        }
+        const minimum = sliderInstance.option("min");
+        const maximum = sliderInstance.option("max");
+        const range = maximum - minimum;
+        const ratio = range > 0 ? (calculatedIteration - minimum) / range : 0;
+        progressElement.style.width = `${Math.max(0, Math.min(1, ratio)) * 100}%`;
+    }
+
     static createPlayerItems(configuration) {
         const itemsBeforeSlider = configuration.itemsBeforeSlider || [];
         const itemsAfterSlider = configuration.itemsAfterSlider || [];
