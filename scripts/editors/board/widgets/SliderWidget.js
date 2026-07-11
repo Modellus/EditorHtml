@@ -1,6 +1,8 @@
 class SliderShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, null, id);
+        this._tickDragState = null;
+        this._axisTickDrag = new AxisTickDrag();
     }
 
     getHandles() {
@@ -157,6 +159,8 @@ class SliderShape extends BaseShape {
         this.container = this.board.createSvgElement("rect");
         this.splitter = this.board.createSvgElement("line");
         this.ticksGroup = this.board.createSvgElement("g");
+        this.tickInteractionLayer = this.board.createSvgElement("g");
+        this.tickInteractionLayer.setAttribute("class", "slider-export-exclude");
         this.container.setAttribute("stroke-width", 1);
         this.splitter.setAttribute("stroke-width", 2);
         element.appendChild(this.topPart);
@@ -165,9 +169,16 @@ class SliderShape extends BaseShape {
         element.appendChild(this.ticksGroup);
         element.appendChild(this.container);
         element.appendChild(this.splitter);
+        element.appendChild(this.tickInteractionLayer);
         this._appliedConfig = null;
         this.updateSliderState();
         return element;
+    }
+
+    createExportElementClone(element) {
+        const clone = super.createExportElementClone(element);
+        clone.querySelectorAll(".slider-export-exclude").forEach(node => node.remove());
+        return clone;
     }
 
     getBoundTermValue(term, caseNumber) {
@@ -456,32 +467,130 @@ class SliderShape extends BaseShape {
             return;
         while (this.ticksGroup.firstChild)
             this.ticksGroup.removeChild(this.ticksGroup.firstChild);
-        const precision = Number(this.properties.precision);
-        if (!precision || precision <= 0)
-            return;
         const config = this._sliderConfig ?? this.buildSliderConfig();
         const range = config.maximum - config.minimum;
-        if (range <= 0)
-            return;
-        const tickCount = Math.floor(range / precision);
-        if (tickCount > 200)
-            return;
-        const borderColor = config.borderColor || "#999";
-        const tickLength = Math.min(6, trackWidth * 0.15);
-        for (let i = 0; i <= tickCount; i++) {
-            const value = config.minimum + i * precision;
-            const ratio = (value - config.minimum) / range;
-            const y = sliderHeight - ratio * sliderHeight;
-            const tick = this.board.createSvgElement("line");
-            tick.setAttribute("x1", trackX);
-            tick.setAttribute("y1", y);
-            tick.setAttribute("x2", trackX + tickLength);
-            tick.setAttribute("y2", y);
-            tick.setAttribute("stroke", borderColor);
-            tick.setAttribute("stroke-width", 0.5);
-            tick.setAttribute("opacity", "0.5");
-            this.ticksGroup.appendChild(tick);
+        const precision = Number(this.properties.precision);
+        if (range > 0 && precision > 0) {
+            const ratios = this._getTickRatios(range, precision, sliderHeight);
+            const borderColor = config.borderColor || "#999";
+            const tickLength = Math.min(6, trackWidth * 0.15);
+            for (const ratio of ratios) {
+                const y = sliderHeight - ratio * sliderHeight;
+                const tick = this.board.createSvgElement("line");
+                tick.setAttribute("x1", trackX);
+                tick.setAttribute("y1", y);
+                tick.setAttribute("x2", trackX + tickLength);
+                tick.setAttribute("y2", y);
+                tick.setAttribute("stroke", borderColor);
+                tick.setAttribute("stroke-width", 0.5);
+                tick.setAttribute("opacity", "0.5");
+                this.ticksGroup.appendChild(tick);
+            }
         }
+        this._updateTickInteractionHandles(trackX, trackWidth, sliderHeight, config);
+    }
+
+    _getTickRatios(range, precision, sliderHeight) {
+        const ratios = [];
+        const precisionTickCount = Math.floor(range / precision);
+        if (precisionTickCount > 0 && sliderHeight / precisionTickCount >= 5) {
+            for (let i = 0; i <= precisionTickCount; i++)
+                ratios.push((i * precision) / range);
+            return ratios;
+        }
+        const divisions = minorTickDivisions(sliderHeight);
+        if (divisions < 2)
+            return ratios;
+        for (let i = 0; i <= divisions; i++)
+            ratios.push(i / divisions);
+        return ratios;
+    }
+
+    _getSliderTickData(sliderHeight, config) {
+        const ticks = [];
+        const range = config.maximum - config.minimum;
+        if (!(range > 0))
+            return ticks;
+        ticks.push({ value: config.maximum, pixelFromOrigin: sliderHeight });
+        return ticks;
+    }
+
+    _updateTickInteractionHandles(trackX, trackWidth, sliderHeight, config) {
+        if (!this.tickInteractionLayer)
+            return;
+        const ticks = this._getSliderTickData(sliderHeight, config);
+        const extents = tickHitExtents(ticks.map(tick => sliderHeight - tick.pixelFromOrigin), 5);
+        while (this.tickInteractionLayer.children.length > ticks.length)
+            this.tickInteractionLayer.removeChild(this.tickInteractionLayer.lastChild);
+        for (let i = 0; i < ticks.length; i++) {
+            const tick = ticks[i];
+            const y = sliderHeight - tick.pixelFromOrigin;
+            const halfHeight = extents[i];
+            let hitRect = this.tickInteractionLayer.children[i];
+            if (!hitRect) {
+                hitRect = this.board.createSvgElement("rect");
+                hitRect.setAttribute("fill", "transparent");
+                hitRect.setAttribute("pointer-events", "all");
+                hitRect.style.cursor = "ns-resize";
+                hitRect.onpointerdown = e => this.onAxisPointerDown(e);
+                this.tickInteractionLayer.appendChild(hitRect);
+            }
+            hitRect.setAttribute("x", trackX);
+            hitRect.setAttribute("y", y - halfHeight);
+            hitRect.setAttribute("width", trackWidth);
+            hitRect.setAttribute("height", halfHeight * 2);
+            hitRect._tickValue = tick.value;
+            hitRect._tickPixelFromOrigin = tick.pixelFromOrigin;
+        }
+    }
+
+    onAxisPointerDown(event) {
+        if (!this.isInteractable())
+            return;
+        event.stopPropagation();
+        event.preventDefault();
+        this._handlePending = null;
+        this._handlePendingStart = null;
+        this._handleActivePointerId = null;
+        const hitRect = event.currentTarget || event.target;
+        const grabValue = hitRect._tickValue;
+        const grabPixelFromOrigin = hitRect._tickPixelFromOrigin;
+        if (!(grabPixelFromOrigin >= 1))
+            return;
+        const config = this._sliderConfig ?? this.buildSliderConfig();
+        const minimum = config.minimum;
+        const sliderHeight = Math.max(1, Number(this.properties.height) || 1);
+        const svgRoot = this.board.svg;
+        const element = this.element;
+        const started = this._axisTickDrag.start(event, {
+            tickOffsetValue: grabValue - minimum,
+            tickOffsetPixel: grabPixelFromOrigin,
+            getPixelOffset: e => {
+                const pt = svgRoot.createSVGPoint();
+                pt.x = e.clientX;
+                pt.y = e.clientY;
+                const localY = pt.matrixTransform(element.getScreenCTM().inverse()).y;
+                return sliderHeight - localY;
+            },
+            onMove: scale => {
+                const newRange = scale * sliderHeight;
+                if (newRange <= 0)
+                    return;
+                this.properties.maximum = minimum + newRange;
+                this.board.markDirty(this);
+            },
+            onEnd: () => {
+                this._tickDragState = null;
+                this.board.pointerLocked = false;
+                this.dragEnd();
+                this.board.markDirty(this);
+            }
+        });
+        if (!started)
+            return;
+        this._tickDragState = { pointerId: event.pointerId };
+        this.board.pointerLocked = true;
+        this.dragStart();
     }
 
     getTermLabelAnchor() {

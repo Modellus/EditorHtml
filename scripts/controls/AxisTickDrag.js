@@ -64,3 +64,28 @@ function niceTickStep(rawStep) {
     if (normalized < 7) return 5 * magnitude;
     return 10 * magnitude;
 }
+
+function minorTickDivisions(majorSpacingPixels, minimumSpacingPixels = 5) {
+    if (!Number.isFinite(majorSpacingPixels) || majorSpacingPixels <= 0)
+        return 1;
+    if (majorSpacingPixels / 10 >= minimumSpacingPixels)
+        return 10;
+    if (majorSpacingPixels / 2 >= minimumSpacingPixels)
+        return 2;
+    return 1;
+}
+
+function tickHitExtents(pixelPositions, maxHalfExtent) {
+    const order = pixelPositions.map((_, index) => index).sort((a, b) => pixelPositions[a] - pixelPositions[b]);
+    const extents = new Array(pixelPositions.length).fill(maxHalfExtent);
+    for (let k = 0; k < order.length; k++) {
+        const i = order[k];
+        let halfExtent = maxHalfExtent;
+        if (k > 0)
+            halfExtent = Math.min(halfExtent, (pixelPositions[i] - pixelPositions[order[k - 1]]) / 2);
+        if (k < order.length - 1)
+            halfExtent = Math.min(halfExtent, (pixelPositions[order[k + 1]] - pixelPositions[i]) / 2);
+        extents[i] = Math.max(0, halfExtent);
+    }
+    return extents;
+}

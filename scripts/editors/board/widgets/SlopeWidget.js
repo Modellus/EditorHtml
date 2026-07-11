@@ -11,6 +11,15 @@ class SlopeShape extends BaseShape {
         return false;
     }
 
+    setPropertyCommand(name, value) {
+        const axisProperties = ["horizontalMinimum", "horizontalMaximum", "horizontalMajorTicks", "verticalMinimum", "verticalMaximum", "verticalMajorTicks"];
+        if (axisProperties.includes(name)) {
+            this._dragAnchorValues.horizontal = null;
+            this._dragAnchorValues.vertical = null;
+        }
+        super.setPropertyCommand(name, value);
+    }
+
     setDefaults() {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Slope Name");
@@ -83,12 +92,12 @@ class SlopeShape extends BaseShape {
         return Number.isFinite(maximum) ? maximum : 10;
     }
 
-    getAxisMajorTicksCount(axis) {
+    getAxisMajorTicksValue(axis) {
         const property = axis === "horizontal" ? "horizontalMajorTicks" : "verticalMajorTicks";
         const majorTicks = Number(this.properties[property]);
-        if (!Number.isFinite(majorTicks) || majorTicks < 1)
+        if (!Number.isFinite(majorTicks) || majorTicks <= 0)
             return 5;
-        return Math.max(1, Math.round(majorTicks));
+        return majorTicks;
     }
 
     getSlopeValue() {
@@ -162,7 +171,7 @@ class SlopeShape extends BaseShape {
         const dragStep = this._dragLinearSteps?.[axis];
         if (dragStep && dragStep > 0)
             return dragStep;
-        return (maximum - minimum) / this.getAxisMajorTicksCount(axis);
+        return (maximum - minimum) / this.getAxisMajorTicksValue(axis);
     }
 
     forEachLinearMajorTick(axis, minimum, maximum, usableLength, cb) {
@@ -177,7 +186,7 @@ class SlopeShape extends BaseShape {
         if (this._dragLinearSteps?.[axis])
             lastIndex = Math.min(lastIndex, 100);
         const anchorValue = this._dragAnchorValues?.[axis];
-        const draggedValue = (this._dragLinearSteps?.[axis] && Number.isFinite(anchorValue)) ? anchorValue : null;
+        const draggedValue = Number.isFinite(anchorValue) ? anchorValue : null;
         let draggedOnGrid = false;
         for (let i = 0; i <= lastIndex; i++) {
             const value = minimum + i * step;
@@ -218,7 +227,6 @@ class SlopeShape extends BaseShape {
     }
 
     drawHorizontalTicks(geometry) {
-        const minorDivisions = 10;
         const startY = geometry.cornerY + geometry.tickDirectionY;
         const minorEndY = geometry.cornerY + geometry.tickDirectionY * geometry.thickness * 0.38;
         const middleMinorEndY = geometry.cornerY + geometry.tickDirectionY * geometry.thickness * 0.48;
@@ -232,6 +240,9 @@ class SlopeShape extends BaseShape {
             this.addTickLine(this.majorTicksLayer, majorX, startY, majorX, majorEndY, 1.2);
             this.addTickLabel(majorX, labelsY, "middle", this.formatModelValue(tickValue));
             if (i === null)
+                return;
+            const minorDivisions = minorTickDivisions((step / range) * geometry.horizontalUsable);
+            if (minorDivisions < 2)
                 return;
             const minorStep = step / minorDivisions;
             for (let minorIndex = 1; minorIndex < minorDivisions; minorIndex++) {
@@ -252,7 +263,6 @@ class SlopeShape extends BaseShape {
     }
 
     drawVerticalTicks(geometry) {
-        const minorDivisions = 10;
         const startX = geometry.cornerX + geometry.tickDirectionX;
         const minorEndX = geometry.cornerX + geometry.tickDirectionX * geometry.thickness * 0.38;
         const middleMinorEndX = geometry.cornerX + geometry.tickDirectionX * geometry.thickness * 0.48;
@@ -266,6 +276,9 @@ class SlopeShape extends BaseShape {
             this.addTickLine(this.majorTicksLayer, startX, majorY, majorEndX, majorY, 1.2);
             this.addTickLabel(labelsX, majorY, "middle", this.formatModelValue(tickValue), -90);
             if (i === null)
+                return;
+            const minorDivisions = minorTickDivisions((step / range) * geometry.verticalUsable);
+            if (minorDivisions < 2)
                 return;
             const minorStep = step / minorDivisions;
             for (let minorIndex = 1; minorIndex < minorDivisions; minorIndex++) {
@@ -323,22 +336,8 @@ class SlopeShape extends BaseShape {
         const ticks = [];
         const minimum = this.getAxisMinimum(axis);
         const maximum = this.getAxisMaximum(axis);
-        const range = maximum - minimum;
-        const minorDivisions = 10;
-        this.forEachLinearMajorTick(axis, minimum, maximum, usableLength, (value, pixelFromOrigin, i, step) => {
+        this.forEachLinearMajorTick(axis, minimum, maximum, usableLength, (value, pixelFromOrigin) => {
             ticks.push({ value, pixelFromOrigin });
-            if (i === null)
-                return;
-            const minorStep = step / minorDivisions;
-            for (let j = 1; j < minorDivisions; j++) {
-                const minorValue = value + j * minorStep;
-                if (minorValue > maximum + step * 1e-6)
-                    break;
-                const minorPixel = ((minorValue - minimum) / range) * usableLength;
-                if (minorPixel >= usableLength)
-                    break;
-                ticks.push({ value: minorValue, pixelFromOrigin: minorPixel });
-            }
         });
         return ticks;
     }
@@ -346,12 +345,13 @@ class SlopeShape extends BaseShape {
     _updateAxisInteractionHandles(axis, layer, geometry) {
         const usableLength = axis === "horizontal" ? geometry.horizontalUsable : geometry.verticalUsable;
         const ticks = this._getAxisTickData(axis, usableLength);
-        const hitThickness = 8;
         const hitLength = geometry.thickness * 0.58;
+        const extents = tickHitExtents(ticks.map(tick => tick.pixelFromOrigin), 4);
         while (layer.children.length > ticks.length)
             layer.removeChild(layer.lastChild);
         for (let i = 0; i < ticks.length; i++) {
             const tick = ticks[i];
+            const halfThickness = extents[i];
             let hitRect = layer.children[i];
             if (!hitRect) {
                 hitRect = this.board.createSvgElement("rect");
@@ -362,15 +362,15 @@ class SlopeShape extends BaseShape {
                 layer.appendChild(hitRect);
             }
             if (axis === "horizontal") {
-                hitRect.setAttribute("x", geometry.cornerX + geometry.horizontalDirection * tick.pixelFromOrigin - hitThickness / 2);
+                hitRect.setAttribute("x", geometry.cornerX + geometry.horizontalDirection * tick.pixelFromOrigin - halfThickness);
                 hitRect.setAttribute("y", geometry.flippedVertically ? geometry.cornerY - hitLength : geometry.cornerY);
-                hitRect.setAttribute("width", hitThickness);
+                hitRect.setAttribute("width", halfThickness * 2);
                 hitRect.setAttribute("height", hitLength);
             } else {
                 hitRect.setAttribute("x", geometry.flippedHorizontally ? geometry.cornerX : geometry.cornerX - hitLength);
-                hitRect.setAttribute("y", geometry.cornerY + geometry.verticalDirection * tick.pixelFromOrigin - hitThickness / 2);
+                hitRect.setAttribute("y", geometry.cornerY + geometry.verticalDirection * tick.pixelFromOrigin - halfThickness);
                 hitRect.setAttribute("width", hitLength);
-                hitRect.setAttribute("height", hitThickness);
+                hitRect.setAttribute("height", halfThickness * 2);
             }
             hitRect._tickValue = tick.value;
             hitRect._tickPixelFromOrigin = tick.pixelFromOrigin;
@@ -393,14 +393,12 @@ class SlopeShape extends BaseShape {
         const geometry = this.getSlopeGeometry();
         const minimum = this.getAxisMinimum(axis);
         const maximum = this.getAxisMaximum(axis);
-        const majorTicksCount = this.getAxisMajorTicksCount(axis);
         const usableLength = axis === "horizontal" ? geometry.horizontalUsable : geometry.verticalUsable;
         const maximumProperty = axis === "horizontal" ? "horizontalMaximum" : "verticalMaximum";
         const majorTicksProperty = axis === "horizontal" ? "horizontalMajorTicks" : "verticalMajorTicks";
         const svgRoot = this.board.svg;
         const element = this.element;
-        const originRange = maximum - minimum;
-        const tickStep = originRange / majorTicksCount;
+        const tickStep = (maximum - minimum) / this.getAxisMajorTicksValue(axis);
         const started = this._axisTickDrag.start(event, {
             tickOffsetValue: grabValue - minimum,
             tickOffsetPixel: grabPixelFromOrigin,
@@ -419,23 +417,14 @@ class SlopeShape extends BaseShape {
                 const newRange = scale * usableLength;
                 if (newRange <= 0)
                     return;
-                const ratio = originRange > 0 ? newRange / originRange : 1;
-                const factor = niceTickStep(ratio) || 1;
                 this._dragAnchorValues[axis] = grabValue;
-                this._dragLinearSteps[axis] = factor * tickStep;
+                this._dragLinearSteps[axis] = tickStep;
                 this.properties[maximumProperty] = minimum + newRange;
-                this.properties[majorTicksProperty] = Math.max(1, Math.min(100, Math.round(newRange / this._dragLinearSteps[axis])));
+                this.properties[majorTicksProperty] = Math.max(1, Math.min(100, newRange / tickStep));
                 this.board.markDirty(this);
             },
             onEnd: () => {
-                const step = this._dragLinearSteps[axis];
-                if (step) {
-                    const count = Math.max(1, Math.round((this.properties[maximumProperty] - minimum) / step));
-                    this.properties[maximumProperty] = minimum + count * step;
-                    this.properties[majorTicksProperty] = count;
-                    this._dragLinearSteps[axis] = null;
-                    this._dragAnchorValues[axis] = null;
-                }
+                this._dragLinearSteps[axis] = null;
                 this._tickDragState = null;
                 this.board.pointerLocked = false;
                 this.dragEnd();

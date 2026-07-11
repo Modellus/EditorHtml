@@ -74,6 +74,12 @@ class RulerShape extends BaseShape {
         return this.properties.scaleType === "logarithmic";
     }
 
+    setPropertyCommand(name, value) {
+        if (name === "minimum" || name === "maximum" || name === "majorTicks")
+            this._dragAnchorValue = null;
+        super.setPropertyCommand(name, value);
+    }
+
     setScaleTypeCommand(scaleType) {
         const updates = { scaleType };
         if (scaleType === "logarithmic" && Number(this.properties.minimum) <= 0)
@@ -87,6 +93,13 @@ class RulerShape extends BaseShape {
         if (!Number.isFinite(majorTicks) || majorTicks < 1)
             return 10;
         return Math.max(1, Math.round(majorTicks));
+    }
+
+    getMajorTicksValue() {
+        const majorTicks = Number(this.properties.majorTicks);
+        if (!Number.isFinite(majorTicks) || majorTicks <= 0)
+            return 10;
+        return majorTicks;
     }
 
     getRulerGeometry() {
@@ -156,13 +169,10 @@ class RulerShape extends BaseShape {
         }
     }
 
-    // Value-step between major ticks. While a tick is being dragged we hold this
-    // step fixed (like the referential) so the grabbed value stays exactly under
-    // the cursor instead of drifting when the major-tick count is rounded.
     getLinearTickStep(minimum, maximum) {
         if (this._dragLinearStep && this._dragLinearStep > 0)
             return this._dragLinearStep;
-        return (maximum - minimum) / this.getMajorTicksCount();
+        return (maximum - minimum) / this.getMajorTicksValue();
     }
 
     // Walks the linear major ticks at a fixed value step, invoking
@@ -181,8 +191,7 @@ class RulerShape extends BaseShape {
         // While dragging the step thins automatically, but cap as a safety net.
         if (this._dragLinearStep)
             lastIndex = Math.min(lastIndex, 100);
-        const draggedValue = (this._dragLinearStep && Number.isFinite(this._dragAnchorValue))
-            ? this._dragAnchorValue : null;
+        const draggedValue = Number.isFinite(this._dragAnchorValue) ? this._dragAnchorValue : null;
         let draggedOnGrid = false;
         for (let i = 0; i <= lastIndex; i++) {
             const value = minimum + i * step;
@@ -194,7 +203,7 @@ class RulerShape extends BaseShape {
             cb(draggedValue, ((draggedValue - minimum) / range) * geometry.usableWidth, null, step);
     }
 
-    _getAllTickData(geometry) {
+    _getMajorTickData(geometry) {
         const ticks = [];
         if (this.isLogarithmic()) {
             const minimum = Number(this.properties.minimum);
@@ -202,41 +211,30 @@ class RulerShape extends BaseShape {
             if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum <= 0 || maximum <= minimum)
                 return ticks;
             const allTicks = getClassicLogRulerTicks(minimum, maximum, geometry.usableWidth, this.getMajorTicksCount());
-            for (const tick of allTicks)
-                ticks.push({ value: tick.value, pixelFromLeft: tick.pixelPosition, isMajor: tick.type === "major" });
+            for (const tick of allTicks) {
+                if (tick.type === "major")
+                    ticks.push({ value: tick.value, pixelFromLeft: tick.pixelPosition });
+            }
         } else {
             const minimum = Number.isFinite(Number(this.properties.minimum)) ? Number(this.properties.minimum) : 0;
             const maximum = Number.isFinite(Number(this.properties.maximum)) ? Number(this.properties.maximum) : 10;
-            const range = maximum - minimum;
-            const minorDivisions = 10;
-            this.forEachLinearMajorTick(minimum, maximum, geometry, (value, pixelFromLeft, i, step) => {
-                ticks.push({ value, pixelFromLeft, isMajor: true });
-                if (i === null) return;
-                const minorStep = step / minorDivisions;
-                for (let j = 1; j < minorDivisions; j++) {
-                    const minorValue = value + j * minorStep;
-                    if (minorValue > maximum + step * 1e-6) break;
-                    const minorPixel = ((minorValue - minimum) / range) * geometry.usableWidth;
-                    if (minorPixel >= geometry.usableWidth) break;
-                    ticks.push({ value: minorValue, pixelFromLeft: minorPixel, isMajor: false });
-                }
+            this.forEachLinearMajorTick(minimum, maximum, geometry, (value, pixelFromLeft) => {
+                ticks.push({ value, pixelFromLeft });
             });
         }
         return ticks;
     }
 
     _updateTickInteractionHandles(geometry) {
-        const ticks = this._getAllTickData(geometry);
-        const hitWidth = 8;
-        // Only cover the vertical band the ticks actually occupy (top ~58% of the
-        // ruler, matching majorBottomY in drawRulerTicks). The lower portion stays
-        // free so the ruler shape itself can still be grabbed and dragged.
+        const ticks = this._getMajorTickData(geometry);
         const hitHeight = geometry.height * 0.58;
+        const extents = tickHitExtents(ticks.map(tick => tick.pixelFromLeft), 4);
         while (this.tickInteractionLayer.children.length > ticks.length)
             this.tickInteractionLayer.removeChild(this.tickInteractionLayer.lastChild);
         for (let i = 0; i < ticks.length; i++) {
             const tick = ticks[i];
             const x = geometry.left + tick.pixelFromLeft;
+            const halfWidth = extents[i];
             let hitRect = this.tickInteractionLayer.children[i];
             if (!hitRect) {
                 hitRect = this.board.createSvgElement("rect");
@@ -246,9 +244,9 @@ class RulerShape extends BaseShape {
                 hitRect.onpointerdown = e => this.onAxisPointerDown(e);
                 this.tickInteractionLayer.appendChild(hitRect);
             }
-            hitRect.setAttribute("x", x - hitWidth / 2);
+            hitRect.setAttribute("x", x - halfWidth);
             hitRect.setAttribute("y", geometry.y);
-            hitRect.setAttribute("width", hitWidth);
+            hitRect.setAttribute("width", halfWidth * 2);
             hitRect.setAttribute("height", hitHeight);
             hitRect._tickValue = tick.value;
             hitRect._tickPixelFromLeft = tick.pixelFromLeft;
@@ -277,7 +275,6 @@ class RulerShape extends BaseShape {
         const svgRoot = this.board.svg;
         const element = this.element;
 
-        const origRange = maximum - minimum;
         let tickOffsetValue, tickStep, logTickStep, logMin;
         if (this.isLogarithmic()) {
             if (!(minimum > 0) || !(grabValue > 0)) return;
@@ -286,7 +283,7 @@ class RulerShape extends BaseShape {
             logTickStep = (Math.log10(maximum) - logMin) / majorTicksCount;
         } else {
             tickOffsetValue = grabValue - minimum;
-            tickStep = (maximum - minimum) / majorTicksCount;
+            tickStep = (maximum - minimum) / this.getMajorTicksValue();
         }
 
         const isLog = this.isLogarithmic();
@@ -310,28 +307,15 @@ class RulerShape extends BaseShape {
                     if (!tickStep) return;
                     const newRange = scale * usableWidth;
                     if (newRange <= 0) return;
-                    // Thin/densify the value-step like the referential so ticks keep a
-                    // readable spacing. The grid stays anchored at the start value; the
-                    // dragged value is recorded so it is also kept on a line at the cursor.
-                    const ratio = origRange > 0 ? newRange / origRange : 1;
-                    const factor = niceTickStep(ratio) || 1;
                     this._dragAnchorValue = grabValue;
-                    this._dragLinearStep = factor * tickStep;
+                    this._dragLinearStep = tickStep;
                     this.properties.maximum = minimum + newRange;
-                    this.properties.majorTicks = Math.max(1, Math.min(100, Math.round(newRange / this._dragLinearStep)));
+                    this.properties.majorTicks = Math.max(1, Math.min(100, newRange / tickStep));
                 }
                 this.board.markDirty(this);
             },
             onEnd: () => {
-                // Settle on a clean range that is an exact multiple of the value-step.
-                if (this._dragLinearStep) {
-                    const step = this._dragLinearStep;
-                    const count = Math.max(1, Math.round((this.properties.maximum - minimum) / step));
-                    this.properties.maximum = minimum + count * step;
-                    this.properties.majorTicks = count;
-                    this._dragLinearStep = null;
-                    this._dragAnchorValue = null;
-                }
+                this._dragLinearStep = null;
                 this._tickDragState = null;
                 this.board.pointerLocked = false;
                 this.dragEnd();
@@ -382,7 +366,6 @@ class RulerShape extends BaseShape {
     }
 
     drawLinearTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY) {
-        const minorDivisions = 10;
         const minimum = Number.isFinite(Number(this.properties.minimum)) ? Number(this.properties.minimum) : 0;
         const maximum = Number.isFinite(Number(this.properties.maximum)) ? Number(this.properties.maximum) : 10;
         const range = maximum - minimum;
@@ -391,6 +374,8 @@ class RulerShape extends BaseShape {
             this.addTickLine(this.majorTicksLayer, majorX, topY, majorBottomY, 1.2);
             this.addTickLabel(majorX, labelsY, this.formatModelValue(tickValue));
             if (i === null) return;
+            const minorDivisions = minorTickDivisions((step / range) * geometry.usableWidth);
+            if (minorDivisions < 2) return;
             const minorStep = step / minorDivisions;
             for (let minorIndex = 1; minorIndex < minorDivisions; minorIndex++) {
                 const minorValue = tickValue + minorIndex * minorStep;

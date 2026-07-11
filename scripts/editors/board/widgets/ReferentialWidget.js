@@ -4,6 +4,15 @@ class ReferentialShape extends BaseShape {
         this.isReferential = true;
         this._tickDragState = null;
         this._axisTickDrag = new AxisTickDrag();
+        this._pinnedTickValues = { horizontal: null, vertical: null };
+    }
+
+    setPropertyCommand(name, value) {
+        if (name === "scaleX" || name === "scaleY" || name === "originX" || name === "originY" || name === "autoScale" || name === "equalAxisScales") {
+            this._pinnedTickValues.horizontal = null;
+            this._pinnedTickValues.vertical = null;
+        }
+        super.setPropertyCommand(name, value);
     }
 
     getHandles() {
@@ -537,6 +546,7 @@ class ReferentialShape extends BaseShape {
             }
         });
         if (!started) return;
+        this._pinnedTickValues[axis === "x" ? "horizontal" : "vertical"] = tickValue;
         this._handlePending = null;
         this._handlePendingStart = null;
         this._handleActivePointerId = null;
@@ -657,6 +667,10 @@ class ReferentialShape extends BaseShape {
             ? (end - origin) * scale
             : (origin - start) * scale;
         const values = this.buildTicks(domainMin, domainMax, this.getMaxMajorTickCount(length));
+        const pinnedValue = this._pinnedTickValues?.[orientation];
+        const dedupeEpsilon = Math.abs(scale) * 0.5;
+        if (Number.isFinite(pinnedValue) && pinnedValue > domainMin && pinnedValue < domainMax && !values.some(value => Math.abs(value - pinnedValue) <= dedupeEpsilon))
+            values.push(pinnedValue);
         const positions = [];
         for (let index = 0; index < values.length; index++) {
             const value = values[index];

@@ -9,6 +9,7 @@ class ChartControl {
         this.width = 0;
         this.height = 0;
         this._axisTickDrag = new AxisTickDrag();
+        this._pinnedTickValues = { x: null, y: null };
         this._zoomDragState = null;
         this._onZoomPointerMove = e => this.onZoomPointerMove(e);
         this._onZoomPointerUp = e => this.onZoomPointerUp(e);
@@ -296,6 +297,7 @@ class ChartControl {
             yMin: override?.yMin ?? null,
             yMax: override?.yMax ?? null
         };
+        this._pinnedTickValues = { x: null, y: null };
         this.render();
     }
 
@@ -375,6 +377,16 @@ class ChartControl {
         for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
             ticks.push(Math.round(value * 1e10) / 1e10);
         return ticks;
+    }
+
+    injectPinnedTick(ticks, pinnedValue, domainMin, domainMax) {
+        if (!Number.isFinite(pinnedValue) || pinnedValue <= domainMin || pinnedValue >= domainMax)
+            return ticks;
+        const range = domainMax - domainMin;
+        const dedupeEpsilon = range * 1e-6;
+        if (ticks.some(value => Math.abs(value - pinnedValue) <= dedupeEpsilon))
+            return ticks;
+        return [...ticks, pinnedValue];
     }
 
     buildMinorTicks(majorTicks, minValue, maxValue, subdivisions = 5) {
@@ -544,11 +556,17 @@ class ChartControl {
         const domain = this.options.equalScales
             ? this.equalizeDomain(rawDomain, preliminaryLayout.plotWidth, preliminaryLayout.plotHeight)
             : rawDomain;
-        const xTicks = this.buildTicks(domain.xMin, domain.xMax, 5);
-        const yTicks = this.buildTicks(domain.yMin, domain.yMax, 5);
-        const xMinorTicks = this.buildMinorTicks(xTicks, domain.xMin, domain.xMax, 5);
-        const yMinorTicks = this.buildMinorTicks(yTicks, domain.yMin, domain.yMax, 5);
+        const xMajorTicks = this.buildTicks(domain.xMin, domain.xMax, 5);
+        const yMajorTicks = this.buildTicks(domain.yMin, domain.yMax, 5);
+        const xTicks = this.injectPinnedTick(xMajorTicks, this._pinnedTickValues.x, domain.xMin, domain.xMax);
+        const yTicks = this.injectPinnedTick(yMajorTicks, this._pinnedTickValues.y, domain.yMin, domain.yMax);
         const layout = this.getLayout(width, height, xTicks, yTicks);
+        const xMajorStep = xMajorTicks.length > 1 ? xMajorTicks[1] - xMajorTicks[0] : 0;
+        const yMajorStep = yMajorTicks.length > 1 ? yMajorTicks[1] - yMajorTicks[0] : 0;
+        const xSubdivisions = minorTickDivisions(layout.plotWidth * xMajorStep / (domain.xMax - domain.xMin));
+        const ySubdivisions = minorTickDivisions(layout.plotHeight * yMajorStep / (domain.yMax - domain.yMin));
+        const xMinorTicks = this.buildMinorTicks(xMajorTicks, domain.xMin, domain.xMax, xSubdivisions);
+        const yMinorTicks = this.buildMinorTicks(yMajorTicks, domain.yMin, domain.yMax, ySubdivisions);
         this.plotClipRect.setAttribute("x", `${layout.plotLeft}`);
         this.plotClipRect.setAttribute("y", `${layout.plotTop}`);
         this.plotClipRect.setAttribute("width", `${layout.plotWidth}`);
@@ -1202,8 +1220,11 @@ class ChartControl {
                     this.options.onDomainChanged({ ...this.domainOverride });
             }
         });
-        if (started && typeof this.options.onTickDragStarted === "function")
-            this.options.onTickDragStarted();
+        if (started) {
+            this._pinnedTickValues[axis] = tickValue;
+            if (typeof this.options.onTickDragStarted === "function")
+                this.options.onTickDragStarted();
+        }
     }
 
     getLocalPointerPoint(event) {
@@ -1346,6 +1367,7 @@ class ChartControl {
 
     resetDomainOverride() {
         this.domainOverride = { xMin: null, xMax: null, yMin: null, yMax: null };
+        this._pinnedTickValues = { x: null, y: null };
         this.render();
     }
 
