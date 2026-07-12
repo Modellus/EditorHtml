@@ -170,6 +170,10 @@ class MiniMap {
         return frames;
     }
 
+    isVisible() {
+        return this.minimapImage.style.display !== "none";
+    }
+
     toggle() {
         const shouldDisplay = this.minimapImage.style.display === "none";
         this.minimapImage.style.display = shouldDisplay ? "block" : "none";

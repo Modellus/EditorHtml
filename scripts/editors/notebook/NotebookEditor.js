@@ -144,6 +144,7 @@ class NotebookEditor extends Workspace {
         };
         const chartDescriptor = BlocksRegistry.getDescriptor("chart");
         const expressionDescriptor = BlocksRegistry.getDescriptor("expression");
+        const tableDescriptor = BlocksRegistry.getDescriptor("table");
         const resolveNotebookToolbarMixin = descriptor => {
             if (typeof descriptor?.getNotebookToolbarMixin === "function")
                 return descriptor.getNotebookToolbarMixin();
@@ -152,11 +153,11 @@ class NotebookEditor extends Workspace {
         const bindings = [
             [chartDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(chartDescriptor)],
             [expressionDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(expressionDescriptor)],
+            [tableDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(tableDescriptor)],
             [SliderNotebookShape, SliderShapeToolbarMixin],
             [GaugeNotebookShape, GaugeShapeToolbarMixin],
             [ValueNotebookShape, ValueShapeToolbarMixin],
             [MediaNotebookShape, MediaShapeToolbarMixin],
-            [TableNotebookShape, TableShapeToolbarMixin],
             [ReferentialNotebookShape, ReferentialShapeToolbarMixin],
             [QuestionNotebookShape, QuestionShapeToolbarMixin],
             [RulerNotebookShape, RulerShapeToolbarMixin],

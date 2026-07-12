@@ -25,7 +25,7 @@ class ShapeInteractionController {
 
     attachItemInteractions(itemElement, itemData, shape) {
         this.initializeItemAccessibility(itemElement, itemData);
-        itemElement.addEventListener("click", event => this.onItemClick(event, itemElement, itemData, shape));
+        itemElement.addEventListener("pointerdown", event => this.onItemPointerDown(event, itemElement, itemData, shape));
         itemElement.addEventListener("keydown", event => this.onItemKeyDown(event, itemElement, itemData, shape));
         if (itemData.id === this.selectedItemId)
             this.selectItem(itemElement, itemData, shape);
@@ -38,7 +38,9 @@ class ShapeInteractionController {
         itemElement.setAttribute("aria-label", `${itemData.type} block`);
     }
 
-    onItemClick(event, itemElement, itemData, shape) {
+    onItemPointerDown(event, itemElement, itemData, shape) {
+        if (this.selectedItemId === itemData.id)
+            return;
         this.selectItem(itemElement, itemData, shape);
     }
 

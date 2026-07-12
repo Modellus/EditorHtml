@@ -370,6 +370,7 @@ class BoardEditor extends Workspace {
 
     miniMapPressed() {
         this.miniMap.toggle();
+        this.bottomToolbar.updateMiniMapButton();
     }
 
     snapToGridPressed() {

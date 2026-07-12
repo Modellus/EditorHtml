@@ -170,6 +170,8 @@ class BottomToolbar {
             ]
         });
         this.instance = $("#bottom-toolbar").dxToolbar("instance");
+        this.updateSnapToGridButton();
+        this.updateMiniMapButton();
         this.zoom = $("#zoomButton").dxButton("instance");
         this.playPause = $("#playPauseButton").dxButton("instance");
         this.stop = $("#stopButton").dxButton("instance");
@@ -482,12 +484,20 @@ class BottomToolbar {
             this._independentNameLabel.textContent = this.shell.calculator.properties.independent.name;
     }
 
-    updateSnapToGridButton() {
-        const button = $("#snap-grid-button").dxButton("instance");
+    updateToggleButton(buttonId, active, iconName) {
+        const button = $(`#${buttonId}`).dxButton("instance");
         if (!button)
             return;
-        const active = this.shell.properties.snapToGrid;
-        button.option("icon", active ? "fa-solid fa-grid" : "fa-light fa-grid");
+        button.option("icon", `${active ? "fa-solid" : "fa-light"} ${iconName}`);
+        $(button.element()).toggleClass("dx-state-selected", active === true);
+    }
+
+    updateSnapToGridButton() {
+        this.updateToggleButton("snap-grid-button", this.shell.properties.snapToGrid, "fa-grid");
+    }
+
+    updateMiniMapButton() {
+        this.updateToggleButton("minimap-button", this.shell.miniMap?.isVisible(), "fa-map");
     }
 
 }
