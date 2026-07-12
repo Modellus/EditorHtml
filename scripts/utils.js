@@ -276,11 +276,16 @@ class Utils {
             textElement.appendChild(valueSpan);
             return;
         }
-        const termSpan = document.createElementNS(svgNs, "tspan");
-        termSpan.setAttribute("font-family", "Katex_Math");
-        termSpan.setAttribute("dominant-baseline", "central");
-        termSpan.textContent = Utils.convertMathTermToPlainText(termLatex);
-        textElement.appendChild(termSpan);
+        const termText = Utils.convertMathTermToPlainText(termLatex);
+        const termSegments = termText.match(/\d+|\D+/g) ?? [];
+        for (const segment of termSegments) {
+            const termSpan = document.createElementNS(svgNs, "tspan");
+            // Katex_Math is the math-italic font whose digit glyphs are oldstyle figures ("0" reads as "o"), so digits use the upright main font.
+            termSpan.setAttribute("font-family", /\d/.test(segment) ? "Katex_Main" : "Katex_Math");
+            termSpan.setAttribute("dominant-baseline", "central");
+            termSpan.textContent = segment;
+            textElement.appendChild(termSpan);
+        }
         const restSpan = document.createElementNS(svgNs, "tspan");
         restSpan.setAttribute("font-family", "Katex_Main");
         restSpan.setAttribute("dominant-baseline", "central");
