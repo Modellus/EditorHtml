@@ -145,6 +145,7 @@ class NotebookEditor extends Workspace {
         const chartDescriptor = BlocksRegistry.getDescriptor("chart");
         const expressionDescriptor = BlocksRegistry.getDescriptor("expression");
         const tableDescriptor = BlocksRegistry.getDescriptor("table");
+        const textDescriptor = BlocksRegistry.getDescriptor("text");
         const resolveNotebookToolbarMixin = descriptor => {
             if (typeof descriptor?.getNotebookToolbarMixin === "function")
                 return descriptor.getNotebookToolbarMixin();
@@ -154,6 +155,7 @@ class NotebookEditor extends Workspace {
             [chartDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(chartDescriptor)],
             [expressionDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(expressionDescriptor)],
             [tableDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(tableDescriptor)],
+            [textDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(textDescriptor)],
             [SliderNotebookShape, SliderShapeToolbarMixin],
             [GaugeNotebookShape, GaugeShapeToolbarMixin],
             [ValueNotebookShape, ValueShapeToolbarMixin],
@@ -162,8 +164,7 @@ class NotebookEditor extends Workspace {
             [QuestionNotebookShape, QuestionShapeToolbarMixin],
             [RulerNotebookShape, RulerShapeToolbarMixin],
             [ProtractorNotebookShape, ProtractorShapeToolbarMixin],
-            [SlopeNotebookShape, SlopeShapeToolbarMixin],
-            [TextNotebookShape, TextShapeToolbarMixin]
+            [SlopeNotebookShape, SlopeShapeToolbarMixin]
         ];
         for (const [shapeClass, toolbarMixin] of bindings) {
             if (!shapeClass || !toolbarMixin)

@@ -196,6 +196,20 @@ html, body {
     line-height: 1.6;
 }
 
+.notebook-text-control {
+    width: 100%;
+}
+
+.notebook-text-control .dx-htmleditor {
+    border: none;
+    box-shadow: none;
+    background-color: transparent;
+}
+
+.notebook-text-control .dx-htmleditor-content {
+    padding: 0;
+}
+
 .block-type-header .notebook-block-content {
     font-size: 22px;
     font-weight: 600;
