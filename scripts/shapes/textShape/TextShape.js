@@ -92,7 +92,34 @@ class TextShape extends BaseShape {
             value: this.properties.text,
             onValueChanged: e => this.onEditorValueChanged(e.value)
         }).dxHtmlEditor("instance");
+        this.attachLinkNavigation();
         return $wrapper.get(0);
+    }
+
+    attachLinkNavigation() {
+        const host = this.$editorHost.get(0);
+        host.addEventListener("pointerdown", event => {
+            if (!this.htmlEditor?.option("readOnly"))
+                return;
+            if (event.target.closest("a[href]"))
+                // Cancelling the probe pointerdown tells the board's
+                // move-handle passthrough (Shape.js) to forward a click
+                // here instead of starting a shape drag.
+                event.preventDefault();
+        });
+        host.addEventListener("click", event => {
+            if (!this.htmlEditor?.option("readOnly"))
+                return;
+            const anchor = event.target.closest("a[href]");
+            if (!anchor)
+                return;
+            event.preventDefault();
+            event.stopPropagation();
+            const href = anchor.getAttribute("href");
+            if (!href || href.trim().toLowerCase().startsWith("javascript:"))
+                return;
+            window.open(anchor.href, "_blank", "noopener");
+        });
     }
 
     onEditorValueChanged(value) {
