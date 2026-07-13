@@ -306,6 +306,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitDifferential?: (ctx: DifferentialContext) => void;
     /**
+     * Enter a parse tree produced by the `DerivativePrime`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     */
+    enterDerivativePrime?: (ctx: DerivativePrimeContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativePrime`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     */
+    exitDerivativePrime?: (ctx: DerivativePrimeContext) => void;
+    /**
      * Enter a parse tree produced by the `Function`
      * labeled alternative in `LatexMathParser.assignment`.
      * @param ctx the parse tree
@@ -755,6 +767,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitCeil?: (ctx: CeilContext) => void;
+    /**
+     * Enter a parse tree produced by the `NthRoot`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterNthRoot?: (ctx: NthRootContext) => void;
+    /**
+     * Exit a parse tree produced by the `NthRoot`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitNthRoot?: (ctx: NthRootContext) => void;
     /**
      * Enter a parse tree produced by the `IRnd`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1274,6 +1298,16 @@ declare class FunctionContext extends AssignmentContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class DerivativePrimeContext extends AssignmentContext {
+    constructor(ctx: AssignmentContext);
+    name(): NameContext[];
+    name(i: number): NameContext | null;
+    expression(): ExpressionContext;
+    units(): UnitsContext | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class FunctionIndependentContext extends AssignmentContext {
     constructor(ctx: AssignmentContext);
     name(): NameContext;
@@ -1577,6 +1611,14 @@ declare class DerivativeDContext extends ExpressionContext {
 declare class CeilContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class NthRootContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext[];
+    expression(i: number): ExpressionContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1909,6 +1951,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitDifferential?: (ctx: DifferentialContext) => Result;
     /**
+     * Visit a parse tree produced by the `DerivativePrime`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativePrime?: (ctx: DerivativePrimeContext) => Result;
+    /**
      * Visit a parse tree produced by the `Function`
      * labeled alternative in `LatexMathParser.assignment`.
      * @param ctx the parse tree
@@ -2171,6 +2220,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitCeil?: (ctx: CeilContext) => Result;
+    /**
+     * Visit a parse tree produced by the `NthRoot`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitNthRoot?: (ctx: NthRootContext) => Result;
     /**
      * Visit a parse tree produced by the `IRnd`
      * labeled alternative in `LatexMathParser.expression`.
@@ -2484,6 +2540,7 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitSecant: (context: SecantContext) => Branch;
     visitCosecant: (context: CosecantContext) => Branch;
     visitSquareRoot: (context: SquareRootContext) => Branch;
+    visitNthRoot: (context: NthRootContext) => Branch;
     visitLogarithm: (context: LogarithmContext) => Branch;
     visitNaturalLogarithm: (context: NaturalLogarithmContext) => Branch;
     visitMaximum: (context: MaximumContext) => Branch;
@@ -2751,6 +2808,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitParenthesis: (context: ParenthesisContext) => Branch;
     visitParenthesisPlain: (context: ParenthesisPlainContext) => Branch;
     visitBraces: (context: BracesContext) => Branch;
+    visitDerivativePrime: (context: DerivativePrimeContext) => Branch;
     visitDifferential: (context: DifferentialContext) => Branch;
     private toRadians;
     visitSine: (context: SineContext) => Branch;
@@ -2766,6 +2824,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitSecant: (context: SecantContext) => Branch;
     visitCosecant: (context: CosecantContext) => Branch;
     visitSquareRoot: (context: SquareRootContext) => Branch;
+    visitNthRoot: (context: NthRootContext) => Branch;
     visitNegation: (context: NegationContext) => Branch;
     visitPositive: (context: PositiveContext) => Branch;
     visitLogarithm: (context: LogarithmContext) => Branch;

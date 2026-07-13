@@ -209,6 +209,8 @@ class ExpressionControl {
         if (keydownEvent.key === "'") {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
+            this.mathfield.executeCommand("insert", "^{\\prime}");
+            this.mathfield.executeCommand("moveAfterParent");
             return;
         }
         if (keydownEvent.key === "\\") {

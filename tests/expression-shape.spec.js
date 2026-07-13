@@ -465,6 +465,17 @@ test.describe('Keyboard shortcuts', () => {
         expect(value).toContain('\\left|');
     });
 
+    test("' produces prime derivative", async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type("f'(t)=x*t");
+        await page.waitForTimeout(500);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain("f^{\\prime}");
+        expect(value).toMatch(/f\^\{\\prime\}\\left\(t\\right\)=x\\cdot t/);
+    });
+
     test('dead key does not stall the editor', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
