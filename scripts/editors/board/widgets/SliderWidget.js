@@ -88,21 +88,11 @@ class SliderShape extends BaseShape {
             },
             {
                 text: "Minimum",
-                buildControl: $container => {
-                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                        value: this.properties.minimum,
-                        onValueChanged: e => this.setPropertyCommand("minimum", e.value)
-                    })).appendTo($container);
-                }
+                buildControl: $container => $container.append(this.createScaleValueControl("minimum", "showMinimumValue"))
             },
             {
                 text: "Maximum",
-                buildControl: $container => {
-                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                        value: this.properties.maximum,
-                        onValueChanged: e => this.setPropertyCommand("maximum", e.value)
-                    })).appendTo($container);
-                }
+                buildControl: $container => $container.append(this.createScaleValueControl("maximum", "showMaximumValue"))
             },
             {
                 text: "Precision",
@@ -131,6 +121,20 @@ class SliderShape extends BaseShape {
         });
     }
 
+    createScaleValueControl(valueProperty, visibilityProperty) {
+        const control = $('<div class="name-packed-control">');
+        const visibilityHost = $("<div>").addClass("name-packed-control__button").appendTo(control);
+        TermControl.createVisibilityCheckbox(visibilityHost, this.properties[visibilityProperty] === true, value => {
+            this.setPropertyCommand(visibilityProperty, value);
+        });
+        const inputHost = $("<div>").addClass("name-packed-control__input").appendTo(control);
+        inputHost.dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+            value: this.properties[valueProperty],
+            onValueChanged: e => this.setPropertyCommand(valueProperty, e.value)
+        }));
+        return control;
+    }
+
     setDefaults() {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Slider Name");
@@ -145,6 +149,8 @@ class SliderShape extends BaseShape {
         this.properties.autoScale = true;
         this.properties.minimum = 0;
         this.properties.maximum = 10;
+        this.properties.showMinimumValue = true;
+        this.properties.showMaximumValue = true;
         this.properties.fillColor = this.board.theme.getBackgroundColors()[3].color;
         this.properties.precision = 0;
         this.properties.positiveColor = this.properties.foregroundColor;
@@ -158,15 +164,20 @@ class SliderShape extends BaseShape {
         this.bottomPart = this.board.createSvgElement("rect");
         this.container = this.board.createSvgElement("rect");
         this.splitter = this.board.createSvgElement("line");
+        this.zeroLine = this.board.createSvgElement("line");
         this.ticksGroup = this.board.createSvgElement("g");
+        this.scaleLabelsGroup = this.board.createSvgElement("g");
         this.tickInteractionLayer = this.board.createSvgElement("g");
         this.tickInteractionLayer.setAttribute("class", "slider-export-exclude");
         this.container.setAttribute("stroke-width", 1);
-        this.splitter.setAttribute("stroke-width", 2);
+        this.splitter.setAttribute("stroke-width", 4);
+        this.zeroLine.setAttribute("stroke-width", 1);
         element.appendChild(this.topPart);
         element.appendChild(this.fillPart);
         element.appendChild(this.bottomPart);
         element.appendChild(this.ticksGroup);
+        element.appendChild(this.zeroLine);
+        element.appendChild(this.scaleLabelsGroup);
         element.appendChild(this.container);
         element.appendChild(this.splitter);
         element.appendChild(this.tickInteractionLayer);
@@ -302,8 +313,10 @@ class SliderShape extends BaseShape {
             splitterOffset: this.getSplitterOffsetFromValue(normalizedValue, range.minimum, range.maximum),
             zeroOffset: this.getSplitterOffsetFromValue(0, range.minimum, range.maximum),
             fillColor: fillColor,
+            splitterColor: Utils.darkenColor(fillColor, 0.35),
             backgroundColor: this.properties.backgroundColor,
-            borderColor: this.getBorderColor()
+            borderColor: this.getBorderColor(),
+            draggable: this.isInteractable() && !this.isTermLocked("term")
         };
     }
 
@@ -326,8 +339,12 @@ class SliderShape extends BaseShape {
             this.fillPart.setAttribute("fill", config.fillColor);
             this.fillPart.setAttribute("stroke", "none");
         }
-        if (this.splitter)
-            this.splitter.setAttribute("stroke", config.borderColor);
+        if (this.splitter) {
+            this.splitter.setAttribute("stroke", config.splitterColor);
+            this.splitter.setAttribute("visibility", config.draggable ? "visible" : "hidden");
+        }
+        if (this.zeroLine)
+            this.zeroLine.setAttribute("stroke", config.borderColor);
     }
 
     updateSliderState() {
@@ -458,7 +475,15 @@ class SliderShape extends BaseShape {
         this.splitter.setAttribute("y1", splitterY);
         this.splitter.setAttribute("x2", trackX + trackWidth);
         this.splitter.setAttribute("y2", splitterY);
+        const config = this._sliderConfig ?? this.buildSliderConfig();
+        const zeroInsideRange = config.minimum < 0 && config.maximum > 0;
+        this.zeroLine.setAttribute("visibility", zeroInsideRange ? "visible" : "hidden");
+        this.zeroLine.setAttribute("x1", trackX);
+        this.zeroLine.setAttribute("y1", zeroY);
+        this.zeroLine.setAttribute("x2", trackX + trackWidth);
+        this.zeroLine.setAttribute("y2", zeroY);
         this.drawTicks(trackX, trackWidth, sliderHeight);
+        this.drawScaleLabels(trackX, sliderHeight, config, zeroY, zeroInsideRange);
         this.element.setAttribute("transform", `translate(${position.x} ${position.y}) rotate(${this.properties.rotation} ${sliderWidth / 2} ${sliderHeight / 2})`);
     }
 
@@ -488,6 +513,39 @@ class SliderShape extends BaseShape {
             }
         }
         this._updateTickInteractionHandles(trackX, trackWidth, sliderHeight, config);
+    }
+
+    drawScaleLabels(trackX, sliderHeight, config, zeroY, zeroInsideRange) {
+        if (!this.scaleLabelsGroup)
+            return;
+        while (this.scaleLabelsGroup.firstChild)
+            this.scaleLabelsGroup.removeChild(this.scaleLabelsGroup.firstChild);
+        const labelX = trackX + 8;
+        const showMaximum = this.properties.showMaximumValue === true;
+        const showMinimum = this.properties.showMinimumValue === true;
+        if (showMaximum)
+            this.appendScaleLabel(this.formatModelValue(config.maximum), labelX, 11);
+        if (showMinimum)
+            this.appendScaleLabel(this.formatModelValue(config.minimum), labelX, sliderHeight - 5);
+        if (zeroInsideRange) {
+            const clearOfMaximum = !showMaximum || zeroY > 22;
+            const clearOfMinimum = !showMinimum || zeroY < sliderHeight - 16;
+            if (clearOfMaximum && clearOfMinimum)
+                this.appendScaleLabel("0", labelX, zeroY - 3);
+        }
+    }
+
+    appendScaleLabel(text, x, y) {
+        const label = this.board.createSvgElement("text");
+        label.setAttribute("class", "shape-tick-label");
+        label.setAttribute("x", x);
+        label.setAttribute("y", y);
+        label.setAttribute("text-anchor", "start");
+        label.setAttribute("fill", this.properties.foregroundColor);
+        label.setAttribute("font-family", "KaTeX_Main");
+        label.setAttribute("font-size", "9");
+        label.textContent = text;
+        this.scaleLabelsGroup.appendChild(label);
     }
 
     _getTickRatios(range, precision, sliderHeight) {

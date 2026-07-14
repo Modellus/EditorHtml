@@ -464,6 +464,15 @@ class Utils {
         return "#ffffff";
     }
 
+    static darkenColor(colorValue, amount = 0.3) {
+        const rgb = Utils.parseColorToRgb(colorValue);
+        if (!rgb)
+            return colorValue;
+        const factor = 1 - amount;
+        const toHex = channel => Math.round(channel * factor).toString(16).padStart(2, "0");
+        return `#${toHex(rgb.red)}${toHex(rgb.green)}${toHex(rgb.blue)}`;
+    }
+
     static parseColorToRgb(colorValue) {
         const normalizedValue = String(colorValue ?? "").trim();
         if (normalizedValue === "")
