@@ -3,7 +3,7 @@ import { ParseTreeListener, TerminalNode, ErrorNode, ParserRuleContext, Abstract
 import { EventEmitter } from 'events';
 
 declare class Branch {
-    readonly text: string;
+    text: string;
     readonly children: Branch[];
     calculate: (values: {
         [name: string]: number;
@@ -552,6 +552,30 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitMultiplication?: (ctx: MultiplicationContext) => void;
     /**
+     * Enter a parse tree produced by the `DerivativePrimeExpression`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivativePrimeExpression?: (ctx: DerivativePrimeExpressionContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativePrimeExpression`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivativePrimeExpression?: (ctx: DerivativePrimeExpressionContext) => void;
+    /**
+     * Enter a parse tree produced by the `DerivativeDOperator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivativeDOperator?: (ctx: DerivativeDOperatorContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativeDOperator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivativeDOperator?: (ctx: DerivativeDOperatorContext) => void;
+    /**
      * Enter a parse tree produced by the `FunctionApplication`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -708,6 +732,30 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitDeterminant?: (ctx: DeterminantContext) => void;
     /**
+     * Enter a parse tree produced by the `DerivativeOperator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivativeOperator?: (ctx: DerivativeOperatorContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativeOperator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivativeOperator?: (ctx: DerivativeOperatorContext) => void;
+    /**
+     * Enter a parse tree produced by the `DerivativeOperatorPlain`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivativeOperatorPlain?: (ctx: DerivativeOperatorPlainContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativeOperatorPlain`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivativeOperatorPlain?: (ctx: DerivativeOperatorPlainContext) => void;
+    /**
      * Enter a parse tree produced by the `ArcTangent`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -755,6 +803,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitDerivativeD?: (ctx: DerivativeDContext) => void;
+    /**
+     * Enter a parse tree produced by the `DerivativePrimeExpressionPlain`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivativePrimeExpressionPlain?: (ctx: DerivativePrimeExpressionPlainContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativePrimeExpressionPlain`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivativePrimeExpressionPlain?: (ctx: DerivativePrimeExpressionPlainContext) => void;
     /**
      * Enter a parse tree produced by the `Ceil`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1055,6 +1115,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitLogarithm?: (ctx: LogarithmContext) => void;
+    /**
+     * Enter a parse tree produced by the `DerivativeDOperatorNoBraces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivativeDOperatorNoBraces?: (ctx: DerivativeDOperatorNoBracesContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativeDOperatorNoBraces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivativeDOperatorNoBraces?: (ctx: DerivativeDOperatorNoBracesContext) => void;
     /**
      * Enter a parse tree produced by the `Round`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1472,6 +1544,24 @@ declare class MultiplicationContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class DerivativePrimeExpressionContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    name(): NameContext[];
+    name(i: number): NameContext | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DerivativeDOperatorContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    name(): NameContext;
+    expression(): ExpressionContext;
+    ID(): antlr.TerminalNode[];
+    ID(i: number): antlr.TerminalNode | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class FunctionApplicationContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     name(): NameContext;
@@ -1571,6 +1661,26 @@ declare class DeterminantContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class DerivativeOperatorContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    differentialMarker(): DifferentialMarkerContext[];
+    differentialMarker(i: number): DifferentialMarkerContext | null;
+    name(): NameContext;
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DerivativeOperatorPlainContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    differentialMarker(): DifferentialMarkerContext[];
+    differentialMarker(i: number): DifferentialMarkerContext | null;
+    name(): NameContext;
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class ArcTangentContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
@@ -1604,6 +1714,14 @@ declare class DerivativeDContext extends ExpressionContext {
     name(): NameContext;
     ID(): antlr.TerminalNode[];
     ID(i: number): antlr.TerminalNode | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DerivativePrimeExpressionPlainContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    name(): NameContext[];
+    name(i: number): NameContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1787,6 +1905,16 @@ declare class SquareRootContext extends ExpressionContext {
 declare class LogarithmContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DerivativeDOperatorNoBracesContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    name(): NameContext;
+    expression(): ExpressionContext;
+    ID(): antlr.TerminalNode[];
+    ID(i: number): antlr.TerminalNode | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -2095,6 +2223,20 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitMultiplication?: (ctx: MultiplicationContext) => Result;
     /**
+     * Visit a parse tree produced by the `DerivativePrimeExpression`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativePrimeExpression?: (ctx: DerivativePrimeExpressionContext) => Result;
+    /**
+     * Visit a parse tree produced by the `DerivativeDOperator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativeDOperator?: (ctx: DerivativeDOperatorContext) => Result;
+    /**
      * Visit a parse tree produced by the `FunctionApplication`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -2186,6 +2328,20 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitDeterminant?: (ctx: DeterminantContext) => Result;
     /**
+     * Visit a parse tree produced by the `DerivativeOperator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativeOperator?: (ctx: DerivativeOperatorContext) => Result;
+    /**
+     * Visit a parse tree produced by the `DerivativeOperatorPlain`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativeOperatorPlain?: (ctx: DerivativeOperatorPlainContext) => Result;
+    /**
      * Visit a parse tree produced by the `ArcTangent`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -2213,6 +2369,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitDerivativeD?: (ctx: DerivativeDContext) => Result;
+    /**
+     * Visit a parse tree produced by the `DerivativePrimeExpressionPlain`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativePrimeExpressionPlain?: (ctx: DerivativePrimeExpressionPlainContext) => Result;
     /**
      * Visit a parse tree produced by the `Ceil`
      * labeled alternative in `LatexMathParser.expression`.
@@ -2389,6 +2552,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitLogarithm?: (ctx: LogarithmContext) => Result;
     /**
+     * Visit a parse tree produced by the `DerivativeDOperatorNoBraces`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativeDOperatorNoBraces?: (ctx: DerivativeDOperatorNoBracesContext) => Result;
+    /**
      * Visit a parse tree produced by the `Round`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -2562,6 +2732,14 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
     visitDerivative: (context: DerivativeContext) => Branch;
     visitDerivativeD: (context: DerivativeDContext) => Branch;
+    visitDerivativeOperator: (context: DerivativeOperatorContext) => Branch;
+    visitDerivativeOperatorPlain: (context: DerivativeOperatorPlainContext) => Branch;
+    visitDerivativeDOperator: (context: DerivativeDOperatorContext) => Branch;
+    visitDerivativeDOperatorNoBraces: (context: DerivativeDOperatorNoBracesContext) => Branch;
+    visitDerivativePrimeExpression: (context: DerivativePrimeExpressionContext) => Branch;
+    visitDerivativePrimeExpressionPlain: (context: DerivativePrimeExpressionPlainContext) => Branch;
+    private derivePrimeInner;
+    private deriveInnerDerivative;
 }
 
 declare class Engine extends EventEmitter {
@@ -2846,6 +3024,17 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDerivativeDMixed: (context: DerivativeDMixedContext) => Branch;
     visitDerivativeDMixedNoBraces: (context: DerivativeDMixedNoBracesContext) => Branch;
     visitDerivativeDNoBraces: (context: DerivativeDNoBracesContext) => Branch;
+    visitDerivativeOperator: (context: DerivativeOperatorContext) => Branch;
+    visitDerivativeOperatorPlain: (context: DerivativeOperatorPlainContext) => Branch;
+    visitDerivativeDOperator: (context: DerivativeDOperatorContext) => Branch;
+    visitDerivativeDOperatorNoBraces: (context: DerivativeDOperatorNoBracesContext) => Branch;
+    visitDerivativePrimeExpression: (context: DerivativePrimeExpressionContext) => Branch;
+    visitDerivativePrimeExpressionPlain: (context: DerivativePrimeExpressionPlainContext) => Branch;
+    private primeDerivativeBranch;
+    private deriveExpressionBranch;
+    private hasUnresolvedNames;
+    private lazyDerivativeBranch;
+    private deriveNamedExpression;
     visitDeltaName: (context: DeltaNameContext) => Branch;
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
