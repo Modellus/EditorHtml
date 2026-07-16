@@ -104,6 +104,8 @@ class BottomToolbar {
                     sliderValue: 1,
                     sliderWidth: 400,
                     sliderTooltipFormatter: value => {
+                        if (this.getPlayerTerm() === "iteration")
+                            return Utils.formatNumber(this.shell.calculator.getIterationTermValue(value), 0);
                         const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
                         return Utils.formatNumber(this.shell.calculator.getIndependentValue(value), precision);
                     },
@@ -344,7 +346,7 @@ class BottomToolbar {
                         fontStyle: "italic",
                         fontSize: "16px"
                     })
-                    .text(this.shell.calculator.properties.independent.name);
+                    .text(this.getPlayerTermName());
                 this._independentNameLabel = $span[0];
                 element[0].appendChild($span[0]);
             },
@@ -362,16 +364,26 @@ class BottomToolbar {
         const listItems = [
             {
                 text: this.shell.board.translations.get("Independent.Name"),
+                buildControl: $container => this.createPlayerTermNameEditor($container, "independent")
+            },
+            {
+                text: this.shell.board.translations.get("IterationTerm"),
+                buildControl: $container => this.createPlayerTermNameEditor($container, "iteration")
+            },
+            {
+                text: this.shell.board.translations.get("CasesCount"),
                 buildControl: $container => {
-                    $('<div>').appendTo($container).dxTextBox({
-                        value: this.shell.calculator.properties.independent.name,
+                    $('<div>').dxNumberBox({
+                        value: this.shell.properties.casesCount,
+                        min: 1,
+                        max: 9,
+                        step: 1,
+                        showSpinButtons: true,
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
-                        onValueChanged: e => {
-                            this.shell.setPropertyCommand("independent.name", e.value);
-                            this._independentNameLabel.textContent = e.value;
-                        }
-                    });
+                        inputAttr: { style: "font-family: Atma, sans-serif" },
+                        onValueChanged: e => this.shell.setPropertyCommand("casesCount", e.value)
+                    }).appendTo($container);
                 }
             },
             {
@@ -435,6 +447,91 @@ class BottomToolbar {
         });
     }
 
+    getPlayerTerm() {
+        return this.shell.properties.playerTerm ?? "independent";
+    }
+
+    getPlayerTermName() {
+        const properties = this.shell.calculator.properties;
+        return this.getPlayerTerm() === "iteration" ? properties.iterationTerm : properties.independent.name;
+    }
+
+    createPlayerTermNameEditor($container, key) {
+        const control = $("<div>").addClass("term-packed-control");
+        const buttonHost = $("<div>").addClass("term-packed-control__button");
+        control.append(buttonHost);
+        const checkbox = TermControl.createVisibilityCheckbox(buttonHost, this.getPlayerTerm() === key, value => {
+            if (this._syncingPlayerTermVisibility)
+                return;
+            if (value && key !== this.getPlayerTerm())
+                this.shell.setPropertyCommand("playerTerm", key);
+            this.syncPlayerTermVisibilityCheckboxes();
+        });
+        if (key === "independent")
+            this._independentVisibilityCheckbox = checkbox;
+        else
+            this._iterationVisibilityCheckbox = checkbox;
+        const editorHost = $("<div>").addClass("term-packed-control__select");
+        control.append(editorHost);
+        const properties = this.shell.calculator.properties;
+        $('<div>').appendTo(editorHost).dxTextBox({
+            value: key === "independent" ? properties.independent.name : properties.iterationTerm,
+            width: "100%",
+            stylingMode: "filled",
+            elementAttr: { class: "mdl-math-input" },
+            onValueChanged: e => this.shell.setPropertyCommand(key === "independent" ? "independent.name" : "iterationTerm", e.value)
+        });
+        if (key === "iteration")
+            this.createIterationDomainButtonGroup(control);
+        control.appendTo($container);
+    }
+
+    createIterationDomainButtonGroup(control) {
+        const host = $("<div>").css({ marginLeft: "8px", flex: "0 0 auto", alignSelf: "center" });
+        control.append(host);
+        this._iterationDomainGroupElement = $('<div>').dxButtonGroup({
+            items: [
+                { key: 0, text: "ℕ₀", hint: this.shell.board.translations.get("StartsAtZero") },
+                { key: 1, text: "ℕ", hint: this.shell.board.translations.get("StartsAtOne") }
+            ],
+            keyExpr: "key",
+            selectedItemKeys: [this.shell.properties.iterationTermStart ?? 1],
+            stylingMode: "outlined",
+            elementAttr: { class: "mdl-pill-group" },
+            buttonTemplate: (data, buttonContainer) => {
+                buttonContainer[0].innerHTML = `<span class="mdl-button-text">${data.text}</span>`;
+            },
+            onContentReady: e => this._initPillButtonGroup(e.element[0]),
+            onSelectionChanged: e => {
+                if (e.addedItems.length > 0 && e.addedItems[0].key !== (this.shell.properties.iterationTermStart ?? 1))
+                    this.shell.setPropertyCommand("iterationTermStart", e.addedItems[0].key);
+                this._movePill(e.component.element()[0]);
+                e.component.repaint();
+            }
+        });
+        this._iterationDomainGroupElement.appendTo(host);
+    }
+
+    syncIterationDomainButtonGroup() {
+        const element = this._iterationDomainGroupElement?.[0];
+        if (!element)
+            return;
+        const group = this._iterationDomainGroupElement.dxButtonGroup("instance");
+        const selectedKey = this.shell.properties.iterationTermStart ?? 1;
+        if (group.option("selectedItemKeys")[0] !== selectedKey)
+            group.option("selectedItemKeys", [selectedKey]);
+    }
+
+    syncPlayerTermVisibilityCheckboxes() {
+        if (!this._independentVisibilityCheckbox && !this._iterationVisibilityCheckbox)
+            return;
+        this._syncingPlayerTermVisibility = true;
+        const playerTerm = this.getPlayerTerm();
+        this._independentVisibilityCheckbox?.option("value", playerTerm === "independent");
+        this._iterationVisibilityCheckbox?.option("value", playerTerm === "iteration");
+        this._syncingPlayerTermVisibility = false;
+    }
+
     _initPillButtonGroup(element) {
         const pill = document.createElement("div");
         pill.className = "mdl-pill";
@@ -471,17 +568,24 @@ class BottomToolbar {
         this.shell.updatePlayerSliderRange(finalIteration);
         this.shell.updatePlayerSliderValue(iteration);
         ModellusPlayerToolbar.updateCalculatedProgress(this.playHead, this.shell.calculator.getLastCalculatedIteration());
-        const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
-        if (this._startLabel)
-            this._startLabel.textContent = Utils.formatNumber(this.shell.calculator.getStart(), precision);
+        const showIterationTerm = this.getPlayerTerm() === "iteration";
+        const precision = showIterationTerm ? 0 : Utils.getPrecision(this.shell.calculator.properties.independent.step);
+        if (this._startLabel) {
+            const start = showIterationTerm ? this.shell.calculator.getIterationTermValue(1) : this.shell.calculator.getStart();
+            this._startLabel.textContent = Utils.formatNumber(start, precision);
+        }
         if (this._endLabel) {
             if (this.shell.calculator.properties.independent.noLimit)
                 this._endLabel.innerHTML = '<i class="fa-light fa-infinity" style="font-size:14px; font-weight:400; padding-top:3px"></i>';
-            else
-                this._endLabel.textContent = Utils.formatNumber(this.shell.calculator.getEnd(), precision);
+            else {
+                const end = showIterationTerm ? this.shell.calculator.getIterationTermValue(finalIteration) : this.shell.calculator.getEnd();
+                this._endLabel.textContent = Utils.formatNumber(end, precision);
+            }
         }
         if (this._independentNameLabel)
-            this._independentNameLabel.textContent = this.shell.calculator.properties.independent.name;
+            this._independentNameLabel.textContent = this.getPlayerTermName();
+        this.syncPlayerTermVisibilityCheckboxes();
+        this.syncIterationDomainButtonGroup();
     }
 
     updateToggleButton(buttonId, active, iconName) {

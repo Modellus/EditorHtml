@@ -407,6 +407,17 @@
           "default": "n",
           "description": "Name of the iteration counter term."
         },
+        "iterationTermStart": {
+          "type": "integer",
+          "default": 1,
+          "description": "First value of the iteration term. Default 1 (n ∈ ℕ). Set 0 when the user says n ∈ ℕ0, 'n starts at 0' or 'n = 0, 1, 2, …' (any integer is allowed, e.g. 'start n at -3'). Do NOT change the model equations to compensate: subscripts are already interpreted in n-space, so with start 0 the seed is written x_0=1 and x_{n-1} refers to the previous row, same as before. Never emulate the offset by rewriting indices (e.g. x_{n} → x_{n+1}); this property is the only correct mechanism."
+        },
+        "playerTerm": {
+          "type": "string",
+          "enum": ["independent", "iteration"],
+          "default": "independent",
+          "description": "Which term the player toolbar displays: the independent variable (its value at the current step) or the iteration term (its integer values). Display-only; playback mechanics are unchanged."
+        },
         "casesCount": {
           "type": "integer",
           "minimum": 1,

@@ -18,7 +18,7 @@ class Calculator extends EventTarget {
     }
 
     createDefaultProperties() {
-        return { precision: 2, angleUnit: "radians", independent: { name: "t", start: 0, end: 10, step: 0.1, noLimit: false }, iterationTerm: "n", casesCount: 1, initialValuesByCase: {}, iterationDuration: null };
+        return { precision: 2, angleUnit: "radians", independent: { name: "t", start: 0, end: 10, step: 0.1, noLimit: false }, iterationTerm: "n", iterationTermStart: 1, casesCount: 1, initialValuesByCase: {}, iterationDuration: null };
     }
 
     setDefaults() {
@@ -149,6 +149,7 @@ class Calculator extends EventTarget {
         this.system.setInitialIndependent(this.properties.independent.start);
         this.system.step = this.properties.independent.step;
         this.system.iterationTerm = this.properties.iterationTerm;
+        this.system.iterationTermStart = this.properties.iterationTermStart ?? 1;
         this.system.useRadians = this.properties.angleUnit === "radians";
         this.properties.casesCount = this.normalizeCasesCount(this.properties.casesCount);
         this.system.casesCount = this.properties.casesCount;
@@ -486,6 +487,10 @@ class Calculator extends EventTarget {
 
     getIndependentValue(iteration = this.system.iteration) {
         return this.system.getIndependentOnIteration(Math.max(1, Math.min(iteration, this.system.lastIteration)));
+    }
+
+    getIterationTermValue(iteration = this.system.iteration) {
+        return this.system.iterationToIterationTermValue(iteration);
     }
 
     get() {

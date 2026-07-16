@@ -114,39 +114,6 @@ class SettingsController {
                     template: (data, itemElement) => this._createBackgroundPicker(itemElement)
                 },
                 {
-                    itemType: "group",
-                    colSpan: 2,
-                    colCount: 4,
-                    items: [
-                        {
-                            dataField: "iterationTerm",
-                            label: {
-                                text: this.shell.board.translations.get("IterationTerm")
-                            },
-                            editorType: "dxTextBox",
-                            editorOptions: {
-                                stylingMode: "filled",
-                                elementAttr: { class: "mdl-math-input" }
-                            }
-                        },
-                        {
-                            dataField: "casesCount",
-                            label: {
-                                text: this.shell.board.translations.get("CasesCount")
-                            },
-                            editorType: "dxNumberBox",
-                            editorOptions: {
-                                min: 1,
-                                max: 9,
-                                step: 1,
-                                showSpinButtons: true,
-                                stylingMode: "filled",
-                                elementAttr: { class: "mdl-math-input" }
-                            }
-                        }
-                    ]
-                },
-                {
                     colSpan: 2,
                     dataField: "instructions",
                     label: { text: "AI Instructions" },

@@ -15,6 +15,8 @@ class ModelSession {
         this.properties.angleUnit = "radians";
         this.properties.independent = { name: "t", start: 0, end: 10, step: 0.1, noLimit: false };
         this.properties.iterationTerm = "n";
+        this.properties.iterationTermStart = 1;
+        this.properties.playerTerm = "independent";
         this.properties.casesCount = 1;
         this.properties.initialValuesByCase = {};
         this.properties.iterationDuration = null;

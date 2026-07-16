@@ -117,6 +117,7 @@
                 <tr><td><code>instructions</code></td><td>string</td><td>Markdown instructions shown to users</td></tr>
                 <tr><td><code>independent</code></td><td>object</td><td><code>{ name, start, end, step }</code> — the simulation variable and its range</td></tr>
                 <tr><td><code>angleUnit</code></td><td>"radians" | "degrees"</td><td>Unit for all trigonometric functions</td></tr>
+                <tr><td><code>iterationTermStart</code></td><td>integer</td><td>First value of the iteration term: 1 by default (n ∈ ℕ), 0 for n ∈ ℕ₀. Subscripts stay in n-space — never rewrite indices to emulate the offset</td></tr>
                 <tr><td><code>casesCount</code></td><td>integer</td><td>Number of independent simulation cases</td></tr>
                 <tr><td><code>initialValuesByCase</code></td><td>object</td><td>Map of case number → { termName: initialValue } for differential terms</td></tr>
             </tbody>

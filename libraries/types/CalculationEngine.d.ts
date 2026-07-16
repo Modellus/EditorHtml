@@ -124,6 +124,7 @@ declare class System {
     static readonly INFINITY: number;
     private _independent;
     private _iterationTerm;
+    private _iterationTermStart;
     terms: {
         [name: string]: Term;
     };
@@ -153,11 +154,16 @@ declare class System {
     private readonly processors;
     private readonly singularitiesByKey;
     private readonly singularityList;
-    constructor(independent?: string, iterationTerm?: string);
+    constructor(independent?: string, iterationTerm?: string, iterationTermStart?: number);
     get independent(): Term;
     set independent(name: string);
     get iterationTerm(): Term;
     set iterationTerm(name: string);
+    get iterationTermStart(): number;
+    set iterationTermStart(value: number);
+    private normalizeIterationTermStart;
+    iterationToIterationTermValue(iteration: number): number;
+    iterationTermValueToIteration(termValue: number): number;
     registerProcessor(processor: SystemProcessor): void;
     setCaseCount(count: number): void;
     get lastIteration(): number;
@@ -612,6 +618,18 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitSine?: (ctx: SineContext) => void;
     /**
+     * Enter a parse tree produced by the `FractionDNumerator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterFractionDNumerator?: (ctx: FractionDNumeratorContext) => void;
+    /**
+     * Exit a parse tree produced by the `FractionDNumerator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitFractionDNumerator?: (ctx: FractionDNumeratorContext) => void;
+    /**
      * Enter a parse tree produced by the `Maximum`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -743,6 +761,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitDerivativeOperator?: (ctx: DerivativeOperatorContext) => void;
+    /**
+     * Enter a parse tree produced by the `FractionDDenominator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterFractionDDenominator?: (ctx: FractionDDenominatorContext) => void;
+    /**
+     * Exit a parse tree produced by the `FractionDDenominator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitFractionDDenominator?: (ctx: FractionDDenominatorContext) => void;
     /**
      * Enter a parse tree produced by the `DerivativeOperatorPlain`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1299,6 +1329,16 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitName?: (ctx: NameContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.dname`.
+     * @param ctx the parse tree
+     */
+    enterDname?: (ctx: DnameContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.dname`.
+     * @param ctx the parse tree
+     */
+    exitDname?: (ctx: DnameContext) => void;
     visitTerminal(node: TerminalNode): void;
     visitErrorNode(node: ErrorNode): void;
     enterEveryRule(node: ParserRuleContext): void;
@@ -1584,6 +1624,14 @@ declare class SineContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class FractionDNumeratorContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    dname(): DnameContext;
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class MaximumContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext[];
@@ -1667,6 +1715,14 @@ declare class DerivativeOperatorContext extends ExpressionContext {
     differentialMarker(i: number): DifferentialMarkerContext | null;
     name(): NameContext;
     expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class FractionDDenominatorContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    expression(): ExpressionContext;
+    dname(): DnameContext;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -2045,6 +2101,17 @@ declare class NameContext extends antlr.ParserRuleContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class DnameContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    ID(): antlr.TerminalNode[];
+    ID(i: number): antlr.TerminalNode | null;
+    DIGIT(): antlr.TerminalNode[];
+    DIGIT(i: number): antlr.TerminalNode | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 
 /**
  * This interface defines a complete generic visitor for a parse tree produced
@@ -2258,6 +2325,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitSine?: (ctx: SineContext) => Result;
     /**
+     * Visit a parse tree produced by the `FractionDNumerator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitFractionDNumerator?: (ctx: FractionDNumeratorContext) => Result;
+    /**
      * Visit a parse tree produced by the `Maximum`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -2334,6 +2408,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitDerivativeOperator?: (ctx: DerivativeOperatorContext) => Result;
+    /**
+     * Visit a parse tree produced by the `FractionDDenominator`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitFractionDDenominator?: (ctx: FractionDDenominatorContext) => Result;
     /**
      * Visit a parse tree produced by the `DerivativeOperatorPlain`
      * labeled alternative in `LatexMathParser.expression`.
@@ -2659,6 +2740,12 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitName?: (ctx: NameContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.dname`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDname?: (ctx: DnameContext) => Result;
 }
 
 declare class Deriver extends LatexMathVisitor<Branch> {
@@ -2693,6 +2780,11 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitMultiplicationImplicit: (context: MultiplicationImplicitContext) => Branch;
     visitDivision: (context: DivisionContext) => Branch;
     visitFraction: (context: FractionContext) => Branch;
+    visitFractionDNumerator: (context: FractionDNumeratorContext) => Branch;
+    visitFractionDDenominator: (context: FractionDDenominatorContext) => Branch;
+    private dnameVariable;
+    private variableBranch;
+    private deriveVariable;
     visitFractionDigits: (context: FractionDigitsContext) => Branch;
     visitPower: (context: PowerContext) => Branch;
     visitFactorial: (context: FactorialContext) => Branch;
@@ -2959,6 +3051,10 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     private extractUnits;
     visitFractionDigits: (context: FractionDigitsContext) => Branch;
     visitFraction: (context: FractionContext) => Branch;
+    visitFractionDNumerator: (context: FractionDNumeratorContext) => Branch;
+    visitFractionDDenominator: (context: FractionDDenominatorContext) => Branch;
+    private dnameBranch;
+    private fractionBranch;
     visitVariable: (context: VariableContext) => Branch;
     visitName: (context: NameContext) => Branch;
     visitDecimal: (context: DecimalContext) => Branch;
