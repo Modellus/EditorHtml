@@ -490,10 +490,25 @@ class BottomToolbar {
                         }
                     }).appendTo($container);
                 }
+            },
+            {
+                text: this.shell.board.translations.get("Auto Play") ?? "Auto Play",
+                buildControl: $container => {
+                    const switchElement = $('<div>').appendTo($container).dxSwitch({
+                        value: this.shell.properties.autoPlay === true,
+                        switchedOnText: this.shell.board.translations.get("On"),
+                        switchedOffText: this.shell.board.translations.get("Off"),
+                        onValueChanged: e => {
+                            if (e.value !== this.shell.properties.autoPlay)
+                                this.shell.setPropertyCommand("autoPlay", e.value);
+                        }
+                    });
+                    this._autoPlaySwitch = switchElement.dxSwitch("instance");
+                }
             }
         ];
         $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 250, width: "100%" });
+        $(contentElement).dxScrollView({ height: 300, width: "100%" });
         const scrollContent = $(contentElement).dxScrollView("instance").content();
         $('<div>').appendTo(scrollContent).dxList({
             dataSource: listItems,
@@ -649,6 +664,8 @@ class BottomToolbar {
             this._independentNameLabel.textContent = this.getPlayerTermName();
         this.syncPlayerTermVisibilityCheckboxes();
         this.syncIterationDomainButtonGroup();
+        if (this._autoPlaySwitch && this._autoPlaySwitch.option("value") !== (this.shell.properties.autoPlay === true))
+            this._autoPlaySwitch.option("value", this.shell.properties.autoPlay === true);
     }
 
     updateToggleButton(buttonId, active, iconName) {
