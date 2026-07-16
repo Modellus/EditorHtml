@@ -122,6 +122,22 @@ class Selection {
             return;
         this.onClickOutside(event);
         this.onSelectShape(event);
+        this.onBackgroundClick(event);
+    }
+
+    onBackgroundClick(event) {
+        if (!this.enabled)
+            return;
+        const targetShape = this.resolveSelectionTarget(event);
+        if (this.findShape(targetShape))
+            return;
+        const backgroundEvent = new CustomEvent("backgroundClicked", {
+            detail: {
+                clientX: event.clientX,
+                clientY: event.clientY
+            }
+        });
+        this.board.svg.dispatchEvent(backgroundEvent);
     }
 
     shouldSkipPointerUp(event) {

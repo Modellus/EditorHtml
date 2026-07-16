@@ -18,6 +18,8 @@ class BoardEditor extends Workspace {
         this.board.svg.addEventListener("zoom", e => this.onZoom(e));
         this.miniMap = new MiniMap(this.board, document.getElementById("MinimapImage"), document.getElementById("MinimapViewport"));
         this.settingsController = new SettingsController(this);
+        this.backgroundToolbar = new BackgroundToolbar(this);
+        this.board.svg.addEventListener("backgroundClicked", e => this.backgroundToolbar.toggle(e.detail));
         this.contextMenuController = new ContextMenuController(this);
         this.topToolbar = new TopToolbar(this);
         this.chatController = new ChatController(this);
@@ -203,6 +205,7 @@ class BoardEditor extends Workspace {
         this.applyBackground();
         this.bottomToolbar?.updateSnapToGridButton();
         this.topToolbar?.updateModelName();
+        this.backgroundToolbar?.refresh();
     }
     
     setProperty(name, value) {
@@ -296,6 +299,7 @@ class BoardEditor extends Workspace {
 
     onBeforePlayback() {
         this.deselectShape();
+        this.backgroundToolbar?.hide();
         this.applyUserPermissions();
     }
 
@@ -392,6 +396,7 @@ class BoardEditor extends Workspace {
 
     clear() {
         this.setDefaults();
+        this.backgroundToolbar?.hide();
         this.calculator.clear();
         this.board.clear();
         this.bottomToolbar.updatePlayer();
@@ -1087,7 +1092,10 @@ class BoardEditor extends Workspace {
     initializeShapeInteractionController() {
         this.shapeInteractionController = new ShapeInteractionController({
             isEditingTarget: target => target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "MATH-FIELD" || target?.isContentEditable === true,
-            clearSelection: () => this.board.deselect(),
+            clearSelection: () => {
+                this.board.deselect();
+                this.backgroundToolbar?.hide();
+            },
             canRemoveSelectedItem: () => this.board.selection.selectedShape != null,
             removeSelectedItem: () => {
                 const selectedShape = this.board.selection.selectedShape;

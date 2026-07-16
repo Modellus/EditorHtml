@@ -12,7 +12,6 @@ class ContextMenuController {
             importFromFile: () => shell.importFromFile(),
             exportToFile: () => shell.exportToFile(),
             exportData: () => shell.exportData(),
-            openSettings: () => shell.openSettings(),
             exit: () => shell.exitEditor()
         });
     }

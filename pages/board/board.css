@@ -392,6 +392,16 @@ body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:n
     display: block;
 }
 
+.mdl-background-toolbar .mdl-background-toolbar-name {
+    display: flex;
+    align-items: center;
+}
+
+.mdl-background-toolbar-check {
+    margin-left: auto;
+    padding-left: 12px;
+}
+
 .shape-context-toolbar .dx-toolbar {
     background: transparent;
     box-shadow: none;

@@ -127,14 +127,6 @@ class MenuController {
                 ]
             },
             {
-                text: this._t("Settings..."),
-                icon: "fa-light fa-gear",
-                shortcut: "",
-                beginGroup: true,
-                name: "Settings",
-                action: () => this.controller.openSettings()
-            },
-            {
                 text: this._t("More Models"),
                 icon: "fa-light fa-chevrons-left",
                 shortcut: "",
