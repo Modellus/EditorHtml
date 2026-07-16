@@ -201,6 +201,7 @@ class BoardEditor extends Workspace {
         this.applyEducationLevel();
         this.applyGrid();
         this.applyBackground();
+        this.bottomToolbar?.updateSnapToGridButton();
         this.topToolbar?.updateModelName();
     }
     
@@ -223,7 +224,7 @@ class BoardEditor extends Workspace {
             this.applyGrid();
         if (name === "backgroundId")
             this.applyBackground();
-        if (name === "snapToGrid")
+        if (name === "gridSize" || name === "snapToGrid")
             this.bottomToolbar?.updateSnapToGridButton();
         if (name === "name")
             this.topToolbar?.updateModelName();
@@ -371,11 +372,6 @@ class BoardEditor extends Workspace {
     miniMapPressed() {
         this.miniMap.toggle();
         this.bottomToolbar.updateMiniMapButton();
-    }
-
-    snapToGridPressed() {
-        this.setPropertyCommand("snapToGrid", !this.properties.snapToGrid);
-        this.bottomToolbar.updateSnapToGridButton();
     }
 
     chatPressed() {

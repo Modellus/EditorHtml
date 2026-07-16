@@ -144,16 +144,12 @@ class BottomToolbar {
                     location: "after"
                 },
                 {
-                    widget: "dxButton",
-                    options: {
-                        icon: this.shell.properties.snapToGrid ? "fa-solid fa-grid" : "fa-light fa-grid",
-                        elementAttr: {
-                            id: "snap-grid-button"
-                        },
-                        onClick: () => this.shell.snapToGridPressed(),
-                        onInitialized: e => this.shell.createTranslatedTooltip(e, "Snap Grid Tooltip", 280)
-                    },
-                    location: "after"
+                    location: "after",
+                    template: () => {
+                        const container = $('<div>');
+                        this.createGridDropDownButton(container);
+                        return container;
+                    }
                 },
                 {
                     location: "after",
@@ -319,6 +315,73 @@ class BottomToolbar {
                             e.component.repaint();
                         }
                     }).appendTo($container);
+                }
+            }
+        ];
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: listItems,
+            scrollingEnabled: false,
+            itemTemplate: (data, _, el) => {
+                el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+                data.buildControl($(el).find(".mdl-dropdown-list-control"));
+            }
+        });
+    }
+
+    createGridDropDownButton(container) {
+        this._gridDropdownElement = $('<div id="snap-grid-button">');
+        this._gridDropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            icon: this.shell.properties.snapToGrid ? "fa-solid fa-grid" : "fa-light fa-grid",
+            onInitialized: e => this.shell.createTranslatedTooltip(e, "Snap Grid Tooltip", 280),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-independent-dropdown" },
+                width: "auto",
+                contentTemplate: contentElement => this.buildGridMenuContent(contentElement)
+            }
+        });
+        this._gridDropdownElement.appendTo(container);
+    }
+
+    buildGridMenuContent(contentElement) {
+        const listItems = [
+            {
+                text: this.shell.board.translations.get("Grid"),
+                buildControl: $container => {
+                    const switchElement = $('<div>').appendTo($container).dxSwitch({
+                        value: this.shell.properties.snapToGrid === true,
+                        switchedOnText: this.shell.board.translations.get("On"),
+                        switchedOffText: this.shell.board.translations.get("Off"),
+                        onValueChanged: e => {
+                            if (e.value !== this.shell.properties.snapToGrid)
+                                this.shell.setPropertyCommand("snapToGrid", e.value);
+                        }
+                    });
+                    this._gridSwitch = switchElement.dxSwitch("instance");
+                }
+            },
+            {
+                text: this.shell.board.translations.get("Grid Size"),
+                buildControl: $container => {
+                    const sizeElement = $('<div>').appendTo($container).dxNumberBox({
+                        value: this.shell.properties.gridSize,
+                        min: 5,
+                        max: 100,
+                        step: 5,
+                        showSpinButtons: true,
+                        stylingMode: "filled",
+                        elementAttr: { class: "mdl-math-input" },
+                        inputAttr: { style: "font-family: Atma, sans-serif" },
+                        onValueChanged: e => {
+                            if (e.value !== this.shell.properties.gridSize)
+                                this.shell.setPropertyCommand("gridSize", e.value);
+                        }
+                    });
+                    this._gridSizeEditor = sizeElement.dxNumberBox("instance");
                 }
             }
         ];
@@ -597,7 +660,16 @@ class BottomToolbar {
     }
 
     updateSnapToGridButton() {
-        this.updateToggleButton("snap-grid-button", this.shell.properties.snapToGrid, "fa-grid");
+        const active = this.shell.properties.snapToGrid === true;
+        const dropDownButton = this._gridDropdownElement?.dxDropDownButton("instance");
+        if (dropDownButton) {
+            dropDownButton.option("icon", `${active ? "fa-solid" : "fa-light"} fa-grid`);
+            $(dropDownButton.element()).find(".dx-button").toggleClass("dx-state-selected", active);
+        }
+        if (this._gridSwitch && this._gridSwitch.option("value") !== active)
+            this._gridSwitch.option("value", active);
+        if (this._gridSizeEditor && this._gridSizeEditor.option("value") !== this.shell.properties.gridSize)
+            this._gridSizeEditor.option("value", this.shell.properties.gridSize);
     }
 
     updateMiniMapButton() {
