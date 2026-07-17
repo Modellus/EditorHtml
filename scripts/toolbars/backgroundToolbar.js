@@ -222,8 +222,6 @@ class BackgroundToolbar {
     show(point) {
         if (!this.shell.board.isModelCreator())
             return;
-        if (document.body.classList.contains("read-only"))
-            return;
         this.refresh();
         this.host.classList.add("visible");
         requestAnimationFrame(() => requestAnimationFrame(() => this.position(point)));

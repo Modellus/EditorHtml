@@ -9,25 +9,6 @@ class MenuController {
         return this.controller.translations?.get(key) ?? key;
     }
 
-    _readOnlyItems(mod) {
-        return [
-            {
-                text: this._t("Duplicate") + "...",
-                icon: "fa-light fa-clone",
-                shortcut: `${mod}D`,
-                name: "Duplicate",
-                action: () => this.controller.duplicate()
-            },
-            {
-                text: this._t("More Models"),
-                icon: "fa-light fa-chevrons-left",
-                shortcut: "",
-                name: "Models",
-                action: () => this.controller.exit()
-            }
-        ];
-    }
-
     _notebookItems(mod) {
         const canSave = this.controller.canSave;
         return [
@@ -57,6 +38,7 @@ class MenuController {
 
     _boardItems(mod) {
         const canSave = this.controller.canSave;
+        const canSaveAs = this.controller.canSaveAs;
         return [
             {
                 text: this._t("Clear"),
@@ -72,7 +54,9 @@ class MenuController {
                     shortcut: `${mod}S`,
                     name: "Save",
                     action: () => this.controller.save()
-                },
+                }
+            ] : []),
+            ...(canSaveAs ? [
                 {
                     text: this._t("Save As") + "...",
                     icon: "fa-light fa-cloud-arrow-down",
@@ -142,8 +126,6 @@ class MenuController {
         const mod = isMac ? "⌘" : "Ctrl+";
         if (this.controller.type === "notebook")
             return this._notebookItems(mod);
-        if (this.controller.isReadOnly)
-            return this._readOnlyItems(mod);
         return this._boardItems(mod);
     }
 

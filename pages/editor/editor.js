@@ -66,11 +66,6 @@ function applyModelMetadata(shell, model) {
     shell.topToolbar?.updateCollabButtonVisibility();
 }
 
-function enableReadOnlyMode() {
-    window.modellusReadOnly = true;
-    document.body.classList.add("read-only");
-}
-
 async function loadModel(modelId, headers) {
     const response = await fetch(`${apiBase}/models/${modelId}`, { headers });
     if (!response.ok) {
@@ -154,7 +149,6 @@ function redirectToLogin() {
             try {
                 const model = await loadModel(modelId, {});
                 if (model && (model.is_public === true || model.is_public === 1)) {
-                    enableReadOnlyMode();
                     const payload = extractModelPayload(model);
                     shell = new BoardApp(modelSession, payload || null);
                     applyModelMetadata(shell, model);

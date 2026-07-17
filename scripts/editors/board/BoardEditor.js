@@ -662,7 +662,7 @@ class BoardEditor extends Workspace {
     }
 
     async autoSaveModel() {
-        if (!this._hasChanges || this.isAnonymous())
+        if (!this._hasChanges || this.isAnonymous() || !this.isModelCreator())
             return;
         const modelId = this.getCurrentModelId();
         if (!modelId)
@@ -1049,12 +1049,12 @@ class BoardEditor extends Workspace {
 
     isAnonymous() {
         const session = window.modellus?.auth?.getSession ? window.modellus.auth.getSession() : null;
-        if (session?.token)
-            return false;
-        return !this.getCurrentModelId();
+        return !session?.token;
     }
 
     saveToSessionStorage() {
+        if (this.getCurrentModelId())
+            return;
         sessionStorage.setItem("mp.anon.model", JSON.stringify(this.serialize()));
     }
 

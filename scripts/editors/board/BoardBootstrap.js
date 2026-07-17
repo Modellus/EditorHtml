@@ -29,10 +29,6 @@ function applyBoardModelMetadata(boardEditor, model) {
     boardEditor.topToolbar?.updateCollabButtonVisibility();
 }
 
-function enableBoardReadOnlyMode() {
-    window.modellusReadOnly = true;
-    document.body.classList.add("read-only");
-}
 function isBoardNetworkFetchError(error) {
     if (!(error instanceof TypeError))
         return false;
@@ -85,9 +81,10 @@ async function createOnlineBoardEditor(options = {}) {
                 return boardEditor;
             }
             if (accessResult.mode === "readonly") {
-                enableBoardReadOnlyMode();
                 const payload = extractBoardModelPayload(accessResult.model);
-                return new BoardEditor(modelSession, payload || null);
+                const boardEditor = new BoardEditor(modelSession, payload || null);
+                applyBoardModelMetadata(boardEditor, accessResult.model);
+                return boardEditor;
             }
             if (accessResult.mode === "login-required") {
                 redirectBoardToLogin();

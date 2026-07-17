@@ -280,7 +280,6 @@ class NotebookEditor extends Workspace {
         });
         this._menuController = new MenuController({
             type: "notebook",
-            isReadOnly: false,
             canSave: false,
             save: () => this.saveToApi(),
             exit: () => window.history.back()

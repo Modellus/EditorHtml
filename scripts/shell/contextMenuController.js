@@ -3,8 +3,12 @@ class ContextMenuController {
         this._menuController = new MenuController({
             type: "board",
             translations: shell.board.translations,
-            isReadOnly: !!window.modellusReadOnly,
-            canSave: !!(shell.modelsApiClient && !shell.isAnonymous()),
+            get canSave() {
+                return !!(shell.modelsApiClient && !shell.isAnonymous() && shell.isModelCreator());
+            },
+            get canSaveAs() {
+                return !!(shell.modelsApiClient && !shell.isAnonymous());
+            },
             clear: () => shell.confirmClearKeepIdentity(),
             save: () => shell.saveToApi(),
             saveAs: () => shell.saveAsModel(),
@@ -17,6 +21,7 @@ class ContextMenuController {
     }
 
     show() {
+        this._menuController.refresh();
         this._menuController.show();
     }
 }

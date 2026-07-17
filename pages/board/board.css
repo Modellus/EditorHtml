@@ -99,12 +99,6 @@ svg {
     -webkit-text-stroke: 0;
 }
 
-body.read-only #model-info-label {
-    display: none;
-}
-
-
-
 .dx-overlay-wrapper {
     font-size: 15px;
 }
@@ -371,12 +365,6 @@ svg:active.pan-available {
     font-style: italic;
 }
 
-
-body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-before .dx-item:not(.mdl-menu-button-item),
-body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-center,
-body.read-only #toolbar .dx-toolbar-items-container .dx-toolbar-after .dx-item:not(.mdl-help-button-item) {
-    display: none;
-}
 
 .shape-context-toolbar {
     position: fixed;
