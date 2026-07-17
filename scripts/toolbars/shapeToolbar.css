@@ -9,3 +9,10 @@
 #toolbar .dx-toolbar.mdl-shape-toolbar .toolbar-separator {
     margin: 8px 10px;
 }
+
+.mdl-shape-toolbar .dx-button.mdl-draw-armed .dx-icon {
+    --fa-style: 900;
+    font-weight: 900;
+    color: #007aff;
+    color: AccentColor;
+}

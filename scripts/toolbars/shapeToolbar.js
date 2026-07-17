@@ -154,7 +154,7 @@ class ModellusShapeToolbar {
                     elementAttr: {
                         id: "expression-button"
                     },
-                    onClick: _ => shell.commands.addShape("ExpressionShape", "Expression"),
+                    onClick: _ => shell.shapeDrawController.toggle("ExpressionShape", "Expression", "expression-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Expression Tooltip", 280)
                 }
             },
@@ -166,7 +166,7 @@ class ModellusShapeToolbar {
                     elementAttr: {
                         id: "referential-button"
                     },
-                    onClick: _ => shell.commands.addShape("ReferentialShape", "Simulation"),
+                    onClick: _ => shell.shapeDrawController.toggle("ReferentialShape", "Simulation", "referential-button"),
                     template1: `<div class='dx-icon'>
                                 <span class="fa-layers">
                                     <i class="fa-regular fa-circle" data-fa-transform="shrink-12 right-1 up-2"></i>
@@ -191,7 +191,7 @@ class ModellusShapeToolbar {
                         id: "chart-button"
                     },
                     icon: "fa-light fa-chart-line",
-                    onClick: _ => shell.commands.addShape("ChartShape", "Chart"),
+                    onClick: _ => shell.shapeDrawController.toggle("ChartShape", "Chart", "chart-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Chart Tooltip", 280)
                 }
             },
@@ -203,7 +203,7 @@ class ModellusShapeToolbar {
                         id: "table-button"
                     },
                     icon: "fa-light fa-table",
-                    onClick: _ => shell.commands.addShape("TableShape", "Table"),
+                    onClick: _ => shell.shapeDrawController.toggle("TableShape", "Table", "table-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Table Tooltip", 280)
                 }
             },
@@ -215,7 +215,7 @@ class ModellusShapeToolbar {
                         id: "range-selector-button"
                     },
                     icon: "fa-light fa-slider",
-                    onClick: _ => shell.commands.addShape("SliderShape", "Slider"),
+                    onClick: _ => shell.shapeDrawController.toggle("SliderShape", "Slider", "range-selector-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Slider Tooltip", 280)
                 }
             },
@@ -227,7 +227,7 @@ class ModellusShapeToolbar {
                     elementAttr: {
                         id: "gauge-button"
                     },
-                    onClick: _ => shell.commands.addShape("GaugeShape", "Gauge"),
+                    onClick: _ => shell.shapeDrawController.toggle("GaugeShape", "Gauge", "gauge-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Gauge Tooltip", 280)
                 }
             },
@@ -239,7 +239,7 @@ class ModellusShapeToolbar {
                     elementAttr: {
                         id: "value-button"
                     },
-                    onClick: _ => shell.commands.addShape("ValueShape", "Value"),
+                    onClick: _ => shell.shapeDrawController.toggle("ValueShape", "Value", "value-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Value Tooltip", 280)
                 }
             },
@@ -255,7 +255,7 @@ class ModellusShapeToolbar {
                         id: "background-button"
                     },
                     icon: "fa-light fa-photo-film-music",
-                    onClick: _ => shell.commands.addShape("MediaShape", "Media"),
+                    onClick: _ => shell.shapeDrawController.toggle("MediaShape", "Media", "background-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Media Tooltip", 280)
                 }
             },
@@ -268,7 +268,7 @@ class ModellusShapeToolbar {
                         id: "text-button",
                         "data-fa-transform": "shrink-8 up-6"
                     },
-                    onClick: _ => shell.commands.addShape("TextShape", "Text"),
+                    onClick: _ => shell.shapeDrawController.toggle("TextShape", "Text", "text-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Text Tooltip", 280)
                 }
             },
@@ -280,7 +280,7 @@ class ModellusShapeToolbar {
                     elementAttr: {
                         id: "question-button"
                     },
-                    onClick: _ => shell.commands.addShape("QuestionShape", "Question"),
+                    onClick: _ => shell.shapeDrawController.toggle("QuestionShape", "Question", "question-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Question Tooltip", 280)
                 }
             },
@@ -296,7 +296,7 @@ class ModellusShapeToolbar {
                     elementAttr: {
                         id: "ruler-button"
                     },
-                    onClick: _ => shell.commands.addShape("RulerShape", "Ruler"),
+                    onClick: _ => shell.shapeDrawController.toggle("RulerShape", "Ruler", "ruler-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Ruler Tooltip", 280)
                 }
             },
@@ -308,7 +308,7 @@ class ModellusShapeToolbar {
                     elementAttr: {
                         id: "protractor-button"
                     },
-                    onClick: _ => shell.commands.addShape("ProtractorShape", "Protractor"),
+                    onClick: _ => shell.shapeDrawController.toggle("ProtractorShape", "Protractor", "protractor-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Protractor Tooltip", 280)
                 }
             },
@@ -320,7 +320,7 @@ class ModellusShapeToolbar {
                     elementAttr: {
                         id: "slope-button"
                     },
-                    onClick: _ => shell.commands.addShape("SlopeShape", "Slope"),
+                    onClick: _ => shell.shapeDrawController.toggle("SlopeShape", "Slope", "slope-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Slope Tooltip", 280)
                 }
             }

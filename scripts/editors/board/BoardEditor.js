@@ -21,6 +21,7 @@ class BoardEditor extends Workspace {
         this.backgroundToolbar = new BackgroundToolbar(this);
         this.board.svg.addEventListener("backgroundClicked", e => this.backgroundToolbar.toggle(e.detail));
         this.contextMenuController = new ContextMenuController(this);
+        this.shapeDrawController = new ShapeDrawController(this);
         this.topToolbar = new TopToolbar(this);
         this.chatController = new ChatController(this);
         this.bottomToolbar = new BottomToolbar(this);

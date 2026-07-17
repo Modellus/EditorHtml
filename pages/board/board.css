@@ -294,6 +294,11 @@ line.handle.move {
     pointer-events: none;
 }
 
+svg.shape-draw-mode,
+svg.shape-draw-mode * {
+    cursor: crosshair !important;
+}
+
 svg.pan-available {
     cursor: grab;
 }
