@@ -48,16 +48,15 @@ test.describe('Initial values table', () => {
                     caseNumber: column.caseNumber
                 })),
                 rows: (table?.rows ?? []).map(row => ({ key: row.key, termName: row.termName, iteration: row.iteration })),
+                termColumnTitle: table?.options?.columns?.[0]?.title ?? null,
                 termCellEditable: table?.canEditCell(0, 0) === true,
-                iterationCellEditable: table?.canEditCell(0, 1) === true,
-                caseCellEditable: table?.canEditCell(0, 2) === true
+                caseCellEditable: table?.canEditCell(0, 1) === true
             };
         });
 
         expect(state.shapeClass).toBe('InitialValuesTableShape');
         expect(state.columns).toEqual([
             { key: 'term', isText: true, editable: false, showCase: false, caseNumber: 1 },
-            { key: 'iteration', isText: false, editable: true, showCase: false, caseNumber: 1 },
             { key: 'case1', isText: false, editable: true, showCase: true, caseNumber: 1 },
             { key: 'case2', isText: false, editable: true, showCase: true, caseNumber: 2 },
             { key: 'case3', isText: false, editable: true, showCase: true, caseNumber: 3 }
@@ -66,8 +65,8 @@ test.describe('Initial values table', () => {
             { key: 'x|1', termName: 'x', iteration: 1 },
             { key: 'v|1', termName: 'v', iteration: 1 }
         ]);
+        expect(state.termColumnTitle).toBe('');
         expect(state.termCellEditable).toBeFalsy();
-        expect(state.iterationCellEditable).toBeFalsy();
         expect(state.caseCellEditable).toBeTruthy();
     });
 
@@ -124,6 +123,7 @@ test.describe('Initial values table', () => {
             tableShape.refreshTableRows();
             return {
                 inputRowKeys: tableShape.table.rows.map(row => row.key),
+                midRunRowTermText: tableShape.table.rows.find(row => row.key === 'v|6')?.term,
                 midRunRowCase2: tableShape.table.rows.find(row => row.key === 'v|6')?.case2,
                 vCase1At8: system.getByNameOnIteration(8, 'v', 1),
                 vCase2At5: system.getByNameOnIteration(5, 'v', 2),
@@ -134,6 +134,7 @@ test.describe('Initial values table', () => {
         });
 
         expect(result.inputRowKeys).toEqual(['x|1', 'v|1', 'v|6']);
+        expect(result.midRunRowTermText).toBe('v (n=6)');
         expect(result.midRunRowCase2).toBe(5);
         expect(result.vCase1At8).toBeCloseTo(1, 8);
         expect(result.vCase2At5).toBeCloseTo(1, 8);

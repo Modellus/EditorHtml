@@ -113,7 +113,7 @@ var ExpressionShapeToolbarMixin = {
                     delay: 300,
                     name: 'mouseenter'
                 },
-                hideEvent: 'mouseleave',
+                hideEvent: 'mouseleave dxpointerdown',
                 position: 'top',
                 width: 220
             });

@@ -579,7 +579,7 @@ class Utils {
                     delay: 1000,
                     name: 'mouseenter'
                 },
-                hideEvent: 'mouseleave',
+                hideEvent: 'mouseleave dxpointerdown',
                 position: 'top',
                 width: width ?? 200
             })

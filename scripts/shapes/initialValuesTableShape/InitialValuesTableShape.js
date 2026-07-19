@@ -75,20 +75,12 @@ class InitialValuesTableShape extends BaseTableShape {
         const controlColumns = [
             {
                 key: "term",
-                title: this.board.translations.get("Term") ?? "Term",
+                title: "",
                 isText: true,
                 editable: false,
                 valueDisplayMode: "none",
                 width: Number.isFinite(columnWidths[0]) ? columnWidths[0] : null,
                 precision: precision
-            },
-            {
-                key: "iteration",
-                title: this.board.calculator.properties.iterationTerm,
-                editable: true,
-                valueDisplayMode: "none",
-                width: Number.isFinite(columnWidths[1]) ? columnWidths[1] : null,
-                precision: 0
             }
         ];
         for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
@@ -99,7 +91,7 @@ class InitialValuesTableShape extends BaseTableShape {
                 showCase: casesCount > 1,
                 editable: true,
                 valueDisplayMode: "none",
-                width: Number.isFinite(columnWidths[caseNumber + 1]) ? columnWidths[caseNumber + 1] : null,
+                width: Number.isFinite(columnWidths[caseNumber]) ? columnWidths[caseNumber] : null,
                 precision: precision
             });
         return controlColumns;
@@ -119,10 +111,11 @@ class InitialValuesTableShape extends BaseTableShape {
             const iterations = [1, ...calculator.getUserInputIterations(term)];
             for (let iterationIndex = 0; iterationIndex < iterations.length; iterationIndex++) {
                 const iteration = iterations[iterationIndex];
+                const termText = Utils.normalizeMathTermForWidth(this.formatTermForDisplay(term));
                 const row = {
                     key: `${term}|${iteration}`,
                     termName: term,
-                    term: Utils.normalizeMathTermForWidth(this.formatTermForDisplay(term)),
+                    term: iteration > 1 ? `${termText} (${calculator.properties.iterationTerm}=${iteration})` : termText,
                     iteration: iteration
                 };
                 for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
@@ -133,12 +126,6 @@ class InitialValuesTableShape extends BaseTableShape {
             }
         }
         return rows;
-    }
-
-    isTableCellEditable(row, column, rowIndex, columnIndex) {
-        if (column?.key === "iteration")
-            return Math.floor(Number(row?.iteration) || 1) > 1;
-        return true;
     }
 
     onTableCellValueChanged(payload) {
@@ -152,12 +139,6 @@ class InitialValuesTableShape extends BaseTableShape {
             return false;
         const calculator = this.board.calculator;
         const iteration = Math.max(1, Math.floor(Number(row.iteration) || 1));
-        if (column.key === "iteration") {
-            const nextIteration = Math.floor(numericValue);
-            if (iteration <= 1 || nextIteration <= 1 || nextIteration === iteration)
-                return false;
-            return this.moveInputRowIteration(termName, iteration, nextIteration);
-        }
         const caseNumber = Number(column.caseNumber);
         if (!Number.isFinite(caseNumber) || caseNumber < 1)
             return false;
@@ -165,27 +146,6 @@ class InitialValuesTableShape extends BaseTableShape {
         if (!calculator.setUserInput(termName, roundedValue, iteration, caseNumber))
             return false;
         calculator.emit("iterate", { calculator: calculator });
-        return true;
-    }
-
-    moveInputRowIteration(termName, fromIteration, toIteration) {
-        const calculator = this.board.calculator;
-        if (calculator.getUserInputIterations(termName).includes(toIteration))
-            return false;
-        const casesCount = this.getCasesCount();
-        let moved = false;
-        for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
-            const value = calculator.getUserInput(termName, fromIteration, caseNumber);
-            if (value === undefined)
-                continue;
-            calculator.removeUserInput(termName, fromIteration, caseNumber);
-            calculator.setUserInput(termName, value, toIteration, caseNumber);
-            moved = true;
-        }
-        if (!moved)
-            return false;
-        calculator.emit("iterate", { calculator: calculator });
-        this.refreshTableRows();
         return true;
     }
 
@@ -287,14 +247,14 @@ class InitialValuesTableShape extends BaseTableShape {
         const columns = this._activeColumns ?? this.getSelectedColumns();
         const casesCount = this.getCasesCount();
         const precision = this.board.calculator.getPrecision();
-        const header = [this.board.translations.get("Term") ?? "Term", this.board.calculator.properties.iterationTerm];
+        const header = [this.board.translations.get("Term") ?? "Term"];
         for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
             header.push(casesCount > 1 ? `case ${caseNumber}` : (this.board.translations.get("Value") ?? "Value"));
         const rows = [header.join(",")];
         const inputRows = this.buildTableRows(columns);
         for (let index = 0; index < inputRows.length; index++) {
             const inputRow = inputRows[index];
-            const values = [inputRow.term, inputRow.iteration];
+            const values = [inputRow.term];
             for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
                 const value = inputRow[this.getCaseColumnKey(caseNumber)];
                 values.push(Number.isFinite(value) ? Utils.roundToPrecision(value, precision) : "");
