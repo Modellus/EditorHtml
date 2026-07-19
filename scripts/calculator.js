@@ -14,6 +14,8 @@ class Calculator extends EventTarget {
         this.physicalEngine = new Modellus.PhysicalEngine(this.system);
         this.status = STATUS.STOPPED;
         this.properties = this.createDefaultProperties();
+        /** @type {{ [caseNumber: number]: { [term: string]: { [iteration: number]: number } } }} */
+        this.userInputsByCase = {};
         this.setDefaults();
     }
 
@@ -159,6 +161,7 @@ class Calculator extends EventTarget {
         this.physicalEngine.physicsConstantsRegistered = false;
         this.status = STATUS.STOPPED;
         this.recalculationRevision = 0;
+        this.userInputsByCase = {};
         this.clearHook();
     }
 
@@ -621,6 +624,122 @@ class Calculator extends EventTarget {
     isEditable(name = "") {
         var term = this.system.getTerm(name);
         return !term || this.system.isEditable(term);
+    }
+
+    isUserInputTerm(name = "") {
+        if (!this.isTerm(name))
+            return false;
+        const type = this.system.getTerm(name)?.type;
+        if (type === Modellus.TermType.FUNCTION || type === Modellus.TermType.INDEPENDENT || type === Modellus.TermType.PRELOADED)
+            return false;
+        if (name === this.properties.iterationTerm)
+            return false;
+        return this.isEditable(name);
+    }
+
+    setUserInput(name = "", value = 0, iteration = 1, caseNumber = 1) {
+        if (!this.isUserInputTerm(name))
+            return false;
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue))
+            return false;
+        const normalizedIteration = Math.max(1, Math.floor(Number(iteration) || 1));
+        const normalizedCase = Math.floor(Number(caseNumber) || 1);
+        if (normalizedCase < 1 || normalizedCase > this.normalizeCasesCount(this.properties.casesCount))
+            return false;
+        this.system.setInitialByName(name, numericValue, normalizedIteration, normalizedCase);
+        if (normalizedIteration > 1) {
+            if (!this.userInputsByCase[normalizedCase])
+                this.userInputsByCase[normalizedCase] = {};
+            if (!this.userInputsByCase[normalizedCase][name])
+                this.userInputsByCase[normalizedCase][name] = {};
+            this.userInputsByCase[normalizedCase][name][normalizedIteration] = numericValue;
+        }
+        const row = this.system.getIteration(normalizedIteration, normalizedCase);
+        if (row)
+            row[name] = numericValue;
+        return true;
+    }
+
+    removeUserInput(name = "", iteration = 1, caseNumber = 1) {
+        const normalizedIteration = Math.max(1, Math.floor(Number(iteration) || 1));
+        const normalizedCase = Math.floor(Number(caseNumber) || 1);
+        if (normalizedIteration <= 1)
+            return false;
+        const termInputs = this.userInputsByCase[normalizedCase]?.[name];
+        if (!termInputs || termInputs[normalizedIteration] === undefined)
+            return false;
+        delete termInputs[normalizedIteration];
+        if (Object.keys(termInputs).length === 0)
+            delete this.userInputsByCase[normalizedCase][name];
+        if (Object.keys(this.userInputsByCase[normalizedCase]).length === 0)
+            delete this.userInputsByCase[normalizedCase];
+        // Passing undefined clears the engine slot: hasInitialValueForCase treats undefined as absent.
+        this.system.setInitialByName(name, /** @type {any} */ (undefined), normalizedIteration, normalizedCase);
+        return true;
+    }
+
+    getUserInputIterations(name = "", caseNumber = 0) {
+        const iterations = new Set();
+        const caseNumbers = caseNumber >= 1 ? [caseNumber] : Object.keys(this.userInputsByCase).map(Number);
+        for (let i = 0; i < caseNumbers.length; i++) {
+            const termInputs = this.userInputsByCase[caseNumbers[i]]?.[name];
+            if (!termInputs)
+                continue;
+            const iterationKeys = Object.keys(termInputs);
+            for (let j = 0; j < iterationKeys.length; j++)
+                iterations.add(parseInt(iterationKeys[j], 10));
+        }
+        return [...iterations].sort((a, b) => a - b);
+    }
+
+    getUserInput(name = "", iteration = 1, caseNumber = 1) {
+        return this.userInputsByCase[caseNumber]?.[name]?.[iteration];
+    }
+
+    getUserInputsByCase() {
+        if (Object.keys(this.userInputsByCase ?? {}).length === 0)
+            return null;
+        return JSON.parse(JSON.stringify(this.userInputsByCase));
+    }
+
+    applyUserInputsByCase(userInputsByCase = null) {
+        this.userInputsByCase = {};
+        if (!userInputsByCase || typeof userInputsByCase !== "object")
+            return;
+        const casesCount = this.normalizeCasesCount(this.properties.casesCount);
+        const caseEntries = Object.entries(userInputsByCase);
+        for (let i = 0; i < caseEntries.length; i++) {
+            const caseNumber = parseInt(caseEntries[i][0], 10);
+            if (!Number.isFinite(caseNumber) || caseNumber < 1 || caseNumber > casesCount)
+                continue;
+            const termInputs = caseEntries[i][1];
+            if (!termInputs || typeof termInputs !== "object")
+                continue;
+            const termEntries = Object.entries(termInputs);
+            for (let j = 0; j < termEntries.length; j++) {
+                const term = termEntries[j][0];
+                if (!this.isUserInputTerm(term))
+                    continue;
+                const iterationValues = termEntries[j][1];
+                if (!iterationValues || typeof iterationValues !== "object")
+                    continue;
+                const iterationEntries = Object.entries(iterationValues);
+                for (let k = 0; k < iterationEntries.length; k++) {
+                    const iteration = parseInt(iterationEntries[k][0], 10);
+                    const value = Number(iterationEntries[k][1]);
+                    if (!Number.isFinite(iteration) || iteration <= 1 || !Number.isFinite(value))
+                        continue;
+                    this.system.setInitialByName(term, value, iteration, caseNumber);
+                    if (!this.userInputsByCase[caseNumber])
+                        this.userInputsByCase[caseNumber] = {};
+                    if (!this.userInputsByCase[caseNumber][term])
+                        this.userInputsByCase[caseNumber][term] = {};
+                    this.userInputsByCase[caseNumber][term][iteration] = value;
+                }
+            }
+        }
+        this.engine.reset();
     }
 
     setTermValue(name = "", value = 0, iteration = this.system.iteration, caseNumber = 1) {

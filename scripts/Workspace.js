@@ -233,6 +233,7 @@ class Workspace {
         if (!this.session || !model)
             return;
         this.session.pendingInitialValuesByCase = model?.properties?.initialValuesByCase ?? model?.properties?.initialValues ?? null;
+        this.session.pendingUserInputsByCase = model?.properties?.userInputsByCase ?? null;
         applyProperties(model.properties);
         this.calculator.loadOutlierIterations(model?.outlierIterations);
         this.calculator.loadRegressionTerms(model?.regressionTerms);

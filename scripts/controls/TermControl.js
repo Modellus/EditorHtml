@@ -590,7 +590,7 @@ class TermControl {
             getFallbackItems: options.getFallbackItems,
             onChanged: options.onChanged
         };
-        const lockOptions = options.lock ?? {
+        const lockOptions = options.lock !== undefined ? options.lock : {
             width: "28px",
             getValue: item => item?.locked === true,
             onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
@@ -607,7 +607,7 @@ class TermControl {
             termEditor: options.termEditor,
             getItems: () => TermControl.getShapeTermsCollectionControlItems(shape, propertyName, mutationOptions),
             getStateKey: () => TermControl.getShapeTermsCollectionStateKey(shape, propertyName),
-            getTermItems: item => TermControl.buildShapeTermsCollectionTermItems(shape, item?.term, normalizeTermValue),
+            getTermItems: options.getTermItems ?? (item => TermControl.buildShapeTermsCollectionTermItems(shape, item?.term, normalizeTermValue)),
             getBoard: () => shape.board,
             getSystem: () => shape.board?.calculator?.system,
             normalizeTermValue: value => normalizeTermValue(value),
@@ -630,7 +630,7 @@ class TermControl {
                 if (includeColor)
                     items[index].color = normalizeColorValue(items[index].color);
             }),
-            secondary: {
+            secondary: options.includeCase === false ? null : {
                 width: "42px",
                 editorType: "dxDropDownButton",
                 caseVisibility: caseVisibility,

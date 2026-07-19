@@ -67,7 +67,10 @@ class TableControl {
             onRowDeleteRequested: null,
             onFocusedCellsChanged: null,
             shouldKeepFocusedCellsOnPointerDown: null,
-            isOutlierCell: null
+            isOutlierCell: null,
+            isCellEditable: null,
+            isUserInputCell: null,
+            userInputMarkerColor: "#2f80ed"
         };
     }
 
@@ -200,6 +203,7 @@ class TableControl {
             caseNumber: parseInt(column?.caseNumber ?? column?.case ?? 1, 10) || 1,
             showCase: column?.showCase === true,
             editable: column?.editable === true,
+            isText: column?.isText === true,
             termType: Number.isFinite(column?.termType) ? Number(column.termType) : null,
             expressionLatex: typeof column?.expressionLatex === "string" ? column.expressionLatex : null,
             width: Number.isFinite(column?.width) ? Math.max(1, Number(column.width)) : null,
@@ -686,6 +690,13 @@ class TableControl {
                 outlierRect.setAttribute("fill", `url(#${this.outlierStripePatternId})`);
                 this.rowsLayer.appendChild(outlierRect);
             }
+            const isUserInputCell = typeof this.options.isUserInputCell === "function" && this.options.isUserInputCell(rowIndex, columnIndex);
+            if (isUserInputCell) {
+                const marker = this.createSvgElement("path");
+                marker.setAttribute("d", `M ${cell.x + cell.width - 7} ${y} L ${cell.x + cell.width} ${y} L ${cell.x + cell.width} ${y + 7} Z`);
+                marker.setAttribute("fill", this.options.userInputMarkerColor);
+                this.rowsLayer.appendChild(marker);
+            }
             if (focused || selected) {
                 const selectedRect = this.createSvgElement("rect");
                 selectedRect.setAttribute("x", `${cell.x}`);
@@ -715,7 +726,7 @@ class TableControl {
             }
             if (!isEditingCell) {
                 const textValue = this.getCellText(row, columns[columnIndex]);
-                this.renderCellText(cell, y, rowHeight, textValue, columnIndex);
+                this.renderCellText(cell, y, rowHeight, textValue, columnIndex, columns[columnIndex]);
             }
             this.cellBoxes.push({
                 x: cell.x,
@@ -895,12 +906,13 @@ class TableControl {
         this.rowsLayer.appendChild(line);
     }
 
-    renderCellText(cellGeometry, y, rowHeight, textValue, columnIndex) {
+    renderCellText(cellGeometry, y, rowHeight, textValue, columnIndex, column = null) {
+        const isText = column?.isText === true;
         const text = this.createSvgElement("text");
-        text.setAttribute("x", `${cellGeometry.x + cellGeometry.width - 6}`);
+        text.setAttribute("x", isText ? `${cellGeometry.x + 6}` : `${cellGeometry.x + cellGeometry.width - 6}`);
         text.setAttribute("y", `${y + rowHeight / 2 + 4}`);
-        text.setAttribute("text-anchor", "end");
-        text.setAttribute("font-family", this.options.numberFontFamily);
+        text.setAttribute("text-anchor", isText ? "start" : "end");
+        text.setAttribute("font-family", isText ? this.options.termFontFamily : this.options.numberFontFamily);
         text.setAttribute("font-size", `${this.options.fontSize}`);
         text.setAttribute("fill", this.options.foregroundColor);
         text.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
@@ -914,6 +926,8 @@ class TableControl {
         const rawValue = row[column.key];
         if (rawValue == null || rawValue === "")
             return "";
+        if (column.isText === true)
+            return String(rawValue);
         const numericValue = Number(rawValue);
         if (numericValue === Infinity)
             return "∞";
@@ -1881,7 +1895,11 @@ class TableControl {
         const column = this.getColumnByIndex(columnIndex);
         if (!row || !column)
             return false;
-        return column.editable === true;
+        if (column.editable !== true)
+            return false;
+        if (typeof this.options.isCellEditable === "function")
+            return this.options.isCellEditable(row, column, rowIndex, columnIndex) !== false;
+        return true;
     }
 
     startEditing(rowIndex, columnIndex, initialKey) {

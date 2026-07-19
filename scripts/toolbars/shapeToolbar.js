@@ -197,14 +197,39 @@ class ModellusShapeToolbar {
             },
             {
                 location: "center",
-                widget: "dxButton",
-                options: {
-                    elementAttr: {
-                        id: "table-button"
-                    },
-                    icon: "fa-light fa-table",
-                    onClick: _ => shell.shapeDrawController.toggle("TableShape", "Table", "table-button"),
-                    onInitialized: event => shell.createTranslatedTooltip(event, "Table Tooltip", 280)
+                template: () => {
+                    const dropdownElement = $('<div id="table-button" class="mdl-table-type-selector">');
+                    dropdownElement.dxDropDownButton({
+                        showArrowIcon: false,
+                        stylingMode: "text",
+                        useSelectMode: false,
+                        icon: "fa-light fa-table",
+                        onInitialized: event => shell.createTranslatedTooltip(event, "Table Tooltip", 280),
+                        dropDownOptions: {
+                            container: document.body,
+                            wrapperAttr: { class: "mdl-shape-overlay-popup" },
+                            width: "auto",
+                            contentTemplate: contentElement => {
+                                const tableTypes = [
+                                    { text: shell.board.translations.get("Table Name") ?? "Table", icon: "fa-light fa-table", type: "TableShape", name: "Table" },
+                                    { text: shell.board.translations.get("Initial Values Table Name") ?? "Initial Values", icon: "fa-light fa-table-list", type: "InitialValuesTableShape", name: "Initial Values" }
+                                ];
+                                $(contentElement).empty();
+                                $("<div>").appendTo(contentElement).dxList({
+                                    dataSource: tableTypes,
+                                    scrollingEnabled: false,
+                                    itemTemplate: (data, _, el) => {
+                                        el[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${data.icon}"></i><span class="mdl-dropdown-list-label">${data.text}</span></div>`;
+                                    },
+                                    onItemClick: event => {
+                                        dropdownElement.dxDropDownButton("instance").close();
+                                        shell.shapeDrawController.toggle(event.itemData.type, event.itemData.name, "table-button");
+                                    }
+                                });
+                            }
+                        }
+                    });
+                    return dropdownElement;
                 }
             },
             {

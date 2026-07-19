@@ -12,6 +12,7 @@ var modellus = {
         addText: name => shell.commands.addShape("TextShape", name),
         addImage: name => shell.commands.addShape("MediaShape", name),
         addTable: name => shell.commands.addShape("TableShape", name),
+        addInitialValuesTable: name => shell.commands.addShape("InitialValuesTableShape", name),
         addExpression: name => shell.commands.addShape("ExpressionShape", name),
         remove: name => shell.commands.removeShape(name),
         select: name => shell.commands.selectShape(name),

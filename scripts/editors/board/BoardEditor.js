@@ -46,13 +46,14 @@ class BoardEditor extends Workspace {
         this.saveFormController = new SaveFormController(this);
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
-        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, InitialValuesTableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.commands.registerShapeAlias("BodyShape", BodyWidget);
         this.commands.registerShapeAlias("PointShape", PointWidget);
         this.commands.registerShapeAlias("ExpressionShape", ExpressionWidget);
         this.commands.registerShapeAlias("ValueShape", ValueWidget);
         this.commands.registerShapeAlias("ChartShape", ChartWidget);
         this.commands.registerShapeAlias("TableShape", TableWidget);
+        this.commands.registerShapeAlias("InitialValuesTableShape", InitialValuesTableWidget);
         this.commands.registerShapeAlias("SliderShape", SliderWidget);
         this.commands.registerShapeAlias("GaugeShape", GaugeWidget);
         this.commands.registerShapeAlias("VectorShape", VectorWidget);
@@ -442,6 +443,8 @@ class BoardEditor extends Workspace {
         this.restoreUserPermissions();
         const initialValuesByCase = this.session.pendingInitialValuesByCase ?? this.calculator.getInitialValuesByCase();
         this.session.pendingInitialValuesByCase = null;
+        const userInputsByCase = this.session.pendingUserInputsByCase ?? this.calculator.getUserInputsByCase();
+        this.session.pendingUserInputsByCase = null;
         this.calculator.reset();
         this.board.shapes.shapes.forEach(shape => {
             if (shape.properties?.expression !== undefined)
@@ -456,6 +459,7 @@ class BoardEditor extends Workspace {
         this.calculator.applyPreloadedOutlierIterations();
         this.calculator.applyPreloadedRegressionTerms();
         this.calculator.applyInitialValuesByCase(initialValuesByCase);
+        this.calculator.applyUserInputsByCase(userInputsByCase);
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
         this.forceRefreshWorkspaceSurface();
         this.bottomToolbar.updatePlayer();

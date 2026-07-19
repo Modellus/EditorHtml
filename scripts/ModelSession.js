@@ -4,6 +4,7 @@ class ModelSession {
         this.modelsApiClient = modelsApiClient;
         this.properties = {};
         this.pendingInitialValuesByCase = null;
+        this.pendingUserInputsByCase = null;
         this.setDefaults();
     }
 
@@ -40,6 +41,7 @@ class ModelSession {
 
     serialize() {
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
+        this.properties.userInputsByCase = this.calculator.getUserInputsByCase();
         const properties = Object.assign({}, this.properties);
         delete properties.AIApiKey;
         const result = { properties };
@@ -54,6 +56,7 @@ class ModelSession {
 
     deserialise(model) {
         this.pendingInitialValuesByCase = model?.properties?.initialValuesByCase ?? model?.properties?.initialValues ?? null;
+        this.pendingUserInputsByCase = model?.properties?.userInputsByCase ?? null;
         this.setProperties(model.properties);
         this.calculator.loadOutlierIterations(model?.outlierIterations);
         this.calculator.loadRegressionTerms(model?.regressionTerms);
