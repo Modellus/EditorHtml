@@ -33,7 +33,14 @@ class TableControl {
         this.outlierStripePatternId = `shape-svg-table-outlier-stripe-${crypto.randomUUID()}`;
         this.initializeRoot();
         this.bindEvents();
-        Utils.ensureCaseIconsLoaded(() => this.render());
+        Utils.ensureCaseIconsLoaded(() => {
+            // The header may already have been drawn without the case icons
+            // (e.g. a table deserialized on page load renders before the icon
+            // fetch finishes). Invalidate the cached header content so this
+            // render pass rebuilds it with the icons available.
+            this._appliedHeaderContentKey = null;
+            this.render();
+        });
         this.setOptions(options);
     }
 

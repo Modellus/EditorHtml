@@ -131,6 +131,14 @@ class BaseShape {
         this.properties.name = name;
     }
 
+    // Recommended size a shape gets when drawn from the toolbar with a
+    // drag too small to be meaningful. Defaults to the size assigned by
+    // setDefaults(), so it must be read before the draw gesture shrinks
+    // the shape; widgets can override it with a dedicated minimum.
+    getMinimumDrawSize() {
+        return { width: this.properties.width, height: this.properties.height };
+    }
+
     initializeElement() {
         this.element = this.createElement();
         this.element.setAttribute("id", this.id);

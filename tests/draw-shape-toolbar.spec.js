@@ -98,6 +98,43 @@ test.describe('Draw-to-create shapes from the top toolbar', () => {
         expect(result.stillArmed).toBe(false);
     });
 
+    test('a drag too small to be usable creates the shape at its default minimum size', async ({ page }) => {
+        await setupEditor(page);
+        await page.click('#chart-button');
+        const start = await svgClientPoint(page, 300, 300);
+        const end = await svgClientPoint(page, 330, 305);
+        await page.mouse.move(start.x, start.y);
+        await page.mouse.down();
+        await page.mouse.move(end.x, end.y, { steps: 4 });
+        await page.mouse.up();
+        await page.waitForTimeout(200);
+        const result = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Chart');
+            return {
+                exists: !!shape,
+                x: shape?.properties.x,
+                y: shape?.properties.y,
+                width: shape?.properties.width,
+                height: shape?.properties.height,
+                selected: shell.board.selection.selectedShape === shape
+            };
+        });
+        expect(result.exists).toBe(true);
+        expect(result.x).toBeCloseTo(300, 0);
+        expect(result.y).toBeCloseTo(300, 0);
+        // ChartShape's recommended default size from setDefaults().
+        expect(result.width).toBe(400);
+        expect(result.height).toBe(200);
+        expect(result.selected).toBe(true);
+        const resized = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Chart');
+            shape.transformShape({ width: 120, height: 90 });
+            return { width: shape.properties.width, height: shape.properties.height };
+        });
+        expect(resized.width).toBe(120);
+        expect(resized.height).toBe(90);
+    });
+
     test('a drawn shape can be undone', async ({ page }) => {
         await setupEditor(page);
         await page.click('#text-button');

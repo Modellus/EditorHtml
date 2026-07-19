@@ -9,6 +9,9 @@ class ShapeDrawController {
         this.drawStartPoint = null;
         this.activePointerId = null;
         this.minimumShapeSize = 10;
+        this.dragThreshold = 4;
+        this.minimumDrawSize = null;
+        this.hasDragged = false;
         // Capture phase so draw mode wins over shape/selection pointer handlers.
         this.board.svg.addEventListener("pointerdown", e => this.onDrawPointerDown(e), true);
         window.addEventListener("keydown", e => this.onKeyDown(e));
@@ -57,6 +60,12 @@ class ShapeDrawController {
         this.drawStartPoint = { x: point.x, y: point.y };
         this.activePointerId = event.pointerId;
         const shape = this.board.createShape(this.pendingShapeType, null);
+        const minimumSize = shape.getMinimumDrawSize();
+        this.minimumDrawSize = {
+            width: Number(minimumSize?.width) || 100,
+            height: Number(minimumSize?.height) || 100
+        };
+        this.hasDragged = false;
         shape.setProperties({ name: this.shell.commands.uniquifyShapeName(this.pendingShapeName), x: point.x, y: point.y, width: 0, height: 0 });
         shape.element.addEventListener("changed", e => this.shell.onShapeChanged(e));
         this.board.addShape(shape, false);
@@ -74,6 +83,8 @@ class ShapeDrawController {
         if (this.activePointerId != null && event.pointerId !== this.activePointerId)
             return;
         const point = this.board.getMouseToSvgPoint(event);
+        if (Math.hypot(point.x - this.drawStartPoint.x, point.y - this.drawStartPoint.y) > this.dragThreshold)
+            this.hasDragged = true;
         this.drawnShape.transformShape({
             x: Math.min(this.drawStartPoint.x, point.x),
             y: Math.min(this.drawStartPoint.y, point.y),
@@ -89,18 +100,26 @@ class ShapeDrawController {
         window.removeEventListener("pointerup", this.onDrawPointerUp);
         window.removeEventListener("pointercancel", this.onDrawPointerUp);
         const shape = this.drawnShape;
+        const minimumDrawSize = this.minimumDrawSize;
+        const hasDragged = this.hasDragged;
         this.drawnShape = null;
         this.drawStartPoint = null;
         this.activePointerId = null;
+        this.minimumDrawSize = null;
+        this.hasDragged = false;
         this.board.pointerLocked = false;
         this.cancel();
         if (!shape)
             return;
         // A plain click (no meaningful drag) creates nothing.
-        if (shape.properties.width < this.minimumShapeSize || shape.properties.height < this.minimumShapeSize) {
+        if (!hasDragged) {
             this.board.removeShape(shape);
             return;
         }
+        // A drag too small to be a usable size falls back to the shape's
+        // recommended default size; afterwards the user resizes freely.
+        if (shape.properties.width < this.minimumShapeSize || shape.properties.height < this.minimumShapeSize)
+            shape.transformShape({ width: minimumDrawSize.width, height: minimumDrawSize.height });
         const command = new AddShapeCommand(this.board, shape);
         this.shell.commands.invoker.record(command);
         this.board.selectShape(shape);

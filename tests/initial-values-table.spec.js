@@ -172,6 +172,30 @@ test.describe('Initial values table', () => {
         expect(result.restoredShapeClass).toBe('InitialValuesTableShape');
     });
 
+    test('case icons in the header survive a browser refresh', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithInitialValuesTable(page, 3);
+
+        const countHeaderCaseIcons = () => page.evaluate(() => {
+            const caseColors = [1, 2, 3].map(caseNumber => Utils.getCaseIconColor(caseNumber).toLowerCase());
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            const paths = Array.from(tableShape.element.querySelectorAll('path'));
+            return paths.filter(path => caseColors.includes((path.getAttribute('fill') ?? '').toLowerCase())).length;
+        });
+
+        expect(await countHeaderCaseIcons()).toBe(3);
+
+        await page.evaluate(() => {
+            sessionStorage.setItem('mp.anon.model', JSON.stringify(shell.serialize()));
+            localStorage.removeItem('mp.session');
+        });
+        await page.reload();
+        await page.waitForFunction(() => typeof shell !== 'undefined' && shell !== null && shell.board !== null, null, { timeout: 15000 });
+        // The case-icon fetch and the follow-up render are asynchronous, so
+        // poll instead of asserting immediately after load.
+        await expect.poll(countHeaderCaseIcons, { timeout: 10000 }).toBe(3);
+    });
+
     test('top toolbar table dropdown lists both table types and arms draw mode', async ({ page }) => {
         await setupEditor(page);
         await page.click('#table-button');
