@@ -198,9 +198,16 @@ class TermControl {
     }
 
     static getBaseShapeCaseNumber(baseShape, termValue, caseNumber = 1) {
-        if (!TermControl.shouldShowCaseSelectionForTerm(termValue, TermControl.getBaseShapeCaseVisibilityConfig(baseShape)))
+        // See getShapeCaseNumber: preserve the stored case whenever the model has
+        // multiple cases, rather than resetting to 1 while a term is transiently
+        // unrecognized (e.g. before expressions are parsed on load).
+        const casesCount = baseShape.getCasesCount();
+        if (!Number.isFinite(casesCount) || casesCount <= 1)
             return 1;
-        return baseShape.getClampedCaseNumber(caseNumber);
+        const normalizedCaseNumber = baseShape.getClampedCaseNumber(caseNumber);
+        if (normalizedCaseNumber > casesCount)
+            return casesCount;
+        return normalizedCaseNumber;
     }
 
     static buildBaseShapeCaseItems(baseShape) {
@@ -376,10 +383,15 @@ class TermControl {
     }
 
     static getShapeCaseNumber(shape, termValue, caseNumber = 1, normalizeTermValue = value => TermControl.normalizeTermValue(value)) {
-        if (!TermControl.shouldShowCaseSelectionForShapeTerm(shape, termValue, normalizeTermValue))
+        // Only a genuinely single-case model collapses to case 1. We must NOT gate
+        // this on shouldShowCaseSelection: during load the expressions may not be
+        // parsed yet, so the term reads as "unknown" and the selector is hidden,
+        // but the stored case still has to be preserved so it survives the round
+        // trip. Whether the selector is shown is decided separately by the caller.
+        const casesCount = shape.getCasesCount();
+        if (!Number.isFinite(casesCount) || casesCount <= 1)
             return 1;
         const normalizedCaseNumber = shape.getClampedCaseNumber(caseNumber);
-        const casesCount = shape.getCasesCount();
         if (normalizedCaseNumber > casesCount)
             return casesCount;
         return normalizedCaseNumber;
