@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notebook – Modellus Docs</title>
+    <meta name="description" content="Notebook documentation: document-style models built from blocks — text, expressions, charts, tables, sliders, and media — sharing the Modellus calculation engine." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/pages/board/index.html">Editor</a></li>
+                    <li><a href="/pages/catalog/index.html">Community</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/pages/board/index.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Editors</h5>
+        <ul>
+            <li><a href="/docs/board/index.html"><i class="fa-light fa-earth-africa"></i> Board</a></li>
+            <li><a href="/docs/notebook/index.html" class="active"><i class="fa-light fa-notebook"></i> Notebook</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="/docs/shapes/expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="/docs/shapes/table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="/docs/shapes/initial-values.html"><i class="fa-light fa-table-list"></i> Initial Values</a></li>
+            <li><a href="/docs/shapes/chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="/docs/shapes/body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="/docs/shapes/point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="/docs/shapes/line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="/docs/shapes/arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="/docs/shapes/vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="/docs/shapes/slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="/docs/shapes/gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="/docs/shapes/value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="/docs/shapes/media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="/docs/shapes/text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="/docs/shapes/ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="/docs/shapes/protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="/docs/shapes/referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="/docs/shapes/question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>Community</h5>
+        <ul>
+            <li><a href="/docs/catalog/index.html"><i class="fa-light fa-store"></i> Community</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <a href="/docs/index.html">Editors</a> <span class="sep">/</span>
+            <span>Notebook</span>
+        </div>
+
+        <h1>Notebook</h1>
+        <p class="page-desc">A Notebook is a document-style Modellus model. Instead of placing shapes freely on a board, you write a vertical sequence of blocks — headings, text, expressions, charts, tables, sliders, and media — like an interactive lab report or worksheet.</p>
+
+        <img src="/docs/screenshots/notebook-overview.png" alt="Notebook editor with cover image, title, and header, text, expression, and table blocks" class="screenshot">
+
+        <h2>Overview</h2>
+        <p>Notebooks share the same calculation engine as the <a href="/docs/board/index.html">Board</a> editor. Expression blocks define the mathematics of the model — using the same expression language as the <a href="/docs/shapes/expression.html">Expression shape</a> — and the remaining blocks display and control it. A notebook combines narrative (headings, text, images) with a live, playable simulation.</p>
+        <p>Every notebook has a header with a cover image, a title, the author name, and the date it was last modified. Click the cover image to upload a new one, and click the title to edit it.</p>
+
+        <h2>Creating and Opening Notebooks</h2>
+        <p>Notebooks are created from the <a href="/docs/catalog/index.html">Community</a> page: click <strong>Create Notebook</strong> in the sidebar. Notebooks appear alongside board models on Community cards, marked with a <i class="fa-light fa-notebook"></i> notebook icon, and open in the notebook editor rather than the board editor.</p>
+
+        <h2>Blocks</h2>
+        <p>Content is added as blocks from the top toolbar. Each button appends a new block at the end of the notebook.</p>
+        <table class="docs-table">
+            <thead>
+                <tr><th>Block</th><th>Icon</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Header</strong></td><td><i class="fa-light fa-heading"></i></td><td>A large heading for structuring the document</td></tr>
+                <tr><td><strong>Text</strong></td><td><i class="fa-light fa-text"></i></td><td>A paragraph of text for explanations and narrative</td></tr>
+                <tr><td><strong>Expression</strong></td><td><i class="fa-light fa-function"></i></td><td>A mathematical expression that is parsed into the model, exactly like the <a href="/docs/shapes/expression.html">Expression shape</a></td></tr>
+                <tr><td><strong>Chart</strong></td><td><i class="fa-light fa-chart-line"></i></td><td>Plots terms of the model as the simulation runs, like the <a href="/docs/shapes/chart.html">Chart shape</a></td></tr>
+                <tr><td><strong>Table</strong></td><td><i class="fa-light fa-table"></i></td><td>Displays term values per iteration, like the <a href="/docs/shapes/table.html">Table shape</a></td></tr>
+                <tr><td><strong>Simulation</strong></td><td><i class="fa-light fa-shapes"></i></td><td>Embedded simulation area (in development)</td></tr>
+                <tr><td><strong>Gauge</strong></td><td><i class="fa-light fa-gauge"></i></td><td>Circular dial for a term (in development)</td></tr>
+                <tr><td><strong>Slider</strong></td><td><i class="fa-light fa-slider"></i></td><td>Interactive slider to adjust a value</td></tr>
+                <tr><td><strong>Value</strong></td><td><i class="fa-light fa-input-numeric"></i></td><td>Numeric readout of a term (in development)</td></tr>
+                <tr><td><strong>Media</strong></td><td><i class="fa-light fa-photo-film-music"></i></td><td>An image embedded in the document</td></tr>
+                <tr><td><strong>Question</strong></td><td><i class="fa-light fa-clipboard-question"></i></td><td>Assessment question (in development)</td></tr>
+                <tr><td><strong>Ruler</strong></td><td><i class="fa-light fa-ruler"></i></td><td>Distance measurement tool (in development)</td></tr>
+                <tr><td><strong>Protractor</strong></td><td><i class="fa-light fa-angle"></i></td><td>Angle measurement tool (in development)</td></tr>
+                <tr><td><strong>Slope</strong></td><td><i class="fa-light fa-ruler-triangle"></i></td><td>Slope measurement tool (in development)</td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>Blocks marked <em>in development</em> can be added and arranged, but currently render as placeholders.</span>
+        </div>
+
+        <h2>Working with Blocks</h2>
+        <ul>
+            <li><strong>Select</strong> — Click a block to select it. A context toolbar appears below the block with its specific options (terms to display, colors, and more).</li>
+            <li><strong>Reorder</strong> — Use the <i class="fa-light fa-grip-dots-vertical"></i> grip handle on the left edge of a block to drag it to a new position. The context toolbar also offers move actions.</li>
+            <li><strong>Style</strong> — Every block has a background color and a border color, available from the <i class="fa-light fa-palette"></i> color button on its context toolbar.</li>
+            <li><strong>Duplicate, copy, and paste</strong> — Blocks can be duplicated in place or copied to the clipboard and pasted after another block.</li>
+            <li><strong>Delete</strong> — Remove a block from its context toolbar, or select it and press <kbd>Delete</kbd>.</li>
+            <li><strong>Undo / redo</strong> — Adding, removing, moving, and editing blocks is undoable with the toolbar buttons or <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> (<kbd>Cmd</kbd> on macOS).</li>
+        </ul>
+
+        <h2>Running the Model</h2>
+        <img src="/docs/screenshots/notebook-player-toolbar.png" alt="Notebook player toolbar with independent variable, playback controls, and playhead slider" class="screenshot">
+        <p>The player toolbar at the bottom of the notebook drives the simulation, just as in the board editor:</p>
+        <ul>
+            <li><strong>Independent variable</strong> — Click the variable name (e.g. <em>t</em>) to rename it.</li>
+            <li><strong>Start / Step</strong> — Click the start value to set the domain start and the iteration step.</li>
+            <li><strong>End</strong> — Click the end value to set where the simulation stops.</li>
+            <li><strong>Playback</strong> — Play/pause, stop, step backward/forward, and replay buttons, plus a playhead slider to scrub through iterations.</li>
+        </ul>
+        <p>Chart, table, and slider blocks update live while the model plays.</p>
+
+        <h2>Saving and Collaboration</h2>
+        <ul>
+            <li>Notebooks are saved to your account from the menu. Only the notebook's owner can save changes.</li>
+            <li>When a notebook you own is open, edits are synchronized in real time, so collaborators viewing the same notebook see changes as they happen.</li>
+            <li>The cover image is uploaded as the notebook's thumbnail when you save.</li>
+        </ul>
+
+        <h2>File Format</h2>
+        <p>A notebook is stored like any other model, with an additional top-level <code>notebook</code> section in the model definition:</p>
+        <pre><code>{
+  "properties": { ... },
+  "notebook": {
+    "title": "Free Fall Lab",
+    "author": "Author",
+    "blocks": [
+      { "id": 1, "type": "header", "content": "Free fall" },
+      { "id": 2, "type": "text", "content": "We model a falling object..." },
+      { "id": 3, "type": "expression", "content": "\\frac{dy}{dt}=v" }
+    ]
+  }
+}</code></pre>
+        <p>Each block carries an <code>id</code>, a <code>type</code>, its <code>content</code>, and styling properties such as <code>backgroundColor</code> and <code>borderColor</code>. See the <a href="/docs/ai/model-schema.html">Model Schema</a> for the full model format.</p>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Protractor Shape – Modellus Docs</title>
-    <meta name="description" content="Protractor shape documentation for Modellus." />
+    <title>Initial Values Shape – Modellus Docs</title>
+    <meta name="description" content="Initial Values shape documentation: edit the starting values of model terms per case, add values at specific iterations, and compare cases side by side." />
     <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -52,7 +52,7 @@
         <ul>
             <li><a href="expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
             <li><a href="table.html"><i class="fa-light fa-table"></i> Table</a></li>
-            <li><a href="initial-values.html"><i class="fa-light fa-table-list"></i> Initial Values</a></li>
+            <li><a href="initial-values.html" class="active"><i class="fa-light fa-table-list"></i> Initial Values</a></li>
             <li><a href="chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
             <li><a href="body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
             <li><a href="point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
@@ -90,41 +90,58 @@
         <div class="docs-breadcrumb">
             <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
             <a href="/docs/index.html">Shapes</a> <span class="sep">/</span>
-            <span>Protractor</span>
+            <span>Initial Values</span>
         </div>
 
-        <h1>Protractor Shape</h1>
-        <p class="page-desc">The Protractor shape measures and displays angles interactively on the board.</p>
+        <h1>Initial Values Shape</h1>
+        <p class="page-desc">The Initial Values shape lists the input terms of your model — the starting values of differential equations and user-adjustable parameters — as an editable table, with one column per case.</p>
 
-        <div class="screenshot-placeholder">
-            <i class="fa-light fa-image"></i>
-            Screenshot: Protractor shape on the board
-        </div>
+        <img src="/docs/screenshots/initial-values-overview.png" alt="Initial Values table with one row per term and one editable value column per case" class="screenshot">
 
         <h2>Overview</h2>
-        <p>A Protractor shape provides an angle measurement tool on the board. It displays the angle between two directions from a center point, making it useful for measuring launch angles, rotation amounts, or any angular quantity in your model.</p>
+        <p>Every term that accepts user input — the state variables of differential equations and recurrences, and parameters without a defining expression — appears as a row. Editing a cell changes the value the term starts from when the model runs. When the model defines more than one case, the table shows one value column per case, making it easy to compare scenarios side by side.</p>
+
+        <h2>Adding the Shape</h2>
+        <p>Open the <i class="fa-light fa-table"></i> table button in the top toolbar and choose <strong><i class="fa-light fa-table-list"></i> Initial Values</strong>, then click and drag on the board to draw it. The table starts with a row for each input term currently defined in the model.</p>
 
         <h2>Toolbar</h2>
-        <div class="screenshot-placeholder">
-            <i class="fa-light fa-image"></i>
-            Screenshot: Protractor shape toolbar
+        <p>The Initial Values toolbar provides:</p>
+        <ul>
+            <li><strong><i class="fa-light fa-palette"></i> Colors</strong> — Background and border colors</li>
+            <li><strong>Rows</strong> — Choose which input terms are listed</li>
+            <li><strong>Delete</strong> — Remove the shape from the board</li>
+        </ul>
+
+        <h2>Editing Values</h2>
+        <ul>
+            <li>Click a value cell and type a number. The model recalculates immediately with the new starting value.</li>
+            <li>Values are rounded to the model's precision setting.</li>
+        </ul>
+
+        <h2>Values at Specific Iterations</h2>
+        <p>Besides the starting value, a term can be given a value at a later iteration — for example to model an impulse or a sudden change:</p>
+        <ol>
+            <li>Select a cell in the term's row</li>
+            <li>Click the <i class="fa-light fa-plus"></i> button in the cell toolbar to add a row for the next iteration (shown as, e.g., <em>v (n=2)</em>)</li>
+            <li>Enter the value the term should take at that iteration</li>
+            <li>Use the <i class="fa-light fa-trash-can"></i> button to remove an iteration row</li>
+        </ol>
+
+        <h2>Cases</h2>
+        <p>A model can run up to 9 cases in parallel, each with its own initial values. Set the number of cases from the independent variable menu in the player toolbar (click the variable name, e.g. <em>t</em>, and change <strong>Cases</strong>). With more than one case, the Initial Values table shows one column per case, and each column is edited independently.</p>
+
+        <div class="callout callout-tip">
+            <i class="fa-light fa-lightbulb"></i>
+            <span>Use cases to compare scenarios — for example, the same projectile launched with three different initial velocities — and plot all of them in a single <a href="chart.html">Chart</a>.</span>
         </div>
 
-        <h2>Properties Panel</h2>
-        <div class="screenshot-placeholder">
-            <i class="fa-light fa-image"></i>
-            Screenshot: Protractor properties panel
+        <h2>Copying Data</h2>
+        <p>The shape's copy menu can copy the table as CSV, with one column per case, ready to paste into a spreadsheet.</p>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>To display computed results instead of editing inputs, use the <a href="table.html">Table shape</a>.</span>
         </div>
-        <table class="docs-table">
-            <thead><tr><th>Property</th><th>Description</th></tr></thead>
-            <tbody>
-                <tr><td>Center position</td><td>The vertex of the angle</td></tr>
-                <tr><td>Start direction</td><td>Reference direction (0°)</td></tr>
-                <tr><td>Angle display</td><td>Current measured angle</td></tr>
-                <tr><td>Units</td><td>Degrees or radians</td></tr>
-                <tr><td>Show arc</td><td>Display the angle arc indicator</td></tr>
-            </tbody>
-        </table>
 
     </main>
 </div>

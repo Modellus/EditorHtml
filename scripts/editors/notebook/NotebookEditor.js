@@ -146,6 +146,7 @@ class NotebookEditor extends Workspace {
         const expressionDescriptor = BlocksRegistry.getDescriptor("expression");
         const tableDescriptor = BlocksRegistry.getDescriptor("table");
         const textDescriptor = BlocksRegistry.getDescriptor("text");
+        const sliderDescriptor = BlocksRegistry.getDescriptor("slider");
         const resolveNotebookToolbarMixin = descriptor => {
             if (typeof descriptor?.getNotebookToolbarMixin === "function")
                 return descriptor.getNotebookToolbarMixin();
@@ -156,7 +157,7 @@ class NotebookEditor extends Workspace {
             [expressionDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(expressionDescriptor)],
             [tableDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(tableDescriptor)],
             [textDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(textDescriptor)],
-            [SliderNotebookShape, SliderShapeToolbarMixin],
+            [sliderDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(sliderDescriptor)],
             [GaugeNotebookShape, GaugeShapeToolbarMixin],
             [ValueNotebookShape, ValueShapeToolbarMixin],
             [MediaNotebookShape, MediaShapeToolbarMixin],

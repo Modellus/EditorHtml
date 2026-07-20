@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Outlier Detection – Modellus Docs</title>
-    <meta name="description" content="How outlier detection works in Modellus charts and how to interpret outlier markers in regression analysis." />
+    <title>Board – Modellus Docs</title>
+    <meta name="description" content="Board editor documentation: the free-form canvas where you place shapes, define models, and run simulations." />
     <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -45,7 +45,7 @@
         </ul>
         <h5>Editors</h5>
         <ul>
-            <li><a href="/docs/board/index.html"><i class="fa-light fa-earth-africa"></i> Board</a></li>
+            <li><a href="/docs/board/index.html" class="active"><i class="fa-light fa-earth-africa"></i> Board</a></li>
             <li><a href="/docs/notebook/index.html"><i class="fa-light fa-notebook"></i> Notebook</a></li>
         </ul>
         <h5>Shapes</h5>
@@ -71,8 +71,8 @@
         </ul>
         <h5>Data Analysis</h5>
         <ul>
-            <li><a href="regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
-            <li><a href="outliers.html" class="active"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
         </ul>
         <h5>Community</h5>
         <ul>
@@ -89,74 +89,59 @@
     <main class="docs-main">
         <div class="docs-breadcrumb">
             <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
-            <a href="/docs/index.html">Data Analysis</a> <span class="sep">/</span>
-            <span>Outliers</span>
+            <a href="/docs/index.html">Editors</a> <span class="sep">/</span>
+            <span>Board</span>
         </div>
 
-        <h1>Outlier Detection</h1>
-        <p class="page-desc">Modellus automatically identifies data points that deviate significantly from the regression curve, helping you spot measurement errors or interesting phenomena.</p>
+        <h1>Board</h1>
+        <p class="page-desc">The Board is the free-form canvas editor of Modellus. You place shapes anywhere, write the mathematics in Expression shapes, and watch tables, charts, and animations react as the model plays.</p>
+
+        <img src="/docs/screenshots/editor-overview.png" alt="Board editor overview with shapes on the canvas" class="screenshot">
 
         <h2>Overview</h2>
-        <p>When you perform a regression on table data, Modellus evaluates each data point against the fitted curve. Points that fall significantly far from the curve are flagged as outliers. These are visually marked in Chart shapes to help you interpret your data.</p>
+        <p>Every element on the board is a <a href="/docs/index.html">shape</a>: expressions define the model, and the remaining shapes display or control it. The board is the default editor for Modellus models; for document-style models built as a vertical sequence of blocks, see the <a href="/docs/notebook/index.html">Notebook</a>.</p>
 
-        <h2>How Outlier Detection Works</h2>
-        <div class="screenshot-placeholder">
-            <i class="fa-light fa-image"></i>
-            Screenshot: Chart with normal points and outlier points visually distinguished
-        </div>
-
-        <p>The detection process:</p>
-        <ol>
-            <li>A regression is computed on the selected data (linear or quadratic)</li>
-            <li>For each data point, the residual (distance from the curve) is calculated</li>
-            <li>Points with residuals exceeding a statistical threshold are flagged</li>
-            <li>The <code>isOutlierIteration</code> method marks these iterations</li>
-            <li>Charts render outlier points with a distinct visual style</li>
-        </ol>
-
-        <h2>Visual Appearance in Charts</h2>
-        <div class="screenshot-placeholder">
-            <i class="fa-light fa-image"></i>
-            Screenshot: Close-up of chart showing the difference between normal and outlier point styles
-        </div>
-
-        <table class="docs-table">
-            <thead><tr><th>Point Type</th><th>Appearance</th><th>Meaning</th></tr></thead>
-            <tbody>
-                <tr><td>Normal</td><td>Filled circle, series color</td><td>Data point consistent with the regression model</td></tr>
-                <tr><td>Outlier</td><td>Different marker style (hollow or contrasting color)</td><td>Data point far from the fitted curve</td></tr>
-            </tbody>
-        </table>
-
-        <h2>Interpreting Outliers</h2>
-        <p>An outlier point may indicate:</p>
+        <h2>Adding Shapes</h2>
+        <p>Click a shape button in the top toolbar and then click and drag on the board to draw the shape at the size you want:</p>
         <ul>
-            <li><strong>Measurement error</strong> — The data point was incorrectly recorded</li>
-            <li><strong>Experimental anomaly</strong> — Something unusual happened during that measurement</li>
-            <li><strong>Model limitation</strong> — The chosen regression model (linear/quadratic) doesn't capture the full behavior</li>
-            <li><strong>Interesting phenomenon</strong> — A genuinely different behavior worth investigating</li>
+            <li>A plain click without dragging creates nothing — drag to give the shape a size.</li>
+            <li>A very small drag falls back to the shape's recommended default size.</li>
+            <li>Press <kbd>Esc</kbd> or click the button again to cancel draw mode.</li>
+        </ul>
+        <p>The <i class="fa-light fa-table"></i> table button opens a dropdown to choose between the <a href="/docs/shapes/table.html">Table</a> and the <a href="/docs/shapes/initial-values.html">Initial Values</a> table. Positional shapes (Body, Point, Vector, Line, Arc) are added from a <a href="/docs/shapes/referential.html">Referential</a>, which provides their coordinate system.</p>
+
+        <h2>Top Toolbar</h2>
+        <ul>
+            <li><strong><i class="fa-light fa-bars"></i> Menu</strong> — Open, import, export, and save models</li>
+            <li><strong><i class="fa-light fa-rotate-left"></i> Undo / <i class="fa-light fa-rotate-right"></i> Redo</strong> — Also available as <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></li>
+            <li><strong>Shape buttons</strong> — Arm draw mode for each shape type</li>
+            <li><strong><i class="fa-light fa-arrow-pointer"></i> Select</strong> — Tree view of all shapes on the board for selecting them by name</li>
+            <li><strong>Collaborators</strong> — Shows who else is viewing or editing the model in real time</li>
         </ul>
 
-        <div class="callout callout-tip">
-            <i class="fa-light fa-lightbulb"></i>
-            <span>Don't automatically discard outliers. Investigate why they're different — they may reveal something important about the phenomenon you're studying.</span>
-        </div>
+        <h2>Board Toolbar</h2>
+        <p>Click an empty spot on the board to open the board toolbar. It edits the model itself rather than a shape:</p>
+        <ul>
+            <li><strong>Name</strong> — The model title</li>
+            <li><strong>Theme</strong> — Mid School or University visual style</li>
+            <li><strong>Background</strong> — Background color and background picture</li>
+        </ul>
 
-        <h2>Working with Outliers</h2>
+        <h2>Player Toolbar</h2>
+        <p>The toolbar at the bottom drives the simulation:</p>
+        <ul>
+            <li><strong>Independent variable</strong> — Click the variable name (e.g. <em>t</em>) to rename it, choose the iteration term, set the number of cases (up to 9), precision, angle unit, and toggle auto play.</li>
+            <li><strong>Start / Step</strong> — The domain start and integration step.</li>
+            <li><strong>End</strong> — Where the simulation stops, with an option to run without limit.</li>
+            <li><strong>Playback</strong> — Play/pause, stop, step backward/forward, replay, and a playhead slider to scrub through iterations.</li>
+            <li><strong><i class="fa-light fa-grid"></i> Grid</strong> — Toggle snap-to-grid and set the grid size.</li>
+        </ul>
 
-        <h3>Excluding outliers from regression</h3>
-        <p>If you determine that certain points are measurement errors, you can exclude them by selecting a narrower range of cells in the Table before applying regression. Only the selected cells participate in the curve fitting.</p>
-
-        <h3>Comparing regressions</h3>
-        <p>Try both linear and quadratic regression on the same data. If the linear model produces many outliers but the quadratic model doesn't, the relationship may be non-linear — consider upgrading your theoretical model.</p>
-
-        <h2>Technical Details</h2>
-        <p>The outlier detection is performed per-iteration by the calculation engine's <code>isOutlierIteration</code> method. The Chart shape queries this for each Y-series data point during rendering, applying the outlier visual style to flagged iterations.</p>
-
-        <div class="callout callout-info">
-            <i class="fa-light fa-info-circle"></i>
-            <span>Outlier detection is only active when a regression term exists for the plotted data series. Without regression, all points are rendered normally.</span>
-        </div>
+        <h2>Saving and Offline Use</h2>
+        <ul>
+            <li>Signed-in users' models save to their account and appear in the <a href="/docs/catalog/index.html">Community</a> personal workspace; changes are also synchronized in real time with collaborators.</li>
+            <li>Without an account you can still use the full editor and import and export model files, but cloud save is unavailable.</li>
+        </ul>
 
     </main>
 </div>

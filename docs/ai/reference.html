@@ -43,10 +43,16 @@
         <ul>
             <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
         </ul>
+        <h5>Editors</h5>
+        <ul>
+            <li><a href="/docs/board/index.html"><i class="fa-light fa-earth-africa"></i> Board</a></li>
+            <li><a href="/docs/notebook/index.html"><i class="fa-light fa-notebook"></i> Notebook</a></li>
+        </ul>
         <h5>Shapes</h5>
         <ul>
             <li><a href="/docs/shapes/expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
             <li><a href="/docs/shapes/table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="/docs/shapes/initial-values.html"><i class="fa-light fa-table-list"></i> Initial Values</a></li>
             <li><a href="/docs/shapes/chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
             <li><a href="/docs/shapes/body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
             <li><a href="/docs/shapes/point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
@@ -105,6 +111,7 @@
             <tbody>
                 <tr><td>expression</td><td>ExpressionShape</td><td>Define equations, parameters, ODEs, recurrences</td><td>No</td></tr>
                 <tr><td>table</td><td>TableShape</td><td>Display/enter data, perform regression</td><td>No</td></tr>
+                <tr><td>initialValuesTable</td><td>InitialValuesTableShape</td><td>Editable table of input-term starting values, one column per case</td><td>No</td></tr>
                 <tr><td>chart</td><td>ChartShape</td><td>Plot data series and regression curves</td><td>No</td></tr>
                 <tr><td>body</td><td>BodyShape</td><td>Animated sprite controlled by terms</td><td>Referential</td></tr>
                 <tr><td>point</td><td>PointShape</td><td>Positioned dot driven by X/Y terms</td><td>Referential</td></tr>
@@ -192,6 +199,20 @@ e (or \E) = 2.71828...</code></pre>
     }
   ]
 }</code></pre>
+
+        <h2>Notebook Models</h2>
+        <p>Besides board models, Modellus supports document-style <a href="/docs/notebook/index.html">notebooks</a>. A notebook definition adds a top-level <code>notebook</code> field to the model JSON:</p>
+        <pre><code>{
+  "properties": { ... },
+  "notebook": {
+    "title": "string",
+    "author": "string",
+    "blocks": [
+      { "id": 1, "type": "header", "content": "string", "backgroundColor": "transparent", "borderColor": "#e8e8e8" }
+    ]
+  }
+}</code></pre>
+        <p>Block <code>type</code> values: <code>header</code>, <code>text</code>, <code>expression</code>, <code>chart</code>, <code>table</code>, <code>simulation</code>, <code>gauge</code>, <code>slider</code>, <code>value</code>, <code>media</code>, <code>question</code>, <code>ruler</code>, <code>protractor</code>, <code>slope</code>. Expression blocks store the same LaTeX expression language in <code>content</code>; blocks are rendered top to bottom in array order.</p>
 
         <h2>Key Rules for Agents</h2>
         <ul>
