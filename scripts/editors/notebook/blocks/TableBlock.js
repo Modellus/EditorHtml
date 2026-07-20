@@ -264,6 +264,7 @@ if (typeof BlocksRegistry !== "undefined" && typeof TableShape !== "undefined") 
 
     BlocksRegistry.register("table", {
         defaultContent: "",
+        resizable: true,
         renderContentHtml: () => "",
         notebookShapeClass: TableBlock,
         getNotebookToolbarMixin: () => typeof TableShapeToolbarMixin !== "undefined" ? TableShapeToolbarMixin : null,

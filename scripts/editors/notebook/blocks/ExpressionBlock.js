@@ -27,6 +27,11 @@ if (typeof BlocksRegistry !== "undefined") {
             this.notebookEditor._reparseExpressions();
         }
 
+        draw() {
+            // Keep the scroll view in sync when the block is resized.
+            this.expressionControl?.updateLayout();
+        }
+
         insertShortcut(shortcutText) {
             if (!this.expressionControl)
                 return;
@@ -59,6 +64,7 @@ if (typeof BlocksRegistry !== "undefined") {
     ExpressionNotebookShape = ExpressionBlock;
     BlocksRegistry.register("expression", {
         defaultContent: "\\displaylines{}",
+        resizable: true,
         notebookShapeClass: ExpressionBlock,
         getNotebookToolbarMixin: () => typeof ExpressionShapeToolbarMixin !== "undefined" ? ExpressionShapeToolbarMixin : null,
         createShape: (notebookEditor, block) => new ExpressionBlock(notebookEditor, block)

@@ -2,14 +2,20 @@ var SliderBlock;
 if (typeof BlocksRegistry !== "undefined" && typeof SliderShape !== "undefined") {
     SliderBlock = class SliderBlock extends SliderShape {
         static WIDTH = 70;
-        static HEIGHT = 200;
         static MARGIN = 12;
+        // Vertical space reserved below the track for the term label.
+        static LABEL_RESERVE = 22;
+        // Default height of the block content area when it has not been resized.
+        static DEFAULT_HEIGHT = 224;
+        // Smallest usable track height so the slider stays interactable when shrunk.
+        static MIN_TRACK_HEIGHT = 40;
 
         constructor(notebookEditor, block, hostElement) {
             super(SliderBlock.createNotebookRuntime(notebookEditor, hostElement), null, block.id);
             this.notebookEditor = notebookEditor;
             this.block = block;
-            this.container = hostElement;
+            // Note: do NOT set this.container here — SliderShape uses this.container
+            // for the SVG border rect. Measuring uses this.contentElement instead.
             this.contentElement = hostElement;
             this.blockElement = hostElement?.closest?.(".notebook-block") ?? null;
             this.applyNotebookBlockProperties();
@@ -50,7 +56,6 @@ if (typeof BlocksRegistry !== "undefined" && typeof SliderShape !== "undefined")
             }
             this.properties.y = SliderBlock.MARGIN;
             this.properties.width = SliderBlock.WIDTH;
-            this.properties.height = SliderBlock.HEIGHT;
             this.properties.rotation = 0;
         }
 
@@ -63,7 +68,7 @@ if (typeof BlocksRegistry !== "undefined" && typeof SliderShape !== "undefined")
             const svg = this.board.createSvgElement("svg");
             svg.classList.add("notebook-slider-control");
             svg.setAttribute("width", "100%");
-            svg.setAttribute("height", SliderBlock.HEIGHT + SliderBlock.MARGIN * 2);
+            svg.setAttribute("height", SliderBlock.DEFAULT_HEIGHT);
             this.board.hostElement.appendChild(svg);
             this.board.svg = svg;
             const group = super.createElement();
@@ -72,7 +77,15 @@ if (typeof BlocksRegistry !== "undefined" && typeof SliderShape !== "undefined")
         }
 
         draw() {
+            const contentHeight = this.contentElement?.clientHeight || this.board.hostElement?.clientHeight || SliderBlock.DEFAULT_HEIGHT;
             const hostWidth = this.contentElement?.clientWidth || this.board.hostElement?.clientWidth || 0;
+            // Match the SVG viewport to the measured content height so the slider parts,
+            // which are drawn in absolute pixels, stay aligned with the visible area.
+            this.board.svg?.setAttribute("height", contentHeight);
+            // Fit the slider track to the block, leaving room for the top margin and the term label below.
+            this.properties.height = Math.max(SliderBlock.MIN_TRACK_HEIGHT, contentHeight - SliderBlock.MARGIN - SliderBlock.LABEL_RESERVE);
+            this.properties.width = SliderBlock.WIDTH;
+            this.properties.y = SliderBlock.MARGIN;
             this.properties.x = hostWidth > 0 ? Math.max(SliderBlock.MARGIN, (hostWidth - SliderBlock.WIDTH) / 2) : SliderBlock.MARGIN;
             SliderShape.prototype.draw.call(this);
         }
@@ -81,7 +94,6 @@ if (typeof BlocksRegistry !== "undefined" && typeof SliderShape !== "undefined")
             this.contentElement = contentElement;
             this.dragHandleElement = dragHandleElement;
             this.blockElement = contentElement.closest(".notebook-block");
-            this.container = contentElement;
             this.bindSliderPointer();
             this.draw();
         }
@@ -242,6 +254,7 @@ if (typeof BlocksRegistry !== "undefined" && typeof SliderShape !== "undefined")
 
     BlocksRegistry.register("slider", {
         defaultContent: "",
+        resizable: true,
         renderContentHtml: () => "",
         notebookShapeClass: SliderBlock,
         getNotebookToolbarMixin: () => typeof SliderShapeToolbarMixin !== "undefined" ? SliderShapeToolbarMixin : null,

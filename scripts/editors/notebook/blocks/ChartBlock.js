@@ -213,6 +213,7 @@ if (typeof BlocksRegistry !== "undefined" && typeof ChartShape !== "undefined") 
 
     BlocksRegistry.register("chart", {
         defaultContent: "",
+        resizable: true,
         renderContentHtml: () => "",
         notebookShapeClass: ChartBlock,
         getNotebookToolbarMixin: () => typeof ChartShapeToolbarMixin !== "undefined" ? ChartShapeToolbarMixin : null,

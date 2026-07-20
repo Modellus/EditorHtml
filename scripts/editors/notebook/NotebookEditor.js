@@ -741,8 +741,14 @@ class NotebookEditor extends Workspace {
 
     applyBlockProperty(blockId, name, value) {
         const shape = this.shapeInstances.get(blockId);
+        const isContentHeight = name === "contentHeight";
+        // Apply the content-area height to the DOM before the shape redraws so it fits the new size.
+        if (isContentHeight && shape?.contentElement && Number.isFinite(value))
+            shape.contentElement.style.height = `${value}px`;
         if (shape?.applyProperty) {
             shape.applyProperty(name, value);
+            if (isContentHeight)
+                shape.draw?.();
             return;
         }
         const block = this.getBlockById(blockId);
@@ -843,6 +849,9 @@ class NotebookEditor extends Workspace {
 
     _renderBlockHtml(block) {
         const contentHtml = this._renderBlockContent(block);
+        const resizeHandleHtml = BlocksRegistry.isResizable(block.type)
+            ? `<div class="notebook-block-resize-handle" title="${this.translations?.get?.("Drag to resize") ?? "Drag to resize"}"></div>`
+            : "";
 
         return `
             <div class="notebook-block block-type-${block.type}" data-block-id="${block.id}">
@@ -852,6 +861,7 @@ class NotebookEditor extends Workspace {
                 <div class="notebook-block-body">
                     <div class="notebook-block-content">${contentHtml}</div>
                 </div>
+                ${resizeHandleHtml}
             </div>
         `;
     }
@@ -867,6 +877,8 @@ class NotebookEditor extends Workspace {
 
         const contentElement = blockElement.querySelector(".notebook-block-content");
         const dragHandleElement = blockElement.querySelector(".notebook-block-drag-handle");
+        if (contentElement && BlocksRegistry.isResizable(block.type) && Number.isFinite(block.contentHeight))
+            contentElement.style.height = `${block.contentHeight}px`;
         const shape = BlocksRegistry.createShape(this, block, contentElement);
         const previousShape = this.shapeInstances.get(block.id);
         if (previousShape)
@@ -879,7 +891,54 @@ class NotebookEditor extends Workspace {
         const colorButtonContainer = blockElement.querySelector(".notebook-block-color-button");
         if (colorButtonContainer)
             this._initBlockGripButton(colorButtonContainer, shape);
+        if (contentElement && BlocksRegistry.isResizable(block.type))
+            this._initBlockResize(blockElement, contentElement, block, shape);
         this.shapeInteractionController.attachItemInteractions(blockElement, block, shape);
+    }
+
+    _initBlockResize(blockElement, contentElement, block, shape) {
+        const handle = blockElement.querySelector(".notebook-block-resize-handle");
+        if (!handle)
+            return;
+        const minimumHeight = 80;
+        let pointerId = null;
+        let startY = 0;
+        let startHeight = 0;
+        let currentHeight = 0;
+        const onPointerMove = event => {
+            if (pointerId != null && event.pointerId !== pointerId)
+                return;
+            currentHeight = Math.max(minimumHeight, Math.round(startHeight + (event.clientY - startY)));
+            contentElement.style.height = `${currentHeight}px`;
+            shape.draw?.();
+        };
+        const onPointerUp = event => {
+            if (pointerId != null && event.pointerId != null && event.pointerId !== pointerId)
+                return;
+            window.removeEventListener("pointermove", onPointerMove);
+            window.removeEventListener("pointerup", onPointerUp);
+            window.removeEventListener("pointercancel", onPointerUp);
+            handle.classList.remove("is-active");
+            pointerId = null;
+            // Commit the final height once; block.contentHeight is untouched during the live drag,
+            // so the command snapshots the pre-drag height for undo.
+            if (currentHeight > 0 && currentHeight !== block.contentHeight)
+                this.setBlockPropertyCommand(block.id, "contentHeight", currentHeight);
+        };
+        handle.addEventListener("pointerdown", event => {
+            if (event.button !== 0)
+                return;
+            event.preventDefault();
+            event.stopPropagation();
+            pointerId = event.pointerId;
+            startY = event.clientY;
+            startHeight = contentElement.getBoundingClientRect().height;
+            currentHeight = startHeight;
+            handle.classList.add("is-active");
+            window.addEventListener("pointermove", onPointerMove);
+            window.addEventListener("pointerup", onPointerUp);
+            window.addEventListener("pointercancel", onPointerUp);
+        });
     }
 
     serialize() {

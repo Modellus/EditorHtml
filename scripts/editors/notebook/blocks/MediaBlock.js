@@ -31,6 +31,7 @@ class MediaNotebookShape extends NotebookShape {
 
 BlocksRegistry.register("media", {
     defaultContent: "",
+    resizable: true,
     createShape: (notebookEditor, block) => new MediaNotebookShape(notebookEditor, block)
 });
 

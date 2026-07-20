@@ -505,6 +505,10 @@ class BlocksRegistry {
         return this.shapeDescriptors[type] ?? this.shapeDescriptors["text"];
     }
 
+    static isResizable(type) {
+        return this.shapeDescriptors[type]?.resizable === true;
+    }
+
     static createShape(notebookEditor, block, hostElement = null) {
         const descriptor = this.getDescriptor(block.type);
         return descriptor.createShape(notebookEditor, block, hostElement);

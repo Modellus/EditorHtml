@@ -468,6 +468,13 @@ class ExpressionControl {
         }
     }
 
+    updateLayout() {
+        if (!this.containerElement)
+            return;
+        const scrollViewInstance = DevExpress.ui.dxScrollView.getInstance(this.containerElement);
+        scrollViewInstance?.update();
+    }
+
     setValue(value) {
         this.mathfield.value = value;
     }
