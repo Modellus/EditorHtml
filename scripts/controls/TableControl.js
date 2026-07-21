@@ -77,7 +77,9 @@ class TableControl {
             isOutlierCell: null,
             isCellEditable: null,
             isUserInputCell: null,
-            userInputMarkerColor: "#2f80ed"
+            userInputMarkerColor: "#2f80ed",
+            focusOnSingleClick: false,
+            showHeader: true
         };
     }
 
@@ -211,6 +213,7 @@ class TableControl {
             showCase: column?.showCase === true,
             editable: column?.editable === true,
             isText: column?.isText === true,
+            useHeaderFontSize: column?.useHeaderFontSize === true,
             termType: Number.isFinite(column?.termType) ? Number(column.termType) : null,
             expressionLatex: typeof column?.expressionLatex === "string" ? column.expressionLatex : null,
             width: Number.isFinite(column?.width) ? Math.max(1, Number(column.width)) : null,
@@ -305,7 +308,7 @@ class TableControl {
     getLayout() {
         const width = this.width;
         const height = this.height;
-        const headerHeight = Math.max(20, Number(this.options.headerHeight) || 28);
+        const headerHeight = this.options.showHeader === false ? 0 : Math.max(20, Number(this.options.headerHeight) || 28);
         const scrollbarSize = Math.max(8, Number(this.options.scrollbarWidth) || 10);
         const totalRowsHeight = this.getTotalRowsHeight();
         const totalColumnsWidth = this.getTotalColumnsWidth(this.options.columns);
@@ -568,6 +571,8 @@ class TableControl {
 
     renderHeader(layout, columns, geometry) {
         this.renderHeaderBackground(layout, columns, geometry);
+        if (layout.headerHeight <= 0)
+            return;
         for (let index = 0; index < columns.length; index++)
             this._headerContentForeignObjects.push(
                 this.renderHeaderCellContent(layout, columns[index], geometry[index], index)
@@ -575,6 +580,8 @@ class TableControl {
     }
 
     renderHeaderBackground(layout, columns, geometry) {
+        if (layout.headerHeight <= 0)
+            return;
         const headerRect = this.createSvgElement("rect");
         headerRect.setAttribute("x", "0");
         headerRect.setAttribute("y", "0");
@@ -673,7 +680,9 @@ class TableControl {
         rowRect.setAttribute("y", `${y}`);
         rowRect.setAttribute("width", `${layout.bodyWidth}`);
         rowRect.setAttribute("height", `${rowHeight}`);
-        if (this.isRowInFocus(rowIndex))
+        if (row.rowBackgroundColor)
+            rowRect.setAttribute("fill", row.rowBackgroundColor);
+        else if (this.isRowInFocus(rowIndex))
             rowRect.setAttribute("fill", this.options.focusedCellColor);
         else if (this.isRowInSelection(rowIndex))
             rowRect.setAttribute("fill", this.options.selectionColor);
@@ -721,7 +730,7 @@ class TableControl {
             }
             if (!isEditingCell)
                 this.renderCellValueIndicator(cell, y, rowHeight, row, columns[columnIndex], columnValueRanges?.[columnIndex]);
-            if (columnIndex < columns.length - 1) {
+            if (columnIndex < columns.length - 1 && !row.hideColumnDividers) {
                 const line = this.createSvgElement("line");
                 line.setAttribute("x1", `${cell.x + cell.width}`);
                 line.setAttribute("y1", `${y}`);
@@ -733,7 +742,7 @@ class TableControl {
             }
             if (!isEditingCell) {
                 const textValue = this.getCellText(row, columns[columnIndex]);
-                this.renderCellText(cell, y, rowHeight, textValue, columnIndex, columns[columnIndex]);
+                this.renderCellText(cell, y, rowHeight, textValue, columnIndex, columns[columnIndex], row);
             }
             this.cellBoxes.push({
                 x: cell.x,
@@ -913,15 +922,16 @@ class TableControl {
         this.rowsLayer.appendChild(line);
     }
 
-    renderCellText(cellGeometry, y, rowHeight, textValue, columnIndex, column = null) {
+    renderCellText(cellGeometry, y, rowHeight, textValue, columnIndex, column = null, row = null) {
         const isText = column?.isText === true;
+        const indent = isText && Number.isFinite(row?.textIndent) ? row.textIndent : 0;
         const text = this.createSvgElement("text");
-        text.setAttribute("x", isText ? `${cellGeometry.x + 6}` : `${cellGeometry.x + cellGeometry.width - 6}`);
+        text.setAttribute("x", isText ? `${cellGeometry.x + 6 + indent}` : `${cellGeometry.x + cellGeometry.width - 6}`);
         text.setAttribute("y", `${y + rowHeight / 2 + 4}`);
         text.setAttribute("text-anchor", isText ? "start" : "end");
         text.setAttribute("font-family", isText ? this.options.termFontFamily : this.options.numberFontFamily);
-        text.setAttribute("font-size", `${this.options.fontSize}`);
-        text.setAttribute("fill", this.options.foregroundColor);
+        text.setAttribute("font-size", `${column?.useHeaderFontSize === true ? this.options.headerFontSize : this.options.fontSize}`);
+        text.setAttribute("fill", row?.rowBackgroundColor ? Utils.getContrastColor(row.rowBackgroundColor) : this.options.foregroundColor);
         text.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
         text.textContent = textValue;
         this.rowsLayer.appendChild(text);
@@ -941,7 +951,7 @@ class TableControl {
         if (numericValue === -Infinity)
             return "-∞";
         if (!Number.isFinite(numericValue))
-            return "\u2014";
+            return "";
         const precision = Number.isFinite(column.precision) ? column.precision : this.options.precision;
         return this.formatNumber(numericValue, precision);
     }
@@ -1297,7 +1307,7 @@ class TableControl {
         if (event.shiftKey && this.selectedCell && this.canCreatePreloadedRangeSelection(this.selectedCell, cell)) {
             this.focusCellRange(this.selectedCell.rowIndex, this.selectedCell.columnIndex, cell.rowIndex, cell.columnIndex);
             this.selectedCellRange = null;
-        } else if (this.isPreloadedColumn(cell.columnIndex)) {
+        } else if (this.isPreloadedColumn(cell.columnIndex) || this.options.focusOnSingleClick === true) {
             this.focusCellRange(cell.rowIndex, cell.columnIndex, cell.rowIndex, cell.columnIndex);
             this.selectedCellRange = null;
         } else {
@@ -1562,10 +1572,25 @@ class TableControl {
         if (!this.isPointInBody(point))
             return null;
         const rowIndex = this.getBodyRowIndexFromY(point.y);
-        const columnIndex = this.getColumnIndexFromX(point.x);
-        if (rowIndex < 0 || columnIndex < 0)
+        if (rowIndex < 0)
             return null;
+        let columnIndex = this.getColumnIndexFromX(point.x);
+        if (columnIndex < 0) {
+            if (this.options.focusOnSingleClick !== true)
+                return null;
+            columnIndex = this.getNearestColumnIndexFromX(point.x);
+            if (columnIndex < 0)
+                return null;
+        }
         return { rowIndex: rowIndex, columnIndex: columnIndex };
+    }
+
+    getNearestColumnIndexFromX(pointX) {
+        const layout = this.getLayout();
+        const geometry = this.getColumnGeometry(layout, this.options.columns);
+        if (geometry.length === 0)
+            return -1;
+        return pointX < geometry[0].x ? 0 : geometry.length - 1;
     }
 
     clearHeaderTooltipHoverTimer() {
@@ -1915,7 +1940,7 @@ class TableControl {
         const row = this.getRowByIndex(rowIndex);
         const column = this.getColumnByIndex(columnIndex);
         const currentValue = row ? row[column.key] : "";
-        let text = currentValue == null ? "" : `${currentValue}`;
+        let text = (currentValue == null || Number.isNaN(currentValue)) ? "" : `${currentValue}`;
         if (initialKey != null && this.isAcceptedEditKey(initialKey))
             text = this.normalizeEditCharacter(initialKey);
         this.editingCell = {

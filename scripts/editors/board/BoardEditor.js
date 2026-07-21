@@ -46,14 +46,14 @@ class BoardEditor extends Workspace {
         this.saveFormController = new SaveFormController(this);
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
-        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, InitialValuesTableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, CasesTableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.commands.registerShapeAlias("BodyShape", BodyWidget);
         this.commands.registerShapeAlias("PointShape", PointWidget);
         this.commands.registerShapeAlias("ExpressionShape", ExpressionWidget);
         this.commands.registerShapeAlias("ValueShape", ValueWidget);
         this.commands.registerShapeAlias("ChartShape", ChartWidget);
         this.commands.registerShapeAlias("TableShape", TableWidget);
-        this.commands.registerShapeAlias("InitialValuesTableShape", InitialValuesTableWidget);
+        this.commands.registerShapeAlias("CasesTableShape", CasesTableWidget);
         this.commands.registerShapeAlias("SliderShape", SliderWidget);
         this.commands.registerShapeAlias("GaugeShape", GaugeWidget);
         this.commands.registerShapeAlias("VectorShape", VectorWidget);
@@ -233,8 +233,11 @@ class BoardEditor extends Workspace {
             this.bottomToolbar?.updateSnapToGridButton();
         if (name === "name")
             this.topToolbar?.updateModelName();
-        if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit")
+        if (name.includes("independent") || name.includes("iteration") || name === "casesCount" || name === "precision" || name === "angleUnit") {
+            this.session.pendingInitialValuesByCase = this.calculator.getInitialValuesByCase();
+            this.session.pendingUserInputsByCase = this.calculator.getUserInputsByCase();
             this.calculator.setProperty(name, value);
+        }
         if (name === "angleUnit")
             this.board.shapes.shapes.forEach(shape => shape.onAngleUnitChanged?.(previousAngleUnit));
         if (name === "independent.start" || name === "independent.end")
@@ -461,6 +464,7 @@ class BoardEditor extends Workspace {
         this.calculator.applyInitialValuesByCase(initialValuesByCase);
         this.calculator.applyUserInputsByCase(userInputsByCase);
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
+        this.board.shapes.shapes.forEach(shape => shape.tick());
         this.forceRefreshWorkspaceSurface();
         this.bottomToolbar.updatePlayer();
         this.topToolbar.update();

@@ -212,7 +212,7 @@ class ModellusShapeToolbar {
                             contentTemplate: contentElement => {
                                 const tableTypes = [
                                     { text: shell.board.translations.get("Table Name") ?? "Table", icon: "fa-light fa-table", type: "TableShape", name: "Table" },
-                                    { text: shell.board.translations.get("Initial Values Table Name") ?? "Initial Values", icon: "fa-light fa-table-list", type: "InitialValuesTableShape", name: "Initial Values" }
+                                    { text: shell.board.translations.get("Cases Table Name") ?? "Cases", icon: "fa-light fa-table-list", type: "CasesTableShape", name: "Cases" }
                                 ];
                                 $(contentElement).empty();
                                 $("<div>").appendTo(contentElement).dxList({

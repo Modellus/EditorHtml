@@ -1,1 +1,1 @@
-var InitialValuesTableWidget = InitialValuesTableShape;
+var CasesTableWidget = CasesTableShape;

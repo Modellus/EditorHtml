@@ -385,13 +385,17 @@ class BaseTableShape extends BaseShape {
         this.refreshFocusedCellsToolbarControl();
         if (this.board.selection.selectedShape !== this)
             return;
-        if (payload?.hasFocusedCells === true) {
+        if (this.shouldShowCellsContextToolbar()) {
             super.hideContextToolbar();
             this.showCellsContextToolbar();
             return;
         }
         this.hideCellsContextToolbar();
         super.showContextToolbar();
+    }
+
+    shouldShowCellsContextToolbar() {
+        return this.table?.hasFocusedCells?.() === true;
     }
 
     showCellsContextToolbar() {
@@ -427,7 +431,7 @@ class BaseTableShape extends BaseShape {
     }
 
     showContextToolbar() {
-        if (this.table?.hasFocusedCells?.()) {
+        if (this.shouldShowCellsContextToolbar()) {
             this.showCellsContextToolbar();
             super.hideContextToolbar();
             return;
@@ -442,6 +446,45 @@ class BaseTableShape extends BaseShape {
 
     hideContextToolbar() {
         this.hideCellsContextToolbar();
+        this.scheduleClearTableFocusIfDeselected();
         super.hideContextToolbar();
+    }
+
+    // Deselect/reselect of the same shape can happen synchronously within one click
+    // (e.g. clicking a resize handle re-resolves to the same shape); deferring lets that
+    // settle first so a same-shape reselect doesn't wipe focus that should survive it.
+    // Double-clicking a preloaded cell also deselects the shape on purpose to enter a
+    // borderless edit-mode highlight, so that state must not be treated as a real deselect.
+    scheduleClearTableFocusIfDeselected() {
+        if (!this.table)
+            return;
+        if (!this.table.hasFocusedCells() && this.table.selectedCell == null)
+            return;
+        Promise.resolve().then(() => {
+            const selection = this.board.selection;
+            if (selection.selectedShape === this || selection._editModeShape === this)
+                return;
+            this.clearTableFocus();
+        });
+    }
+
+    clearTableFocus() {
+        if (!this.table)
+            return;
+        if (!this.table.hasFocusedCells() && this.table.selectedCell == null)
+            return;
+        if (this.table.editingCell && !this.table.commitEditing())
+            this.table.cancelEditing();
+        this.table.clearFocusedCells();
+        this.table.selectedCell = null;
+        this.table.render();
+    }
+
+    // Double-clicking a cell puts the shape in a borderless edit-mode highlight instead of
+    // a normal selection (see CanvasSelection.onDoubleClick); clicking fully outside the shape
+    // ends that highlight via exitEditMode, which is the only place left to close the caret.
+    exitEditMode() {
+        this.clearTableFocus();
+        super.exitEditMode();
     }
 }
