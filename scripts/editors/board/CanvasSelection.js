@@ -398,25 +398,6 @@ class Selection {
             return;
         this.removeEditModeHighlight();
         this._editModeShape = shape;
-        const bounds = this.getOutlineBounds(shape);
-        if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height))
-            return;
-        const rotation = Number(shape.properties?.rotation) || 0;
-        const cx = bounds.x + bounds.width / 2;
-        const cy = bounds.y + bounds.height / 2;
-        const rotateAttr = Math.abs(rotation) > 0.00001 ? ` transform="rotate(${rotation} ${cx} ${cy})"` : "";
-        const proxy = this.board.createSvgElement("g");
-        proxy.setAttribute("class", "highlight-proxy edit-mode");
-        proxy.setAttribute("pointer-events", "none");
-        proxy.innerHTML = `<defs>
-            <mask id="mdl-edit-mode-mask">
-                <rect x="-100000" y="-100000" width="200000" height="200000" fill="white"/>
-                <rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="black"${rotateAttr}/>
-            </mask>
-        </defs>
-        <rect x="-100000" y="-100000" width="200000" height="200000" fill="rgba(0,0,0,0.15)" mask="url(#mdl-edit-mode-mask)"/>`;
-        this.board.svg.appendChild(proxy);
-        this._editModeProxy = proxy;
         this.resolveInteractionAdapter()?.onEditModeHighlightChanged?.(shape, true, this);
     }
 
@@ -429,18 +410,11 @@ class Selection {
 
     removeEditModeHighlight() {
         const shape = this._editModeShape;
-        if (shape) {
-            this._editModeShape = null;
-            shape.exitEditMode();
-        }
-        let removedOverlay = false;
-        if (this._editModeProxy) {
-            this._editModeProxy.remove();
-            this._editModeProxy = null;
-            removedOverlay = true;
-        }
-        if (removedOverlay)
-            this.resolveInteractionAdapter()?.onEditModeHighlightChanged?.(shape, false, this);
+        if (!shape)
+            return;
+        this._editModeShape = null;
+        shape.exitEditMode();
+        this.resolveInteractionAdapter()?.onEditModeHighlightChanged?.(shape, false, this);
     }
 
     setDragging(isDragging) {
