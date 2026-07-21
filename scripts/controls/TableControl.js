@@ -952,7 +952,8 @@ class TableControl {
             return "-∞";
         if (!Number.isFinite(numericValue))
             return "";
-        const precision = Number.isFinite(column.precision) ? column.precision : this.options.precision;
+        const cellPrecision = row.cellPrecision && Number.isFinite(row.cellPrecision[column.key]) ? row.cellPrecision[column.key] : null;
+        const precision = cellPrecision != null ? cellPrecision : (Number.isFinite(column.precision) ? column.precision : this.options.precision);
         return this.formatNumber(numericValue, precision);
     }
 

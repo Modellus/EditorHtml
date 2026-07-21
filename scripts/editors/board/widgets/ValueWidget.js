@@ -444,7 +444,7 @@ class ValueShape extends BaseShape {
         const calculator = this.board.calculator;
         if (calculator.isTerm(term)) {
             const value = calculator.getByName(term, caseNumber);
-            return this.formatModelValue(value);
+            return this.formatModelValue(value, term);
         }
         const numericValue = Number(term);
         if (Number.isFinite(numericValue))

@@ -111,6 +111,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
             getPrecision: () => this.board.calculator.getPrecision(),
+            getArgumentPrecision: () => this.board.calculator.getTermPrecision(this.getXTermName()),
             onDomainChanged: domain => this.onDomainChanged(domain),
             onTickDragStarted: () => this.onTickDragStarted(),
             onTickDragEnded: () => this.onTickDragEnded(),

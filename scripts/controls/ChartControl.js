@@ -429,6 +429,14 @@ class ChartControl {
         return Utils.formatNumber(value, precision);
     }
 
+    formatArgumentValue(value) {
+        if (!Number.isFinite(value))
+            return "";
+        if (typeof this.options.getArgumentPrecision === "function")
+            return Utils.formatNumber(value, this.options.getArgumentPrecision());
+        return this.formatCrosshairValue(value);
+    }
+
     renderValueTitleLegend(targetLayer, layout, fontSize, clipId = null) {
         const series = this.options.series;
         if (!series || series.length === 0)
@@ -1465,8 +1473,8 @@ class ChartControl {
         const firstSeries = state.series.length > 0 ? this.getNearestSeriesPoint(state.series[0], argumentValue) : null;
         const snappedX = firstSeries ? firstSeries.xValue : argumentValue;
         const axisLabelX = xScale(snappedX);
-        const axisLabelText = this.formatCrosshairValue(snappedX);
-        const coordinateText = `${this.formatCrosshairValue(argumentValue)}, ${this.formatCrosshairValue(valueY)}`;
+        const axisLabelText = this.formatArgumentValue(snappedX);
+        const coordinateText = `${this.formatArgumentValue(argumentValue)}, ${this.formatCrosshairValue(valueY)}`;
         let crosshairMarkup = `
             ${Utils.crosshairLineSvgMarkup(crosshairX, layout.plotTop, crosshairX, layout.plotBottom, crosshairColor)}
             ${Utils.crosshairLineSvgMarkup(layout.plotLeft, mouseY, layout.plotRight, mouseY, crosshairColor)}

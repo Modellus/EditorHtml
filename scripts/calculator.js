@@ -779,6 +779,14 @@ class Calculator extends EventTarget {
         return this.system.terms[name] !== undefined;
     }
 
+    isIterationTerm(name) {
+        return name != null && name !== "" && name === this.properties.iterationTerm;
+    }
+
+    getTermPrecision(name) {
+        return this.isIterationTerm(name) ? 0 : this.getPrecision();
+    }
+
     getTermsByType() {
         const independentName = this.properties.independent.name;
         const iterationName = this.properties.iterationTerm;

@@ -63,7 +63,7 @@
         return caseNumber;
     }
 
-    formatModelValue(value) {
+    formatModelValue(value, termName) {
         const numericValue = Number(value);
         if (numericValue === Infinity)
             return "∞";
@@ -71,7 +71,7 @@
             return "-∞";
         if (!Number.isFinite(numericValue))
             return "\u2014";
-        const precision = this.shape.getModelPrecision();
+        const precision = this.shape.getTermModelPrecision(termName);
         const rounded = Utils.roundToPrecision(numericValue, precision);
         const normalized = Object.is(rounded, -0) ? 0 : rounded;
         return Utils.formatNumber(normalized, precision);
@@ -107,7 +107,7 @@
         const caseNumber = this.getCaseNumber(entry.caseProperty);
         const isTerm = calculator.isTerm(termName);
         const value = isTerm ? calculator.getByName(termName, caseNumber) : Number(termName);
-        const valueText = isTerm ? this.formatModelValue(value) : this.formatTermForDisplay(termName);
+        const valueText = isTerm ? this.formatModelValue(value, termName) : this.formatTermForDisplay(termName);
         if (!isTerm)
             return {
                 termText: "",

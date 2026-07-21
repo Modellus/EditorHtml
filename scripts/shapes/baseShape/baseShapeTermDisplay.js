@@ -22,7 +22,7 @@ Object.assign(BaseShape.prototype, {
             return 1;
         return caseNumber;
     },
-    formatModelValue(value) {
+    formatModelValue(value, termName) {
         const numericValue = Number(value);
         if (numericValue === Infinity)
             return "∞";
@@ -30,10 +30,15 @@ Object.assign(BaseShape.prototype, {
             return "-∞";
         if (!Number.isFinite(numericValue))
             return "\u2014";
-        const precision = this.getModelPrecision();
+        const precision = this.getTermModelPrecision(termName);
         const rounded = Utils.roundToPrecision(numericValue, precision);
         const normalized = Object.is(rounded, -0) ? 0 : rounded;
         return Utils.formatNumber(normalized, precision);
+    },
+    getTermModelPrecision(termName) {
+        if (termName != null && this.board?.calculator?.isIterationTerm(termName))
+            return 0;
+        return this.getModelPrecision();
     },
     formatTermForDisplay(term) {
         if (term == null || term === "")

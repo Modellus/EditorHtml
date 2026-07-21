@@ -294,7 +294,6 @@ class TableShape extends BaseTableShape {
             return;
         const system = this.board.calculator.system;
         const lastIteration = this.board.calculator.getLastIteration();
-        const precision = this.board.calculator.getPrecision();
         const iterationSkip = Math.max(0, Math.floor(Number(this.properties.iterationSkip) || 0));
         const header = columns.map(column => column.term).join(",");
         const rows = [header];
@@ -303,7 +302,7 @@ class TableShape extends BaseTableShape {
                 continue;
             const values = columns.map(column => {
                 const value = system.getByNameOnIteration(iteration, column.term, column.case);
-                return Number.isFinite(value) ? Utils.roundToPrecision(value, precision) : "";
+                return Number.isFinite(value) ? Utils.roundToPrecision(value, this.board.calculator.getTermPrecision(column.term)) : "";
             });
             rows.push(values.join(","));
         }
@@ -933,7 +932,6 @@ class TableShape extends BaseTableShape {
     }
 
     buildControlColumns(columns = this._activeColumns) {
-        const precision = this.board.calculator.getPrecision();
         const hasPreloadedData = this.properties.externalData != null;
         const system = this.board.calculator.system;
         const controlColumns = columns.map(column => {
@@ -947,7 +945,7 @@ class TableShape extends BaseTableShape {
                 showCase: TermControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value)),
                 editable: this.canEditTableColumn(column.term, isPreloadedTerm),
                 width: Number.isFinite(column.width) ? column.width : null,
-                precision: precision,
+                precision: this.board.calculator.getTermPrecision(column.term),
                 barColor: this.normalizeColumnColor(column.color),
                 valueDisplayMode: this.normalizeColumnValueDisplayMode(column.valueDisplayMode),
                 isPreloadedTerm: isPreloadedTerm,
@@ -1191,7 +1189,6 @@ class TableShape extends BaseTableShape {
             return "";
         const system = this.board.calculator.system;
         const lastIteration = this.board.calculator.getLastIteration();
-        const precision = this.board.calculator.getPrecision();
         const iterationSkip = Math.max(0, Math.floor(Number(this.properties.iterationSkip) || 0));
         const headerCells = columns.map(column => `<th>${column.term}</th>`).join("");
         const rows = [];
@@ -1202,7 +1199,7 @@ class TableShape extends BaseTableShape {
                 const value = system.getByNameOnIteration(iteration, column.term, column.case);
                 if (value == null || !Number.isFinite(value))
                     return "<td></td>";
-                return `<td>${Utils.roundToPrecision(value, precision)}</td>`;
+                return `<td>${Utils.roundToPrecision(value, this.board.calculator.getTermPrecision(column.term))}</td>`;
             }).join("");
             rows.push(`<tr>${cells}</tr>`);
         }
@@ -1215,7 +1212,6 @@ class TableShape extends BaseTableShape {
             return "";
         const system = this.board.calculator.system;
         const lastIteration = this.board.calculator.getLastIteration();
-        const precision = this.board.calculator.getPrecision();
         const iterationSkip = Math.max(0, Math.floor(Number(this.properties.iterationSkip) || 0));
         const rows = [columns.map(column => column.term).join("\t")];
         for (let iteration = 1; iteration <= lastIteration; iteration++) {
@@ -1223,7 +1219,7 @@ class TableShape extends BaseTableShape {
                 continue;
             const values = columns.map(column => {
                 const value = system.getByNameOnIteration(iteration, column.term, column.case);
-                return Number.isFinite(value) ? Utils.roundToPrecision(value, precision) : "";
+                return Number.isFinite(value) ? Utils.roundToPrecision(value, this.board.calculator.getTermPrecision(column.term)) : "";
             });
             rows.push(values.join("\t"));
         }

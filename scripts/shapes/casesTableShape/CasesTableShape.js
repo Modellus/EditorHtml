@@ -171,6 +171,10 @@ class CasesTableShape extends BaseTableShape {
     }
 
     formatIndependentName() {
+        return this.getMomentTermName();
+    }
+
+    getMomentTermName() {
         const calculator = this.board.calculator;
         return this.getPlayerTerm() === "iteration" ? calculator.properties.iterationTerm : calculator.properties.independent.name;
     }
@@ -275,6 +279,7 @@ class CasesTableShape extends BaseTableShape {
         const groupIterations = this.getGroupIterations();
         const independentName = this.formatTermSymbol(this.formatIndependentName());
         const momentColumnKey = this.getMomentColumnKey();
+        const momentPrecision = calculator.getTermPrecision(this.getMomentTermName());
         const rows = [];
         for (let groupIndex = 0; groupIndex < groupIterations.length; groupIndex++) {
             const iteration = groupIterations[groupIndex];
@@ -285,6 +290,7 @@ class CasesTableShape extends BaseTableShape {
                 iteration: iteration,
                 term: independentName,
                 [momentColumnKey]: this.getMomentValueForIteration(iteration),
+                cellPrecision: { [momentColumnKey]: momentPrecision },
                 rowBackgroundColor: groupColor,
                 hideColumnDividers: true
             });
