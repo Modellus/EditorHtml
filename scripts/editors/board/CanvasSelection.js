@@ -120,13 +120,19 @@ class Selection {
         this.pointerDown = null;
         if (!this.shouldProcessPointerUpSelection(pointerMovement, event))
             return;
+        const hadSelectedShape = this.selectedShape != null;
         this.onClickOutside(event);
         this.onSelectShape(event);
-        this.onBackgroundClick(event);
+        this.onBackgroundClick(event, hadSelectedShape);
     }
 
-    onBackgroundClick(event) {
+    onBackgroundClick(event, hadSelectedShape) {
         if (!this.enabled)
+            return;
+        // A background click that deselects a shape should only clear the
+        // selection; the board toolbar appears only when the board is clicked
+        // while nothing was selected.
+        if (hadSelectedShape)
             return;
         const targetShape = this.resolveSelectionTarget(event);
         if (this.findShape(targetShape))
