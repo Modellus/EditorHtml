@@ -289,6 +289,7 @@ var ChartShapeToolbarMixin = {
                         this.board.markDirty(this);
                     }
                 }));
+                this.createAxisTypeButtonGroup("xAxisType").appendTo(wrapper);
                 wrapper.appendTo($container);
             }
         });
@@ -328,6 +329,7 @@ var ChartShapeToolbarMixin = {
                         this.board.markDirty(this);
                     }
                 }));
+                this.createAxisTypeButtonGroup("yAxisType").appendTo(wrapper);
                 wrapper.appendTo($container);
             }
         });
@@ -341,6 +343,48 @@ var ChartShapeToolbarMixin = {
             grid.append(control);
         }
         grid.appendTo($(contentElement).dxScrollView("instance").content());
+    },
+    createAxisTypeButtonGroup(axisProperty) {
+        const currentType = this.properties[axisProperty] || "decimal";
+        const container = $('<div>');
+        container.dxButtonGroup({
+            items: [
+                { key: "decimal", text: "0" },
+                { key: "pi", text: "π" }
+            ],
+            keyExpr: "key",
+            selectedItemKeys: [currentType],
+            stylingMode: "outlined",
+            elementAttr: { class: "mdl-pill-group" },
+            onContentReady: e => this.initAxisTypePill(e.element[0]),
+            onSelectionChanged: e => {
+                if (e.addedItems.length === 0)
+                    return;
+                this.properties[axisProperty] = e.addedItems[0].key;
+                this.chart.setOptions({ [axisProperty]: e.addedItems[0].key });
+                this.moveAxisTypePill(e.component.element()[0]);
+                e.component.repaint();
+                this.board.markDirty(this);
+            }
+        });
+        return container;
+    },
+    initAxisTypePill(element) {
+        const pill = document.createElement("div");
+        pill.className = "mdl-pill";
+        element.style.position = "relative";
+        element.appendChild(pill);
+        this.moveAxisTypePill(element);
+    },
+    moveAxisTypePill(element) {
+        const pill = element.querySelector(".mdl-pill");
+        if (!pill)
+            return;
+        const selected = element.querySelector(".dx-item-selected .dx-button");
+        if (!selected)
+            return;
+        pill.style.left = selected.offsetLeft + "px";
+        pill.style.width = selected.offsetWidth + "px";
     },
     populateTermsMenuSections(listItems) {
         listItems.push(

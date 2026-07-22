@@ -65,6 +65,32 @@ function niceTickStep(rawStep) {
     return 10 * magnitude;
 }
 
+// Same idea as niceTickStep, but the returned step is a "nice" multiple of π so
+// axes displayed in π units land on values like π/6, π/4, π/2, π, 2π. Fractions
+// of π use the denominators 12, 6, 4, 3, 2; whole multiples reuse the 1/2/5/10
+// progression. Returns the step measured in the axis' own value units (× π).
+function nicePiTickStep(rawStep) {
+    if (!Number.isFinite(rawStep) || rawStep <= 0) return 0;
+    const rawStepInPi = rawStep / Math.PI;
+    if (rawStepInPi < 1) {
+        const candidates = [1 / 12, 1 / 6, 1 / 4, 1 / 3, 1 / 2, 1];
+        const stepInPi = candidates.find(candidate => candidate >= rawStepInPi - 1e-9) ?? 1;
+        return stepInPi * Math.PI;
+    }
+    return niceTickStep(rawStepInPi) * Math.PI;
+}
+
+function greatestCommonDivisor(a, b) {
+    let x = Math.abs(a);
+    let y = Math.abs(b);
+    while (y) {
+        const temp = y;
+        y = x % y;
+        x = temp;
+    }
+    return x || 1;
+}
+
 function minorTickDivisions(majorSpacingPixels, minimumSpacingPixels = 5) {
     if (!Number.isFinite(majorSpacingPixels) || majorSpacingPixels <= 0)
         return 1;

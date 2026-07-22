@@ -69,6 +69,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         this.properties.equalScales = false;
         this.properties.tangentColor = "#00000000";
         this.properties.axisColor = "";
+        this.properties.xAxisType = "decimal";
+        this.properties.yAxisType = "decimal";
         this.properties.originX = 0;
         this.properties.originY = 0;
         this.properties.xTerm = this.board.calculator.properties.independent.name;
@@ -108,6 +110,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             borderColor: this.getBorderColor(),
             borderRadius: this.getBorderRadius(),
             ...(this.properties.axisColor ? { axisColor: this.properties.axisColor } : {}),
+            xAxisType: this.properties.xAxisType || "decimal",
+            yAxisType: this.properties.yAxisType || "decimal",
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
             getPrecision: () => this.board.calculator.getPrecision(),
@@ -344,6 +348,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             bg: this.properties.backgroundColor,
             dataAreaColor: this.properties.dataAreaColor,
             axisColor: this.properties.axisColor || undefined,
+            xAxisType: this.properties.xAxisType || "decimal",
+            yAxisType: this.properties.yAxisType || "decimal",
             border: this.getBorderColor(),
             argTitle: this.getTermLabelWithCase(xTerm, xCase)
         };
@@ -364,6 +370,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
                 backgroundColor: config.bg,
                 dataAreaColor: config.dataAreaColor,
                 axisColor: config.axisColor,
+                xAxisType: config.xAxisType,
+                yAxisType: config.yAxisType,
                 borderColor: config.border,
                 argumentTitle: config.argTitle
             });

@@ -33,6 +33,8 @@ class ChartControl {
             gridColor: "#d3d3d3",
             axisColor: "#7a7a7a",
             fontFamily: "Katex_Main",
+            xAxisType: "decimal",
+            yAxisType: "decimal",
             termFontFamily: "Katex_Math",
             termFontStyle: "italic",
             termFontWeight: 400,
@@ -237,12 +239,12 @@ class ChartControl {
         let maxXTickWidth = 0;
         let maxYTickWidth = 0;
         for (let index = 0; index < xTicks.length; index++) {
-            const labelWidth = this.estimateTextWidth(this.formatAxisValue(xTicks[index]), tickFontSize);
+            const labelWidth = this.estimateTextWidth(this.formatAxisValue(xTicks[index], this.options.xAxisType), tickFontSize);
             if (labelWidth > maxXTickWidth)
                 maxXTickWidth = labelWidth;
         }
         for (let index = 0; index < yTicks.length; index++) {
-            const labelWidth = this.estimateTextWidth(this.formatAxisValue(yTicks[index]), tickFontSize);
+            const labelWidth = this.estimateTextWidth(this.formatAxisValue(yTicks[index], this.options.yAxisType), tickFontSize);
             if (labelWidth > maxYTickWidth)
                 maxYTickWidth = labelWidth;
         }
@@ -364,13 +366,13 @@ class ChartControl {
         return domain;
     }
 
-    buildTicks(minValue, maxValue, targetCount = 5) {
+    buildTicks(minValue, maxValue, targetCount = 5, axisType = "decimal") {
         const ticks = [];
         if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || minValue >= maxValue)
             return ticks;
         const range = maxValue - minValue;
         const rawStep = range / Math.max(1, targetCount - 1);
-        const step = niceTickStep(rawStep);
+        const step = axisType === "pi" ? nicePiTickStep(rawStep) : niceTickStep(rawStep);
         if (!(step > 0))
             return ticks;
         const firstTick = Math.floor(minValue / step) * step;
@@ -412,14 +414,43 @@ class ChartControl {
         return ticks;
     }
 
-    formatAxisValue(value) {
+    formatAxisValue(value, axisType = "decimal") {
         if (!Number.isFinite(value))
             return "";
+        if (axisType === "pi")
+            return this.formatPiValue(value);
         const absoluteValue = Math.abs(value);
         if (absoluteValue >= 10000 || (absoluteValue > 0 && absoluteValue < 0.001))
             return value.toExponential(2);
         const roundedValue = Math.round(value * 1000) / 1000;
         return String(roundedValue);
+    }
+
+    formatPiValue(value) {
+        if (!Number.isFinite(value))
+            return "";
+        if (Math.abs(value) < 1e-10)
+            return "0";
+        const ratio = value / Math.PI;
+        const sign = ratio < 0 ? "-" : "";
+        const absoluteRatio = Math.abs(ratio);
+        let match = null;
+        for (let denominator = 1; denominator <= 12; denominator++) {
+            const numerator = Math.round(absoluteRatio * denominator);
+            if (numerator === 0)
+                continue;
+            if (Math.abs(absoluteRatio - numerator / denominator) < 1e-6) {
+                match = { numerator: numerator, denominator: denominator };
+                break;
+            }
+        }
+        if (!match)
+            return `${this.formatAxisValue(ratio)}π`;
+        const divisor = greatestCommonDivisor(match.numerator, match.denominator);
+        const numerator = match.numerator / divisor;
+        const denominator = match.denominator / divisor;
+        const numeratorText = numerator === 1 ? "π" : `${numerator}π`;
+        return denominator === 1 ? `${sign}${numeratorText}` : `${sign}${numeratorText}/${denominator}`;
     }
 
     formatCrosshairValue(value) {
@@ -558,14 +589,14 @@ class ChartControl {
             return;
         this.renderBackground(width, height);
         const rawDomain = this.getDomain(this.options.argumentField, this.options.series);
-        const preliminaryXTicks = this.buildTicks(rawDomain.xMin, rawDomain.xMax, 5);
-        const preliminaryYTicks = this.buildTicks(rawDomain.yMin, rawDomain.yMax, 5);
+        const preliminaryXTicks = this.buildTicks(rawDomain.xMin, rawDomain.xMax, 5, this.options.xAxisType);
+        const preliminaryYTicks = this.buildTicks(rawDomain.yMin, rawDomain.yMax, 5, this.options.yAxisType);
         const preliminaryLayout = this.getLayout(width, height, preliminaryXTicks, preliminaryYTicks);
         const domain = this.options.equalScales
             ? this.equalizeDomain(rawDomain, preliminaryLayout.plotWidth, preliminaryLayout.plotHeight)
             : rawDomain;
-        const xMajorTicks = this.buildTicks(domain.xMin, domain.xMax, 5);
-        const yMajorTicks = this.buildTicks(domain.yMin, domain.yMax, 5);
+        const xMajorTicks = this.buildTicks(domain.xMin, domain.xMax, 5, this.options.xAxisType);
+        const yMajorTicks = this.buildTicks(domain.yMin, domain.yMax, 5, this.options.yAxisType);
         const xTicks = this.injectPinnedTick(xMajorTicks, this._pinnedTickValues.x, domain.xMin, domain.xMax);
         const yTicks = this.injectPinnedTick(yMajorTicks, this._pinnedTickValues.y, domain.yMin, domain.yMax);
         const layout = this.getLayout(width, height, xTicks, yTicks);
@@ -719,7 +750,7 @@ class ChartControl {
             anchor = "end";
             labelX = xPosition - 2;
         }
-        const labelText = this.escapeMarkupText(this.formatAxisValue(xValue));
+        const labelText = this.escapeMarkupText(this.formatAxisValue(xValue, this.options.xAxisType));
         this.appendSvgMarkup(this.axisLayer, `
             <g clip-path="url(#${this.xTicksClipId})">
                 <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 4}" stroke="${this.options.axisColor}" stroke-width="1" />
@@ -731,7 +762,7 @@ class ChartControl {
 
     renderYAxisTick(layout, yScale, yValue) {
         const yPosition = yScale(yValue);
-        const labelText = this.escapeMarkupText(this.formatAxisValue(yValue));
+        const labelText = this.escapeMarkupText(this.formatAxisValue(yValue, this.options.yAxisType));
         this.appendSvgMarkup(this.axisLayer, `
             <g clip-path="url(#${this.yTicksClipId})">
                 <line x1="${layout.plotLeft - 4}" y1="${yPosition}" x2="${layout.plotLeft}" y2="${yPosition}" stroke="${this.options.axisColor}" stroke-width="1" />
