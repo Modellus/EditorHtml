@@ -75,6 +75,12 @@ Object.assign(BaseShape.prototype, {
     },
     getTermEntryLabelColor(entry, index) {
         return null;
+    },
+    getTermEntryAnchorPoint(entry, index) {
+        return null;
+    },
+    getTermEntryDisplayValue(entry, index) {
+        return null;
     }
 });
 

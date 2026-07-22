@@ -368,8 +368,10 @@ class VectorShape extends ChildShape {
         this.termsMapping.push({ termProperty: "yTerm", termValue: 0, property: "height", isInverted: true, scaleProperty: "y", caseProperty: "yTermCase" });
         this.termsMapping.push({ termProperty: "xOriginTerm", termValue: 0, property: "x", isInverted: false, scaleProperty: "x", caseProperty: "xOriginTermCase" });
         this.termsMapping.push({ termProperty: "yOriginTerm", termValue: 0, property: "y", isInverted: true, scaleProperty: "y", caseProperty: "yOriginTermCase" });
-        this.termDisplayEntries.push({ term: "xTerm", caseProperty: "xTermCase", title: "Horizontal" });
-        this.termDisplayEntries.push({ term: "yTerm", caseProperty: "yTermCase", title: "Vertical" });
+        this.termDisplayEntries.push({ term: "xOriginTerm", caseProperty: "xOriginTermCase", title: "Origin X", endpoint: "start", axis: "x" });
+        this.termDisplayEntries.push({ term: "yOriginTerm", caseProperty: "yOriginTermCase", title: "Origin Y", endpoint: "start", axis: "y" });
+        this.termDisplayEntries.push({ term: "xTerm", caseProperty: "xTermCase", title: "Horizontal", endpoint: "tip", axis: "x" });
+        this.termDisplayEntries.push({ term: "yTerm", caseProperty: "yTermCase", title: "Vertical", endpoint: "tip", axis: "y" });
     }
 
     tickShape() {
@@ -594,6 +596,27 @@ class VectorShape extends ChildShape {
     getShapeCenterPosition() {
         const position = this.getBoardPosition();
         return { x: position.x + this.properties.width, y: position.y + this.properties.height };
+    }
+
+    getTermEntryAnchorPoint(entry) {
+        const position = this.getBoardPosition();
+        if (entry.endpoint === "tip")
+            return { x: position.x + this.properties.width, y: position.y + this.properties.height };
+        return { x: position.x, y: position.y };
+    }
+
+    getTermEntryDisplayValue(entry) {
+        if (entry.endpoint !== "tip")
+            return null;
+        const originTerm = entry.axis === "x" ? "xOriginTerm" : "yOriginTerm";
+        const originCase = entry.axis === "x" ? "xOriginTermCase" : "yOriginTermCase";
+        const componentTerm = entry.axis === "x" ? "xTerm" : "yTerm";
+        const componentCase = entry.axis === "x" ? "xTermCase" : "yTermCase";
+        const origin = this.resolveTermNumeric(this.properties[originTerm], this.getTermCaseNumber(originCase));
+        const component = this.resolveTermNumeric(this.properties[componentTerm], this.getTermCaseNumber(componentCase));
+        const tipValue = (Number.isFinite(origin) ? origin : 0) + (Number.isFinite(component) ? component : 0);
+        const valueText = this.formatModelValue(tipValue, this.properties[componentTerm]);
+        return { termText: "", valueText: valueText, text: valueText };
     }
 
     getTrajectoryPosition() {

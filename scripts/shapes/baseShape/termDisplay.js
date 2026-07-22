@@ -95,10 +95,13 @@
         return this.formatModelValue(numeric);
     }
 
-    buildLabel(entry) {
+    buildLabel(entry, index) {
         const modeProperty = this.getDisplayModeProperty(entry.term);
         if (!this.isDisplayVisible(this.properties[modeProperty] ?? "none"))
             return null;
+        const override = this.shape.getTermEntryDisplayValue?.(entry, index);
+        if (override)
+            return override;
         const rawTerm = this.normalizeTermValue(this.properties[entry.term]);
         if (rawTerm == null || rawTerm === "")
             return null;
@@ -323,34 +326,26 @@
         const axesPosition = this.getReferentialAxesPosition();
         const shapeCenterPosition = this.getShapeCenterPosition();
         let fallbackLabelIndex = 0;
-        let xAxisLabelIndex = 0;
-        let yAxisLabelIndex = 0;
-        let hasXGuide = false;
-        let hasYGuide = false;
+        const axisLabelIndexByKey = new Map();
+        const drawnGuideKeys = new Set();
         this.clearLayerChildren(this.guidesLayer);
         for (let i = 0; i < this.entries.length; i++) {
             const entry = this.entries[i];
-            const labelData = this.buildLabel(entry);
+            const labelData = this.buildLabel(entry, i);
             if (!labelData)
                 continue;
-            if (axesPosition && shapeCenterPosition) {
-                const axis = this.getTermAxis(entry.term);
+            const entryAnchor = this.shape.getTermEntryAnchorPoint?.(entry, i) ?? shapeCenterPosition;
+            if (axesPosition && entryAnchor) {
+                const axis = entry.axis ?? this.getTermAxis(entry.term);
                 if (axis == "x" || axis == "y") {
-                    const axisLabelIndex = axis == "x" ? xAxisLabelIndex : yAxisLabelIndex;
-                    const labelPosition = this.getAxisLabelPosition(axis, shapeCenterPosition, axesPosition, axisLabelIndex);
+                    const anchorKey = `${axis}:${Math.round(entryAnchor.x)}:${Math.round(entryAnchor.y)}`;
+                    const axisLabelIndex = axisLabelIndexByKey.get(anchorKey) ?? 0;
+                    const labelPosition = this.getAxisLabelPosition(axis, entryAnchor, axesPosition, axisLabelIndex);
                     labels.push(this.createLabelDefinition(entry, labelData, labelPosition.x, labelPosition.y, labelPosition.anchor));
-                    if (axis == "x") {
-                        xAxisLabelIndex++;
-                        if (!hasXGuide) {
-                            this.createGuideLine("x", shapeCenterPosition, axesPosition, color);
-                            hasXGuide = true;
-                        }
-                    } else {
-                        yAxisLabelIndex++;
-                        if (!hasYGuide) {
-                            this.createGuideLine("y", shapeCenterPosition, axesPosition, color);
-                            hasYGuide = true;
-                        }
+                    axisLabelIndexByKey.set(anchorKey, axisLabelIndex + 1);
+                    if (!drawnGuideKeys.has(anchorKey)) {
+                        this.createGuideLine(axis, entryAnchor, axesPosition, color);
+                        drawnGuideKeys.add(anchorKey);
                     }
                     continue;
                 }
