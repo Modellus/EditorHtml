@@ -1,6 +1,6 @@
 var TableBlock;
-if (typeof BlocksRegistry !== "undefined" && typeof TableShape !== "undefined") {
-    TableBlock = class TableBlock extends TableShape {
+if (typeof BlocksRegistry !== "undefined" && typeof DataTableShape !== "undefined") {
+    TableBlock = class TableBlock extends DataTableShape {
         constructor(notebookEditor, block, hostElement) {
             super(TableBlock.createNotebookRuntime(notebookEditor, hostElement), null, block.id);
             this.notebookEditor = notebookEditor;
@@ -13,6 +13,24 @@ if (typeof BlocksRegistry !== "undefined" && typeof TableShape !== "undefined") 
             this.update();
             this._calculatorIterateHandler = () => this.onCalculatorIterate();
             this.notebookEditor.calculator?.on("iterate", this._calculatorIterateHandler);
+        }
+
+        setDefaults() {
+            super.setDefaults();
+            // Unlike the board data table (which starts empty), a notebook table block defaults to
+            // showing the model's iterations, matching its long-standing behavior.
+            const defaultTerm = this.board.calculator.getDefaultTerm();
+            this.properties.columns = [
+                { term: this.board.calculator.properties.independent.name, case: 1, color: "transparent", valueDisplayMode: "bars" },
+                { term: defaultTerm, case: 1, color: "transparent", valueDisplayMode: "bars" }
+            ];
+        }
+
+        // The notebook table shows iterations by default, so it keeps the Row Step control that the
+        // board data table drops.
+        populateShapeColorMenuSections(sections) {
+            super.populateShapeColorMenuSections(sections);
+            sections[0].items.push(this.createRowStepMenuItem());
         }
 
         static createNotebookRuntime(notebookEditor, hostElement) {
@@ -267,7 +285,7 @@ if (typeof BlocksRegistry !== "undefined" && typeof TableShape !== "undefined") 
         resizable: true,
         renderContentHtml: () => "",
         notebookShapeClass: TableBlock,
-        getNotebookToolbarMixin: () => typeof TableShapeToolbarMixin !== "undefined" ? TableShapeToolbarMixin : null,
+        getNotebookToolbarMixin: () => typeof DataTableShapeToolbarMixin !== "undefined" ? DataTableShapeToolbarMixin : null,
         createShape: (notebookEditor, block, hostElement) => new TableBlock(notebookEditor, block, hostElement)
     });
 }

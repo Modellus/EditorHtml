@@ -11,6 +11,7 @@ class BaseShape {
         ArcShape: "fa-light fa-circle-half-stroke",
         ChartShape: "fa-light fa-chart-line",
         TableShape: "fa-light fa-table",
+        DataTableShape: "fa-light fa-flask",
         CasesTableShape: "fa-light fa-table-list",
         SliderShape: "fa-light fa-slider",
         ValueShape: "fa-light fa-input-numeric",

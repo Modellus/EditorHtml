@@ -99,6 +99,12 @@ math-field {
     gap: 8px;
 }
 
+.mdl-dropdown-list-item--icon-only {
+    justify-content: center;
+    min-width: 28px;
+    gap: 0;
+}
+
 .mdl-actions-menu {
     padding: 4px 0;
 }

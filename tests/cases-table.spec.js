@@ -508,7 +508,7 @@ test.describe('Cases table', () => {
         expect(result.restoredShapeClass).toBe('CasesTableShape');
     });
 
-    test('top toolbar table dropdown lists both table types and arms draw mode', async ({ page }) => {
+    test('top toolbar table dropdown lists all table types and arms draw mode', async ({ page }) => {
         await setupEditor(page);
         await page.click('#table-button');
         await page.waitForTimeout(400);
@@ -517,7 +517,7 @@ test.describe('Cases table', () => {
             const items = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item .mdl-dropdown-list-label'));
             return items.map(item => item.textContent.trim());
         });
-        expect(menuState).toEqual(['Table', 'Scenarios']);
+        expect(menuState).toEqual(['Table', 'Scenarios', 'Experiment']);
 
         await page.click('.mdl-shape-overlay-popup .dx-list-item:nth-child(2)');
         await page.waitForTimeout(300);

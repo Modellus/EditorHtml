@@ -12,7 +12,9 @@ async function setupEditor(page) {
 }
 
 async function addTable(page, name) {
-    await page.evaluate(n => modellus.shape.addTable(n), name);
+    // External-data behavior now lives on the dedicated data table (DataTableShape); every test
+    // in this file loads a preloaded dataset, so the shape under test is a data table.
+    await page.evaluate(n => modellus.shape.addDataTable(n), name);
     await page.waitForTimeout(400);
 }
 
@@ -215,7 +217,7 @@ test.describe('Table shape editing', () => {
             tableShape.refreshTableRows();
 
             table.focusCellRange(1, 1, 2, 1);
-            const resetApplied = tableShape.resetFocusedCellsFromPreloadedData();
+            const resetApplied = tableShape.resetFocusedCells();
 
             const externalData = tableShape.properties.externalData;
             const yColIdx = externalData?.names?.indexOf('y') ?? -1;

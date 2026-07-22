@@ -46,13 +46,14 @@ class BoardEditor extends Workspace {
         this.saveFormController = new SaveFormController(this);
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
-        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, CasesTableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, DataTableWidget, CasesTableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.commands.registerShapeAlias("BodyShape", BodyWidget);
         this.commands.registerShapeAlias("PointShape", PointWidget);
         this.commands.registerShapeAlias("ExpressionShape", ExpressionWidget);
         this.commands.registerShapeAlias("ValueShape", ValueWidget);
         this.commands.registerShapeAlias("ChartShape", ChartWidget);
         this.commands.registerShapeAlias("TableShape", TableWidget);
+        this.commands.registerShapeAlias("DataTableShape", DataTableWidget);
         this.commands.registerShapeAlias("CasesTableShape", CasesTableWidget);
         this.commands.registerShapeAlias("SliderShape", SliderWidget);
         this.commands.registerShapeAlias("GaugeShape", GaugeWidget);
