@@ -446,7 +446,9 @@ class ExpressionControl {
     }
 
     copyToClipboardUsingMathlive() {
-        const latex = this.mathfield.getValue("latex");
+        const latex = this.mathfield.selectionIsCollapsed
+            ? this.mathfield.getValue("latex")
+            : this.mathfield.getValue(this.mathfield.selection, "latex");
         const strippedLatex = latex.replace(/^\\displaylines\{([\s\S]*)\}$/, "$1");
         navigator.clipboard.writeText(strippedLatex);
     }
