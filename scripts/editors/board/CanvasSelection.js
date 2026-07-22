@@ -91,6 +91,12 @@ class Selection {
     }
 
     onPointerDown(event) {
+        // Record whether a shape is active (selected or in edit mode) at
+        // mousedown time. Some shapes (expression, text) exit edit mode from a
+        // document-level mousedown handler that runs before onPointerUp, so by
+        // pointer-up _editModeShape is already cleared — capturing it here keeps
+        // the board toolbar from appearing on the click that ends edit mode.
+        this._hadActiveShapeAtPointerDown = this.selectedShape != null || this._editModeShape != null;
         const pointerDown = this.resolvePointerDown(event);
         if (!pointerDown)
             return;
@@ -120,19 +126,24 @@ class Selection {
         this.pointerDown = null;
         if (!this.shouldProcessPointerUpSelection(pointerMovement, event))
             return;
-        const hadSelectedShape = this.selectedShape != null;
+        // Use the active-shape state captured at pointer-down (see onPointerDown):
+        // edit mode may already be cleared by the time this runs.
+        const hadActiveShape = this._hadActiveShapeAtPointerDown === true
+            || this.selectedShape != null
+            || this._editModeShape != null;
+        this._hadActiveShapeAtPointerDown = false;
         this.onClickOutside(event);
         this.onSelectShape(event);
-        this.onBackgroundClick(event, hadSelectedShape);
+        this.onBackgroundClick(event, hadActiveShape);
     }
 
-    onBackgroundClick(event, hadSelectedShape) {
+    onBackgroundClick(event, hadActiveShape) {
         if (!this.enabled)
             return;
-        // A background click that deselects a shape should only clear the
-        // selection; the board toolbar appears only when the board is clicked
-        // while nothing was selected.
-        if (hadSelectedShape)
+        // A background click that clears an active shape (selected or in edit
+        // mode) should only dismiss it; the board toolbar appears only when the
+        // board is clicked while no shape is selected or being edited.
+        if (hadActiveShape)
             return;
         const targetShape = this.resolveSelectionTarget(event);
         if (this.findShape(targetShape))
