@@ -517,7 +517,7 @@ test.describe('Cases table', () => {
             const items = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item .mdl-dropdown-list-label'));
             return items.map(item => item.textContent.trim());
         });
-        expect(menuState).toEqual(['Table', 'Cases']);
+        expect(menuState).toEqual(['Table', 'Scenarios']);
 
         await page.click('.mdl-shape-overlay-popup .dx-list-item:nth-child(2)');
         await page.waitForTimeout(300);
@@ -789,7 +789,7 @@ test.describe('Cases table', () => {
             tableShape.populateTermsMenuSections(items);
             return items.map(item => item.text);
         });
-        expect(sections).toEqual(['Cases', 'Rows']);
+        expect(sections).toEqual(['Scenarios', 'Rows']);
     });
 
     test('changing casesCount updates the live terms dropdown without an explicit manual refresh', async ({ page }) => {
@@ -804,7 +804,7 @@ test.describe('Cases table', () => {
         await page.waitForTimeout(300);
 
         let hasCasesSection = await page.evaluate(() =>
-            shell.board.shapes.getByName('Inputs1')._termsMenuContentElement[0].textContent.includes('Cases'));
+            shell.board.shapes.getByName('Inputs1')._termsMenuContentElement[0].textContent.includes('Scenarios'));
         expect(hasCasesSection).toBe(false);
 
         await page.evaluate(() => {
@@ -814,7 +814,7 @@ test.describe('Cases table', () => {
         await page.waitForTimeout(300);
 
         hasCasesSection = await page.evaluate(() =>
-            shell.board.shapes.getByName('Inputs1')._termsMenuContentElement[0].textContent.includes('Cases'));
+            shell.board.shapes.getByName('Inputs1')._termsMenuContentElement[0].textContent.includes('Scenarios'));
         expect(hasCasesSection).toBe(true);
     });
 

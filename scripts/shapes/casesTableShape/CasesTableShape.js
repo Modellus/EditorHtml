@@ -5,7 +5,7 @@ class CasesTableShape extends BaseTableShape {
 
     setDefaults() {
         super.setDefaults();
-        this.properties.name = this.board.translations.get("Cases Table Name") ?? "Cases";
+        this.properties.name = this.board.translations.get("Cases Table Name") ?? "Scenarios";
         this.properties.columns = this.buildDefaultColumns();
         this.properties.groupColors = {};
         this.properties.hiddenCases = [];
@@ -38,7 +38,7 @@ class CasesTableShape extends BaseTableShape {
 
     populateTermsMenuSections(listItems) {
         if (this.getCasesCount() > 1)
-            listItems.push({ text: this.board.translations.get("Cases") ?? "Cases", stacked: true, buildControl: $p => $p.append(this.createCasesVisibilityControl()) });
+            listItems.push({ text: this.board.translations.get("Cases") ?? "Scenarios", stacked: true, buildControl: $p => $p.append(this.createCasesVisibilityControl()) });
         listItems.push({ text: this.board.translations.get("Rows") ?? "Rows", stacked: true, buildControl: $p => $p.append(this.createColumnsControl()) });
     }
 
