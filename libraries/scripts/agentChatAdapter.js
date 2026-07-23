@@ -511,17 +511,12 @@
         }
 
         extractToolOutputText(part) {
+            // Tool outputs (e.g. the serialized model JSON) are intentionally not
+            // rendered into the chat bubble. Only surface genuine tool errors so
+            // failures are not silent.
             if (typeof part.errorText === "string" && part.errorText)
                 return part.errorText;
-            if (part.output === undefined)
-                return "";
-            if (typeof part.output === "string")
-                return part.output;
-            try {
-                return JSON.stringify(part.output);
-            } catch (_error) {
-                return "";
-            }
+            return "";
         }
 
         appendUserMessageItem(text, messageId) {
