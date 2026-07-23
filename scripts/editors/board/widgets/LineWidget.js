@@ -4,14 +4,14 @@ class LineShape extends ChildShape {
     }
 
     getHandles() {
-        const handleSize = 12;
-        const lineLength = this.getLineLength();
+        const handleSize = this.getDragHandleHitSize();
+        const tipRadius = this.getDragHandleHitRadius();
         return [
             {
                 className: "handle move",
                 getAttributes: () => {
-                    const position = this.getBoardPosition();
-                    return { x: position.x - handleSize / 2, y: position.y - handleSize / 2, width: handleSize, height: handleSize };
+                    const grip = this.getGripPositions().origin;
+                    return { x: grip.x - handleSize / 2, y: grip.y - handleSize / 2, width: handleSize, height: handleSize };
                 },
                 getTransform: e => ({
                     x: this.delta("x", e.dx),
@@ -22,12 +22,11 @@ class LineShape extends ChildShape {
                 tag: "circle",
                 className: "handle tip",
                 getAttributes: () => {
-                    const position = this.getBoardPosition();
-                    const angleRad = this.getAngleRadians();
+                    const grip = this.getGripPositions().angle;
                     return {
-                        cx: position.x + Math.cos(angleRad) * lineLength,
-                        cy: position.y - Math.sin(angleRad) * lineLength,
-                        r: 5
+                        cx: grip.x,
+                        cy: grip.y,
+                        r: tipRadius
                     };
                 },
                 getTransform: e => {
@@ -49,6 +48,39 @@ class LineShape extends ChildShape {
     }
 
     hideSelectionOutline = true;
+
+    getReferencePointMarkers() {
+        return [this.pointMarker, this.anglePointMarker];
+    }
+
+    isPointerNearShape(point) {
+        const origin = this.getBoardPosition();
+        const angleRad = this.getAngleRadians();
+        const dirX = Math.cos(angleRad);
+        const dirY = -Math.sin(angleRad);
+        const perpendicular = Math.abs((point.x - origin.x) * dirY - (point.y - origin.y) * dirX);
+        return perpendicular <= this.getReferencePointProximityThreshold();
+    }
+
+    getSelectionOutlinePrimitives() {
+        const position = this.getBoardPosition();
+        const angleRad = this.getAngleRadians();
+        const lineLength = this.getLineLength();
+        const lineWidth = this.properties.lineWidth ?? 1;
+        const halfX = Math.cos(angleRad) * lineLength;
+        const halfY = -Math.sin(angleRad) * lineLength;
+        return [{
+            tag: "line",
+            mode: "stroke",
+            strokeWidth: lineWidth,
+            attributes: {
+                x1: position.x - halfX,
+                y1: position.y - halfY,
+                x2: position.x + halfX,
+                y2: position.y + halfY
+            }
+        }];
+    }
 
     createHandles() {
         this.handleElements = [];
@@ -89,6 +121,56 @@ class LineShape extends ChildShape {
         if (!referential)
             return 200;
         return Math.max(referential.properties.width, referential.properties.height) * 2;
+    }
+
+    // Distance from the anchor to the rotation grip. The line is drawn spanning
+    // the whole referential, but the drag handle sits close to the anchor so it
+    // stays inside the view and easy to grab.
+    getAngleHandleDistance() {
+        const referential = this.getReferentialParent();
+        if (!referential)
+            return 80;
+        const size = Math.min(Number(referential.properties.width) || 0, Number(referential.properties.height) || 0);
+        return Math.max(48, size * 0.35);
+    }
+
+    // Positions of the two draggable grips (origin + angle) in board coordinates.
+    // Both are kept on the line and inside the referential so they stay visible
+    // and grabbable even when the line's real anchor is dragged out of view. The
+    // drag math itself still uses the true anchor/angle, so clamping the grips
+    // does not change the line's data.
+    getGripPositions() {
+        const origin = this.getBoardPosition();
+        const angleRad = this.getAngleRadians();
+        const dir = { x: Math.cos(angleRad), y: -Math.sin(angleRad) };
+        const desired = this.getAngleHandleDistance();
+        const pointOnLine = t => ({ x: origin.x + dir.x * t, y: origin.y + dir.y * t });
+        const rect = this.getReferentialRect();
+        if (!rect)
+            return { origin: pointOnLine(0), angle: pointOnLine(desired) };
+        const inset = 6;
+        const range = this.getVisibleLineRange(origin, dir, rect);
+        if (!range) {
+            const clamped = this.clampPointToRect(origin, rect, inset);
+            return { origin: clamped, angle: { x: clamped.x + dir.x * desired, y: clamped.y + dir.y * desired } };
+        }
+        let tMin = range.tMin + inset;
+        let tMax = range.tMax - inset;
+        if (tMin > tMax) {
+            const mid = (range.tMin + range.tMax) / 2;
+            tMin = mid;
+            tMax = mid;
+        }
+        const clamp = t => Math.min(Math.max(t, tMin), tMax);
+        const originT = clamp(0);
+        let angleT = clamp(desired);
+        const separation = Math.min(this.getDragHandleHitRadius() * 2, tMax - tMin);
+        if (Math.abs(angleT - originT) < separation) {
+            angleT = (tMax - originT >= originT - tMin)
+                ? Math.min(tMax, originT + separation)
+                : Math.max(tMin, originT - separation);
+        }
+        return { origin: pointOnLine(originT), angle: pointOnLine(angleT) };
     }
 
     getAngleRadians() {
@@ -254,6 +336,9 @@ class LineShape extends ChildShape {
         this.pointMarker = this.board.createSvgElement("circle");
         this.pointMarker.setAttribute("pointer-events", "all");
         element.appendChild(this.pointMarker);
+        this.anglePointMarker = this.board.createSvgElement("circle");
+        this.anglePointMarker.setAttribute("pointer-events", "all");
+        element.appendChild(this.anglePointMarker);
         this.motionGroup = this.board.createSvgElement("g");
         this.motionGroup.setAttribute("pointer-events", "none");
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
@@ -350,18 +435,23 @@ class LineShape extends ChildShape {
         const lineLength = this.getLineLength();
         const lineWidth = this.properties.lineWidth ?? 1;
         const color = this.properties.foregroundColor;
-        const dx = Math.cos(angleRad) * lineLength;
-        const dy = -Math.sin(angleRad) * lineLength;
-        this.mainLine.setAttribute("x1", position.x - dx);
-        this.mainLine.setAttribute("y1", position.y + dy);
-        this.mainLine.setAttribute("x2", position.x + dx);
-        this.mainLine.setAttribute("y2", position.y - dy);
+        // Direction of the line in screen space. +angle points up, matching the
+        // angle point and the drag handle, so the line always passes through the
+        // angle point (origin -> angle point define the same ray).
+        const dirX = Math.cos(angleRad);
+        const dirY = -Math.sin(angleRad);
+        const halfX = dirX * lineLength;
+        const halfY = dirY * lineLength;
+        this.mainLine.setAttribute("x1", position.x - halfX);
+        this.mainLine.setAttribute("y1", position.y - halfY);
+        this.mainLine.setAttribute("x2", position.x + halfX);
+        this.mainLine.setAttribute("y2", position.y + halfY);
         this.mainLine.setAttribute("stroke", color);
         this.mainLine.setAttribute("stroke-width", lineWidth);
-        this.pointMarker.setAttribute("cx", position.x);
-        this.pointMarker.setAttribute("cy", position.y);
-        this.pointMarker.setAttribute("r", 3);
-        this.pointMarker.setAttribute("fill", color);
+        const grips = this.getGripPositions();
+        this.updateReferencePointMarker(this.pointMarker, grips.origin, color);
+        this.updateReferencePointMarker(this.anglePointMarker, grips.angle, color);
+        this.applyReferencePointVisibility();
         this.drawTrajectory();
         this.drawStroboscopy();
     }
@@ -382,9 +472,9 @@ class LineShape extends ChildShape {
             const logical = positions[i];
             const pos = this.logicalToBoardPosition(logical.logicalX, logical.logicalY);
             const angleRad = (logical.angle ?? 0) * Math.PI / 180;
-            const dx = Math.cos(angleRad) * lineLength;
-            const dy = -Math.sin(angleRad) * lineLength;
-            html += `<line x1="${pos.x - dx}" y1="${pos.y + dy}" x2="${pos.x + dx}" y2="${pos.y - dy}" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"/>`;
+            const halfX = Math.cos(angleRad) * lineLength;
+            const halfY = -Math.sin(angleRad) * lineLength;
+            html += `<line x1="${pos.x - halfX}" y1="${pos.y - halfY}" x2="${pos.x + halfX}" y2="${pos.y + halfY}" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"/>`;
         }
         this.stroboscopy.innerHTML = html;
     }

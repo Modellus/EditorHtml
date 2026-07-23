@@ -4,23 +4,140 @@ class ArcShape extends ChildShape {
     }
 
     getHandles() {
-        const handleSize = 12;
+        const handleSize = this.getDragHandleHitSize();
+        const tipRadius = this.getDragHandleHitRadius();
         return [
             {
                 className: "handle move",
                 getAttributes: () => {
-                    const position = this.getBoardPosition();
-                    return { x: position.x - handleSize / 2, y: position.y - handleSize / 2, width: handleSize, height: handleSize };
+                    const grip = this.getArcGripPositions().origin;
+                    return { x: grip.x - handleSize / 2, y: grip.y - handleSize / 2, width: handleSize, height: handleSize };
                 },
                 getTransform: e => ({
                     x: this.delta("x", e.dx),
                     y: this.delta("y", e.dy)
                 })
+            },
+            {
+                tag: "circle",
+                className: "handle tip",
+                getAttributes: () => {
+                    const grip = this.getArcGripPositions().start;
+                    return { cx: grip.x, cy: grip.y, r: tipRadius };
+                },
+                getTransform: e => this.setArcAngleRadiusFromPoint("startAngleTerm", e)
+            },
+            {
+                tag: "circle",
+                className: "handle tip",
+                getAttributes: () => {
+                    const grip = this.getArcGripPositions().end;
+                    return { cx: grip.x, cy: grip.y, r: tipRadius };
+                },
+                getTransform: e => this.setArcAngleRadiusFromPoint("endAngleTerm", e)
             }
         ];
     }
 
+    // The three draggable grips (center, start-angle, end-angle) in board
+    // coordinates. The start/end grips sit on the arc endpoints (angle + radius)
+    // but are clamped to stay inside the referential so they remain visible and
+    // grabbable even when the arc is larger than the view. Dragging them uses the
+    // true pointer position, so clamping never changes the arc's data.
+    getArcGripPositions() {
+        const origin = this.getBoardPosition();
+        const radiusPx = Math.abs(Number(this.properties.radius) || 0);
+        const startRad = this.toRadians(this.properties.startAngle);
+        const endRad = this.toRadians(this.properties.endAngle);
+        const startDir = { x: Math.cos(startRad), y: -Math.sin(startRad) };
+        const endDir = { x: Math.cos(endRad), y: -Math.sin(endRad) };
+        const along = (dir, t) => ({ x: origin.x + dir.x * t, y: origin.y + dir.y * t });
+        const rect = this.getReferentialRect();
+        if (!rect) {
+            return {
+                origin: { x: origin.x, y: origin.y },
+                start: along(startDir, radiusPx),
+                end: along(endDir, radiusPx)
+            };
+        }
+        const inset = 6;
+        return {
+            origin: this.clampPointToRect(origin, rect, inset),
+            start: this.clampRadialGrip(origin, startDir, radiusPx, rect, inset),
+            end: this.clampRadialGrip(origin, endDir, radiusPx, rect, inset)
+        };
+    }
+
+    // A point at distance radiusPx from origin along dir, pulled back so it stays
+    // on the visible part of that ray inside the referential.
+    clampRadialGrip(origin, dir, radiusPx, rect, inset) {
+        const along = t => ({ x: origin.x + dir.x * t, y: origin.y + dir.y * t });
+        const range = this.getVisibleLineRange(origin, dir, rect);
+        if (!range)
+            return this.clampPointToRect(along(radiusPx), rect, inset);
+        let lo = Math.max(range.tMin, 0) + inset;
+        let hi = range.tMax - inset;
+        if (lo > hi) {
+            const mid = (Math.max(range.tMin, 0) + range.tMax) / 2;
+            lo = mid;
+            hi = mid;
+        }
+        return along(Math.min(Math.max(radiusPx, lo), hi));
+    }
+
+    // Set an angle term (start/end) and the shared radius term from a pointer
+    // position, mirroring how the arc is drawn (board-space angle, radius scaled
+    // by the referential x scale).
+    setArcAngleRadiusFromPoint(angleTermProperty, point) {
+        const origin = this.getBoardPosition();
+        const dx = point.x - origin.x;
+        const dy = -(point.y - origin.y);
+        let angle = Math.atan2(dy, dx);
+        if (!this.getUseRadians())
+            angle = angle * 180 / Math.PI;
+        const radiusPx = Math.hypot(dx, dy);
+        const scaleX = this.getScale().x ?? 1;
+        const radiusValue = radiusPx * scaleX;
+        const precision = this.board.calculator.getPrecision();
+        this.properties[angleTermProperty] = String(Utils.roundToPrecision(angle, precision));
+        this.properties.radiusTerm = String(Utils.roundToPrecision(radiusValue, precision));
+        this.tick();
+        this.board.markDirty(this);
+        return {};
+    }
+
     hideSelectionOutline = true;
+
+    getReferencePointMarkers() {
+        return [this.pointMarker, this.startPointMarker, this.endPointMarker];
+    }
+
+    isPointerNearShape(point) {
+        const center = this.getBoardPosition();
+        const radius = Math.abs(Number(this.properties.radius) || 0);
+        const threshold = this.getReferencePointProximityThreshold();
+        const distanceToCenter = this.distanceToPoint(point, center);
+        if (distanceToCenter <= threshold)
+            return true;
+        return Math.abs(distanceToCenter - radius) <= threshold;
+    }
+
+    getSelectionOutlinePrimitives() {
+        const position = this.getBoardPosition();
+        const pixelRadius = Math.abs(this.properties.radius);
+        const startRad = this.toRadians(this.properties.startAngle);
+        const endRad = this.toRadians(this.properties.endAngle);
+        const pathData = this.buildArcPathData(position.x, position.y, pixelRadius, startRad, endRad);
+        if (!pathData)
+            return null;
+        const lineWidth = this.properties.lineWidth ?? 2;
+        return [{
+            tag: "path",
+            mode: "stroke",
+            strokeWidth: lineWidth,
+            attributes: { d: pathData }
+        }];
+    }
 
     createHandles() {
         this.handleElements = [];
@@ -252,6 +369,12 @@ class ArcShape extends ChildShape {
         this.pointMarker = this.board.createSvgElement("circle");
         this.pointMarker.setAttribute("pointer-events", "all");
         element.appendChild(this.pointMarker);
+        this.startPointMarker = this.board.createSvgElement("circle");
+        this.startPointMarker.setAttribute("pointer-events", "all");
+        element.appendChild(this.startPointMarker);
+        this.endPointMarker = this.board.createSvgElement("circle");
+        this.endPointMarker.setAttribute("pointer-events", "all");
+        element.appendChild(this.endPointMarker);
         this.motionGroup = this.board.createSvgElement("g");
         this.motionGroup.setAttribute("pointer-events", "none");
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
@@ -304,10 +427,11 @@ class ArcShape extends ChildShape {
             this.arcPath.setAttribute("stroke-width", lineWidth);
         } else
             this.arcPath.removeAttribute("d");
-        this.pointMarker.setAttribute("cx", cx);
-        this.pointMarker.setAttribute("cy", cy);
-        this.pointMarker.setAttribute("r", 3);
-        this.pointMarker.setAttribute("fill", color);
+        const grips = this.getArcGripPositions();
+        this.updateReferencePointMarker(this.pointMarker, grips.origin, color);
+        this.updateReferencePointMarker(this.startPointMarker, grips.start, color);
+        this.updateReferencePointMarker(this.endPointMarker, grips.end, color);
+        this.applyReferencePointVisibility();
         this.drawTrajectory();
         this.drawStroboscopy();
     }

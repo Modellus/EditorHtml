@@ -16,8 +16,169 @@ class ChildShape extends BaseShape {
 
     initializeElement() {
         super.initializeElement();
+        // Referential children are dragged by small anchor/tip points, so they
+        // share a crosshair cursor. cursor inherits in CSS, so setting it on the
+        // root group also covers the geometry elements and the move-handle
+        // passthrough (which mirrors the underlying element's computed cursor).
+        this.element.classList.add("mdl-referential-child");
         if (this.motionGroup)
             this.motionGroup.setAttribute("clip-path", this.element.getAttribute("clip-path"));
+    }
+
+    // Hit region for the square move/anchor handle of a referential child. The
+    // visible geometry (a point, a thin line, ...) is tiny, so the interactive
+    // area is deliberately larger to make dragging easier.
+    getDragHandleHitSize() {
+        return 24;
+    }
+
+    // Hit radius for circular drag points (line/vector tips).
+    getDragHandleHitRadius() {
+        return 12;
+    }
+
+    // Referential children are dragged directly by their (enlarged) grab area,
+    // not by a container move handle overlaying other shapes, so they skip the
+    // move-handle passthrough and keep a single crosshair cursor across the
+    // whole handle.
+    usesMoveHandlePassthrough() {
+        return false;
+    }
+
+    getMoveHandleCursor() {
+        return "crosshair";
+    }
+
+    // The referential's visible rectangle in board coordinates, or null when it
+    // cannot be resolved (or is rotated, where an axis-aligned clamp would be
+    // wrong - callers then fall back to unclamped positions). Shared by shapes
+    // that keep their control points visible inside the referential.
+    getReferentialRect() {
+        const referential = this.getReferentialParent();
+        if (!referential)
+            return null;
+        const position = referential.getBoardPosition?.();
+        if (!position)
+            return null;
+        const width = Number(referential.properties.width);
+        const height = Number(referential.properties.height);
+        if (!Number.isFinite(width) || !Number.isFinite(height))
+            return null;
+        const rotation = Number(referential.properties.rotation);
+        if (Number.isFinite(rotation) && Math.abs(rotation) > 0.00001)
+            return null;
+        return { x: position.x, y: position.y, width: width, height: height };
+    }
+
+    // Liang-Barsky: range of t for which origin + t*dir stays inside rect, or
+    // null if the line misses the rect entirely.
+    getVisibleLineRange(origin, dir, rect) {
+        let tMin = -Infinity;
+        let tMax = Infinity;
+        const edges = [
+            { p: -dir.x, q: origin.x - rect.x },
+            { p: dir.x, q: rect.x + rect.width - origin.x },
+            { p: -dir.y, q: origin.y - rect.y },
+            { p: dir.y, q: rect.y + rect.height - origin.y }
+        ];
+        for (const { p, q } of edges) {
+            if (Math.abs(p) < 1e-9) {
+                if (q < 0)
+                    return null;
+                continue;
+            }
+            const r = q / p;
+            if (p < 0)
+                tMin = Math.max(tMin, r);
+            else
+                tMax = Math.min(tMax, r);
+        }
+        if (tMin > tMax)
+            return null;
+        return { tMin: tMin, tMax: tMax };
+    }
+
+    clampPointToRect(point, rect, inset = 0) {
+        return {
+            x: Math.min(Math.max(point.x, rect.x + inset), rect.x + rect.width - inset),
+            y: Math.min(Math.max(point.y, rect.y + inset), rect.y + rect.height - inset)
+        };
+    }
+
+    distanceToPoint(p, a) {
+        return Math.hypot(p.x - a.x, p.y - a.y);
+    }
+
+    distanceToSegment(p, a, b) {
+        const abx = b.x - a.x;
+        const aby = b.y - a.y;
+        const lengthSquared = abx * abx + aby * aby;
+        if (lengthSquared < 1e-9)
+            return this.distanceToPoint(p, a);
+        let t = ((p.x - a.x) * abx + (p.y - a.y) * aby) / lengthSquared;
+        t = Math.min(Math.max(t, 0), 1);
+        return Math.hypot(p.x - (a.x + t * abx), p.y - (a.y + t * aby));
+    }
+
+    // --- Reference (control) point markers -------------------------------
+    // Shapes draw small dots at their draggable control points. These are only
+    // shown when the pointer is near the shape or the user has turned on a term
+    // display in the toolbar - otherwise they stay hidden so the board is not
+    // cluttered. (The point shape is the exception: its dot IS the shape, so it
+    // has no reference markers to hide.)
+
+    getReferencePointMarkers() {
+        return [];
+    }
+
+    updateReferencePointMarker(marker, point, color) {
+        if (!marker)
+            return;
+        marker.setAttribute("cx", point.x);
+        marker.setAttribute("cy", point.y);
+        marker.setAttribute("r", 3);
+        marker.setAttribute("fill", color);
+    }
+
+    hasVisibleTermDisplay() {
+        return (this.termDisplayEntries ?? []).some(entry => {
+            const mode = this.properties[`${entry.term}DisplayMode`];
+            return mode !== undefined && mode !== null && mode !== false && mode !== "none";
+        });
+    }
+
+    getReferencePointProximityThreshold() {
+        return 40;
+    }
+
+    isPointerNearShape(point) {
+        return false;
+    }
+
+    shouldShowReferencePoints() {
+        return this._pointerNear === true || this.hasVisibleTermDisplay();
+    }
+
+    applyReferencePointVisibility() {
+        const show = this.shouldShowReferencePoints();
+        const visibility = show ? "visible" : "hidden";
+        // A hidden element with pointer-events:all still captures the pointer, so
+        // disable hit-testing while the markers are hidden.
+        const pointerEvents = show ? "all" : "none";
+        for (const marker of this.getReferencePointMarkers()) {
+            if (!marker)
+                continue;
+            marker.setAttribute("visibility", visibility);
+            marker.setAttribute("pointer-events", pointerEvents);
+        }
+    }
+
+    updatePointerProximity(point) {
+        const near = this.isPointerNearShape(point);
+        if (near === this._pointerNear)
+            return;
+        this._pointerNear = near;
+        this.applyReferencePointVisibility();
     }
 
     tick() {

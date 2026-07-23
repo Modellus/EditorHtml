@@ -550,11 +550,28 @@ class BaseShape {
         return null;
     }
 
+    // A move handle covering a container-like shape forwards hover/clicks to the
+    // element underneath and mirrors its cursor. Leaf shapes whose handle is
+    // just an enlarged grab area around tiny geometry opt out (see ChildShape)
+    // so the whole handle keeps a single, fixed cursor instead of the move
+    // cursor leaking through wherever there is no geometry underneath.
+    usesMoveHandlePassthrough() {
+        return true;
+    }
+
+    getMoveHandleCursor() {
+        return "move";
+    }
+
     onHandlePointerMove = (event, handle) => {
         if (this.draggedHandle)
             return;
         if (!handle.classList.contains("move"))
             return;
+        if (!this.usesMoveHandlePassthrough()) {
+            handle.style.cursor = this.getMoveHandleCursor();
+            return;
+        }
         const underlying = this.getElementUnderMoveHandle(handle, event);
         if (underlying)
             handle.style.cursor = window.getComputedStyle(underlying).cursor;
@@ -570,7 +587,7 @@ class BaseShape {
     }
 
     onHandlePointerDown = (event, handle) => {
-        if (handle.classList.contains("move")) {
+        if (handle.classList.contains("move") && this.usesMoveHandlePassthrough()) {
             const underlying = this.getElementUnderMoveHandle(handle, event);
             if (underlying) {
                 const probeEvent = new PointerEvent("pointerdown", event);

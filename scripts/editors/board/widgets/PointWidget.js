@@ -28,7 +28,7 @@ class PointShape extends ChildShape {
     }
 
     getHandles() {
-        const handleSize = 12;
+        const handleSize = this.getDragHandleHitSize();
         return [
             {
                 className: "handle move",
@@ -46,6 +46,16 @@ class PointShape extends ChildShape {
 
     enterEditMode() {
         return false;
+    }
+
+    getSelectionOutlinePrimitives() {
+        const position = this.getBoardPosition();
+        const radius = this.properties.radius ?? 4;
+        return [{
+            tag: "circle",
+            mode: "fill",
+            attributes: { cx: position.x, cy: position.y, r: radius }
+        }];
     }
 
     getScreenAnchorPoint() {

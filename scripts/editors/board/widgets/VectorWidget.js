@@ -4,14 +4,14 @@ class VectorShape extends ChildShape {
     }
 
     getHandles() {
-        const tipRadius = 10;
+        const tipRadius = this.getDragHandleHitRadius();
         return [
             {
                 tag: "line",
                 className: "handle move",
                 getAttributes: () => {
-                    const position = this.getBoardPosition();
-                    return { x1: position.x, y1: position.y, x2: position.x + this.properties.width, y2: position.y + this.properties.height };
+                    const grips = this.getGripPositions();
+                    return { x1: grips.origin.x, y1: grips.origin.y, x2: grips.tip.x, y2: grips.tip.y };
                 },
                 getTransform: e => ({
                     x: this.delta("x", e.dx),
@@ -22,8 +22,8 @@ class VectorShape extends ChildShape {
                 tag: "circle",
                 className: "handle tip",
                 getAttributes: () => {
-                    const position = this.getBoardPosition();
-                    return { cx: position.x, cy: position.y, r: tipRadius };
+                    const grip = this.getGripPositions().origin;
+                    return { cx: grip.x, cy: grip.y, r: tipRadius };
                 },
                 getTransform: e => ({
                     x: this.delta("x", e.dx),
@@ -34,12 +34,8 @@ class VectorShape extends ChildShape {
                 tag: "circle",
                 className: "handle tip",
                 getAttributes: () => {
-                    const position = this.getBoardPosition();
-                    return {
-                        cx: position.x + this.properties.width,
-                        cy: position.y + this.properties.height,
-                        r: tipRadius
-                    };
+                    const grip = this.getGripPositions().tip;
+                    return { cx: grip.x, cy: grip.y, r: tipRadius };
                 },
                 getTransform: e => ({
                     width: this.delta("width", e.dx),
@@ -49,7 +45,69 @@ class VectorShape extends ChildShape {
         ];
     }
 
+    // Origin (back) and tip (angle + length) grips in board coordinates, clamped
+    // to the visible part of the vector inside the referential so they stay
+    // grabbable even when the vector is dragged out of view. Both grips drag by
+    // relative delta, so clamping the display never changes the vector's data.
+    getGripPositions() {
+        const origin = this.getBoardPosition();
+        const tip = { x: origin.x + this.properties.width, y: origin.y + this.properties.height };
+        const rect = this.getReferentialRect();
+        if (!rect)
+            return { origin: origin, tip: tip };
+        const inset = 6;
+        const dx = tip.x - origin.x;
+        const dy = tip.y - origin.y;
+        const length = Math.hypot(dx, dy);
+        if (length < 1e-6) {
+            const clamped = this.clampPointToRect(origin, rect, inset);
+            return { origin: clamped, tip: clamped };
+        }
+        const dir = { x: dx / length, y: dy / length };
+        const range = this.getVisibleLineRange(origin, dir, rect);
+        if (!range)
+            return { origin: this.clampPointToRect(origin, rect, inset), tip: this.clampPointToRect(tip, rect, inset) };
+        let lo = range.tMin + inset;
+        let hi = range.tMax - inset;
+        if (lo > hi) {
+            const mid = (range.tMin + range.tMax) / 2;
+            lo = mid;
+            hi = mid;
+        }
+        const along = t => ({ x: origin.x + dir.x * t, y: origin.y + dir.y * t });
+        return {
+            origin: along(Math.min(Math.max(0, lo), hi)),
+            tip: along(Math.min(Math.max(length, lo), hi))
+        };
+    }
+
     hideSelectionOutline = true;
+
+    getReferencePointMarkers() {
+        return [this.originPointMarker, this.tipPointMarker];
+    }
+
+    isPointerNearShape(point) {
+        const origin = this.getBoardPosition();
+        const tip = { x: origin.x + this.properties.width, y: origin.y + this.properties.height };
+        return this.distanceToSegment(point, origin, tip) <= this.getReferencePointProximityThreshold();
+    }
+
+    getSelectionOutlinePrimitives() {
+        const position = this.getBoardPosition();
+        const lineWidth = this.properties.lineWidth ?? 1;
+        return [{
+            tag: "line",
+            mode: "stroke",
+            strokeWidth: lineWidth,
+            attributes: {
+                x1: position.x,
+                y1: position.y,
+                x2: position.x + this.properties.width,
+                y2: position.y + this.properties.height
+            }
+        }];
+    }
 
     createHandles() {
         this.handleElements = [];
@@ -445,6 +503,12 @@ class VectorShape extends ChildShape {
         element.appendChild(this.borderLine);
         this.line = this.board.createSvgElement("line");
         element.appendChild(this.line);
+        this.originPointMarker = this.board.createSvgElement("circle");
+        this.originPointMarker.setAttribute("pointer-events", "all");
+        element.appendChild(this.originPointMarker);
+        this.tipPointMarker = this.board.createSvgElement("circle");
+        this.tipPointMarker.setAttribute("pointer-events", "all");
+        element.appendChild(this.tipPointMarker);
         this.motionGroup = this.board.createSvgElement("g");
         this.motionGroup.setAttribute("pointer-events", "none");
         this.trajectory = { element: this.board.createSvgElement("polyline"), values: [], pointsString: "", lastCount: 0 };
@@ -537,6 +601,10 @@ class VectorShape extends ChildShape {
             this.borderLine.removeAttribute("marker-end");
             this.line.removeAttribute("marker-end");
         }
+        const grips = this.getGripPositions();
+        this.updateReferencePointMarker(this.originPointMarker, grips.origin, color);
+        this.updateReferencePointMarker(this.tipPointMarker, grips.tip, color);
+        this.applyReferencePointVisibility();
         this.drawComponents(startX, startY, tipX, tipY, color, lineWidth);
         this.drawTrajectory();
         this.drawStroboscopy();

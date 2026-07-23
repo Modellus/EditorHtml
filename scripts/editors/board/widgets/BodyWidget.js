@@ -229,7 +229,8 @@ class BodyShape extends ChildShape {
                 getAttributes: () => {
                     const position = this.getBoardPosition();
                     const radius = this.properties.radius ?? 0;
-                    return { x: position.x - radius, y: position.y - radius, width: radius * 2, height: radius * 2 };
+                    const half = Math.max(radius, this.getDragHandleHitSize() / 2);
+                    return { x: position.x - half, y: position.y - half, width: half * 2, height: half * 2 };
                 },
                 getTransform: e => ({
                     x: this.delta("x", e.dx),
@@ -278,6 +279,23 @@ class BodyShape extends ChildShape {
 
     enterEditMode() {
         return false;
+    }
+
+    getSelectionOutlinePrimitives() {
+        // Character/image bodies are drawn as a square image region, so the
+        // default bounding-box outline already traces their shape. A plain
+        // body is a circle and gets a circular outline.
+        if (this.getSelectedCharacter() || this.getImageSource())
+            return null;
+        const radius = this.properties.radius ?? 0;
+        if (!(radius > 0))
+            return null;
+        const position = this.getBoardPosition();
+        return [{
+            tag: "circle",
+            mode: "fill",
+            attributes: { cx: position.x, cy: position.y, r: radius }
+        }];
     }
 
     getScreenAnchorPoint() {

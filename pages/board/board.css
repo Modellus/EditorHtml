@@ -159,6 +159,13 @@ svg {
     opacity: 1;
 }
 
+/* Shapes inside a referential (point, body, line, arc, vector) are dragged by
+   small anchor/tip points. cursor inherits, so this covers their geometry and,
+   via the move-handle passthrough, the drag handles too. */
+.mdl-referential-child {
+    cursor: crosshair;
+}
+
 .handle.top-left {
     cursor: nwse-resize;
     fill: #4039d7;

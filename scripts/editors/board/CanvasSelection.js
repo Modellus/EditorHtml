@@ -2,6 +2,7 @@ class Selection {
     constructor(board) {
         this.board = board;
         this.interactionAdapter = null;
+        this.selectionOutline = new ShapeSelectionOutline(board);
         this.selectedShape = null;
         this.hoveredShape = null;
         this.isDragging = false;
@@ -19,8 +20,33 @@ class Selection {
         this.board.svg.addEventListener("mousedown", (e) => this.onPointerDown(e));
         this.board.svg.addEventListener("mouseup", (e) => this.onPointerUp(e));
         this.board.svg.addEventListener("mousemove", (e) => this.onPointerMove(e));
+        this.board.svg.addEventListener("mousemove", (e) => this.updateReferentialProximity(e));
         this.board.svg.addEventListener("dblclick", (e) => this.onDoubleClick(e));
         this.board.svg.addEventListener("mouseleave", () => this.clearHover());
+        this.board.svg.addEventListener("mouseleave", () => this.clearReferentialProximity());
+    }
+
+    // Let referential children reveal their reference points when the pointer is
+    // near them (see ChildShape.updatePointerProximity).
+    updateReferentialProximity(event) {
+        const shapes = this.board.shapes?.shapes;
+        if (!shapes)
+            return;
+        const point = this.board.getMouseToSvgPoint(event);
+        for (const shape of shapes) {
+            if (typeof shape.updatePointerProximity === "function")
+                shape.updatePointerProximity(point);
+        }
+    }
+
+    clearReferentialProximity() {
+        const shapes = this.board.shapes?.shapes;
+        if (!shapes)
+            return;
+        for (const shape of shapes) {
+            if (typeof shape.updatePointerProximity === "function")
+                shape.updatePointerProximity({ x: Infinity, y: Infinity });
+        }
     }
 
     setInteractionAdapter(interactionAdapter) {
@@ -376,31 +402,14 @@ class Selection {
         if (!shape.element)
             return;
         this.removeHighlightProxy(shape);
-        const bounds = this.getOutlineBounds(shape);
-        if (!bounds || !Number.isFinite(bounds.width) || !Number.isFinite(bounds.height))
+        const proxy = this.selectionOutline.createProxy(shape, color, {
+            bounds: this.getOutlineBounds(shape),
+            rotation: this.getOutlineRotationDegrees(shape)
+        });
+        if (!proxy)
             return;
-        this.ensureHoverGlowFilter();
-        const proxy = this.board.createSvgElement("g");
-        proxy.setAttribute("class", "highlight-proxy");
-        proxy.setAttribute("pointer-events", "none");
-        proxy.innerHTML = `<rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="${color}" stroke="none" filter="url(#mdl-hover-glow)" style="color: ${color}" pointer-events="none"/>
-            <rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" fill="none" stroke="${color}" stroke-width="1.5" pointer-events="none"/>`;
-        this.applyOutlineRotation(proxy, shape, bounds);
         this.board.svg.appendChild(proxy);
         shape._highlightProxy = proxy;
-    }
-
-    ensureHoverGlowFilter() {
-        if (this.board.svg.querySelector("#mdl-hover-glow"))
-            return;
-        const defs = this.board.createSvgElement("defs");
-        defs.innerHTML = `<filter id="mdl-hover-glow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
-            <feComposite in="blur" in2="SourceAlpha" operator="out" result="outer-glow"/>
-            <feFlood flood-color="currentColor" result="flood-color"/>
-            <feComposite in="flood-color" in2="outer-glow" operator="in"/>
-        </filter>`;
-        this.board.svg.insertBefore(defs, this.board.svg.firstChild);
     }
 
     removeHighlightProxy(shape) {
