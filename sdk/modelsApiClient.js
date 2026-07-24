@@ -98,6 +98,45 @@ export class ModelsApiClient {
     return [];
   }
 
+  async fetchPublicModelsPage(options = {}) {
+    const headers = this.buildAuthHeaders();
+    const url = new URL(`${this.apiBaseUrl}/models/public`);
+    const limit = options.limit || 20;
+    const offset = options.offset || 0;
+    url.searchParams.set("limit", String(limit));
+    url.searchParams.set("offset", String(offset));
+    if (options.search) url.searchParams.set("q", options.search);
+    if (options.educationLevelId) url.searchParams.set("education_level_id", options.educationLevelId);
+    if (options.scienceId) url.searchParams.set("science_id", options.scienceId);
+    if (options.isSample) url.searchParams.set("is_sample", "1");
+    const response = await fetch(url.toString(), { headers });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+    const items = Array.isArray(data) ? data
+      : Array.isArray(data?.items) ? data.items
+      : Array.isArray(data?.models) ? data.models
+      : Array.isArray(data?.data) ? data.data
+      : [];
+    const total = typeof data?.total === "number" ? data.total
+      : typeof data?.total_count === "number" ? data.total_count
+      : items.length;
+    return { items, total };
+  }
+
+  async fetchPublicModelsFacets(options = {}) {
+    const headers = this.buildAuthHeaders();
+    const url = new URL(`${this.apiBaseUrl}/models/public/facets`);
+    if (options.isSample) url.searchParams.set("is_sample", "1");
+    const response = await fetch(url.toString(), { headers });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+    return {
+      education: Array.isArray(data?.education) ? data.education : [],
+      sciences: Array.isArray(data?.sciences) ? data.sciences : [],
+      total: typeof data?.total === "number" ? data.total : 0
+    };
+  }
+
   async fetchAllModels() {
     const headers = this.buildAuthHeaders();
     const url = new URL(`${this.apiBaseUrl}/models`);
@@ -611,6 +650,43 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Delete whats-new failed (${response.status})`);
   }
 
+  async fetchVideosPage(options = {}) {
+    const url = new URL(`${this.apiBaseUrl}/videos`);
+    url.searchParams.set("limit", String(options.limit || 20));
+    url.searchParams.set("offset", String(options.offset || 0));
+    if (options.search) url.searchParams.set("q", options.search);
+    if (options.educationLevelId) url.searchParams.set("education_level_id", options.educationLevelId);
+    if (options.scienceId) url.searchParams.set("science_id", options.scienceId);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch videos failed (${response.status})`);
+    return this.parsePagedResponse(await response.json());
+  }
+
+  async fetchVideosFacets() {
+    const response = await fetch(`${this.apiBaseUrl}/videos/facets`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch video facets failed (${response.status})`);
+    return this.parseTaxonomyFacets(await response.json());
+  }
+
+  parsePagedResponse(data) {
+    const items = Array.isArray(data) ? data
+      : Array.isArray(data?.items) ? data.items
+      : Array.isArray(data?.data) ? data.data
+      : [];
+    const total = typeof data?.total === "number" ? data.total
+      : typeof data?.total_count === "number" ? data.total_count
+      : items.length;
+    return { items, total };
+  }
+
+  parseTaxonomyFacets(data) {
+    return {
+      education: Array.isArray(data?.education) ? data.education : [],
+      sciences: Array.isArray(data?.sciences) ? data.sciences : [],
+      total: typeof data?.total === "number" ? data.total : 0
+    };
+  }
+
   async fetchVideos(filters = {}) {
     const url = new URL(`${this.apiBaseUrl}/videos`);
     if (filters.science_id) url.searchParams.set("science_id", filters.science_id);
@@ -643,6 +719,24 @@ export class ModelsApiClient {
       headers: this.buildAuthHeaders()
     });
     if (!response.ok) throw new Error(`Delete video failed (${response.status})`);
+  }
+
+  async fetchDataSetsPage(options = {}) {
+    const url = new URL(`${this.apiBaseUrl}/data`);
+    url.searchParams.set("limit", String(options.limit || 20));
+    url.searchParams.set("offset", String(options.offset || 0));
+    if (options.search) url.searchParams.set("q", options.search);
+    if (options.educationLevelId) url.searchParams.set("education_level_id", options.educationLevelId);
+    if (options.scienceId) url.searchParams.set("science_id", options.scienceId);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch data sets failed (${response.status})`);
+    return this.parsePagedResponse(await response.json());
+  }
+
+  async fetchDataSetsFacets() {
+    const response = await fetch(`${this.apiBaseUrl}/data/facets`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch data facets failed (${response.status})`);
+    return this.parseTaxonomyFacets(await response.json());
   }
 
   async fetchDataSets(filters = {}) {
@@ -744,6 +838,28 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Fetch characters failed (${response.status})`);
     const data = await response.json();
     return Array.isArray(data) ? data : [];
+  }
+
+  async fetchCharactersPage(options = {}) {
+    const url = new URL(`${this.apiBaseUrl}/characters`);
+    url.searchParams.set("limit", String(options.limit || 20));
+    url.searchParams.set("offset", String(options.offset || 0));
+    if (options.search) url.searchParams.set("q", options.search);
+    if (options.categoryId) url.searchParams.set("category_id", options.categoryId);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch characters failed (${response.status})`);
+    return this.parsePagedResponse(await response.json());
+  }
+
+  async fetchCharacterFacets() {
+    const response = await fetch(`${this.apiBaseUrl}/characters/facets`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch character facets failed (${response.status})`);
+    const data = await response.json();
+    return {
+      categories: Array.isArray(data?.categories) ? data.categories : [],
+      uncategorized: typeof data?.uncategorized === "number" ? data.uncategorized : 0,
+      total: typeof data?.total === "number" ? data.total : 0
+    };
   }
 
   async createCharacter(payload, assetFile) {

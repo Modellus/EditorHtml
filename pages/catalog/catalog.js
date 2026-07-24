@@ -92,6 +92,17 @@ class ModelsApp {
     this.publishedModels = [];
     this.deletedModels = [];
     this.publicModels = [];
+    this.pageSize = 20;
+    this.modelsSource = { kind: "remote", filter: {} };
+    this.videosSource = { filter: {} };
+    this.dataSetsSource = { filter: {} };
+    this.charactersSource = { filter: {} };
+    this.assetsFeedTotals = null;
+    this.publicFacets = { education: [], sciences: [], total: 0 };
+    this.sampleFacets = { education: [], sciences: [], total: 0 };
+    this.videoFacets = { education: [], sciences: [], total: 0 };
+    this.dataFacets = { education: [], sciences: [], total: 0 };
+    this.characterFacets = { categories: [], uncategorized: 0, total: 0 };
     this.videosData = [];
     this.dataSetData = [];
     this.educationLookupOptions = [];
@@ -115,6 +126,10 @@ class ModelsApp {
     this.videosCardViewInstance = null;
     this.dataCardViewInstance = null;
     this.characterCardViewInstance = null;
+    this.modelsFeed = null;
+    this.videosFeed = null;
+    this.dataSetsFeed = null;
+    this.charactersFeed = null;
     this.drawerInstance = null;
     this.treeViewInstance = null;
     this.toolbarInstance = null;
@@ -190,23 +205,9 @@ class ModelsApp {
   }
 
   isNonSelectableTreeNodeId(nodeId) {
+    // Catalog/Samples model branches are selectable: clicking a parent branch
+    // loads every model inside it via the API.
     return nodeId === treeNodeIds.myModels
-      || nodeId === treeNodeIds.catalog
-      || nodeId === treeNodeIds.catalogModels
-      || nodeId === treeNodeIds.catalogModelsEducation
-      || nodeId === treeNodeIds.catalogModelsSciences
-      || nodeId === treeNodeIds.catalogVideos
-      || nodeId === treeNodeIds.catalogVideosEducation
-      || nodeId === treeNodeIds.catalogVideosSciences
-      || nodeId === treeNodeIds.catalogData
-      || nodeId === treeNodeIds.catalogDataEducation
-      || nodeId === treeNodeIds.catalogDataSciences
-      || nodeId === treeNodeIds.catalogCharacters
-      || nodeId === treeNodeIds.samples
-      || nodeId === treeNodeIds.samplesModels
-      || nodeId === treeNodeIds.samplesEducation
-      || nodeId === treeNodeIds.samplesSciences
-      || nodeId === treeNodeIds.assets
       || nodeId === treeNodeIds.maintenance;
   }
 
@@ -425,9 +426,13 @@ class ModelsApp {
       this.cardViewInstance = new CardView(this.elements.cardView, {
         dataSource: [],
         height: "100%",
+        repaintChangesOnly: true,
         scrolling: { mode: "virtual" },
         paging: { enabled: false },
         pager: { visible: false },
+        noDataText: this.translations.get("No models found."),
+        onContentReady: () => this.bindFeedScroll(this.modelsFeed),
+        onOptionChanged: event => this.handleFeedSearchChange(this.modelsFeed, event),
         showBorders: false,
       focusStateEnabled: false,
       hoverStateEnabled: false,
@@ -436,13 +441,17 @@ class ModelsApp {
       columnHidingEnabled: true,
       headerPanel: { visible: false },
       groupPanel: { visible: false },
+      searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search by name, author, science…") },
       grouping: { autoExpandAll: false, contextMenuEnabled: false },
       sorting: { mode: "none" },
       cardsPerRow: 4,
       cardMinWidth: 125,
       columns: [
         { dataField: "title", caption: this.translations.get("Title") },
-        { dataField: "description", caption: this.translations.get("Description") }
+        { dataField: "description", caption: this.translations.get("Description") },
+        { dataField: "creator_name", caption: this.translations.get("Author"), visible: false },
+        { dataField: "education_level", caption: this.translations.get("Education Levels"), visible: false },
+        { dataField: "science", caption: this.translations.get("Sciences"), visible: false }
       ],
       cardTemplate: (cardData, cardElement) => {
         const host = cardElement.get(0);
@@ -654,30 +663,35 @@ class ModelsApp {
         }
       }
     });
+    this.modelsFeed = this.createFeed(this.cardViewInstance, (search, offset, limit) => this.fetchModelsFeedPage(search, offset, limit));
   }
 
   disposeCardView() {
     if (!this.cardViewInstance) return;
     this.cardViewInstance.dispose();
     this.cardViewInstance = null;
+    this.modelsFeed = null;
   }
 
   disposeVideosCardView() {
     if (!this.videosCardViewInstance) return;
     this.videosCardViewInstance.dispose();
     this.videosCardViewInstance = null;
+    this.videosFeed = null;
   }
 
   disposeDataCardView() {
     if (!this.dataCardViewInstance) return;
     this.dataCardViewInstance.dispose();
     this.dataCardViewInstance = null;
+    this.dataSetsFeed = null;
   }
 
   disposeCharacterCardView() {
     if (!this.characterCardViewInstance) return;
     this.characterCardViewInstance.dispose();
     this.characterCardViewInstance = null;
+    this.charactersFeed = null;
   }
 
   ensureCharacterCardView() {
@@ -685,11 +699,15 @@ class ModelsApp {
     const CardView = DevExpress.ui.dxCardView;
     this.elements.cardView.innerHTML = "";
     this.characterCardViewInstance = new CardView(this.elements.cardView, {
+      onContentReady: () => this.bindFeedScroll(this.charactersFeed),
+      onOptionChanged: event => this.handleFeedSearchChange(this.charactersFeed, event),
       dataSource: [],
       height: "100%",
+      repaintChangesOnly: true,
       scrolling: { mode: "virtual" },
       paging: { enabled: false },
       pager: { visible: false },
+      noDataText: this.translations.get("No models found."),
       showBorders: false,
       focusStateEnabled: false,
       hoverStateEnabled: false,
@@ -698,6 +716,7 @@ class ModelsApp {
       columnHidingEnabled: true,
       headerPanel: { visible: false },
       groupPanel: { visible: false },
+      searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search…") },
       grouping: { autoExpandAll: false, contextMenuEnabled: false },
       sorting: { mode: "none" },
       cardsPerRow: 4,
@@ -713,10 +732,13 @@ class ModelsApp {
         const descriptionLabel = this.escapeHtml(data.description || "");
         const createdDate = this.formatShortDate(data.created_at);
         const currentUserId = this.userSdk.getUserId(this.state.session);
-        const canEdit = this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId);
+        const isAssetsView = this.state.selectedTreeNodeId === treeNodeIds.assets;
+        const canEdit = !isAssetsView && (this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId));
+        const assetIcon = data.asset_type === "video" ? "fa-light fa-video" : data.asset_type === "data" ? "fa-light fa-table" : "fa-light fa-person-running";
+        const assetLabel = data.asset_type === "video" ? this.translations.get("Videos") : data.asset_type === "data" ? this.translations.get("Data") : this.translations.get("Characters");
         const thumbContent = assetUrl
           ? `<img class="card-thumb character-card-thumb" src="${this.escapeHtml(assetUrl)}" alt="${this.escapeHtml(data.title || "")}">`
-          : `<div class="media-thumb-placeholder character-thumb"><i class="fa-light fa-person-running media-thumb-icon" aria-hidden="true"></i></div>`;
+          : `<div class="media-thumb-placeholder character-thumb"><i class="${assetIcon} media-thumb-icon" aria-hidden="true"></i></div>`;
         const cardMarkup = `
           <div class="card-tile" data-item-id="${this.escapeHtml(data.id || "")}">
             <div class="card-thumb-wrap">${thumbContent}</div>
@@ -725,7 +747,10 @@ class ModelsApp {
               ${canEdit ? `<button class="delete-button" aria-label="Delete character"><i class="fa-light fa-trash-can trash" aria-hidden="true"></i><i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i></button>` : ""}
             </div>
             <div class="card-body">
-              <h3 class="card-title">${this.escapeHtml(data.title) || "Untitled"}</h3>
+              <div class="card-title-row">
+                <h3 class="card-title">${this.escapeHtml(data.title) || "Untitled"}</h3>
+                ${isAssetsView ? `<span class="card-kind-badge"><i class="${assetIcon}" aria-hidden="true"></i>${assetLabel}</span>` : ""}
+              </div>
               <p class="card-desc">${descriptionLabel}</p>
               <div class="card-meta">
                 <div class="card-dates">
@@ -763,6 +788,7 @@ class ModelsApp {
           });
       }
     });
+    this.charactersFeed = this.createFeed(this.characterCardViewInstance, (search, offset, limit) => this.fetchCharactersFeedPage(search, offset, limit));
   }
 
   ensureVideosCardView() {
@@ -770,11 +796,15 @@ class ModelsApp {
     const CardView = DevExpress.ui.dxCardView;
     this.elements.cardView.innerHTML = "";
     this.videosCardViewInstance = new CardView(this.elements.cardView, {
+      onContentReady: () => this.bindFeedScroll(this.videosFeed),
+      onOptionChanged: event => this.handleFeedSearchChange(this.videosFeed, event),
       dataSource: [],
       height: "100%",
+      repaintChangesOnly: true,
       scrolling: { mode: "virtual" },
       paging: { enabled: false },
       pager: { visible: false },
+      noDataText: this.translations.get("No models found."),
       showBorders: false,
       focusStateEnabled: false,
       hoverStateEnabled: false,
@@ -783,6 +813,7 @@ class ModelsApp {
       columnHidingEnabled: true,
       headerPanel: { visible: false },
       groupPanel: { visible: false },
+      searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search…") },
       grouping: { autoExpandAll: false, contextMenuEnabled: false },
       sorting: { mode: "none" },
       cardsPerRow: 4,
@@ -932,6 +963,7 @@ class ModelsApp {
         }
       }
     });
+    this.videosFeed = this.createFeed(this.videosCardViewInstance, (search, offset, limit) => this.fetchVideosFeedPage(search, offset, limit));
   }
 
   ensureDataCardView() {
@@ -939,11 +971,15 @@ class ModelsApp {
     const CardView = DevExpress.ui.dxCardView;
     this.elements.cardView.innerHTML = "";
     this.dataCardViewInstance = new CardView(this.elements.cardView, {
+      onContentReady: () => this.bindFeedScroll(this.dataSetsFeed),
+      onOptionChanged: event => this.handleFeedSearchChange(this.dataSetsFeed, event),
       dataSource: [],
       height: "100%",
+      repaintChangesOnly: true,
       scrolling: { mode: "virtual" },
       paging: { enabled: false },
       pager: { visible: false },
+      noDataText: this.translations.get("No models found."),
       showBorders: false,
       focusStateEnabled: false,
       hoverStateEnabled: false,
@@ -952,6 +988,7 @@ class ModelsApp {
       columnHidingEnabled: true,
       headerPanel: { visible: false },
       groupPanel: { visible: false },
+      searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search…") },
       grouping: { autoExpandAll: false, contextMenuEnabled: false },
       sorting: { mode: "none" },
       cardsPerRow: 4,
@@ -1101,6 +1138,7 @@ class ModelsApp {
         }
       }
     });
+    this.dataSetsFeed = this.createFeed(this.dataCardViewInstance, (search, offset, limit) => this.fetchDataSetsFeedPage(search, offset, limit));
   }
 
   showVideosCardView() {
@@ -1145,19 +1183,36 @@ class ModelsApp {
     this.ensureCharacterCardView();
   }
 
-  renderVideos(items) {
+  renderVideos() {
     this.showVideosCardView();
-    if (this.videosCardViewInstance) this.videosCardViewInstance.option("dataSource", items);
+    this.startFeed(this.videosFeed);
   }
 
-  renderDataSets(items) {
+  renderDataSets() {
     this.showDataCardView();
-    if (this.dataCardViewInstance) this.dataCardViewInstance.option("dataSource", items);
+    this.startFeed(this.dataSetsFeed);
   }
 
-  renderCharacters(items) {
+  renderCharacters() {
     this.showCharacterCardView();
-    if (this.characterCardViewInstance) this.characterCardViewInstance.option("dataSource", items);
+    this.startFeed(this.charactersFeed);
+  }
+
+  renderAssets() {
+    this.showCharacterCardView();
+    this.charactersFeed.fetchPage = (search, offset, limit) => this.fetchAssetsFeedPage(search, offset, limit);
+    this.charactersFeed.key = ["asset_type", "id"];
+    this.startFeed(this.charactersFeed);
+  }
+
+  // Clears the search box and (re)loads the first page for the given feed.
+  startFeed(feed) {
+    if (!feed || !feed.instance) return;
+    feed.search = "";
+    if (feed.searchTimer) { clearTimeout(feed.searchTimer); feed.searchTimer = null; }
+    feed.instance.option("searchPanel.text", "");
+    this.bindFeedScroll(feed);
+    this.reloadFeed(feed);
   }
 
   async deleteVideoItem(videoData) {
@@ -2789,32 +2844,37 @@ class ModelsApp {
       this.setStatus("");
       return;
     }
+    if (this.state.selectedTreeNodeId === treeNodeIds.assets) {
+      this.renderAssets();
+      this.setStatus("");
+      return;
+    }
     if (this.isVideoNodeId(this.state.selectedTreeNodeId)) {
-      const videos = this.getVideosByTreeNodeId(this.state.selectedTreeNodeId);
-      this.renderVideos(videos);
-      this.setStatus(videos.length ? "" : this.translations.get("No models found."));
+      this.videosSource = { filter: this.resolveTaxonomyFilter(this.state.selectedTreeNodeId, "catalog-video-education-item:", "catalog-video-science-item:") };
+      this.renderVideos();
+      this.setStatus("");
       return;
     }
     if (this.isDataNodeId(this.state.selectedTreeNodeId)) {
-      const dataSets = this.getDataSetsByTreeNodeId(this.state.selectedTreeNodeId);
-      this.renderDataSets(dataSets);
-      this.setStatus(dataSets.length ? "" : this.translations.get("No models found."));
+      this.dataSetsSource = { filter: this.resolveTaxonomyFilter(this.state.selectedTreeNodeId, "catalog-data-education-item:", "catalog-data-science-item:") };
+      this.renderDataSets();
+      this.setStatus("");
       return;
     }
     if (this.isCharacterNodeId(this.state.selectedTreeNodeId)) {
-      const characters = this.getCharactersByTreeNodeId(this.state.selectedTreeNodeId);
-      this.renderCharacters(characters);
-      this.setStatus(characters.length ? "" : this.translations.get("No models found."));
+      this.charactersSource = { filter: this.resolveCharactersFilter(this.state.selectedTreeNodeId) };
+      this.renderCharacters();
+      this.setStatus("");
       return;
     }
-    const models = this.getModelsByTreeNodeId(this.state.selectedTreeNodeId);
-    this.renderModels(models);
-    this.setStatus(models.length ? "" : this.translations.get("No models found."));
+    this.modelsSource = this.resolveModelsSource(this.state.selectedTreeNodeId);
+    this.renderModels();
+    this.setStatus("");
   }
 
-  renderModels(items) {
+  renderModels() {
     this.showModelsCardView();
-    if (this.cardViewInstance) this.cardViewInstance.option("dataSource", items);
+    this.startFeed(this.modelsFeed);
   }
 
   async checkProfileComplete() {
@@ -2850,7 +2910,8 @@ class ModelsApp {
       }
       this.setStatus(error && error.message ? error.message : this.translations.get("Failed to load models."), true);
       this.showModelsCardView();
-      this.renderModels([]);
+      this.modelsSource = { kind: "local", array: [] };
+      this.renderModels();
     }
   }
 
@@ -2858,20 +2919,22 @@ class ModelsApp {
     const isAuthenticated = this.isAuthenticated();
     const requests = [
       isAuthenticated ? this.apiClient.fetchPersonalModels() : Promise.resolve([]),
-      this.apiClient.fetchPublicModels(),
+      this.apiClient.fetchPublicModelsFacets(),
+      this.apiClient.fetchPublicModelsFacets({ isSample: true }),
       this.apiClient.fetchEducationLevelLookups(),
       this.apiClient.fetchScienceLookups(),
-      this.apiClient.fetchVideos(),
-      this.apiClient.fetchDataSets(),
-      this.apiClient.fetchCharacters(),
+      this.apiClient.fetchVideosFacets(),
+      this.apiClient.fetchDataSetsFacets(),
+      this.apiClient.fetchCharacterFacets(),
       this.apiClient.fetchCharacterCategories(),
       isAuthenticated ? this.apiClient.fetchDeletedModels() : Promise.resolve([])
     ];
-    const [personalModelsResult, publicModelsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videosResult, dataSetsResult, charactersResult, characterCategoriesResult, deletedModelsResult] = await Promise.allSettled(requests);
+    const [personalModelsResult, publicFacetsResult, sampleFacetsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videoFacetsResult, dataFacetsResult, characterFacetsResult, characterCategoriesResult, deletedModelsResult] = await Promise.allSettled(requests);
     const personalModels = personalModelsResult.status === "fulfilled" ? personalModelsResult.value : [];
-    if (publicModelsResult.status !== "fulfilled")
-      throw publicModelsResult.reason;
-    const publicModels = publicModelsResult.value;
+    if (publicFacetsResult.status !== "fulfilled")
+      throw publicFacetsResult.reason;
+    this.publicFacets = publicFacetsResult.value;
+    this.sampleFacets = sampleFacetsResult.status === "fulfilled" ? sampleFacetsResult.value : { education: [], sciences: [], total: 0 };
     const educationLookupOptions = educationLookupOptionsResult.status === "fulfilled" ? educationLookupOptionsResult.value : [];
     const scienceLookupOptions = scienceLookupOptionsResult.status === "fulfilled" ? scienceLookupOptionsResult.value : [];
     this.educationLookupOptions = educationLookupOptions;
@@ -2883,10 +2946,13 @@ class ModelsApp {
     this.educationLookupIconById = this.createLookupIconByIdMap(educationLookupOptions);
     this.scienceLookupIconById = this.createLookupIconByIdMap(scienceLookupOptions);
     this.personalModels = this.applyModelLookupLabels(personalModels);
-    this.publicModels = this.applyModelLookupLabels(publicModels);
-    this.videosData = this.applyModelLookupLabels(videosResult.status === "fulfilled" ? videosResult.value : []);
-    this.dataSetData = this.applyModelLookupLabels(dataSetsResult.status === "fulfilled" ? dataSetsResult.value : []);
-    this.charactersData = charactersResult.status === "fulfilled" ? charactersResult.value : [];
+    this.publicModels = [];
+    this.videoFacets = videoFacetsResult.status === "fulfilled" ? videoFacetsResult.value : { education: [], sciences: [], total: 0 };
+    this.dataFacets = dataFacetsResult.status === "fulfilled" ? dataFacetsResult.value : { education: [], sciences: [], total: 0 };
+    this.characterFacets = characterFacetsResult.status === "fulfilled" ? characterFacetsResult.value : { categories: [], uncategorized: 0, total: 0 };
+    this.videosData = [];
+    this.dataSetData = [];
+    this.charactersData = [];
     const characterCategories = characterCategoriesResult.status === "fulfilled" ? characterCategoriesResult.value : [];
     this.characterCategoryNameById = new Map(characterCategories.map(cat => [cat.id, cat.name]));
     this.characterCategoryIconById = new Map();
@@ -2951,100 +3017,232 @@ class ModelsApp {
     return models;
   }
 
-  getModelsByTreeNodeId(nodeId) {
+  // Resolves the selected tree node to a models data source descriptor.
+  // Personal ("My Models") branches are served from the in-memory arrays;
+  // catalog/samples branches are served remotely (server search + pagination).
+  resolveModelsSource(nodeId) {
     if (nodeId === treeNodeIds.myPersonal)
-      return this.personalModels;
+      return { kind: "local", array: this.personalModels };
     if (nodeId === treeNodeIds.myFavorite)
-      return this.favoriteModels;
+      return { kind: "local", array: this.favoriteModels };
     if (nodeId === treeNodeIds.myLibrary)
-      return this.libraryModels;
+      return { kind: "local", array: this.libraryModels };
     if (nodeId === treeNodeIds.myDraft)
-      return this.draftModels;
+      return { kind: "local", array: this.draftModels };
     if (nodeId === treeNodeIds.myPublished)
-      return this.publishedModels;
+      return { kind: "local", array: this.publishedModels };
     if (nodeId === treeNodeIds.myDeleted)
-      return this.deletedModels;
-    const publicModels = Array.isArray(this.publicModels) ? this.publicModels : [];
-    const sampleModels = publicModels.filter(model => this.isSampleValue(model));
-    if (nodeId === treeNodeIds.catalog || nodeId === treeNodeIds.catalogModels)
-      return publicModels;
-    if (nodeId === treeNodeIds.samples || nodeId === treeNodeIds.samplesModels)
-      return sampleModels;
-    const catalogEducation = this.filterModelsByGroupNode(publicModels, nodeId, "catalog-education-item:", "education");
+      return { kind: "local", array: this.deletedModels };
+    // Clicking any catalog parent branch shows every public model.
+    if (nodeId === treeNodeIds.catalog || nodeId === treeNodeIds.catalogModels
+      || nodeId === treeNodeIds.catalogModelsEducation || nodeId === treeNodeIds.catalogModelsSciences)
+      return { kind: "remote", filter: {} };
+    if (nodeId === treeNodeIds.samples || nodeId === treeNodeIds.samplesModels
+      || nodeId === treeNodeIds.samplesEducation || nodeId === treeNodeIds.samplesSciences)
+      return { kind: "remote", filter: { isSample: true } };
+    const catalogEducation = this.resolveGroupFilter(nodeId, "catalog-education-item:", "education", {});
     if (catalogEducation) return catalogEducation;
-    const catalogScience = this.filterModelsByGroupNode(publicModels, nodeId, "catalog-science-item:", "science");
+    const catalogScience = this.resolveGroupFilter(nodeId, "catalog-science-item:", "science", {});
     if (catalogScience) return catalogScience;
-    const sampleEducation = this.filterModelsByGroupNode(sampleModels, nodeId, "samples-education-item:", "education");
+    const sampleEducation = this.resolveGroupFilter(nodeId, "samples-education-item:", "education", { isSample: true });
     if (sampleEducation) return sampleEducation;
-    const sampleScience = this.filterModelsByGroupNode(sampleModels, nodeId, "samples-science-item:", "science");
+    const sampleScience = this.resolveGroupFilter(nodeId, "samples-science-item:", "science", { isSample: true });
     if (sampleScience) return sampleScience;
-    return [];
+    return { kind: "remote", filter: {} };
   }
 
-  filterModelsByGroupNode(models, nodeId, prefix, dimension) {
+  resolveGroupFilter(nodeId, prefix, dimension, baseFilter) {
     if (typeof nodeId !== "string" || !nodeId.startsWith(prefix))
       return null;
     const key = nodeId.substring(prefix.length);
-    const idField = dimension === "education" ? "education_level_id" : "science_id";
-    const getLabel = dimension === "education"
-      ? model => this.getEducationLabel(model)
-      : model => this.getScienceLabel(model);
-    if (key.startsWith("id:")) {
-      const lookupId = decodeURIComponent(key.substring("id:".length));
-      return models.filter(model => model[idField] === lookupId);
-    }
-    const label = key.startsWith("label:")
-      ? decodeURIComponent(key.substring("label:".length))
-      : decodeURIComponent(key);
-    return models.filter(model => getLabel(model) === label);
+    // Non-id (label) groups are the "Uncategorized" bucket: filter by the "none" sentinel.
+    const lookupId = key.startsWith("id:") ? decodeURIComponent(key.substring("id:".length)) : "none";
+    const filter = Object.assign({}, baseFilter);
+    if (dimension === "education") filter.educationLevelId = lookupId;
+    else filter.scienceId = lookupId;
+    return { kind: "remote", filter };
   }
 
-  getVideosByTreeNodeId(nodeId) {
-    if (nodeId === treeNodeIds.catalogVideos)
-      return this.videosData;
-    if (typeof nodeId === "string" && nodeId.startsWith("catalog-video-education-item:")) {
-      const educationKey = nodeId.substring("catalog-video-education-item:".length);
-      if (educationKey.startsWith("id:")) {
-        const educationLookupId = decodeURIComponent(educationKey.substring("id:".length));
-        return this.videosData.filter(video => video.education_level_id === educationLookupId);
-      }
-      const educationLabel = decodeURIComponent(educationKey.startsWith("label:") ? educationKey.substring("label:".length) : educationKey);
-      return this.videosData.filter(video => this.getEducationLabel(video) === educationLabel);
-    }
-    if (typeof nodeId === "string" && nodeId.startsWith("catalog-video-science-item:")) {
-      const scienceKey = nodeId.substring("catalog-video-science-item:".length);
-      if (scienceKey.startsWith("id:")) {
-        const scienceLookupId = decodeURIComponent(scienceKey.substring("id:".length));
-        return this.videosData.filter(video => video.science_id === scienceLookupId);
-      }
-      const scienceLabel = decodeURIComponent(scienceKey.startsWith("label:") ? scienceKey.substring("label:".length) : scienceKey);
-      return this.videosData.filter(video => this.getScienceLabel(video) === scienceLabel);
-    }
-    return [];
+  matchesSearch(model, searchText) {
+    const query = String(searchText).toLowerCase();
+    const fields = [
+      model.title,
+      model.creator_name,
+      this.getEducationLabel(model),
+      this.getScienceLabel(model),
+      this.getModelDescriptionText(model.description)
+    ];
+    return fields.some(field => String(field || "").toLowerCase().includes(query));
   }
 
-  getDataSetsByTreeNodeId(nodeId) {
-    if (nodeId === treeNodeIds.catalogData)
-      return this.dataSetData;
-    if (typeof nodeId === "string" && nodeId.startsWith("catalog-data-education-item:")) {
-      const educationKey = nodeId.substring("catalog-data-education-item:".length);
-      if (educationKey.startsWith("id:")) {
-        const educationLookupId = decodeURIComponent(educationKey.substring("id:".length));
-        return this.dataSetData.filter(dataSet => dataSet.education_level_id === educationLookupId);
-      }
-      const educationLabel = decodeURIComponent(educationKey.startsWith("label:") ? educationKey.substring("label:".length) : educationKey);
-      return this.dataSetData.filter(dataSet => this.getEducationLabel(dataSet) === educationLabel);
+  // ---- Infinite-scroll paging (manual) --------------------------------------
+  // dxCardView does not drive remote paging on its own, so each card view is fed
+  // by a "feed": an ArrayStore that we append 20-item pages into as the user
+  // scrolls, plus a debounced server search.
+  createFeed(instance, fetchPage) {
+    return { instance, fetchPage, key: "id", store: null, offset: 0, total: 0, loading: false, search: "", done: false, searchTimer: null, scrollable: null, scrollHandler: null };
+  }
+
+  getFeedScrollable(feed) {
+    if (!feed || !feed.instance) return null;
+    return feed.instance.getScrollable();
+  }
+
+  resetFeed(feed) {
+    if (!feed || !feed.instance) return;
+    feed.offset = 0;
+    feed.total = 0;
+    feed.done = false;
+    feed.loading = false;
+    feed.store = new DevExpress.data.ArrayStore({ key: feed.key, data: [] });
+    feed.instance.option("dataSource", feed.store);
+  }
+
+  async reloadFeed(feed) {
+    this.resetFeed(feed);
+    await this.loadFeedNext(feed);
+  }
+
+  async loadFeedNext(feed) {
+    if (!feed || !feed.store || feed.loading || feed.done) return;
+    feed.loading = true;
+    try {
+      const { items, total } = await feed.fetchPage(feed.search, feed.offset, this.pageSize);
+      const rows = Array.isArray(items) ? items : [];
+      feed.total = typeof total === "number" ? total : feed.offset + rows.length;
+      if (rows.length)
+        feed.store.push(rows.map(row => ({ type: "insert", data: row })));
+      feed.offset += rows.length;
+      if (rows.length === 0 || feed.offset >= feed.total)
+        feed.done = true;
+    } catch (error) {
+      if (error?.message?.includes("401") && this.isAuthenticated())
+        this.userSdk.logout();
+      else
+        this.setStatus(error?.message || this.translations.get("Failed to load models."), true);
+    } finally {
+      feed.loading = false;
     }
-    if (typeof nodeId === "string" && nodeId.startsWith("catalog-data-science-item:")) {
-      const scienceKey = nodeId.substring("catalog-data-science-item:".length);
-      if (scienceKey.startsWith("id:")) {
-        const scienceLookupId = decodeURIComponent(scienceKey.substring("id:".length));
-        return this.dataSetData.filter(dataSet => dataSet.science_id === scienceLookupId);
-      }
-      const scienceLabel = decodeURIComponent(scienceKey.startsWith("label:") ? scienceKey.substring("label:".length) : scienceKey);
-      return this.dataSetData.filter(dataSet => this.getScienceLabel(dataSet) === scienceLabel);
+  }
+
+  bindFeedScroll(feed) {
+    const scrollable = this.getFeedScrollable(feed);
+    if (!scrollable || feed.scrollable === scrollable) return;
+    if (feed.scrollable && feed.scrollHandler)
+      feed.scrollable.off("scroll", feed.scrollHandler);
+    feed.scrollable = scrollable;
+    feed.scrollHandler = this.handleFeedScroll.bind(this, feed);
+    scrollable.on("scroll", feed.scrollHandler);
+  }
+
+  handleFeedScroll(feed, event) {
+    if (event.scrollOffset.top + feed.scrollable.clientHeight() >= feed.scrollable.scrollHeight() - 240)
+      this.loadFeedNext(feed);
+  }
+
+  handleFeedSearchChange(feed, event) {
+    if (!feed || event.fullName !== "searchPanel.text") return;
+    const value = event.value || "";
+    if (value === feed.search) return;
+    feed.search = value;
+    if (feed.searchTimer) clearTimeout(feed.searchTimer);
+    feed.searchTimer = setTimeout(() => this.reloadFeed(feed), 300);
+  }
+
+  fetchModelsFeedPage(search, offset, limit) {
+    const source = this.modelsSource || { kind: "remote", filter: {} };
+    if (source.kind === "local") {
+      const all = Array.isArray(source.array) ? source.array : [];
+      const filtered = search ? all.filter(model => this.matchesSearch(model, search)) : all;
+      return Promise.resolve({ items: filtered.slice(offset, offset + limit), total: filtered.length });
     }
-    return [];
+    const filter = source.filter || {};
+    return this.apiClient.fetchPublicModelsPage({ search, educationLevelId: filter.educationLevelId, scienceId: filter.scienceId, isSample: filter.isSample, offset, limit })
+      .then(result => ({ items: this.applyModelLookupLabels(result.items), total: result.total }));
+  }
+
+  fetchVideosFeedPage(search, offset, limit) {
+    const filter = this.videosSource?.filter || {};
+    return this.apiClient.fetchVideosPage({ search, educationLevelId: filter.educationLevelId, scienceId: filter.scienceId, offset, limit })
+      .then(result => ({ items: this.applyModelLookupLabels(result.items), total: result.total }));
+  }
+
+  fetchDataSetsFeedPage(search, offset, limit) {
+    const filter = this.dataSetsSource?.filter || {};
+    return this.apiClient.fetchDataSetsPage({ search, educationLevelId: filter.educationLevelId, scienceId: filter.scienceId, offset, limit })
+      .then(result => ({ items: this.applyModelLookupLabels(result.items), total: result.total }));
+  }
+
+  fetchCharactersFeedPage(search, offset, limit) {
+    const filter = this.charactersSource?.filter || {};
+    return this.apiClient.fetchCharactersPage({ search, categoryId: filter.categoryId, offset, limit })
+      .then(result => ({ items: result.items, total: result.total }));
+  }
+
+  async getAssetsFeedTotals(search) {
+    if (!search)
+      return { search, videos: this.videoFacets.total, data: this.dataFacets.total, characters: this.characterFacets.total };
+    if (this.assetsFeedTotals?.search === search)
+      return this.assetsFeedTotals;
+    const [videos, data, characters] = await Promise.all([
+      this.apiClient.fetchVideosPage({ search, offset: 0, limit: 1 }),
+      this.apiClient.fetchDataSetsPage({ search, offset: 0, limit: 1 }),
+      this.apiClient.fetchCharactersPage({ search, offset: 0, limit: 1 })
+    ]);
+    this.assetsFeedTotals = { search, videos: videos.total, data: data.total, characters: characters.total };
+    return this.assetsFeedTotals;
+  }
+
+  async fetchAssetsFeedPage(search, offset, limit) {
+    const totals = await this.getAssetsFeedTotals(search);
+    const items = [];
+    let remaining = limit;
+    if (offset < totals.videos) {
+      const take = Math.min(remaining, totals.videos - offset);
+      const result = await this.apiClient.fetchVideosPage({ search, offset, limit: take });
+      items.push(...result.items.map(item => Object.assign({ asset_type: "video" }, item)));
+      remaining -= result.items.length;
+    }
+    const dataOffset = Math.max(0, offset - totals.videos);
+    if (remaining && dataOffset < totals.data) {
+      const take = Math.min(remaining, totals.data - dataOffset);
+      const result = await this.apiClient.fetchDataSetsPage({ search, offset: dataOffset, limit: take });
+      items.push(...result.items.map(item => Object.assign({ asset_type: "data" }, item)));
+      remaining -= result.items.length;
+    }
+    const characterOffset = Math.max(0, offset - totals.videos - totals.data);
+    if (remaining && characterOffset < totals.characters) {
+      const take = Math.min(remaining, totals.characters - characterOffset);
+      const result = await this.apiClient.fetchCharactersPage({ search, offset: characterOffset, limit: take });
+      items.push(...result.items.map(item => Object.assign({ asset_type: "character" }, item)));
+    }
+    return { items, total: totals.videos + totals.data + totals.characters };
+  }
+
+  // Maps an education/science child node to a { educationLevelId | scienceId } filter.
+  // A parent branch (no prefix match) yields an empty filter → "all inside".
+  resolveTaxonomyFilter(nodeId, educationPrefix, sciencePrefix) {
+    const filter = {};
+    if (typeof nodeId !== "string")
+      return filter;
+    if (nodeId.startsWith(educationPrefix)) {
+      const key = nodeId.substring(educationPrefix.length);
+      filter.educationLevelId = key.startsWith("id:") ? decodeURIComponent(key.substring("id:".length)) : "none";
+    } else if (nodeId.startsWith(sciencePrefix)) {
+      const key = nodeId.substring(sciencePrefix.length);
+      filter.scienceId = key.startsWith("id:") ? decodeURIComponent(key.substring("id:".length)) : "none";
+    }
+    return filter;
+  }
+
+  resolveCharactersFilter(nodeId) {
+    const filter = {};
+    if (typeof nodeId === "string" && nodeId.startsWith("catalog-character-category-item:")) {
+      const key = nodeId.substring("catalog-character-category-item:".length);
+      if (key.startsWith("id:")) filter.categoryId = decodeURIComponent(key.substring("id:".length));
+      else if (key === "uncategorized") filter.categoryId = "none";
+    }
+    return filter;
   }
 
   isVideoNodeId(nodeId) {
@@ -3060,21 +3258,6 @@ class ModelsApp {
   isCharacterNodeId(nodeId) {
     return nodeId === treeNodeIds.catalogCharacters
       || (typeof nodeId === "string" && nodeId.startsWith("catalog-character-category-item:"));
-  }
-
-  getCharactersByTreeNodeId(nodeId) {
-    if (nodeId === treeNodeIds.catalogCharacters)
-      return this.charactersData;
-    if (typeof nodeId === "string" && nodeId.startsWith("catalog-character-category-item:")) {
-      const categoryKey = nodeId.substring("catalog-character-category-item:".length);
-      if (categoryKey.startsWith("id:")) {
-        const categoryId = decodeURIComponent(categoryKey.substring("id:".length));
-        return this.charactersData.filter(character => character.category_id === categoryId);
-      }
-      if (categoryKey === "uncategorized")
-        return this.charactersData.filter(character => !character.category_id);
-    }
-    return [];
   }
 
   getEducationLabel(model) {
@@ -3099,37 +3282,29 @@ class ModelsApp {
     return this.userSdk.hasFeatureFlag(maintenanceAccessFeatureFlagKey);
   }
 
+  // Builds the education/science child nodes from server-provided facet counts
+  // so the tree never has to load the full catalog into memory.
   buildGroupedPublicItems(type, options = {}) {
-    const sourceModels = Array.isArray(options.models)
-      ? options.models
-      : (Array.isArray(this.publicModels) ? this.publicModels : []);
+    const facets = options.facets || this.publicFacets || { education: [], sciences: [] };
     const prefixBase = options.prefixBase || "catalog";
-    const grouped = new Map();
-    const publicModels = sourceModels;
-    for (let index = 0; index < publicModels.length; index++) {
-      const model = publicModels[index];
-      const lookupId = type === "education" ? model.education_level_id : model.science_id;
-      const label = type === "education" ? this.getEducationLabel(model) : this.getScienceLabel(model);
-      const groupKey = lookupId ? `id:${lookupId}` : `label:${label}`;
-      const existingGroup = grouped.get(groupKey);
-      if (existingGroup) {
-        existingGroup.count += 1;
-        continue;
-      }
-      grouped.set(groupKey, { lookupId: lookupId, label: label, count: 1 });
-    }
-    return Array.from(grouped.values())
+    const isEducation = type === "education";
+    const facetList = (isEducation ? facets.education : facets.sciences) || [];
+    const defaultIconClass = isEducation ? "fa-light fa-graduation-cap" : "fa-light fa-flask";
+    const defaultIconColor = isEducation ? "#8b5cf6" : "#0ea5e9";
+    const lookupIconById = isEducation ? this.educationLookupIconById : this.scienceLookupIconById;
+    const lookupColorById = isEducation ? this.educationLookupColorById : this.scienceLookupColorById;
+    const nodePrefix = isEducation ? `${prefixBase}-education-item:` : `${prefixBase}-science-item:`;
+    const nodeType = isEducation ? `${prefixBase}-education-item` : `${prefixBase}-science-item`;
+    return facetList
+      .map(entry => ({
+        lookupId: entry.id || null,
+        label: entry.name || this.translations.get("Uncategorized"),
+        count: entry.count || 0
+      }))
       .sort((left, right) => left.label.localeCompare(right.label))
       .map(entry => {
-        const isEducation = type === "education";
-        const defaultIconClass = isEducation ? "fa-light fa-graduation-cap" : "fa-light fa-flask";
-        const defaultIconColor = isEducation ? "#8b5cf6" : "#0ea5e9";
-        const lookupIconById = isEducation ? this.educationLookupIconById : this.scienceLookupIconById;
-        const lookupColorById = isEducation ? this.educationLookupColorById : this.scienceLookupColorById;
         const iconClass = entry.lookupId ? lookupIconById.get(entry.lookupId) || defaultIconClass : defaultIconClass;
         const iconColor = entry.lookupId ? lookupColorById.get(entry.lookupId) || defaultIconColor : defaultIconColor;
-        const nodePrefix = isEducation ? `${prefixBase}-education-item:` : `${prefixBase}-science-item:`;
-        const nodeType = isEducation ? `${prefixBase}-education-item` : `${prefixBase}-science-item`;
         const nodeSuffix = entry.lookupId ? `id:${encodeURIComponent(entry.lookupId)}` : `label:${encodeURIComponent(entry.label)}`;
         return {
           id: `${nodePrefix}${nodeSuffix}`,
@@ -3143,114 +3318,33 @@ class ModelsApp {
   }
 
   buildGroupedVideosItems(type) {
-    const grouped = new Map();
-    const videos = Array.isArray(this.videosData) ? this.videosData : [];
-    for (let index = 0; index < videos.length; index++) {
-      const video = videos[index];
-      const lookupId = type === "education" ? video.education_level_id : video.science_id;
-      const label = type === "education" ? this.getEducationLabel(video) : this.getScienceLabel(video);
-      const groupKey = lookupId ? `id:${lookupId}` : `label:${label}`;
-      const existingGroup = grouped.get(groupKey);
-      if (existingGroup) {
-        existingGroup.count += 1;
-        continue;
-      }
-      grouped.set(groupKey, { lookupId, label, count: 1 });
-    }
-    return Array.from(grouped.values())
-      .sort((left, right) => left.label.localeCompare(right.label))
-      .map(entry => {
-        const isEducation = type === "education";
-        const defaultIconClass = isEducation ? "fa-light fa-graduation-cap" : "fa-light fa-flask";
-        const defaultIconColor = isEducation ? "#8b5cf6" : "#0ea5e9";
-        const lookupIconById = isEducation ? this.educationLookupIconById : this.scienceLookupIconById;
-        const lookupColorById = isEducation ? this.educationLookupColorById : this.scienceLookupColorById;
-        const iconClass = entry.lookupId ? lookupIconById.get(entry.lookupId) || defaultIconClass : defaultIconClass;
-        const iconColor = entry.lookupId ? lookupColorById.get(entry.lookupId) || defaultIconColor : defaultIconColor;
-        const nodePrefix = isEducation ? "catalog-video-education-item:" : "catalog-video-science-item:";
-        const nodeType = isEducation ? "catalog-video-education-item" : "catalog-video-science-item";
-        const nodeSuffix = entry.lookupId ? `id:${encodeURIComponent(entry.lookupId)}` : `label:${encodeURIComponent(entry.label)}`;
-        return {
-          id: `${nodePrefix}${nodeSuffix}`,
-          text: `${entry.label} (${entry.count})`,
-          nodeType,
-          count: entry.count,
-          iconClass,
-          iconColor
-        };
-      });
-  }
-
-  buildGroupedCharacterItems() {
-    const grouped = new Map();
-    const characters = Array.isArray(this.charactersData) ? this.charactersData : [];
-    for (let index = 0; index < characters.length; index++) {
-      const character = characters[index];
-      const categoryId = character.category_id || null;
-      const groupKey = categoryId ? `id:${categoryId}` : "uncategorized";
-      const existingGroup = grouped.get(groupKey);
-      if (existingGroup) {
-        existingGroup.count += 1;
-        continue;
-      }
-      const label = categoryId ? (this.characterCategoryNameById?.get(categoryId) || categoryId) : (this.translations.get("Uncategorized") ?? "Uncategorized");
-      grouped.set(groupKey, { categoryId, label, count: 1 });
-    }
-    return Array.from(grouped.values())
-      .sort((left, right) => {
-        if (!left.categoryId) return 1;
-        if (!right.categoryId) return -1;
-        return left.label.localeCompare(right.label);
-      })
-      .map(entry => {
-        const nodeSuffix = entry.categoryId ? `id:${encodeURIComponent(entry.categoryId)}` : "uncategorized";
-        return {
-          id: `catalog-character-category-item:${nodeSuffix}`,
-          text: `${entry.label} (${entry.count})`,
-          nodeType: "catalog-character-category-item",
-          iconClass: "fa-light fa-person-running",
-          iconColor: "#7c3aed"
-        };
-      });
+    return this.buildGroupedPublicItems(type, { facets: this.videoFacets, prefixBase: "catalog-video" });
   }
 
   buildGroupedDataItems(type) {
-    const grouped = new Map();
-    const dataSets = Array.isArray(this.dataSetData) ? this.dataSetData : [];
-    for (let index = 0; index < dataSets.length; index++) {
-      const dataSet = dataSets[index];
-      const lookupId = type === "education" ? dataSet.education_level_id : dataSet.science_id;
-      const label = type === "education" ? this.getEducationLabel(dataSet) : this.getScienceLabel(dataSet);
-      const groupKey = lookupId ? `id:${lookupId}` : `label:${label}`;
-      const existingGroup = grouped.get(groupKey);
-      if (existingGroup) {
-        existingGroup.count += 1;
-        continue;
-      }
-      grouped.set(groupKey, { lookupId, label, count: 1 });
-    }
-    return Array.from(grouped.values())
-      .sort((left, right) => left.label.localeCompare(right.label))
-      .map(entry => {
-        const isEducation = type === "education";
-        const defaultIconClass = isEducation ? "fa-light fa-graduation-cap" : "fa-light fa-flask";
-        const defaultIconColor = isEducation ? "#8b5cf6" : "#0ea5e9";
-        const lookupIconById = isEducation ? this.educationLookupIconById : this.scienceLookupIconById;
-        const lookupColorById = isEducation ? this.educationLookupColorById : this.scienceLookupColorById;
-        const iconClass = entry.lookupId ? lookupIconById.get(entry.lookupId) || defaultIconClass : defaultIconClass;
-        const iconColor = entry.lookupId ? lookupColorById.get(entry.lookupId) || defaultIconColor : defaultIconColor;
-        const nodePrefix = isEducation ? "catalog-data-education-item:" : "catalog-data-science-item:";
-        const nodeType = isEducation ? "catalog-data-education-item" : "catalog-data-science-item";
-        const nodeSuffix = entry.lookupId ? `id:${encodeURIComponent(entry.lookupId)}` : `label:${encodeURIComponent(entry.label)}`;
-        return {
-          id: `${nodePrefix}${nodeSuffix}`,
-          text: `${entry.label} (${entry.count})`,
-          nodeType,
-          count: entry.count,
-          iconClass,
-          iconColor
-        };
+    return this.buildGroupedPublicItems(type, { facets: this.dataFacets, prefixBase: "catalog-data" });
+  }
+
+  buildGroupedCharacterItems() {
+    const facets = this.characterFacets || { categories: [], uncategorized: 0 };
+    const items = (facets.categories || [])
+      .map(entry => ({
+        id: `catalog-character-category-item:id:${encodeURIComponent(entry.id)}`,
+        text: `${entry.name || entry.id} (${entry.count || 0})`,
+        nodeType: "catalog-character-category-item",
+        iconClass: "fa-light fa-person-running",
+        iconColor: "#7c3aed"
+      }))
+      .sort((left, right) => left.text.localeCompare(right.text));
+    if (facets.uncategorized)
+      items.push({
+        id: "catalog-character-category-item:uncategorized",
+        text: `${this.translations.get("Uncategorized")} (${facets.uncategorized})`,
+        nodeType: "catalog-character-category-item",
+        iconClass: "fa-light fa-person-running",
+        iconColor: "#7c3aed"
       });
+    return items;
   }
 
   getTreeData() {
@@ -3261,10 +3355,14 @@ class ModelsApp {
     const dataEducationItems = this.buildGroupedDataItems("education");
     const dataScienceItems = this.buildGroupedDataItems("science");
     const characterCategoryItems = this.buildGroupedCharacterItems();
-    const publicModels = Array.isArray(this.publicModels) ? this.publicModels : [];
-    const sampleModels = publicModels.filter(model => this.isSampleValue(model));
-    const sampleEducationItems = this.buildGroupedPublicItems("education", { models: sampleModels, prefixBase: "samples" });
-    const sampleScienceItems = this.buildGroupedPublicItems("science", { models: sampleModels, prefixBase: "samples" });
+    const publicModelsCount = this.publicFacets?.total || 0;
+    const sampleModelsCount = this.sampleFacets?.total || 0;
+    const videosCount = this.videoFacets?.total || 0;
+    const dataCount = this.dataFacets?.total || 0;
+    const charactersCount = this.characterFacets?.total || 0;
+    const assetsCount = videosCount + dataCount + charactersCount;
+    const sampleEducationItems = this.buildGroupedPublicItems("education", { facets: this.sampleFacets, prefixBase: "samples" });
+    const sampleScienceItems = this.buildGroupedPublicItems("science", { facets: this.sampleFacets, prefixBase: "samples" });
     const treeData = [];
     if (this.isAuthenticated())
       treeData.push({
@@ -3321,36 +3419,32 @@ class ModelsApp {
       });
     treeData.push({
         id: treeNodeIds.catalog,
-        text: `${this.translations.get("Community")} (${publicModels.length})`,
+        text: `${this.translations.get("Community")} (${publicModelsCount})`,
         iconClass: "fa-light fa-users",
         iconColor: "#16a34a",
         expanded: false,
-        selectable: false,
         items: [
           {
             id: treeNodeIds.catalogModels,
-            text: `${this.translations.get("Models")} (${publicModels.length})`,
+            text: `${this.translations.get("Models")} (${publicModelsCount})`,
             iconClass: "fa-light fa-cube",
             iconColor: "#16a34a",
             expanded: false,
-            selectable: false,
             items: [
               {
                 id: treeNodeIds.catalogModelsEducation,
-                text: `${this.translations.get("Education Levels")} (${educationItems.length})`,
+                text: `${this.translations.get("Education Levels")} (${publicModelsCount})`,
                 iconClass: "fa-light fa-graduation-cap",
                 iconColor: "#8b5cf6",
                 expanded: false,
-                selectable: false,
                 items: educationItems
               },
               {
                 id: treeNodeIds.catalogModelsSciences,
-                text: `${this.translations.get("Sciences")} (${scienceItems.length})`,
+                text: `${this.translations.get("Sciences")} (${publicModelsCount})`,
                 iconClass: "fa-light fa-flask",
                 iconColor: "#0ea5e9",
                 expanded: false,
-                selectable: false,
                 items: scienceItems
               }
             ]
@@ -3359,36 +3453,32 @@ class ModelsApp {
       });
     treeData.push({
         id: treeNodeIds.samples,
-        text: `${this.translations.get("Samples")} (${sampleModels.length})`,
+        text: `${this.translations.get("Samples")} (${sampleModelsCount})`,
         iconClass: "fa-light fa-flask-vial",
         iconColor: "#a855f7",
         expanded: false,
-        selectable: false,
         items: [
           {
             id: treeNodeIds.samplesModels,
-            text: `${this.translations.get("Models")} (${sampleModels.length})`,
+            text: `${this.translations.get("Models")} (${sampleModelsCount})`,
             iconClass: "fa-light fa-cube",
             iconColor: "#a855f7",
             expanded: false,
-            selectable: false,
             items: [
               {
                 id: treeNodeIds.samplesEducation,
-                text: `${this.translations.get("Education Levels")} (${sampleEducationItems.length})`,
+                text: `${this.translations.get("Education Levels")} (${sampleModelsCount})`,
                 iconClass: "fa-light fa-graduation-cap",
                 iconColor: "#8b5cf6",
                 expanded: false,
-                selectable: false,
                 items: sampleEducationItems
               },
               {
                 id: treeNodeIds.samplesSciences,
-                text: `${this.translations.get("Sciences")} (${sampleScienceItems.length})`,
+                text: `${this.translations.get("Sciences")} (${sampleModelsCount})`,
                 iconClass: "fa-light fa-flask",
                 iconColor: "#0ea5e9",
                 expanded: false,
-                selectable: false,
                 items: sampleScienceItems
               }
             ]
@@ -3397,75 +3487,67 @@ class ModelsApp {
       });
     treeData.push({
         id: treeNodeIds.assets,
-        text: `${this.translations.get("Assets")} (${this.videosData.length + this.dataSetData.length + this.charactersData.length})`,
+        text: `${this.translations.get("Assets")} (${assetsCount})`,
         iconClass: "fa-light fa-photo-film",
         iconColor: "#d97706",
         expanded: false,
-        selectable: false,
         items: [
           {
             id: treeNodeIds.catalogVideos,
-            text: `${this.translations.get("Videos")} (${this.videosData.length})`,
+            text: `${this.translations.get("Videos")} (${videosCount})`,
             iconClass: "fa-light fa-video",
             iconColor: "#e11d48",
             expanded: false,
-            selectable: false,
             items: [
               {
                 id: treeNodeIds.catalogVideosEducation,
-                text: `${this.translations.get("Education Levels")} (${videoEducationItems.length})`,
+                text: `${this.translations.get("Education Levels")} (${videosCount})`,
                 iconClass: "fa-light fa-graduation-cap",
                 iconColor: "#8b5cf6",
                 expanded: false,
-                selectable: false,
                 items: videoEducationItems
               },
               {
                 id: treeNodeIds.catalogVideosSciences,
-                text: `${this.translations.get("Sciences")} (${videoScienceItems.length})`,
+                text: `${this.translations.get("Sciences")} (${videosCount})`,
                 iconClass: "fa-light fa-flask",
                 iconColor: "#0ea5e9",
                 expanded: false,
-                selectable: false,
                 items: videoScienceItems
               }
             ]
           },
           {
             id: treeNodeIds.catalogData,
-            text: `${this.translations.get("Data")} (${this.dataSetData.length})`,
+            text: `${this.translations.get("Data")} (${dataCount})`,
             iconClass: "fa-light fa-table",
             iconColor: "#d97706",
             expanded: false,
-            selectable: false,
             items: [
               {
                 id: treeNodeIds.catalogDataEducation,
-                text: `${this.translations.get("Education Levels")} (${dataEducationItems.length})`,
+                text: `${this.translations.get("Education Levels")} (${dataCount})`,
                 iconClass: "fa-light fa-graduation-cap",
                 iconColor: "#8b5cf6",
                 expanded: false,
-                selectable: false,
                 items: dataEducationItems
               },
               {
                 id: treeNodeIds.catalogDataSciences,
-                text: `${this.translations.get("Sciences")} (${dataScienceItems.length})`,
+                text: `${this.translations.get("Sciences")} (${dataCount})`,
                 iconClass: "fa-light fa-flask",
                 iconColor: "#0ea5e9",
                 expanded: false,
-                selectable: false,
                 items: dataScienceItems
               }
             ]
           },
           {
             id: treeNodeIds.catalogCharacters,
-            text: `${this.translations.get("Characters")} (${this.charactersData.length})`,
+            text: `${this.translations.get("Characters")} (${charactersCount})`,
             iconClass: "fa-light fa-person-running",
             iconColor: "#7c3aed",
             expanded: false,
-            selectable: false,
             items: characterCategoryItems
           }
         ]

@@ -134,6 +134,16 @@ body {
 .dx-cardview .dx-scrollable-container {
   height: 100%;
 }
+.dx-cardview .dx-cardview-search-panel,
+.dx-cardview .dx-cardview-search-panel.dx-state-hover,
+.dx-cardview .dx-cardview-search-panel.dx-state-focused {
+  box-shadow: none;
+}
+.dx-cardview .dx-toolbar-after,
+.dx-cardview .dx-toolbar-before,
+.dx-cardview .dx-toolbar-center {
+  box-shadow: none;
+}
 .status {
   color: var(--c-muted);
   min-height: 1.25rem;
