@@ -308,6 +308,12 @@
         handleUseChatResponseMessage(message) {
             if (typeof message.id !== "string")
                 return;
+            if (message.error) {
+                this.setTypingIndicator(false);
+                this.activeStreams.delete(message.id);
+                this.notifyError(new Error(typeof message.body === "string" && message.body ? message.body : "Agent response failed."));
+                return;
+            }
             let streamState = this.activeStreams.get(message.id);
             if (!streamState) {
                 streamState = this.startStream(message);
