@@ -712,12 +712,12 @@ class BodyShape extends ChildShape {
         const animation = this.getCharacterAnimation(character);
         const frameCount = animation.frames;
         const startIndex = animation.startIndex ?? 0;
-        const interval = Math.max(1, this.properties.stroboscopyInterval);
-        this._stroboscopyPositions = this._stroboscopyPositions.map((pos, i) => {
-            const iteration = i === 0 ? 1 : i * interval;
+        this._stroboscopyPositions = this._stroboscopyPositions.map(pos => {
+            const iteration = this.trajectory.values.indexOf(pos) + 1;
             const rawFrameIndex = this.getAnimationFrameIndex(animation, frameCount, iteration, startIndex);
             const href = animation.frameUrls?.[Math.min(rawFrameIndex, (animation.frameUrls.length || 1) - 1)] || character.thumbnail_url || "";
-            return { ...pos, href };
+            const rotation = character.shouldRotate ? this.getCharacterMovementAngleAtIteration(iteration, true) : null;
+            return { ...pos, href, rotation };
         });
     }
 
@@ -758,6 +758,10 @@ class BodyShape extends ChildShape {
                 imageClone.setAttribute("height", diameter);
                 imageClone.setAttribute("preserveAspectRatio", "xMidYMid meet");
                 imageClone.setAttribute("opacity", this.properties.stroboscopyOpacity);
+                if (character?.shouldRotate && Number.isFinite(pos.rotation))
+                    imageClone.setAttribute("transform", `rotate(${pos.rotation} ${pos.x} ${pos.y})`);
+                else
+                    imageClone.removeAttribute("transform");
             } else {
                 let circle = this.stroboscopy.children[i];
                 if (!circle || circle.tagName !== "circle") {
@@ -1065,16 +1069,24 @@ class BodyShape extends ChildShape {
         return this.getBoardPositionFromLocalPosition({ x: localX, y: localY });
     }
 
-    updateCharacterMovementAngle() {
-        const currentIteration = this.board.calculator.getIteration();
-        if (currentIteration <= 1)
-            return;
-        const previousPosition = this.getTermBoardPosition(currentIteration - 1);
+    getCharacterMovementAngleAtIteration(iteration, useNextPositionAtStart = false) {
+        if (iteration <= 1 && !useNextPositionAtStart)
+            return null;
+        const previousIteration = iteration <= 1 ? 1 : iteration - 1;
+        const currentIteration = iteration <= 1 ? 2 : iteration;
+        const previousPosition = this.getTermBoardPosition(previousIteration);
         const currentPosition = this.getTermBoardPosition(currentIteration);
         const deltaX = currentPosition.x - previousPosition.x;
         const deltaY = currentPosition.y - previousPosition.y;
         if (Math.hypot(deltaX, deltaY) > 0.01)
-            this.characterMovementAngle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+            return Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+        return null;
+    }
+
+    updateCharacterMovementAngle() {
+        const angle = this.getCharacterMovementAngleAtIteration(this.board.calculator.getIteration());
+        if (angle !== null)
+            this.characterMovementAngle = angle;
     }
 
     tick() {
