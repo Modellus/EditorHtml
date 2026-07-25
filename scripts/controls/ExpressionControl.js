@@ -421,7 +421,7 @@ class ExpressionControl {
         if (typeof resolveExpressionTemplateShortcuts === "function")
             return resolveExpressionTemplateShortcuts("t");
         return [
-            { name: "Differential", text: "\\frac{\\mathrm{d}x}{\\mathrm{d}t}", insertText: "\\frac{\\mathrm{d}\\placeholder{}}{\\mathrm{d}t}", shortcutMac: "⌥/", shortcutWindows: "Alt+/" },
+            { name: "Differential", text: "\\frac{\\mathrm{d}x}{\\mathrm{d}t}", insertText: "\\frac{\\differentialD{\\placeholder{}}}{\\differentialD{t}}", shortcutMac: "⌥/", shortcutWindows: "Alt+/" },
             { name: "Power", text: "x^2", insertText: "\\placeholder{}^2", shortcut: "^" },
             { name: "Squareroot", text: "\\sqrt{x}", insertText: "\\sqrt{\\placeholder{}}", shortcut: "#" },
             { name: "Index", text: "x_{t-1}", insertText: "\\placeholder{}_{t-1}", shortcut: "_" },

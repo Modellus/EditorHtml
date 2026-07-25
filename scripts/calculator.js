@@ -457,6 +457,7 @@ class Calculator extends EventTarget {
     parse(text = "") {
         text = this.removeDisplaylinesWrappers(text);
         text = text.replace(/\\placeholder\{\}/g, '');
+        text = text.replace(/\\differentialD\s+([A-Za-z][A-Za-z0-9]*)/g, '\\differentialD{$1}');
         const expressions = this.splitExpressions(text);
         expressions.forEach(e => this.parser.parse(e));
         const latexVisitor = new Modellus.LatexVisitor(this.system);

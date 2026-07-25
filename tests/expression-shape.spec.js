@@ -178,6 +178,32 @@ test.describe('Differential expansion caret placement', () => {
     });
 });
 
+test.describe('Differential template shortcut', () => {
+    test('palette differential template parses as a derivative like manual typing', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            const shortcuts = resolveExpressionTemplateShortcuts('t');
+            const differential = shortcuts.find(shortcut => shortcut.name === 'Differential');
+            shape.insert(differential.insertText);
+        });
+        await page.waitForTimeout(400);
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        await page.waitForTimeout(400);
+        const filledValue = await getExpressionValue(page, 'Expr1');
+        expect(filledValue).not.toContain('\\mathrm');
+        expect(filledValue).toMatch(/\\differentialD\{?\s*x\}?/);
+        const parseResult = await page.evaluate(latex => {
+            shell.board.calculator.parse(latex + '=1');
+            return Object.keys(shell.board.calculator.system.terms);
+        }, filledValue);
+        expect(parseResult).toContain('x');
+    });
+});
+
 test.describe('Keyboard shortcuts', () => {
 
     test('Ctrl+. opens the keyboard-accessible template palette without toolbar visibility', async ({ page }) => {

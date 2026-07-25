@@ -2,7 +2,7 @@ function resolveExpressionTemplateShortcuts(independentTermName) {
     const resolvedIndependentTermName = independentTermName ?? "t";
     const previewTermName = resolvedIndependentTermName === "x" ? "y" : "x";
     return [
-        { name: "Differential", text: `\\frac{\\mathrm{d}${previewTermName}}{\\mathrm{d}${resolvedIndependentTermName}}`, insertText: `\\frac{\\mathrm{d}\\placeholder{}}{\\mathrm{d}${resolvedIndependentTermName}}`, shortcutMac: "⌥/", shortcutWindows: "Alt+/" },
+        { name: "Differential", text: `\\frac{\\mathrm{d}${previewTermName}}{\\mathrm{d}${resolvedIndependentTermName}}`, insertText: `\\frac{\\differentialD{\\placeholder{}}}{\\differentialD{${resolvedIndependentTermName}}}`, shortcutMac: "⌥/", shortcutWindows: "Alt+/" },
         { name: "Power", text: `${previewTermName}^2`, insertText: "\\placeholder{}^2", shortcut: "^" },
         { name: "Square root", text: `\\sqrt{${previewTermName}}`, insertText: "\\sqrt{\\placeholder{}}", shortcut: "#" },
         { name: "Index", text: `${previewTermName}_{i}`, insertText: "\\placeholder{}_{\\placeholder{}}", shortcut: "_" },
