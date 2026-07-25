@@ -1223,15 +1223,19 @@ class BaseShape {
     }
 
     getBoardPosition() {
+        return this.getBoardPositionFromLocalPosition(this.properties);
+    }
+
+    getBoardPositionFromLocalPosition(localPosition) {
         const parent = this.parent;
         if (!parent)
             return {
-                x: this.properties.x,
-                y: this.properties.y
+                x: localPosition.x,
+                y: localPosition.y
             };
         const parentPosition = parent.getBoardPosition?.() ?? { x: 0, y: 0 };
-        let x = this.properties.x + parentPosition.x + (parent.properties?.originX ?? 0);
-        let y = this.properties.y + parentPosition.y + (parent.properties?.originY ?? 0);
+        let x = localPosition.x + parentPosition.x + (parent.properties?.originX ?? 0);
+        let y = localPosition.y + parentPosition.y + (parent.properties?.originY ?? 0);
         const parentRotation = typeof parent.getAbsoluteRotation == "function" ? parent.getAbsoluteRotation() : Number(parent?.properties?.rotation ?? 0);
         if (!Number.isFinite(parentRotation) || Math.abs(parentRotation) < 0.00001)
             return { x: x, y: y };

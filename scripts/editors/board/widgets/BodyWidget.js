@@ -802,7 +802,6 @@ class BodyShape extends ChildShape {
         this.properties.isPhysical = false;
         this.character = null;
         this.lastBoardHorizontalPosition = null;
-        this.lastBoardPosition = null;
         this.characterMovementAngle = null;
         this.flipImageHorizontally = false;
         this.idleAnimationIntervalId = null;
@@ -1048,18 +1047,43 @@ class BodyShape extends ChildShape {
         }
     }
 
+    resolveTermNumericAtIteration(term, caseNumber, iteration) {
+        const calculator = this.board.calculator;
+        if (calculator.isTerm(term))
+            return calculator.system.getByNameOnIteration(iteration, term, caseNumber);
+        return parseFloat(term);
+    }
+
+    getTermBoardPosition(iteration) {
+        const scale = this.getScale();
+        const xCaseNumber = this.properties.xTermCase ?? 1;
+        const yCaseNumber = this.properties.yTermCase ?? 1;
+        const rawX = this.resolveTermNumericAtIteration(this.properties.xTerm, xCaseNumber, iteration);
+        const rawY = this.resolveTermNumericAtIteration(this.properties.yTerm, yCaseNumber, iteration);
+        const localX = Number.isFinite(rawX) ? (scale.x !== 0 ? rawX / scale.x : 0) : 0;
+        const localY = Number.isFinite(rawY) ? (scale.y !== 0 ? -rawY / scale.y : 0) : 0;
+        return this.getBoardPositionFromLocalPosition({ x: localX, y: localY });
+    }
+
+    updateCharacterMovementAngle() {
+        const currentIteration = this.board.calculator.getIteration();
+        if (currentIteration <= 1)
+            return;
+        const previousPosition = this.getTermBoardPosition(currentIteration - 1);
+        const currentPosition = this.getTermBoardPosition(currentIteration);
+        const deltaX = currentPosition.x - previousPosition.x;
+        const deltaY = currentPosition.y - previousPosition.y;
+        if (Math.hypot(deltaX, deltaY) > 0.01)
+            this.characterMovementAngle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+    }
+
     tick() {
         super.tick();
         const boardPosition = this.getBoardPosition();
         const character = this.getSelectedCharacter();
-        if (character?.shouldRotate) {
-            if (this.lastBoardPosition !== null) {
-                const dx = boardPosition.x - this.lastBoardPosition.x;
-                const dy = boardPosition.y - this.lastBoardPosition.y;
-                if (Math.hypot(dx, dy) > 0.01)
-                    this.characterMovementAngle = Math.atan2(dy, dx) * 180 / Math.PI;
-            }
-        } else if (character) {
+        if (character?.shouldRotate)
+            this.updateCharacterMovementAngle();
+        else if (character) {
             this.characterMovementAngle = null;
             this.flipImageHorizontally = false;
         } else {
@@ -1069,7 +1093,6 @@ class BodyShape extends ChildShape {
                 this.lastBoardHorizontalPosition = boardPosition.x;
             }
         }
-        this.lastBoardPosition = { x: boardPosition.x, y: boardPosition.y };
     }
 
     getStroboscopyRadius() {
