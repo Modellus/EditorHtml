@@ -239,6 +239,15 @@ class BlockShape {
             this.renderTermsButtonTemplate(buttonContentElement);
     }
 
+    isMissingTermReference(term, allowNumeric = true) {
+        return TermControl.isMissingTermReference(this.board.calculator, term, allowNumeric);
+    }
+
+    refreshTermReferenceState() {
+        Object.values(this.termFormControls).forEach(({ termControl }) => termControl?.refresh());
+        this.refreshTermsToolbarControl();
+    }
+
     renderTermsButtonTemplate(element) {
     }
 
@@ -275,12 +284,13 @@ class BlockShape {
         return Utils.getDisplayedTerm(String(term));
     }
 
-    createNameButtonTermMarkup(termText) {
+    createNameButtonTermMarkup(termText, termValue = termText, allowNumeric = true) {
         const normalized = String(termText ?? "").trim();
         if (!normalized)
             return "";
         const mathMarkup = Utils.buildReadOnlyMathFieldMarkup(normalized, "height:auto;width:auto;display:inline-block;pointer-events:none");
-        return `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${mathMarkup}</span></span>`;
+        const className = this.isMissingTermReference(termValue, allowNumeric) ? "mdl-name-btn-term mdl-missing-term" : "mdl-name-btn-term";
+        return `<span class="${className}"><span class="mdl-name-btn-term-text">${mathMarkup}</span></span>`;
     }
 
     createTermControl(termProperty, title, showVisibilityToggle = true) {
@@ -352,6 +362,16 @@ class BlockShape {
         return TermControl.normalizeTermValue(value);
     }
 
+    refreshNotebookTermControl(editor, propertyName, options) {
+        const activeSystem = options.system ?? this.board.calculator?.system;
+        const value = this.normalizeNotebookTermValue(propertyName ? this.properties[propertyName] : options.value);
+        const isMissingTerm = this.isMissingTermReference(value);
+        editor.option({ dataSource: this.getNotebookTermItems(activeSystem), value: value });
+        const editorElement = editor.element();
+        editorElement.toggleClass("mdl-missing-term", isMissingTerm);
+        editorElement.attr("title", isMissingTerm ? `Term “${value}” no longer exists` : "");
+    }
+
     createNotebookTermControl($container, options = {}) {
         const propertyName = options.propertyName;
         const system = options.system ?? this.board.calculator?.system;
@@ -359,7 +379,7 @@ class BlockShape {
         const normalizedValue = this.normalizeNotebookTermValue(propertyName ? this.properties[propertyName] : options.value);
         const width = options.width ?? 120;
         const editor = $("<div>").appendTo($container);
-        editor.dxSelectBox({
+        const editorInstance = editor.dxSelectBox({
             dataSource: this.getNotebookTermItems(system),
             valueExpr: "term",
             displayExpr: "text",
@@ -387,7 +407,12 @@ class BlockShape {
                 if (typeof onValueChanged === "function")
                     onValueChanged(nextValue);
             }
-        });
+        }).dxSelectBox("instance");
+        const termControl = { refresh: () => this.refreshNotebookTermControl(editorInstance, propertyName, options) };
+        if (propertyName)
+            this.termFormControls[propertyName] = { termControl: termControl };
+        termControl.refresh();
+        return editorInstance;
     }
 
     normalizeNotebookTermList(values) {

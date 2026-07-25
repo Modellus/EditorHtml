@@ -671,6 +671,7 @@ class BaseValueTableShape extends BaseTableShape {
                 term: column.term,
                 caseNumber: column.case,
                 showCase: TermControl.shouldShowCaseSelectionForShapeTerm(this, column.term, value => this.normalizeColumnValue(value)),
+                isMissingTerm: this.isMissingTermReference(column.term, false),
                 editable: this.canEditTableColumn(column.term, isPreloadedTerm),
                 width: Number.isFinite(column.width) ? column.width : null,
                 precision: this.board.calculator.getTermPrecision(column.term),

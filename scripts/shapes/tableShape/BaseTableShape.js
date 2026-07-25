@@ -129,6 +129,7 @@ class BaseTableShape extends BaseShape {
             term: column.term,
             caseNumber: column.caseNumber,
             showCase: column.showCase === true,
+            isMissingTerm: column.isMissingTerm === true,
             isText: column.isText === true,
             editable: column.editable === true,
             isPreloadedTerm: column.isPreloadedTerm === true,
@@ -150,14 +151,12 @@ class BaseTableShape extends BaseShape {
     clearStaleTermCollectionReferences(staleTermNames) {
         if (!Array.isArray(this.properties.columns))
             return;
-        let hadStale = false;
+        let hasStale = false;
         for (let i = 0; i < this.properties.columns.length; i++) {
-            if (staleTermNames.has(this.properties.columns[i].term)) {
-                this.properties.columns[i] = { ...this.properties.columns[i], term: "" };
-                hadStale = true;
-            }
+            if (staleTermNames.has(this.properties.columns[i].term))
+                hasStale = true;
         }
-        if (hadStale)
+        if (hasStale)
             this.update();
     }
 
@@ -192,7 +191,7 @@ class BaseTableShape extends BaseShape {
         const firstTerm = columns.length > 0 ? this.formatTermForDisplay(columns[0].term) : "";
         const extraCount = columns.length - 1;
         if (firstTerm) {
-            const termPart = this.createNameButtonTermMarkup(firstTerm);
+            const termPart = this.createNameButtonTermMarkup(firstTerm, columns[0].term, false);
             const extraPart = extraCount > 0 ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-extra">+${extraCount}</span></span>` : "";
             element.innerHTML = `${termPart}${extraPart}`;
         } else

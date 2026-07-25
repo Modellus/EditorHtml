@@ -17,6 +17,20 @@ html, body {
     --mdl-shape-toolbar-button-focus-ring: 0 0 0 2px rgba(15, 108, 189, 0.24);
 }
 
+.mdl-missing-term,
+.mdl-missing-term math-field,
+.mdl-missing-term .form-math-field {
+    color: #d13438 !important;
+}
+
+.mdl-missing-term.dx-selectbox .dx-texteditor-container {
+    background-color: rgba(209, 52, 56, 0.08);
+}
+
+.mdl-missing-term.dx-selectbox .dx-texteditor-input {
+    color: #d13438 !important;
+}
+
 
 
 #notebook-container {

@@ -249,15 +249,15 @@ class ArcShape extends ChildShape {
         const startAngleTerm = this.formatTermForDisplay(this.properties.startAngleTerm);
         const endAngleTerm = this.formatTermForDisplay(this.properties.endAngleTerm);
         element.innerHTML =
-            this.createNameButtonTermMarkup(xTerm) +
+            this.createNameButtonTermMarkup(xTerm, this.properties.xTerm) +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
-            this.createNameButtonTermMarkup(yTerm) +
+            this.createNameButtonTermMarkup(yTerm, this.properties.yTerm) +
             `<i class="fa-light fa-pipe mdl-name-btn-separator" style="opacity:0.3"></i>` +
-            this.createNameButtonTermMarkup(radiusTerm) +
+            this.createNameButtonTermMarkup(radiusTerm, this.properties.radiusTerm) +
             `<i class="fa-light fa-pipe mdl-name-btn-separator" style="opacity:0.3"></i>` +
-            this.createNameButtonTermMarkup(startAngleTerm) +
+            this.createNameButtonTermMarkup(startAngleTerm, this.properties.startAngleTerm) +
             `<i class="fa-light fa-arrow-right mdl-name-btn-separator"></i>` +
-            this.createNameButtonTermMarkup(endAngleTerm);
+            this.createNameButtonTermMarkup(endAngleTerm, this.properties.endAngleTerm);
     }
 
     renderLineWidthButtonTemplate(element) {

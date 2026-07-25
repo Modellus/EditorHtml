@@ -182,17 +182,11 @@ class BodyShape extends ChildShape {
             this.board.shapes.shapes.forEach(shape => {
                 if (shape === this)
                     return;
-                let hadStaleTerms = false;
-                shape.termDisplayEntries.forEach(entry => {
-                    if (physicalTermNames.has(shape.properties[entry.term])) {
-                        shape.properties[entry.term] = "";
-                        hadStaleTerms = true;
-                    }
-                });
-                if (hadStaleTerms)
-                    Object.values(shape.termFormControls).forEach(({ termControl }) => termControl?.refresh());
                 shape.clearStaleTermCollectionReferences(physicalTermNames);
+                shape.refreshTermReferenceState();
+                this.board.markDirty(shape);
             });
+            this.refreshTermReferenceState();
         }
         if (name === "isPhysical" || (name === "name" && this.properties.isPhysical)) {
             this._termsDropdownElement?.dxDropDownButton("instance")?.close();
@@ -592,11 +586,11 @@ class BodyShape extends ChildShape {
         const yTerm = this.formatTermForDisplay(this.properties.yTerm);
         const sizeTerm = this.formatTermForDisplay(this.properties.sizeTerm);
         element.innerHTML =
-            this.createNameButtonTermMarkup(xTerm) +
+            this.createNameButtonTermMarkup(xTerm, this.properties.xTerm) +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
-            this.createNameButtonTermMarkup(yTerm) +
+            this.createNameButtonTermMarkup(yTerm, this.properties.yTerm) +
             `<i class="fa-light fa-arrow-up-right mdl-name-btn-separator"></i>` +
-            this.createNameButtonTermMarkup(sizeTerm);
+            this.createNameButtonTermMarkup(sizeTerm, this.properties.sizeTerm);
     }
 
     refreshNameToolbarControl() {

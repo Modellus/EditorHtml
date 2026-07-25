@@ -15,7 +15,7 @@ class ValueNotebookShape extends PlaceholderNotebookShape {
         if (!term)
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Term</span></span>`;
         else
-            element.innerHTML = this.createNameButtonTermMarkup(term);
+            element.innerHTML = this.createNameButtonTermMarkup(term, this.properties.term);
     }
 
     buildFontMenuContent(contentElement) {

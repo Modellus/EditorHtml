@@ -512,7 +512,8 @@ class ChartControl {
             }
             this.renderLegendIndicator(hostGroup, cursorX, centerY, fontSize, entry.color, entry.chartTypes, indicatorWidth);
             cursorX += indicatorTotalWidth;
-            Utils.appendCaseTermSvg(hostGroup, cursorX, centerY, fontSize, contrastColor, entry.name.caseNumber, entry.name.termLatex ?? "");
+            const termColor = entry.name.isMissingTerm ? "#d13438" : contrastColor;
+            Utils.appendCaseTermSvg(hostGroup, cursorX, centerY, fontSize, termColor, entry.name.caseNumber, entry.name.termLatex ?? "");
             cursorX += entry.width - indicatorTotalWidth;
         }
     }
@@ -977,7 +978,8 @@ class ChartControl {
             this.axisLayer.appendChild(hostGroup);
             const totalWidth = Utils.estimateCaseTermWidth(argTitle.caseNumber, argTitle.termLatex, titleFontSize);
             const startX = layout.plotLeft + layout.plotWidth / 2 - totalWidth / 2;
-            Utils.appendCaseTermSvg(hostGroup, startX, layout.axisTitleX, titleFontSize, this.options.foregroundColor, argTitle.caseNumber, argTitle.termLatex);
+            const termColor = argTitle.isMissingTerm ? "#d13438" : this.options.foregroundColor;
+            Utils.appendCaseTermSvg(hostGroup, startX, layout.axisTitleX, titleFontSize, termColor, argTitle.caseNumber, argTitle.termLatex);
         }
         this.renderValueTitleLegend(this.axisLayer, layout, titleFontSize, this.yTitleClipId);
         this.appendSvgMarkup(this.axisLayer, `

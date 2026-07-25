@@ -35,6 +35,7 @@ var ChartShapeToolbarMixin = {
             dragHandleClassName: "shape-term-drag-handle chart-yterm-drag-handle",
             includeColor: true,
             includeVisibility: true,
+            allowNumericTermReference: true,
             colorSelection: {
                 getValue: (item, index) => this.getYTermControlDisplayColor(item, index)
             },
@@ -116,12 +117,13 @@ var ChartShapeToolbarMixin = {
     getTermLabelWithCase(term, caseNumber = 1) {
         const normalizedTerm = this.normalizeYTermValue(term);
         if (normalizedTerm === "")
-            return { termLatex: "", caseNumber: null };
+            return { termLatex: "", caseNumber: null, isMissingTerm: false };
         const displayedTerm = Utils.formatMathTermName(this.formatTermForDisplay(normalizedTerm));
+        const isMissingTerm = this.isMissingTermReference(normalizedTerm);
         if (!this.shouldShowCaseLabelForTerm(normalizedTerm))
-            return { termLatex: displayedTerm, caseNumber: null };
+            return { termLatex: displayedTerm, caseNumber: null, isMissingTerm: isMissingTerm };
         const normalizedCaseNumber = TermControl.getShapeCaseNumber(this, normalizedTerm, caseNumber, value => this.normalizeYTermValue(value));
-        return { termLatex: displayedTerm, caseNumber: normalizedCaseNumber };
+        return { termLatex: displayedTerm, caseNumber: normalizedCaseNumber, isMissingTerm: isMissingTerm };
     },
     getSeriesValueFieldName(index) {
         return `series${index}`;

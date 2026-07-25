@@ -240,11 +240,11 @@ class LineShape extends ChildShape {
         const yTerm = this.formatTermForDisplay(this.properties.yTerm);
         const angleTerm = this.formatTermForDisplay(this.properties.angleTerm);
         element.innerHTML =
-            this.createNameButtonTermMarkup(xTerm) +
+            this.createNameButtonTermMarkup(xTerm, this.properties.xTerm) +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
-            this.createNameButtonTermMarkup(yTerm) +
+            this.createNameButtonTermMarkup(yTerm, this.properties.yTerm) +
             `<i class="fa-light fa-angle mdl-name-btn-separator"></i>` +
-            this.createNameButtonTermMarkup(angleTerm);
+            this.createNameButtonTermMarkup(angleTerm, this.properties.angleTerm);
     }
 
     renderLineWidthButtonTemplate(element) {

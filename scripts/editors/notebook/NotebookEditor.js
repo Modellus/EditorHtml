@@ -572,6 +572,7 @@ class NotebookEditor extends Workspace {
         this.updatePlayerSliderValue(1);
         this._updateIndependentNameLabel();
         this.reparseAndCalculateWorkspace();
+        this.shapeInstances.forEach(shape => shape.refreshTermReferenceState?.());
     }
 
     _onCalculatorIterate() {

@@ -465,7 +465,10 @@ class BoardEditor extends Workspace {
         this.calculator.applyInitialValuesByCase(initialValuesByCase);
         this.calculator.applyUserInputsByCase(userInputsByCase);
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
-        this.board.shapes.shapes.forEach(shape => shape.tick());
+        this.board.shapes.shapes.forEach(shape => {
+            shape.refreshTermReferenceState();
+            shape.tick();
+        });
         this.forceRefreshWorkspaceSurface();
         this.bottomToolbar.updatePlayer();
         this.topToolbar.update();

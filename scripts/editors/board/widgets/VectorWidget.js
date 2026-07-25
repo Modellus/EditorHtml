@@ -205,13 +205,13 @@ class VectorShape extends ChildShape {
         const xOriginTerm = this.formatTermForDisplay(this.properties.xOriginTerm);
         const yOriginTerm = this.formatTermForDisplay(this.properties.yOriginTerm);
         element.innerHTML =
-              this.createNameButtonTermMarkup(xOriginTerm) +
+              this.createNameButtonTermMarkup(xOriginTerm, this.properties.xOriginTerm) +
             `<i class="fa-light fa-circle-dot mdl-name-btn-separator"></i>` +
-              this.createNameButtonTermMarkup(yOriginTerm) +
+              this.createNameButtonTermMarkup(yOriginTerm, this.properties.yOriginTerm) +
             `<i class="fa-light fa-pipe mdl-name-btn-separator" style="opacity:0.3"></i>` +
-              this.createNameButtonTermMarkup(xTerm) +
+              this.createNameButtonTermMarkup(xTerm, this.properties.xTerm) +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
-              this.createNameButtonTermMarkup(yTerm);
+              this.createNameButtonTermMarkup(yTerm, this.properties.yTerm);
     }
 
     positionContextToolbar() {

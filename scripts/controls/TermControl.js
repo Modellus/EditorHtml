@@ -21,6 +21,17 @@ class TermControl {
         return String(value).trim();
     }
 
+    static isMissingTermReference(calculator, value, allowNumeric = true) {
+        const term = TermControl.normalizeTermValue(value);
+        if (term === "")
+            return false;
+        if (calculator.isTerm(term))
+            return false;
+        if (allowNumeric && Number.isFinite(Number(term)))
+            return false;
+        return true;
+    }
+
     static shouldShowCaseSelectionForTerm(termValue, options = {}) {
         const normalizeTermValue = options.normalizeTermValue ?? (value => TermControl.normalizeTermValue(value));
         const normalizedTerm = normalizeTermValue(termValue);
@@ -313,6 +324,7 @@ class TermControl {
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term),
             getBoard: () => baseShape.board,
             getSystem: () => baseShape.board?.calculator?.system,
+            allowNumericTermReference: true,
             normalizeTermValue: value => TermControl.normalizeBaseShapeTermValue(value),
             onTermChanged: (_, value) => {
                 formInstance.updateData(term, value);
@@ -622,6 +634,7 @@ class TermControl {
             getTermItems: options.getTermItems ?? (item => TermControl.buildShapeTermsCollectionTermItems(shape, item?.term, normalizeTermValue)),
             getBoard: () => shape.board,
             getSystem: () => shape.board?.calculator?.system,
+            allowNumericTermReference: options.allowNumericTermReference === true,
             normalizeTermValue: value => normalizeTermValue(value),
             onItemDeleting: index => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                 if (index < 0 || index >= items.length)
@@ -1264,6 +1277,8 @@ class TermControl {
             ? providedOptions.acceptCustomValue(item, index) === true
             : providedOptions.acceptCustomValue === true;
         const termValue = this.getTermValue(item, index);
+        const calculator = this.getCalculator();
+        const isMissingTerm = calculator ? TermControl.isMissingTermReference(calculator, termValue, this.options.allowNumericTermReference === true) : false;
         const board = this.options.getBoard?.();
         const system = this.getSystem();
         const flatItems = this.getTermItems(item, index);
@@ -1277,7 +1292,10 @@ class TermControl {
             displayExpr: data => this.resolveTermEditorDisplayedText(data, termValue, system),
             inputAttr: { class: "mdl-variable-selector" },
             stylingMode: "filled",
-            elementAttr: { class: "mdl-variable-selector" },
+            elementAttr: {
+                class: isMissingTerm ? "mdl-variable-selector mdl-missing-term" : "mdl-variable-selector",
+                title: isMissingTerm ? `Term “${termValue}” no longer exists` : ""
+            },
             fieldAddons: {
                 before: data => {
                     const selectedText = Utils.formatMathTermName(this.resolveTermEditorDisplayedText(data, termValue, system));

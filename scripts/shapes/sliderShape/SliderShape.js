@@ -51,7 +51,7 @@ class SliderShape extends BaseShape {
     renderTermsButtonTemplate(element) {
         const term = this.formatTermForDisplay(this.properties.term);
         element.innerHTML = term
-            ? this.createNameButtonTermMarkup(term)
+            ? this.createNameButtonTermMarkup(term, this.properties.term)
             : `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Value</span></span>`;
     }
 

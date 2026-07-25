@@ -1044,6 +1044,17 @@ svg:active.pan-available {
     line-height: 1;
 }
 
+.mdl-missing-term,
+.mdl-missing-term math-field,
+.mdl-missing-term .mdl-term-editor-math-field,
+.mdl-missing-term .form-math-field {
+    color: #d13438 !important;
+}
+
+.mdl-missing-term.dx-dropdownbox {
+    background-color: rgba(209, 52, 56, 0.08);
+}
+
 .mdl-name-btn-extra {
     font-size: 10px;
     line-height: 1;

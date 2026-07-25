@@ -211,6 +211,7 @@ class TableControl {
             term: column?.term ?? column?.title ?? "",
             caseNumber: parseInt(column?.caseNumber ?? column?.case ?? 1, 10) || 1,
             showCase: column?.showCase === true,
+            isMissingTerm: column?.isMissingTerm === true,
             editable: column?.editable === true,
             isText: column?.isText === true,
             useHeaderFontSize: column?.useHeaderFontSize === true,
@@ -480,7 +481,7 @@ class TableControl {
     }
 
     getHeaderContentKey(columns) {
-        const columnSummary = columns.map(column => `${column.title}|${column.barColor}|${column.caseNumber}|${column.showCase}`).join(",");
+        const columnSummary = columns.map(column => `${column.title}|${column.barColor}|${column.caseNumber}|${column.showCase}|${column.isMissingTerm}`).join(",");
         return `${this.options.headerBackgroundColor}|${this.options.foregroundColor}|${this.options.headerFontSize}|${columnSummary}`;
     }
 
@@ -625,7 +626,7 @@ class TableControl {
 
     renderHeaderCellContent(layout, column, cellGeometry, columnIndex) {
         const headerBackgroundColor = this.getColumnHeaderBackgroundColor(column);
-        const headerTextColor = Utils.getContrastColor(headerBackgroundColor);
+        const headerTextColor = column.isMissingTerm ? "#d13438" : Utils.getContrastColor(headerBackgroundColor);
         const titleText = column.title ?? "";
         const fontSize = Number(this.options.headerFontSize) || 16;
         const paddingLeft = 9;

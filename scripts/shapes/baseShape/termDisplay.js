@@ -111,12 +111,16 @@
         const isTerm = calculator.isTerm(termName);
         const value = isTerm ? calculator.getByName(termName, caseNumber) : Number(termName);
         const valueText = isTerm ? this.formatModelValue(value, termName) : this.formatTermForDisplay(termName);
-        if (!isTerm)
+        if (!isTerm) {
+            const isNumericValue = Number.isFinite(Number(termName));
+            const displayedMissingTerm = this.formatTermForDisplay(termName);
             return {
-                termText: "",
-                valueText: valueText,
-                text: valueText
+                termText: isNumericValue ? "" : displayedMissingTerm,
+                valueText: isNumericValue ? valueText : "\u2014",
+                text: isNumericValue ? valueText : `${displayedMissingTerm} = \u2014`,
+                isMissingTerm: !isNumericValue
             };
+        }
         const displayedTermText = this.formatTermForDisplay(termName);
         return {
             termText: displayedTermText,
@@ -149,7 +153,8 @@
             y: y,
             anchor: anchor,
             caseNumber: this.getCaseIndicatorNumber(entry),
-            color: entry.color ?? null
+            color: entry.color ?? null,
+            isMissingTerm: labelData?.isMissingTerm === true
         };
     }
 
@@ -368,7 +373,7 @@
         for (let i = 0; i < labels.length; i++) {
             const labelElements = this.ensureLabelElements(i);
             const label = labels[i];
-            const labelColor = label.color ?? color;
+            const labelColor = label.isMissingTerm ? "#d13438" : (label.color ?? color);
             const labelContrastColor = Utils.getContrastColor(labelColor);
             const labelText = labelElements.labelText;
             labelText.setAttribute("x", label.x);

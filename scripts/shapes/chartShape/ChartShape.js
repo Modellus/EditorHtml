@@ -20,14 +20,12 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
     clearStaleTermCollectionReferences(staleTermNames) {
         if (!Array.isArray(this.properties.yTerms))
             return;
-        let hadStale = false;
+        let hasStale = false;
         for (let i = 0; i < this.properties.yTerms.length; i++) {
-            if (staleTermNames.has(this.properties.yTerms[i].term)) {
-                this.properties.yTerms[i] = { ...this.properties.yTerms[i], term: "" };
-                hadStale = true;
-            }
+            if (staleTermNames.has(this.properties.yTerms[i].term))
+                hasStale = true;
         }
-        if (hadStale) {
+        if (hasStale) {
             this.resetValues();
             this.update();
         }

@@ -1038,6 +1038,17 @@ class BaseShape {
             this.renderTermsButtonTemplate(buttonContentElement);
     }
 
+    isMissingTermReference(term, allowNumeric = true) {
+        return TermControl.isMissingTermReference(this.board.calculator, term, allowNumeric);
+    }
+
+    refreshTermReferenceState() {
+        Object.values(this.termFormControls).forEach(({ termControl }) => termControl?.refresh());
+        this._yTermsControl?.refresh?.();
+        this._columnsControl?.refresh?.();
+        this.refreshTermsToolbarControl();
+    }
+
     delta(property, delta) {
         var termMapping = this.termsMapping.find(t => t.property === property);
         let updatedValue = this.properties[property];
@@ -1611,12 +1622,14 @@ class BaseShape {
         return Utils.formatMathTermName(text);
     }
 
-    createNameButtonTermMarkup(termText) {
+    createNameButtonTermMarkup(termText, termValue = termText, allowNumeric = true) {
         const normalizedTermText = String(termText ?? "").trim();
         if (normalizedTermText === "")
             return "";
         const mathFieldMarkup = Utils.buildReadOnlyMathFieldMarkup(normalizedTermText, "height:auto;width:auto;display:inline-block;pointer-events:none");
-        return `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text">${mathFieldMarkup}</span></span>`;
+        const isMissingTerm = this.isMissingTermReference(termValue, allowNumeric);
+        const className = isMissingTerm ? "mdl-name-btn-term mdl-missing-term" : "mdl-name-btn-term";
+        return `<span class="${className}"><span class="mdl-name-btn-term-text">${mathFieldMarkup}</span></span>`;
     }
 
     addTerm(termProperty, property, title, isInverted = false, isEditable = true, colSpan = 1, scaleProperty = null) {

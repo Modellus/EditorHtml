@@ -129,9 +129,9 @@ class PointShape extends ChildShape {
         const xTerm = this.formatTermForDisplay(this.properties.xTerm);
         const yTerm = this.formatTermForDisplay(this.properties.yTerm);
         element.innerHTML =
-            this.createNameButtonTermMarkup(xTerm) +
+            this.createNameButtonTermMarkup(xTerm, this.properties.xTerm) +
             `<i class="fa-light fa-x mdl-name-btn-separator"></i>` +
-            this.createNameButtonTermMarkup(yTerm);
+            this.createNameButtonTermMarkup(yTerm, this.properties.yTerm);
     }
 
     createElement() {

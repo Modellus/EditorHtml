@@ -117,7 +117,7 @@ class ValueShape extends BaseShape {
     renderTermsButtonTemplate(element) {
         const term = this.formatTermForDisplay(this.properties.term);
         element.innerHTML = term
-            ? this.createNameButtonTermMarkup(term)
+            ? this.createNameButtonTermMarkup(term, this.properties.term)
             : `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Term</span></span>`;
     }
 
@@ -550,7 +550,7 @@ class ValueShape extends BaseShape {
         const textVerticalOffset = isEditingCurrentTerm ? this.getEditingTextVerticalOffset() : 0;
         this.valueText.setAttribute("x", `${position.x + width / 2}`);
         this.valueText.setAttribute("y", `${position.y + height / 2 + textVerticalOffset}`);
-        this.valueText.setAttribute("fill", this.properties.foregroundColor);
+        this.valueText.setAttribute("fill", this.isMissingTermReference(termText) ? "#d13438" : this.properties.foregroundColor);
         const resolvedFontSize = this.resolveTermNumeric(this.properties.fontSizeTerm, this.properties.fontSizeTermCase ?? 1);
         this.valueText.setAttribute("font-size", Number.isFinite(resolvedFontSize) ? Math.max(1, resolvedFontSize) : 14);
         this.valueText.setAttribute("font-weight", this.properties.fontBold ? "bold" : "normal");
