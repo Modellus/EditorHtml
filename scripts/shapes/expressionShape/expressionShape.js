@@ -3,6 +3,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     constructor(board, parent, id) {
         super(board, null, id);
         this.focusDispatchFrame = null;
+        this.shortcutsHintShown = false;
         this.toolbarAdapter = {
             pasteFromClipboard: shape => shape.pasteTextFromClipboard()
         };
@@ -44,6 +45,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
             useScrollView: true,
             value: this.flattenNestedDisplaylines(this.properties.expression ?? "\\displaylines{}"),
             getTemplateShortcuts: () => this.getTemplateShortcuts(),
+            onOpenShortcuts: () => this.openShortcutsPalette(),
             onInput: _ => {
                 this.mathfield = this.expressionControl.mathfield;
                 this.deferFixContentOutsideDisplaylines();
@@ -198,6 +200,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     }
 
     onFocus() {
+        this.showShortcutsHint();
         if (this.focusDispatchFrame != null)
             cancelAnimationFrame(this.focusDispatchFrame);
         this.focusDispatchFrame = requestAnimationFrame(() => {
@@ -207,6 +210,30 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     }
 
     onBlur() {
+        this.hideShortcutsHint();
+    }
+
+    showShortcutsHint() {
+        if (this.shortcutsHintShown)
+            return;
+        this.shortcutsHintShown = true;
+        const launcherShortcut = /mac/i.test(navigator.platform) ? "⌘." : "Ctrl+.";
+        this._shortcutsHint = $(`<div class="mdl-expression-shortcuts-hint" role="status">${launcherShortcut}</div>`).appendTo(document.body);
+        const mathfieldRectangle = this.mathfield.getBoundingClientRect();
+        const hintWidth = this._shortcutsHint.outerWidth();
+        const hintHeight = this._shortcutsHint.outerHeight();
+        const left = Math.max(8, Math.min(mathfieldRectangle.left, window.innerWidth - hintWidth - 8));
+        const spaceBelow = window.innerHeight - mathfieldRectangle.bottom;
+        const top = spaceBelow >= hintHeight + 16 ? mathfieldRectangle.bottom + 8 : mathfieldRectangle.top - hintHeight - 8;
+        this._shortcutsHint.css({ left: `${left}px`, top: `${Math.max(8, top)}px` });
+        clearTimeout(this._shortcutsHintTimer);
+        this._shortcutsHintTimer = setTimeout(() => this.hideShortcutsHint(), 4500);
+    }
+
+    hideShortcutsHint() {
+        clearTimeout(this._shortcutsHintTimer);
+        this._shortcutsHint?.remove();
+        this._shortcutsHint = null;
     }
 
     enterEditMode() {

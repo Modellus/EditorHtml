@@ -181,6 +181,13 @@ class ExpressionControl {
     }
 
     _onKeyDown(keydownEvent) {
+        if ((keydownEvent.ctrlKey || keydownEvent.metaKey) && !keydownEvent.altKey && keydownEvent.key === ".") {
+            keydownEvent.preventDefault();
+            keydownEvent.stopImmediatePropagation();
+            keydownEvent.stopPropagation();
+            this.options.onOpenShortcuts();
+            return;
+        }
         if ((keydownEvent.ctrlKey || keydownEvent.metaKey) && keydownEvent.key === "c") {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
@@ -411,6 +418,8 @@ class ExpressionControl {
     getTemplateShortcuts() {
         if (this.options.getTemplateShortcuts)
             return this.options.getTemplateShortcuts();
+        if (typeof resolveExpressionTemplateShortcuts === "function")
+            return resolveExpressionTemplateShortcuts("t");
         return [
             { name: "Differential", text: "\\frac{\\mathrm{d}x}{\\mathrm{d}t}", insertText: "\\frac{\\mathrm{d}\\placeholder{}}{\\mathrm{d}t}", shortcutMac: "⌥/", shortcutWindows: "Alt+/" },
             { name: "Power", text: "x^2", insertText: "\\placeholder{}^2", shortcut: "^" },

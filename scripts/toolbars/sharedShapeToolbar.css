@@ -553,6 +553,104 @@ math-field {
     height: auto;
 }
 
+.mdl-shortcuts-picker-menu .dx-popup-content {
+    padding: 10px;
+}
+
+.mdl-shortcuts-palette {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.mdl-shortcuts-palette-tiles .dx-tile {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: #fafafa;
+}
+
+.mdl-shortcuts-palette-tiles .dx-tile.dx-state-hover,
+.mdl-shortcuts-palette-tiles .dx-tile.dx-state-focused,
+.mdl-shortcuts-palette-tiles .dx-tile.dx-state-active,
+.mdl-shortcuts-palette-tiles .dx-tile.mdl-shortcuts-palette-tile-focused {
+    border-color: #0f6cbd;
+    background: #e8f0fe;
+}
+
+.mdl-shortcuts-palette-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 100%;
+    height: 100%;
+    padding: 3px;
+    box-sizing: border-box;
+}
+
+.mdl-shortcuts-palette-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 11px;
+}
+
+.mdl-shortcuts-palette-preview,
+.mdl-shortcuts-palette-preview * {
+    pointer-events: none;
+}
+
+.mdl-shortcuts-palette-status {
+    min-height: 28px;
+}
+
+.mdl-shortcuts-palette-status .dx-toolbar {
+    min-height: 28px;
+    padding: 0;
+    background: transparent;
+}
+
+.mdl-shortcuts-palette-status .dx-toolbar-items-container {
+    height: 28px;
+}
+
+.mdl-shortcuts-palette-status-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: #555;
+    font-size: 12px;
+}
+
+.mdl-shortcuts-palette-shortcut-pill {
+    padding: 2px 7px;
+    border: 0;
+    border-radius: 999px;
+    background: #e9edf2;
+    color: #46505a;
+    font: 11px/1.25 system-ui, sans-serif;
+    white-space: nowrap;
+}
+
+.mdl-expression-shortcuts-hint {
+    position: fixed;
+    z-index: 15000;
+    padding: 5px 9px;
+    border: 0;
+    border-radius: 999px;
+    background: #e9edf2;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.16);
+    color: #444;
+    font-size: 12px;
+    pointer-events: none;
+}
+
 .name-packed-control__input .dx-texteditor {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;

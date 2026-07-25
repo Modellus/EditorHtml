@@ -180,6 +180,101 @@ test.describe('Differential expansion caret placement', () => {
 
 test.describe('Keyboard shortcuts', () => {
 
+    test('Ctrl+. opens the keyboard-accessible template palette without toolbar visibility', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await expect(page.locator('.mdl-expression-shortcuts-hint')).toHaveText(/^(Ctrl\+\.|⌘\.)$/);
+        await page.evaluate(() => shell.board.shapes.getByName('Expr1').hideContextToolbar());
+        await page.keyboard.press('Control+.');
+        const palette = page.locator('.mdl-shortcuts-picker-menu .mdl-shortcuts-palette');
+        await expect(palette).toBeVisible();
+        await expect(palette.locator('.mdl-shortcuts-palette-search')).toHaveCount(0);
+        await expect(palette.locator('.dx-textbox')).toHaveCount(0);
+        await expect(palette.locator('.dx-tileview')).toHaveCount(1);
+        await expect(palette.locator('.mdl-shortcuts-palette-tile')).toHaveCount(19);
+        await expect(palette.locator('.mdl-shortcuts-palette-name')).toHaveCount(0);
+        await expect(palette.locator('.mdl-shortcuts-palette-key')).toHaveCount(0);
+        await expect(palette.locator('.mdl-shortcuts-palette-tile-focused')).toHaveCount(0);
+        await expect(palette.locator('.mdl-shortcuts-palette-status-content')).toHaveCount(0);
+        const shadingEnabled = await page.evaluate(() => shell.board.shapes.getByName('Expr1')._shortcutsPopup.option('shading'));
+        expect(shadingEnabled).toBe(false);
+        const shortcutKeys = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            return shape.getTemplateShortcuts().map(shortcut => shape.getShortcutPaletteKeyText(shortcut));
+        });
+        expect(shortcutKeys).toEqual(expect.arrayContaining(['!', '%', '|', '<>', '>=', '<=', '*', "'"]));
+    });
+
+    test('template palette focuses explicitly and inserts the focused result with Enter', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.press('Control+.');
+        const palette = page.locator('.mdl-shortcuts-picker-menu .mdl-shortcuts-palette');
+        await expect(palette.locator('.mdl-shortcuts-palette-tile-focused')).toHaveCount(0);
+        await page.keyboard.press('ArrowRight');
+        await expect(palette.locator('.mdl-shortcuts-palette-tile-focused')).toHaveCount(1);
+        await expect(palette.locator('.mdl-shortcuts-palette-status-name')).toHaveText('Differential');
+        await expect(palette.locator('.mdl-shortcuts-palette-shortcut-pill')).toHaveText(/^(Alt\+|⌥)\/$/);
+        await page.keyboard.press('ArrowRight');
+        await expect(palette.locator('.mdl-shortcuts-palette-status-name')).toHaveText('Power');
+        await expect(palette.locator('.mdl-shortcuts-palette-shortcut-pill')).toHaveText('^');
+        await page.keyboard.press('Enter');
+        await expect(page.locator('.mdl-shortcuts-picker-menu .mdl-shortcuts-palette')).toBeHidden();
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('^2');
+    });
+
+    test('clicking a template tile inserts its shortcut', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.press('Control+.');
+        const palette = page.locator('.mdl-shortcuts-picker-menu .mdl-shortcuts-palette');
+        await palette.locator('.mdl-shortcuts-palette-tile').nth(2).click();
+        await expect(palette).toBeHidden();
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\sqrt');
+    });
+
+    test('index palette shortcut uses a generic mathematical index', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        const indexShortcut = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            return shape.getTemplateShortcut('Index');
+        });
+        expect(indexShortcut.text).toBe('x_{i}');
+        expect(indexShortcut.insertText).toBe('\\placeholder{}_{\\placeholder{}}');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.press('Control+.');
+        const renderedIndex = await page.locator('.mdl-shortcuts-palette-tile').nth(3).locator('math-field').evaluate(mathfield => mathfield.getValue());
+        expect(renderedIndex).not.toContain('\\_');
+        expect(renderedIndex).toMatch(/^x_\{?i\}?$/);
+    });
+
+    test('Escape closes the template palette and returns focus to the expression', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('x');
+        await page.keyboard.press('Control+.');
+        await expect(page.locator('.mdl-shortcuts-picker-menu .mdl-shortcuts-palette')).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(page.locator('.mdl-shortcuts-picker-menu .mdl-shortcuts-palette')).toBeHidden();
+        await expect.poll(() => page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            return document.activeElement === shape.mathfield;
+        })).toBe(true);
+        await page.keyboard.type('+1');
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('x+1');
+        await page.keyboard.press('Control+.');
+        await expect(page.locator('.mdl-shortcuts-picker-menu .mdl-shortcuts-palette')).toBeVisible();
+        await page.keyboard.press('Escape');
+    });
+
     test('~ produces negation on US keyboard', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
