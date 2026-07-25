@@ -53,6 +53,7 @@ async function createOnlineNotebookEditor(options = {}) {
         if (accessResult.mode === "editable")
             notebookEditor.setupCollab(modelId);
         updateNotebookSaveCapability(notebookEditor, accessResult.mode === "editable" ? model : null);
+        modelsApiClient.sendModelUsage(modelId, "opened");
         return notebookEditor;
     } catch (error) {
         console.error("Failed to load notebook:", error);

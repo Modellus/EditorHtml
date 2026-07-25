@@ -33,6 +33,7 @@ const treeNodeIds = {
   samplesSciences: "samples-sciences",
   assets: "assets",
   maintenance: "maintenance",
+  maintenanceDashboard: "maintenance-dashboard",
   maintenanceModels: "maintenance-models",
   maintenanceEducation: "maintenance-education",
   maintenanceSciences: "maintenance-sciences",
@@ -138,6 +139,7 @@ class ModelsApp {
     this.systemTemplatesGridInstance = null;
     this.templatePickerPopupInstance = null;
     this.usersGridInstance = null;
+    this.dashboardRefreshButtonInstance = null;
     this.userFeaturesPopupInstance = null;
     this.favoriteModelIdSet = new Set();
     this.pickedModelIdSet = new Set();
@@ -2619,6 +2621,297 @@ class ModelsApp {
     this.usersGridInstance = null;
   }
 
+  disposeUsageDashboard() {
+    if (!this.dashboardRefreshButtonInstance)
+      return;
+    this.dashboardRefreshButtonInstance.dispose();
+    this.dashboardRefreshButtonInstance = null;
+  }
+
+  formatDashboardNumber(value) {
+    return new Intl.NumberFormat(this.translations.language).format(value);
+  }
+
+  countDashboardValues(items, dataField) {
+    const countsByValue = new Map();
+    for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+      const value = items[itemIndex][dataField];
+      const countKey = value ?? "__unspecified__";
+      countsByValue.set(countKey, (countsByValue.get(countKey) || 0) + 1);
+    }
+    return Array.from(countsByValue.entries())
+      .map(([value, count]) => ({ value, count }))
+      .sort((leftItem, rightItem) => rightItem.count - leftItem.count);
+  }
+
+  getDashboardCountryLabel(countryCode) {
+    if (countryCode === "__unspecified__")
+      return this.translations.get("Not specified");
+    const countryItem = countryItems.find(item => item.value === countryCode);
+    return countryItem?.text || countryCode;
+  }
+
+  getDashboardRoleLabel(role) {
+    if (role === "__unspecified__")
+      return this.translations.get("Not specified");
+    if (role === "teacher")
+      return this.translations.get("Teacher");
+    if (role === "student")
+      return this.translations.get("Student");
+    return role;
+  }
+
+  getDashboardLookupLabel(lookupId, labelById) {
+    if (lookupId === "__unspecified__")
+      return this.translations.get("Uncategorized");
+    return labelById.get(lookupId) || lookupId;
+  }
+
+  buildDashboardMetricMarkup(label, value, iconClass, accentColor, detail) {
+    return `
+      <article class="usage-metric-card" style="--metric-accent:${accentColor}">
+        <div class="usage-metric-icon"><i class="${iconClass}" aria-hidden="true"></i></div>
+        <div class="usage-metric-content">
+          <span class="usage-metric-label">${this.escapeHtml(label)}</span>
+          <strong class="usage-metric-value">${this.formatDashboardNumber(value)}</strong>
+          <span class="usage-metric-detail">${this.escapeHtml(detail)}</span>
+        </div>
+      </article>
+    `;
+  }
+
+  buildDashboardDistributionMarkup(title, subtitle, iconClass, accentColor, entries, total, labelResolver) {
+    const visibleEntries = entries.slice(0, 6);
+    const maximumCount = visibleEntries[0]?.count || 1;
+    const rowsMarkup = visibleEntries.map(entry => {
+      const label = labelResolver(entry.value);
+      const width = Math.max(6, Math.round((entry.count / maximumCount) * 100));
+      const share = total ? Math.round((entry.count / total) * 100) : 0;
+      return `
+        <div class="usage-breakdown-row">
+          <div class="usage-breakdown-row-head">
+            <span class="usage-breakdown-label">${this.escapeHtml(label)}</span>
+            <span class="usage-breakdown-count">${this.formatDashboardNumber(entry.count)} <small>${share}%</small></span>
+          </div>
+          <div class="usage-breakdown-track"><span style="width:${width}%"></span></div>
+        </div>
+      `;
+    }).join("");
+    const emptyMarkup = `<div class="usage-breakdown-empty">${this.translations.get("No data available")}</div>`;
+    return `
+      <article class="usage-breakdown-card" style="--breakdown-accent:${accentColor}">
+        <div class="usage-breakdown-header">
+          <span class="usage-breakdown-icon"><i class="${iconClass}" aria-hidden="true"></i></span>
+          <div>
+            <h2>${this.escapeHtml(title)}</h2>
+            <p>${this.escapeHtml(subtitle)}</p>
+          </div>
+        </div>
+        <div class="usage-breakdown-list">${rowsMarkup || emptyMarkup}</div>
+      </article>
+    `;
+  }
+
+  getModelUsageCount(model) {
+    return Number(model.usage_count ?? model.usageCount) || 0;
+  }
+
+  async fetchTopModelUsage(models) {
+    // Rank by the legacy denormalized counter, then refine the top candidates
+    // with the usage endpoint, which also provides distinct users.
+    const candidates = models
+      .filter(model => this.getModelUsageCount(model) > 0)
+      .sort((leftModel, rightModel) => this.getModelUsageCount(rightModel) - this.getModelUsageCount(leftModel))
+      .slice(0, 8);
+    const entries = await Promise.all(candidates.map(async model => {
+      try {
+        const usage = await this.apiClient.fetchModelUsage(model.id);
+        return {
+          model,
+          totalUsage: typeof usage?.total_usage === "number" ? usage.total_usage : this.getModelUsageCount(model),
+          distinctUsers: typeof usage?.distinct_users === "number" ? usage.distinct_users : null
+        };
+      } catch {
+        return { model, totalUsage: this.getModelUsageCount(model), distinctUsers: null };
+      }
+    }));
+    return entries
+      .filter(entry => entry.totalUsage > 0)
+      .sort((leftEntry, rightEntry) => rightEntry.totalUsage - leftEntry.totalUsage)
+      .slice(0, 6);
+  }
+
+  formatDashboardDate(value) {
+    if (!value)
+      return "";
+    const date = new Date(value);
+    if (isNaN(date.getTime()))
+      return "";
+    return new Intl.DateTimeFormat(this.translations.language, { dateStyle: "medium" }).format(date);
+  }
+
+  buildDashboardTopModelsMarkup(entries) {
+    const maximumUsage = entries[0]?.totalUsage || 1;
+    const rowsMarkup = entries.map(entry => {
+      const label = entry.model.title || this.translations.get("Untitled model");
+      const width = Math.max(6, Math.round((entry.totalUsage / maximumUsage) * 100));
+      const usersMarkup = entry.distinctUsers === null
+        ? ""
+        : ` <small>· ${this.formatDashboardNumber(entry.distinctUsers)} ${this.translations.get("users")}</small>`;
+      const authorName = entry.model.creator_name || "";
+      const metaLabel = [authorName, this.formatDashboardDate(entry.model.createdAt)]
+        .filter(Boolean).join(" · ");
+      const avatarMarkup = authorName || entry.model.creator_avatar
+        ? Utils.buildAvatarMarkup(authorName, entry.model.creator_avatar || "", { size: 16, className: "usage-breakdown-avatar" })
+        : "";
+      const metaMarkup = metaLabel || avatarMarkup
+        ? `<div class="usage-breakdown-meta">${avatarMarkup}<span>${this.escapeHtml(metaLabel)}</span></div>`
+        : "";
+      return `
+        <div class="usage-breakdown-row">
+          <div class="usage-breakdown-row-head">
+            <span class="usage-breakdown-label">${this.escapeHtml(label)}</span>
+            <span class="usage-breakdown-count">${this.formatDashboardNumber(entry.totalUsage)} ${this.translations.get("uses")}${usersMarkup}</span>
+          </div>
+          ${metaMarkup}
+          <div class="usage-breakdown-track"><span style="width:${width}%"></span></div>
+        </div>
+      `;
+    }).join("");
+    const emptyMarkup = `<div class="usage-breakdown-empty">${this.translations.get("No data available")}</div>`;
+    return `
+      <article class="usage-breakdown-card usage-breakdown-card--wide" style="--breakdown-accent:#d97706">
+        <div class="usage-breakdown-header">
+          <span class="usage-breakdown-icon"><i class="fa-light fa-ranking-star" aria-hidden="true"></i></span>
+          <div>
+            <h2>${this.translations.get("Top models")}</h2>
+            <p>${this.translations.get("By total usage and distinct users")}</p>
+          </div>
+        </div>
+        <div class="usage-breakdown-list">${rowsMarkup || emptyMarkup}</div>
+      </article>
+    `;
+  }
+
+  buildDashboardInsightMarkup(label, value, detail, iconClass, accentColor) {
+    return `
+      <div class="usage-insight" style="--insight-accent:${accentColor}">
+        <i class="${iconClass}" aria-hidden="true"></i>
+        <div>
+          <strong>${this.escapeHtml(value)}</strong>
+          <span>${this.escapeHtml(label)}</span>
+          <small>${this.escapeHtml(detail)}</small>
+        </div>
+      </div>
+    `;
+  }
+
+  async showUsageDashboard() {
+    if (!this.elements.cardView)
+      return;
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
+    this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
+    this.disposeCharacterCardView();
+    this.disposeUsageDashboard();
+    this.elements.cardView.innerHTML = `
+      <div class="usage-dashboard-loading">
+        <i class="fa-light fa-spinner fa-spin" aria-hidden="true"></i>
+        <span>${this.translations.get("Loading system usage…")}</span>
+      </div>
+    `;
+    try {
+      const [models, users] = await Promise.all([
+        this.apiClient.fetchAllModels(),
+        this.apiClient.fetchUsers()
+      ]);
+      const topModels = await this.fetchTopModelUsage(models);
+      if (this.state.selectedTreeNodeId !== treeNodeIds.maintenanceDashboard)
+        return;
+      const publishedModels = models.filter(model => model.is_public === 1);
+      const sampleModels = models.filter(model => model.is_sample === 1);
+      const totalLikes = models.reduce((likes, model) => likes + model.likes_count, 0);
+      const totalUsage = models.reduce((usage, model) => usage + this.getModelUsageCount(model), 0);
+      const countries = this.countDashboardValues(users, "country");
+      const profiles = this.countDashboardValues(users, "role");
+      const sciences = this.countDashboardValues(models, "science_id");
+      const educationLevels = this.countDashboardValues(models, "education_level_id");
+      const representedCountries = countries.filter(country => country.value !== "__unspecified__").length;
+      const publicationRate = models.length ? Math.round((publishedModels.length / models.length) * 100) : 0;
+      const averageUsage = models.length ? Math.round(totalUsage / models.length) : 0;
+      const averageLikes = publishedModels.length ? (totalLikes / publishedModels.length).toFixed(1) : "0";
+      const updateTime = new Intl.DateTimeFormat(this.translations.language, { dateStyle: "medium", timeStyle: "short" }).format(new Date());
+      this.elements.cardView.innerHTML = `
+        <div class="usage-dashboard">
+          <header class="usage-dashboard-header">
+            <div>
+              <span class="usage-dashboard-eyebrow">${this.translations.get("System overview")}</span>
+              <h1>${this.translations.get("Overall system usage")}</h1>
+              <p>${this.translations.get("A live view of the Modellus community, content and engagement.")}</p>
+            </div>
+            <div class="usage-dashboard-actions">
+              <span><i class="fa-light fa-clock" aria-hidden="true"></i>${this.escapeHtml(updateTime)}</span>
+              <div id="usage-dashboard-refresh"></div>
+            </div>
+          </header>
+          <section class="usage-metrics-grid" aria-label="${this.translations.get("Key usage metrics")}">
+            ${this.buildDashboardMetricMarkup(this.translations.get("Models"), models.length, "fa-light fa-cube", "#2563eb", this.translations.get("All models created"))}
+            ${this.buildDashboardMetricMarkup(this.translations.get("Published models"), publishedModels.length, "fa-light fa-earth-americas", "#16a34a", `${publicationRate}% ${this.translations.get("of all models")}`)}
+            ${this.buildDashboardMetricMarkup(this.translations.get("Users"), users.length, "fa-light fa-users", "#7c3aed", `${representedCountries} ${this.translations.get("countries represented")}`)}
+            ${this.buildDashboardMetricMarkup(this.translations.get("Likes"), totalLikes, "fa-light fa-heart", "#e11d48", this.translations.get("Across all models"))}
+            ${this.buildDashboardMetricMarkup(this.translations.get("Samples"), sampleModels.length, "fa-light fa-flask-vial", "#d97706", this.translations.get("Curated examples"))}
+            ${this.buildDashboardMetricMarkup(this.translations.get("Times used"), totalUsage, "fa-light fa-play", "#0891b2", this.translations.get("Total model usage"))}
+          </section>
+          <section class="usage-insights-row" aria-label="${this.translations.get("Engagement highlights")}">
+            ${this.buildDashboardInsightMarkup(this.translations.get("Publication rate"), `${publicationRate}%`, this.translations.get("models shared publicly"), "fa-light fa-arrow-up-right-dots", "#16a34a")}
+            ${this.buildDashboardInsightMarkup(this.translations.get("Average usage"), this.formatDashboardNumber(averageUsage), this.translations.get("uses per model"), "fa-light fa-chart-line", "#0891b2")}
+            ${this.buildDashboardInsightMarkup(this.translations.get("Average likes"), averageLikes, this.translations.get("likes per published model"), "fa-light fa-heart", "#e11d48")}
+            ${this.buildDashboardInsightMarkup(this.translations.get("Countries"), this.formatDashboardNumber(representedCountries), this.translations.get("different user countries"), "fa-light fa-earth-europe", "#2563eb")}
+          </section>
+          <section class="usage-breakdowns-grid">
+            ${this.buildDashboardTopModelsMarkup(topModels)}
+            ${this.buildDashboardDistributionMarkup(this.translations.get("Countries"), this.translations.get("Where users are located"), "fa-light fa-earth-europe", "#2563eb", countries, users.length, value => this.getDashboardCountryLabel(value))}
+            ${this.buildDashboardDistributionMarkup(this.translations.get("Profiles"), this.translations.get("Community roles"), "fa-light fa-address-card", "#7c3aed", profiles, users.length, value => this.getDashboardRoleLabel(value))}
+            ${this.buildDashboardDistributionMarkup(this.translations.get("Sciences"), this.translations.get("Models by subject area"), "fa-light fa-flask", "#0ea5e9", sciences, models.length, value => this.getDashboardLookupLabel(value, this.scienceLookupNameById))}
+            ${this.buildDashboardDistributionMarkup(this.translations.get("Education Levels"), this.translations.get("Models by learning stage"), "fa-light fa-graduation-cap", "#8b5cf6", educationLevels, models.length, value => this.getDashboardLookupLabel(value, this.educationLookupNameById))}
+          </section>
+        </div>
+      `;
+      const refreshButtonHost = document.getElementById("usage-dashboard-refresh");
+      this.dashboardRefreshButtonInstance = new DevExpress.ui.dxButton(refreshButtonHost, {
+        text: this.translations.get("Refresh"),
+        icon: "fa-light fa-rotate",
+        stylingMode: "outlined",
+        onClick: () => this.showUsageDashboard()
+      });
+    } catch (error) {
+      if (this.state.selectedTreeNodeId !== treeNodeIds.maintenanceDashboard)
+        return;
+      this.elements.cardView.innerHTML = `
+        <div class="usage-dashboard-error">
+          <i class="fa-light fa-triangle-exclamation" aria-hidden="true"></i>
+          <strong>${this.translations.get("Dashboard unavailable")}</strong>
+          <span>${this.escapeHtml(error.message)}</span>
+          <div id="usage-dashboard-retry"></div>
+        </div>
+      `;
+      const retryButtonHost = document.getElementById("usage-dashboard-retry");
+      this.dashboardRefreshButtonInstance = new DevExpress.ui.dxButton(retryButtonHost, {
+        text: this.translations.get("Try again"),
+        icon: "fa-light fa-rotate",
+        type: "default",
+        onClick: () => this.showUsageDashboard()
+      });
+    }
+  }
+
   async showUsersGrid() {
     if (!this.elements.cardView)
       return;
@@ -2808,6 +3101,13 @@ class ModelsApp {
   }
 
   renderCurrentTreeNode() {
+    if (this.state.selectedTreeNodeId !== treeNodeIds.maintenanceDashboard)
+      this.disposeUsageDashboard();
+    if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceDashboard) {
+      this.showUsageDashboard();
+      this.setStatus("");
+      return;
+    }
     if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceModels) {
       this.showMaintenanceModelsGrid();
       this.setStatus("");
@@ -3562,6 +3862,13 @@ class ModelsApp {
         expanded: false,
         selectable: false,
         items: [
+          {
+            id: treeNodeIds.maintenanceDashboard,
+            text: this.translations.get("Overview"),
+            nodeType: "maintenance-dashboard",
+            iconClass: "fa-light fa-chart-pie",
+            iconColor: "#2563eb"
+          },
           {
             id: treeNodeIds.maintenanceModels,
             text: this.translations.get("Models"),

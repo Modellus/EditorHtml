@@ -73,6 +73,7 @@ async function createOnlineBoardEditor(options = {}) {
                 const payload = extractBoardModelPayload(accessResult.model);
                 const boardEditor = new BoardEditor(modelSession, payload || null);
                 applyBoardModelMetadata(boardEditor, accessResult.model);
+                modelsApiClient.sendModelUsage(modelId, "opened");
                 boardEditor.setupCollab(modelId);
                 if (urlParameters.get("new") === "1") {
                     boardEditor.properties.name = boardEditor.board.translations.get("New Model");
@@ -84,6 +85,7 @@ async function createOnlineBoardEditor(options = {}) {
                 const payload = extractBoardModelPayload(accessResult.model);
                 const boardEditor = new BoardEditor(modelSession, payload || null);
                 applyBoardModelMetadata(boardEditor, accessResult.model);
+                modelsApiClient.sendModelUsage(modelId, "opened");
                 return boardEditor;
             }
             if (accessResult.mode === "login-required") {

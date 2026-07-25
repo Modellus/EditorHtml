@@ -561,6 +561,23 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Sample update failed (${response.status})`);
   }
 
+  sendModelUsage(modelId, usageEvent = "opened") {
+    // Fire-and-forget analytics signal; must never surface errors to the UI.
+    try {
+      fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}/usage`, {
+        method: "POST",
+        headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+        body: JSON.stringify({ event: usageEvent })
+      }).catch(() => {});
+    } catch (_) {}
+  }
+
+  async fetchModelUsage(modelId) {
+    const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}/usage`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch model usage failed (${response.status})`);
+    return await response.json();
+  }
+
   async fetchModelById(modelId) {
     const headers = this.buildAuthHeaders();
     const response = await fetch(`${this.apiBaseUrl}/models/${encodeURIComponent(modelId)}`, { headers });
