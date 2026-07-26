@@ -11,23 +11,38 @@ async function setupEditor(page) {
     await page.waitForTimeout(500);
 }
 
-test('message box is disabled and stop bar shown while busy', async ({ page }) => {
+test('message box is disabled and stop button replaces send while busy', async ({ page }) => {
     await setupEditor(page);
     await page.evaluate(() => shell.chatController.open());
     await page.waitForSelector('.mdl-chat-popup .dx-chat-textarea textarea');
     const textarea = page.locator('.mdl-chat-popup .dx-chat-textarea textarea');
-    const stopBar = page.locator('.mdl-chat-stop-bar');
+    const stopBar = page.locator('.mdl-chat-stop-button');
+    const sendButton = page.locator('.mdl-chat-popup .dx-chat-textarea-toolbar .dx-toolbar-after .dx-toolbar-item:not(.mdl-chat-stop-item) .dx-button');
     await expect(textarea).toBeEnabled();
     await expect(stopBar).toBeHidden();
+    await expect(sendButton).toBeVisible();
 
     await page.evaluate(() => shell.chatController.setBusy(true));
     await expect(textarea).toBeDisabled();
     await expect(stopBar).toBeVisible();
-    expect(await page.locator('.mdl-chat-popup .dx-chat-textarea').first().evaluate(e => e.classList.contains('dx-state-disabled'))).toBe(true);
+    await expect(sendButton).toBeHidden();
+    expect(await page.locator('.mdl-chat-popup .dx-chat-textarea .dx-texteditor-container').first().evaluate(e => e.classList.contains('dx-state-disabled'))).toBe(true);
 
     await page.evaluate(() => shell.chatController.setBusy(false));
     await expect(textarea).toBeEnabled();
     await expect(stopBar).toBeHidden();
+    await expect(sendButton).toBeVisible();
+
+    // A repaint rebuilds the message box toolbar, so the stop button must be re-injected
+    // exactly once and stay in the send button's slot.
+    await page.evaluate(() => {
+        shell.chatController.setBusy(true);
+        shell.chatController.handlePopupResize();
+    });
+    await expect(stopBar).toBeVisible();
+    await expect(sendButton).toBeHidden();
+    expect(await page.locator('.mdl-chat-stop-item').count()).toBe(1);
+    await page.evaluate(() => shell.chatController.setBusy(false));
 
     await page.evaluate(async () => {
         shell.chatController.disposeAdapter();

@@ -141,41 +141,6 @@ svg {
     flex: 1 1 auto;
 }
 
-.mdl-chat-stop-bar {
-    display: none;
-    justify-content: center;
-    flex-shrink: 0;
-    padding: 0 12px 10px;
-}
-
-.mdl-chat-host.mdl-chat-busy .mdl-chat-stop-bar {
-    display: flex;
-}
-
-.mdl-chat-stop-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border: 1px solid rgba(37, 48, 71, 0.18);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--mdl-shape-toolbar-button-color);
-    font: inherit;
-    line-height: 1.4;
-    cursor: pointer;
-}
-
-.mdl-chat-stop-button:hover {
-    background: var(--mdl-shape-toolbar-button-hover-bg);
-    border-color: transparent;
-    color: var(--mdl-shape-toolbar-button-hover-color);
-}
-
-.mdl-chat-stop-button:active {
-    background: var(--mdl-shape-toolbar-button-active-bg);
-}
-
 .mdl-chat-popup .dx-chat-messagebox-textarea-container {
     min-width: 0;
     overflow: hidden;

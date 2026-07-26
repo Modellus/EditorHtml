@@ -111,7 +111,6 @@ class ChatController {
                 });
                 this.instance = chat.dxChat("instance");
                 this.hostElement = $host[0];
-                this.renderStopBar();
                 this.createAdapter(this.instance, firstUser, secondUser, initialMessages);
                 return $host;
             },
@@ -171,10 +170,31 @@ class ChatController {
         }
     }
 
-    renderStopBar() {
+    // The stop button takes the send button's place in the message box toolbar while the
+    // agent is generating. dxChat rebuilds that toolbar on repaint, so it is re-injected
+    // whenever the busy state is refreshed instead of only once when the chat is created.
+    syncStopButton() {
+        const toolbarAfter = this.instance?.$element().find(".dx-chat-textarea-toolbar .dx-toolbar-after").get(0);
+        if (!toolbarAfter)
+            return;
+        const stopItem = toolbarAfter.querySelector(".mdl-chat-stop-item") ?? this.createStopItem(toolbarAfter);
+        for (const item of toolbarAfter.querySelectorAll(".dx-toolbar-item"))
+            item.style.display = (item === stopItem) === this.busy ? "" : "none";
+    }
+
+    createStopItem(toolbarAfter) {
         const stopLabel = this.shell.board.translations.get("Stop Generating");
-        this.hostElement.insertAdjacentHTML("beforeend", `<div class="mdl-chat-stop-bar"><button type="button" class="mdl-chat-stop-button"><i class="fa-light fa-circle-stop"></i><span>${stopLabel}</span></button></div>`);
-        this.hostElement.querySelector(".mdl-chat-stop-button").addEventListener("click", () => this.cancel());
+        const $item = $("<div class='dx-item dx-toolbar-item dx-toolbar-button mdl-chat-stop-item'><div class='dx-item-content dx-toolbar-item-content'></div></div>").appendTo(toolbarAfter);
+        $("<div>").appendTo($item.children().first()).dxButton({
+            icon: "stopfilled",
+            type: "danger",
+            stylingMode: "contained",
+            focusStateEnabled: false,
+            hint: stopLabel,
+            elementAttr: { class: "mdl-chat-stop-button", "aria-label": stopLabel },
+            onClick: () => this.cancel()
+        });
+        return $item[0];
     }
 
     cancel() {
@@ -187,12 +207,16 @@ class ChatController {
         this.updateMessageBoxState();
     }
 
+    // Only the input part of the textarea widget is marked disabled: DevExtreme ignores
+    // clicks on anything inside a disabled widget, and the toolbar holding the stop button
+    // is a child of that widget.
     updateMessageBoxState() {
         const textAreaElement = this.instance?.$element().find(".dx-chat-textarea").get(0);
-        textAreaElement?.classList.toggle("dx-state-disabled", this.busy);
+        textAreaElement?.querySelector(".dx-texteditor-container")?.classList.toggle("dx-state-disabled", this.busy);
         const inputElement = textAreaElement?.querySelector("textarea");
         if (inputElement)
             inputElement.disabled = this.busy;
+        this.syncStopButton();
     }
 
     createAdapter(chat, firstUser, secondUser, initialMessages) {
