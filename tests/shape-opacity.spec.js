@@ -22,6 +22,7 @@ async function setupText(page) {
         textShape.update();
         textShape.draw();
         shell.board.selection.select(textShape);
+        textShape.showContextToolbar();
     });
     await page.waitForTimeout(250);
 }

@@ -244,7 +244,7 @@ class BoardEditor extends Workspace {
         if (name === "independent.start" || name === "independent.end")
             this.adjustChartDomainsForIndependentChange();
         if (name === "casesCount" && this.board?.selection?.selectedShape)
-            this.board.selection.selectedShape.showContextToolbar?.();
+            this.board.selection.selectedShape.refreshContextToolbar?.();
         if (this.isAnonymous())
             this.saveToSessionStorage();
         this.reset();

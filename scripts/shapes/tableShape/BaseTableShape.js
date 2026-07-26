@@ -449,6 +449,16 @@ class BaseTableShape extends BaseShape {
         super.hideContextToolbar();
     }
 
+    isContextToolbarVisible() {
+        if (this.cellsContextToolbar?.classList.contains("visible") === true)
+            return true;
+        return super.isContextToolbarVisible();
+    }
+
+    shouldShowContextToolbarOnSelect() {
+        return this.shouldShowCellsContextToolbar();
+    }
+
     // Deselect/reselect of the same shape can happen synchronously within one click
     // (e.g. clicking a resize handle re-resolves to the same shape); deferring lets that
     // settle first so a same-shape reselect doesn't wipe focus that should survive it.

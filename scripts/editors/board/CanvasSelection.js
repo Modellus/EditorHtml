@@ -68,6 +68,13 @@ class Selection {
     }
 
     select(shape, modifiers = null) {
+        // The context toolbar belongs to the second click on an already
+        // selected shape (see onSelectShape), so selecting never reveals it.
+        // Re-selecting the same shape (drag end, property commands) keeps
+        // whatever visibility it already had, and shapes with their own
+        // selection-time toolbar (table cells) opt in explicitly.
+        const keepContextToolbar = (this.selectedShape === shape && shape.isContextToolbarVisible?.() === true)
+            || shape.shouldShowContextToolbarOnSelect?.() === true;
         this.deselect();
         this.clearHover();
         this.removeEditModeHighlight();
@@ -75,7 +82,7 @@ class Selection {
         shape.createHandles();
         shape.showHandles();
         this.applyHighlight(shape);
-        if (shape.showContextToolbar)
+        if (keepContextToolbar)
             shape.showContextToolbar();
         this.resolveInteractionAdapter()?.onShapeSelected?.(shape, modifiers, this);
         this.dispatchEvent("selected", this.selectedShape, modifiers);
@@ -294,8 +301,11 @@ class Selection {
             return;
         const point = this.board.getMouseToSvgPoint(event);
         const selectedShape = this.resolveSelectedShape(shape, point, event);
-        if (selectedShape !== this.selectedShape)
+        if (selectedShape !== this.selectedShape) {
             this.select(selectedShape, { altKey: event.altKey === true });
+            return;
+        }
+        selectedShape.showContextToolbar?.();
     }
 
     resolveSelectedShape(shape, point, event) {
