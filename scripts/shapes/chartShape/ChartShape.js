@@ -112,6 +112,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             yAxisType: this.properties.yAxisType || "decimal",
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
+            getRotationDegrees: () => this.getHandleRotationDegrees(),
             getPrecision: () => this.board.calculator.getPrecision(),
             getArgumentPrecision: () => this.board.calculator.getTermPrecision(this.getXTermName()),
             onDomainChanged: domain => this.onDomainChanged(domain),

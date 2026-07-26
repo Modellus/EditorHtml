@@ -270,11 +270,12 @@ class BaseShape {
         this._handlePendingPoint = null;
         this._handleActivePointerId = null;
         const handles = this.getHandles();
-        handles.forEach(({ tag, className, getAttributes, getTransform }) => {
+        handles.forEach(({ tag, className, getAttributes, getTransform, cursorAngle }) => {
             const handle = this.board.createSvgElement(tag ?? "rect");
             handle.setAttribute("class", className);
             handle.setAttribute("visibility", "hidden");
             handle._shape = this;
+            handle._cursorAngle = cursorAngle;
             this.board.svg.appendChild(handle);
             this.handleElements.push(handle);
             handle.addEventListener("pointerdown", e => this.onHandlePointerDown(e, handle));
@@ -296,6 +297,7 @@ class BaseShape {
         this.handleElements.forEach(handle => {
             handle.update(handle);
             this.applyHandleRotation(handle);
+            this.applyHandleCursor(handle);
             handle.classList.toggle("locked", !this.isHandleDragAllowed(handle));
         });
     }
@@ -334,6 +336,9 @@ class BaseShape {
         };
     }
 
+    // Fixed distance from the shape center — half the unrotated height plus a
+    // margin. The handle rotates with the shape, so this anchors it just off
+    // the middle of the top border in the shape's own frame at every angle.
     getRotationHandleDistance(size) {
         return this.properties.height / 2 + size * 1.5;
     }
@@ -351,7 +356,35 @@ class BaseShape {
         const distance = Math.hypot(deltaX, deltaY);
         if (distance < 1)
             return Number(this.properties.rotation) || 0;
-        return Math.atan2(deltaX, -deltaY) * 180 / Math.PI;
+        const pointerAngle = Math.atan2(deltaX, -deltaY) * 180 / Math.PI;
+        if (!this._rotationDragStart)
+            return pointerAngle;
+        const delta = this.normalizeRotationDegrees(pointerAngle - this._rotationDragStart.pointerAngle);
+        return this.normalizeRotationDegrees(this._rotationDragStart.rotation + delta);
+    }
+
+    normalizeRotationDegrees(angleDegrees) {
+        return ((angleDegrees % 360) + 540) % 360 - 180;
+    }
+
+    // Rotating is relative to where the handle was grabbed: taking the pointer
+    // angle as the new rotation outright would snap the shape by the offset
+    // between the grab point and the handle center.
+    captureRotationDragStart() {
+        this._rotationDragStart = null;
+        if (!this.isRotationHandle(this.draggedHandle))
+            return;
+        if (!this._handlePendingStart)
+            return;
+        const center = this.getShapeCenter();
+        const deltaX = this._handlePendingStart.x - center.x;
+        const deltaY = this._handlePendingStart.y - center.y;
+        if (Math.hypot(deltaX, deltaY) < 1)
+            return;
+        this._rotationDragStart = {
+            rotation: Number(this.properties.rotation) || 0,
+            pointerAngle: Math.atan2(deltaX, -deltaY) * 180 / Math.PI
+        };
     }
 
     getRotationSnapIncrementDegrees() {
@@ -430,6 +463,59 @@ class BaseShape {
         return snappedTransform;
     }
 
+    isCornerResizeHandle(handle) {
+        if (!(handle instanceof Element))
+            return false;
+        const classes = handle.classList;
+        return classes.contains("top-left") || classes.contains("top-right") || classes.contains("bottom-left") || classes.contains("bottom-right");
+    }
+
+    // Corner handle transforms treat dx/dy as offsets in the shape's own
+    // frame, so pointer deltas must be rotated back by the shape rotation.
+    getResizeDragPoint(point) {
+        const rotation = this.getHandleRotationDegrees();
+        if (!this.isCornerResizeHandle(this.draggedHandle) || Math.abs(rotation) < 0.00001)
+            return point;
+        const radians = rotation * Math.PI / 180;
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        return Object.assign({}, point, {
+            dx: point.dx * cos + point.dy * sin,
+            dy: -point.dx * sin + point.dy * cos
+        });
+    }
+
+    // Resizing changes the center the rotation pivots around, which would
+    // drag the whole shape sideways; shift x/y so the corner opposite the
+    // dragged handle stays fixed on screen.
+    applyRotatedResizeAnchor(transform) {
+        const rotation = this.getHandleRotationDegrees();
+        if (!transform || !this.isCornerResizeHandle(this.draggedHandle) || Math.abs(rotation) < 0.00001)
+            return transform;
+        const oldX = Number(this.properties.x);
+        const oldY = Number(this.properties.y);
+        const oldWidth = Number(this.properties.width);
+        const oldHeight = Number(this.properties.height);
+        if (!Number.isFinite(oldX) || !Number.isFinite(oldY) || !Number.isFinite(oldWidth) || !Number.isFinite(oldHeight))
+            return transform;
+        const newX = Number(transform.x ?? oldX);
+        const newY = Number(transform.y ?? oldY);
+        const newWidth = Number(transform.width ?? oldWidth);
+        const newHeight = Number(transform.height ?? oldHeight);
+        const classes = this.draggedHandle.classList;
+        const anchorFactorX = classes.contains("top-left") || classes.contains("bottom-left") ? 0.5 : -0.5;
+        const anchorFactorY = classes.contains("top-left") || classes.contains("top-right") ? 0.5 : -0.5;
+        const radians = rotation * Math.PI / 180;
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        const rotateOffset = (offsetX, offsetY) => ({ x: offsetX * cos - offsetY * sin, y: offsetX * sin + offsetY * cos });
+        const oldAnchorOffset = rotateOffset(anchorFactorX * oldWidth, anchorFactorY * oldHeight);
+        const newAnchorOffset = rotateOffset(anchorFactorX * newWidth, anchorFactorY * newHeight);
+        const anchorShiftX = (oldX + oldWidth / 2 + oldAnchorOffset.x) - (newX + newWidth / 2 + newAnchorOffset.x);
+        const anchorShiftY = (oldY + oldHeight / 2 + oldAnchorOffset.y) - (newY + newHeight / 2 + newAnchorOffset.y);
+        return Object.assign({}, transform, { x: newX + anchorShiftX, y: newY + anchorShiftY });
+    }
+
     captureResizeFixedCorner() {
         if (!this.board.snapToGrid)
             return;
@@ -460,6 +546,8 @@ class BaseShape {
         if (!this.draggedHandle)
             return null;
         if (!this._resizeFixedCorner)
+            return null;
+        if (Math.abs(this.getHandleRotationDegrees()) >= 0.00001)
             return null;
         const cls = this.draggedHandle.classList;
         const isCorner = cls.contains("top-left") || cls.contains("top-right") || cls.contains("bottom-left") || cls.contains("bottom-right");
@@ -520,6 +608,85 @@ class BaseShape {
         if (!Number.isFinite(rotation))
             return 0;
         return rotation;
+    }
+
+    // Every drag handle gets the app's own arrow, angled to the direction it
+    // actually drags on screen. Native cursors only exist in four orientations,
+    // so relying on CSS would leave the arrow lying when the shape is turned.
+    applyHandleCursor(handle) {
+        const localAngle = this.getHandleCursorAngle(handle);
+        if (localAngle == null)
+            return;
+        handle.style.cursor = this.getRotatedResizeCursorStyle(localAngle + this.getHandleRotationDegrees());
+    }
+
+    // Angle of a handle's drag axis in the shape's own frame, or null for
+    // handles that keep whatever cursor CSS gives them. Handles declared in
+    // getHandles() can set cursorAngle; corners derive theirs from the corner.
+    getHandleCursorAngle(handle) {
+        if (Number.isFinite(handle?._cursorAngle))
+            return handle._cursorAngle;
+        if (!this.isCornerResizeHandle(handle))
+            return null;
+        const classes = handle.classList;
+        const directionX = classes.contains("top-right") || classes.contains("bottom-right") ? 1 : -1;
+        const directionY = classes.contains("bottom-left") || classes.contains("bottom-right") ? 1 : -1;
+        return Math.atan2(directionY, directionX) * 180 / Math.PI;
+    }
+
+    getResizeCursorForAngle(angleDegrees) {
+        return BaseShape.getResizeCursorKeyword(angleDegrees);
+    }
+
+    getRotatedResizeCursorStyle(angleDegrees) {
+        return BaseShape.getRotatedResizeCursor(angleDegrees);
+    }
+
+    static getResizeCursorKeyword(angleDegrees) {
+        const angle = ((angleDegrees % 180) + 180) % 180;
+        if (angle < 22.5 || angle >= 157.5)
+            return "ew-resize";
+        if (angle < 67.5)
+            return "nwse-resize";
+        if (angle < 112.5)
+            return "ns-resize";
+        return "nesw-resize";
+    }
+
+    // A double-headed arrow cursor rotated to the exact handle angle. Quantized
+    // to 5 degrees and cached so live rotation doesn't rebuild the image every
+    // frame. The nearest native keyword rides along as a fallback.
+    static getRotatedResizeCursor(angleDegrees) {
+        return BaseShape.getRotatedResizeCursorUrl(angleDegrees) + ", " + BaseShape.getResizeCursorKeyword(angleDegrees);
+    }
+
+    static getRotatedResizeCursorUrl(angleDegrees) {
+        const quantized = ((Math.round(angleDegrees / 5) * 5) % 180 + 180) % 180;
+        if (!BaseShape._resizeCursorCache)
+            BaseShape._resizeCursorCache = new Map();
+        let cursor = BaseShape._resizeCursorCache.get(quantized);
+        if (cursor)
+            return cursor;
+        // Mirrors the macOS resize cursor: two arrowheads joined by a thin
+        // shaft. One path, so the white outline traces the whole silhouette
+        // instead of showing seams where the parts meet.
+        const arrow = "M2.5 12 L8.5 7.5 L8.5 11.1 L15.5 11.1 L15.5 7.5 L21.5 12 L15.5 16.5 L15.5 12.9 L8.5 12.9 L8.5 16.5 Z";
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path transform="rotate(${quantized} 12 12)" d="${arrow}" fill="#000000" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round" paint-order="stroke"/></svg>`;
+        cursor = `url("data:image/svg+xml,${encodeURIComponent(svg)}") 12 12`;
+        BaseShape._resizeCursorCache.set(quantized, cursor);
+        return cursor;
+    }
+
+    // Maps a pointer position in board coordinates into the shape's unrotated
+    // frame, so handle math written for the unrotated layout keeps working on
+    // rotated shapes.
+    getLocalPointFromBoardPoint(point) {
+        const rotation = this.getHandleRotationDegrees();
+        const center = this.getHandleRotationCenter();
+        if (!center || Math.abs(rotation) < 0.00001)
+            return point;
+        const rotated = this.rotatePointAroundCenter(point.x, point.y, center.x, center.y, -rotation);
+        return Object.assign({}, point, { x: rotated.x, y: rotated.y });
     }
 
     applyHandleRotation(handle) {
@@ -660,6 +827,7 @@ class BaseShape {
             event.preventDefault();
             this.draggedHandle = this._handlePending;
             this.captureResizeFixedCorner();
+            this.captureRotationDragStart();
             this.handleStartX = this._handlePendingStart.x;
             this.handleStartY = this._handlePendingStart.y;
         }
@@ -674,8 +842,8 @@ class BaseShape {
                 const point = this._handlePendingPoint;
                 this._handlePendingPoint = null;
                 const directionalResizeTransform = this.getDirectionalResizeTransformFromAbsolutePoint(point);
-                const dragPoint = this.draggedHandle.classList.contains("move") ? this.snapDragPoint(point) : point;
-                const transform = directionalResizeTransform ?? this.applyTransformSnapping(this.draggedHandle.getTransform(dragPoint));
+                const dragPoint = this.draggedHandle.classList.contains("move") ? this.snapDragPoint(point) : this.getResizeDragPoint(point);
+                const transform = directionalResizeTransform ?? this.applyRotatedResizeAnchor(this.applyTransformSnapping(this.draggedHandle.getTransform(dragPoint)));
                 this.transformShape(transform);
                 this.updateHandles();
                 this.handleStartX = point.x;
@@ -714,6 +882,7 @@ class BaseShape {
         }
         this._handlePendingPoint = null;
         this._resizeFixedCorner = null;
+        this._rotationDragStart = null;
         this.board.pointerLocked = false;
         this.dragEnd();
     }

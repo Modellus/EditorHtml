@@ -1179,7 +1179,17 @@ class ChartControl {
         this.appendSvgMarkup(this.focusLayer, tangentMarkup);
     }
 
+    // Rotation of the host shape, if any; notebook charts are never rotated.
+    getTickCursors() {
+        const rotation = Number(this.options.getRotationDegrees?.()) || 0;
+        return {
+            x: BaseShape.getRotatedResizeCursor(rotation),
+            y: BaseShape.getRotatedResizeCursor(rotation + 90)
+        };
+    }
+
     renderTickHitAreas(layout, xScale, yScale, xTicks, yTicks) {
+        const tickCursors = this.getTickCursors();
         for (let index = 0; index < xTicks.length; index++) {
             const xValue = xTicks[index];
             const xPosition = xScale(xValue);
@@ -1190,6 +1200,7 @@ class ChartControl {
             hitArea.setAttribute("height", "24");
             hitArea.setAttribute("fill", "transparent");
             hitArea.setAttribute("class", "chart-tick-handle chart-tick-handle-x");
+            hitArea.style.cursor = tickCursors.x;
             hitArea.dataset.axis = "x";
             hitArea.dataset.index = index;
             hitArea.dataset.value = xValue;
@@ -1206,6 +1217,7 @@ class ChartControl {
             hitArea.setAttribute("height", "20");
             hitArea.setAttribute("fill", "transparent");
             hitArea.setAttribute("class", "chart-tick-handle chart-tick-handle-y");
+            hitArea.style.cursor = tickCursors.y;
             hitArea.dataset.axis = "y";
             hitArea.dataset.index = index;
             hitArea.dataset.value = yValue;

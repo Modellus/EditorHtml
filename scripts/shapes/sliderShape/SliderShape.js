@@ -10,6 +10,7 @@ class SliderShape extends BaseShape {
         var handles = super.getHandles();
         handles.push({
             className: "handle splitter",
+            cursorAngle: 90,
             getAttributes: () => {
                 const position = this.getBoardPosition();
                 return {
@@ -20,7 +21,7 @@ class SliderShape extends BaseShape {
                 };
             },
             getTransform: e => ({
-                splitterValue: this.getValueFromBoardY(e.y)
+                splitterValue: this.getValueFromBoardY(this.getLocalPointFromBoardPoint(e).y)
             })
         });
         return handles;
@@ -640,6 +641,9 @@ class SliderShape extends BaseShape {
         const extents = tickHitExtents(ticks.map(tick => sliderHeight - tick.pixelFromOrigin), 5);
         while (this.tickInteractionLayer.children.length > ticks.length)
             this.tickInteractionLayer.removeChild(this.tickInteractionLayer.lastChild);
+        // The scale drags along the slider's own vertical axis, so the arrow
+        // follows that axis once the shape is rotated.
+        const tickCursor = this.getRotatedResizeCursorStyle(this.getHandleRotationDegrees() + 90);
         for (let i = 0; i < ticks.length; i++) {
             const tick = ticks[i];
             const y = sliderHeight - tick.pixelFromOrigin;
@@ -649,10 +653,10 @@ class SliderShape extends BaseShape {
                 hitRect = this.board.createSvgElement("rect");
                 hitRect.setAttribute("fill", "transparent");
                 hitRect.setAttribute("pointer-events", "all");
-                hitRect.style.cursor = "ns-resize";
                 hitRect.onpointerdown = e => this.onAxisPointerDown(e);
                 this.tickInteractionLayer.appendChild(hitRect);
             }
+            hitRect.style.cursor = tickCursor;
             hitRect.setAttribute("x", trackX);
             hitRect.setAttribute("y", y - halfHeight);
             hitRect.setAttribute("width", trackWidth);

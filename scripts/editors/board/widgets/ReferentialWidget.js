@@ -30,10 +30,11 @@ class ReferentialShape extends BaseShape {
                 };
             },
             getTransform: e => {
+                const localPoint = this.getLocalPointFromBoardPoint(e);
                 const position = this.getBoardPosition();
                 return {
-                    originX: e.x - position.x,
-                    originY: e.y - position.y
+                    originX: localPoint.x - position.x,
+                    originY: localPoint.y - position.y
                 };
             }
         });
@@ -91,7 +92,7 @@ class ReferentialShape extends BaseShape {
     }
 
     enterEditMode(event) {
-        const svgPoint = this.board.getMouseToSvgPoint(event);
+        const svgPoint = this.getLocalPointFromBoardPoint(this.board.getMouseToSvgPoint(event));
         const position = this.getBoardPosition();
         const newOriginX = svgPoint.x - position.x;
         const newOriginY = svgPoint.y - position.y;
@@ -472,6 +473,9 @@ class ReferentialShape extends BaseShape {
         }
         while (this.tickInteractionLayer.children.length > handles.length)
             this.tickInteractionLayer.removeChild(this.tickInteractionLayer.lastChild);
+        const rotation = this.getHandleRotationDegrees();
+        const tickCursorX = this.getRotatedResizeCursorStyle(rotation);
+        const tickCursorY = this.getRotatedResizeCursorStyle(rotation + 90);
         for (let index = 0; index < handles.length; index++) {
             const handleData = handles[index];
             let hitArea = this.tickInteractionLayer.children[index];
@@ -494,6 +498,7 @@ class ReferentialShape extends BaseShape {
                 hitArea.setAttribute("height", "24");
                 hitArea.setAttribute("class", "chart-tick-handle chart-tick-handle-y");
             }
+            hitArea.style.cursor = handleData.axis === "x" ? tickCursorX : tickCursorY;
             hitArea.dataset.axis = handleData.axis;
             hitArea.dataset.index = `${handleData.index}`;
             hitArea.dataset.total = `${handleData.total}`;
@@ -515,13 +520,13 @@ class ReferentialShape extends BaseShape {
         const position = this.getBoardPosition();
         const axisX = position.x + this.properties.originX;
         const axisY = position.y + this.properties.originY;
-        const startPoint = this.board.getMouseToSvgPoint(event);
+        const startPoint = this.getLocalPointFromBoardPoint(this.board.getMouseToSvgPoint(event));
         const tickOffsetPixel = axis === "x" ? startPoint.x - axisX : axisY - startPoint.y;
         const started = this._axisTickDrag.start(event, {
             tickOffsetValue: tickValue,
             tickOffsetPixel,
             getPixelOffset: e => {
-                const pt = this.board.getMouseToSvgPoint(e);
+                const pt = this.getLocalPointFromBoardPoint(this.board.getMouseToSvgPoint(e));
                 return axis === "x" ? pt.x - axisX : axisY - pt.y;
             },
             onMove: scale => {

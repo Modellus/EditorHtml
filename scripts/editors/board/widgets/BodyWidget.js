@@ -233,6 +233,7 @@ class BodyShape extends ChildShape {
             },
             {
                 className: "handle edge-resize",
+                cursorAngle: 45,
                 getAttributes: () => {
                     const position = this.getBoardPosition();
                     const radius = this.properties.radius ?? 0;

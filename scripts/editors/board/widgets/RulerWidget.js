@@ -231,6 +231,9 @@ class RulerShape extends BaseShape {
         const extents = tickHitExtents(ticks.map(tick => tick.pixelFromLeft), 4);
         while (this.tickInteractionLayer.children.length > ticks.length)
             this.tickInteractionLayer.removeChild(this.tickInteractionLayer.lastChild);
+        // The scale drags along the ruler's own horizontal axis, so the arrow
+        // follows that axis once the shape is rotated.
+        const tickCursor = this.getRotatedResizeCursorStyle(this.getHandleRotationDegrees());
         for (let i = 0; i < ticks.length; i++) {
             const tick = ticks[i];
             const x = geometry.left + tick.pixelFromLeft;
@@ -240,10 +243,10 @@ class RulerShape extends BaseShape {
                 hitRect = this.board.createSvgElement("rect");
                 hitRect.setAttribute("fill", "transparent");
                 hitRect.setAttribute("pointer-events", "all");
-                hitRect.style.cursor = "ew-resize";
                 hitRect.onpointerdown = e => this.onAxisPointerDown(e);
                 this.tickInteractionLayer.appendChild(hitRect);
             }
+            hitRect.style.cursor = tickCursor;
             hitRect.setAttribute("x", x - halfWidth);
             hitRect.setAttribute("y", geometry.y);
             hitRect.setAttribute("width", halfWidth * 2);
