@@ -65,7 +65,7 @@ class AiSdk {
     }
 
     createChatAdapter(options) {
-        const { chat, firstUser, secondUser, initialMessages, chatThreadIdRef, onClientToolCall } = options;
+        const { chat, firstUser, secondUser, initialMessages, chatThreadIdRef, onClientToolCall, onBusyChange } = options;
         if (typeof AgentChatAdapter !== "function")
             return null;
         const conversationName = this.getChatConversationName(chatThreadIdRef);
@@ -78,7 +78,8 @@ class AiSdk {
             assistant: secondUser,
             initialItems: initialMessages,
             debugEnabled: false,
-            onClientToolCall
+            onClientToolCall,
+            onBusyChange
         });
         adapter.connect();
         return adapter;

@@ -5,6 +5,9 @@ class ChatController {
         this.instance = null;
         this.adapter = null;
         this.tooltip = null;
+        this.hostElement = null;
+        this.busy = false;
+        this.toolCallDepth = 0;
         this.threadIdRef = { value: null };
         this.agentToolBridge = null;
         if (typeof AgentToolBridge === "function")
@@ -48,6 +51,7 @@ class ChatController {
 
     handlePopupResize() {
         this.instance?.repaint();
+        this.updateMessageBoxState();
     }
 
     _create() {
@@ -97,8 +101,8 @@ class ChatController {
                 const firstUser = { id: "1", name: "User" };
                 const secondUser = { id: "2", name: "Modellus", avatarUrl: "/scripts/themes/modellus bot.svg" };
                 const initialMessages = this.getInitialMessages();
-                const $chat = $("<div class='mdl-chat-host'>").appendTo(contentElement);
-                const chat = $chat.dxChat({
+                const $host = $("<div class='mdl-chat-host'>").appendTo(contentElement);
+                const chat = $("<div>").appendTo($host).dxChat({
                     width: "100%",
                     height: "100%",
                     user: firstUser,
@@ -106,8 +110,10 @@ class ChatController {
                     items: initialMessages
                 });
                 this.instance = chat.dxChat("instance");
+                this.hostElement = $host[0];
+                this.renderStopBar();
                 this.createAdapter(this.instance, firstUser, secondUser, initialMessages);
-                return $chat;
+                return $host;
             },
             position: popupPosition
         });
@@ -140,22 +146,66 @@ class ChatController {
         this.createAdapter(chat, firstUser, secondUser, initialMessages);
     }
 
+    // Model lifecycle actions (new/open) start a fresh conversation, but when the
+    // agent is the one performing them we must keep the popup and the live adapter:
+    // resetting mid-turn cancels the request and sends the tool result to a new thread.
     reset() {
+        if (this.isExecutingToolCall())
+            return;
         this.clear();
         const popup = $("#chat-popup").dxPopup("instance");
         if (popup)
             popup.hide();
     }
 
+    isExecutingToolCall() {
+        return this.toolCallDepth > 0;
+    }
+
+    async executeToolCall(toolCall) {
+        this.toolCallDepth++;
+        try {
+            return await this.agentToolBridge?.handleToolCall(toolCall);
+        } finally {
+            this.toolCallDepth--;
+        }
+    }
+
+    renderStopBar() {
+        const stopLabel = this.shell.board.translations.get("Stop Generating");
+        this.hostElement.insertAdjacentHTML("beforeend", `<div class="mdl-chat-stop-bar"><button type="button" class="mdl-chat-stop-button"><i class="fa-light fa-circle-stop"></i><span>${stopLabel}</span></button></div>`);
+        this.hostElement.querySelector(".mdl-chat-stop-button").addEventListener("click", () => this.cancel());
+    }
+
+    cancel() {
+        this.adapter?.cancel();
+    }
+
+    setBusy(busy) {
+        this.busy = busy;
+        this.hostElement?.classList.toggle("mdl-chat-busy", busy);
+        this.updateMessageBoxState();
+    }
+
+    updateMessageBoxState() {
+        const textAreaElement = this.instance?.$element().find(".dx-chat-textarea").get(0);
+        textAreaElement?.classList.toggle("dx-state-disabled", this.busy);
+        const inputElement = textAreaElement?.querySelector("textarea");
+        if (inputElement)
+            inputElement.disabled = this.busy;
+    }
+
     createAdapter(chat, firstUser, secondUser, initialMessages) {
         this.disposeAdapter();
+        this.setBusy(false);
         this.adapter = this.shell.aiSdk.createChatAdapter({
             chat,
             firstUser,
             secondUser,
             initialMessages,
             chatThreadIdRef: this.threadIdRef,
-            onClientToolCall: toolCall => this.agentToolBridge?.handleToolCall(toolCall)
+            onClientToolCall: toolCall => this.executeToolCall(toolCall),
+            onBusyChange: busy => this.setBusy(busy)
         });
     }
 

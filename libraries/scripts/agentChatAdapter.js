@@ -1,4 +1,6 @@
 (function(global) {
+    const CONTINUATION_TIMEOUT = 20000;
+
     class AgentChatAdapter {
         constructor(options) {
             this.host = options.host;
@@ -10,6 +12,7 @@
             this.initialItems = Array.isArray(options.initialItems) ? [...options.initialItems] : [];
             this.onError = options.onError;
             this.onClientToolCall = options.onClientToolCall;
+            this.onBusyChange = options.onBusyChange;
             this.debugEnabled = options.debugEnabled !== false;
             this.connection = null;
             this.destroyed = false;
@@ -25,6 +28,14 @@
             this.chatItems = [...this.initialItems];
             this.activeStreams = new Map();
             this.processedToolCallIds = new Set();
+            this.pendingRequestIds = new Set();
+            this.pendingToolCallIds = new Set();
+            this.cancelledRequestIds = new Set();
+            this.awaitingContinuation = false;
+            this.continuationTimeoutId = null;
+            this.sending = false;
+            this.cancelRequested = false;
+            this.busy = false;
             this.handleOpenBound = this.handleOpen.bind(this);
             this.handleMessageBound = this.handleMessage.bind(this);
             this.handleCloseBound = this.handleClose.bind(this);
@@ -113,15 +124,78 @@
         destroy() {
             if (this.destroyed)
                 return;
+            this.cancel();
             this.destroyed = true;
             this.activeStreams.clear();
             this.disconnect();
+        }
+
+        isBusy() {
+            return this.sending || this.pendingRequestIds.size > 0 || this.pendingToolCallIds.size > 0 || this.awaitingContinuation;
+        }
+
+        updateBusyState() {
+            const busy = this.isBusy();
+            if (busy === this.busy)
+                return;
+            this.busy = busy;
+            this.debug("busyChanged", { busy });
+            if (typeof this.onBusyChange === "function")
+                this.onBusyChange(busy);
+        }
+
+        resetBusyState() {
+            this.pendingRequestIds.clear();
+            this.pendingToolCallIds.clear();
+            this.completeContinuationWait();
+            this.updateBusyState();
+        }
+
+        cancel() {
+            if (!this.isBusy())
+                return;
+            this.debug("cancel", { pendingRequestIds: [...this.pendingRequestIds] });
+            this.cancelRequested = this.sending;
+            this.sending = false;
+            this.pendingRequestIds.forEach(requestId => {
+                this.cancelledRequestIds.add(requestId);
+                this.sendRaw({ type: "cf_agent_chat_request_cancel", id: requestId });
+            });
+            this.activeStreams.clear();
+            this.setTypingIndicator(false);
+            this.resetBusyState();
+        }
+
+        beginContinuationWait() {
+            this.clearContinuationWatchdog();
+            this.awaitingContinuation = true;
+            this.setTypingIndicator(true);
+            this.continuationTimeoutId = global.setTimeout(() => {
+                this.continuationTimeoutId = null;
+                this.awaitingContinuation = false;
+                this.setTypingIndicator(false);
+                this.updateBusyState();
+            }, CONTINUATION_TIMEOUT);
+        }
+
+        completeContinuationWait() {
+            this.clearContinuationWatchdog();
+            this.awaitingContinuation = false;
+        }
+
+        clearContinuationWatchdog() {
+            if (this.continuationTimeoutId === null)
+                return;
+            global.clearTimeout(this.continuationTimeoutId);
+            this.continuationTimeoutId = null;
         }
 
         resetLocalMessages(items) {
             this.agentMessages = [];
             this.activeStreams.clear();
             this.processedToolCallIds.clear();
+            this.cancelledRequestIds.clear();
+            this.resetBusyState();
             this.initialMessagesLoaded = false;
             this.resetInitialMessagesReadyPromise();
             this.chatItems = Array.isArray(items) ? [...items] : [];
@@ -138,6 +212,22 @@
             });
             if (!messageText)
                 return;
+            if (this.busy) {
+                this.debug("sendMessage:busy");
+                return;
+            }
+            this.sending = true;
+            this.updateBusyState();
+            try {
+                await this.sendRequest(messageText);
+            } finally {
+                this.sending = false;
+                this.cancelRequested = false;
+                this.updateBusyState();
+            }
+        }
+
+        async sendRequest(messageText) {
             try {
                 await this.connect();
             } catch (error) {
@@ -154,7 +244,7 @@
                 initialMessagesLoaded: this.initialMessagesLoaded,
                 agentMessageCount: this.agentMessages.length
             });
-            if (!this.connection)
+            if (!this.connection || this.cancelRequested)
                 return;
             const requestId = this.createId("request");
             const userMessage = this.createUserMessage(messageText);
@@ -165,7 +255,7 @@
                 agentMessageCount: this.agentMessages.length
             });
             this.setTypingIndicator(true);
-            this.sendRaw({
+            const sent = this.sendRaw({
                 type: "cf_agent_use_chat_request",
                 id: requestId,
                 init: {
@@ -176,12 +266,24 @@
                     })
                 }
             });
+            if (!sent) {
+                this.setTypingIndicator(false);
+                return;
+            }
+            this.pendingRequestIds.add(requestId);
+            this.completeContinuationWait();
         }
 
         sendToolResult(toolCallId, toolName, output, state, errorText) {
-            if (!this.connection)
+            if (!this.pendingToolCallIds.delete(toolCallId)) {
+                this.debug("sendToolResult:stale", { toolCallId });
                 return;
-            this.sendRaw({
+            }
+            if (!this.connection) {
+                this.updateBusyState();
+                return;
+            }
+            const sent = this.sendRaw({
                 type: "cf_agent_tool_result",
                 toolCallId,
                 toolName,
@@ -190,11 +292,14 @@
                 errorText,
                 autoContinue: true
             });
+            if (sent)
+                this.beginContinuationWait();
+            this.updateBusyState();
         }
 
         sendRaw(payload) {
             if (!this.connection)
-                return;
+                return false;
             try {
                 this.debug("sendRaw", {
                     type: payload?.type,
@@ -202,9 +307,11 @@
                     payload
                 });
                 this.connection.send(JSON.stringify(payload));
+                return true;
             } catch (error) {
                 this.debug("sendRaw:error", error);
                 this.notifyError(error);
+                return false;
             }
         }
 
@@ -223,6 +330,7 @@
             });
             this.setTypingIndicator(false);
             this.activeStreams.clear();
+            this.resetBusyState();
             if (this.connection)
                 this.removeConnectionListeners(this.connection);
             this.connection = null;
@@ -308,22 +416,34 @@
         handleUseChatResponseMessage(message) {
             if (typeof message.id !== "string")
                 return;
+            if (this.cancelledRequestIds.has(message.id)) {
+                if (message.done || message.error)
+                    this.cancelledRequestIds.delete(message.id);
+                return;
+            }
+            this.completeContinuationWait();
             if (message.error) {
+                this.pendingRequestIds.delete(message.id);
                 this.setTypingIndicator(false);
                 this.activeStreams.delete(message.id);
+                this.updateBusyState();
                 this.notifyError(new Error(typeof message.body === "string" && message.body ? message.body : "Agent response failed."));
                 return;
             }
+            if (!message.done)
+                this.pendingRequestIds.add(message.id);
             let streamState = this.activeStreams.get(message.id);
             if (!streamState) {
                 streamState = this.startStream(message);
                 this.activeStreams.set(message.id, streamState);
             }
             this.applyStreamChunk(message, streamState);
-            if (message.done || message.error) {
+            if (message.done) {
+                this.pendingRequestIds.delete(message.id);
                 this.setTypingIndicator(false);
                 this.activeStreams.delete(message.id);
             }
+            this.updateBusyState();
         }
 
         async loadInitialMessages() {
@@ -425,6 +545,8 @@
             if (this.processedToolCallIds.has(chunk.toolCallId))
                 return;
             this.processedToolCallIds.add(chunk.toolCallId);
+            this.pendingToolCallIds.add(chunk.toolCallId);
+            this.updateBusyState();
             if (typeof this.onClientToolCall === "function") {
                 this.onClientToolCall({
                     toolCallId: chunk.toolCallId,
