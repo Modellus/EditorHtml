@@ -25,6 +25,13 @@ class ChildShape extends BaseShape {
             this.motionGroup.setAttribute("clip-path", this.element.getAttribute("clip-path"));
     }
 
+    // Referential children draw straight into board coordinates from their
+    // terms instead of placing their content with a transform, so there is
+    // nothing for a mirror of that transform to act on.
+    supportsFlip() {
+        return false;
+    }
+
     // Hit region for the square move/anchor handle of a referential child. The
     // visible geometry (a point, a thin line, ...) is tiny, so the interactive
     // area is deliberately larger to make dragging easier.

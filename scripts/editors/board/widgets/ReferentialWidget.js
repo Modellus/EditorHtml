@@ -7,6 +7,13 @@ class ReferentialShape extends BaseShape {
         this._pinnedTickValues = { horizontal: null, vertical: null };
     }
 
+    // The referential's children are drawn as siblings of its axes rather than
+    // inside them, so mirroring the axes would move them away from the shapes
+    // they are plotting. Flipping an axis is done through its scale instead.
+    supportsFlip() {
+        return false;
+    }
+
     setPropertyCommand(name, value) {
         if (name === "scaleX" || name === "scaleY" || name === "originX" || name === "originY" || name === "autoScale" || name === "equalAxisScales") {
             this._pinnedTickValues.horizontal = null;

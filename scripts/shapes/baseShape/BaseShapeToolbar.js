@@ -144,6 +144,19 @@ function resolveShapeToolbarCopyAction(shape) {
     return () => {};
 }
 
+// Only the shapes that place their content through the shared shape transform
+// can mirror it, so the rest leave the flip actions out.
+function resolveShapeToolbarFlipItems(shape) {
+    if (shape.supportsFlip?.() !== true)
+        return [];
+    const horizontalWeight = shape.isFlippedHorizontally() ? "fa-solid" : "fa-light";
+    const verticalWeight = shape.isFlippedVertically() ? "fa-solid" : "fa-light";
+    return [
+        { text: "Flip Horizontal", icon: `${horizontalWeight} fa-reflect-horizontal`, shortcut: "", action: () => shape.toggleFlip("horizontal") },
+        { text: "Flip Vertical", icon: `${verticalWeight} fa-reflect-vertical`, shortcut: "", action: () => shape.toggleFlip("vertical") }
+    ];
+}
+
 function finalizeShapeContextToolbarItems(shape, toolbarItems) {
     const resolvedItems = toolbarItems ?? [];
     if (!resolvedItems.length)
@@ -168,6 +181,7 @@ var ShapeContextToolbarMixin = {
     showContextToolbar() {
         this.refreshNameToolbarControl?.();
         this.refreshShapeColorToolbarControl?.();
+        this.refreshActionsMenuFlipIcons?.();
         this.refreshTermControlVisibilities?.();
         if (this.contextToolbar)
             this.contextToolbar.classList.add("visible");
@@ -238,6 +252,18 @@ var ShapeToolbarPresentationMixin = {
         this._nameTextBoxInstance?.option("value", this.properties.name);
         if (this._nameColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._nameColorPicker, this.properties.nameColor);
+    },
+    // The actions menu content is built once and kept, so the solid icon that
+    // marks an axis as flipped is updated in place instead of re-rendered.
+    refreshActionsMenuFlipIcons() {
+        if (!this._actionsMenuContentElement)
+            return;
+        const horizontalIcon = this._actionsMenuContentElement.querySelector(".fa-reflect-horizontal");
+        const verticalIcon = this._actionsMenuContentElement.querySelector(".fa-reflect-vertical");
+        if (horizontalIcon)
+            horizontalIcon.className = `dx-icon ${this.isFlippedHorizontally() ? "fa-solid" : "fa-light"} fa-reflect-horizontal`;
+        if (verticalIcon)
+            verticalIcon.className = `dx-icon ${this.isFlippedVertically() ? "fa-solid" : "fa-light"} fa-reflect-vertical`;
     },
     renderShapeColorButtonTemplate(element) {
         const name = this.properties.name ?? "";
@@ -644,6 +670,7 @@ var BaseShapeToolbarMixin = {
             { text: "Send Backward", icon: "fa-light fa-send-backward", shortcut: "", action: resolveShapeToolbarBoardAction(this, "sendBackward") },
             { text: "Send to Back", icon: "fa-light fa-send-back", shortcut: "", action: resolveShapeToolbarBoardAction(this, "sendToBack") }
         ];
+        const flipItems = resolveShapeToolbarFlipItems(this);
         const actionItems = [
             { text: "Copy", icon: "fa-light fa-copy", shortcut: `${mod}C`, action: resolveShapeToolbarCopyAction(this) },
             ...(showCopySubItems ? copySubItems.map(subItem => ({ ...subItem, isSubItem: true })) : []),
@@ -657,10 +684,15 @@ var BaseShapeToolbarMixin = {
             return `<div class="mdl-dropdown-list-item" style="${indent}cursor:pointer" data-action-item><i class="dx-icon ${item.icon}"></i><span class="mdl-dropdown-list-label">${item.text}</span>${shortcut}</div>`;
         };
         const container = $(contentElement).empty()[0];
-        const allItems = [...layerItems, ...actionItems];
+        this._actionsMenuContentElement = container;
+        const allItems = [...layerItems, ...flipItems, ...actionItems];
+        const flipMarkup = flipItems.length
+            ? `${flipItems.map(renderItem).join("")}<div class="mdl-actions-menu-separator"></div>`
+            : "";
         const markup = `<div class="mdl-actions-menu">
             ${layerItems.map(renderItem).join("")}
             <div class="mdl-actions-menu-separator"></div>
+            ${flipMarkup}
             ${actionItems.map(renderItem).join("")}
         </div>`;
         container.innerHTML = markup;

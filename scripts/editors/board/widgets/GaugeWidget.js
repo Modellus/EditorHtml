@@ -181,14 +181,13 @@ class GaugeShape extends BaseShape {
         const position = this.getBoardPosition();
         const geo = this.getGaugeGeometry();
         const localPt = this.getPointerLocalPoint();
-        const unrotatedX = position.x + localPt.x;
-        const unrotatedY = position.y + localPt.y;
+        const mirrored = this.mirrorBoardPoint({ x: position.x + localPt.x, y: position.y + localPt.y });
         const rotation = Number(this.properties.rotation) || 0;
         if (Math.abs(rotation) < 0.00001)
-            return { x: unrotatedX, y: unrotatedY };
+            return mirrored;
         const boardCx = position.x + geo.cx;
         const boardCy = position.y + geo.cy;
-        return this.rotatePointAroundCenter(unrotatedX, unrotatedY, boardCx, boardCy, rotation);
+        return this.rotatePointAroundCenter(mirrored.x, mirrored.y, boardCx, boardCy, rotation);
     }
 
     clampToGaugeAngle(angleDeg) {
@@ -231,10 +230,7 @@ class GaugeShape extends BaseShape {
         const position = this.getBoardPosition();
         const boardCx = position.x + geo.cx;
         const boardCy = position.y + geo.cy;
-        const rotation = Number(this.properties.rotation) || 0;
-        const unrotated = Math.abs(rotation) < 0.00001
-            ? { x, y }
-            : this.rotatePointAroundCenter(x, y, boardCx, boardCy, -rotation);
+        const unrotated = this.getLocalPointFromBoardPoint({ x, y });
         const localX = unrotated.x - boardCx;
         const localY = unrotated.y - boardCy;
         let visualAngleDeg = Math.atan2(-localY, localX) * 180 / Math.PI;
@@ -413,7 +409,7 @@ class GaugeShape extends BaseShape {
         this.hubCircle.setAttribute("fill", fg);
         this.hubCircle.setAttribute("stroke", "none");
         const position = this.getBoardPosition();
-        this.element.setAttribute("transform", `translate(${position.x} ${position.y}) rotate(${this.properties.rotation} ${geo.cx} ${geo.cy})`);
+        this.applyShapeTransform(geo.cx, geo.cy, `translate(${position.x} ${position.y})`);
     }
 
     tick() {

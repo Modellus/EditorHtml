@@ -288,7 +288,7 @@ class BaseTableShape extends BaseShape {
         const height = this.properties.height;
         if (this.table)
             this.table.setSize(width, height);
-        this.element.setAttribute("transform", `translate(${x} ${y}) rotate(${this.properties.rotation} ${width / 2} ${height / 2})`);
+        this.applyShapeTransform(width / 2, height / 2, `translate(${x} ${y})`);
     }
 
     tick() {

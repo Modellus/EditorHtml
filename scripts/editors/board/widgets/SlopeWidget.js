@@ -455,7 +455,7 @@ class SlopeShape extends BaseShape {
         this.drawSlopeSection(geometry);
         this._updateAxisInteractionHandles("horizontal", this.horizontalTickInteractionLayer, geometry);
         this._updateAxisInteractionHandles("vertical", this.verticalTickInteractionLayer, geometry);
-        this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${geometry.x + geometry.width / 2}, ${geometry.y + geometry.height / 2})`);
+        this.applyShapeTransform(geometry.x + geometry.width / 2, geometry.y + geometry.height / 2);
     }
 }
 

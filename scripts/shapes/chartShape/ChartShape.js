@@ -440,7 +440,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         const width = this.properties.width;
         const height = this.properties.height;
         this.chart.setSize(width, height);
-        this.element.setAttribute("transform", `translate(${x} ${y}) rotate(${this.properties.rotation} ${width / 2} ${height / 2})`);
+        this.applyShapeTransform(width / 2, height / 2, `translate(${x} ${y})`);
         super.draw();
     }
 

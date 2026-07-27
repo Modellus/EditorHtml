@@ -937,12 +937,26 @@ class BodyShape extends ChildShape {
         this.centerDot.setAttribute("stroke-width", 1);
     }
 
-    applyImageFlipTransform(position, hasImage) {
-        if (!hasImage || !this.flipImageHorizontally) {
+    // A body's trajectory and stroboscopy trail follow the path it travelled, so
+    // mirroring them about a center that moves every tick would smear them
+    // across the board. The image is the part a flip acts on, mirrored about the
+    // body center on top of the direction flip it already does on its own.
+    supportsFlip() {
+        return true;
+    }
+
+    applyImageFlipTransform(position, hasImage, rotationDegrees = null) {
+        const mirrorHorizontally = hasImage && this.flipImageHorizontally !== this.isFlippedHorizontally();
+        const mirrorVertically = hasImage && this.isFlippedVertically();
+        const parts = [];
+        if (rotationDegrees !== null)
+            parts.push(`rotate(${rotationDegrees} ${position.x} ${position.y})`);
+        if (mirrorHorizontally || mirrorVertically)
+            parts.push(`translate(${position.x} ${position.y}) scale(${mirrorHorizontally ? -1 : 1} ${mirrorVertically ? -1 : 1}) translate(${-position.x} ${-position.y})`);
+        if (parts.length)
+            this.image.setAttribute("transform", parts.join(" "));
+        else
             this.image.removeAttribute("transform");
-            return;
-        }
-        this.image.setAttribute("transform", `translate(${position.x * 2} 0) scale(-1 1)`);
     }
 
     loadApiCharacterIfNeeded(characterKey) {
@@ -990,11 +1004,8 @@ class BodyShape extends ChildShape {
         this.image.setAttribute("width", diameter);
         this.image.setAttribute("height", diameter);
         this.image.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        if (character.shouldRotate && this.characterMovementAngle !== null) {
-            this.image.setAttribute("transform", `rotate(${this.characterMovementAngle} ${position.x} ${position.y})`);
-        } else {
-            this.image.removeAttribute("transform");
-        }
+        const movementAngle = character.shouldRotate ? this.characterMovementAngle : null;
+        this.applyImageFlipTransform(position, imageUrl !== "", movementAngle);
         this.image.setAttribute("href", imageUrl);
     }
 

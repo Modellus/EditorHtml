@@ -428,9 +428,11 @@ class SliderShape extends BaseShape {
         return height / 2;
     }
 
+    // The splitter handle lives outside the slider's element, so it is mirrored
+    // here to stay on the line it drags once the slider is flipped.
     getSplitterBoardY() {
         const position = this.getBoardPosition();
-        return position.y + this.getSplitterOffset();
+        return this.mirrorBoardPoint({ x: position.x, y: position.y + this.getSplitterOffset() }).y;
     }
 
     getValueFromBoardY(boardY) {
@@ -540,7 +542,7 @@ class SliderShape extends BaseShape {
         this.zeroLine.setAttribute("y2", zeroY);
         this.drawTicks(trackX, trackWidth, sliderHeight);
         this.drawScaleLabels(trackX, trackWidth, sliderHeight, config, zeroY, zeroInsideRange);
-        this.element.setAttribute("transform", `translate(${position.x} ${position.y}) rotate(${this.properties.rotation} ${sliderWidth / 2} ${sliderHeight / 2})`);
+        this.applyShapeTransform(sliderWidth / 2, sliderHeight / 2, `translate(${position.x} ${position.y})`);
     }
 
     drawTicks(trackX, trackWidth, sliderHeight) {

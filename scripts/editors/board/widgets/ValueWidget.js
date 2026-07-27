@@ -581,7 +581,7 @@ class ValueShape extends BaseShape {
         } else
             this.hideValueEditor();
         this.updateValueSoundState(numericDisplayedValue, termText, caseNumber);
-        this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${position.x + width / 2}, ${position.y + height / 2})`);
+        this.applyShapeTransform(position.x + width / 2, position.y + height / 2);
     }
 
     tick() {

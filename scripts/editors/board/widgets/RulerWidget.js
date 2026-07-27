@@ -426,7 +426,7 @@ class RulerShape extends BaseShape {
         this._clipRect.setAttribute("height", geometry.height);
         this.drawRulerTicks(geometry);
         this._updateTickInteractionHandles(geometry);
-        this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${geometry.x + geometry.width / 2}, ${geometry.y + geometry.height / 2})`);
+        this.applyShapeTransform(geometry.x + geometry.width / 2, geometry.y + geometry.height / 2);
     }
 }
 

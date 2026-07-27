@@ -239,7 +239,8 @@ class MediaShape extends BaseShape {
             this._mediaOverlayDiv.style.top = `${topLeft.y}px`;
             this._mediaOverlayDiv.style.width = `${screenWidth}px`;
             this._mediaOverlayDiv.style.height = `${screenHeight}px`;
-            this._mediaOverlayDiv.style.transform = rotation ? `rotate(${rotation}deg)` : "";
+            const rotationCss = rotation ? `rotate(${rotation}deg)` : "";
+            this._mediaOverlayDiv.style.transform = [rotationCss, this.getFlipCssTransform()].filter(Boolean).join(" ");
             this._mediaOverlayDiv.style.transformOrigin = "center center";
         }
     }
@@ -373,8 +374,7 @@ class MediaShape extends BaseShape {
         this.border.setAttribute("width", width);
         this.border.setAttribute("height", height);
         this.applyBorderStroke(this.border, 1);
-        this.element.setAttribute("transform", `rotate(${this.properties.rotation}, ${this.properties.x + width / 2}, 
-            ${this.properties.y + height / 2})`);
+        this.applyShapeTransform(this.properties.x + width / 2, this.properties.y + height / 2);
         const isNonSynced = this.properties.mediaSynced === false;
         const videoUrl = this.properties.videoUrl ?? "";
         const audioUrl = this.properties.audioUrl ?? "";

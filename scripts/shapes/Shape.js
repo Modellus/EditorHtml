@@ -122,6 +122,8 @@ class BaseShape {
         this.properties.borderColor = this.properties.foregroundColor;
         this.properties.backgroundColor = this.board.theme.getBackgroundColors()[2].color;
         this.properties.rotation = 0;
+        this.properties.flipHorizontal = false;
+        this.properties.flipVertical = false;
         this.properties.opacity = 1;
         this.properties.showName = false;
         this.properties.nameColor = null;
@@ -677,16 +679,42 @@ class BaseShape {
         return cursor;
     }
 
-    // Maps a pointer position in board coordinates into the shape's unrotated
-    // frame, so handle math written for the unrotated layout keeps working on
-    // rotated shapes.
+    // Maps a pointer position in board coordinates into the shape's unrotated,
+    // unmirrored frame, so handle math written for the plain layout keeps
+    // working on rotated and flipped shapes. The content is drawn mirror-first
+    // then rotated, so undoing it goes the other way round: unrotate, then
+    // mirror back — a mirror being its own inverse.
     getLocalPointFromBoardPoint(point) {
         const rotation = this.getHandleRotationDegrees();
         const center = this.getHandleRotationCenter();
-        if (!center || Math.abs(rotation) < 0.00001)
+        if (!center)
             return point;
-        const rotated = this.rotatePointAroundCenter(point.x, point.y, center.x, center.y, -rotation);
-        return Object.assign({}, point, { x: rotated.x, y: rotated.y });
+        let x = point.x;
+        let y = point.y;
+        if (Math.abs(rotation) >= 0.00001) {
+            const rotated = this.rotatePointAroundCenter(x, y, center.x, center.y, -rotation);
+            x = rotated.x;
+            y = rotated.y;
+        }
+        if (this.isFlippedHorizontally())
+            x = 2 * center.x - x;
+        if (this.isFlippedVertically())
+            y = 2 * center.y - y;
+        if (x === point.x && y === point.y)
+            return point;
+        return Object.assign({}, point, { x: x, y: y });
+    }
+
+    // Mirrors a point the shape computed from its own geometry, so a handle
+    // placed from it lands on the mirrored drawing. Handles take their rotation
+    // from applyHandleRotation, which is why only the mirror belongs here.
+    mirrorBoardPoint(point) {
+        const center = this.getHandleRotationCenter();
+        if (!center || !this.isFlipped())
+            return point;
+        const x = this.isFlippedHorizontally() ? 2 * center.x - point.x : point.x;
+        const y = this.isFlippedVertically() ? 2 * center.y - point.y : point.y;
+        return Object.assign({}, point, { x: x, y: y });
     }
 
     applyHandleRotation(handle) {
@@ -1376,6 +1404,82 @@ class BaseShape {
         return normalizedLocalRotation + parentRotation;
     }
 
+    // Flipping mirrors what the shape draws about its own center. Pivoting on
+    // the center leaves position and bounds untouched, so the handles, the
+    // selection outline and the resize math keep working unchanged.
+    supportsFlip() {
+        return true;
+    }
+
+    isFlippedHorizontally() {
+        return this.properties.flipHorizontal === true;
+    }
+
+    isFlippedVertically() {
+        return this.properties.flipVertical === true;
+    }
+
+    isFlipped() {
+        return this.isFlippedHorizontally() || this.isFlippedVertically();
+    }
+
+    toggleFlip(axis) {
+        const property = axis === "vertical" ? "flipVertical" : "flipHorizontal";
+        this.setPropertyCommand(property, this.properties[property] !== true);
+    }
+
+    // Empty when the shape isn't flipped, so callers can concatenate it blindly.
+    getFlipTransform(centerX, centerY) {
+        if (!this.isFlipped())
+            return "";
+        const scaleX = this.isFlippedHorizontally() ? -1 : 1;
+        const scaleY = this.isFlippedVertically() ? -1 : 1;
+        return `translate(${centerX} ${centerY}) scale(${scaleX} ${scaleY}) translate(${-centerX} ${-centerY})`;
+    }
+
+    // CSS counterpart, for the HTML overlays some shapes layer over the canvas.
+    getFlipCssTransform() {
+        if (!this.isFlipped())
+            return "";
+        const scaleX = this.isFlippedHorizontally() ? -1 : 1;
+        const scaleY = this.isFlippedVertically() ? -1 : 1;
+        return `scale(${scaleX}, ${scaleY})`;
+    }
+
+    getRotationFlipTransform(centerX, centerY, prefix = "") {
+        const parts = [];
+        if (prefix)
+            parts.push(prefix);
+        parts.push(`rotate(${this.properties.rotation} ${centerX} ${centerY})`);
+        const flipTransform = this.getFlipTransform(centerX, centerY);
+        if (flipTransform)
+            parts.push(flipTransform);
+        return parts.join(" ");
+    }
+
+    // The prefix is the translate into the shape's own frame for the shapes that
+    // draw locally, and centerX/centerY are given in that same frame.
+    applyShapeTransform(centerX, centerY, prefix = "") {
+        if (!this.element)
+            return;
+        this.element.setAttribute("transform", this.getRotationFlipTransform(centerX, centerY, prefix));
+        this.applyFlipCompensation(this.shapeNameLayer, centerX, centerY);
+        this.applyFlipCompensation(this.termDisplayLayer, centerX, centerY);
+    }
+
+    // The name and term labels are drawn inside the shape's element, so the
+    // mirror would render their text backwards. A mirror is its own inverse:
+    // applying the same one to those layers cancels it out for them alone.
+    applyFlipCompensation(layer, centerX, centerY) {
+        if (!layer || layer.parentNode !== this.element)
+            return;
+        const flipTransform = this.getFlipTransform(centerX, centerY);
+        if (flipTransform)
+            layer.setAttribute("transform", flipTransform);
+        else
+            layer.removeAttribute("transform");
+    }
+
     rotatePointAroundCenter(pointX, pointY, centerX, centerY, angleDegrees) {
         const radians = angleDegrees * Math.PI / 180;
         const dx = pointX - centerX;
@@ -1683,7 +1787,7 @@ class BaseShape {
     applyForeignObjectLayout() {
         if (!this.foreignObject)
             return;
-        this.element.setAttribute("transform", `translate(${this.properties.x}, ${this.properties.y}) rotate(${this.properties.rotation}, ${this.properties.width / 2}, ${this.properties.height / 2})`);
+        this.applyShapeTransform(this.properties.width / 2, this.properties.height / 2, `translate(${this.properties.x}, ${this.properties.y})`);
         this.foreignObject.setAttribute("x", 0);
         this.foreignObject.setAttribute("y", 0);
         this.foreignObject.setAttribute("width", this.properties.width);
