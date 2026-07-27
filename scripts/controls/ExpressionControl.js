@@ -454,10 +454,105 @@ class ExpressionControl {
             this.mathfield.executeCommand("moveToPreviousPlaceholder");
     }
 
+    _getRowRanges() {
+        const savedSelection = this.mathfield.selection;
+        const lastOffset = this.mathfield.lastOffset;
+        const rowRanges = [];
+        let rowStart = 0;
+        while (rowStart <= lastOffset) {
+            this.mathfield.position = rowStart;
+            this.mathfield.executeCommand("moveToGroupEnd");
+            const rowEnd = this.mathfield.position;
+            if (rowEnd < rowStart)
+                break;
+            rowRanges.push([rowStart, rowEnd]);
+            if (rowEnd >= lastOffset)
+                break;
+            rowStart = rowEnd + 1;
+        }
+        this.mathfield.selection = savedSelection;
+        return rowRanges;
+    }
+
+    _getSelectionRange() {
+        const selectionRanges = this.mathfield.selection?.ranges ?? [];
+        let start = this.mathfield.lastOffset;
+        let end = 0;
+        for (let rangeIndex = 0; rangeIndex < selectionRanges.length; rangeIndex++) {
+            const selectionRange = selectionRanges[rangeIndex];
+            start = Math.min(start, selectionRange[0], selectionRange[1]);
+            end = Math.max(end, selectionRange[0], selectionRange[1]);
+        }
+        return [start, end];
+    }
+
+    _getRowAwareLatex(start, end) {
+        const rowRanges = this._getRowRanges();
+        const rowLatexParts = [];
+        for (let rowIndex = 0; rowIndex < rowRanges.length; rowIndex++) {
+            const [rowStart, rowEnd] = rowRanges[rowIndex];
+            if (rowStart === rowEnd) {
+                if (rowStart >= start && rowEnd <= end)
+                    rowLatexParts.push("");
+                continue;
+            }
+            const partStart = Math.max(start, rowStart);
+            const partEnd = Math.min(end, rowEnd);
+            if (partEnd <= partStart)
+                continue;
+            rowLatexParts.push(this.mathfield.getValue([partStart, partEnd], "latex"));
+        }
+        return rowLatexParts.join("\\\\");
+    }
+
+    _splitTopLevelRows(latex) {
+        const expressionRows = [];
+        let currentRow = "";
+        let braceDepth = 0;
+        let environmentDepth = 0;
+        let characterIndex = 0;
+        while (characterIndex < latex.length) {
+            const character = latex[characterIndex];
+            if (character === "\\") {
+                if (latex[characterIndex + 1] === "\\" && braceDepth === 0 && environmentDepth === 0) {
+                    expressionRows.push(currentRow);
+                    currentRow = "";
+                    characterIndex += 2;
+                    continue;
+                }
+                const commandMatch = /^\\([a-zA-Z]+)/.exec(latex.substring(characterIndex));
+                if (commandMatch) {
+                    if (commandMatch[1] === "begin")
+                        environmentDepth++;
+                    else if (commandMatch[1] === "end")
+                        environmentDepth--;
+                    currentRow += commandMatch[0];
+                    characterIndex += commandMatch[0].length;
+                    continue;
+                }
+                currentRow += latex.substring(characterIndex, characterIndex + 2);
+                characterIndex += 2;
+                continue;
+            }
+            if (character === "{")
+                braceDepth++;
+            else if (character === "}")
+                braceDepth--;
+            currentRow += character;
+            characterIndex++;
+        }
+        expressionRows.push(currentRow);
+        return expressionRows;
+    }
+
     copyToClipboardUsingMathlive() {
-        const latex = this.mathfield.selectionIsCollapsed
-            ? this.mathfield.getValue("latex")
-            : this.mathfield.getValue(this.mathfield.selection, "latex");
+        let latex;
+        if (this.mathfield.selectionIsCollapsed)
+            latex = this.mathfield.getValue("latex");
+        else {
+            const [start, end] = this._getSelectionRange();
+            latex = this._getRowAwareLatex(start, end);
+        }
         const strippedLatex = latex.replace(/^\\displaylines\{([\s\S]*)\}$/, "$1");
         navigator.clipboard.writeText(strippedLatex);
     }
@@ -467,7 +562,7 @@ class ExpressionControl {
             const clipboardText = await navigator.clipboard.readText();
             if (!clipboardText)
                 return;
-            const expressionRows = clipboardText.split("\\\\");
+            const expressionRows = this._splitTopLevelRows(clipboardText);
             this.mathfield.focus();
             this.mathfield.executeCommand("insert", expressionRows[0] ?? "");
             for (let rowIndex = 1; rowIndex < expressionRows.length; rowIndex++) {
