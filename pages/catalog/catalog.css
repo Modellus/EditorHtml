@@ -144,6 +144,14 @@ body {
 .dx-cardview .dx-toolbar-center {
   box-shadow: none;
 }
+/* The card chrome lives on .card-tile; strip the DevExtreme wrapper so the
+   border and background are not drawn twice. */
+.dx-cardview-card {
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  overflow: visible;
+}
 .status {
   color: var(--c-muted);
   min-height: 1.25rem;
@@ -187,7 +195,7 @@ body {
   object-fit: contain;
   background: var(--c-surface-alt, #f5f5f5);
 }
-
+.card-thumb-dropdowns {
   position: absolute;
   left: 8px;
   bottom: 8px;
@@ -195,6 +203,30 @@ body {
   gap: 0.35rem;
   max-width: calc(100% - 16px);
   flex-wrap: wrap;
+}
+.card-thumb-flags {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  display: flex;
+  gap: 0.35rem;
+}
+.card-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.65);
+  color: #fff;
+  backdrop-filter: blur(2px);
+}
+.card-flag i {
+  font-size: 12px;
+}
+.card-flag--sample {
+  background: rgba(168, 85, 247, 0.9);
 }
 .card-thumb-dropdown {
   flex: 0 0 auto;
@@ -282,7 +314,7 @@ body {
 .trash-hover {
   display: none;
 }
-.recover-button {
+.card-menu-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -292,32 +324,32 @@ body {
   width: 34px;
   height: 34px;
   cursor: pointer;
+  color: var(--c-text);
 }
-.recover-button i {
-  color: #16a34a;
+.card-menu-button:hover {
+  background: var(--c-surface-alt, #f5f5f5);
+}
+.card-menu-button i {
+  font-size: 16px;
   font-weight: 300;
 }
-.sample-button {
-  display: inline-flex;
+.card-menu .dx-menu-item-content {
+  padding: 6px 12px;
+}
+.card-menu-item {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid var(--c-border);
-  background: #fff;
-  border-radius: 999px;
-  width: 34px;
-  height: 34px;
-  cursor: pointer;
+  gap: 0.55rem;
+  white-space: nowrap;
 }
-.sample-button i {
-  color: #a855f7;
-  font-weight: 300;
+.card-menu-item i {
+  width: 16px;
+  font-size: 14px;
+  text-align: center;
 }
-.sample-button.is-sample {
-  border-color: #a855f7;
-  background: #a855f7;
-}
-.sample-button.is-sample i {
-  color: #fff;
+.card-menu-item--danger,
+.card-menu-item--danger i {
+  color: #dc2626;
 }
 .card-tile.selected {
   border-color: var(--c-link);
@@ -504,32 +536,11 @@ body {
 .pick-button.is-picked .pick-icon {
   color: #dc2626;
 }
-.visibility-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--c-border);
-  background: #fff;
-  border-radius: 999px;
-  width: 34px;
-  height: 34px;
-  cursor: pointer;
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-}
-.visibility-button .visibility-icon {
-  color: #6b7280;
-  font-size: 14px;
-}
 .card-thumb-dropdown .dx-icon,
 .card-tile .trash,
 .card-tile .trash-hover,
 .card-badge i {
   font-size: 14px;
-}
-.visibility-button.is-public .visibility-icon {
-  color: #16a34a;
 }
 .user-menu .dx-button-content {
   display: inline-flex;

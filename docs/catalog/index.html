@@ -148,20 +148,30 @@
             <li>The model title and description</li>
             <li>Education level and science category pills</li>
             <li>Like count and creator information</li>
+            <li>Status badges over the thumbnail: <i class="fa-light fa-lock"></i> for private models and <i class="fa-solid fa-flask-vial"></i> for samples</li>
         </ul>
 
         <h3>Card Actions</h3>
+        <p>The card itself keeps only the social actions. Everything else lives in the <i class="fa-light fa-ellipsis"></i> menu in the card's top-right corner, so the tile stays readable no matter how many actions you have access to.</p>
         <table class="docs-table">
-            <thead><tr><th>Action</th><th>Description</th></tr></thead>
+            <thead><tr><th>Action</th><th>Where</th><th>Description</th></tr></thead>
             <tbody>
-                <tr><td>Open</td><td>Click the card to open the model in the editor</td></tr>
-                <tr><td>Like</td><td>Toggle the like heart on a model to show appreciation</td></tr>
-                <tr><td>Favorite</td><td>Star a model to add it to your Favorites section</td></tr>
-                <tr><td>Pick</td><td>Save a public model to your personal Library</td></tr>
-                <tr><td>Edit</td><td>Open the metadata popup to change title, description, or thumbnail</td></tr>
-                <tr><td>Delete</td><td>Move the model to the Deleted bin (recoverable)</td></tr>
+                <tr><td>Like</td><td>Card</td><td>Toggle the like heart on a model to show appreciation</td></tr>
+                <tr><td>Favorite</td><td>Card</td><td>Star a model to add it to your Favorites section</td></tr>
+                <tr><td>Pick</td><td>Card</td><td>Save a public model to your personal Library</td></tr>
+                <tr><td>Open</td><td>Card / menu</td><td>Double-click the card, or use the menu, to open the model in the editor</td></tr>
+                <tr><td>Open in new tab</td><td>Menu</td><td>Open the model in a separate browser tab</td></tr>
+                <tr><td>Copy link</td><td>Menu</td><td>Copy a direct link to the model to the clipboard, ready to share</td></tr>
+                <tr><td>Edit</td><td>Menu</td><td>Open the metadata popup to change title, description, or thumbnail</td></tr>
+                <tr><td>Make public / private</td><td>Menu</td><td>Publish the model to the Community or take it back to private</td></tr>
+                <tr><td>Set as sample</td><td>Menu</td><td>Flag the model as a sample (maintainers only)</td></tr>
+                <tr><td>Delete</td><td>Menu</td><td>Move the model to the Deleted bin (recoverable). Only the owner and maintenance users can delete a model</td></tr>
+                <tr><td>Recover</td><td>Menu</td><td>Restore a model from the Deleted bin (owner and maintenance users only)</td></tr>
             </tbody>
         </table>
+
+        <h3>Sharing a Link</h3>
+        <p>Use <strong>Copy link</strong> to get a direct URL to a model — for example <code>https://&lt;host&gt;/pages/board/index.html?model_id=123</code>. The link points at the right editor for the model kind (board or notebook). Anyone opening it will need access to the model, so publish it first if you are sharing outside your account.</p>
 
         <h2>Editing Model Metadata</h2>
         <p>The edit popup allows you to modify:</p>

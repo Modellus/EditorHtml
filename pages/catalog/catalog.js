@@ -124,6 +124,8 @@ class ModelsApp {
     }
     this.profileController = new ProfileController(this.apiClient, this.userSdk, this.state, this.translations);
     this.cardViewInstance = null;
+    this.modelCardMenuInstance = null;
+    this.modelCardMenuHost = null;
     this.videosCardViewInstance = null;
     this.dataCardViewInstance = null;
     this.characterCardViewInstance = null;
@@ -459,8 +461,8 @@ class ModelsApp {
         const host = cardElement.get(0);
         const data = cardData.card.data;
         const isDeleted = this.state.selectedTreeNodeId === treeNodeIds.myDeleted;
-        const currentUserId = this.userSdk.getUserId(this.state.session);
-        const canEdit = !isDeleted && (this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId));
+        const canManage = this.canManageModel(data);
+        const canEdit = !isDeleted && canManage;
         const isFavorite = this.isFavoriteValue(data);
         const isPicked = this.isPickedValue(data);
         const isLiked = this.isLikedValue(data);
@@ -494,20 +496,21 @@ class ModelsApp {
             <div class="card-thumb-dropdown science-dropdown-host" data-lookup-id="${scienceLookupId}">${escapedScienceLabel}</div>
           </div>
         `;
+        const flagsMarkup = `
+          <div class="card-thumb-flags">
+            ${isDeleted || isPublic ? "" : `<span class="card-flag card-flag--private" title="${this.translations.get("Private")}"><i class="fa-light fa-lock" aria-hidden="true"></i></span>`}
+            ${isSample ? `<span class="card-flag card-flag--sample" title="${this.translations.get("Sample")}"><i class="fa-solid fa-flask-vial" aria-hidden="true"></i></span>` : ""}
+          </div>
+        `;
+        const thumbnailOverlays = `${flagsMarkup}${taxonomyDropDownMarkup}`;
         const thumbnailMarkup = thumbnailSrc
-          ? `<div class="card-thumb-wrap"><img class="card-thumb" src="${this.escapeHtml(thumbnailSrc)}" alt="${this.escapeHtml(data.title || "")}">${taxonomyDropDownMarkup}</div>`
-          : `<div class="card-thumb-wrap"><div class="card-thumb card-thumb-placeholder" style="${Utils.generateThumbPlaceholder(data.id)}">${taxonomyDropDownMarkup}</div></div>`;
+          ? `<div class="card-thumb-wrap"><img class="card-thumb" src="${this.escapeHtml(thumbnailSrc)}" alt="${this.escapeHtml(data.title || "")}">${thumbnailOverlays}</div>`
+          : `<div class="card-thumb-wrap"><div class="card-thumb card-thumb-placeholder" style="${Utils.generateThumbPlaceholder(data.id)}">${thumbnailOverlays}</div></div>`;
         const cardMarkup = `
           <div class="card-tile" data-model-id="${data.id || ""}">
             ${thumbnailMarkup}
             <div class="card-actions">
-              ${isDeleted ? `<button class="recover-button" aria-label="${this.translations.get("Recover model")}"><i class="fa-light fa-rotate-left" aria-hidden="true"></i></button>` : ""}
-              ${canManageSample ? `<button class="sample-button${isSample ? " is-sample" : ""}" aria-label="${isSample ? this.translations.get("Remove from samples") : this.translations.get("Set as sample")}" title="${isSample ? this.translations.get("Sample") : this.translations.get("Set as sample")}"><i class="${isSample ? "fa-solid fa-flask-vial" : "fa-light fa-flask-vial"}" aria-hidden="true"></i></button>` : ""}
-              ${canEdit ? `<button class="edit-button" aria-label="${this.translations.get("Edit model")}"><i class="fa-light fa-pen" aria-hidden="true"></i></button>` : ""}
-              ${(canEdit || isDeleted) ? `<button class="delete-button" aria-label="${this.translations.get("Delete model")}">
-                <i class="fa-light fa-trash-can trash" aria-hidden="true"></i>
-                <i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i>
-              </button>` : ""}
+              <button class="card-menu-button" aria-label="${this.translations.get("More actions")}" title="${this.translations.get("More actions")}"><i class="fa-light fa-ellipsis" aria-hidden="true"></i></button>
             </div>
             <div class="card-body">
               <div class="card-title-row">
@@ -532,9 +535,6 @@ class ModelsApp {
                 ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
               </div>
             </div>
-            ${isDeleted ? "" : `<button class="visibility-button${isPublic ? " is-public" : ""}" aria-label="${isPublic ? this.translations.get("Set private") : this.translations.get("Set public")}" title="${isPublic ? this.translations.get("Public") : this.translations.get("Private")}">
-              <i class="${isPublic ? "fa-light fa-lock-open" : "fa-light fa-lock"} visibility-icon" aria-hidden="true"></i>
-            </button>`}
           </div>
         `;
         host.innerHTML = cardMarkup;
@@ -542,11 +542,7 @@ class ModelsApp {
         const likeButton = host.querySelector(".like-button");
         const favoriteButton = host.querySelector(".favorite-button");
         const pickButton = host.querySelector(".pick-button");
-        const editButton = host.querySelector(".edit-button");
-        const deleteButton = host.querySelector(".delete-button");
-        const recoverButton = host.querySelector(".recover-button");
-        const sampleButton = host.querySelector(".sample-button");
-        const visibilityButton = host.querySelector(".visibility-button");
+        const menuButton = host.querySelector(".card-menu-button");
         const educationDropdownHost = host.querySelector(".education-dropdown-host");
         const scienceDropdownHost = host.querySelector(".science-dropdown-host");
         if (educationDropdownHost) educationDropdownHost.style.setProperty("--pill-color", educationColor);
@@ -554,26 +550,9 @@ class ModelsApp {
         if (likeButton) likeButton.addEventListener("click", () => this.toggleLike(data, likeButton));
         if (favoriteButton) favoriteButton.addEventListener("click", () => this.toggleFavorite(data, !isFavorite));
         if (pickButton) pickButton.addEventListener("click", () => this.togglePick(data, !isPicked));
-        if (editButton)
-          editButton.addEventListener("click", event => {
-            event.stopPropagation();
-            this.showEditModelPopup(data);
-          });
-        if (deleteButton) deleteButton.addEventListener("click", event => {
+        if (menuButton) menuButton.addEventListener("click", event => {
           event.stopPropagation();
-          this.deleteModel(data);
-        });
-        if (recoverButton) recoverButton.addEventListener("click", event => {
-          event.stopPropagation();
-          this.recoverModel(data);
-        });
-        if (sampleButton) sampleButton.addEventListener("click", event => {
-          event.stopPropagation();
-          this.toggleSample(data);
-        });
-        if (visibilityButton) visibilityButton.addEventListener("click", event => {
-          event.stopPropagation();
-          this.toggleVisibility(data);
+          this.showModelCardMenu(menuButton, this.buildModelCardMenuItems(data, { isDeleted, canManage, canEdit, canManageSample, isPublic, isSample }));
         });
         if (educationDropdownHost) {
           educationDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
@@ -643,23 +622,11 @@ class ModelsApp {
         }
         if (cardTile) {
           cardTile.addEventListener("click", event => {
-            if (event?.target?.closest(".like-button")) return;
-            if (event?.target?.closest(".favorite-button")) return;
-            if (event?.target?.closest(".pick-button")) return;
-            if (event?.target?.closest(".edit-button")) return;
-            if (event?.target?.closest(".delete-button")) return;
-            if (event?.target?.closest(".visibility-button")) return;
-            if (event?.target?.closest(".card-thumb-dropdowns")) return;
+            if (this.isCardControlTarget(event?.target)) return;
             this.selectModelCard(cardTile);
           });
           cardTile.addEventListener("dblclick", event => {
-            if (event?.target?.closest(".like-button")) return;
-            if (event?.target?.closest(".favorite-button")) return;
-            if (event?.target?.closest(".pick-button")) return;
-            if (event?.target?.closest(".edit-button")) return;
-            if (event?.target?.closest(".delete-button")) return;
-            if (event?.target?.closest(".visibility-button")) return;
-            if (event?.target?.closest(".card-thumb-dropdowns")) return;
+            if (this.isCardControlTarget(event?.target)) return;
             this.openModel(data);
           });
         }
@@ -669,10 +636,94 @@ class ModelsApp {
   }
 
   disposeCardView() {
+    this.disposeModelCardMenu();
     if (!this.cardViewInstance) return;
     this.cardViewInstance.dispose();
     this.cardViewInstance = null;
     this.modelsFeed = null;
+  }
+
+  isCardControlTarget(target) {
+    if (!target || typeof target.closest !== "function") return false;
+    return Boolean(target.closest(".card-actions, .card-meta-actions, .card-thumb-dropdowns"));
+  }
+
+  buildModelCardMenuItems(modelData, cardFlags) {
+    const { isDeleted, canManage, canEdit, canManageSample, isPublic, isSample } = cardFlags;
+    const deleteItem = { text: this.translations.get("Delete model"), icon: "fa-light fa-trash-can", danger: true, beginGroup: true, action: () => this.deleteModel(modelData) };
+    const items = [];
+    if (isDeleted) {
+      if (canManage) {
+        items.push({ text: this.translations.get("Recover model"), icon: "fa-light fa-rotate-left", action: () => this.recoverModel(modelData) });
+        items.push(deleteItem);
+      }
+      return items;
+    }
+    items.push({ text: this.translations.get("Open"), icon: "fa-light fa-arrow-up-right-from-square", action: () => this.openModel(modelData) });
+    items.push({ text: this.translations.get("Open in new tab"), icon: "fa-light fa-up-right-from-square", action: () => this.openModelInNewTab(modelData) });
+    items.push({ text: this.translations.get("Copy link"), icon: "fa-light fa-link", action: () => this.copyModelLink(modelData) });
+    if (canEdit) {
+      items.push({ text: this.translations.get("Edit model"), icon: "fa-light fa-pen", beginGroup: true, action: () => this.showEditModelPopup(modelData) });
+      items.push({
+        text: isPublic ? this.translations.get("Make private") : this.translations.get("Make public"),
+        icon: isPublic ? "fa-light fa-lock" : "fa-light fa-lock-open",
+        action: () => this.toggleVisibility(modelData)
+      });
+    }
+    if (canManageSample)
+      items.push({
+        text: isSample ? this.translations.get("Remove from samples") : this.translations.get("Set as sample"),
+        icon: "fa-light fa-flask-vial",
+        action: () => this.toggleSample(modelData)
+      });
+    if (canEdit) items.push(deleteItem);
+    return items;
+  }
+
+  ensureModelCardMenu() {
+    if (this.modelCardMenuInstance) return this.modelCardMenuInstance;
+    if (!window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxContextMenu) return null;
+    const menuHost = this.createNodeFromMarkup(`<div class="card-menu-host"></div>`);
+    if (!menuHost) return null;
+    document.body.appendChild(menuHost);
+    this.modelCardMenuHost = menuHost;
+    this.modelCardMenuInstance = $(menuHost).dxContextMenu({
+      items: [],
+      showEvent: null,
+      cssClass: "card-menu",
+      itemTemplate: itemData => `<div class="card-menu-item${itemData.danger ? " card-menu-item--danger" : ""}">
+        <i class="${itemData.icon}" aria-hidden="true"></i>
+        <span>${this.escapeHtml(itemData.text)}</span>
+      </div>`,
+      onItemClick: event => {
+        if (typeof event.itemData?.action === "function") event.itemData.action();
+      }
+    }).dxContextMenu("instance");
+    return this.modelCardMenuInstance;
+  }
+
+  showModelCardMenu(anchorElement, items) {
+    const menu = this.ensureModelCardMenu();
+    if (!menu || !anchorElement) return;
+    const showAtAnchor = () => {
+      menu.option("items", items);
+      menu.option("target", anchorElement);
+      menu.option("position", { my: "top right", at: "bottom right", of: anchorElement, offset: "0 6" });
+      menu.show();
+    };
+    if (menu.option("visible")) Promise.resolve(menu.hide()).then(showAtAnchor);
+    else showAtAnchor();
+  }
+
+  disposeModelCardMenu() {
+    if (this.modelCardMenuInstance) {
+      this.modelCardMenuInstance.dispose();
+      this.modelCardMenuInstance = null;
+    }
+    if (this.modelCardMenuHost) {
+      this.modelCardMenuHost.remove();
+      this.modelCardMenuHost = null;
+    }
   }
 
   disposeVideosCardView() {
@@ -2586,9 +2637,6 @@ class ModelsApp {
           if (event.row?.rowType !== "data")
             return;
           const model = event.row.data;
-          const modelUrl = new URL("/pages/board/index.html", window.location.origin);
-          modelUrl.searchParams.set("model_id", model.id);
-          const link = modelUrl.toString();
           event.items = [
             {
               text: this.translations.get("Open"),
@@ -2598,12 +2646,12 @@ class ModelsApp {
             {
               text: this.translations.get("Open in new tab"),
               icon: "fa-light fa-up-right-from-square",
-              onItemClick: () => window.open(link, "_blank")
+              onItemClick: () => this.openModelInNewTab(model)
             },
             {
               text: this.translations.get("Copy link"),
               icon: "fa-light fa-link",
-              onItemClick: () => navigator.clipboard.writeText(link)
+              onItemClick: () => this.copyModelLink(model)
             }
           ];
         }
@@ -3582,6 +3630,14 @@ class ModelsApp {
     return this.userSdk.hasFeatureFlag(maintenanceAccessFeatureFlagKey);
   }
 
+  // Only the model owner and maintenance users may edit, delete or recover a model.
+  canManageModel(modelData) {
+    if (!modelData) return false;
+    if (this.canAccessMaintenance()) return true;
+    const currentUserId = this.userSdk.getUserId(this.state.session);
+    return Boolean(currentUserId && modelData.created_by === currentUserId);
+  }
+
   // Builds the education/science child nodes from server-provided facet counts
   // so the tree never has to load the full catalog into memory.
   buildGroupedPublicItems(type, options = {}) {
@@ -4412,6 +4468,10 @@ class ModelsApp {
       this.setStatus(this.translations.get("Sign-in required to delete a model."), true);
       return;
     }
+    if (!this.canManageModel(modelData)) {
+      this.setStatus(this.translations.get("Only the owner can delete this model."), true);
+      return;
+    }
     const isPermanentDelete = modelData.is_deleted === true || modelData.is_deleted === 1;
     if (isPermanentDelete) {
       const confirmed = await this.confirmPermanentDelete();
@@ -4550,13 +4610,46 @@ class ModelsApp {
       this.deletePopupInstance.show();
     });
   }
-  openModel(model) {
-    if (!model || !model.id) return;
+  getModelLink(model) {
+    if (!model || !model.id) return "";
     const isNotebook = model.model_kind === "notebook";
     const editorPage = isNotebook ? "/pages/notebook/index.html" : "/pages/board/index.html";
     const url = new URL(editorPage, window.location.origin);
     url.searchParams.set("model_id", model.id);
-    window.location.href = url.toString();
+    return url.toString();
+  }
+  openModel(model) {
+    const link = this.getModelLink(model);
+    if (!link) return;
+    window.location.href = link;
+  }
+  openModelInNewTab(model) {
+    const link = this.getModelLink(model);
+    if (!link) return;
+    window.open(link, "_blank", "noopener");
+  }
+  async copyModelLink(model) {
+    const link = this.getModelLink(model);
+    if (!link) return;
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(link);
+      else this.copyTextFallback(link);
+      this.setStatus(this.translations.get("Link copied."));
+    } catch (error) {
+      this.setStatus(error && error.message ? error.message : this.translations.get("Failed to copy link."), true);
+    }
+  }
+  copyTextFallback(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.setAttribute("readonly", "");
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.select();
+    const copied = document.execCommand("copy");
+    textArea.remove();
+    if (!copied) throw new Error(this.translations.get("Failed to copy link."));
   }
   async loadUnreadNotificationCount() {
     try {
