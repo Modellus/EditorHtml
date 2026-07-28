@@ -191,14 +191,6 @@ var ShapeContextToolbarMixin = {
         if (this.contextToolbar)
             this.contextToolbar.classList.remove("visible");
     },
-    isContextToolbarVisible() {
-        return this.contextToolbar?.classList.contains("visible") === true;
-    },
-    refreshContextToolbar() {
-        if (!this.isContextToolbarVisible())
-            return;
-        this.showContextToolbar();
-    },
     positionContextToolbar() {
         if (!this.contextToolbar)
             return;

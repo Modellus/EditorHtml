@@ -130,7 +130,7 @@ class Canvas {
         this.markDirty(shape);
         this.dispatchShapeEvent("shapeChanged", shape);
         if (this.selection.selectedShape === shape) {
-            shape.refreshContextToolbar();
+            shape.showContextToolbar();
             // Property commands (drag/resize commits, property-panel edits,
             // and their undo/redo) move the shape without going through
             // Selection.select()/setDragging(), which are the only other
