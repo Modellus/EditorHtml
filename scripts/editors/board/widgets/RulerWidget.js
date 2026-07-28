@@ -158,15 +158,22 @@ class RulerShape extends BaseShape {
         this.clearLayerChildren(this.majorTicksLayer);
         this.clearLayerChildren(this.labelsLayer);
         const topY = geometry.y + 1;
-        const minorBottomY = geometry.y + geometry.height * 0.38;
-        const middleMinorBottomY = geometry.y + geometry.height * 0.48;
         const majorBottomY = geometry.y + geometry.height * 0.58;
         const labelsY = majorBottomY + 12;
         if (this.isLogarithmic()) {
-            this.drawLogarithmicTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY);
+            this.drawLogarithmicTicks(geometry, topY, majorBottomY, labelsY);
         } else {
-            this.drawLinearTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY);
+            this.drawLinearTicks(geometry, topY, majorBottomY, labelsY);
         }
+    }
+
+    // Every tick hangs from the same top edge; the shared style decides how far
+    // down it reaches and how strongly it reads.
+    addAxisTick(x, topY, majorBottomY, kind) {
+        const style = axisTickStyle(kind);
+        const layer = kind === "major" ? this.majorTicksLayer : this.minorTicksLayer;
+        const bottomY = topY + (majorBottomY - topY) * style.lengthRatio;
+        this.addTickLine(layer, x, topY, bottomY, style.strokeWidth, kind === "major" ? undefined : style.opacity);
     }
 
     getLinearTickStep(minimum, maximum) {
@@ -368,34 +375,26 @@ class RulerShape extends BaseShape {
         );
     }
 
-    drawLinearTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY) {
+    drawLinearTicks(geometry, topY, majorBottomY, labelsY) {
         const minimum = Number.isFinite(Number(this.properties.minimum)) ? Number(this.properties.minimum) : 0;
         const maximum = Number.isFinite(Number(this.properties.maximum)) ? Number(this.properties.maximum) : 10;
         const range = maximum - minimum;
         this.forEachLinearMajorTick(minimum, maximum, geometry, (tickValue, pixelFromLeft, i, step) => {
             const majorX = geometry.left + pixelFromLeft;
-            this.addTickLine(this.majorTicksLayer, majorX, topY, majorBottomY, 1.2);
+            this.addAxisTick(majorX, topY, majorBottomY, "major");
             this.addTickLabel(majorX, labelsY, this.formatModelValue(tickValue));
             if (i === null) return;
-            const minorDivisions = minorTickDivisions((step / range) * geometry.usableWidth);
-            if (minorDivisions < 2) return;
-            const minorStep = step / minorDivisions;
-            for (let minorIndex = 1; minorIndex < minorDivisions; minorIndex++) {
-                const minorValue = tickValue + minorIndex * minorStep;
-                if (minorValue > maximum + step * 1e-6) break;
+            const divisions = minorTickDivisions((step / range) * geometry.usableWidth);
+            forEachMinorTick(tickValue, step, divisions, (minorValue, isMiddle) => {
+                if (minorValue > maximum + step * 1e-6) return;
                 const minorX = geometry.left + ((minorValue - minimum) / range) * geometry.usableWidth;
-                if (minorX >= geometry.right)
-                    break;
-                const isMiddleMinorTick = minorIndex === minorDivisions / 2;
-                const tickBottomY = isMiddleMinorTick ? middleMinorBottomY : minorBottomY;
-                const tickWidth = isMiddleMinorTick ? 1.1 : 1;
-                const tickOpacity = isMiddleMinorTick ? 0.5 : 0.25;
-                this.addTickLine(this.minorTicksLayer, minorX, topY, tickBottomY, tickWidth, tickOpacity);
-            }
+                if (minorX >= geometry.right) return;
+                this.addAxisTick(minorX, topY, majorBottomY, isMiddle ? "middleMinor" : "minor");
+            });
         });
     }
 
-    drawLogarithmicTicks(geometry, topY, minorBottomY, middleMinorBottomY, majorBottomY, labelsY) {
+    drawLogarithmicTicks(geometry, topY, majorBottomY, labelsY) {
         const minimum = Number(this.properties.minimum);
         const maximum = Number(this.properties.maximum);
         if (!Number.isFinite(minimum) || !Number.isFinite(maximum) || minimum <= 0 || maximum <= minimum)
@@ -405,12 +404,10 @@ class RulerShape extends BaseShape {
         for (const tick of ticks) {
             const x = geometry.left + tick.pixelPosition;
             if (tick.type === "major") {
-                this.addTickLine(this.majorTicksLayer, x, topY, majorBottomY, 1.2);
+                this.addAxisTick(x, topY, majorBottomY, "major");
                 this.addTickLabel(x, labelsY, tick.label);
-            } else if (tick.isMiddle) {
-                this.addTickLine(this.minorTicksLayer, x, topY, middleMinorBottomY, 1.1, 0.50);
             } else {
-                this.addTickLine(this.minorTicksLayer, x, topY, minorBottomY, 1.0, 0.25);
+                this.addAxisTick(x, topY, majorBottomY, tick.isMiddle ? "middleMinor" : "minor");
             }
         }
     }

@@ -101,6 +101,95 @@ function minorTickDivisions(majorSpacingPixels, minimumSpacingPixels = 5) {
     return 1;
 }
 
+// Lays out the major tick values of an axis on a grid of "nice" steps covering
+// [minValue, maxValue]. The anchor decides where that grid starts: "inside" keeps
+// every tick within the range (the referential), while "outside" starts on the
+// last multiple at or before the minimum (the chart, which clips its own edges).
+function buildNiceTickValues(minValue, maxValue, targetCount = 5, { axisType = "decimal", anchor = "inside" } = {}) {
+    const ticks = [];
+    if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || minValue >= maxValue)
+        return ticks;
+    const rawStep = (maxValue - minValue) / Math.max(1, targetCount - 1);
+    const step = axisType === "pi" ? nicePiTickStep(rawStep) : niceTickStep(rawStep);
+    if (!(step > 0))
+        return ticks;
+    const firstTick = anchor === "outside" ? Math.floor(minValue / step) * step : Math.ceil(minValue / step) * step;
+    for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
+        ticks.push(Math.round(value * 1e10) / 1e10);
+    return ticks;
+}
+
+// Picks a "nice" major-tick step for an axis of the given length, aiming to keep
+// consecutive major ticks at least minimumSpacingPixels apart.
+function niceAxisTickStep(range, lengthPixels, minimumSpacingPixels = 24, axisType = "decimal") {
+    if (!Number.isFinite(range) || range <= 0 || !(lengthPixels > 0))
+        return 0;
+    const maximumTicks = Math.max(1, Math.floor(lengthPixels / Math.max(1, minimumSpacingPixels)));
+    const rawStep = range / maximumTicks;
+    return axisType === "pi" ? nicePiTickStep(rawStep) : niceTickStep(rawStep);
+}
+
+// Walks the minor ticks that subdivide the major interval starting at startValue,
+// calling cb(value, isMiddle) for each. The middle tick is flagged so renderers can
+// draw it slightly taller, which is how every axis in the editor marks the half-way
+// point of a major interval.
+function forEachMinorTick(startValue, step, divisions, cb) {
+    if (!(step > 0) || !(divisions >= 2))
+        return;
+    for (let index = 1; index < divisions; index++)
+        cb(startValue + (index * step) / divisions, index * 2 === divisions);
+}
+
+// Shared look of the three tick kinds, expressed relative to the major tick so
+// every axis (ruler, slope, slider) draws the same hierarchy whatever its size.
+const AXIS_TICK_STYLES = {
+    major: { lengthRatio: 1, strokeWidth: 1.2, opacity: 1 },
+    middleMinor: { lengthRatio: 48 / 58, strokeWidth: 1.1, opacity: 0.5 },
+    minor: { lengthRatio: 38 / 58, strokeWidth: 1, opacity: 0.25 }
+};
+
+function axisTickStyle(kind) {
+    return AXIS_TICK_STYLES[kind] ?? AXIS_TICK_STYLES.minor;
+}
+
+// Builds the major and minor tick marks of a linear axis running from minimum to
+// maximum over lengthPixels. Major ticks sit on a grid of `step` value units,
+// anchored either at the axis minimum or at whole multiples of the step ("nice"),
+// and each interval is subdivided whenever the minor ticks stay at least
+// minorSpacingPixels apart. preferredDivisions wins over the automatic count when
+// it fits, which lets a consumer align the minor ticks with its own increment.
+// Returns [{ value, ratio, pixel, kind }] with kind in major/middleMinor/minor.
+function buildLinearTickMarks({ minimum, maximum, lengthPixels, step, anchor = "minimum", preferredDivisions = 0, minorSpacingPixels = 5, maximumMajorTicks = 200 } = {}) {
+    const marks = [];
+    const range = maximum - minimum;
+    if (!Number.isFinite(range) || range <= 0 || !(step > 0) || !(lengthPixels > 0))
+        return marks;
+    const majorSpacingPixels = (step / range) * lengthPixels;
+    let divisions = minorTickDivisions(majorSpacingPixels, minorSpacingPixels);
+    if (preferredDivisions >= 2 && majorSpacingPixels / preferredDivisions >= minorSpacingPixels)
+        divisions = preferredDivisions;
+    const epsilon = step * 1e-6;
+    const firstMajor = anchor === "nice" ? Math.ceil((minimum - epsilon) / step) * step : minimum;
+    const majorCount = Math.floor((maximum - firstMajor + epsilon) / step);
+    if (majorCount < 0 || majorCount > maximumMajorTicks)
+        return marks;
+    const addMark = (value, kind) => {
+        if (value < minimum - epsilon || value > maximum + epsilon)
+            return;
+        const ratio = (value - minimum) / range;
+        marks.push({ value: value, ratio: ratio, pixel: ratio * lengthPixels, kind: kind });
+    };
+    // The grid starts at the first major tick, so the interval below it still owes
+    // its minor ticks to the stretch of axis before that tick.
+    forEachMinorTick(firstMajor - step, step, divisions, (value, isMiddle) => addMark(value, isMiddle ? "middleMinor" : "minor"));
+    for (let index = 0; index <= majorCount; index++) {
+        const majorValue = firstMajor + index * step;
+        addMark(majorValue, "major");
+        forEachMinorTick(majorValue, step, divisions, (value, isMiddle) => addMark(value, isMiddle ? "middleMinor" : "minor"));
+    }
+    return marks;
+}
+
 function tickHitExtents(pixelPositions, maxHalfExtent) {
     const order = pixelPositions.map((_, index) => index).sort((a, b) => pixelPositions[a] - pixelPositions[b]);
     const extents = new Array(pixelPositions.length).fill(maxHalfExtent);

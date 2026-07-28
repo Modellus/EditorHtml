@@ -9,7 +9,7 @@ class DataTableShape extends BaseValueTableShape {
 
     setDefaults() {
         super.setDefaults();
-        this.properties.name = this.board.translations.get("Data Table Name") ?? "Experiment";
+        this.properties.name = this.board.translations.get("Data Table Name") ?? "Data Analysis";
         this.properties.externalData = null;
         this.properties.originalExternalData = null;
         this.properties.dataCase = 1;

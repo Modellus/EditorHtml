@@ -367,18 +367,7 @@ class ChartControl {
     }
 
     buildTicks(minValue, maxValue, targetCount = 5, axisType = "decimal") {
-        const ticks = [];
-        if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || minValue >= maxValue)
-            return ticks;
-        const range = maxValue - minValue;
-        const rawStep = range / Math.max(1, targetCount - 1);
-        const step = axisType === "pi" ? nicePiTickStep(rawStep) : niceTickStep(rawStep);
-        if (!(step > 0))
-            return ticks;
-        const firstTick = Math.floor(minValue / step) * step;
-        for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
-            ticks.push(Math.round(value * 1e10) / 1e10);
-        return ticks;
+        return buildNiceTickValues(minValue, maxValue, targetCount, { axisType: axisType, anchor: "outside" });
     }
 
     injectPinnedTick(ticks, pinnedValue, domainMin, domainMax) {
@@ -398,18 +387,17 @@ class ChartControl {
         const step = majorTicks[1] - majorTicks[0];
         if (!Number.isFinite(step) || step <= 0 || subdivisions <= 1)
             return ticks;
-        const minorStep = step / subdivisions;
         const firstMajor = majorTicks[0];
         const extendedStart = firstMajor - step;
         const lastMajor = majorTicks[majorTicks.length - 1];
         for (let majorStart = extendedStart; majorStart <= lastMajor + step * 0.001; majorStart += step) {
             const majorStartRounded = Math.round(majorStart * 1e10) / 1e10;
-            for (let minorIndex = 1; minorIndex < subdivisions; minorIndex++) {
-                const tickValue = Math.round((majorStartRounded + minorStep * minorIndex) * 1e10) / 1e10;
+            forEachMinorTick(majorStartRounded, step, subdivisions, minorValue => {
+                const tickValue = Math.round(minorValue * 1e10) / 1e10;
                 if (tickValue <= minValue || tickValue >= maxValue)
-                    continue;
+                    return;
                 ticks.push(tickValue);
-            }
+            });
         }
         return ticks;
     }

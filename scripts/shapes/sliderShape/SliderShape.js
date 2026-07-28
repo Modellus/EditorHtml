@@ -1,4 +1,11 @@
 class SliderShape extends BaseShape {
+
+    static scaleLabelFontSize = 9;
+    // Length of a major tick; the minor kinds scale down from it through AXIS_TICK_STYLES.
+    static majorTickLength = 5;
+    // Two centred labels need this much room between their axis positions to stay apart.
+    static scaleLabelHeight = 11;
+
     constructor(board, parent, id) {
         super(board, null, id);
         this._tickDragState = null;
@@ -79,6 +86,17 @@ class SliderShape extends BaseShape {
             {
                 text: "Style",
                 buildControl: $container => $container.append(this.createSliderStyleButtonGroup())
+            },
+            {
+                text: "Ticks",
+                buildControl: $container => {
+                    $('<div>').appendTo($container).dxSwitch({
+                        value: this.showsTicks(),
+                        onValueChanged: e => {
+                            this.setPropertyCommand("showTicks", e.value);
+                        }
+                    });
+                }
             },
             {
                 text: "Auto Scale",
@@ -178,6 +196,7 @@ class SliderShape extends BaseShape {
         this.properties.maximum = 10;
         this.properties.showMinimumValue = true;
         this.properties.showMaximumValue = true;
+        this.properties.showTicks = true;
         this.properties.fillColor = this.board.theme.getBackgroundColors()[3].color;
         this.properties.precision = 0;
         this.properties.positiveColor = this.properties.foregroundColor;
@@ -187,6 +206,11 @@ class SliderShape extends BaseShape {
 
     getSliderStyle() {
         return this.properties.sliderStyle === "classic" ? "classic" : "bar";
+    }
+
+    // Sliders saved before the toolbar switch existed carry no flag and keep their ticks.
+    showsTicks() {
+        return this.properties.showTicks !== false;
     }
 
     isClassicStyle() {
@@ -329,6 +353,12 @@ class SliderShape extends BaseShape {
         return this.properties.negativeColor ?? this.getPositiveColor();
     }
 
+    // The handle reads as part of the slider's frame, not of the value it carries,
+    // so it keeps the foreground color instead of the fill's positive/negative one.
+    getHandleColor() {
+        return this.properties.foregroundColor ?? this.getPositiveColor();
+    }
+
     buildSliderConfig() {
         const term = this.properties.term;
         const caseNumber = this.getCaseNumber();
@@ -342,6 +372,7 @@ class SliderShape extends BaseShape {
         const range = this.getAutoRange(term, caseNumber, value, manualRange);
         const normalizedValue = this.clamp(value, range.minimum, range.maximum);
         const fillColor = normalizedValue < 0 ? this.getNegativeColor() : this.getPositiveColor();
+        const handleColor = this.getHandleColor();
         return {
             isBoundTerm,
             caseNumber,
@@ -352,7 +383,10 @@ class SliderShape extends BaseShape {
             splitterOffset: this.getSplitterOffsetFromValue(normalizedValue, range.minimum, range.maximum),
             zeroOffset: this.getSplitterOffsetFromValue(0, range.minimum, range.maximum),
             fillColor: fillColor,
-            splitterColor: Utils.darkenColor(fillColor, 0.35),
+            handleColor: handleColor,
+            // A ring in the contrasting color keeps the handle readable wherever it
+            // lands - over the rail's fill, the background, or a tick.
+            handleBorderColor: Utils.getContrastColor(handleColor),
             backgroundColor: this.properties.backgroundColor,
             borderColor: this.getBorderColor(),
             draggable: this.isInteractable() && !this.isTermLocked("term")
@@ -365,8 +399,12 @@ class SliderShape extends BaseShape {
         const classic = config.style === "classic";
         if (this.container) {
             this.container.setAttribute("fill", "none");
-            this.container.setAttribute("stroke", config.borderColor);
-            this.container.setAttribute("visibility", classic ? "hidden" : "visible");
+            // The rectangle is the slider's hit area whatever the style, so the
+            // classic rail is hovered and picked over its whole frame too - it only
+            // drops the visible border.
+            this.container.setAttribute("stroke", classic ? "none" : config.borderColor);
+            this.container.setAttribute("pointer-events", "all");
+            this.container.setAttribute("visibility", "visible");
         }
         if (this.topPart) {
             this.topPart.setAttribute("fill", config.backgroundColor);
@@ -381,12 +419,12 @@ class SliderShape extends BaseShape {
             this.fillPart.setAttribute("stroke", "none");
         }
         if (this.splitter) {
-            this.splitter.setAttribute("stroke", config.splitterColor);
+            this.splitter.setAttribute("stroke", config.handleColor);
             this.splitter.setAttribute("visibility", !classic && config.draggable ? "visible" : "hidden");
         }
         if (this.thumb) {
-            this.thumb.setAttribute("fill", config.fillColor);
-            this.thumb.setAttribute("stroke", config.splitterColor);
+            this.thumb.setAttribute("fill", config.handleColor);
+            this.thumb.setAttribute("stroke", config.handleBorderColor);
             this.thumb.setAttribute("stroke-width", 1.5);
             this.thumb.setAttribute("visibility", classic ? "visible" : "hidden");
         }
@@ -552,23 +590,20 @@ class SliderShape extends BaseShape {
             this.ticksGroup.removeChild(this.ticksGroup.firstChild);
         const config = this._sliderConfig ?? this.buildSliderConfig();
         const classic = this.isClassicStyle();
-        const range = config.maximum - config.minimum;
-        const precision = Number(this.properties.precision);
-        if (range > 0 && precision > 0) {
-            const ratios = this._getTickRatios(range, precision, sliderHeight);
+        const geometry = this.getTickGeometry(trackX, trackWidth);
+        if (this.showsTicks() && geometry.majorLength > 0) {
             const borderColor = config.borderColor || "#999";
-            const tickX = classic ? trackX - 4 : trackX;
-            const tickLength = classic ? trackWidth + 8 : Math.min(6, trackWidth * 0.15);
-            for (const ratio of ratios) {
-                const y = sliderHeight - ratio * sliderHeight;
+            for (const mark of this.getTickMarks(config, sliderHeight)) {
+                const style = axisTickStyle(mark.kind);
+                const y = sliderHeight - mark.pixel;
                 const tick = this.board.createSvgElement("line");
-                tick.setAttribute("x1", tickX);
+                tick.setAttribute("x1", geometry.x);
                 tick.setAttribute("y1", y);
-                tick.setAttribute("x2", tickX + tickLength);
+                tick.setAttribute("x2", geometry.x + geometry.majorLength * style.lengthRatio);
                 tick.setAttribute("y2", y);
                 tick.setAttribute("stroke", borderColor);
-                tick.setAttribute("stroke-width", 0.5);
-                tick.setAttribute("opacity", "0.5");
+                tick.setAttribute("stroke-width", style.strokeWidth);
+                tick.setAttribute("stroke-opacity", style.opacity);
                 this.ticksGroup.appendChild(tick);
             }
         }
@@ -583,48 +618,87 @@ class SliderShape extends BaseShape {
             return;
         while (this.scaleLabelsGroup.firstChild)
             this.scaleLabelsGroup.removeChild(this.scaleLabelsGroup.firstChild);
-        const labelX = this.isClassicStyle() ? trackX + trackWidth + 10 : trackX + 8;
+        // The values read on the same side as the ticks: past the tick ends of the
+        // classic rail, and outside the left border of the bar style.
+        const geometry = this.getTickGeometry(trackX, trackWidth);
+        const classic = this.isClassicStyle();
+        const labelX = classic ? geometry.x + geometry.majorLength + 3 : -4;
+        const anchor = classic ? "start" : "end";
         const showMaximum = this.properties.showMaximumValue === true;
         const showMinimum = this.properties.showMinimumValue === true;
+        // Each value reads against its own spot on the axis, so it is centred on
+        // the tick line it names rather than tucked inside the slider ends.
         if (showMaximum)
-            this.appendScaleLabel(this.formatModelValue(config.maximum), labelX, 11);
+            this.appendScaleLabel(this.formatScaleValue(config.maximum), labelX, 0, anchor);
         if (showMinimum)
-            this.appendScaleLabel(this.formatModelValue(config.minimum), labelX, sliderHeight - 5);
+            this.appendScaleLabel(this.formatScaleValue(config.minimum), labelX, sliderHeight, anchor);
         if (zeroInsideRange) {
-            const clearOfMaximum = !showMaximum || zeroY > 22;
-            const clearOfMinimum = !showMinimum || zeroY < sliderHeight - 16;
+            const clearOfMaximum = !showMaximum || zeroY > SliderShape.scaleLabelHeight;
+            const clearOfMinimum = !showMinimum || zeroY < sliderHeight - SliderShape.scaleLabelHeight;
             if (clearOfMaximum && clearOfMinimum)
-                this.appendScaleLabel("0", labelX, zeroY - 3);
+                this.appendScaleLabel("0", labelX, zeroY, anchor);
         }
     }
 
-    appendScaleLabel(text, x, y) {
+    // Zero marks an exact spot on the axis, so it never carries the scale precision.
+    formatScaleValue(value) {
+        if (Number(value) === 0)
+            return "0";
+        return this.formatModelValue(value);
+    }
+
+    // y is the axis position the value marks; the digits are centred on it.
+    appendScaleLabel(text, x, y, anchor = "end") {
         const label = this.board.createSvgElement("text");
         label.setAttribute("class", "shape-tick-label");
         label.setAttribute("x", x);
         label.setAttribute("y", y);
-        label.setAttribute("text-anchor", "start");
+        label.setAttribute("dy", "0.35em");
+        label.setAttribute("text-anchor", anchor);
         label.setAttribute("fill", this.properties.foregroundColor);
         label.setAttribute("font-family", "KaTeX_Main");
-        label.setAttribute("font-size", "9");
+        label.setAttribute("font-size", SliderShape.scaleLabelFontSize);
         label.textContent = text;
         this.scaleLabelsGroup.appendChild(label);
     }
 
-    _getTickRatios(range, precision, sliderHeight) {
-        const ratios = [];
-        const precisionTickCount = Math.floor(range / precision);
-        if (precisionTickCount > 0 && sliderHeight / precisionTickCount >= 5) {
-            for (let i = 0; i <= precisionTickCount; i++)
-                ratios.push((i * precision) / range);
-            return ratios;
-        }
-        const divisions = minorTickDivisions(sliderHeight);
-        if (divisions < 2)
-            return ratios;
-        for (let i = 0; i <= divisions; i++)
-            ratios.push(i / divisions);
-        return ratios;
+    // Ticks grow straight out of the track: from the right edge of the thin
+    // classic rail, and from just inside the left border of the bar style.
+    getTickGeometry(trackX, trackWidth) {
+        const sliderWidth = Number(this.properties.width) || 0;
+        const majorLength = SliderShape.majorTickLength;
+        if (!this.isClassicStyle())
+            return { x: trackX, majorLength: Math.max(0, Math.min(majorLength, trackWidth * 0.175)) };
+        const x = trackX + trackWidth;
+        return { x: x, majorLength: Math.max(0, Math.min(majorLength, sliderWidth - 1 - x)) };
+    }
+
+    // Major ticks land on round values, and the precision — the increment the
+    // slider snaps to — drives the minor ticks whenever they still fit.
+    getTickMarks(config, sliderHeight) {
+        const range = config.maximum - config.minimum;
+        const step = this.getMajorTickStep(range, sliderHeight);
+        const precision = Number(this.properties.precision);
+        return buildLinearTickMarks({
+            minimum: config.minimum,
+            maximum: config.maximum,
+            lengthPixels: sliderHeight,
+            step: step,
+            anchor: "nice",
+            preferredDivisions: precision > 0 ? Math.round(step / precision) : 0
+        });
+    }
+
+    getMajorTickStep(range, sliderHeight) {
+        const step = niceAxisTickStep(range, sliderHeight, 22);
+        const precision = Number(this.properties.precision);
+        if (!(step > 0) || !(precision > 0))
+            return step;
+        // Ticks are only worth showing where the slider can actually stop, so the
+        // major grid stays on multiples of the snapping precision — unless the
+        // precision is coarser than the whole scale, which would leave no ticks.
+        const alignedStep = Math.max(precision, Math.round(step / precision) * precision);
+        return alignedStep <= range ? alignedStep : step;
     }
 
     _getSliderTickData(sliderHeight, config) {

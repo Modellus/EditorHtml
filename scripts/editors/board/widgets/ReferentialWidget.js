@@ -831,18 +831,7 @@ class ReferentialShape extends BaseShape {
     }
 
     buildTicks(minValue, maxValue, targetCount = 5) {
-        const ticks = [];
-        if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || minValue >= maxValue)
-            return ticks;
-        const range = maxValue - minValue;
-        const rawStep = range / Math.max(1, targetCount - 1);
-        const step = niceTickStep(rawStep);
-        if (!(step > 0))
-            return ticks;
-        const firstTick = Math.ceil(minValue / step) * step;
-        for (let value = firstTick; value <= maxValue + step * 0.001; value += step)
-            ticks.push(Math.round(value * 1e10) / 1e10);
-        return ticks;
+        return buildNiceTickValues(minValue, maxValue, targetCount);
     }
 
     computeTickStep(axisLength, scale) {

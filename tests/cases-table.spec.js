@@ -517,7 +517,7 @@ test.describe('Cases table', () => {
             const items = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item .mdl-dropdown-list-label'));
             return items.map(item => item.textContent.trim());
         });
-        expect(menuState).toEqual(['Table', 'Scenarios', 'Experiment']);
+        expect(menuState).toEqual(['Table', 'Scenarios', 'Data Analysis']);
 
         await page.click('.mdl-shape-overlay-popup .dx-list-item:nth-child(2)');
         await page.waitForTimeout(300);

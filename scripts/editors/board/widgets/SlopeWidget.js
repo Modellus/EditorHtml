@@ -226,75 +226,67 @@ class SlopeShape extends BaseShape {
         this.labelsLayer.appendChild(label);
     }
 
+    // Ticks all start on the axis line; the shared style sets how deep into the
+    // band each kind reaches, so the hierarchy matches the ruler and the slider.
+    getTickEnd(start, direction, thickness, kind) {
+        return start + direction * thickness * 0.58 * axisTickStyle(kind).lengthRatio;
+    }
+
     drawHorizontalTicks(geometry) {
         const startY = geometry.cornerY + geometry.tickDirectionY;
-        const minorEndY = geometry.cornerY + geometry.tickDirectionY * geometry.thickness * 0.38;
-        const middleMinorEndY = geometry.cornerY + geometry.tickDirectionY * geometry.thickness * 0.48;
-        const majorEndY = geometry.cornerY + geometry.tickDirectionY * geometry.thickness * 0.58;
+        const majorEndY = this.getTickEnd(geometry.cornerY, geometry.tickDirectionY, geometry.thickness, "major");
         const labelsY = majorEndY + (geometry.tickDirectionY === 1 ? 12 : -5);
         const minimum = this.getAxisMinimum("horizontal");
         const maximum = this.getAxisMaximum("horizontal");
         const range = maximum - minimum;
         this.forEachLinearMajorTick("horizontal", minimum, maximum, geometry.horizontalUsable, (tickValue, pixelFromOrigin, i, step) => {
             const majorX = geometry.cornerX + geometry.horizontalDirection * pixelFromOrigin;
-            this.addTickLine(this.majorTicksLayer, majorX, startY, majorX, majorEndY, 1.2);
+            this.addTickLine(this.majorTicksLayer, majorX, startY, majorX, majorEndY, axisTickStyle("major").strokeWidth);
             this.addTickLabel(majorX, labelsY, "middle", this.formatModelValue(tickValue));
             if (i === null)
                 return;
             const minorDivisions = minorTickDivisions((step / range) * geometry.horizontalUsable);
-            if (minorDivisions < 2)
-                return;
-            const minorStep = step / minorDivisions;
-            for (let minorIndex = 1; minorIndex < minorDivisions; minorIndex++) {
-                const minorValue = tickValue + minorIndex * minorStep;
+            forEachMinorTick(tickValue, step, minorDivisions, (minorValue, isMiddle) => {
                 if (minorValue > maximum + step * 1e-6)
-                    break;
+                    return;
                 const minorPixel = ((minorValue - minimum) / range) * geometry.horizontalUsable;
                 if (minorPixel >= geometry.horizontalUsable)
-                    break;
+                    return;
                 const minorX = geometry.cornerX + geometry.horizontalDirection * minorPixel;
-                const isMiddleMinorTick = minorIndex === minorDivisions / 2;
-                const tickEndY = isMiddleMinorTick ? middleMinorEndY : minorEndY;
-                const tickWidth = isMiddleMinorTick ? 1.1 : 1;
-                const tickOpacity = isMiddleMinorTick ? 0.5 : 0.25;
-                this.addTickLine(this.minorTicksLayer, minorX, startY, minorX, tickEndY, tickWidth, tickOpacity);
-            }
+                const kind = isMiddle ? "middleMinor" : "minor";
+                const style = axisTickStyle(kind);
+                const tickEndY = this.getTickEnd(geometry.cornerY, geometry.tickDirectionY, geometry.thickness, kind);
+                this.addTickLine(this.minorTicksLayer, minorX, startY, minorX, tickEndY, style.strokeWidth, style.opacity);
+            });
         });
     }
 
     drawVerticalTicks(geometry) {
         const startX = geometry.cornerX + geometry.tickDirectionX;
-        const minorEndX = geometry.cornerX + geometry.tickDirectionX * geometry.thickness * 0.38;
-        const middleMinorEndX = geometry.cornerX + geometry.tickDirectionX * geometry.thickness * 0.48;
-        const majorEndX = geometry.cornerX + geometry.tickDirectionX * geometry.thickness * 0.58;
+        const majorEndX = this.getTickEnd(geometry.cornerX, geometry.tickDirectionX, geometry.thickness, "major");
         const labelsX = majorEndX + geometry.tickDirectionX * 8;
         const minimum = this.getAxisMinimum("vertical");
         const maximum = this.getAxisMaximum("vertical");
         const range = maximum - minimum;
         this.forEachLinearMajorTick("vertical", minimum, maximum, geometry.verticalUsable, (tickValue, pixelFromOrigin, i, step) => {
             const majorY = geometry.cornerY + geometry.verticalDirection * pixelFromOrigin;
-            this.addTickLine(this.majorTicksLayer, startX, majorY, majorEndX, majorY, 1.2);
+            this.addTickLine(this.majorTicksLayer, startX, majorY, majorEndX, majorY, axisTickStyle("major").strokeWidth);
             this.addTickLabel(labelsX, majorY, "middle", this.formatModelValue(tickValue), -90);
             if (i === null)
                 return;
             const minorDivisions = minorTickDivisions((step / range) * geometry.verticalUsable);
-            if (minorDivisions < 2)
-                return;
-            const minorStep = step / minorDivisions;
-            for (let minorIndex = 1; minorIndex < minorDivisions; minorIndex++) {
-                const minorValue = tickValue + minorIndex * minorStep;
+            forEachMinorTick(tickValue, step, minorDivisions, (minorValue, isMiddle) => {
                 if (minorValue > maximum + step * 1e-6)
-                    break;
+                    return;
                 const minorPixel = ((minorValue - minimum) / range) * geometry.verticalUsable;
                 if (minorPixel >= geometry.verticalUsable)
-                    break;
+                    return;
                 const minorY = geometry.cornerY + geometry.verticalDirection * minorPixel;
-                const isMiddleMinorTick = minorIndex === minorDivisions / 2;
-                const tickEndX = isMiddleMinorTick ? middleMinorEndX : minorEndX;
-                const tickWidth = isMiddleMinorTick ? 1.1 : 1;
-                const tickOpacity = isMiddleMinorTick ? 0.5 : 0.25;
-                this.addTickLine(this.minorTicksLayer, startX, minorY, tickEndX, minorY, tickWidth, tickOpacity);
-            }
+                const kind = isMiddle ? "middleMinor" : "minor";
+                const style = axisTickStyle(kind);
+                const tickEndX = this.getTickEnd(geometry.cornerX, geometry.tickDirectionX, geometry.thickness, kind);
+                this.addTickLine(this.minorTicksLayer, startX, minorY, tickEndX, minorY, style.strokeWidth, style.opacity);
+            });
         });
     }
 
