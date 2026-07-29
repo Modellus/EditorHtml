@@ -1,6 +1,13 @@
 class MindMapConnectorShape extends BaseShape {
     hideSelectionOutline = true;
 
+    constructor(board, parent, id) {
+        super(board, parent, id);
+        this.toolbarAdapter = {
+            getScreenAnchorPoint: shape => shape.getScreenAnchorPoint()
+        };
+    }
+
     setDefaults() {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Connector Name");
@@ -55,7 +62,91 @@ class MindMapConnectorShape extends BaseShape {
     }
 
     enterEditMode() {
-        return false;
+        this._editedText = this.properties.text;
+        this._isEditingText = true;
+        this.labelElement.setAttribute("contenteditable", "true");
+        this.board.pointerLocked = true;
+        document.addEventListener("mousedown", this._onDocumentMouseDown);
+        this.drawLabel();
+        this.labelElement.focus();
+        document.getSelection().selectAllChildren(this.labelElement);
+        return true;
+    }
+
+    exitEditMode() {
+        this._isEditingText = false;
+        this.labelElement.setAttribute("contenteditable", "false");
+        this.board.pointerLocked = false;
+        this.labelElement.blur();
+        super.exitEditMode();
+        const editedText = this._editedText;
+        this._editedText = null;
+        if (editedText != null && editedText !== this.properties.text)
+            this.setPropertyCommand("text", editedText);
+        this.drawLabel();
+    }
+
+    onLabelInput() {
+        this._editedText = this.labelElement.textContent;
+    }
+
+    onLabelPointerDown(event) {
+        if (this._isEditingText)
+            return;
+        if (this.board.selection.selectedShape !== this)
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        const pointerId = event.pointerId;
+        const startPoint = this.board.getMouseToSvgPoint(event);
+        const threshold = 4;
+        let dragging = false;
+        const onMove = moveEvent => {
+            if (moveEvent.pointerId !== pointerId)
+                return;
+            const point = this.board.getMouseToSvgPoint(moveEvent);
+            if (!dragging) {
+                if (Math.hypot(point.x - startPoint.x, point.y - startPoint.y) <= threshold)
+                    return;
+                dragging = true;
+                this.board.pointerLocked = true;
+                this.dragStart();
+            }
+            this.setProperty("textPosition", this.getPositionAlongPath(point));
+        };
+        const onUp = upEvent => {
+            if (upEvent.pointerId !== pointerId)
+                return;
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+            window.removeEventListener("pointercancel", onUp);
+            if (dragging) {
+                this.board.pointerLocked = false;
+                this.dragEnd();
+            }
+        };
+        window.addEventListener("pointermove", onMove);
+        window.addEventListener("pointerup", onUp);
+        window.addEventListener("pointercancel", onUp);
+    }
+
+    getPositionAlongPath(point) {
+        const totalLength = this.path.getTotalLength();
+        if (!(totalLength > 0))
+            return 0.5;
+        const samples = 100;
+        let closestFraction = this.properties.textPosition;
+        let closestDistance = Infinity;
+        for (let index = 0; index <= samples; index++) {
+            const length = (totalLength * index) / samples;
+            const samplePoint = this.path.getPointAtLength(length);
+            const distance = Math.hypot(samplePoint.x - point.x, samplePoint.y - point.y);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestFraction = index / samples;
+            }
+        }
+        return Math.min(1, Math.max(0, closestFraction));
     }
 
     setProperties(properties) {
@@ -244,9 +335,16 @@ class MindMapConnectorShape extends BaseShape {
         this.path.setAttribute("fill", "none");
         this.path.setAttribute("pointer-events", "none");
         element.appendChild(this.path);
-        this.labelLayer = this.board.createSvgElement("g");
-        this.labelLayer.setAttribute("pointer-events", "none");
-        element.appendChild(this.labelLayer);
+        this.labelForeignObject = this.board.createSvgElement("foreignObject");
+        this.labelForeignObject.setAttribute("width", 0);
+        this.labelForeignObject.setAttribute("height", 0);
+        this.labelForeignObject.setAttribute("pointer-events", "none");
+        element.appendChild(this.labelForeignObject);
+        const labelHost = $('<div class="mdl-mindmap-connector-label-host"><div class="mdl-mindmap-connector-label" contenteditable="false"></div></div>').appendTo(this.labelForeignObject);
+        this.labelHost = labelHost.get(0);
+        this.labelElement = this.labelHost.firstElementChild;
+        this.labelElement.addEventListener("input", () => this.onLabelInput());
+        this.labelElement.addEventListener("pointerdown", event => this.onLabelPointerDown(event));
         return element;
     }
 
@@ -360,17 +458,54 @@ class MindMapConnectorShape extends BaseShape {
         return this.path.getPointAtLength(totalLength * this.properties.textPosition);
     }
 
+    // The base bounding box only spans the endpoints, but a curved/bent path
+    // and its label can bulge well past that box. Anchoring the context
+    // toolbar there would let it land on top of the label, blocking the drag.
+    getScreenAnchorPoint() {
+        if (!this.board?.svg)
+            return null;
+        const ctm = this.board.svg.getScreenCTM();
+        if (!ctm)
+            return null;
+        const startX = this.properties.startX;
+        const startY = this.properties.startY;
+        const endX = this.properties.endX;
+        const endY = this.properties.endY;
+        const points = [{ x: startX, y: startY }, { x: endX, y: endY }, this.getBendPoint(startX, startY, endX, endY)];
+        if (this.properties.text)
+            points.push(this.getLabelPoint());
+        const minX = Math.min(...points.map(point => point.x));
+        const maxX = Math.max(...points.map(point => point.x));
+        const maxY = Math.max(...points.map(point => point.y));
+        const labelClearance = this.properties.text ? 24 : 0;
+        const anchorPoint = new DOMPoint((minX + maxX) / 2, maxY + labelClearance).matrixTransform(ctm);
+        return { centerX: anchorPoint.x, bottomY: anchorPoint.y };
+    }
+
     drawLabel() {
-        if (!this.properties.text) {
-            this.labelLayer.innerHTML = "";
+        const hasText = !!this.properties.text || this._isEditingText;
+        if (!hasText) {
+            this.labelForeignObject.setAttribute("width", 0);
+            this.labelForeignObject.setAttribute("height", 0);
+            this.labelForeignObject.setAttribute("pointer-events", "none");
+            if (this.labelElement.textContent !== "")
+                this.labelElement.textContent = "";
             return;
         }
         const point = this.getLabelPoint();
-        this.labelLayer.innerHTML = Utils.valueBadgeSvgMarkup(this.properties.text, point.x, point.y, {
-            fontSize: this.properties.fontSize,
-            backgroundColor: this.properties.backgroundColor,
-            textColor: this.properties.textColor
-        });
+        const boxWidth = 320;
+        const boxHeight = 44;
+        this.labelForeignObject.setAttribute("x", point.x - boxWidth / 2);
+        this.labelForeignObject.setAttribute("y", point.y - boxHeight / 2);
+        this.labelForeignObject.setAttribute("width", boxWidth);
+        this.labelForeignObject.setAttribute("height", boxHeight);
+        this.labelForeignObject.setAttribute("pointer-events", "all");
+        const badgeColor = Utils.parseColorToRgb(this.properties.backgroundColor ?? "#666666") ?? { red: 102, green: 102, blue: 102 };
+        this.labelElement.style.backgroundColor = `rgba(${badgeColor.red}, ${badgeColor.green}, ${badgeColor.blue}, 0.85)`;
+        this.labelElement.style.color = this.properties.textColor;
+        this.labelElement.style.fontSize = `${this.properties.fontSize}px`;
+        if (!this._isEditingText && this.labelElement.textContent !== this.properties.text)
+            this.labelElement.textContent = this.properties.text;
     }
 }
 

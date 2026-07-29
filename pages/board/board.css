@@ -299,6 +299,33 @@ line.handle.move {
     word-break: break-word;
 }
 
+.mdl-mindmap-connector-label-host {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.mdl-mindmap-connector-label {
+    display: inline-block;
+    max-width: 260px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: "Nunito", sans-serif;
+    text-align: center;
+    white-space: pre-wrap;
+    word-break: break-word;
+    outline: none;
+    cursor: move;
+    pointer-events: auto;
+}
+
+.mdl-mindmap-connector-label[contenteditable="true"] {
+    cursor: text;
+}
+
 .rotation-handle {
     fill: white;
     stroke: #4039d7;

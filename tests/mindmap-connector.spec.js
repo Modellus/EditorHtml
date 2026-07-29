@@ -452,7 +452,7 @@ test.describe('Mind map connectors', () => {
                 startsAtFirst: connector?.properties.startShapeId === first?.id,
                 startRelativeX: connector?.properties.startRelativeX,
                 text: connector?.properties.text,
-                label: connector?.labelLayer.textContent,
+                label: connector?.labelElement.textContent,
                 endTipType: connector?.properties.endTipType,
                 dashed: connector?.path.getAttribute('stroke-dasharray'),
                 pathData: connector?.path.getAttribute('d'),
@@ -554,5 +554,126 @@ test.describe('Mind map connectors', () => {
         expect(attached.indexed).toBe(1);
         expect(attached.endX).toBeCloseTo(430, 5);
         expect(attached.endY).toBeCloseTo(230, 5);
+    });
+
+    test('double clicking a connector edits its text inline and the edit is undoable', async ({ page }) => {
+        await setupEditor(page);
+        await page.evaluate(() => {
+            const connector = shell.board.createShape('MindMapConnectorShape', null);
+            connector.setProperties({ name: 'Labelled', startX: 100, startY: 500, endX: 300, endY: 500, routing: 'straight' });
+            shell.board.addShape(connector, false);
+            shell.board.forceRefresh();
+        });
+        await page.waitForTimeout(200);
+        const centre = await svgClientPoint(page, 200, 500);
+        await page.mouse.dblclick(centre.x, centre.y);
+        await page.waitForTimeout(300);
+        const editing = await page.evaluate(() => {
+            const connector = shell.board.shapes.getByName('Labelled');
+            return {
+                editable: connector.labelElement.getAttribute('contenteditable'),
+                focused: document.activeElement === connector.labelElement,
+                pointerLocked: shell.board.pointerLocked
+            };
+        });
+        expect(editing.editable).toBe('true');
+        expect(editing.focused).toBe(true);
+        expect(editing.pointerLocked).toBe(true);
+        await page.keyboard.type('because');
+        const away = await svgClientPoint(page, 800, 700);
+        await page.mouse.click(away.x, away.y);
+        await page.waitForTimeout(300);
+        const committed = await page.evaluate(() => {
+            const connector = shell.board.shapes.getByName('Labelled');
+            return {
+                text: connector.properties.text,
+                editable: connector.labelElement.getAttribute('contenteditable'),
+                pointerLocked: shell.board.pointerLocked
+            };
+        });
+        expect(committed.text).toBe('because');
+        expect(committed.editable).toBe('false');
+        expect(committed.pointerLocked).toBe(false);
+        await page.evaluate(() => modellus.undo());
+        await page.waitForTimeout(200);
+        const undone = await page.evaluate(() => {
+            const connector = shell.board.shapes.getByName('Labelled');
+            return { text: connector.properties.text, renderedText: connector.labelElement.textContent };
+        });
+        expect(undone.text).toBe('');
+        expect(undone.renderedText).toBe('');
+    });
+
+    test('dragging the connector label along the line moves the text position and is undoable', async ({ page }) => {
+        await setupEditor(page);
+        await page.evaluate(() => {
+            const connector = shell.board.createShape('MindMapConnectorShape', null);
+            connector.setProperties({ name: 'Draggable', startX: 100, startY: 500, endX: 300, endY: 500, routing: 'straight', text: 'label', textPosition: 0.25 });
+            shell.board.addShape(connector, false);
+            shell.board.selectShape(connector);
+            shell.board.forceRefresh();
+        });
+        await page.waitForTimeout(200);
+        const before = await page.evaluate(() => shell.board.shapes.getByName('Draggable').properties.textPosition);
+        expect(before).toBeCloseTo(0.25, 5);
+        const grab = await svgClientPoint(page, 150, 500);
+        const drop = await svgClientPoint(page, 260, 500);
+        await page.mouse.move(grab.x, grab.y);
+        await page.mouse.down();
+        await page.mouse.move(drop.x, drop.y, { steps: 10 });
+        await page.mouse.up();
+        await page.waitForTimeout(250);
+        const after = await page.evaluate(() => {
+            const connector = shell.board.shapes.getByName('Draggable');
+            return { textPosition: connector.properties.textPosition, text: connector.properties.text };
+        });
+        expect(after.textPosition).toBeCloseTo(0.8, 1);
+        expect(after.text).toBe('label');
+        await page.evaluate(() => modellus.undo());
+        await page.waitForTimeout(200);
+        const undone = await page.evaluate(() => shell.board.shapes.getByName('Draggable').properties.textPosition);
+        expect(undone).toBeCloseTo(0.25, 5);
+    });
+
+    test('the label of a default curved connector is not covered by its own context toolbar once selected', async ({ page }) => {
+        await setupEditor(page);
+        await page.evaluate(() => {
+            const connector = shell.board.createShape('MindMapConnectorShape', null);
+            connector.setProperties({ name: 'Default', startX: 100, startY: 300, endX: 400, endY: 300, text: 'because' });
+            shell.board.addShape(connector, false);
+            shell.board.forceRefresh();
+        });
+        await page.waitForTimeout(200);
+        const onCurve = await page.evaluate(() => {
+            const connector = shell.board.shapes.getByName('Default');
+            const total = connector.path.getTotalLength();
+            const point = connector.path.getPointAtLength(total * 0.2);
+            return { x: point.x, y: point.y };
+        });
+        const linePoint = await svgClientPoint(page, onCurve.x, onCurve.y);
+        await page.mouse.click(linePoint.x, linePoint.y);
+        await page.waitForTimeout(300);
+        const selected = await page.evaluate(() => shell.board.selection.selectedShape?.properties.name);
+        expect(selected).toBe('Default');
+        const overlap = await page.evaluate(() => {
+            const connector = shell.board.shapes.getByName('Default');
+            const labelRect = connector.labelElement.getBoundingClientRect();
+            const toolbar = document.querySelector('.shape-context-toolbar.visible');
+            const toolbarRect = toolbar.getBoundingClientRect();
+            return toolbarRect.top < labelRect.bottom;
+        });
+        expect(overlap).toBe(false);
+        const labelRect = await page.evaluate(() => shell.board.shapes.getByName('Default').labelElement.getBoundingClientRect());
+        const labelCenterX = (labelRect.left + labelRect.right) / 2;
+        const labelCenterY = (labelRect.top + labelRect.bottom) / 2;
+        const elementAtLabel = await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.getAttribute('class'), { x: labelCenterX, y: labelCenterY });
+        expect(elementAtLabel).toBe('mdl-mindmap-connector-label');
+        await page.mouse.move(labelCenterX, labelCenterY);
+        await page.mouse.down();
+        await page.mouse.move(labelCenterX + 80, labelCenterY, { steps: 10 });
+        await page.mouse.up();
+        await page.waitForTimeout(250);
+        const after = await page.evaluate(() => shell.board.shapes.getByName('Default').properties.textPosition);
+        expect(after).not.toBeCloseTo(0.5, 1);
     });
 });
