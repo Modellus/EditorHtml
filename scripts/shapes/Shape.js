@@ -23,7 +23,11 @@ class BaseShape {
         ProtractorShape: "fa-light fa-angle",
         SlopeShape: "fa-light fa-ruler-triangle",
         ReferentialShape: "fa-light fa-shapes",
-        GaugeShape: "fa-light fa-gauge"
+        GaugeShape: "fa-light fa-gauge",
+        MindMapBubbleShape: "fa-light fa-comment",
+        MindMapRectangleShape: "fa-light fa-rectangle",
+        MindMapCircleShape: "fa-light fa-circle",
+        MindMapConnectorShape: "fa-light fa-arrow-right-long"
     };
 
     static buildShapeTreeItem(shape) {
@@ -336,6 +340,40 @@ class BaseShape {
             x: position.x + this.properties.width / 2,
             y: position.y + this.properties.height / 2
         };
+    }
+
+    isConnector() {
+        return false;
+    }
+
+    supportsConnectorAttachment() {
+        if (this.isLocked())
+            return false;
+        return Number.isFinite(Number(this.properties.width)) && Number.isFinite(Number(this.properties.height));
+    }
+
+    getConnectorPointForRelativePosition(relativeX, relativeY) {
+        const center = this.getShapeCenter();
+        const rotation = this.getAbsoluteRotation();
+        const offsetX = (relativeX - 0.5) * this.properties.width;
+        const offsetY = (relativeY - 0.5) * this.properties.height;
+        return this.rotatePointAroundCenter(center.x + offsetX, center.y + offsetY, center.x, center.y, rotation);
+    }
+
+    getRelativePositionForConnectorPoint(point) {
+        const center = this.getShapeCenter();
+        const rotation = this.getAbsoluteRotation();
+        const unrotated = this.rotatePointAroundCenter(point.x, point.y, center.x, center.y, -rotation);
+        const relativeX = 0.5 + (unrotated.x - center.x) / this.properties.width;
+        const relativeY = 0.5 + (unrotated.y - center.y) / this.properties.height;
+        return {
+            x: Math.min(1, Math.max(0, relativeX)),
+            y: Math.min(1, Math.max(0, relativeY))
+        };
+    }
+
+    getDrawGesture() {
+        return "box";
     }
 
     // Fixed distance from the shape center — half the unrotated height plus a
@@ -730,7 +768,7 @@ class BaseShape {
     }
 
     getElementUnderMoveHandle(handle, event) {
-        const overlays = this.board.svg.querySelectorAll(".handle, .bounding-box, .hover-outline, .selected-outline, .resize-handle, .rotation-handle");
+        const overlays = this.board.svg.querySelectorAll(".handle, .bounding-box, .hover-outline, .selected-outline, .resize-handle, .rotation-handle, .mdl-connection-target");
         const savedStyles = [];
         overlays.forEach(element => {
             savedStyles.push({ element: element, pointerEvents: element.style.pointerEvents });

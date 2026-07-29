@@ -16,8 +16,6 @@
 //                 shape line width so the glow hugs the shape)
 //   - attributes: geometry attributes for the element, in board coordinates
 class ShapeSelectionOutline {
-    static GLOW_FILTER_ID = "mdl-hover-glow";
-
     constructor(board) {
         this.board = board;
     }
@@ -28,7 +26,7 @@ class ShapeSelectionOutline {
         const primitives = this.resolvePrimitives(shape, options.bounds);
         if (!primitives || primitives.length === 0)
             return null;
-        this.ensureGlowFilter();
+        const glowFilterId = this.ensureGlowFilter(color);
         const proxy = this.board.createSvgElement("g");
         proxy.setAttribute("class", "highlight-proxy");
         proxy.setAttribute("pointer-events", "none");
@@ -42,7 +40,7 @@ class ShapeSelectionOutline {
         if (clipPath)
             proxy.setAttribute("clip-path", clipPath);
         for (const primitive of primitives) {
-            proxy.appendChild(this.createGlowElement(primitive, color));
+            proxy.appendChild(this.createGlowElement(primitive, color, glowFilterId));
             if (primitive.mode !== "stroke")
                 proxy.appendChild(this.createOutlineElement(primitive, color));
         }
@@ -79,7 +77,7 @@ class ShapeSelectionOutline {
         }];
     }
 
-    createGlowElement(primitive, color) {
+    createGlowElement(primitive, color, glowFilterId) {
         const element = this.board.createSvgElement(primitive.tag);
         this.applyGeometry(element, primitive);
         if (primitive.mode === "stroke") {
@@ -92,8 +90,7 @@ class ShapeSelectionOutline {
             element.setAttribute("fill", color);
             element.setAttribute("stroke", "none");
         }
-        element.setAttribute("filter", `url(#${ShapeSelectionOutline.GLOW_FILTER_ID})`);
-        element.setAttribute("style", `color: ${color}`);
+        element.setAttribute("filter", `url(#${glowFilterId})`);
         element.setAttribute("pointer-events", "none");
         return element;
     }
@@ -178,17 +175,23 @@ class ShapeSelectionOutline {
         return null;
     }
 
-    ensureGlowFilter() {
-        if (this.board.svg.querySelector(`#${ShapeSelectionOutline.GLOW_FILTER_ID}`))
-            return;
+    getGlowFilterId(color) {
+        return `mdl-hover-glow-${String(color).replace(/[^a-zA-Z0-9]/g, "")}`;
+    }
+
+    ensureGlowFilter(color) {
+        const id = this.getGlowFilterId(color);
+        if (this.board.svg.querySelector(`#${id}`))
+            return id;
         const defs = this.board.createSvgElement("defs");
-        defs.innerHTML = `<filter id="${ShapeSelectionOutline.GLOW_FILTER_ID}" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+        defs.innerHTML = `<filter id="${id}" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
             <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur"/>
             <feComposite in="blur" in2="SourceAlpha" operator="out" result="outer-glow"/>
-            <feFlood flood-color="currentColor" result="flood-color"/>
+            <feFlood flood-color="${color}" result="flood-color"/>
             <feComposite in="flood-color" in2="outer-glow" operator="in"/>
         </filter>`;
         this.board.svg.insertBefore(defs, this.board.svg.firstChild);
+        return id;
     }
 }
 

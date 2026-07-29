@@ -5,6 +5,48 @@ class ModellusShapeToolbar {
         return $("<div class='toolbar-separator'>|</div>");
     }
 
+    static getMindMapShapeTypes(shell) {
+        const translations = shell.board.translations;
+        return [
+            { text: translations.get("Mind Map Bubble Name"), icon: "fa-light fa-comment", type: "MindMapBubbleShape", name: "Bubble", properties: null },
+            { text: translations.get("Mind Map Rectangle Name"), icon: "fa-light fa-rectangle", type: "MindMapRectangleShape", name: "Rectangle", properties: null },
+            { text: translations.get("Mind Map Circle Name"), icon: "fa-light fa-circle", type: "MindMapCircleShape", name: "Circle", properties: null },
+            { text: translations.get("Mind Map Line Name"), icon: "fa-light fa-slash-forward", type: "MindMapConnectorShape", name: "Line", properties: { startTipType: "none", endTipType: "none", routing: "straight" } },
+            { text: translations.get("Connector Name"), icon: "fa-light fa-arrow-right-long", type: "MindMapConnectorShape", name: "Connector", properties: { startTipType: "none", endTipType: "arrow", routing: "curved" } }
+        ];
+    }
+
+    static createMindMapDropDownButton(shell) {
+        const dropdownElement = $('<div id="mindmap-button" class="mdl-mindmap-type-selector">');
+        dropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            icon: "fa-light fa-diagram-project",
+            onInitialized: event => shell.createTranslatedTooltip(event, "Mind Map Tooltip", 280),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-shape-overlay-popup" },
+                width: "auto",
+                contentTemplate: contentElement => {
+                    $(contentElement).empty();
+                    $("<div>").appendTo(contentElement).dxList({
+                        dataSource: ModellusShapeToolbar.getMindMapShapeTypes(shell),
+                        scrollingEnabled: false,
+                        itemTemplate: (data, _, el) => {
+                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${data.icon}"></i><span class="mdl-dropdown-list-label">${data.text}</span></div>`;
+                        },
+                        onItemClick: event => {
+                            dropdownElement.dxDropDownButton("instance").close();
+                            shell.shapeDrawController.toggle(event.itemData.type, event.itemData.name, "mindmap-button", event.itemData.properties);
+                        }
+                    });
+                }
+            }
+        });
+        return dropdownElement;
+    }
+
     static notebookItems(notebook) {
         return [
             {
@@ -297,6 +339,10 @@ class ModellusShapeToolbar {
                     onClick: _ => shell.shapeDrawController.toggle("TextShape", "Text", "text-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Text Tooltip", 280)
                 }
+            },
+            {
+                location: "center",
+                template: () => ModellusShapeToolbar.createMindMapDropDownButton(shell)
             },
             {
                 location: "center",

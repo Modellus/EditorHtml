@@ -10,7 +10,8 @@
     margin: 8px 10px;
 }
 
-.mdl-shape-toolbar .dx-button.mdl-draw-armed .dx-icon {
+.mdl-shape-toolbar .dx-button.mdl-draw-armed .dx-icon,
+.mdl-shape-toolbar .mdl-draw-armed .dx-button .dx-icon {
     --fa-style: 900;
     font-weight: 900;
     color: #007aff;

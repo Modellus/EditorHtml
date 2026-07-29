@@ -7,6 +7,7 @@ class Canvas {
         this.theme = new BaseTheme();
         this.translations = new BaseTranslations("en-US");
         this.selection = new Selection(this);
+        this.connectorIndex = new ConnectorIndex();
         this._refreshId = null;
         this._dirtyShapes = new Set();
         this.suppressNextFocusSelect = false;
@@ -38,6 +39,7 @@ class Canvas {
             this.motionLayer.removeChild(this.motionLayer.firstChild);
         this.svg.appendChild(this.motionLayer);
         this.shapes.clear();
+        this.connectorIndex.clear();
         this._gridDefs = null;
         this._gridRect = null;
         this._gridPattern = null;
@@ -82,6 +84,8 @@ class Canvas {
             this.svg.appendChild(shape.element);
         shape.attachShapeNameLayer();
         this.shapes.add(shape);
+        if (shape.isConnector())
+            this.connectorIndex.update(shape);
         // A shape re-added after being removed (undo of a delete, redo of an
         // add, ...) is the same instance with the same element, so guard
         // against attaching a second copy of these listeners - duplicates
@@ -112,6 +116,8 @@ class Canvas {
         this.svg.removeChild(shape.element);
         shape.detachShapeNameLayer();
         this.shapes.remove(shape);
+        if (shape.isConnector())
+            this.connectorIndex.unregister(shape);
         this.selection.deselect(shape);
         this.dispatchShapeEvent("shapeRemoved", shape);
     }
@@ -239,6 +245,8 @@ class Canvas {
 
     markDirty(shape) {
         this._dirtyShapes.add(shape);
+        if (!this.connectorIndex.isEmpty())
+            this.connectorIndex.addSubtreeConnectors(shape, this._dirtyShapes);
         this.refresh();
     }
 

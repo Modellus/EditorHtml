@@ -340,11 +340,13 @@ class Selection {
             return true;
         if (element.classList.contains("rotation-handle"))
             return true;
+        if (element.classList.contains("mdl-connection-target"))
+            return true;
         return !!element._shape;
     }
 
     getOverlayElements() {
-        return Array.from(this.board.svg.querySelectorAll(".handle, .bounding-box, .hover-outline, .selected-outline, .resize-handle, .rotation-handle"));
+        return Array.from(this.board.svg.querySelectorAll(".handle, .bounding-box, .hover-outline, .selected-outline, .resize-handle, .rotation-handle, .mdl-connection-target"));
     }
 
     setHover(shape) {

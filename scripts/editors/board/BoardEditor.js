@@ -22,6 +22,7 @@ class BoardEditor extends Workspace {
         this.board.svg.addEventListener("backgroundClicked", e => this.backgroundToolbar.toggle(e.detail));
         this.contextMenuController = new ContextMenuController(this);
         this.shapeDrawController = new ShapeDrawController(this);
+        this.connectorTargetHighlighter = new ConnectorTargetHighlighter(this);
         this.topToolbar = new TopToolbar(this);
         this.chatController = new ChatController(this);
         this.bottomToolbar = new BottomToolbar(this);
@@ -46,7 +47,7 @@ class BoardEditor extends Workspace {
         this.saveFormController = new SaveFormController(this);
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
-        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, DataTableWidget, CasesTableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, TableWidget, DataTableWidget, CasesTableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget, MindMapBubbleWidget, MindMapRectangleWidget, MindMapCircleWidget, MindMapConnectorWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.commands.registerShapeAlias("BodyShape", BodyWidget);
         this.commands.registerShapeAlias("PointShape", PointWidget);
         this.commands.registerShapeAlias("ExpressionShape", ExpressionWidget);

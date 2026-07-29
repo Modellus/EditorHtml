@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vector Shape – Modellus Docs</title>
-    <meta name="description" content="Vector shape documentation for Modellus." />
+    <title>Mind Map Shapes – Modellus Docs</title>
+    <meta name="description" content="Mind map shapes documentation for Modellus." />
     <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -91,42 +91,69 @@
         <div class="docs-breadcrumb">
             <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
             <a href="/docs/index.html">Shapes</a> <span class="sep">/</span>
-            <span>Vector</span>
+            <span>Mind Map</span>
         </div>
 
-        <h1>Vector Shape</h1>
-        <p class="page-desc">The Vector shape displays arrows with direction and magnitude controlled by expressions, ideal for representing forces, velocities, and other vector quantities.</p>
+        <h1>Mind Map Shapes</h1>
+        <p class="page-desc">Bubbles, rectangles, circles, lines and connectors for laying out ideas on the board. Connectors stay attached to the shapes they link, so the diagram keeps its meaning while you rearrange it.</p>
 
         <div class="screenshot-placeholder">
             <i class="fa-light fa-image"></i>
-            Screenshot: Vector shape on the board
+            Screenshot: mind map on the board
         </div>
 
         <h2>Overview</h2>
-        <p>A Vector shape renders an arrow from a start point in a given direction with a given magnitude. Both the direction angle and the length can be bound to expression terms. Vectors are essential for physics models that involve forces, velocity, acceleration, or any directional quantity.</p>
+        <p>The mind map set is grouped under a single dropdown in the main toolbar. Pick a shape, then drag on the board to place it: nodes are drawn as a rectangle, connectors as a segment from one point to another. Double-click a node to type its text.</p>
+        <p>Unlike the Line, Vector and Arc shapes, mind map shapes are annotations rather than simulation objects. They are not bound to calculator terms and do not need a referential, so they can be placed anywhere on the board.</p>
 
-        <h2>Toolbar</h2>
+        <h2>The shapes</h2>
+        <table class="docs-table">
+            <thead><tr><th>Shape</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td>Bubble</td><td>Rounded speech bubble with a tail, for comments and asides</td></tr>
+                <tr><td>Rectangle</td><td>Rounded box, the workhorse node for a topic or step</td></tr>
+                <tr><td>Circle</td><td>Ellipse, typically the central idea of the map</td></tr>
+                <tr><td>Line</td><td>A plain segment with no tips, for grouping or underlining</td></tr>
+                <tr><td>Connector</td><td>An arrow that links two shapes and follows them when they move</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Connecting shapes</h2>
+        <p>Shapes have no fixed connection points. Draw a connector — or drag the end of an existing one — and drop it anywhere inside another shape, including charts, tables, expressions and images: that exact spot becomes the attachment point. Dropping on empty canvas leaves that end free instead.</p>
+        <p>While you drag an end over a shape, that shape is highlighted so you can see it will become the target; move off it or over empty canvas and the highlight disappears. An end can't attach to the shape the connector's other end is already attached to.</p>
+        <p>An attached end is not a fixed coordinate: it is stored as a position relative to the shape's own box — for example "a quarter of the way across, a quarter of the way down" — and recomputed from the shape's current size, position and rotation on every redraw. Resize the shape and the point slides to keep the same relative spot; move or rotate it and the connector follows. Deleting a shape also deletes the connectors attached to it, and a single undo brings back both.</p>
+        <p>Select a connector to drag either endpoint. Dropping an endpoint on a different shape re-attaches it there, at the new drop point; dropping it on empty canvas detaches it.</p>
+
         <div class="screenshot-placeholder">
             <i class="fa-light fa-image"></i>
-            Screenshot: Vector shape toolbar
+            Screenshot: a shape highlighted while a connector end is dragged over it
         </div>
 
-        <h2>Properties Panel</h2>
-        <div class="screenshot-placeholder">
-            <i class="fa-light fa-image"></i>
-            Screenshot: Vector properties panel
-        </div>
+        <h2>Node properties</h2>
         <table class="docs-table">
             <thead><tr><th>Property</th><th>Description</th></tr></thead>
             <tbody>
-                <tr><td>Origin X / Y</td><td>Base position of the vector arrow</td></tr>
-                <tr><td>Component X</td><td>Horizontal component term</td></tr>
-                <tr><td>Component Y</td><td>Vertical component term</td></tr>
-                <tr><td>Scale</td><td>Visual scale factor for the arrow length</td></tr>
-                <tr><td>Color</td><td>Arrow color</td></tr>
-                <tr><td>Label</td><td>Text label displayed near the vector</td></tr>
+                <tr><td>Text</td><td>Label shown inside the shape; double-click the shape to edit it</td></tr>
+                <tr><td>Font size</td><td>Size of the label text</td></tr>
+                <tr><td>Text color</td><td>Colour of the label text</td></tr>
+                <tr><td>Border width</td><td>Thickness of the outline</td></tr>
+                <tr><td>Fill and border color</td><td>Set from the appearance dropdown, together with opacity</td></tr>
             </tbody>
         </table>
+
+        <h2>Connector properties</h2>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td>Start tip / End tip</td><td>None, arrow, filled arrow, dot or diamond at each end</td></tr>
+                <tr><td>Type</td><td>Straight, curved or orthogonal path between the endpoints</td></tr>
+                <tr><td>Line style</td><td>Solid or dashed</td></tr>
+                <tr><td>Line width</td><td>Thickness of the connector</td></tr>
+                <tr><td>Label</td><td>Text placed on the connector, with a slider to move it along the line</td></tr>
+            </tbody>
+        </table>
+
+        <p>Select a connector to reveal a third handle on its path, in addition to the two endpoint handles. Dragging it reshapes the connector: for a straight connector it kinks the line into two segments meeting at an angle; for a curved connector it adjusts the curve, on top of the gentle bulge it already has by default; for an orthogonal connector it slides the elbow along whichever axis the path turns on.</p>
 
     </main>
 </div>

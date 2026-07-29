@@ -95,7 +95,11 @@
         "GaugeShape":        { "type": "string", "const": "Polar gauge. angleTerm + magnitudeTerm drive the needle. Use for two-component quantities like velocity direction and speed." },
         "MediaShape":        { "type": "string", "const": "Static or animated image, video or audio. Use for background reference images (e.g., a photograph to overlay a model trajectory) or synced/free-running video and audio." },
         "RulerShape":        { "type": "string", "const": "On-canvas ruler for manual distance measurement. Not connected to calculator terms. Teaching aid." },
-        "ProtractorShape":   { "type": "string", "const": "On-canvas protractor for manual angle measurement. Not connected to calculator terms. Teaching aid." }
+        "ProtractorShape":   { "type": "string", "const": "On-canvas protractor for manual angle measurement. Not connected to calculator terms. Teaching aid." },
+        "MindMapBubbleShape":    { "type": "string", "const": "Speech bubble node for a mind map. properties.text holds its label. Annotation only, not connected to calculator terms. Place it directly on the board (parent = null)." },
+        "MindMapRectangleShape": { "type": "string", "const": "Rounded box node for a mind map. properties.text holds its label. Annotation only, not connected to calculator terms. Place it directly on the board (parent = null)." },
+        "MindMapCircleShape":    { "type": "string", "const": "Ellipse node for a mind map, usually the central idea. properties.text holds its label. Annotation only, not connected to calculator terms." },
+        "MindMapConnectorShape": { "type": "string", "const": "Line or arrow linking two shapes of any type. startShapeId/endShapeId are shape ids; startRelativeX/Y and endRelativeX/Y (0..1 fractions of the attached shape's box) fix the point inside the shape the end is attached to, so it follows and rescales when that shape moves or resizes. Leave an id null and use startX/startY or endX/endY for a free end. startTipType/endTipType choose the ends, routing chooses the path, properties.text places a label in the middle. bendAlong/bendOffset position a draggable bend handle that reshapes the path: for straight routing it kinks the line at an angle, for curved routing it adjusts the curve on top of its automatic bulge, for orthogonal routing only bendAlong applies and slides the elbow." }
       }
     },
 
@@ -529,7 +533,11 @@
         { "$ref": "#/$defs/GaugeShape" },
         { "$ref": "#/$defs/RulerShape" },
         { "$ref": "#/$defs/ProtractorShape" },
-        { "$ref": "#/$defs/ReferentialShape" }
+        { "$ref": "#/$defs/ReferentialShape" },
+        { "$ref": "#/$defs/MindMapBubbleShape" },
+        { "$ref": "#/$defs/MindMapRectangleShape" },
+        { "$ref": "#/$defs/MindMapCircleShape" },
+        { "$ref": "#/$defs/MindMapConnectorShape" }
       ]
     },
 
@@ -688,6 +696,229 @@
                 "text": {
                   "type": "string",
                   "description": "HTML/Markdown content of the text box."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "MindMapNodeProperties": {
+      "title": "MindMapNodeProperties",
+      "description": "Properties shared by the mind map node shapes (bubble, rectangle, circle).",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "Plain-text label centred inside the node."
+        },
+        "textColor": {
+          "type": "string",
+          "default": "#000000",
+          "description": "Colour of the label text (hex)."
+        },
+        "fontSize": {
+          "type": "number",
+          "default": 16,
+          "description": "Label font size in pixels."
+        },
+        "lineWidth": {
+          "type": "number",
+          "default": 2,
+          "description": "Outline thickness in pixels."
+        }
+      }
+    },
+
+    "MindMapBubbleShape": {
+      "title": "MindMapBubbleShape",
+      "description": "Speech-bubble mind map node with a centred text label.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["MindMapBubbleShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            { "$ref": "#/$defs/MindMapNodeProperties" }
+          ]
+        }
+      }
+    },
+
+    "MindMapRectangleShape": {
+      "title": "MindMapRectangleShape",
+      "description": "Rounded-box mind map node with a centred text label.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["MindMapRectangleShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            { "$ref": "#/$defs/MindMapNodeProperties" }
+          ]
+        }
+      }
+    },
+
+    "MindMapCircleShape": {
+      "title": "MindMapCircleShape",
+      "description": "Ellipse mind map node with a centred text label.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["MindMapCircleShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            { "$ref": "#/$defs/MindMapNodeProperties" }
+          ]
+        }
+      }
+    },
+
+    "MindMapConnectorShape": {
+      "title": "MindMapConnectorShape",
+      "description": "Line or arrow between two shapes. An end attached to a shape follows it; an unattached end keeps its own coordinates.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["MindMapConnectorShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "properties": {
+                "startShapeId": {
+                  "type": ["string", "null"],
+                  "default": null,
+                  "description": "Id of the shape the start is attached to. Null for a free start at startX/startY."
+                },
+                "endShapeId": {
+                  "type": ["string", "null"],
+                  "default": null,
+                  "description": "Id of the shape the end is attached to. Null for a free end at endX/endY."
+                },
+                "startRelativeX": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.5,
+                  "description": "Horizontal position of the start inside the attached shape's box, as a fraction from 0 (left edge) to 1 (right edge). Set from wherever the start was dropped inside the shape; recomputed against the shape's current width every draw, so it stays at the same relative spot through resize, move and rotation."
+                },
+                "startRelativeY": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.5,
+                  "description": "Vertical position of the start inside the attached shape's box, as a fraction from 0 (top edge) to 1 (bottom edge)."
+                },
+                "endRelativeX": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.5,
+                  "description": "Horizontal position of the end inside the attached shape's box, as a fraction from 0 (left edge) to 1 (right edge)."
+                },
+                "endRelativeY": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.5,
+                  "description": "Vertical position of the end inside the attached shape's box, as a fraction from 0 (top edge) to 1 (bottom edge)."
+                },
+                "startX": {
+                  "type": "number",
+                  "description": "Start position in canvas coordinates. Authoritative only when startShapeId is null; otherwise it caches the last resolved point."
+                },
+                "startY": {
+                  "type": "number",
+                  "description": "Start position in canvas coordinates."
+                },
+                "endX": {
+                  "type": "number",
+                  "description": "End position in canvas coordinates. Authoritative only when endShapeId is null."
+                },
+                "endY": {
+                  "type": "number",
+                  "description": "End position in canvas coordinates."
+                },
+                "routing": {
+                  "type": "string",
+                  "enum": ["straight", "curved", "orthogonal"],
+                  "default": "curved",
+                  "description": "Shape of the path drawn between the endpoints."
+                },
+                "bendAlong": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.5,
+                  "description": "Position of the bend handle along the straight line from start to end, from 0 (start) to 1 (end). Set by dragging the connector's bend handle."
+                },
+                "bendOffset": {
+                  "type": "number",
+                  "default": 0,
+                  "description": "Perpendicular distance in pixels of the bend handle from the straight line between the endpoints. Ignored for orthogonal routing, where only bendAlong applies. Set by dragging the connector's bend handle; curved routing adds its own automatic bulge on top of this value."
+                },
+                "startTipType": {
+                  "type": "string",
+                  "enum": ["none", "arrow", "closed", "point", "diamond"],
+                  "default": "none",
+                  "description": "Marker drawn at the start."
+                },
+                "endTipType": {
+                  "type": "string",
+                  "enum": ["none", "arrow", "closed", "point", "diamond"],
+                  "default": "arrow",
+                  "description": "Marker drawn at the end."
+                },
+                "lineStyle": {
+                  "type": "string",
+                  "enum": ["solid", "dashed"],
+                  "default": "solid",
+                  "description": "Stroke style of the connector."
+                },
+                "lineWidth": {
+                  "type": "number",
+                  "default": 2,
+                  "description": "Stroke thickness in pixels."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "Label drawn on the connector."
+                },
+                "textPosition": {
+                  "type": "number",
+                  "default": 0.5,
+                  "minimum": 0,
+                  "maximum": 1,
+                  "description": "Position of the label along the path, from 0 (start) to 1 (end)."
+                },
+                "textColor": {
+                  "type": "string",
+                  "default": "#000000",
+                  "description": "Colour of the label text (hex)."
+                },
+                "fontSize": {
+                  "type": "number",
+                  "default": 12,
+                  "description": "Label font size in pixels."
                 }
               }
             }
