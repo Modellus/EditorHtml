@@ -945,8 +945,12 @@ class BodyShape extends ChildShape {
         return true;
     }
 
+    // An image rotated to its direction of travel already faces the right way,
+    // so only an explicit flip may mirror it. Folding in the automatic
+    // left/right flip as well would point it opposite the movement.
     applyImageFlipTransform(position, hasImage, rotationDegrees = null) {
-        const mirrorHorizontally = hasImage && this.flipImageHorizontally !== this.isFlippedHorizontally();
+        const autoFlipHorizontally = rotationDegrees === null && this.flipImageHorizontally;
+        const mirrorHorizontally = hasImage && autoFlipHorizontally !== this.isFlippedHorizontally();
         const mirrorVertically = hasImage && this.isFlippedVertically();
         const parts = [];
         if (rotationDegrees !== null)
@@ -1105,11 +1109,17 @@ class BodyShape extends ChildShape {
         super.tick();
         const boardPosition = this.getBoardPosition();
         const character = this.getSelectedCharacter();
-        if (character?.shouldRotate)
+        if (character?.shouldRotate) {
             this.updateCharacterMovementAngle();
-        else if (character) {
+            // A rotating character already points where it travels, so the
+            // automatic left/right flip must not survive from the plain image
+            // path — mirroring on top of the angle would face it backwards.
+            this.flipImageHorizontally = false;
+            this.lastBoardHorizontalPosition = null;
+        } else if (character) {
             this.characterMovementAngle = null;
             this.flipImageHorizontally = false;
+            this.lastBoardHorizontalPosition = null;
         } else {
             this.characterMovementAngle = null;
             if (this.lastBoardHorizontalPosition !== boardPosition.x) {
