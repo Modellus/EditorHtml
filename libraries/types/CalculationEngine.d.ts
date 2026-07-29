@@ -33,6 +33,12 @@ declare class Expression {
         [name: string]: number;
     }) => boolean) | null;
     type: TermType;
+    /**
+     * Names this expression reads at the current iteration, e.g. `x` for a right-hand side
+     * containing `x_{n}`.  Those reads go through the stored row, so the producer of each
+     * name has to be evaluated first regardless of the order the statements were written in.
+     */
+    currentIterationDependencies: string[];
     constructor(name: string, calculate: (input: {
         [name: string]: number;
     }) => number, type?: TermType, condition?: ((input: {
@@ -142,6 +148,7 @@ declare class System {
     private differentialNames;
     private functionExpressionsWithCondition;
     private functionExpressionsWithoutCondition;
+    private orderedFunctionExpressionsWithCondition;
     private readonly piecewiseTermNames;
     private readonly iterationValuesByKey;
     private _lastIteration;
@@ -194,6 +201,15 @@ declare class System {
     calculateFunctions(): void;
     private calculateFunctionsForVisibleIterations;
     private calculateFunctionsOnIteration;
+    /**
+     * Conditional function expressions ordered so that a term reading `x_{n}` runs after the
+     * expressions producing `x` for that same row.  Every pass of the evaluation loop below
+     * resets purely-conditional names to NaN, so a consumer evaluated ahead of its producer
+     * reads NaN on every pass and never recovers — declaration order alone is not enough.
+     * The sort is stable: expressions keep declaration order unless a dependency forces a move,
+     * and a dependency cycle degrades to declaration order instead of dropping expressions.
+     */
+    private getOrderedFunctionExpressionsWithCondition;
     private evaluateFunctionExpressions;
     private areFunctionValuesEqual;
     addSingularity(type: SingularityType, termName: string, iteration: number, caseNumber: number): void;
@@ -235,6 +251,16 @@ declare class System {
         [name: string]: number;
     }, term: string): number;
     getValueAtIteration(iteration: number, term: string, caseNumber?: number): number;
+    /**
+     * Subscripted read that also works while the target row is still being built.  During the
+     * Runge-Kutta sub-steps the row for the current iteration has not been stored yet, so a
+     * `term_{n}` reference has no row to read from; it resolves against the in-flight values
+     * instead, which is what a plain `term` reference would see at that point.  Earlier rows
+     * are always read from history, so `term_{n-1}` is unaffected.
+     */
+    getValueAtIterationInRow(iteration: number, term: string, values: {
+        [name: string]: number;
+    }, caseNumber?: number): number;
     getValueAtIndependent(value: number, term: string, caseNumber?: number): number;
     getInitialByExpression(expression: Expression, iteration?: number): number;
     getTermsNames(): string[];
@@ -3128,6 +3154,13 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDerivativePrimeExpressionPlain: (context: DerivativePrimeExpressionPlainContext) => Branch;
     private primeDerivativeBranch;
     private deriveExpressionBranch;
+    /**
+     * Names read at the current iteration by `tree`, i.e. those written `name_{n}` with the
+     * iteration term as the subscript.  `name_{n-1}` and friends read an earlier row and are
+     * therefore not dependencies of the row being calculated.
+     */
+    private collectCurrentIterationDependencies;
+    private collectCurrentIterationDependenciesInto;
     private hasUnresolvedNames;
     private lazyDerivativeBranch;
     private deriveNamedExpression;

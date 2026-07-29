@@ -672,6 +672,19 @@ class TableControl {
         }
     }
 
+    getRowSpanColumnIndex(row) {
+        const spanColumnKey = row?.spanColumnKey;
+        if (spanColumnKey == null)
+            return -1;
+        return this.options.columns.findIndex(column => column.key === spanColumnKey);
+    }
+
+    getRowTextColor(row) {
+        if (row?.rowBackgroundColor)
+            return Utils.getContrastColor(row.rowBackgroundColor);
+        return this.options.foregroundColor;
+    }
+
     renderRow(layout, rowIndex, y, rowHeight, columns, geometry, columnValueRanges) {
         const row = this.rows[rowIndex];
         if (!row)
@@ -692,6 +705,65 @@ class TableControl {
         else
             rowRect.setAttribute("fill", this.options.backgroundColor);
         this.rowsLayer.appendChild(rowRect);
+        const spanColumnIndex = this.getRowSpanColumnIndex(row);
+        if (spanColumnIndex >= 0)
+            this.renderSpanRowCell(layout, rowIndex, y, rowHeight, row, spanColumnIndex);
+        else
+            this.renderRowCells(layout, rowIndex, y, rowHeight, row, columns, geometry, columnValueRanges);
+        const rowLine = this.createSvgElement("line");
+        rowLine.setAttribute("x1", "0");
+        rowLine.setAttribute("y1", `${y + rowHeight}`);
+        rowLine.setAttribute("x2", `${layout.bodyWidth}`);
+        rowLine.setAttribute("y2", `${y + rowHeight}`);
+        rowLine.setAttribute("stroke", this.options.gridColor);
+        rowLine.setAttribute("stroke-width", "1");
+        this.rowsLayer.appendChild(rowLine);
+    }
+
+    renderSpanRowCell(layout, rowIndex, y, rowHeight, row, spanColumnIndex) {
+        const focused = this.isCellFocused(rowIndex, spanColumnIndex);
+        const selected = this.isCellSelected(rowIndex, spanColumnIndex);
+        if (focused || selected) {
+            const outlineRect = this.createSvgElement("rect");
+            outlineRect.setAttribute("x", "0.5");
+            outlineRect.setAttribute("y", `${y + 0.5}`);
+            outlineRect.setAttribute("width", `${Math.max(0, layout.bodyWidth - 1)}`);
+            outlineRect.setAttribute("height", `${Math.max(0, rowHeight - 1)}`);
+            outlineRect.setAttribute("fill", "none");
+            outlineRect.setAttribute("stroke", this.getRowTextColor(row));
+            outlineRect.setAttribute("stroke-width", "1");
+            this.rowsLayer.appendChild(outlineRect);
+        }
+        const isEditingCell = this.editingCell?.rowIndex === rowIndex && this.editingCell?.columnIndex === spanColumnIndex;
+        if (!isEditingCell)
+            this.appendSpanRowText(this.rowsLayer, y, rowHeight, row, this.getCellText(row, this.getColumnByIndex(spanColumnIndex)));
+        this.cellBoxes.push({
+            x: 0,
+            y: y,
+            width: layout.bodyWidth,
+            height: rowHeight,
+            rowIndex: rowIndex,
+            columnIndex: spanColumnIndex
+        });
+    }
+
+    appendSpanRowText(layerElement, y, rowHeight, row, valueText) {
+        const text = this.createSvgElement("text");
+        text.setAttribute("x", `${this.getSpanRowTextX()}`);
+        text.setAttribute("y", `${y + rowHeight / 2 + 4}`);
+        text.setAttribute("text-anchor", "start");
+        text.setAttribute("font-size", `${this.options.headerFontSize}`);
+        text.setAttribute("fill", this.getRowTextColor(row));
+        text.innerHTML = `<tspan font-family="${this.options.termFontFamily}">${row.spanLabel ?? ""}</tspan><tspan font-family="${this.options.numberFontFamily}"> = ${valueText}</tspan>`;
+        layerElement.appendChild(text);
+        return text;
+    }
+
+    getSpanRowTextX() {
+        return 6;
+    }
+
+    renderRowCells(layout, rowIndex, y, rowHeight, row, columns, geometry, columnValueRanges) {
         for (let columnIndex = 0; columnIndex < columns.length; columnIndex++) {
             const cell = geometry[columnIndex];
             const selected = this.isCellSelected(rowIndex, columnIndex);
@@ -754,14 +826,6 @@ class TableControl {
                 columnIndex: columnIndex
             });
         }
-        const rowLine = this.createSvgElement("line");
-        rowLine.setAttribute("x1", "0");
-        rowLine.setAttribute("y1", `${y + rowHeight}`);
-        rowLine.setAttribute("x2", `${layout.bodyWidth}`);
-        rowLine.setAttribute("y2", `${y + rowHeight}`);
-        rowLine.setAttribute("stroke", this.options.gridColor);
-        rowLine.setAttribute("stroke-width", "1");
-        this.rowsLayer.appendChild(rowLine);
     }
 
     renderRegressionRangeOverlays(layout, geometry) {
@@ -932,7 +996,7 @@ class TableControl {
         text.setAttribute("text-anchor", isText ? "start" : "end");
         text.setAttribute("font-family", isText ? this.options.termFontFamily : this.options.numberFontFamily);
         text.setAttribute("font-size", `${column?.useHeaderFontSize === true ? this.options.headerFontSize : this.options.fontSize}`);
-        text.setAttribute("fill", row?.rowBackgroundColor ? Utils.getContrastColor(row.rowBackgroundColor) : this.options.foregroundColor);
+        text.setAttribute("fill", this.getRowTextColor(row));
         text.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
         text.textContent = textValue;
         this.rowsLayer.appendChild(text);
@@ -1098,6 +1162,10 @@ class TableControl {
         if (rowIndex < visible.first || rowIndex > visible.last)
             return;
         const y = layout.headerHeight + (rowIndex - visible.first) * rowHeight - visible.offset;
+        if (this.getRowSpanColumnIndex(row) === this.editingCell.columnIndex) {
+            this.renderSpanRowEditingValue(y, rowHeight, row);
+            return;
+        }
         const cell = geometry[this.editingCell.columnIndex];
         if (!cell)
             return;
@@ -1117,6 +1185,19 @@ class TableControl {
         cursor.setAttribute("x2", `${cursorX}`);
         cursor.setAttribute("y2", `${y + rowHeight - 5}`);
         cursor.setAttribute("stroke", this.options.foregroundColor);
+        cursor.setAttribute("stroke-width", "1");
+        this.overlayLayer.appendChild(cursor);
+    }
+
+    renderSpanRowEditingValue(y, rowHeight, row) {
+        const text = this.appendSpanRowText(this.overlayLayer, y, rowHeight, row, this.editingCell.text);
+        const cursorX = this.getSpanRowTextX() + text.getComputedTextLength() + 1;
+        const cursor = this.createSvgElement("line");
+        cursor.setAttribute("x1", `${cursorX}`);
+        cursor.setAttribute("y1", `${y + 4}`);
+        cursor.setAttribute("x2", `${cursorX}`);
+        cursor.setAttribute("y2", `${y + rowHeight - 4}`);
+        cursor.setAttribute("stroke", this.getRowTextColor(row));
         cursor.setAttribute("stroke-width", "1");
         this.overlayLayer.appendChild(cursor);
     }
@@ -1576,6 +1657,9 @@ class TableControl {
         const rowIndex = this.getBodyRowIndexFromY(point.y);
         if (rowIndex < 0)
             return null;
+        const spanColumnIndex = this.getRowSpanColumnIndex(this.getRowByIndex(rowIndex));
+        if (spanColumnIndex >= 0)
+            return { rowIndex: rowIndex, columnIndex: spanColumnIndex };
         let columnIndex = this.getColumnIndexFromX(point.x);
         if (columnIndex < 0) {
             if (this.options.focusOnSingleClick !== true)
@@ -1920,7 +2004,8 @@ class TableControl {
         const nextRow = Math.max(0, Math.min(this.rows.length - 1, this.selectedCell.rowIndex + rowDelta));
         const maxColumnIndex = Math.max(0, this.options.columns.length - 1);
         const nextColumn = Math.max(0, Math.min(maxColumnIndex, this.selectedCell.columnIndex + columnDelta));
-        this.selectCell(nextRow, nextColumn);
+        const spanColumnIndex = this.getRowSpanColumnIndex(this.getRowByIndex(nextRow));
+        this.selectCell(nextRow, spanColumnIndex >= 0 ? spanColumnIndex : nextColumn);
         return true;
     }
 

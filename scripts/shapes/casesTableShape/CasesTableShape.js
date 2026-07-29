@@ -193,15 +193,15 @@ class CasesTableShape extends BaseTableShape {
         return Math.max(1, Math.round((momentValue - independent.start) / independent.step) + 1);
     }
 
-    getDefaultGroupColor(sequenceIndex) {
-        return Utils.getCaseIconColor(((Math.max(1, sequenceIndex) - 1) % 9) + 1);
+    getDefaultGroupColor() {
+        return Utils.getSwitchOnColor();
     }
 
-    getGroupColor(iteration, sequenceIndex) {
+    getGroupColor(iteration) {
         const override = this.properties.groupColors?.[iteration];
         if (override)
             return override;
-        return this.getDefaultGroupColor(sequenceIndex);
+        return this.getDefaultGroupColor();
     }
 
     setGroupColor(iteration, color) {
@@ -283,7 +283,6 @@ class CasesTableShape extends BaseTableShape {
         const rows = [];
         for (let groupIndex = 0; groupIndex < groupIterations.length; groupIndex++) {
             const iteration = groupIterations[groupIndex];
-            const groupColor = this.getGroupColor(iteration, groupIndex + 1);
             rows.push({
                 key: `independent|${iteration}`,
                 isIndependentRow: true,
@@ -291,8 +290,10 @@ class CasesTableShape extends BaseTableShape {
                 term: independentName,
                 [momentColumnKey]: this.getMomentValueForIteration(iteration),
                 cellPrecision: { [momentColumnKey]: momentPrecision },
-                rowBackgroundColor: groupColor,
-                hideColumnDividers: true
+                rowBackgroundColor: this.getGroupColor(iteration),
+                hideColumnDividers: true,
+                spanColumnKey: momentColumnKey,
+                spanLabel: independentName
             });
             for (let index = 0; index < terms.length; index++) {
                 const term = terms[index];
@@ -506,9 +507,7 @@ class CasesTableShape extends BaseTableShape {
             return;
         const focusedRow = this._focusedCellsPayload?.focusedRows?.[0]?.row;
         const iteration = Math.floor(Number(focusedRow.iteration) || 1);
-        const sequenceIndex = this.getGroupIterations().indexOf(iteration) + 1;
-        const currentColor = this.getGroupColor(iteration, sequenceIndex);
-        const picker = this.getColorControl().createEditor(currentColor, value => this.setGroupColor(iteration, value));
+        const picker = this.getColorControl().createEditor(this.getGroupColor(iteration), value => this.setGroupColor(iteration, value));
         picker.appendTo(this._focusedColorSlotElement);
     }
 

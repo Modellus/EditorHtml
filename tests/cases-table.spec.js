@@ -51,6 +51,21 @@ async function clickTableCell(page, shapeName, rowIndex, columnIndex) {
     await page.mouse.click(point.x, point.y);
 }
 
+async function getTableRowPoint(page, shapeName, rowIndex, localX) {
+    const point = await page.evaluate(({ shapeName, rowIndex, localX }) => {
+        const table = shell.board.shapes.getByName(shapeName)?.table;
+        const cellBox = table?.cellBoxes?.find(box => box.rowIndex === rowIndex);
+        if (!cellBox || !table.rootElement.getScreenCTM)
+            return null;
+        const localPoint = new DOMPoint(localX, cellBox.y + cellBox.height / 2);
+        const screenPoint = localPoint.matrixTransform(table.rootElement.getScreenCTM());
+        return { x: screenPoint.x, y: screenPoint.y };
+    }, { shapeName, rowIndex, localX });
+    if (!point)
+        throw new Error(`row not found: ${rowIndex}`);
+    return point;
+}
+
 test.describe('Cases table', () => {
     test('base group: independent row followed by term rows, in a single flat color', async ({ page }) => {
         await setupEditor(page);
@@ -77,12 +92,14 @@ test.describe('Cases table', () => {
                     case1: row.case1,
                     case2: row.case2,
                     rowBackgroundColor: row.rowBackgroundColor,
-                    textIndent: row.textIndent
+                    textIndent: row.textIndent,
+                    spanColumnKey: row.spanColumnKey,
+                    spanLabel: row.spanLabel
                 })),
                 independentRowCase1Editable: table?.canEditCell(0, 1) === true,
                 independentRowTermEditable: table?.canEditCell(0, 0) === true,
                 termRowEditable: table?.canEditCell(1, 1) === true,
-                groupColor: tableShape.getGroupColor(1, 1),
+                groupColor: tableShape.getGroupColor(1),
                 backgroundColor: tableShape.properties.backgroundColor
             };
         });
@@ -95,9 +112,9 @@ test.describe('Cases table', () => {
             { key: 'case3', isText: false, editable: true, showCase: true, useHeaderFontSize: false }
         ]);
         expect(state.rows).toEqual([
-            { key: 'independent|1', isIndependentRow: true, termName: undefined, term: 't', iteration: 1, case1: 0, case2: undefined, rowBackgroundColor: state.groupColor, textIndent: undefined },
-            { key: 'x|1', isIndependentRow: false, termName: 'x', term: 'x', iteration: 1, case1: 0, case2: 0, rowBackgroundColor: undefined, textIndent: 14 },
-            { key: 'v|1', isIndependentRow: false, termName: 'v', term: 'v', iteration: 1, case1: 0, case2: 0, rowBackgroundColor: undefined, textIndent: 14 }
+            { key: 'independent|1', isIndependentRow: true, termName: undefined, term: 't', iteration: 1, case1: 0, case2: undefined, rowBackgroundColor: state.groupColor, textIndent: undefined, spanColumnKey: 'case1', spanLabel: 't' },
+            { key: 'x|1', isIndependentRow: false, termName: 'x', term: 'x', iteration: 1, case1: 0, case2: 0, rowBackgroundColor: undefined, textIndent: 14, spanColumnKey: undefined, spanLabel: undefined },
+            { key: 'v|1', isIndependentRow: false, termName: 'v', term: 'v', iteration: 1, case1: 0, case2: 0, rowBackgroundColor: undefined, textIndent: 14, spanColumnKey: undefined, spanLabel: undefined }
         ]);
         expect(state.independentRowCase1Editable).toBeTruthy();
         expect(state.independentRowTermEditable).toBeFalsy();
@@ -106,7 +123,7 @@ test.describe('Cases table', () => {
         expect(state.groupColor.toLowerCase()).not.toBe(state.backgroundColor.toLowerCase());
     });
 
-    test('groups get distinct sequential colors by default, and the user can override a group color', async ({ page }) => {
+    test('groups take their default color from the DevExtreme switch on-value style, and the user can override a group color', async ({ page }) => {
         await setupEditor(page);
         await setupModelWithCasesTable(page, 1);
 
@@ -119,14 +136,20 @@ test.describe('Cases table', () => {
             tableShape.setGroupColor(2, '#123456');
             tableShape.refreshTableRows();
             const colorsAfterOverride = table.rows.filter(row => row.isIndependentRow).map(row => ({ iteration: row.iteration, color: row.rowBackgroundColor }));
-            return { colorsBeforeOverride, colorsAfterOverride };
+            const switchHost = $('<div>').appendTo('body');
+            switchHost.dxSwitch({ value: true });
+            const switchOnColor = Utils.toHexColor(getComputedStyle(switchHost.find('.dx-switch-container')[0], '::before').backgroundColor);
+            switchHost.remove();
+            return { colorsBeforeOverride, colorsAfterOverride, switchOnColor, groupColor: tableShape.getDefaultGroupColor() };
         });
 
-        // Three distinct groups must get three distinct default colors, not shades of the same hue.
-        expect(new Set(result.colorsBeforeOverride).size).toBe(3);
+        // Read off a live dxSwitch so the group color follows the DevExtreme theme instead of a copied hex.
+        expect(result.switchOnColor).toMatch(/^#[0-9a-f]{6}$/);
+        expect(result.groupColor).toBe(result.switchOnColor);
+        expect(result.colorsBeforeOverride).toEqual([result.switchOnColor, result.switchOnColor, result.switchOnColor]);
         expect(result.colorsAfterOverride.find(entry => entry.iteration === 2).color).toBe('#123456');
-        expect(result.colorsAfterOverride.find(entry => entry.iteration === 1).color).not.toBe('#123456');
-        expect(result.colorsAfterOverride.find(entry => entry.iteration === 3).color).not.toBe('#123456');
+        expect(result.colorsAfterOverride.find(entry => entry.iteration === 1).color).toBe(result.switchOnColor);
+        expect(result.colorsAfterOverride.find(entry => entry.iteration === 3).color).toBe(result.switchOnColor);
     });
 
     test('double-clicking the base moment cell enters edit mode but does not move the base group', async ({ page }) => {
@@ -373,21 +396,81 @@ test.describe('Cases table', () => {
         expect(newGroupRowDeleteVisible).toBe(true);
     });
 
-    test('clicking the term name cell of an independent row does not reveal a toolbar', async ({ page }) => {
+    test('the independent row is a single cell spanning the whole table row', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 3);
+
+        const state = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            const table = tableShape.table;
+            table.render();
+            const layout = table.getLayout();
+            const independentBoxes = table.cellBoxes.filter(box => box.rowIndex === 0);
+            const termRowBoxes = table.cellBoxes.filter(box => box.rowIndex === 1);
+            return {
+                independentBoxes: independentBoxes.map(box => ({ x: box.x, width: box.width, columnIndex: box.columnIndex })),
+                termRowBoxCount: termRowBoxes.length,
+                bodyWidth: layout.bodyWidth,
+                momentColumnIndex: table.options.columns.findIndex(column => column.key === tableShape.getMomentColumnKey())
+            };
+        });
+
+        expect(state.independentBoxes).toEqual([{ x: 0, width: state.bodyWidth, columnIndex: state.momentColumnIndex }]);
+        expect(state.termRowBoxCount).toBe(4);
+    });
+
+    test('clicking anywhere along the independent row focuses its spanning cell and reveals the toolbar', async ({ page }) => {
         await setupEditor(page);
         await setupModelWithCasesTable(page, 1);
 
-        await clickTableCell(page, 'Inputs1', 0, 0);
+        const point = await getTableRowPoint(page, 'Inputs1', 0, 8);
+        await page.mouse.click(point.x, point.y);
         await page.waitForTimeout(300);
         const state = await page.evaluate(() => {
             const tableShape = shell.board.shapes.getByName('Inputs1');
             return {
                 hasFocusedCells: tableShape.table.hasFocusedCells(),
+                focusedColumnKey: tableShape.table.getFocusedColumn()?.key,
+                momentColumnKey: tableShape.getMomentColumnKey(),
                 toolbarVisible: tableShape.cellsContextToolbar?.classList.contains('visible')
             };
         });
         expect(state.hasFocusedCells).toBe(true);
-        expect(state.toolbarVisible).toBe(false);
+        expect(state.focusedColumnKey).toBe(state.momentColumnKey);
+        expect(state.toolbarVisible).toBe(true);
+    });
+
+    test('double-clicking the independent row edits only the value, keeping the term label in the editor', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const point = await getTableRowPoint(page, 'Inputs1', 0, 8);
+        await page.mouse.dblclick(point.x, point.y);
+        await page.waitForTimeout(300);
+
+        const editorState = await page.evaluate(() => {
+            const table = shell.board.shapes.getByName('Inputs1').table;
+            return {
+                editingText: table.editingCell?.text,
+                editingColumnKey: table.options.columns[table.editingCell?.columnIndex]?.key,
+                overlayText: Array.from(table.overlayLayer.querySelectorAll('text')).map(t => t.textContent)
+            };
+        });
+        expect(editorState.editingColumnKey).toBe('case1');
+        expect(editorState.editingText).toBe('0');
+        expect(editorState.overlayText).toEqual(['t = 0']);
+
+        await page.keyboard.press('Backspace');
+        await page.keyboard.type('5');
+        const afterTyping = await page.evaluate(() => {
+            const table = shell.board.shapes.getByName('Inputs1').table;
+            return {
+                editingText: table.editingCell?.text,
+                overlayText: Array.from(table.overlayLayer.querySelectorAll('text')).map(t => t.textContent)
+            };
+        });
+        expect(afterTyping.editingText).toBe('5');
+        expect(afterTyping.overlayText).toEqual(['t = 5']);
     });
 
     test('clicking a term row cell does not reveal a toolbar', async ({ page }) => {
@@ -643,14 +726,16 @@ test.describe('Cases table', () => {
             const table = tableShape.table;
             table.render();
             const independentRow = table.rows.find(row => row.isIndependentRow);
-            const termText = Array.from(table.rowsLayer.querySelectorAll('text')).find(t => t.textContent === independentRow.term);
+            const spanText = Array.from(table.rowsLayer.querySelectorAll('text')).find(t => t.textContent.startsWith(`${independentRow.spanLabel} = `));
             return {
                 groupColor: independentRow.rowBackgroundColor,
-                textFill: termText?.getAttribute('fill'),
+                spanTextContent: spanText?.textContent,
+                textFill: spanText?.getAttribute('fill'),
                 expectedContrast: Utils.getContrastColor(independentRow.rowBackgroundColor)
             };
         });
 
+        expect(result.spanTextContent).toBe('t = 0.00');
         expect(result.textFill).toBe(result.expectedContrast);
     });
 
@@ -658,7 +743,7 @@ test.describe('Cases table', () => {
         await setupEditor(page);
         await setupModelWithCasesTable(page, 1);
 
-        await clickTableCell(page, 'Inputs1', 0, 0);
+        await clickTableCell(page, 'Inputs1', 0, 1);
         await page.waitForTimeout(300);
 
         const result = await page.evaluate(() => {
@@ -668,12 +753,12 @@ test.describe('Cases table', () => {
             const independentRow = table.rows.find(row => row.isIndependentRow);
             const rowRect = Array.from(table.rowsLayer.querySelectorAll('rect'))
                 .find(rect => Number(rect.getAttribute('width')) === layout.bodyWidth && Number(rect.getAttribute('y')) === layout.headerHeight);
-            const termText = Array.from(table.rowsLayer.querySelectorAll('text')).find(t => t.textContent === independentRow.term);
+            const spanText = Array.from(table.rowsLayer.querySelectorAll('text')).find(t => t.textContent.startsWith(`${independentRow.spanLabel} = `));
             return {
                 hasFocusedCells: table.hasFocusedCells(),
                 groupColor: independentRow.rowBackgroundColor,
                 rowRectFill: rowRect?.getAttribute('fill'),
-                textFill: termText?.getAttribute('fill'),
+                textFill: spanText?.getAttribute('fill'),
                 expectedContrast: Utils.getContrastColor(independentRow.rowBackgroundColor)
             };
         });
@@ -699,7 +784,7 @@ test.describe('Cases table', () => {
         const point = await page.evaluate(() => {
             const table = shell.board.shapes.getByName('Inputs1').table;
             const layout = table.getLayout();
-            const cellBox = table.cellBoxes.find(box => box.rowIndex === 0 && box.columnIndex === 0);
+            const cellBox = table.cellBoxes.find(box => box.rowIndex === 0);
             const localPoint = new DOMPoint(layout.bodyWidth - 5, cellBox.y + cellBox.height / 2);
             const screenPoint = localPoint.matrixTransform(table.rootElement.getScreenCTM());
             return { x: screenPoint.x, y: screenPoint.y };

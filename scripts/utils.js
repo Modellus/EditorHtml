@@ -464,6 +464,34 @@ class Utils {
         return "#ffffff";
     }
 
+    static FALLBACK_SWITCH_ON_COLOR = "#0f6cbd";
+    static _switchOnColor = null;
+
+    static getSwitchOnColor() {
+        if (Utils._switchOnColor)
+            return Utils._switchOnColor;
+        document.body.insertAdjacentHTML("beforeend", `<div class="mdl-switch-color-probe dx-switch dx-switch-on-value"><div class="dx-switch-wrapper"><div class="dx-switch-container"></div></div></div>`);
+        const probeElement = document.body.lastElementChild;
+        const probedStyle = window.getComputedStyle(probeElement.querySelector(".dx-switch-container"), "::before");
+        const probedColor = Utils.toHexColor(probedStyle.backgroundColor);
+        probeElement.remove();
+        Utils._switchOnColor = probedColor ?? Utils.FALLBACK_SWITCH_ON_COLOR;
+        return Utils._switchOnColor;
+    }
+
+    static toHexColor(colorValue) {
+        if (Utils.isTransparentColor(colorValue))
+            return null;
+        const rgb = Utils.parseColorToRgb(colorValue);
+        if (!rgb)
+            return null;
+        return `#${Utils.toColorChannelHex(rgb.red)}${Utils.toColorChannelHex(rgb.green)}${Utils.toColorChannelHex(rgb.blue)}`;
+    }
+
+    static toColorChannelHex(channel) {
+        return Math.round(channel).toString(16).padStart(2, "0");
+    }
+
     static darkenColor(colorValue, amount = 0.3) {
         const rgb = Utils.parseColorToRgb(colorValue);
         if (!rgb)
