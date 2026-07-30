@@ -264,33 +264,24 @@ class Utils {
         return baseWidth + 1 + String(scriptText).length * scriptFontSize * 0.58;
     }
 
-    static setTermValueTextContent(textElement, termLatex, valueText) {
-        while (textElement.firstChild)
-            textElement.removeChild(textElement.firstChild);
-        const svgNs = "http://www.w3.org/2000/svg";
-        if (!termLatex) {
-            const valueSpan = document.createElementNS(svgNs, "tspan");
-            valueSpan.setAttribute("font-family", "Katex_Main");
-            valueSpan.setAttribute("dominant-baseline", "central");
-            valueSpan.textContent = valueText;
-            textElement.appendChild(valueSpan);
-            return;
-        }
+    static escapeXmlText(value) {
+        return String(value ?? "").replace(/[&<>]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[character]));
+    }
+
+    static buildTermValueTextHtml(termLatex, valueText) {
+        if (!termLatex)
+            return `<tspan font-family="Katex_Main" dominant-baseline="central">${Utils.escapeXmlText(valueText)}</tspan>`;
         const termText = Utils.convertMathTermToPlainText(termLatex);
         const termSegments = termText.match(/\d+|\D+/g) ?? [];
-        for (const segment of termSegments) {
-            const termSpan = document.createElementNS(svgNs, "tspan");
-            // Katex_Math is the math-italic font whose digit glyphs are oldstyle figures ("0" reads as "o"), so digits use the upright main font.
-            termSpan.setAttribute("font-family", /\d/.test(segment) ? "Katex_Main" : "Katex_Math");
-            termSpan.setAttribute("dominant-baseline", "central");
-            termSpan.textContent = segment;
-            textElement.appendChild(termSpan);
-        }
-        const restSpan = document.createElementNS(svgNs, "tspan");
-        restSpan.setAttribute("font-family", "Katex_Main");
-        restSpan.setAttribute("dominant-baseline", "central");
-        restSpan.textContent = ` = ${valueText}`;
-        textElement.appendChild(restSpan);
+        let html = "";
+        // Katex_Math is the math-italic font whose digit glyphs are oldstyle figures ("0" reads as "o"), so digits use the upright main font.
+        for (const segment of termSegments)
+            html += `<tspan font-family="${/\d/.test(segment) ? "Katex_Main" : "Katex_Math"}" dominant-baseline="central">${Utils.escapeXmlText(segment)}</tspan>`;
+        return `${html}<tspan font-family="Katex_Main" dominant-baseline="central"> = ${Utils.escapeXmlText(valueText)}</tspan>`;
+    }
+
+    static setTermValueTextContent(textElement, termLatex, valueText) {
+        textElement.innerHTML = Utils.buildTermValueTextHtml(termLatex, valueText);
     }
 
     static applyCaseIconSvg(group, iconX, iconY, iconSize, caseNumber) {

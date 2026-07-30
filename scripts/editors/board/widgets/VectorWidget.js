@@ -724,8 +724,36 @@ class VectorShape extends ChildShape {
         return this.buildStroboscopyMarkerForTip("start") + this.buildStroboscopyMarkerForTip("end");
     }
 
+    getStroboscopyEntryAnchorPoint(position, entry) {
+        if (entry.endpoint === "start")
+            return { x: position.startX, y: position.startY };
+        return { x: position.x, y: position.y };
+    }
+
+    getStroboscopyEntryTermText(entry, termName) {
+        if (entry.endpoint === "tip")
+            return "";
+        return super.getStroboscopyEntryTermText(entry, termName);
+    }
+
+    getStroboscopyEntryValueText(entry, termName, iteration) {
+        if (entry.endpoint !== "tip")
+            return super.getStroboscopyEntryValueText(entry, termName, iteration);
+        const originTerm = entry.axis === "x" ? "xOriginTerm" : "yOriginTerm";
+        const originCase = entry.axis === "x" ? "xOriginTermCase" : "yOriginTermCase";
+        const componentTerm = entry.axis === "x" ? "xTerm" : "yTerm";
+        const componentCase = entry.axis === "x" ? "xTermCase" : "yTermCase";
+        const origin = this.resolveTermNumericAtIteration(this.properties[originTerm], this.getTermCaseNumber(originCase), iteration);
+        const component = this.resolveTermNumericAtIteration(this.properties[componentTerm], this.getTermCaseNumber(componentCase), iteration);
+        if (!Number.isFinite(origin) && !Number.isFinite(component))
+            return null;
+        const tipValue = (Number.isFinite(origin) ? origin : 0) + (Number.isFinite(component) ? component : 0);
+        return this.formatModelValue(tipValue, this.properties[componentTerm]);
+    }
+
     drawStroboscopy() {
-        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+        this.drawStroboscopyLabels();
+        if (!this.isStroboscopyVisible()) {
             this.stroboscopy.innerHTML = "";
             return;
         }

@@ -410,24 +410,6 @@ class LineShape extends ChildShape {
             this.trajectory.element.removeAttribute("points");
     }
 
-    tickStroboscopy() {
-        const lastIteration = this.board.calculator.getLastIteration();
-        if (lastIteration === 0) {
-            this._stroboscopyPositions = [];
-            return;
-        }
-        const interval = Math.max(1, this.properties.stroboscopyInterval);
-        const desired = Math.floor(lastIteration / interval);
-        const positions = [];
-        for (let i = 0; i < desired; i++) {
-            const idx = i * interval;
-            const logical = this.trajectory.values[idx];
-            if (logical)
-                positions.push(logical);
-        }
-        this._stroboscopyPositions = positions;
-    }
-
     draw() {
         super.draw();
         const position = this.getBoardPosition();
@@ -456,8 +438,13 @@ class LineShape extends ChildShape {
         this.drawStroboscopy();
     }
 
+    getStroboscopyBoardPosition(position) {
+        return this.logicalToBoardPosition(position.logicalX, position.logicalY);
+    }
+
     drawStroboscopy() {
-        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+        this.drawStroboscopyLabels();
+        if (!this.isStroboscopyVisible()) {
             this.stroboscopy.innerHTML = "";
             return;
         }

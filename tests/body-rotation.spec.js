@@ -82,7 +82,8 @@ test.describe('Body character rotation', () => {
                 transforms: [...body.stroboscopy.children].map(image => image.getAttribute('transform'))
             };
         });
-        expect(result.rotations).toEqual([0, 0, -90]);
-        expect(result.transforms).toEqual(['rotate(0 10 10)', 'rotate(0 20 20)', 'rotate(-90 40 40)']);
+        // Ghosts are sampled on whole multiples of the interval: iterations 1 and 3.
+        expect(result.rotations).toEqual([0, -90]);
+        expect(result.transforms).toEqual(['rotate(0 10 10)', 'rotate(-90 30 30)']);
     });
 });

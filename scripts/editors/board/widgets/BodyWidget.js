@@ -15,6 +15,37 @@ class BodyShape extends ChildShape {
         img.src = imageUrl;
     }
 
+    // Every animation frame is a separate image, and its aspect ratio is only known
+    // once it has loaded. Laying out a frame that is still loading as if it were
+    // square moves the pivot, so the body hops from frame to frame on the first run
+    // and only walks smoothly once every frame sits in the cache. Frames of a
+    // character share their dimensions, so borrow the aspect of a loaded sibling
+    // until this one arrives.
+    getCharacterImageAspectRatio(imageUrl, character, animation) {
+        const cachedAspectRatio = BodyShape.characterImageAspectCache.get(imageUrl);
+        if (cachedAspectRatio)
+            return cachedAspectRatio;
+        const siblingUrls = [...(animation?.frameUrls ?? [])];
+        for (const characterAnimation of character?.animations ?? [])
+            siblingUrls.push(...(characterAnimation.frameUrls ?? []));
+        siblingUrls.push(character?.thumbnail_url);
+        for (const siblingUrl of siblingUrls) {
+            const siblingAspectRatio = BodyShape.characterImageAspectCache.get(siblingUrl);
+            if (siblingAspectRatio)
+                return siblingAspectRatio;
+        }
+        return 1;
+    }
+
+    preloadCharacterImageAspects(character) {
+        if (!character)
+            return;
+        this.loadImageAspectIfNeeded(character.thumbnail_url);
+        for (const animation of character.animations ?? [])
+            for (const frameUrl of animation.frameUrls ?? [])
+                this.loadImageAspectIfNeeded(frameUrl);
+    }
+
     static computeLetterboxedPivotOffset(pivotX, pivotY, diameter, imageAspectRatio) {
         let renderedWidth, renderedHeight;
         if (imageAspectRatio >= 1) {
@@ -714,17 +745,17 @@ class BodyShape extends ChildShape {
         const frameCount = animation.frames;
         const startIndex = animation.startIndex ?? 0;
         this._stroboscopyPositions = this._stroboscopyPositions.map(pos => {
-            const iteration = this.trajectory.values.indexOf(pos) + 1;
-            const rawFrameIndex = this.getAnimationFrameIndex(animation, frameCount, iteration, startIndex);
+            const rawFrameIndex = this.getAnimationFrameIndex(animation, frameCount, pos.iteration, startIndex);
             const href = animation.frameUrls?.[Math.min(rawFrameIndex, (animation.frameUrls.length || 1) - 1)] || character.thumbnail_url || "";
-            const rotation = character.shouldRotate ? this.getCharacterMovementAngleAtIteration(iteration, true) : null;
+            const rotation = character.shouldRotate ? this.getCharacterMovementAngleAtIteration(pos.iteration, true) : null;
             return { ...pos, href, rotation };
         });
     }
 
     drawStroboscopy() {
+        this.drawStroboscopyLabels();
         const hasCharacterOrImage = !!(this.getSelectedCharacter() || this.getImageSource());
-        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+        if (!this.isStroboscopyVisible()) {
             while (this.stroboscopy.firstChild)
                 this.stroboscopy.removeChild(this.stroboscopy.firstChild);
             return;
@@ -751,7 +782,7 @@ class BodyShape extends ChildShape {
                 const diameter = radius * 2;
                 const pivotX = character?.centerPoint?.x ?? 0.5;
                 const pivotY = character?.centerPoint?.y ?? 0.5;
-                const imageAspectRatio = BodyShape.characterImageAspectCache.get(href ?? "") ?? 1;
+                const imageAspectRatio = this.getCharacterImageAspectRatio(href ?? "", character, character ? this.getCharacterAnimation(character) : null);
                 const pivotOffset = BodyShape.computeLetterboxedPivotOffset(pivotX, pivotY, diameter, imageAspectRatio);
                 imageClone.setAttribute("x", pos.x - pivotOffset.x);
                 imageClone.setAttribute("y", pos.y - pivotOffset.y);
@@ -972,6 +1003,9 @@ class BodyShape extends ChildShape {
                 if (this.properties.characterKey !== characterKey)
                     return;
                 this.character = adapted;
+                // Measuring (and so fetching) every frame up front keeps the first
+                // playthrough as smooth as the ones after it.
+                this.preloadCharacterImageAspects(adapted);
                 this.synchronizeIdleAnimationTicker();
                 this.board.markDirty(this);
             })
@@ -1001,7 +1035,7 @@ class BodyShape extends ChildShape {
         const frameUrl = animation.frameUrls?.[Math.min(rawFrameIndex, (animation.frameUrls.length || 1) - 1)];
         const imageUrl = frameUrl || character.thumbnail_url || "";
         this.loadImageAspectIfNeeded(imageUrl);
-        const imageAspectRatio = BodyShape.characterImageAspectCache.get(imageUrl) ?? 1;
+        const imageAspectRatio = this.getCharacterImageAspectRatio(imageUrl, character, animation);
         const pivotOffset = BodyShape.computeLetterboxedPivotOffset(pivotX, pivotY, diameter, imageAspectRatio);
         this.image.setAttribute("x", position.x - pivotOffset.x);
         this.image.setAttribute("y", position.y - pivotOffset.y);
@@ -1065,13 +1099,6 @@ class BodyShape extends ChildShape {
             const value = mapping.isInverted ? -rawValue : rawValue;
             this.properties[mapping.property] = Number.isFinite(value) ? (axisScale !== 0 ? value / axisScale : 0) : 0;
         }
-    }
-
-    resolveTermNumericAtIteration(term, caseNumber, iteration) {
-        const calculator = this.board.calculator;
-        if (calculator.isTerm(term))
-            return calculator.system.getByNameOnIteration(iteration, term, caseNumber);
-        return parseFloat(term);
     }
 
     getTermBoardPosition(iteration) {

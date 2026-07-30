@@ -255,13 +255,14 @@ class ChildShape extends BaseShape {
             return;
         }
         const interval = Math.max(1, this.properties.stroboscopyInterval);
-        const intervalCount = Math.floor(lastIteration / interval);
         const positions = [];
-        for (let i = 0; i <= intervalCount; i++) {
-            const idx = i === 0 ? 0 : i * interval - 1;
-            const pos = this.trajectory.values[idx];
+        // Ghosts land on whole multiples of the interval counted from the first
+        // iteration, so an interval of 10 over a step of 0.1 starting at 0 shows
+        // them at 0, 1, 2, ... of the independent variable.
+        for (let index = 0; index < lastIteration; index += interval) {
+            const pos = this.trajectory.values[index];
             if (pos)
-                positions.push(pos);
+                positions.push({ ...pos, iteration: index + 1 });
         }
         this._stroboscopyPositions = positions;
     }
@@ -279,8 +280,141 @@ class ChildShape extends BaseShape {
         return 3;
     }
 
+    isStroboscopyVisible() {
+        const color = this.properties.stroboscopyColor;
+        return !!color && color !== "transparent" && color !== "#00000000";
+    }
+
+    getStroboscopyBoardPosition(position) {
+        return { x: position.x, y: position.y };
+    }
+
+    getStroboscopyPositionOffset(position) {
+        const ghostPosition = this.getStroboscopyBoardPosition(position);
+        const livePosition = this.getStroboscopyBoardPosition(this.getTrajectoryPosition());
+        return { x: ghostPosition.x - livePosition.x, y: ghostPosition.y - livePosition.y };
+    }
+
+    // Ghost labels are laid out exactly like the live term labels - projected on the
+    // referential axes when the term has an axis, stacked under the shape otherwise -
+    // only translated from the current position to the ghost position.
+    getStroboscopyEntryAnchorPoint(position, entry, index) {
+        const liveAnchorPoint = this.getTermEntryAnchorPoint?.(entry, index) ?? this.termDisplay?.getShapeCenterPosition();
+        if (!liveAnchorPoint)
+            return null;
+        const offset = this.getStroboscopyPositionOffset(position);
+        return { x: liveAnchorPoint.x + offset.x, y: liveAnchorPoint.y + offset.y };
+    }
+
+    getStroboscopyFallbackLabelPosition(position, entry, index) {
+        const offset = this.getStroboscopyPositionOffset(position);
+        const entryPosition = this.getTermEntryLabelPosition(entry, index);
+        if (entryPosition)
+            return { x: entryPosition.x + offset.x, y: entryPosition.y + offset.y, anchor: entryPosition.anchor ?? "middle" };
+        const labelAnchor = this.getTermLabelAnchor();
+        if (!labelAnchor)
+            return null;
+        return { x: labelAnchor.x + offset.x, y: labelAnchor.y + offset.y + index * 12, anchor: labelAnchor.anchor ?? "middle" };
+    }
+
+    // Ghosts often project onto the same spot of an axis (a body passing twice
+    // through the same height), so stack those labels instead of overprinting them.
+    stackStroboscopyLabelPosition(buildPosition, labelIndexByPosition) {
+        const basePosition = buildPosition(0);
+        if (!basePosition)
+            return null;
+        const positionKey = `${Math.round(basePosition.x)}:${Math.round(basePosition.y)}`;
+        const labelIndex = labelIndexByPosition.get(positionKey) ?? 0;
+        labelIndexByPosition.set(positionKey, labelIndex + 1);
+        return labelIndex === 0 ? basePosition : buildPosition(labelIndex);
+    }
+
+    getStroboscopyLabelPosition(position, entry, index, labelIndexByPosition) {
+        const axesPosition = this.termDisplay?.getReferentialAxesPosition();
+        const anchorPoint = this.getStroboscopyEntryAnchorPoint(position, entry, index);
+        if (axesPosition && anchorPoint) {
+            const axis = entry.axis ?? this.termDisplay.getTermAxis(entry.term);
+            if (axis === "x" || axis === "y")
+                return this.stackStroboscopyLabelPosition(labelIndex => this.termDisplay.getAxisLabelPosition(axis, anchorPoint, axesPosition, labelIndex), labelIndexByPosition);
+        }
+        return this.stackStroboscopyLabelPosition(labelIndex => this.getStroboscopyFallbackLabelPosition(position, entry, labelIndex), labelIndexByPosition);
+    }
+
+    getStroboscopyLabelEntries() {
+        const labelEntries = [];
+        for (const entry of this.termDisplayEntries) {
+            const displayMode = this.properties[this.getTermDisplayModeProperty(entry.term)] ?? "none";
+            if (displayMode === false || displayMode === "none")
+                continue;
+            const rawTerm = this.normalizeTermValue(this.properties[entry.term]);
+            if (rawTerm == null || rawTerm === "")
+                continue;
+            const termName = String(rawTerm);
+            labelEntries.push({ entry: entry, termName: termName, termText: this.getStroboscopyEntryTermText(entry, termName) });
+        }
+        return labelEntries;
+    }
+
+    getStroboscopyEntryTermText(entry, termName) {
+        if (!this.board.calculator.isTerm(termName))
+            return "";
+        return this.formatTermForDisplay(termName);
+    }
+
+    getStroboscopyEntryValueText(entry, termName, iteration) {
+        const value = this.resolveTermNumericAtIteration(termName, this.getTermCaseNumber(entry.caseProperty), iteration);
+        if (!Number.isFinite(value))
+            return null;
+        return this.formatModelValue(value, termName);
+    }
+
+    ensureStroboscopyLabelsLayer() {
+        if (this.stroboscopyLabels)
+            return;
+        this.stroboscopyLabels = this.board.createSvgElement("g");
+        this.stroboscopyLabels.setAttribute("pointer-events", "none");
+        this.motionGroup.appendChild(this.stroboscopyLabels);
+    }
+
+    drawStroboscopyLabels() {
+        this.ensureStroboscopyLabelsLayer();
+        const labelEntries = this.isStroboscopyVisible() ? this.getStroboscopyLabelEntries() : [];
+        if (labelEntries.length === 0) {
+            this.stroboscopyLabels.innerHTML = "";
+            return;
+        }
+        const color = this.properties.stroboscopyColor;
+        // The ghost labels reuse the term display look (filled box plus contrasting
+        // text), tinted with the stroboscopy color and faded with its opacity.
+        const textColor = Utils.getContrastColor(color);
+        const opacity = this.properties.stroboscopyOpacity;
+        const positions = this._stroboscopyPositions ?? [];
+        const labelIndexByPosition = new Map();
+        let html = "";
+        for (const position of positions) {
+            for (let i = 0; i < labelEntries.length; i++) {
+                const labelEntry = labelEntries[i];
+                const valueText = this.getStroboscopyEntryValueText(labelEntry.entry, labelEntry.termName, position.iteration);
+                if (valueText === null)
+                    continue;
+                const labelPosition = this.getStroboscopyLabelPosition(position, labelEntry.entry, i, labelIndexByPosition);
+                if (!labelPosition)
+                    continue;
+                const textHtml = Utils.buildTermValueTextHtml(labelEntry.termText, valueText);
+                html += `<g opacity="${opacity}"><rect class="shape-term-label-bg" rx="3" fill-opacity="0.85" fill="${color}"></rect>`;
+                html += `<text class="shape-term-label" x="${labelPosition.x}" y="${labelPosition.y}" text-anchor="${labelPosition.anchor}" dominant-baseline="central" fill="${textColor}">${textHtml}</text></g>`;
+            }
+        }
+        this.stroboscopyLabels.innerHTML = html;
+        // Backgrounds are sized from the measured text, so they can only be laid
+        // out once the labels are in the document.
+        for (const labelGroup of this.stroboscopyLabels.children)
+            Utils.applyTermLabelBackground(labelGroup.firstChild, labelGroup.lastChild, color, labelGroup.lastChild.getAttribute("text-anchor"));
+    }
+
     drawStroboscopy() {
-        if (!this.properties.stroboscopyColor || this.properties.stroboscopyColor === "transparent" || this.properties.stroboscopyColor === "#00000000") {
+        this.drawStroboscopyLabels();
+        if (!this.isStroboscopyVisible()) {
             while (this.stroboscopy.firstChild)
                 this.stroboscopy.removeChild(this.stroboscopy.firstChild);
             return;

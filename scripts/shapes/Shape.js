@@ -2046,6 +2046,13 @@ class BaseShape {
         return parseFloat(term);
     }
 
+    resolveTermNumericAtIteration(term, caseNumber, iteration) {
+        const calculator = this.board.calculator;
+        if (calculator.isTerm(term))
+            return calculator.system.getByNameOnIteration(iteration, term, caseNumber);
+        return parseFloat(term);
+    }
+
     initializeTermDisplayLayer() {
         this.termDisplay = new TermDisplay(this);
         this.termDisplay.initializeLayer();
