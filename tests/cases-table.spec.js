@@ -31,6 +31,16 @@ async function setupModelWithCasesTable(page, casesCount) {
     await page.waitForTimeout(200);
 }
 
+async function addExpressionAndReparse(page, name, expression) {
+    await page.evaluate(({ name }) => modellus.shape.addExpression(name), { name });
+    await page.waitForTimeout(400);
+    await page.evaluate(({ name, expression }) => {
+        shell.board.shapes.getByName(name).properties.expression = expression;
+        shell.reset();
+    }, { name, expression });
+    await page.waitForTimeout(400);
+}
+
 async function getTableCellPoint(page, shapeName, rowIndex, columnIndex) {
     const point = await page.evaluate(({ shapeName, rowIndex, columnIndex }) => {
         const table = shell.board.shapes.getByName(shapeName)?.table;
@@ -901,6 +911,129 @@ test.describe('Cases table', () => {
         hasCasesSection = await page.evaluate(() =>
             shell.board.shapes.getByName('Inputs1')._termsMenuContentElement[0].textContent.includes('Scenarios'));
         expect(hasCasesSection).toBe(true);
+    });
+
+    test('rows follow the model terms on every re-parse while the user has not changed them', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const before = await page.evaluate(() => shell.board.shapes.getByName('Inputs1').getSelectedTermNames());
+        expect(before.slice().sort()).toEqual(['v', 'x']);
+
+        await addExpressionAndReparse(page, 'Expr2', '\\frac{dy}{dt}=w');
+
+        const after = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            return {
+                terms: tableShape.getSelectedTermNames(),
+                rowTermNames: tableShape.table.rows.filter(row => !row.isIndependentRow).map(row => row.termName),
+                columnsUserDefined: tableShape.properties.columnsUserDefined
+            };
+        });
+
+        expect(after.terms.slice().sort()).toEqual(['v', 'w', 'x', 'y']);
+        expect(after.rowTermNames.slice().sort()).toEqual(['v', 'w', 'x', 'y']);
+        expect(after.columnsUserDefined).toBe(false);
+    });
+
+    test('values entered before a re-parse stay matched with their own term and case', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 2);
+
+        await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            const vRow = tableShape.table.rows.find(row => row.termName === 'v');
+            tableShape.onTableCellValueChanged({ row: vRow, column: tableShape.table.options.columns.find(c => c.key === 'case1'), value: 3 });
+            tableShape.onTableCellValueChanged({ row: vRow, column: tableShape.table.options.columns.find(c => c.key === 'case2'), value: 8 });
+            shell.calculator.setUserInput('x', 42, 4, 2);
+        });
+
+        await addExpressionAndReparse(page, 'Expr2', '\\frac{dy}{dt}=w');
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.refreshTableRows();
+            const baseRow = tableShape.table.rows.find(row => row.termName === 'v' && row.iteration === 1);
+            const movedRow = tableShape.table.rows.find(row => row.termName === 'x' && row.iteration === 4);
+            return {
+                vCase1: baseRow.case1,
+                vCase2: baseRow.case2,
+                xAtFourCase1: movedRow.case1,
+                xAtFourCase2: movedRow.case2,
+                userInputs: shell.calculator.getUserInputsByCase()
+            };
+        });
+
+        expect(result.vCase1).toBeCloseTo(3, 8);
+        expect(result.vCase2).toBeCloseTo(8, 8);
+        expect(result.xAtFourCase2).toBeCloseTo(42, 8);
+        expect(result.xAtFourCase1).not.toBeCloseTo(42, 8);
+        expect(result.userInputs).toEqual({ 2: { x: { 4: 42 } } });
+    });
+
+    test('once the user changes the rows, a re-parse no longer replaces them', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const afterUserEdit = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.createColumnsControl();
+            tableShape._columnsControl.options.onItemDeleting(0);
+            return { terms: tableShape.getSelectedTermNames(), columnsUserDefined: tableShape.properties.columnsUserDefined };
+        });
+
+        expect(afterUserEdit.terms).toEqual(['v']);
+        expect(afterUserEdit.columnsUserDefined).toBe(true);
+
+        await addExpressionAndReparse(page, 'Expr2', '\\frac{dy}{dt}=w');
+
+        const afterReparse = await page.evaluate(() => shell.board.shapes.getByName('Inputs1').getSelectedTermNames());
+        expect(afterReparse).toEqual(['v']);
+    });
+
+    test('a scenarios shape whose cases were never chosen shows every case, including ones added later', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            const initial = tableShape.getVisibleCaseNumbers();
+            shell.setPropertyCommand('casesCount', 3);
+            shell.reset();
+            tableShape.update();
+            return {
+                initial,
+                afterCasesAdded: tableShape.getVisibleCaseNumbers(),
+                columnKeys: tableShape.table.options.columns.map(column => column.key)
+            };
+        });
+
+        expect(result.initial).toEqual([1]);
+        expect(result.afterCasesAdded).toEqual([1, 2, 3]);
+        expect(result.columnKeys).toEqual(['term', 'case1', 'case2', 'case3']);
+    });
+
+    test('once the user chooses which cases are shown, later cases are not added automatically', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 3);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.setCaseVisible(3, false);
+            const chosen = tableShape.getVisibleCaseNumbers();
+            shell.setPropertyCommand('casesCount', 5);
+            shell.reset();
+            tableShape.update();
+            return {
+                chosen,
+                afterCasesAdded: tableShape.getVisibleCaseNumbers(),
+                columnKeys: tableShape.table.options.columns.map(column => column.key)
+            };
+        });
+
+        expect(result.chosen).toEqual([1, 2]);
+        expect(result.afterCasesAdded).toEqual([1, 2]);
+        expect(result.columnKeys).toEqual(['term', 'case1', 'case2']);
     });
 
     test('the terms dropdown never shows a Moments section', async ({ page }) => {

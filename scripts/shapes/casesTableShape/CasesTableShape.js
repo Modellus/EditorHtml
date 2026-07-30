@@ -8,7 +8,8 @@ class CasesTableShape extends BaseTableShape {
         this.properties.name = this.board.translations.get("Cases Table Name") ?? "Scenarios";
         this.properties.columns = this.buildDefaultColumns();
         this.properties.groupColors = {};
-        this.properties.hiddenCases = [];
+        this.properties.visibleCases = null;
+        this.properties.columnsUserDefined = false;
     }
 
     tick() {
@@ -22,10 +23,37 @@ class CasesTableShape extends BaseTableShape {
     }
 
     buildDefaultColumns() {
+        return this.getAutomaticColumnTerms().map(term => ({ term: term, case: 1 }));
+    }
+
+    getAutomaticColumnTerms() {
         const calculator = this.board.calculator;
         const { derivatives, parameters } = calculator.getTermsByType();
-        const terms = [...derivatives, ...parameters].filter(term => calculator.isUserInputTerm(term));
-        return terms.map(term => ({ term: term, case: 1 }));
+        return [...derivatives, ...parameters].filter(term => calculator.isUserInputTerm(term));
+    }
+
+    refreshTermReferenceState() {
+        if (this.syncAutomaticColumns())
+            this.update();
+        super.refreshTermReferenceState();
+    }
+
+    syncAutomaticColumns() {
+        if (this.properties.columnsUserDefined === true)
+            return false;
+        const automaticTerms = this.getAutomaticColumnTerms();
+        const currentTerms = this.getSelectedColumns().map(column => column.term);
+        if (automaticTerms.join("\n") === currentTerms.join("\n"))
+            return false;
+        this.properties.columns = automaticTerms.map(term => ({ term: term, case: 1 }));
+        this.normalizeColumns();
+        return true;
+    }
+
+    onColumnsChanged() {
+        if (this.properties.columnsUserDefined !== true)
+            this.setPropertyCommand("columnsUserDefined", true);
+        this.refreshTableColumns();
     }
 
     getFallbackColumns() {
@@ -68,39 +96,40 @@ class CasesTableShape extends BaseTableShape {
     }
 
     onCasesSelectionChanged(e) {
-        const casesCount = this.getCasesCount();
-        const selectedKeys = new Set((e.component.option("selectedItemKeys") ?? []).map(Number));
-        if (selectedKeys.size === 0) {
+        const selectedCases = [...new Set((e.component.option("selectedItemKeys") ?? []).map(Number))].sort((a, b) => a - b);
+        if (selectedCases.length === 0) {
             e.component.option("selectedItemKeys", this.getVisibleCaseNumbers());
             return;
         }
-        const hiddenCases = [];
-        for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
-            if (!selectedKeys.has(caseNumber))
-                hiddenCases.push(caseNumber);
-        this.setPropertyCommand("hiddenCases", hiddenCases);
+        this.setPropertyCommand("visibleCases", selectedCases);
         this.update();
     }
 
     setCaseVisible(caseNumber, visible) {
-        const hiddenCases = new Set(Array.isArray(this.properties.hiddenCases) ? this.properties.hiddenCases : []);
-        if (!visible && hiddenCases.size >= this.getCasesCount() - 1)
+        const visibleCases = new Set(this.getVisibleCaseNumbers());
+        if (!visible && visibleCases.size <= 1)
             return;
         if (visible)
-            hiddenCases.delete(caseNumber);
+            visibleCases.add(caseNumber);
         else
-            hiddenCases.add(caseNumber);
-        this.setPropertyCommand("hiddenCases", [...hiddenCases].sort((a, b) => a - b));
+            visibleCases.delete(caseNumber);
+        this.setPropertyCommand("visibleCases", [...visibleCases].sort((a, b) => a - b));
         this.update();
     }
 
-    getVisibleCaseNumbers() {
+    getAllCaseNumbers() {
         const casesCount = this.getCasesCount();
-        const hiddenCases = new Set(Array.isArray(this.properties.hiddenCases) ? this.properties.hiddenCases : []);
-        const visible = [];
+        const caseNumbers = [];
         for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
-            if (!hiddenCases.has(caseNumber))
-                visible.push(caseNumber);
+            caseNumbers.push(caseNumber);
+        return caseNumbers;
+    }
+
+    getVisibleCaseNumbers() {
+        if (!Array.isArray(this.properties.visibleCases))
+            return this.getAllCaseNumbers();
+        const casesCount = this.getCasesCount();
+        const visible = this.properties.visibleCases.filter(caseNumber => caseNumber >= 1 && caseNumber <= casesCount).sort((a, b) => a - b);
         return visible.length > 0 ? visible : [1];
     }
 
@@ -122,7 +151,7 @@ class CasesTableShape extends BaseTableShape {
             normalizeTermValue: value => this.normalizeColumnValue(value),
             createEmptyItem: () => this.createEmptyColumnListItem(),
             getFallbackItems: () => this.getFallbackColumns(),
-            onChanged: () => this.refreshTableColumns()
+            onChanged: () => this.onColumnsChanged()
         });
         return this._columnsControl.createHost();
     }
