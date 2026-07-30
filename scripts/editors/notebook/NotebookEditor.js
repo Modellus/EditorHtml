@@ -1013,7 +1013,6 @@ class NotebookEditor extends Workspace {
             modelId,
             getToken: () => window.modellus?.auth?.getSession?.()?.token ?? "",
             getSnapshot: () => this.serialize(),
-            onRemoteOp: op => this.applyRemoteNotebookOp(op),
             onRemoteSnapshot: model => this.applyRemoteNotebookSnapshot(model)
         });
         this.collabCoordinator.start();
@@ -1022,16 +1021,7 @@ class NotebookEditor extends Workspace {
     broadcastNotebookCollabUpdate() {
         if (!this.collabCoordinator || this.collabCoordinator.isApplyingRemote())
             return;
-        const serializedNotebook = this.serialize();
-        this.collabCoordinator.sendOp({ type: "setNotebookSnapshot", model: serializedNotebook });
-        this.collabCoordinator.sendSnapshot(serializedNotebook);
-    }
-
-    applyRemoteNotebookOp(op) {
-        if (!this.collabCoordinator)
-            return;
-        if (op.type === "setNotebookSnapshot" && op.model)
-            this.deserialize(op.model);
+        this.collabCoordinator.sendSnapshot(this.serialize());
     }
 
     applyRemoteNotebookSnapshot(model) {

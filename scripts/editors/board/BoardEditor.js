@@ -809,7 +809,7 @@ class BoardEditor extends Workspace {
             getZoom: () => this.panAndZoom?.getZoom?.() ?? 1
         });
         const session = window.modellus?.auth?.getSession?.();
-        this._collabClientId = (crypto.randomUUID?.() ?? String(Math.random()).slice(2));
+        this._collabClientId = this.collabCoordinator.clientId;
         this._collabCursorName = session?.name || session?.email || "Guest";
         this._collabCursorColor = CollabCursors.colorFor(session?.email || this._collabClientId);
         this._collabCursorAvatar = session?.avatar || "";
@@ -952,6 +952,7 @@ class BoardEditor extends Workspace {
             this.reset();
             this.calculator.stop();
         });
+        this._hasChanges = false;
     }
 
     async onPopState(event) {

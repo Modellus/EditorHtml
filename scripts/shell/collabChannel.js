@@ -5,6 +5,7 @@ class CollabChannel {
         this.getToken = options.getToken;
         this.onOp = options.onOp;
         this.onSnapshot = options.onSnapshot;
+        this.onOpen = options.onOpen;
         this.ws = null;
         this._applyingRemote = false;
         this._destroyed = false;
@@ -29,6 +30,7 @@ class CollabChannel {
     }
 
     _onOpen() {
+        this.onOpen?.();
     }
 
     _onMessage(event) {
