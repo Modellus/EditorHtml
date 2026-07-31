@@ -27,6 +27,49 @@ class MindMapNodeShape extends BaseShape {
         return { horizontal: 12, vertical: 10 };
     }
 
+    getResizeHandleBounds() {
+        const position = this.getBoardPosition();
+        return { x: position.x, y: position.y, width: this.properties.width, height: this.properties.height };
+    }
+
+    getAdditionalHandles() {
+        return [];
+    }
+
+    getHandles() {
+        const handles = super.getHandles();
+        const handleRadius = 4;
+        const topLeftHandle = handles.find(handle => handle.className.includes("top-left"));
+        const topRightHandle = handles.find(handle => handle.className.includes("top-right"));
+        const bottomLeftHandle = handles.find(handle => handle.className.includes("bottom-left"));
+        const bottomRightHandle = handles.find(handle => handle.className.includes("bottom-right"));
+        topLeftHandle.getAttributes = () => {
+            const bounds = this.getResizeHandleBounds();
+            return { cx: bounds.x, cy: bounds.y, r: handleRadius };
+        };
+        topRightHandle.getAttributes = () => {
+            const bounds = this.getResizeHandleBounds();
+            return { cx: bounds.x + bounds.width, cy: bounds.y, r: handleRadius };
+        };
+        bottomLeftHandle.getAttributes = () => {
+            const bounds = this.getResizeHandleBounds();
+            return { cx: bounds.x, cy: bounds.y + bounds.height, r: handleRadius };
+        };
+        bottomRightHandle.getAttributes = () => {
+            const bounds = this.getResizeHandleBounds();
+            return { cx: bounds.x + bounds.width, cy: bounds.y + bounds.height, r: handleRadius };
+        };
+        return handles.concat(this.getAdditionalHandles());
+    }
+
+    showHandles() {
+        super.showHandles();
+        this.handleElements.forEach(handle => {
+            if (!handle.classList.contains("move"))
+                handle.setAttribute("visibility", "visible");
+        });
+    }
+
     createElement() {
         const { group } = this.createForeignObjectGroup();
         this.bodyElement = this.board.createSvgElement(this.getBodyTag());

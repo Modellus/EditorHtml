@@ -3,8 +3,27 @@ class MindMapBubbleShape extends MindMapNodeShape {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Mind Map Bubble Name");
         this.properties.height = 120;
+        this.properties.tailHeight = 20;
+        this.properties.tailTipPosition = 0.18;
         const center = this.board.getClientCenter();
         this.properties.y = center.y - this.properties.height / 2;
+    }
+
+    getResizeHandleBounds() {
+        const bounds = super.getResizeHandleBounds();
+        return { x: bounds.x, y: bounds.y, width: bounds.width, height: this.getBodyHeight() };
+    }
+
+    getAdditionalHandles() {
+        return [{
+            tag: "circle",
+            className: "handle tip mindmap-bubble-tail-tip",
+            getAttributes: () => {
+                const tip = this.getTailTipBoardPoint();
+                return { cx: tip.x, cy: tip.y, r: 5 };
+            },
+            getTransform: point => this.getTailTipTransform(point)
+        }];
     }
 
     getMinimumDrawSize() {
@@ -16,7 +35,7 @@ class MindMapBubbleShape extends MindMapNodeShape {
     }
 
     getTailHeight() {
-        return Math.min(20, this.properties.height * 0.2);
+        return this.properties.tailHeight;
     }
 
     getTextInset() {
@@ -27,13 +46,31 @@ class MindMapBubbleShape extends MindMapNodeShape {
         return this.properties.height - this.getTailHeight();
     }
 
+    getTailTipLocalX() {
+        return this.properties.width * this.properties.tailTipPosition;
+    }
+
+    getTailTipBoardPoint() {
+        const position = this.getBoardPosition();
+        return this.mirrorBoardPoint({ x: position.x + this.getTailTipLocalX(), y: position.y + this.properties.height });
+    }
+
+    getTailTipTransform(point) {
+        const localPoint = this.getLocalPointFromBoardPoint(point);
+        const position = this.getBoardPosition();
+        const tailTipX = Math.min(this.properties.width - 2, Math.max(2, localPoint.x - position.x));
+        const bodyHeight = this.getBodyHeight();
+        const height = Math.max(bodyHeight + 2, localPoint.y - position.y);
+        return { tailTipPosition: tailTipX / this.properties.width, tailHeight: height - bodyHeight, height: height };
+    }
+
     getBodyPathData() {
         const width = this.properties.width;
         const bodyHeight = this.getBodyHeight();
         const radius = Math.min(16, bodyHeight / 2, width / 2);
         const tailRight = Math.min(width - radius, width * 0.38);
         const tailLeft = Math.max(radius, width * 0.24);
-        const tailTipX = Math.max(2, width * 0.18);
+        const tailTipX = this.getTailTipLocalX();
         return `M ${radius} 0 H ${width - radius} A ${radius} ${radius} 0 0 1 ${width} ${radius} V ${bodyHeight - radius} A ${radius} ${radius} 0 0 1 ${width - radius} ${bodyHeight} H ${tailRight} L ${tailTipX} ${this.properties.height} L ${tailLeft} ${bodyHeight} H ${radius} A ${radius} ${radius} 0 0 1 0 ${bodyHeight - radius} V ${radius} A ${radius} ${radius} 0 0 1 ${radius} 0 Z`;
     }
 

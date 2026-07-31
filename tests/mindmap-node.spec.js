@@ -64,6 +64,164 @@ test.describe('Mind map node shapes', () => {
         expect(result.selected).toBe(true);
     });
 
+    test('mind map nodes show resize handles around their body bounds', async ({ page }) => {
+        await setupEditor(page);
+        const handlesByShape = await page.evaluate(() => {
+            const shapeProperties = [
+                { type: 'MindMapBubbleShape', properties: { name: 'Bubble', x: 200, y: 200, width: 200, height: 120 } },
+                { type: 'MindMapRectangleShape', properties: { name: 'Rectangle', x: 500, y: 200, width: 180, height: 100 } },
+                { type: 'MindMapCircleShape', properties: { name: 'Oval', x: 200, y: 400, width: 240, height: 120 } }
+            ];
+            const result = {};
+            shapeProperties.forEach(shapeDefinition => {
+                const shape = shell.board.createShape(shapeDefinition.type, null);
+                shape.setProperties(shapeDefinition.properties);
+                shell.board.addShape(shape, false);
+                shell.board.selectShape(shape);
+                shell.board.forceRefresh();
+                result[shapeDefinition.properties.name] = Object.fromEntries(['top-left', 'top-right', 'bottom-left', 'bottom-right'].map(className => {
+                    const handle = shell.board.svg.querySelector(`.handle.${className}`);
+                    return [className, {
+                        visible: handle.getAttribute('visibility'),
+                        cx: Number(handle.getAttribute('cx')),
+                        cy: Number(handle.getAttribute('cy'))
+                    }];
+                }));
+            });
+            return result;
+        });
+        expect(handlesByShape.Bubble['top-left']).toEqual({ visible: 'visible', cx: 200, cy: 200 });
+        expect(handlesByShape.Bubble['top-right']).toEqual({ visible: 'visible', cx: 400, cy: 200 });
+        expect(handlesByShape.Bubble['bottom-left']).toEqual({ visible: 'visible', cx: 200, cy: 300 });
+        expect(handlesByShape.Bubble['bottom-right']).toEqual({ visible: 'visible', cx: 400, cy: 300 });
+        expect(handlesByShape.Rectangle['top-left']).toEqual({ visible: 'visible', cx: 500, cy: 200 });
+        expect(handlesByShape.Rectangle['bottom-right']).toEqual({ visible: 'visible', cx: 680, cy: 300 });
+        expect(handlesByShape.Oval['top-left']).toEqual({ visible: 'visible', cx: 200, cy: 400 });
+        expect(handlesByShape.Oval['top-right']).toEqual({ visible: 'visible', cx: 440, cy: 400 });
+        expect(handlesByShape.Oval['bottom-left']).toEqual({ visible: 'visible', cx: 200, cy: 520 });
+        expect(handlesByShape.Oval['bottom-right']).toEqual({ visible: 'visible', cx: 440, cy: 520 });
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Oval');
+            shell.board.selectShape(shape);
+            shell.board.forceRefresh();
+        });
+        const ovalGrab = await svgClientPoint(page, 440, 520);
+        const ovalDrop = await svgClientPoint(page, 480, 550);
+        await page.mouse.move(ovalGrab.x, ovalGrab.y);
+        await page.mouse.down();
+        await page.mouse.move(ovalDrop.x, ovalDrop.y, { steps: 10 });
+        await page.mouse.up();
+        await page.waitForTimeout(250);
+        const resizedOval = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Oval');
+            const handle = shell.board.svg.querySelector('.handle.bottom-right');
+            return {
+                width: shape.properties.width,
+                height: shape.properties.height,
+                radiusX: Number(shape.bodyElement.getAttribute('rx')),
+                radiusY: Number(shape.bodyElement.getAttribute('ry')),
+                handleX: Number(handle.getAttribute('cx')),
+                handleY: Number(handle.getAttribute('cy'))
+            };
+        });
+        expect(resizedOval).toEqual({ width: 280, height: 150, radiusX: 140, radiusY: 75, handleX: 480, handleY: 550 });
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Bubble');
+            shell.board.selectShape(shape);
+            shell.board.forceRefresh();
+        });
+        const grab = await svgClientPoint(page, 400, 300);
+        const drop = await svgClientPoint(page, 450, 340);
+        await page.mouse.move(grab.x, grab.y);
+        await page.mouse.down();
+        await page.mouse.move(drop.x, drop.y, { steps: 10 });
+        await page.mouse.up();
+        await page.waitForTimeout(250);
+        const resized = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Bubble');
+            const handle = shell.board.svg.querySelector('.handle.bottom-right');
+            return {
+                width: shape.properties.width,
+                height: shape.properties.height,
+                tailHeight: shape.properties.tailHeight,
+                handleX: Number(handle.getAttribute('cx')),
+                handleY: Number(handle.getAttribute('cy'))
+            };
+        });
+        expect(resized.width).toBeCloseTo(250, 0);
+        expect(resized.height).toBeCloseTo(160, 0);
+        expect(resized.tailHeight).toBe(20);
+        expect(resized.handleX).toBeCloseTo(450, 0);
+        expect(resized.handleY).toBeCloseTo(340, 0);
+    });
+
+    test('the bubble tail tip handle repositions and stretches the tip', async ({ page }) => {
+        await setupEditor(page);
+        await page.evaluate(() => {
+            const shape = shell.board.createShape('MindMapBubbleShape', null);
+            shape.setProperties({ name: 'Bubble', x: 200, y: 200, width: 200, height: 120 });
+            shell.board.addShape(shape, false);
+            shell.board.selectShape(shape);
+            shell.board.forceRefresh();
+        });
+        const before = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Bubble');
+            const handle = shell.board.svg.querySelector('.handle.mindmap-bubble-tail-tip');
+            return {
+                position: shape.properties.tailTipPosition,
+                tailHeight: shape.properties.tailHeight,
+                path: shape.bodyElement.getAttribute('d'),
+                visible: handle.getAttribute('visibility'),
+                cx: Number(handle.getAttribute('cx')),
+                cy: Number(handle.getAttribute('cy'))
+            };
+        });
+        expect(before.position).toBeCloseTo(0.18, 5);
+        expect(before.tailHeight).toBe(20);
+        expect(before.visible).toBe('visible');
+        expect(before.cx).toBeCloseTo(236, 5);
+        expect(before.cy).toBeCloseTo(320, 5);
+        const grab = await svgClientPoint(page, before.cx, before.cy);
+        const drop = await svgClientPoint(page, 350, 360);
+        await page.mouse.move(grab.x, grab.y);
+        await page.mouse.down();
+        await page.mouse.move(drop.x, drop.y, { steps: 10 });
+        await page.mouse.up();
+        await page.waitForTimeout(250);
+        const after = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Bubble');
+            return {
+                position: shape.properties.tailTipPosition,
+                height: shape.properties.height,
+                tailHeight: shape.properties.tailHeight,
+                path: shape.bodyElement.getAttribute('d'),
+                cx: Number(shell.board.svg.querySelector('.handle.mindmap-bubble-tail-tip').getAttribute('cx')),
+                cy: Number(shell.board.svg.querySelector('.handle.mindmap-bubble-tail-tip').getAttribute('cy'))
+            };
+        });
+        expect(after.position).toBeCloseTo(0.75, 2);
+        expect(after.height).toBeCloseTo(160, 1);
+        expect(after.tailHeight).toBeCloseTo(60, 1);
+        expect(after.path).not.toBe(before.path);
+        expect(after.cx).toBeCloseTo(350, 1);
+        expect(after.cy).toBeCloseTo(360, 1);
+        await page.evaluate(() => modellus.undo());
+        await page.waitForTimeout(200);
+        expect(await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Bubble');
+            return { position: shape.properties.tailTipPosition, height: shape.properties.height, tailHeight: shape.properties.tailHeight };
+        })).toEqual({ position: 0.18, height: 120, tailHeight: 20 });
+        await page.evaluate(() => modellus.redo());
+        await page.waitForTimeout(200);
+        const redone = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Bubble');
+            return { position: shape.properties.tailTipPosition, height: shape.properties.height, tailHeight: shape.properties.tailHeight };
+        });
+        expect(redone.position).toBeCloseTo(0.75, 2);
+        expect(redone.height).toBeCloseTo(160, 1);
+        expect(redone.tailHeight).toBeCloseTo(60, 1);
+    });
+
     test('a tiny drag falls back to the minimum draw size and undo removes the shape', async ({ page }) => {
         await setupEditor(page);
         await armShape(page, 'MindMapCircleShape', 'Circle');
