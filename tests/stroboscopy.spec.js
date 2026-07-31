@@ -99,4 +99,41 @@ test.describe('Stroboscopy', () => {
             expect(match, `no ghost label at the live label position of ${liveLabel.text}`).toBeTruthy();
         }
     });
+
+    test('draws a repeated body axis value only once at its axis position', async ({ page }) => {
+        await setupEditor(page);
+        const labels = await page.evaluate(() => {
+            shell.commands.addShape('ReferentialShape', 'Referential');
+            const referential = shell.board.shapes.shapes.find(shape => shape.isReferential);
+            shell.commands.addShape('BodyShape', 'Body', referential);
+            const body = shell.board.shapes.getByName('Body');
+            let iteration = 5;
+            shell.calculator.isTerm = term => term === 'x' || term === 'y';
+            shell.calculator.getIteration = () => iteration;
+            shell.calculator.getLastIteration = () => iteration;
+            shell.calculator.getByName = term => term === 'x' ? iteration * 10 : 20;
+            shell.calculator.system.getByNameOnIteration = (currentIteration, term) => term === 'x' ? currentIteration * 10 : 20;
+            body.setProperties({
+                xTerm: 'x',
+                yTerm: 'y',
+                xTermDisplayMode: 'value',
+                yTermDisplayMode: 'value',
+                stroboscopyInterval: 2,
+                stroboscopyColor: '#ff0000'
+            });
+            for (let currentIteration = 1; currentIteration <= 5; currentIteration++) {
+                iteration = currentIteration;
+                body.tick();
+            }
+            body.draw();
+            return [...body.stroboscopyLabels.children].map(group => ({
+                text: group.lastChild.textContent,
+                x: Number(group.lastChild.getAttribute('x')),
+                y: Number(group.lastChild.getAttribute('y'))
+            }));
+        });
+        const verticalLabels = labels.filter(label => label.text.startsWith('y'));
+        expect(verticalLabels).toHaveLength(1);
+        expect(labels.filter(label => label.text.startsWith('x'))).toHaveLength(3);
+    });
 });

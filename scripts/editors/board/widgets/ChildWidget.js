@@ -340,6 +340,13 @@ class ChildShape extends BaseShape {
         return this.stackStroboscopyLabelPosition(labelIndex => this.getStroboscopyFallbackLabelPosition(position, entry, labelIndex), labelIndexByPosition);
     }
 
+    getStroboscopyLabelAxis(entry) {
+        if (!this.termDisplay?.getReferentialAxesPosition())
+            return null;
+        const axis = entry.axis ?? this.termDisplay.getTermAxis(entry.term);
+        return axis === "x" || axis === "y" ? axis : null;
+    }
+
     getStroboscopyLabelEntries() {
         const labelEntries = [];
         for (const entry of this.termDisplayEntries) {
@@ -390,6 +397,7 @@ class ChildShape extends BaseShape {
         const opacity = this.properties.stroboscopyOpacity;
         const positions = this._stroboscopyPositions ?? [];
         const labelIndexByPosition = new Map();
+        const drawnAxisValues = new Set();
         let html = "";
         for (const position of positions) {
             for (let i = 0; i < labelEntries.length; i++) {
@@ -397,9 +405,15 @@ class ChildShape extends BaseShape {
                 const valueText = this.getStroboscopyEntryValueText(labelEntry.entry, labelEntry.termName, position.iteration);
                 if (valueText === null)
                     continue;
+                const axis = this.getStroboscopyLabelAxis(labelEntry.entry);
+                const axisValueKey = axis ? `${labelEntry.entry.term}:${valueText}` : null;
+                if (axisValueKey && drawnAxisValues.has(axisValueKey))
+                    continue;
                 const labelPosition = this.getStroboscopyLabelPosition(position, labelEntry.entry, i, labelIndexByPosition);
                 if (!labelPosition)
                     continue;
+                if (axisValueKey)
+                    drawnAxisValues.add(axisValueKey);
                 const textHtml = Utils.buildTermValueTextHtml(labelEntry.termText, valueText);
                 html += `<g opacity="${opacity}"><rect class="shape-term-label-bg" rx="3" fill-opacity="0.85" fill="${color}"></rect>`;
                 html += `<text class="shape-term-label" x="${labelPosition.x}" y="${labelPosition.y}" text-anchor="${labelPosition.anchor}" dominant-baseline="central" fill="${textColor}">${textHtml}</text></g>`;
