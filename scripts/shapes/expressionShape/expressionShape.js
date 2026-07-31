@@ -159,7 +159,8 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         super.setProperties(properties);
         if (properties.expression != undefined) {
             const flattened = this.flattenNestedDisplaylines(properties.expression);
-            const ensured = flattened?.startsWith("\\displaylines{") ? flattened : `\\displaylines{${flattened ?? ""}}`;
+            const wrapped = flattened?.startsWith("\\displaylines{") ? flattened : `\\displaylines{${flattened ?? ""}}`;
+            const ensured = Utils.writeTermNames(wrapped);
             this.mathfield.value = ensured;
             this.properties.expression = ensured;
             this._committedExpression = ensured;
@@ -263,7 +264,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         const height = this.properties.height;
         const color = this.properties.foregroundColor || "black";
         const backgroundColor = this.properties.backgroundColor || "transparent";
-        const markup = MathLive.convertLatexToMarkup(this.properties.expression);
+        const markup = MathLive.convertLatexToMarkup(Utils.writeTermNames(this.properties.expression));
         const mathStyles = BaseShape.embeddedMathStyles || "";
         const isMidSchool = document.body.classList.contains("mid-school");
         const handwrittenOverride = isMidSchool

@@ -49,6 +49,53 @@ class Utils {
         return text.replace(Utils.greekLettersPattern, match => Utils.greekLetters[match]);
     }
 
+    // A term name can carry named parts separated by dots (`v.x`, `Body1.vx`).  A named part is
+    // always written as a subscript marked with '\!' (`v_{\!x}`) so the parser tells it apart from an
+    // index and restores the dot, and so the name reads as a subscript everywhere it is shown.
+    static termNamedIndexMarker = "\\!";
+    static termNamedIndexPattern = /_\{\\!([A-Za-z0-9]+)\}/g;
+    static termNamePartPattern = /\.([A-Za-z0-9]+)/g;
+    static dottedTermNamePattern = /(\\[A-Za-z]+|[A-Za-zΑ-ω][A-Za-z0-9]*)((?:\.[A-Za-z0-9]+)+)/g;
+    static termNameEndPattern = /(\\[A-Za-z]+|[A-Za-zΑ-ω][A-Za-z0-9]*)$/;
+    // Mathlive writes the latex up to the caret with the enclosing groups left open, so a named part
+    // still being written ends with its marker followed by the name characters typed so far.
+    static openTermNamedIndexPattern = /\\!\s*[A-Za-z0-9]*$/;
+
+    static writeTermNames(text) {
+        return String(text ?? "").replace(Utils.dottedTermNamePattern, (matchedName, baseName, namedParts) =>
+            baseName + namedParts.replace(Utils.termNamePartPattern, (namedPart, partName) => `_{${Utils.termNamedIndexMarker}${partName}}`));
+    }
+
+    static convertTermNamedIndexesToPlainText(text) {
+        return String(text ?? "").replace(Utils.termNamedIndexPattern, (matchedIndex, partName) => `_${partName}`);
+    }
+
+    static endsWithTermName(text) {
+        return Utils.termNameEndPattern.test(String(text ?? ""));
+    }
+
+    static endsWithOpenTermNamedIndex(text) {
+        return Utils.openTermNamedIndexPattern.test(String(text ?? ""));
+    }
+
+    static splitTermNameSegments(termLatex) {
+        const normalizedText = String(termLatex ?? "");
+        const namedIndexPattern = new RegExp(Utils.termNamedIndexPattern.source, "g");
+        const segments = [];
+        let segmentStart = 0;
+        let namedIndexMatch = namedIndexPattern.exec(normalizedText);
+        while (namedIndexMatch) {
+            if (namedIndexMatch.index > segmentStart)
+                segments.push({ text: normalizedText.substring(segmentStart, namedIndexMatch.index), isNamedIndex: false });
+            segments.push({ text: namedIndexMatch[1], isNamedIndex: true });
+            segmentStart = namedIndexMatch.index + namedIndexMatch[0].length;
+            namedIndexMatch = namedIndexPattern.exec(normalizedText);
+        }
+        if (segmentStart < normalizedText.length)
+            segments.push({ text: normalizedText.substring(segmentStart), isNamedIndex: false });
+        return segments;
+    }
+
     static getRegressionDisplayTerm(term, system = null) {
         const normalizedTerm = String(term ?? "").trim();
         if (normalizedTerm === "" || !system)
@@ -71,7 +118,7 @@ class Utils {
         const regressionDisplayTerm = Utils.getRegressionDisplayTerm(normalizedTerm, system);
         if (regressionDisplayTerm)
             return regressionDisplayTerm;
-        return Utils.convertGreekLetters(normalizedTerm);
+        return Utils.convertGreekLetters(Utils.writeTermNames(normalizedTerm));
     }
 
     static getTerms(terms, system = null) {
@@ -80,7 +127,7 @@ class Utils {
 
     static escapeMathTermName(text) {
         const normalizedText = String(text ?? "");
-        return normalizedText.replace(/(^|[^\\])_/g, "$1\\_");
+        return normalizedText.replace(/(^|[^\\])_(?!\{\\!)/g, "$1\\_");
     }
 
     static isMathTermText(text) {
@@ -88,7 +135,7 @@ class Utils {
     }
 
     static normalizeMathTermForWidth(text) {
-        const normalizedText = String(text ?? "");
+        const normalizedText = Utils.convertTermNamedIndexesToPlainText(text);
         const simplifiedText = normalizedText
             .replace(/\\widehat\s*\{([^}]*)\}/g, "$1")
             .replace(/\\hat\s*\{([^}]*)\}/g, "$1")
@@ -100,7 +147,7 @@ class Utils {
     }
 
     static convertMathTermToPlainText(text) {
-        const normalizedText = String(text ?? "");
+        const normalizedText = Utils.convertTermNamedIndexesToPlainText(text);
         const withHatText = normalizedText
             .replace(/\\widehat\s*\{([^}]*)\}/g, (_, innerText) => `${innerText}\u0302`)
             .replace(/\\hat\s*\{([^}]*)\}/g, (_, innerText) => `${innerText}\u0302`);
@@ -108,7 +155,7 @@ class Utils {
     }
 
     static parseMathTermLatex(latexValue) {
-        let remaining = String(latexValue ?? "").trim();
+        let remaining = String(latexValue ?? "").trim().replace(Utils.termNamedIndexPattern, (matchedIndex, partName) => `\\_{${partName}}`);
         let hat = null;
         const widehatMatch = remaining.match(/^\\widehat\{([\s\S]*)\}$/);
         const hatMatch = remaining.match(/^\\hat\{([\s\S]*)\}$/);
@@ -271,13 +318,26 @@ class Utils {
     static buildTermValueTextHtml(termLatex, valueText) {
         if (!termLatex)
             return `<tspan font-family="Katex_Main" dominant-baseline="central">${Utils.escapeXmlText(valueText)}</tspan>`;
-        const termText = Utils.convertMathTermToPlainText(termLatex);
-        const termSegments = termText.match(/\d+|\D+/g) ?? [];
+        const namedIndexShift = 0.25;
         let html = "";
-        // Katex_Math is the math-italic font whose digit glyphs are oldstyle figures ("0" reads as "o"), so digits use the upright main font.
-        for (const segment of termSegments)
-            html += `<tspan font-family="${/\d/.test(segment) ? "Katex_Main" : "Katex_Math"}" dominant-baseline="central">${Utils.escapeXmlText(segment)}</tspan>`;
-        return `${html}<tspan font-family="Katex_Main" dominant-baseline="central"> = ${Utils.escapeXmlText(valueText)}</tspan>`;
+        let pendingShift = 0;
+        const appendTermSegment = (segmentText, isNamedIndex) => {
+            // Katex_Math is the math-italic font whose digit glyphs are oldstyle figures ("0" reads as "o"), so digits use the upright main font.
+            const characterRuns = Utils.convertMathTermToPlainText(segmentText).match(/\d+|\D+/g) ?? [];
+            const segmentShift = isNamedIndex ? namedIndexShift : 0;
+            for (const characterRun of characterRuns) {
+                const shift = segmentShift - pendingShift;
+                const fontFamily = /\d/.test(characterRun) ? "Katex_Main" : "Katex_Math";
+                const fontSizeAttribute = isNamedIndex ? ` font-size="65%"` : "";
+                const shiftAttribute = shift === 0 ? "" : ` dy="${shift}em"`;
+                html += `<tspan font-family="${fontFamily}"${fontSizeAttribute}${shiftAttribute} dominant-baseline="central">${Utils.escapeXmlText(characterRun)}</tspan>`;
+                pendingShift = segmentShift;
+            }
+        };
+        for (const segment of Utils.splitTermNameSegments(termLatex))
+            appendTermSegment(segment.text, segment.isNamedIndex);
+        const valueShiftAttribute = pendingShift === 0 ? "" : ` dy="${-pendingShift}em"`;
+        return `${html}<tspan font-family="Katex_Main"${valueShiftAttribute} dominant-baseline="central"> = ${Utils.escapeXmlText(valueText)}</tspan>`;
     }
 
     static setTermValueTextContent(textElement, termLatex, valueText) {
@@ -332,7 +392,7 @@ class Utils {
     }
 
     static formatMathTermName(text) {
-        return Utils.escapeMathTermName(String(text ?? ""));
+        return Utils.escapeMathTermName(Utils.writeTermNames(text));
     }
 
     static buildReadOnlyMathFieldMarkup(mathText, styleText = "") {

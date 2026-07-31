@@ -1356,6 +1356,16 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitName?: (ctx: NameContext) => void;
     /**
+     * Enter a parse tree produced by `LatexMathParser.namedIndex`.
+     * @param ctx the parse tree
+     */
+    enterNamedIndex?: (ctx: NamedIndexContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.namedIndex`.
+     * @param ctx the parse tree
+     */
+    exitNamedIndex?: (ctx: NamedIndexContext) => void;
+    /**
      * Enter a parse tree produced by `LatexMathParser.dname`.
      * @param ctx the parse tree
      */
@@ -2119,9 +2129,22 @@ declare class NameContext extends antlr.ParserRuleContext {
     constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
     ID(): antlr.TerminalNode[];
     ID(i: number): antlr.TerminalNode | null;
+    SPECIAL(): antlr.TerminalNode | null;
+    namedIndex(): NamedIndexContext[];
+    namedIndex(i: number): NamedIndexContext | null;
     DOT(): antlr.TerminalNode[];
     DOT(i: number): antlr.TerminalNode | null;
-    SPECIAL(): antlr.TerminalNode | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class NamedIndexContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    ID(): antlr.TerminalNode[];
+    ID(i: number): antlr.TerminalNode | null;
+    DIGIT(): antlr.TerminalNode[];
+    DIGIT(i: number): antlr.TerminalNode | null;
     get ruleIndex(): number;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
@@ -2766,6 +2789,12 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitName?: (ctx: NameContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.namedIndex`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitNamedIndex?: (ctx: NamedIndexContext) => Result;
     /**
      * Visit a parse tree produced by `LatexMathParser.dname`.
      * @param ctx the parse tree

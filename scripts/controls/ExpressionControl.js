@@ -50,7 +50,7 @@ class ExpressionControl {
                 scrollByThumb: true
             });
         if (typeof this.options.value === "string")
-            this.mathfield.value = this.options.value;
+            this.setValue(this.options.value);
         return this.containerElement;
     }
 
@@ -202,6 +202,7 @@ class ExpressionControl {
             this.pasteFromClipboardUsingMathlive();
             return;
         }
+        this._leaveTermNamedIndexOnKeydown(keydownEvent);
         if (keydownEvent.key === "Dead") {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
@@ -257,11 +258,70 @@ class ExpressionControl {
             this._applyParenthesisFunctionShortcuts();
             return;
         }
+        if (this._handleTermNamedIndexKeydown(keydownEvent))
+            return;
         if (this._handleSpaceKeydown(keydownEvent))
             return;
         if (this.mathliveController?.handleBackspaceKeydown(keydownEvent))
             return;
         this.mathliveController?.handleDeleteKeydown(keydownEvent);
+    }
+
+    // A dot after a name starts a named part of that name (`v.x`), written as a subscript marked with
+    // '\!' so the parser tells it apart from an index and restores the dot.  A dot anywhere else, a
+    // decimal separator in particular, is left to Mathlive.
+    _handleTermNamedIndexKeydown(keydownEvent) {
+        if (keydownEvent.key !== "." || keydownEvent.altKey || keydownEvent.ctrlKey || keydownEvent.metaKey)
+            return false;
+        if (!this._canStartTermNamedIndex())
+            return false;
+        keydownEvent.preventDefault();
+        keydownEvent.stopImmediatePropagation();
+        this.mathfield.executeCommand("moveToSubscript");
+        this.mathfield.executeCommand("insert", Utils.termNamedIndexMarker);
+        return true;
+    }
+
+    // The name being named is looked for in the group holding the caret, so a dot typed at the start of
+    // a group does not reach for the name written in the group before it.
+    _canStartTermNamedIndex() {
+        const groupLatexBeforeCaret = this._getGroupLatexBeforeCaret();
+        if (groupLatexBeforeCaret === null)
+            return false;
+        // Mathlive keeps a single subscript per name, so a name already being named cannot take another one.
+        if (Utils.endsWithOpenTermNamedIndex(groupLatexBeforeCaret))
+            return false;
+        return Utils.endsWithTermName(groupLatexBeforeCaret);
+    }
+
+    // A named part of a name is made of name characters only, so anything else closes it and carries
+    // on with the expression.  The space key is left to the caret handling that already leaves groups.
+    // This runs on every keystroke, so it only reads the latex written so far and never moves the caret.
+    _leaveTermNamedIndexOnKeydown(keydownEvent) {
+        if (keydownEvent.altKey || keydownEvent.ctrlKey || keydownEvent.metaKey)
+            return;
+        const typedKey = keydownEvent.key;
+        if (typedKey.length !== 1 || typedKey === " " || /[A-Za-z0-9]/.test(typedKey))
+            return;
+        if (!Utils.endsWithOpenTermNamedIndex(this._getLatexBeforeCaret()))
+            return;
+        this.mathfield.executeCommand("moveAfterParent");
+    }
+
+    _getLatexBeforeCaret() {
+        if (!this.mathliveController || this.mathliveController.hasSelection())
+            return "";
+        return this.mathliveController.getTextRange(0, this.mathliveController.getCaretPosition());
+    }
+
+    _getGroupLatexBeforeCaret() {
+        if (!this.mathliveController || this.mathliveController.hasSelection())
+            return null;
+        const caretPosition = this.mathliveController.getCaretPosition();
+        const groupStartPosition = this.mathliveController.getCurrentGroupStartPosition();
+        if (caretPosition <= groupStartPosition)
+            return null;
+        return this.mathliveController.getTextRange(groupStartPosition, caretPosition);
     }
 
     _handleSpaceKeydown(keydownEvent) {
@@ -581,8 +641,10 @@ class ExpressionControl {
         scrollViewInstance?.update();
     }
 
+    // Names written with a dot, as they come from the parser or from a saved model, are written back as
+    // named subscripts so a name always reads the same way, whoever wrote it.
     setValue(value) {
-        this.mathfield.value = value;
+        this.mathfield.value = Utils.writeTermNames(value);
     }
 
     getValue(format) {
