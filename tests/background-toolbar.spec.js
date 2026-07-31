@@ -122,6 +122,22 @@ test.describe('Background toolbar', () => {
         expect(state.hasRect).toBe(true);
     });
 
+    test('Selected background survives serialization and reload', async ({ page }) => {
+        await setupEditor(page);
+        const state = await page.evaluate(() => {
+            shell.setProperty('backgroundId', 'math-grid');
+            const serialized = JSON.parse(JSON.stringify(shell.serialize()));
+            shell.setProperty('backgroundId', '');
+            shell.deserialise(serialized);
+            return {
+                backgroundId: shell.properties.backgroundId,
+                hasRect: !!shell.board.svg.querySelector('#mdl-bg-rect')
+            };
+        });
+        expect(state.backgroundId).toBe('math-grid');
+        expect(state.hasRect).toBe(true);
+    });
+
     test('Settings popup no longer contains theme, background color or background', async ({ page }) => {
         await setupEditor(page);
         const fields = await page.evaluate(() => {

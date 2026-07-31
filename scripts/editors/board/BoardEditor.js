@@ -547,6 +547,7 @@ class BoardEditor extends Workspace {
         this.applySerializedSession(model, properties => this.setProperties(properties));
         this.board.deserialize(model.board);
         this.applyGrid();
+        this.applyBackground();
     }
 
     async saveToPath(filePath) {
