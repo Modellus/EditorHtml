@@ -13,16 +13,16 @@ class GaugeShape extends BaseShape {
         handles.push({
             className: "handle gauge-pointer",
             getAttributes: () => {
-                const pt = this.getPointerBoardPoint();
+                const point = this.getPointerBoardPoint();
                 return {
-                    x: pt.x - handleSize / 2,
-                    y: pt.y - handleSize / 2,
+                    x: point.x - handleSize / 2,
+                    y: point.y - handleSize / 2,
                     width: handleSize,
                     height: handleSize
                 };
             },
-            getTransform: e => ({
-                pointerDrag: { x: e.x, y: e.y }
+            getTransform: event => ({
+                pointerDrag: { x: event.x, y: event.y }
             })
         });
         return handles;
@@ -36,6 +36,28 @@ class GaugeShape extends BaseShape {
         super.transformShape(transform);
     }
 
+    isPointerDraggable() {
+        if (this.isTermLocked("term"))
+            return false;
+        const term = this.properties.term;
+        if (!term || !this.board.calculator.isTerm(term))
+            return true;
+        return this.board.calculator.isEditable(term);
+    }
+
+    isHandleDragAllowed(handle) {
+        if (handle?.classList.contains("gauge-pointer"))
+            return super.isHandleDragAllowed(handle) && this.isPointerDraggable();
+        return super.isHandleDragAllowed(handle);
+    }
+
+    updateHandles() {
+        super.updateHandles();
+        const pointerHandle = this.handleElements?.find(handle => handle.classList.contains("gauge-pointer"));
+        if (pointerHandle)
+            pointerHandle.style.pointerEvents = this.isPointerDraggable() ? "" : "none";
+    }
+
     setDefaults() {
         super.setDefaults();
         this.properties.name = this.board.translations.get("Gauge Name");
@@ -44,372 +66,420 @@ class GaugeShape extends BaseShape {
         this.properties.y = center.y - 90;
         this.properties.width = 180;
         this.properties.height = 180;
-        this.properties.angleTerm = this.board.calculator.properties.independent.name;
-        this.properties.angleValue = 0;
-        this.properties.magnitudeTerm = this.board.calculator.getDefaultTerm();
-        this.properties.magnitudeValue = 0;
+        this.properties.term = this.board.calculator.getDefaultTerm();
+        this.properties.value = 0;
+        this.properties.autoScale = true;
+        this.properties.minimum = 0;
+        this.properties.maximum = 10;
+        this.properties.precision = 1;
+        this.properties.snapToTick = false;
         this.properties.startAngle = 225;
         this.properties.endAngle = -45;
-        this.properties.minimumMagnitude = 0;
-        this.properties.maximumMagnitude = 1;
-        this.properties.anglePrecision = 30;
-        this.properties.snapToAngleTick = false;
-        this.properties.magnitudePrecision = 0;
-        this.properties.snapToMagnitudeTick = false;
+        this.properties.ranges = [{ minimum: this.properties.minimum, maximum: this.properties.maximum, color: "transparent" }, { minimum: null, maximum: null, color: "transparent" }];
         this.properties.backgroundColor = "#f7f7f7";
         this.properties.foregroundColor = this.board.theme.getStrokeColors()[2].color;
         this.properties.borderColor = this.properties.foregroundColor;
     }
 
     showContextToolbar() {
-        this.termFormControls["angleTerm"]?.termControl?.refresh();
-        this.termFormControls["magnitudeTerm"]?.termControl?.refresh();
+        this.termFormControls["term"]?.termControl?.refresh();
         this.refreshTermsToolbarControl();
         this.refreshGaugeSettingsToolbarControl();
+        this.refreshGaugeScaleControls();
         super.showContextToolbar();
     }
 
     populateTermsMenuSections(listItems) {
-        listItems.push(
-            { text: "Angle", stacked: true, buildControl: $p => $p.append(this._angleTermControl) },
-            { text: "Magnitude", stacked: true, buildControl: $p => $p.append(this._magnitudeTermControl) }
-        );
+        listItems.push({ text: "Value", stacked: true, buildControl: $container => $container.append(this._termControl) });
     }
 
     renderTermsButtonTemplate(element) {
-        const angleTerm = this.formatTermForDisplay(this.properties.angleTerm);
-        const magnitudeTerm = this.formatTermForDisplay(this.properties.magnitudeTerm);
-        const anglePart = angleTerm ? this.createNameButtonTermMarkup(angleTerm, this.properties.angleTerm) : "";
-        const separator = (angleTerm && magnitudeTerm) ? `<i class="fa-light fa-x mdl-name-btn-separator"></i>` : "";
-        const magnitudePart = magnitudeTerm ? this.createNameButtonTermMarkup(magnitudeTerm, this.properties.magnitudeTerm) : "";
-        if (!anglePart && !magnitudePart)
-            element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Terms</span></span>`;
-        else
-            element.innerHTML = `${anglePart}${separator}${magnitudePart}`;
+        const term = this.formatTermForDisplay(this.properties.term);
+        element.innerHTML = term
+            ? this.createNameButtonTermMarkup(term, this.properties.term)
+            : `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Value</span></span>`;
     }
 
     refreshGaugeSettingsToolbarControl() {
-        if (!this._gaugeSettingsDropdownElement)
-            return;
-        const popup = this._gaugeSettingsDropdownElement.dxDropDownButton("instance").option("dropDownOptions");
-        if (popup?.visible)
-            this._gaugeSettingsDropdownElement.dxDropDownButton("instance").close();
+        this._gaugeRangesListInstance?.option("dataSource", this.properties.ranges);
     }
 
     createElement() {
         const element = this.board.createSvgElement("g");
+        this.hitArea = this.board.createSvgElement("rect");
+        this.hitArea.setAttribute("fill", "transparent");
+        this.hitArea.setAttribute("stroke", "none");
+        this.hitArea.setAttribute("pointer-events", "all");
+        element.appendChild(this.hitArea);
         this.gaugeBg = this.board.createSvgElement("path");
-        this.magnitudeTicksLayer = this.board.createSvgElement("g");
-        this.angleTicksLayer = this.board.createSvgElement("g");
-        this.angleLabelsLayer = this.board.createSvgElement("g");
+        this.rangeLayer = this.board.createSvgElement("g");
+        this.tickLayer = this.board.createSvgElement("g");
+        this.labelLayer = this.board.createSvgElement("g");
         this.pointerLine = this.board.createSvgElement("line");
-        this.pointerDot = this.board.createSvgElement("circle");
         this.hubCircle = this.board.createSvgElement("circle");
+        this.crosshairLayer = this.board.createSvgElement("g");
+        this.crosshairLayer.setAttribute("pointer-events", "none");
+        this.crosshairLayer.setAttribute("class", "gauge-export-exclude");
         element.appendChild(this.gaugeBg);
-        element.appendChild(this.magnitudeTicksLayer);
-        element.appendChild(this.angleTicksLayer);
-        element.appendChild(this.angleLabelsLayer);
+        element.appendChild(this.rangeLayer);
+        element.appendChild(this.tickLayer);
+        element.appendChild(this.labelLayer);
         element.appendChild(this.pointerLine);
-        element.appendChild(this.pointerDot);
         element.appendChild(this.hubCircle);
+        element.appendChild(this.crosshairLayer);
+        element.addEventListener("pointermove", e => this.onGaugePointerMove(e));
+        element.addEventListener("pointerleave", () => this.clearLayerChildren(this.crosshairLayer));
         return element;
+    }
+
+    createExportElementClone(element) {
+        const clone = super.createExportElementClone(element);
+        clone.querySelectorAll(".gauge-export-exclude").forEach(node => node.remove());
+        return clone;
     }
 
     getGaugeGeometry() {
         const width = Math.max(40, Number(this.properties.width) || 40);
         const height = Math.max(40, Number(this.properties.height) || 40);
-        const cx = width / 2;
-        const cy = height / 2;
-        const maxR = Math.min(cx, cy);
-        const labelPadding = 14;
-        const outerR = Math.max(10, maxR - labelPadding);
-        const hubR = Math.max(4, Math.min(outerR * 0.1, 8));
-        const innerR = Math.max(hubR + 2, outerR * 0.25);
-        return { width, height, cx, cy, outerR, innerR, hubR };
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const maximumRadius = Math.min(centerX, centerY);
+        const outerRadius = Math.max(10, maximumRadius - 4);
+        const innerRadius = Math.max(8, outerRadius - 10);
+        const hubRadius = Math.max(4, Math.min(outerRadius * 0.1, 8));
+        const needleRadius = Math.max(hubRadius + 4, innerRadius - 6);
+        const labelRadius = Math.max(hubRadius + 12, innerRadius - 19);
+        return { width, height, centerX, centerY, outerRadius, innerRadius, hubRadius, needleRadius, labelRadius };
     }
 
-    getMagnitudeRange() {
-        const minimum = Number(this.properties.minimumMagnitude);
-        const maximum = Number(this.properties.maximumMagnitude);
-        const minVal = Number.isFinite(minimum) ? minimum : 0;
-        const maxVal = Number.isFinite(maximum) ? maximum : 1;
-        if (minVal === maxVal)
-            return { minimum: minVal, maximum: maxVal + 1 };
-        return { minimum: minVal, maximum: maxVal };
+    // The label layer lives inside the shape element, so the anchor is in the
+    // gauge's own frame: just below the hub circle at the base of the needle.
+    getTermLabelAnchor() {
+        const geometry = this.getGaugeGeometry();
+        return { x: geometry.centerX, y: geometry.centerY + geometry.hubRadius + 12, anchor: "middle" };
+    }
+
+    getTermEntryLabelColor(entry, index) {
+        return this.properties.foregroundColor;
+    }
+
+    getGaugeValue() {
+        const term = this.properties.term;
+        if (term && this.board.calculator.isTerm(term))
+            return this.board.calculator.getByName(term, this.getTermCaseNumber("termCase"));
+        return this.properties.value;
+    }
+
+    getConfiguredGaugeRange() {
+        return { minimum: this.properties.minimum, maximum: this.properties.maximum };
+    }
+
+    getObservedGaugeRange() {
+        const term = this.properties.term;
+        if (!term || !this.board.calculator.isTerm(term))
+            return this.getConfiguredGaugeRange();
+        const caseNumber = this.getTermCaseNumber("termCase");
+        const values = this.board.calculator.system.values;
+        let minimum = Number.POSITIVE_INFINITY;
+        let maximum = Number.NEGATIVE_INFINITY;
+        for (let index = 0; index < values.length; index++) {
+            const iterationValues = values[index];
+            if ((iterationValues.case ?? 1) !== caseNumber)
+                continue;
+            const value = iterationValues[term];
+            if (!Number.isFinite(value))
+                continue;
+            minimum = Math.min(minimum, value);
+            maximum = Math.max(maximum, value);
+        }
+        const currentValue = this.getGaugeValue();
+        if (Number.isFinite(currentValue)) {
+            minimum = Math.min(minimum, currentValue);
+            maximum = Math.max(maximum, currentValue);
+        }
+        if (!Number.isFinite(minimum) || !Number.isFinite(maximum))
+            return this.getConfiguredGaugeRange();
+        if (minimum === maximum) {
+            const margin = Math.max(Math.abs(minimum) * 0.1, 1);
+            return { minimum: minimum - margin, maximum: maximum + margin };
+        }
+        return { minimum, maximum };
+    }
+
+    getGaugeRange() {
+        return this.properties.autoScale === true ? this.getObservedGaugeRange() : this.getConfiguredGaugeRange();
+    }
+
+    getGaugeSpan() {
+        return ((this.properties.startAngle - this.properties.endAngle) % 360 + 360) % 360 || 360;
+    }
+
+    clampGaugeValue(value, range) {
+        return Math.max(range.minimum, Math.min(range.maximum, value));
+    }
+
+    getGaugeValueRatio(value, range) {
+        if (range.minimum === range.maximum)
+            return 0;
+        return (this.clampGaugeValue(value, range) - range.minimum) / (range.maximum - range.minimum);
     }
 
     getPointerVisualAngleDeg() {
-        const calculator = this.board.calculator;
-        const angleTerm = this.properties.angleTerm;
-        let storedAngle;
-        if (angleTerm && calculator.isTerm(angleTerm))
-            storedAngle = calculator.getByName(angleTerm, this.getTermCaseNumber("angleTermCase"));
-        else
-            storedAngle = Number(this.properties.angleValue ?? 0);
-        if (!Number.isFinite(storedAngle))
-            storedAngle = 0;
-        const useRadians = calculator.properties.angleUnit === "radians";
-        return useRadians ? storedAngle * 180 / Math.PI : storedAngle;
-    }
-
-    getPointerMagnitude() {
-        const calculator = this.board.calculator;
-        const magnitudeTerm = this.properties.magnitudeTerm;
-        let magnitude;
-        if (magnitudeTerm && calculator.isTerm(magnitudeTerm))
-            magnitude = calculator.getByName(magnitudeTerm, this.getTermCaseNumber("magnitudeTermCase"));
-        else
-            magnitude = Number(this.properties.magnitudeValue ?? 0);
-        if (!Number.isFinite(magnitude))
-            magnitude = 0;
-        return magnitude;
+        const range = this.getGaugeRange();
+        return this.properties.startAngle - this.getGaugeValueRatio(this.getGaugeValue(), range) * this.getGaugeSpan();
     }
 
     getPointerLocalPoint() {
-        const geo = this.getGaugeGeometry();
-        const visualAngleDeg = this.getPointerVisualAngleDeg();
-        const magnitude = this.getPointerMagnitude();
-        const { minimum, maximum } = this.getMagnitudeRange();
-        const magnitudeSpan = maximum - minimum;
-        const ratio = magnitudeSpan !== 0 ? Math.max(0, Math.min(1, (magnitude - minimum) / magnitudeSpan)) : 0;
-        const r = geo.innerR + ratio * (geo.outerR - geo.innerR);
-        const rad = visualAngleDeg * Math.PI / 180;
-        return { x: geo.cx + r * Math.cos(rad), y: geo.cy - r * Math.sin(rad) };
+        const geometry = this.getGaugeGeometry();
+        const radians = this.getPointerVisualAngleDeg() * Math.PI / 180;
+        return {
+            x: geometry.centerX + geometry.needleRadius * Math.cos(radians),
+            y: geometry.centerY - geometry.needleRadius * Math.sin(radians)
+        };
     }
 
     getPointerBoardPoint() {
         const position = this.getBoardPosition();
-        const geo = this.getGaugeGeometry();
-        const localPt = this.getPointerLocalPoint();
-        const mirrored = this.mirrorBoardPoint({ x: position.x + localPt.x, y: position.y + localPt.y });
+        const geometry = this.getGaugeGeometry();
+        const localPoint = this.getPointerLocalPoint();
+        const mirrored = this.mirrorBoardPoint({ x: position.x + localPoint.x, y: position.y + localPoint.y });
         const rotation = Number(this.properties.rotation) || 0;
         if (Math.abs(rotation) < 0.00001)
             return mirrored;
-        const boardCx = position.x + geo.cx;
-        const boardCy = position.y + geo.cy;
-        return this.rotatePointAroundCenter(mirrored.x, mirrored.y, boardCx, boardCy, rotation);
+        const boardCenterX = position.x + geometry.centerX;
+        const boardCenterY = position.y + geometry.centerY;
+        return this.rotatePointAroundCenter(mirrored.x, mirrored.y, boardCenterX, boardCenterY, rotation);
     }
 
-    clampToGaugeAngle(angleDeg) {
-        const startAngle = Number(this.properties.startAngle);
-        const endAngle = Number(this.properties.endAngle);
-        if (!Number.isFinite(startAngle) || !Number.isFinite(endAngle))
-            return angleDeg;
-        const span = ((startAngle - endAngle) % 360 + 360) % 360 || 360;
-        const offset = ((startAngle - angleDeg) % 360 + 360) % 360;
+    clampToGaugeAngle(angleDegrees) {
+        const span = this.getGaugeSpan();
+        const offset = ((this.properties.startAngle - angleDegrees) % 360 + 360) % 360;
         if (offset <= span)
-            return angleDeg;
-        const toEnd = offset - span;
-        const toStart = (360 - offset) % 360;
-        return toEnd <= toStart ? endAngle : startAngle;
+            return angleDegrees;
+        const distanceToEnd = offset - span;
+        const distanceToStart = (360 - offset) % 360;
+        return distanceToEnd <= distanceToStart ? this.properties.endAngle : this.properties.startAngle;
     }
 
-    snapVisualAngle(angleDeg) {
-        if (!this.properties.snapToAngleTick)
-            return angleDeg;
-        const precision = Number(this.properties.anglePrecision);
-        if (!precision || precision <= 0)
-            return angleDeg;
-        const startAngle = Number(this.properties.startAngle) || 0;
-        const offset = startAngle - angleDeg;
-        const snappedOffset = Math.round(offset / precision) * precision;
-        return startAngle - snappedOffset;
-    }
-
-    snapMagnitude(magnitude) {
-        if (!this.properties.snapToMagnitudeTick)
-            return magnitude;
-        const precision = Number(this.properties.magnitudePrecision);
-        if (!precision || precision <= 0)
-            return magnitude;
-        return Math.round(magnitude / precision) * precision;
+    snapGaugeValue(value) {
+        if (!this.properties.snapToTick)
+            return value;
+        if (this.properties.precision <= 0)
+            return value;
+        return Math.round(value / this.properties.precision) * this.properties.precision;
     }
 
     applyPointerDrag({ x, y }) {
-        const geo = this.getGaugeGeometry();
+        const geometry = this.getGaugeGeometry();
         const position = this.getBoardPosition();
-        const boardCx = position.x + geo.cx;
-        const boardCy = position.y + geo.cy;
-        const unrotated = this.getLocalPointFromBoardPoint({ x, y });
-        const localX = unrotated.x - boardCx;
-        const localY = unrotated.y - boardCy;
-        let visualAngleDeg = Math.atan2(-localY, localX) * 180 / Math.PI;
-        visualAngleDeg = this.clampToGaugeAngle(visualAngleDeg);
-        visualAngleDeg = this.snapVisualAngle(visualAngleDeg);
-        const radialSpan = geo.outerR - geo.innerR;
-        let magnitudeRatio = radialSpan > 0 ? (Math.hypot(localX, localY) - geo.innerR) / radialSpan : 0;
-        const { minimum, maximum } = this.getMagnitudeRange();
-        let magnitude = minimum + Math.max(0, Math.min(1, magnitudeRatio)) * (maximum - minimum);
-        magnitude = this.snapMagnitude(magnitude);
-        magnitude = Math.max(minimum, Math.min(maximum, magnitude));
-        const useRadians = this.board.calculator.properties.angleUnit === "radians";
-        const storedAngle = useRadians ? visualAngleDeg * Math.PI / 180 : visualAngleDeg;
-        this.setGaugeTermValue("angleTerm", "angleTermCase", "angleValue", storedAngle);
-        this.setGaugeTermValue("magnitudeTerm", "magnitudeTermCase", "magnitudeValue", magnitude);
+        const boardCenterX = position.x + geometry.centerX;
+        const boardCenterY = position.y + geometry.centerY;
+        const localPoint = this.getLocalPointFromBoardPoint({ x, y });
+        const localX = localPoint.x - boardCenterX;
+        const localY = localPoint.y - boardCenterY;
+        const angleDegrees = this.clampToGaugeAngle(Math.atan2(-localY, localX) * 180 / Math.PI);
+        const range = this.getGaugeRange();
+        this.setGaugeValue(this.getGaugeValueAtAngle(angleDegrees, range));
     }
 
-    setGaugeTermValue(termProperty, caseProperty, stateProperty, value) {
-        if (this.isTermLocked(termProperty))
+    getGaugeValueAtAngle(angleDegrees, range) {
+        const angleOffset = ((this.properties.startAngle - angleDegrees) % 360 + 360) % 360;
+        const ratio = Math.max(0, Math.min(1, angleOffset / this.getGaugeSpan()));
+        const value = this.snapGaugeValue(range.minimum + ratio * (range.maximum - range.minimum));
+        return this.clampGaugeValue(value, range);
+    }
+
+    setGaugeValue(value) {
+        if (!this.isPointerDraggable())
             return;
-        const term = this.properties[termProperty];
+        const term = this.properties.term;
         if (!term || !this.board.calculator.isTerm(term)) {
-            this.properties[stateProperty] = value;
+            this.properties.value = value;
             this.board.markDirty(this);
             return;
         }
-        const caseNumber = this.getTermCaseNumber(caseProperty);
+        const caseNumber = this.getTermCaseNumber("termCase");
         this.board.calculator.setTermValue(term, value, this.board.calculator.getIteration(), caseNumber);
         this.board.calculator.calculate();
     }
 
-    getArcPoint(cx, cy, r, angleDeg) {
-        const rad = angleDeg * Math.PI / 180;
-        return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
+    getArcPoint(centerX, centerY, radius, angleDegrees) {
+        const radians = angleDegrees * Math.PI / 180;
+        return { x: centerX + radius * Math.cos(radians), y: centerY - radius * Math.sin(radians) };
     }
 
-    buildAnnularSectorPath(cx, cy, innerR, outerR, startAngle, endAngle) {
+    buildAnnularSectorPath(centerX, centerY, innerRadius, outerRadius, startAngle, endAngle) {
         const span = ((startAngle - endAngle) % 360 + 360) % 360;
         if (span < 0.001)
             return "";
         const largeArc = span > 180 ? 1 : 0;
-        const p1 = this.getArcPoint(cx, cy, outerR, startAngle);
-        const p2 = this.getArcPoint(cx, cy, outerR, endAngle);
-        const p3 = this.getArcPoint(cx, cy, innerR, endAngle);
-        const p4 = this.getArcPoint(cx, cy, innerR, startAngle);
+        const outerStart = this.getArcPoint(centerX, centerY, outerRadius, startAngle);
+        const outerEnd = this.getArcPoint(centerX, centerY, outerRadius, endAngle);
+        const innerEnd = this.getArcPoint(centerX, centerY, innerRadius, endAngle);
+        const innerStart = this.getArcPoint(centerX, centerY, innerRadius, startAngle);
         return [
-            `M ${p1.x} ${p1.y}`,
-            `A ${outerR} ${outerR} 0 ${largeArc} 1 ${p2.x} ${p2.y}`,
-            `L ${p3.x} ${p3.y}`,
-            `A ${innerR} ${innerR} 0 ${largeArc} 0 ${p4.x} ${p4.y}`,
+            `M ${outerStart.x} ${outerStart.y}`,
+            `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
+            `L ${innerEnd.x} ${innerEnd.y}`,
+            `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerStart.x} ${innerStart.y}`,
             "Z"
         ].join(" ");
     }
 
-    addAngleTick(angleDeg, isStart, geo, fg) {
-        const tickLength = isStart ? 10 : 7;
-        const strokeWidth = isStart ? 1.5 : 1;
-        const p1 = this.getArcPoint(geo.cx, geo.cy, geo.outerR - tickLength, angleDeg);
-        const p2 = this.getArcPoint(geo.cx, geo.cy, geo.outerR, angleDeg);
+    addGaugeTick(value, isEndpoint, geometry, range) {
+        const ratio = this.getGaugeValueRatio(value, range);
+        const angleDegrees = this.properties.startAngle - ratio * this.getGaugeSpan();
+        const tickLength = isEndpoint ? 9 : 6;
+        const innerPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.innerRadius - tickLength, angleDegrees);
+        const outerPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.innerRadius - 2, angleDegrees);
         const line = this.board.createSvgElement("line");
-        line.setAttribute("x1", p1.x);
-        line.setAttribute("y1", p1.y);
-        line.setAttribute("x2", p2.x);
-        line.setAttribute("y2", p2.y);
-        line.setAttribute("stroke", fg);
-        line.setAttribute("stroke-width", strokeWidth);
-        this.angleTicksLayer.appendChild(line);
+        line.setAttribute("x1", innerPoint.x);
+        line.setAttribute("y1", innerPoint.y);
+        line.setAttribute("x2", outerPoint.x);
+        line.setAttribute("y2", outerPoint.y);
+        line.setAttribute("stroke", this.properties.foregroundColor);
+        line.setAttribute("stroke-width", isEndpoint ? 1.5 : 1);
+        this.tickLayer.appendChild(line);
+        return angleDegrees;
     }
 
-    addAngleLabel(angleDeg, geo, fg, useRadians) {
-        const labelR = geo.outerR + 10;
-        const lp = this.getArcPoint(geo.cx, geo.cy, labelR, angleDeg);
-        const storedVal = useRadians ? angleDeg * Math.PI / 180 : angleDeg;
-        const rounded = parseFloat(storedVal.toFixed(2));
-        const rawStr = Object.is(rounded, -0) || rounded === 0 ? "0" : rounded.toString();
-        const displayText = rawStr.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    formatGaugeValue(value) {
+        const rounded = parseFloat(value.toFixed(2));
+        const rawValue = Object.is(rounded, -0) || rounded === 0 ? "0" : rounded.toString();
+        return rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    }
+
+    addGaugeLabel(value, angleDegrees, geometry) {
+        const point = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.labelRadius, angleDegrees);
         const label = this.board.createSvgElement("text");
         label.setAttribute("class", "shape-tick-label");
-        label.setAttribute("x", lp.x);
-        label.setAttribute("y", lp.y);
+        label.setAttribute("x", point.x);
+        label.setAttribute("y", point.y);
         label.setAttribute("text-anchor", "middle");
         label.setAttribute("dominant-baseline", "middle");
-        label.setAttribute("fill", fg);
+        label.setAttribute("fill", this.properties.foregroundColor);
         label.setAttribute("font-family", "KaTeX_Main");
-        label.setAttribute("font-size", "9");
-        label.textContent = displayText;
-        this.angleLabelsLayer.appendChild(label);
+        label.setAttribute("font-size", "8.5");
+        label.textContent = this.formatGaugeValue(value);
+        this.labelLayer.appendChild(label);
     }
 
-    addMagnitudeTickArc(r, startAngle, endAngle, geo, fg) {
-        const span = ((startAngle - endAngle) % 360 + 360) % 360;
-        if (span < 0.001)
+    drawGaugeTicks(geometry, range) {
+        this.clearLayerChildren(this.tickLayer);
+        this.clearLayerChildren(this.labelLayer);
+        if (this.properties.precision <= 0)
             return;
-        const largeArc = span > 180 ? 1 : 0;
-        const p1 = this.getArcPoint(geo.cx, geo.cy, r, startAngle);
-        const p2 = this.getArcPoint(geo.cx, geo.cy, r, endAngle);
-        const path = this.board.createSvgElement("path");
-        path.setAttribute("d", `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${largeArc} 1 ${p2.x} ${p2.y}`);
-        path.setAttribute("fill", "none");
-        path.setAttribute("stroke", fg);
-        path.setAttribute("stroke-width", "0.8");
-        this.magnitudeTicksLayer.appendChild(path);
-    }
-
-    drawAngleTicks(geo, startAngle, endAngle, fg, precision) {
-        this.clearLayerChildren(this.angleTicksLayer);
-        this.clearLayerChildren(this.angleLabelsLayer);
-        if (!precision || precision <= 0)
-            return;
-        const span = ((startAngle - endAngle) % 360 + 360) % 360;
-        if (span < 0.001)
-            return;
-        const maxTicks = Math.min(360, Math.ceil(span / precision) + 1);
-        const useRadians = this.board.calculator.properties.angleUnit === "radians";
-        for (let i = 0; i <= maxTicks; i++) {
-            const tickOffset = i * precision;
-            if (tickOffset > span + 0.001)
-                break;
-            const angleDeg = startAngle - tickOffset;
-            this.addAngleTick(angleDeg, i === 0, geo, fg);
-            if (maxTicks <= 18)
-                this.addAngleLabel(angleDeg, geo, fg, useRadians);
-        }
-    }
-
-    drawMagnitudeTicks(geo, startAngle, endAngle, fg, precision, minimum, maximum) {
-        this.clearLayerChildren(this.magnitudeTicksLayer);
-        if (!precision || precision <= 0)
-            return;
-        const range = maximum - minimum;
-        if (range <= 0)
-            return;
-        const tickCount = Math.floor(range / precision);
+        const tickCount = Math.floor((range.maximum - range.minimum) / this.properties.precision);
         if (tickCount > 200)
             return;
-        for (let i = 0; i <= tickCount; i++) {
-            const magnitude = minimum + i * precision;
-            const ratio = (magnitude - minimum) / range;
-            const r = geo.innerR + ratio * (geo.outerR - geo.innerR);
-            this.addMagnitudeTickArc(r, startAngle, endAngle, geo, fg);
+        for (let index = 0; index <= tickCount; index++) {
+            const value = range.minimum + index * this.properties.precision;
+            const isEndpoint = index === 0 || index === tickCount;
+            const angleDegrees = this.addGaugeTick(value, isEndpoint, geometry, range);
+            if (tickCount <= 12)
+                this.addGaugeLabel(value, angleDegrees, geometry);
         }
+        const lastValue = range.minimum + tickCount * this.properties.precision;
+        if (lastValue < range.maximum) {
+            const angleDegrees = this.addGaugeTick(range.maximum, true, geometry, range);
+            if (tickCount < 12)
+                this.addGaugeLabel(range.maximum, angleDegrees, geometry);
+        }
+    }
+
+    drawGaugeRanges(geometry, range) {
+        this.clearLayerChildren(this.rangeLayer);
+        for (let index = 0; index < this.properties.ranges.length; index++) {
+            const colorRange = this.properties.ranges[index];
+            if (colorRange.minimum == null || colorRange.maximum == null)
+                continue;
+            const colorRangeMinimum = Math.min(colorRange.minimum, colorRange.maximum);
+            const colorRangeMaximum = Math.max(colorRange.minimum, colorRange.maximum);
+            const rangeMinimum = Math.max(range.minimum, colorRangeMinimum);
+            const rangeMaximum = Math.min(range.maximum, colorRangeMaximum);
+            if (rangeMaximum <= rangeMinimum)
+                continue;
+            const startRatio = this.getGaugeValueRatio(rangeMinimum, range);
+            const endRatio = this.getGaugeValueRatio(rangeMaximum, range);
+            const startAngle = this.properties.startAngle - startRatio * this.getGaugeSpan();
+            const endAngle = this.properties.startAngle - endRatio * this.getGaugeSpan();
+            const path = this.board.createSvgElement("path");
+            path.setAttribute("d", this.buildAnnularSectorPath(geometry.centerX, geometry.centerY, geometry.innerRadius, geometry.outerRadius, startAngle, endAngle));
+            path.setAttribute("fill", colorRange.color);
+            path.setAttribute("stroke", "none");
+            this.rangeLayer.appendChild(path);
+        }
+    }
+
+    // The pointer position is read in the gauge's own frame, so the rotation and
+    // the mirror of the shape element are already undone by the screen matrix.
+    getGaugeLocalPointerPoint(event) {
+        const svgPoint = this.board.svg.createSVGPoint();
+        svgPoint.x = event.clientX;
+        svgPoint.y = event.clientY;
+        return svgPoint.matrixTransform(this.element.getScreenCTM().inverse());
+    }
+
+    onGaugePointerMove(event) {
+        const geometry = this.getGaugeGeometry();
+        const localPoint = this.getGaugeLocalPointerPoint(event);
+        const localX = localPoint.x - geometry.centerX;
+        const localY = geometry.centerY - localPoint.y;
+        const distance = Math.hypot(localX, localY);
+        const angleDegrees = Math.atan2(localY, localX) * 180 / Math.PI;
+        const angleOffset = ((this.properties.startAngle - angleDegrees) % 360 + 360) % 360;
+        // Over the hub the angle is meaningless, and outside the scale span or
+        // the dial there is no value to read.
+        if (distance < geometry.hubRadius || distance > geometry.outerRadius || angleOffset > this.getGaugeSpan()) {
+            this.clearLayerChildren(this.crosshairLayer);
+            return;
+        }
+        const range = this.getGaugeRange();
+        const value = this.getGaugeValueAtAngle(angleDegrees, range);
+        const foregroundColor = this.properties.foregroundColor;
+        const innerPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.hubRadius, angleDegrees);
+        const outerPoint = this.getArcPoint(geometry.centerX, geometry.centerY, geometry.outerRadius, angleDegrees);
+        const badgePoint = this.getArcPoint(geometry.centerX, geometry.centerY, (geometry.innerRadius + geometry.outerRadius) / 2, angleDegrees);
+        this.clearLayerChildren(this.crosshairLayer);
+        this.crosshairLayer.insertAdjacentHTML("beforeend",
+            Utils.crosshairLineSvgMarkup(innerPoint.x, innerPoint.y, outerPoint.x, outerPoint.y, foregroundColor) +
+            Utils.valueBadgeSvgMarkup(this.formatGaugeValue(value), badgePoint.x, badgePoint.y, { backgroundColor: foregroundColor, textColor: Utils.getContrastColor(foregroundColor), fontSize: 10 })
+        );
     }
 
     draw() {
         super.draw();
-        const geo = this.getGaugeGeometry();
-        const rawStartAngle = Number(this.properties.startAngle);
-        const rawEndAngle = Number(this.properties.endAngle);
-        const startAngle = Number.isFinite(rawStartAngle) ? rawStartAngle : 225;
-        const endAngle = Number.isFinite(rawEndAngle) ? rawEndAngle : -45;
-        const fg = this.properties.foregroundColor;
-        const border = this.getBorderColor();
-        this.gaugeBg.setAttribute("d", this.buildAnnularSectorPath(geo.cx, geo.cy, geo.innerR, geo.outerR, startAngle, endAngle));
+        const geometry = this.getGaugeGeometry();
+        const range = this.getGaugeRange();
+        this.hitArea.setAttribute("x", "0");
+        this.hitArea.setAttribute("y", "0");
+        this.hitArea.setAttribute("width", geometry.width);
+        this.hitArea.setAttribute("height", geometry.height);
+        this.gaugeBg.setAttribute("d", this.buildAnnularSectorPath(geometry.centerX, geometry.centerY, geometry.innerRadius, geometry.outerRadius, this.properties.startAngle, this.properties.endAngle));
         this.gaugeBg.setAttribute("fill", this.properties.backgroundColor);
-        this.gaugeBg.setAttribute("stroke", border);
+        this.gaugeBg.setAttribute("stroke", this.getBorderColor());
         this.gaugeBg.setAttribute("stroke-width", "1");
-        this.drawAngleTicks(geo, startAngle, endAngle, fg, Number(this.properties.anglePrecision));
-        const { minimum, maximum } = this.getMagnitudeRange();
-        this.drawMagnitudeTicks(geo, startAngle, endAngle, fg, Number(this.properties.magnitudePrecision), minimum, maximum);
-        const pt = this.getPointerLocalPoint();
-        this.pointerLine.setAttribute("x1", geo.cx);
-        this.pointerLine.setAttribute("y1", geo.cy);
-        this.pointerLine.setAttribute("x2", pt.x);
-        this.pointerLine.setAttribute("y2", pt.y);
-        this.pointerLine.setAttribute("stroke", fg);
-        this.pointerLine.setAttribute("stroke-width", "2");
+        this.gaugeBg.setAttribute("stroke-linejoin", "round");
+        this.drawGaugeRanges(geometry, range);
+        this.drawGaugeTicks(geometry, range);
+        const pointerPoint = this.getPointerLocalPoint();
+        this.pointerLine.setAttribute("x1", geometry.centerX);
+        this.pointerLine.setAttribute("y1", geometry.centerY);
+        this.pointerLine.setAttribute("x2", pointerPoint.x);
+        this.pointerLine.setAttribute("y2", pointerPoint.y);
+        this.pointerLine.setAttribute("stroke", this.properties.foregroundColor);
+        this.pointerLine.setAttribute("stroke-width", "2.5");
         this.pointerLine.setAttribute("stroke-linecap", "round");
-        this.pointerDot.setAttribute("cx", pt.x);
-        this.pointerDot.setAttribute("cy", pt.y);
-        this.pointerDot.setAttribute("r", "4");
-        this.pointerDot.setAttribute("fill", fg);
-        this.pointerDot.setAttribute("stroke", "none");
-        this.hubCircle.setAttribute("cx", geo.cx);
-        this.hubCircle.setAttribute("cy", geo.cy);
-        this.hubCircle.setAttribute("r", geo.hubR);
-        this.hubCircle.setAttribute("fill", fg);
-        this.hubCircle.setAttribute("stroke", "none");
+        this.hubCircle.setAttribute("cx", geometry.centerX);
+        this.hubCircle.setAttribute("cy", geometry.centerY);
+        this.hubCircle.setAttribute("r", geometry.hubRadius);
+        this.hubCircle.setAttribute("fill", this.properties.backgroundColor);
+        this.hubCircle.setAttribute("stroke", this.properties.foregroundColor);
+        this.hubCircle.setAttribute("stroke-width", "2.5");
         const position = this.getBoardPosition();
-        this.applyShapeTransform(geo.cx, geo.cy, `translate(${position.x} ${position.y})`);
+        this.applyShapeTransform(geometry.centerX, geometry.centerY, `translate(${position.x} ${position.y})`);
+        this.updateHandles();
+        this.refreshGaugeScaleControls();
     }
 
     tick() {

@@ -92,7 +92,7 @@
         "SliderShape":       { "type": "string", "const": "Interactive slider controlling a PARAMETER term. term = parameter name (e.g. 'g', 'k', 'm'). Set minimum/maximum to a sensible physical range. Users drag to explore parameter sensitivity." },
         "ValueShape":        { "type": "string", "const": "Displays the current numeric value of any calculator term. term = term name. termDisplayMode: 'nameValue' shows label + number, 'valueOnly' shows only the number." },
         "TableShape":        { "type": "string", "const": "Tabular view of term values across iterations. columns array lists term names. Useful for discrete/recurrence models or when exact numeric output matters." },
-        "GaugeShape":        { "type": "string", "const": "Polar gauge. angleTerm + magnitudeTerm drive the needle. Use for two-component quantities like velocity direction and speed." },
+        "GaugeShape":        { "type": "string", "const": "Circular gauge whose term value is mapped between minimum and maximum across a dial. Supports automatic scaling and colored value ranges." },
         "MediaShape":        { "type": "string", "const": "Static or animated image, video or audio. Use for background reference images (e.g., a photograph to overlay a model trajectory) or synced/free-running video and audio." },
         "RulerShape":        { "type": "string", "const": "On-canvas ruler for manual distance measurement. Not connected to calculator terms. Teaching aid." },
         "ProtractorShape":   { "type": "string", "const": "On-canvas protractor for manual angle measurement. Not connected to calculator terms. Teaching aid." },
@@ -1595,7 +1595,7 @@
 
     "GaugeShape": {
       "title": "GaugeShape",
-      "description": "A polar gauge with an angle axis and a magnitude axis.",
+      "description": "A circular value gauge with automatic scaling and colored ranges.",
       "type": "object",
       "required": ["type", "id", "properties"],
       "additionalProperties": false,
@@ -1608,25 +1608,31 @@
             { "$ref": "#/$defs/BaseProperties" },
             {
               "type": "object",
-              "required": ["angleTerm", "magnitudeTerm"],
+              "required": ["term"],
               "properties": {
-                "angleTerm": {
+                "term": {
                   "type": "string",
-                  "description": "Calculator term controlling the needle angle."
+                  "description": "Calculator term whose value controls the needle."
                 },
-                "angleValue": {
+                "value": {
                   "type": "number",
                   "default": 0,
-                  "description": "Last computed angle value (runtime state)."
+                  "description": "Current gauge value."
                 },
-                "magnitudeTerm": {
-                  "type": "string",
-                  "description": "Calculator term controlling the needle magnitude."
+                "autoScale": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "When true, minimum and maximum follow the observed term range."
                 },
-                "magnitudeValue": {
+                "minimum": {
                   "type": "number",
                   "default": 0,
-                  "description": "Last computed magnitude value (runtime state)."
+                  "description": "Minimum gauge value."
+                },
+                "maximum": {
+                  "type": "number",
+                  "default": 10,
+                  "description": "Maximum gauge value."
                 },
                 "startAngle": {
                   "type": "number",
@@ -1638,31 +1644,30 @@
                   "default": -45,
                   "description": "End of the gauge sweep in degrees."
                 },
-                "minimumMagnitude": {
+                "precision": {
                   "type": "number",
-                  "default": 0
+                  "minimum": 0,
+                  "default": 1,
+                  "description": "Value interval between gauge ticks."
                 },
-                "maximumMagnitude": {
-                  "type": "number",
-                  "default": 1
-                },
-                "anglePrecision": {
-                  "type": "number",
-                  "default": 30,
-                  "description": "Tick interval in degrees for the angle axis."
-                },
-                "snapToAngleTick": {
+                "snapToTick": {
                   "type": "boolean",
                   "default": false
                 },
-                "magnitudePrecision": {
-                  "type": "number",
-                  "default": 0,
-                  "description": "Tick count for the magnitude axis."
-                },
-                "snapToMagnitudeTick": {
-                  "type": "boolean",
-                  "default": false
+                "ranges": {
+                  "type": "array",
+                  "default": [{ "minimum": 0, "maximum": 10, "color": "transparent" }, { "minimum": null, "maximum": null, "color": "transparent" }],
+                  "description": "Colored bands shown over configured value ranges, followed by one incomplete draft range for adding the next band.",
+                  "items": {
+                    "type": "object",
+                    "required": ["minimum", "maximum", "color"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "minimum": { "type": ["number", "null"] },
+                      "maximum": { "type": ["number", "null"] },
+                      "color": { "type": "string" }
+                    }
+                  }
                 }
               }
             }

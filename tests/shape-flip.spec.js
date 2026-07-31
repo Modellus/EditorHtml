@@ -184,26 +184,39 @@ test('the slider splitter handle stays on the line it drags when flipped', async
     expect(result.valueAfter).toBeCloseTo(result.valueBefore, 6);
 });
 
-test('the gauge pointer handle follows the mirrored needle and drags to the same angle', async ({ page }) => {
+test('the gauge pointer handle follows the mirrored needle and preserves its value', async ({ page }) => {
     await setupEditor(page);
     const result = await page.evaluate(() => {
         shell.commands.addShape('GaugeShape', 'Gauge');
         const gauge = shell.board.shapes.getByName('Gauge');
-        gauge.setProperties({ angleValue: 40, magnitudeValue: 0.6 });
+        gauge.setProperties({ term: '', value: 40, autoScale: false, minimum: 0, maximum: 100 });
         gauge.draw();
         const position = gauge.getBoardPosition();
         const centerX = position.x + gauge.properties.width / 2;
+        const centerY = position.y + gauge.properties.height / 2;
         const before = gauge.getPointerBoardPoint();
+        const radiusBefore = Math.hypot(before.x - centerX, before.y - centerY);
         const angleBefore = gauge.getPointerVisualAngleDeg();
+        const valueBefore = gauge.getGaugeValue();
         gauge.toggleFlip('horizontal');
         gauge.draw();
         const after = gauge.getPointerBoardPoint();
         gauge.applyPointerDrag({ x: after.x, y: after.y });
-        return { before, after, centerX, angleBefore, angleAfterDrag: gauge.getPointerVisualAngleDeg() };
+        const angleAfterDrag = gauge.getPointerVisualAngleDeg();
+        const valueAfterDrag = gauge.getGaugeValue();
+        const nearCenter = gauge.mirrorBoardPoint({ x: centerX + 2, y: centerY + 2 });
+        gauge.applyPointerDrag(nearCenter);
+        const afterNearCenterDrag = gauge.getPointerBoardPoint();
+        const radiusAfterNearCenterDrag = Math.hypot(afterNearCenterDrag.x - centerX, afterNearCenterDrag.y - centerY);
+        const hasMagnitudeProperties = Object.keys(gauge.properties).some(property => property.toLowerCase().includes('magnitude'));
+        return { before, after, centerX, radiusBefore, radiusAfterNearCenterDrag, angleBefore, angleAfterDrag, valueBefore, valueAfterDrag, hasMagnitudeProperties };
     });
     expect(result.after.x).toBeCloseTo(2 * result.centerX - result.before.x, 3);
     expect(result.after.y).toBeCloseTo(result.before.y, 3);
     expect(result.angleAfterDrag).toBeCloseTo(result.angleBefore, 3);
+    expect(result.valueAfterDrag).toBeCloseTo(result.valueBefore, 3);
+    expect(result.radiusAfterNearCenterDrag).toBeCloseTo(result.radiusBefore, 3);
+    expect(result.hasMagnitudeProperties).toBe(false);
 });
 
 test('flipping a body mirrors its image without touching its trajectory', async ({ page }) => {

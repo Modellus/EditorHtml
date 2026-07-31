@@ -251,6 +251,14 @@ line.handle.move {
     cursor: ns-resize;
 }
 
+.handle.gauge-pointer {
+    cursor: grab;
+}
+
+.handle.gauge-pointer:active {
+    cursor: grabbing;
+}
+
 .handle.radius {
     transform: translate(-4px, -4px);
     rx: 4px;

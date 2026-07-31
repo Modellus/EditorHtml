@@ -95,7 +95,7 @@
         </div>
 
         <h1>Gauge Shape</h1>
-        <p class="page-desc">The Gauge shape displays a circular dial that visually represents a term value, useful for dashboard-style model presentations.</p>
+        <p class="page-desc">The Gauge shape displays an elegant circular dial whose needle follows a term value.</p>
 
         <div class="screenshot-placeholder">
             <i class="fa-light fa-image"></i>
@@ -103,7 +103,8 @@
         </div>
 
         <h2>Overview</h2>
-        <p>A Gauge shape renders a circular or semi-circular meter that fills proportionally to a bound term value. It provides an intuitive, at-a-glance visualization of quantities like speed, temperature, or progress within defined bounds.</p>
+        <p>A Gauge shape maps a bound term between its minimum and maximum values across a circular dial. The needle can be dragged to update the term, while automatic scaling and colored ranges make the current value easy to interpret.</p>
+        <p>The needle is only draggable when the value it shows can be set: a gauge with no bound term, or one bound to a term the model lets you change. A needle bound to a computed term, to the independent variable, or to a locked term is read-only, and dragging over it moves the shape instead.</p>
 
         <h2>Toolbar</h2>
         <div class="screenshot-placeholder">
@@ -119,11 +120,14 @@
         <table class="docs-table">
             <thead><tr><th>Property</th><th>Description</th></tr></thead>
             <tbody>
-                <tr><td>Term</td><td>The term whose value is displayed</td></tr>
-                <tr><td>Minimum</td><td>Value at the gauge start (empty)</td></tr>
-                <tr><td>Maximum</td><td>Value at the gauge end (full)</td></tr>
-                <tr><td>Label</td><td>Text label on the gauge</td></tr>
-                <tr><td>Color zones</td><td>Color ranges for different value regions</td></tr>
+                <tr><td>Value</td><td>The term controlling the gauge needle</td></tr>
+                <tr><td>Auto Scale</td><td>Uses the observed term range as the gauge scale</td></tr>
+                <tr><td>Minimum</td><td>The lower end of a manual scale</td></tr>
+                <tr><td>Maximum</td><td>The upper end of a manual scale</td></tr>
+                <tr><td>Start angle</td><td>The beginning of the visible dial sweep</td></tr>
+                <tr><td>End angle</td><td>The end of the visible dial sweep</td></tr>
+                <tr><td>Tick step</td><td>The value interval between gauge ticks</td></tr>
+                <tr><td>Color ranges</td><td>Colored bands assigned to value intervals</td></tr>
             </tbody>
         </table>
 
