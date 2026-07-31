@@ -315,10 +315,11 @@ class Utils {
         return String(value ?? "").replace(/[&<>]/g, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[character]));
     }
 
-    static buildTermValueTextHtml(termLatex, valueText) {
+    static buildTermTextHtml(termLatex, useCentralBaseline = true) {
         if (!termLatex)
-            return `<tspan font-family="Katex_Main" dominant-baseline="central">${Utils.escapeXmlText(valueText)}</tspan>`;
+            return "";
         const namedIndexShift = 0.25;
+        const baselineAttribute = useCentralBaseline ? ` dominant-baseline="central"` : "";
         let html = "";
         let pendingShift = 0;
         const appendTermSegment = (segmentText, isNamedIndex) => {
@@ -330,14 +331,26 @@ class Utils {
                 const fontFamily = /\d/.test(characterRun) ? "Katex_Main" : "Katex_Math";
                 const fontSizeAttribute = isNamedIndex ? ` font-size="65%"` : "";
                 const shiftAttribute = shift === 0 ? "" : ` dy="${shift}em"`;
-                html += `<tspan font-family="${fontFamily}"${fontSizeAttribute}${shiftAttribute} dominant-baseline="central">${Utils.escapeXmlText(characterRun)}</tspan>`;
+                html += `<tspan font-family="${fontFamily}"${fontSizeAttribute}${shiftAttribute}${baselineAttribute}>${Utils.escapeXmlText(characterRun)}</tspan>`;
                 pendingShift = segmentShift;
             }
         };
         for (const segment of Utils.splitTermNameSegments(termLatex))
             appendTermSegment(segment.text, segment.isNamedIndex);
+        return html;
+    }
+
+    static setTermTextContent(textElement, termLatex) {
+        textElement.innerHTML = Utils.buildTermTextHtml(termLatex, false);
+    }
+
+    static buildTermValueTextHtml(termLatex, valueText) {
+        if (!termLatex)
+            return `<tspan font-family="Katex_Main" dominant-baseline="central">${Utils.escapeXmlText(valueText)}</tspan>`;
+        const segments = Utils.splitTermNameSegments(termLatex);
+        const pendingShift = segments.length > 0 && segments[segments.length - 1].isNamedIndex ? 0.25 : 0;
         const valueShiftAttribute = pendingShift === 0 ? "" : ` dy="${-pendingShift}em"`;
-        return `${html}<tspan font-family="Katex_Main"${valueShiftAttribute} dominant-baseline="central"> = ${Utils.escapeXmlText(valueText)}</tspan>`;
+        return `${Utils.buildTermTextHtml(termLatex)}<tspan font-family="Katex_Main"${valueShiftAttribute} dominant-baseline="central"> = ${Utils.escapeXmlText(valueText)}</tspan>`;
     }
 
     static setTermValueTextContent(textElement, termLatex, valueText) {

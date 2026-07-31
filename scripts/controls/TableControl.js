@@ -754,7 +754,7 @@ class TableControl {
         text.setAttribute("text-anchor", "start");
         text.setAttribute("font-size", `${this.options.headerFontSize}`);
         text.setAttribute("fill", this.getRowTextColor(row));
-        text.innerHTML = `<tspan font-family="${this.options.termFontFamily}">${row.spanLabel ?? ""}</tspan><tspan font-family="${this.options.numberFontFamily}"> = ${valueText}</tspan>`;
+        Utils.setTermValueTextContent(text, row.spanLabel ?? "", valueText);
         layerElement.appendChild(text);
         return text;
     }
@@ -998,7 +998,10 @@ class TableControl {
         text.setAttribute("font-size", `${column?.useHeaderFontSize === true ? this.options.headerFontSize : this.options.fontSize}`);
         text.setAttribute("fill", this.getRowTextColor(row));
         text.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
-        text.textContent = textValue;
+        if (isText)
+            Utils.setTermTextContent(text, textValue);
+        else
+            text.textContent = textValue;
         this.rowsLayer.appendChild(text);
     }
 

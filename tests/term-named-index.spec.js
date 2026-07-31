@@ -202,4 +202,32 @@ test.describe('Named term parts', () => {
         expect(result.columnTitle).toBe('v_{\\!x}');
         expect(result.pointLabelHtml).toContain('font-size="65%"');
     });
+
+    test('a named term reads as a subscript in a scenarios shape', async ({ page }) => {
+        await setupEditor(page);
+        const result = await page.evaluate(() => {
+            modellus.shape.addExpression('Expression1');
+            const expression = shell.board.shapes.getByName('Expression1');
+            expression.properties.expression = '\\frac{dx}{dt}=v_{\\!x}';
+            expression.mathfield.value = expression.properties.expression;
+            shell.reset();
+
+            modellus.shape.addCasesTable('Scenarios1');
+            const scenarios = shell.board.shapes.getByName('Scenarios1');
+            scenarios.update();
+            scenarios.refreshTableRows();
+            const namedTermRow = scenarios.table.rows.find(row => row.termName === 'v.x');
+            const namedIndex = Array.from(scenarios.table.rowsLayer.querySelectorAll('tspan')).find(element => element.getAttribute('font-size') === '65%');
+            return {
+                rowTerm: namedTermRow?.term,
+                namedIndexText: namedIndex?.textContent,
+                namedIndexShift: namedIndex?.getAttribute('dy'),
+                namedIndexBaseline: namedIndex?.getAttribute('dominant-baseline')
+            };
+        });
+        expect(result.rowTerm).toBe('v_{\\!x}');
+        expect(result.namedIndexText).toBe('x');
+        expect(result.namedIndexShift).toBe('0.25em');
+        expect(result.namedIndexBaseline).toBeNull();
+    });
 });

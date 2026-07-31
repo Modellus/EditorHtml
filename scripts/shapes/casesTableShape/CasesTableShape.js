@@ -192,7 +192,7 @@ class CasesTableShape extends BaseTableShape {
     }
 
     formatTermSymbol(term) {
-        return Utils.normalizeMathTermForWidth(this.formatTermForDisplay(term));
+        return Utils.getDisplayedTerm(term, this.board.calculator.system);
     }
 
     getPlayerTerm() {
