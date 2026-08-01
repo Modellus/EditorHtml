@@ -105,11 +105,21 @@ test.describe('Chart shape interactions', () => {
             chartShape.update();
             chartShape.draw();
             const labelElement = readAreaLabel();
+            const iconElement = labelElement?.querySelector('tspan');
+            // An unresolved icon font falls back to a narrower missing-glyph box, so the attribute
+            // width has to match the width the same family gives when forced through the style.
+            const attributeIconWidth = iconElement?.getComputedTextLength();
+            if (iconElement) {
+                iconElement.style.fontFamily = "'Font Awesome 7 Pro'";
+                iconElement.style.fontWeight = '900';
+            }
             const layout = chartShape.chart.renderState.layout;
             return {
                 hiddenLabelText: hiddenLabelText,
                 labelText: labelElement?.textContent ?? null,
-                symbolFontFamily: labelElement?.querySelector('tspan')?.getAttribute('font-family') ?? null,
+                iconFontFamily: iconElement?.getAttribute('font-family') ?? null,
+                attributeIconWidth: attributeIconWidth,
+                styledIconWidth: iconElement?.getComputedTextLength(),
                 labelX: Number(labelElement?.getAttribute('x')),
                 labelY: Number(labelElement?.getAttribute('y')),
                 calculatedArea: shell.calculator.calculateTermArea('x', 'y', 1),
@@ -121,8 +131,9 @@ test.describe('Chart shape interactions', () => {
         });
 
         expect(areaState.hiddenLabelText).toBeNull();
-        expect(areaState.labelText).toBe('A = 130.00');
-        expect(areaState.symbolFontFamily).toBe('Katex_Math');
+        expect(areaState.labelText).toBe('\uf1fe 130.00');
+        expect(areaState.iconFontFamily).toBe("'Font Awesome 7 Pro'");
+        expect(areaState.attributeIconWidth).toBeCloseTo(areaState.styledIconWidth, 3);
         expect(areaState.calculatedArea).toBeCloseTo(130, 6);
         expect(areaState.labelX).toBeGreaterThan(areaState.plotLeft);
         expect(areaState.labelX).toBeLessThan(areaState.plotRight);
@@ -172,6 +183,6 @@ test.describe('Chart shape interactions', () => {
         expect(areaState.lastIterationValue).toBeCloseTo(0, 6);
         expect(areaState.chartReplayedRowValue).toBeCloseTo(5, 6);
         expect(areaState.calculatedArea).toBeCloseTo(0.5, 6);
-        expect(areaState.labelText).toBe('A = 0.50');
+        expect(areaState.labelText).toBe('\uf1fe 0.50');
     });
 });

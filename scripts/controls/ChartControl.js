@@ -1,5 +1,7 @@
 class ChartControl {
-    static areaSymbol = "A";
+    // fa-solid fa-chart-area
+    static areaIconGlyph = "\uf1fe";
+    static areaIconFontFamily = "Font Awesome 7 Pro";
 
     constructor(hostElement, options) {
         this.hostElement = hostElement;
@@ -862,7 +864,7 @@ class ChartControl {
             return;
         const fontSize = 11;
         const valueText = this.formatCrosshairValue(areaValue);
-        const labelWidth = this.estimateTextWidth(`${ChartControl.areaSymbol} = ${valueText}`, fontSize) + 8;
+        const labelWidth = fontSize + this.estimateTextWidth(` ${valueText}`, fontSize) + 8;
         const labelX = this.clampToPlotBounds(position.x, layout.plotLeft + labelWidth / 2, layout.plotRight - labelWidth / 2);
         const labelGroup = this.createSvgElement("g");
         const backgroundRect = this.createSvgElement("rect");
@@ -880,7 +882,8 @@ class ChartControl {
         labelText.setAttribute("fill", Utils.getContrastColor(color));
         labelGroup.appendChild(labelText);
         this.seriesLayer.appendChild(labelGroup);
-        Utils.setTermValueTextContent(labelText, ChartControl.areaSymbol, valueText);
+        Utils.setIconValueTextContent(labelText, ChartControl.areaIconGlyph, ChartControl.areaIconFontFamily, valueText);
+        Utils.ensureIconFontLoaded(ChartControl.areaIconFontFamily, () => this.render());
         Utils.applyTermLabelBackground(backgroundRect, labelText, color, "middle");
     }
 

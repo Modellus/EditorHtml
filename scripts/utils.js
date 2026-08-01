@@ -357,6 +357,34 @@ class Utils {
         textElement.innerHTML = Utils.buildTermValueTextHtml(termLatex, valueText);
     }
 
+    static buildIconValueTextHtml(iconGlyph, iconFontFamily, valueText) {
+        // The icon glyph only resolves on the solid face, which is weight 900, and the family has to
+        // be quoted: a bare "Font Awesome 7 Pro" is not a valid css family name because "7" cannot
+        // start an identifier, so the whole declaration is dropped and the glyph draws as a box.
+        return `<tspan font-family="'${Utils.escapeXmlText(iconFontFamily)}'" font-weight="900" dominant-baseline="central">${Utils.escapeXmlText(iconGlyph)}</tspan><tspan font-family="Katex_Main" dominant-baseline="central"> ${Utils.escapeXmlText(valueText)}</tspan>`;
+    }
+
+    static setIconValueTextContent(textElement, iconGlyph, iconFontFamily, valueText) {
+        textElement.innerHTML = Utils.buildIconValueTextHtml(iconGlyph, iconFontFamily, valueText);
+    }
+
+    static _iconFontLoadPromises = {};
+
+    // A webfont is only fetched once something on the page renders with it, and the page uses the
+    // light face for its icons, so an svg glyph on the solid face draws as a missing-glyph box until
+    // that face is asked for: onLoaded gives the caller a chance to draw again once it is there.
+    static ensureIconFontLoaded(iconFontFamily, onLoaded) {
+        const fontFamily = String(iconFontFamily ?? "");
+        if (fontFamily === "" || typeof document.fonts?.load !== "function")
+            return null;
+        if (Utils._iconFontLoadPromises[fontFamily])
+            return Utils._iconFontLoadPromises[fontFamily];
+        Utils._iconFontLoadPromises[fontFamily] = document.fonts.load(`900 16px "${fontFamily}"`)
+            .then(() => onLoaded?.())
+            .catch(() => {});
+        return Utils._iconFontLoadPromises[fontFamily];
+    }
+
     static applyCaseIconSvg(group, iconX, iconY, iconSize, caseNumber) {
         while (group.firstChild)
             group.removeChild(group.firstChild);
