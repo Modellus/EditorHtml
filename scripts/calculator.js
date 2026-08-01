@@ -853,6 +853,33 @@ class Calculator extends EventTarget {
     isOutlierIteration(termName = "", iteration = 1) {
         return this.system.preloadedData.isOutlierIteration(termName, iteration);
     }
+
+    calculateArea(argumentValues = [], values = []) {
+        const count = Math.min(argumentValues.length, values.length);
+        let area = 0;
+        for (let index = 1; index < count; index++) {
+            const previousArgument = Number(argumentValues[index - 1]);
+            const currentArgument = Number(argumentValues[index]);
+            const previousValue = Number(values[index - 1]);
+            const currentValue = Number(values[index]);
+            if (!Number.isFinite(previousArgument) || !Number.isFinite(currentArgument))
+                continue;
+            if (!Number.isFinite(previousValue) || !Number.isFinite(currentValue))
+                continue;
+            area += (currentArgument - previousArgument) * (previousValue + currentValue) / 2;
+        }
+        return area;
+    }
+
+    calculateTermArea(argumentTermName = "", valueTermName = "", caseNumber = 1, startIteration = 1, endIteration = this.system.lastIteration) {
+        const argumentValues = [];
+        const values = [];
+        for (let iteration = Math.max(1, startIteration); iteration <= endIteration; iteration++) {
+            argumentValues.push(this.system.getByNameOnIteration(iteration, argumentTermName, caseNumber));
+            values.push(this.system.getByNameOnIteration(iteration, valueTermName, caseNumber));
+        }
+        return this.calculateArea(argumentValues, values);
+    }
 }
 
 if (typeof module !== "undefined" && module.exports)

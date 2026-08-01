@@ -1,4 +1,6 @@
 class ChartControl {
+    static areaSymbol = "A";
+
     constructor(hostElement, options) {
         this.hostElement = hostElement;
         this.options = this.createDefaultOptions();
@@ -819,7 +821,7 @@ class ChartControl {
                 if (chartType === "line" && seriesChartTypes.includes("area"))
                     continue;
                 if (chartType === "area")
-                    this.renderAreaSeries(regularPoints, series.color, areaBaseY);
+                    this.renderAreaSeries(regularPoints, series.color, areaBaseY, layout, series.showLabel === true);
                 else if (chartType === "line")
                     this.renderLineSeries(regularPoints, series.color);
                 else if (chartType === "scatter")
@@ -836,7 +838,7 @@ class ChartControl {
         `);
     }
 
-    renderAreaSeries(points, color, baseY) {
+    renderAreaSeries(points, color, baseY, layout, showAreaValue) {
         if (points.length < 2) {
             this.renderPointMarkers(points, color);
             return;
@@ -845,6 +847,74 @@ class ChartControl {
             <path fill="${color}" fill-opacity="0.22" stroke="none" d="${this.getAreaPath(points, baseY)}" />
         `);
         this.renderLineSeries(points, color);
+        if (showAreaValue)
+            this.renderAreaValueLabel(points, color, baseY, layout);
+    }
+
+    renderAreaValueLabel(points, color, baseY, layout) {
+        if (typeof this.options.calculateArea !== "function")
+            return;
+        const areaValue = this.options.calculateArea(points.map(point => point.xValue), points.map(point => point.yValue));
+        if (!Number.isFinite(areaValue))
+            return;
+        const position = this.getAreaLabelPosition(points, baseY, layout);
+        if (!position)
+            return;
+        const fontSize = 11;
+        const valueText = this.formatCrosshairValue(areaValue);
+        const labelWidth = this.estimateTextWidth(`${ChartControl.areaSymbol} = ${valueText}`, fontSize) + 8;
+        const labelX = this.clampToPlotBounds(position.x, layout.plotLeft + labelWidth / 2, layout.plotRight - labelWidth / 2);
+        const labelGroup = this.createSvgElement("g");
+        const backgroundRect = this.createSvgElement("rect");
+        backgroundRect.setAttribute("class", "chart-area-value-label-bg");
+        backgroundRect.setAttribute("rx", "3");
+        backgroundRect.setAttribute("fill-opacity", "0.85");
+        labelGroup.appendChild(backgroundRect);
+        const labelText = this.createSvgElement("text");
+        labelText.setAttribute("class", "chart-area-value-label");
+        labelText.setAttribute("x", `${labelX}`);
+        labelText.setAttribute("y", `${position.y}`);
+        labelText.setAttribute("text-anchor", "middle");
+        labelText.setAttribute("dominant-baseline", "central");
+        labelText.setAttribute("font-size", `${fontSize}`);
+        labelText.setAttribute("fill", Utils.getContrastColor(color));
+        labelGroup.appendChild(labelText);
+        this.seriesLayer.appendChild(labelGroup);
+        Utils.setTermValueTextContent(labelText, ChartControl.areaSymbol, valueText);
+        Utils.applyTermLabelBackground(backgroundRect, labelText, color, "middle");
+    }
+
+    getAreaLabelPosition(points, baseY, layout) {
+        let weightSum = 0;
+        let weightedX = 0;
+        for (let index = 0; index < points.length; index++) {
+            const point = points[index];
+            if (point.x < layout.plotLeft || point.x > layout.plotRight)
+                continue;
+            const weight = Math.abs(point.y - baseY);
+            weightSum += weight;
+            weightedX += weight * point.x;
+        }
+        if (weightSum <= 0)
+            return null;
+        const centerX = weightedX / weightSum;
+        let nearestPoint = null;
+        let nearestDistance = Number.POSITIVE_INFINITY;
+        for (let index = 0; index < points.length; index++) {
+            const point = points[index];
+            if (point.x < layout.plotLeft || point.x > layout.plotRight)
+                continue;
+            const distance = Math.abs(point.x - centerX);
+            if (distance >= nearestDistance)
+                continue;
+            nearestDistance = distance;
+            nearestPoint = point;
+        }
+        if (!nearestPoint)
+            return null;
+        const curveY = this.clampToPlotBounds(nearestPoint.y, layout.plotTop, layout.plotBottom);
+        const labelY = this.clampToPlotBounds((baseY + curveY) / 2, layout.plotTop + 10, layout.plotBottom - 10);
+        return { x: centerX, y: labelY };
     }
 
     renderPointMarkers(points, color) {

@@ -114,6 +114,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             tangentColor: this.properties.tangentColor ?? "",
             getRotationDegrees: () => this.getHandleRotationDegrees(),
             getPrecision: () => this.board.calculator.getPrecision(),
+            calculateArea: (argumentValues, values) => this.board.calculator.calculateArea(argumentValues, values),
             getArgumentPrecision: () => this.board.calculator.getTermPrecision(this.getXTermName()),
             onDomainChanged: domain => this.onDomainChanged(domain),
             onTickDragStarted: () => this.onTickDragStarted(),
