@@ -28,6 +28,7 @@ class Calculator extends EventTarget {
         this.preloadedRegressionTerms = null;
         this.preloadedOutlierIterations = null;
         this.recalculationRevision = 0;
+        this.recalculatedIteration = 1;
     }
 
     normalizeCasesCount(value = 1) {
@@ -88,9 +89,16 @@ class Calculator extends EventTarget {
         }
     }
 
-    calculate() {
+    calculate(iteration = this.system.iteration) {
+        const normalizedIteration = Math.max(1, Math.min(Math.floor(Number(iteration) || 1), this.system.lastIteration));
         this.recalculationRevision = (this.recalculationRevision ?? 0) + 1;
-        this.system.calculateFunctions();
+        this.recalculatedIteration = normalizedIteration;
+        // calculateFunctions always targets the last calculated iteration, so a value changed while
+        // the player replays already-computed rows has to be recalculated on the displayed row.
+        if (normalizedIteration >= this.system.lastCalculatedIteration)
+            this.system.calculateFunctions();
+        else
+            /** @type {any} */ (this.system).calculateFunctionsOnIteration(normalizedIteration);
         this.emit("iterate", { calculator: this });
     }
 
@@ -161,6 +169,7 @@ class Calculator extends EventTarget {
         this.physicalEngine.physicsConstantsRegistered = false;
         this.status = STATUS.STOPPED;
         this.recalculationRevision = 0;
+        this.recalculatedIteration = 1;
         this.userInputsByCase = {};
         this.clearHook();
     }
@@ -748,9 +757,15 @@ class Calculator extends EventTarget {
         var term = system.getTerm(name);
         if (!term)
             return;
-        system.set(term, value, caseNumber);
-        if (iteration == 1)
-            system.setInitialByName(name, value, iteration, caseNumber);
+        const normalizedIteration = Math.max(1, Math.floor(Number(iteration) || 1));
+        // system.set only ever writes on the last iteration, which is not where the user is looking
+        // when the player replays already-computed rows.
+        if (normalizedIteration >= system.lastIteration)
+            system.set(term, value, caseNumber);
+        else if (system.isEditable(term))
+            system.getIteration(normalizedIteration, caseNumber)[name] = value;
+        if (normalizedIteration == 1)
+            system.setInitialByName(name, value, normalizedIteration, caseNumber);
     }
 
     getFinalIteration() {

@@ -230,10 +230,10 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         const calculator = this.board.calculator;
         const recalculationRevision = calculator.recalculationRevision ?? 0;
         if (recalculationRevision !== this.lastSyncedRecalculationRevision) {
-            const currentIteration = system.iteration;
+            const recalculatedIteration = calculator.recalculatedIteration ?? system.iteration;
             for (let rowIndex = 0; rowIndex < this.chartRows.length; rowIndex++) {
-                if (this.chartRows[rowIndex].iteration === currentIteration) {
-                    this.chartRows[rowIndex] = this.createChartDataItem(currentIteration, chartDataConfig);
+                if (this.chartRows[rowIndex].iteration === recalculatedIteration) {
+                    this.chartRows[rowIndex] = this.createChartDataItem(recalculatedIteration, chartDataConfig);
                     hasChanges = true;
                     break;
                 }

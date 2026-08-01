@@ -129,4 +129,49 @@ test.describe('Chart shape interactions', () => {
         expect(areaState.labelY).toBeGreaterThan(areaState.plotTop);
         expect(areaState.labelY).toBeLessThan(areaState.plotBottom);
     });
+
+    test('area follows a value changed on the iteration being replayed', async ({ page }) => {
+        await setupEditor(page);
+        await page.evaluate(() => modellus.shape.addExpression('Expr1'));
+        await page.waitForTimeout(400);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Expr1').properties.expression = '\\frac{dx}{dt}=v';
+            shell.reset();
+        });
+        await page.waitForTimeout(400);
+
+        const areaState = await page.evaluate(() => {
+            modellus.shape.addChart('Chart1');
+            const chartShape = shell.board.shapes.getByName('Chart1');
+            chartShape.properties.xTerm = 't';
+            chartShape.properties.xTermCase = 1;
+            chartShape.properties.yTerms = [{ term: 'v', case: 1, color: '', showLabel: true, chartTypes: ['area'] }];
+            chartShape.properties.autoScale = true;
+            chartShape.update();
+            shell.reset();
+            for (let iterationIndex = 0; iterationIndex < 20; iterationIndex++)
+                shell.calculator.engine.iterate();
+            chartShape.update();
+            const calculator = shell.calculator;
+            calculator.setIteration(10);
+            calculator.setTermValue('v', 5, calculator.getIteration(), 1);
+            calculator.calculate();
+            chartShape.draw();
+            const valueField = chartShape.chartDataConfig.ySeries[0].valueField;
+            const lastIteration = calculator.system.lastIteration;
+            return {
+                labelText: chartShape.element.querySelector('.chart-area-value-label')?.textContent ?? null,
+                replayedIterationValue: calculator.system.getByNameOnIteration(10, 'v', 1),
+                lastIterationValue: calculator.system.getByNameOnIteration(lastIteration, 'v', 1),
+                chartReplayedRowValue: chartShape.chartRows.find(row => row.iteration === 10)?.[valueField],
+                calculatedArea: calculator.calculateTermArea('t', 'v', 1)
+            };
+        });
+
+        expect(areaState.replayedIterationValue).toBeCloseTo(5, 6);
+        expect(areaState.lastIterationValue).toBeCloseTo(0, 6);
+        expect(areaState.chartReplayedRowValue).toBeCloseTo(5, 6);
+        expect(areaState.calculatedArea).toBeCloseTo(0.5, 6);
+        expect(areaState.labelText).toBe('A = 0.50');
+    });
 });
