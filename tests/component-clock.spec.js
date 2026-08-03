@@ -7,7 +7,7 @@ async function setupBoard(page) {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
     });
     await page.goto(BOARD_URL);
-    await page.waitForFunction(() => typeof shell !== 'undefined' && shell.board !== null, null, { timeout: 15000 });
+    await page.waitForFunction(() => typeof shell !== 'undefined' && shell !== null && shell.board !== null, null, { timeout: 15000 });
     await page.waitForTimeout(500);
 }
 
@@ -69,6 +69,59 @@ test.describe('analogue clock component', () => {
         expect(rendered.ticks).toBeGreaterThan(60);
         expect(rendered.numbers).toEqual(['12', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11']);
         expect(rendered.hands).toBeGreaterThanOrEqual(2);
+    });
+
+    test('the settings menu offers the component options and no visual preset', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page);
+        await addClock(page);
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            shell.board.selection.select(shape);
+        });
+        await page.waitForTimeout(300);
+        const settingsButton = page.locator('.shape-context-toolbar.visible .mdl-component-settings-selector');
+        await expect(settingsButton).toHaveCount(1);
+        await settingsButton.click();
+        await page.waitForTimeout(300);
+        const labels = await page.$$eval('.mdl-shape-overlay-popup .mdl-dropdown-list-label, .mdl-shape-overlay-popup .mdl-dropdown-list-stacked-label',
+            elements => elements.map(element => element.textContent.trim()));
+        expect(labels).toContain('Show second hand');
+        expect(labels).toContain('Hands can be dragged');
+        expect(labels.join('|').toLowerCase()).not.toContain('preset');
+    });
+
+    test('shows switches rather than check boxes for the boolean options', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page);
+        await addClock(page);
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Clock')));
+        await page.waitForTimeout(300);
+        await page.locator('.shape-context-toolbar.visible .mdl-component-settings-selector').click();
+        await page.waitForTimeout(400);
+        const popup = page.locator('.mdl-shape-overlay-popup').last();
+        const counts = await page.evaluate(() => {
+            const popups = document.querySelectorAll('.mdl-shape-overlay-popup');
+            const last = popups[popups.length - 1];
+            return { switches: last.querySelectorAll('.dx-switch').length, checkboxes: last.querySelectorAll('.dx-checkbox').length };
+        });
+        expect(counts.checkboxes).toBe(0);
+        expect(counts.switches).toBe(4);
+
+        await popup.locator('.dx-switch').first().click();
+        await page.waitForTimeout(400);
+        const toggled = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            const hands = shape.getInspectionReport().nodes.filter(node => node.sourceComponent === 'pointer-hand' && node.transform.startsWith('rotate('));
+            return { showSecondHand: shape.properties.showSecondHand, handCount: hands.length };
+        });
+        expect(toggled.showSecondHand).toBe(false);
+        expect(toggled.handCount).toBe(2);
+
+        await page.evaluate(() => shell.commands.undo());
+        await page.waitForTimeout(400);
+        const undone = await page.evaluate(() => shell.board.shapes.getByName('Clock').properties.showSecondHand);
+        expect(undone).toBe(true);
     });
 
     test('is placed from the components palette by drawing on the board', async ({ page }) => {
@@ -274,6 +327,122 @@ test.describe('analogue clock component', () => {
         await page.waitForTimeout(300);
         const minute = await page.evaluate(() => shell.board.calculator.getByName('minute', 1));
         expect(minute).toBe(30);
+    });
+});
+
+test.describe('component variable inputs', () => {
+    async function addCompass(page) {
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('compass', 'Compass');
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200 });
+            shape.draw();
+            shell.board.selection.select(shape);
+        });
+        await page.waitForTimeout(400);
+    }
+
+    async function typeIntoHeading(page, text) {
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.waitForTimeout(400);
+        const input = page.locator('.mdl-shape-overlay-popup').last().locator('.dx-texteditor-input').first();
+        await input.click();
+        await input.fill(text);
+        await input.press('Enter');
+        await page.waitForTimeout(400);
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+    }
+
+    async function readCompass(page) {
+        return page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Compass');
+            const needle = shape.getInspectionReport().nodes
+                .find(node => node.sourceComponent === 'pointer-hand' && node.transform.startsWith('rotate('));
+            return { headingVariable: shape.properties.headingVariable, needleTransform: needle?.transform ?? '' };
+        });
+    }
+
+    test('accepts a typed number, keeping the precision as written', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120');
+        await addCompass(page);
+        await typeIntoHeading(page, '0.125');
+        const result = await readCompass(page);
+        expect(result.headingVariable).toBe('0.125');
+        expect(readRotation(result.needleTransform)).toBeCloseTo(0.125, 3);
+    });
+
+    test('still accepts a term name typed into the same control', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120');
+        await addCompass(page);
+        await typeIntoHeading(page, 'heading');
+        const result = await readCompass(page);
+        expect(result.headingVariable).toBe('heading');
+        expect(readRotation(result.needleTransform)).toBeCloseTo(120, 3);
+    });
+
+    test('renders a value like the player start value and a term as mathematics', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120');
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('compass', 'Compass');
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200, headingVariable: '42.5', rotationVariable: 'heading' });
+            shape.draw();
+            shell.board.selection.select(shape);
+        });
+        await page.waitForTimeout(500);
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.waitForTimeout(500);
+        const report = await page.evaluate(() => {
+            const popups = document.querySelectorAll('.mdl-shape-overlay-popup');
+            const rows = Array.from(popups[popups.length - 1].querySelectorAll('.mdl-dropdown-list-stacked-control, .mdl-dropdown-list-control'));
+            const describe = row => {
+                const value = row.querySelector('.mdl-term-editor-value');
+                const style = value ? getComputedStyle(value) : null;
+                return {
+                    text: value?.textContent ?? null,
+                    hasMathField: !!row.querySelector('.mdl-term-editor-math-field'),
+                    font: style ? `${style.fontFamily}|${style.fontSize}|${style.fontStyle}|${style.fontWeight}` : null
+                };
+            };
+            const buttonValue = document.querySelector('.shape-context-toolbar .mdl-name-btn-term-value');
+            const buttonStyle = buttonValue ? getComputedStyle(buttonValue) : null;
+            const startLabel = document.querySelector('#startDropDown span');
+            const startStyle = getComputedStyle(startLabel);
+            return {
+                valueRow: describe(rows[0]),
+                termRow: describe(rows[1]),
+                nameButton: {
+                    text: buttonValue?.textContent ?? null,
+                    font: buttonStyle ? `${buttonStyle.fontFamily}|${buttonStyle.fontSize}|${buttonStyle.fontStyle}|${buttonStyle.fontWeight}` : null,
+                    termStillTypeset: !!document.querySelector('.shape-context-toolbar .mdl-name-btn-term math-field')
+                },
+                playerFont: `${startStyle.fontFamily}|${startStyle.fontSize}|${startStyle.fontStyle}|${startStyle.fontWeight}`
+            };
+        });
+        expect(report.valueRow.text).toBe('42.5');
+        expect(report.valueRow.hasMathField).toBe(false);
+        expect(report.valueRow.font).toBe(report.playerFont);
+        expect(report.termRow.hasMathField).toBe(true);
+        expect(report.termRow.text).toBeNull();
+        expect(report.nameButton.text).toBe('42.50');
+        expect(report.nameButton.font).toBe(report.playerFont);
+        expect(report.nameButton.termStillTypeset).toBe(true);
+    });
+
+    test('still lists the model terms for picking', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120\\\\turn=35');
+        await addCompass(page);
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.waitForTimeout(400);
+        const input = page.locator('.mdl-shape-overlay-popup').last().locator('.dx-texteditor-input').first();
+        await input.click();
+        await page.waitForTimeout(400);
+        const listed = await page.$$eval('.dx-list-item, .dx-item-content', elements => elements.map(element => element.textContent.trim()));
+        expect(listed.join('|')).toContain('heading');
+        expect(listed.join('|')).toContain('turn');
     });
 });
 

@@ -487,13 +487,14 @@ Capabilities: `radial`, `angular`, `reads-model`
 
 ### `compass` — Compass
 
-Compass rose with cardinal labels and a needle whose heading comes from a model variable.
+Compass rose with cardinal labels, a needle whose heading comes from a model variable and a rose that a second variable can turn.
 
 Capabilities: `radial`, `angular`, `reads-model`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
 | `headingVariable` | variable | "0" |  |
+| `rotationVariable` | variable | "0" |  |
 | `showDegrees` | boolean | false |  |
 | `faceColor` | colour | "token:surface.default" |  |
 | `borderColor` | colour | "token:stroke.default" |  |

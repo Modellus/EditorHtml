@@ -1,0 +1,103 @@
+{
+    "schemaVersion": "1.0.0",
+    "type": "circular-gauge",
+    "category": "component",
+    "displayName": "Circular gauge",
+    "description": "Ring gauge that fills clockwise in proportion to a model variable.",
+    "icon": "fa-light fa-circle-notch",
+    "tags": ["object", "gauge", "progress", "ring", "meter"],
+    "capabilities": ["radial", "angular", "reads-model"],
+    "parameters": [
+        { "id": "valueVariable", "label": "Value variable", "valueType": "variable", "defaultValue": "0", "category": "model" },
+        { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": 0, "category": "scale" },
+        { "id": "maximum", "label": "Maximum", "valueType": "number", "defaultValue": 100, "category": "scale" },
+        { "id": "startAngle", "label": "Start angle", "valueType": "number", "defaultValue": 90, "category": "scale", "unit": "deg" },
+        { "id": "spanAngle", "label": "Span", "valueType": "number", "defaultValue": 360, "category": "scale", "unit": "deg", "minimum": 1, "maximum": 360 },
+        { "id": "thickness", "label": "Ring thickness", "valueType": "number", "defaultValue": 0.22, "category": "style", "minimum": 0.02, "maximum": 1 },
+        { "id": "trackColor", "label": "Track colour", "valueType": "colour", "defaultValue": "token:surface.muted", "category": "style" },
+        { "id": "fillColor", "label": "Fill colour", "valueType": "colour", "defaultValue": "token:stroke.accent", "category": "style" },
+        { "id": "labelColor", "label": "Label colour", "valueType": "colour", "defaultValue": "token:text.primary", "category": "style" },
+        { "id": "digits", "label": "Decimals", "valueType": "number", "defaultValue": 0, "category": "display", "minimum": 0, "maximum": 6 },
+        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "", "category": "display" },
+        { "id": "showReadout", "label": "Show readout", "valueType": "boolean", "defaultValue": true, "category": "display" }
+    ],
+    "locals": [
+        { "id": "w", "value": { "parameter": "$width" } },
+        { "id": "h", "value": { "parameter": "$height" } },
+        { "id": "cx", "formula": "\\frac{w}{2}" },
+        { "id": "cy", "formula": "\\frac{h}{2}" },
+        { "id": "r", "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-4\\right)" },
+        { "id": "innerRadius", "formula": "r\\cdot\\left(1-\\max\\left(0.02,\\min\\left(1,thickness\\right)\\right)\\right)" },
+        { "id": "value", "value": { "parameter": "valueVariable", "as": "number" } },
+        { "id": "ratio", "value": { "choose": { "formula": "maximum-minimum" }, "then": { "formula": "\\max\\left(0,\\min\\left(1,\\frac{value-minimum}{maximum-minimum}\\right)\\right)" }, "otherwise": 0 } },
+        { "id": "sweep", "formula": "\\max\\left(0.001,\\min\\left(360,spanAngle\\right)\\right)" },
+        { "id": "filledSweep", "formula": "\\max\\left(0.001,sweep\\cdot ratio\\right)" },
+        { "id": "trackEnd", "value": { "choose": { "formula": "360-sweep" }, "then": { "formula": "startAngle-sweep" }, "otherwise": { "formula": "startAngle-sweep+0.001" } } },
+        { "id": "fillEnd", "formula": "startAngle-filledSweep" },
+        { "id": "readoutFontSize", "formula": "\\max\\left(10,r\\cdot0.34\\right)" },
+        { "id": "readoutWeight", "value": { "token": "font.weight.strong" } },
+        {
+            "id": "readoutText",
+            "value": {
+                "concat": [
+                    { "format": { "parameter": "value" }, "digits": { "parameter": "digits" } },
+                    { "choose": { "parameter": "unit" }, "then": { "concat": [" ", { "parameter": "unit" }] }, "otherwise": "" }
+                ]
+            }
+        }
+    ],
+    "root": {
+        "id": "circular-gauge",
+        "type": "group",
+        "children": [
+            {
+                "id": "track",
+                "type": "arc",
+                "bindings": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "r" },
+                    "innerRadius": { "parameter": "innerRadius" },
+                    "startAngle": { "parameter": "startAngle" },
+                    "endAngle": { "parameter": "trackEnd" },
+                    "fill": { "parameter": "trackColor" }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "fill",
+                "type": "arc",
+                "bindings": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "r" },
+                    "innerRadius": { "parameter": "innerRadius" },
+                    "startAngle": { "parameter": "startAngle" },
+                    "endAngle": { "parameter": "fillEnd" },
+                    "fill": { "parameter": "fillColor" }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "readout",
+                "type": "text",
+                "when": { "parameter": "showReadout" },
+                "bindings": {
+                    "x": { "parameter": "cx" },
+                    "y": { "parameter": "cy" },
+                    "text": { "parameter": "readoutText" },
+                    "fontSize": { "parameter": "readoutFontSize" },
+                    "fontWeight": { "parameter": "readoutWeight" },
+                    "fill": { "parameter": "labelColor" }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            }
+        ]
+    }
+}

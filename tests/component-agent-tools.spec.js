@@ -7,7 +7,7 @@ async function setupBoard(page) {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
     });
     await page.goto(BOARD_URL);
-    await page.waitForFunction(() => typeof shell !== 'undefined' && shell.board !== null, null, { timeout: 15000 });
+    await page.waitForFunction(() => typeof shell !== 'undefined' && shell !== null && shell.board !== null, null, { timeout: 15000 });
     await page.waitForTimeout(500);
 }
 

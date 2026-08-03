@@ -1,0 +1,116 @@
+{
+    "schemaVersion": "1.0.0",
+    "type": "rotating-vector",
+    "category": "component",
+    "displayName": "Rotating vector",
+    "description": "Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections.",
+    "icon": "fa-light fa-arrow-right-long",
+    "tags": ["object", "vector", "phasor", "arrow", "rotation", "oscillation"],
+    "capabilities": ["angular", "reads-model", "vector"],
+    "parameters": [
+        { "id": "angleVariable", "label": "Angle variable", "valueType": "variable", "defaultValue": "0", "category": "model", "description": "Angle in degrees, measured counter-clockwise from the positive x axis." },
+        { "id": "lengthVariable", "label": "Length variable", "valueType": "variable", "defaultValue": "1", "category": "model" },
+        { "id": "lengthScale", "label": "Length scale", "valueType": "number", "defaultValue": 1, "category": "scale", "minimum": 0 },
+        { "id": "showCircle", "label": "Show reference circle", "valueType": "boolean", "defaultValue": true, "category": "display" },
+        { "id": "showProjections", "label": "Show projections", "valueType": "boolean", "defaultValue": false, "category": "display" },
+        { "id": "vectorColor", "label": "Vector colour", "valueType": "colour", "defaultValue": "token:stroke.accent", "category": "style" },
+        { "id": "circleColor", "label": "Circle colour", "valueType": "colour", "defaultValue": "token:stroke.subtle", "category": "style" },
+        { "id": "projectionColor", "label": "Projection colour", "valueType": "colour", "defaultValue": "token:stroke.subtle", "category": "style" }
+    ],
+    "locals": [
+        { "id": "w", "value": { "parameter": "$width" } },
+        { "id": "h", "value": { "parameter": "$height" } },
+        { "id": "cx", "formula": "\\frac{w}{2}" },
+        { "id": "cy", "formula": "\\frac{h}{2}" },
+        { "id": "maxRadius", "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-8\\right)" },
+        { "id": "angle", "value": { "parameter": "angleVariable", "as": "number" } },
+        { "id": "rawLength", "value": { "parameter": "lengthVariable", "as": "number" } },
+        { "id": "length", "formula": "\\max\\left(0,\\min\\left(maxRadius,rawLength\\cdot lengthScale\\right)\\right)" },
+        { "id": "tipX", "formula": "cx+length\\cdot\\cos\\left(\\frac{angle\\cdot\\pi}{180}\\right)" },
+        { "id": "tipY", "formula": "cy-length\\cdot\\sin\\left(\\frac{angle\\cdot\\pi}{180}\\right)" },
+        { "id": "pointerAngle", "formula": "90-angle" },
+        { "id": "hairline", "value": { "token": "strokeWidth.hairline" } },
+        { "id": "vectorWidth", "formula": "strong\\cdot1.5", "inputs": { "strong": { "token": "strokeWidth.strong" } } }
+    ],
+    "root": {
+        "id": "rotating-vector",
+        "type": "group",
+        "children": [
+            {
+                "id": "reference-circle",
+                "type": "circle",
+                "when": { "parameter": "showCircle" },
+                "bindings": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "maxRadius" },
+                    "stroke": { "parameter": "circleColor" },
+                    "strokeWidth": { "parameter": "hairline" }
+                },
+                "properties": {
+                    "fill": "none",
+                    "strokeDash": "3 3"
+                }
+            },
+            {
+                "id": "projection-x",
+                "type": "line",
+                "when": { "parameter": "showProjections" },
+                "bindings": {
+                    "x1": { "parameter": "tipX" },
+                    "y1": { "parameter": "tipY" },
+                    "x2": { "parameter": "tipX" },
+                    "y2": { "parameter": "cy" },
+                    "stroke": { "parameter": "projectionColor" },
+                    "strokeWidth": { "parameter": "hairline" }
+                },
+                "properties": {
+                    "strokeDash": "2 2"
+                }
+            },
+            {
+                "id": "projection-y",
+                "type": "line",
+                "when": { "parameter": "showProjections" },
+                "bindings": {
+                    "x1": { "parameter": "tipX" },
+                    "y1": { "parameter": "tipY" },
+                    "x2": { "parameter": "cx" },
+                    "y2": { "parameter": "tipY" },
+                    "stroke": { "parameter": "projectionColor" },
+                    "strokeWidth": { "parameter": "hairline" }
+                },
+                "properties": {
+                    "strokeDash": "2 2"
+                }
+            },
+            {
+                "id": "vector",
+                "type": "pointer-hand",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "angle": { "parameter": "pointerAngle" },
+                    "length": { "parameter": "length" },
+                    "tailLength": 0,
+                    "width": { "parameter": "vectorWidth" },
+                    "color": { "parameter": "vectorColor" },
+                    "style": "arrow"
+                }
+            },
+            {
+                "id": "origin",
+                "type": "circle",
+                "bindings": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "fill": { "parameter": "vectorColor" }
+                },
+                "properties": {
+                    "radius": 2.5,
+                    "stroke": "none"
+                }
+            }
+        ]
+    }
+}

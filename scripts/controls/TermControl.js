@@ -196,6 +196,20 @@ class TermControl {
         return baseShape.formatModelValue(numeric);
     }
 
+    // A value the reader types is an input, not a reading, so it is kept as written instead of
+    // being rounded to the model's display precision. Anything that is not a number is left
+    // alone, so a term name can still be typed.
+    static normalizeExactTypedValue(value) {
+        const normalizedValue = TermControl.normalizeBaseShapeTermValue(value);
+        if (typeof normalizedValue !== "string")
+            return normalizedValue;
+        const trimmedValue = normalizedValue.trim();
+        if (trimmedValue === "")
+            return trimmedValue;
+        const numeric = Number(trimmedValue);
+        return Number.isFinite(numeric) ? String(numeric) : trimmedValue;
+    }
+
     static getBaseShapeCaseVisibilityConfig(baseShape) {
         const calculator = baseShape.board.calculator;
         return {
@@ -253,7 +267,7 @@ class TermControl {
         };
     }
 
-    static getBaseShapeTermSelectItems(baseShape, term) {
+    static getBaseShapeTermSelectItems(baseShape, term, normalizeCustomValue = null) {
         const calculator = baseShape.board.calculator;
         const items = Utils.getTerms(calculator.getTermsNames(), calculator.system);
         const selectedValue = TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]);
@@ -261,8 +275,8 @@ class TermControl {
             return items;
         if (calculator.isTerm(selectedValue))
             return items;
-        const formattedValue = TermControl.normalizeBaseShapeCustomTermValue(baseShape, selectedValue);
-        items.unshift({ text: formattedValue, term: selectedValue });
+        const formatValue = normalizeCustomValue ?? (value => TermControl.normalizeBaseShapeCustomTermValue(baseShape, value));
+        items.unshift({ text: formatValue(selectedValue), term: selectedValue });
         return items;
     }
 
@@ -284,7 +298,10 @@ class TermControl {
             control.refresh();
     }
 
-    static createBaseShapeTermFormControl(baseShape, formInstance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true) {
+    static createBaseShapeTermFormControl(baseShape, formInstance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true, options = {}) {
+        const normalizeCustomValue = options.exactTypedValue === true
+            ? value => TermControl.normalizeExactTypedValue(value)
+            : value => TermControl.normalizeBaseShapeCustomTermValue(baseShape, value);
         if (!baseShape.termDisplayEntries.some(entry => entry.term === term))
             baseShape.termDisplayEntries.push({ term: term, caseProperty: caseProperty });
         const lockedProperty = `${term}Locked`;
@@ -321,7 +338,7 @@ class TermControl {
             rowMarginBottom: "0",
             getItems: () => [{ term: TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1), locked: baseShape.properties[lockedProperty] === true }],
             getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty),
-            getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term),
+            getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term, normalizeCustomValue),
             getBoard: () => baseShape.board,
             getSystem: () => baseShape.board?.calculator?.system,
             allowNumericTermReference: true,
@@ -337,7 +354,7 @@ class TermControl {
                 acceptCustomValue: isEditable,
                 onOpened: _ => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl),
                 onCustomItemCreating: event => {
-                    const customValue = TermControl.normalizeBaseShapeCustomTermValue(baseShape, event.text);
+                    const customValue = normalizeCustomValue(event.text);
                     formInstance.updateData(term, customValue);
                     event.component.option("value", customValue);
                     event.customItem = { text: customValue, term: customValue };
@@ -1241,6 +1258,24 @@ class TermControl {
         Utils.setMathFieldValue(mathFieldElement, mathValue);
     }
 
+    // A plain number is not mathematics to typeset: it is shown as text in the player's own
+    // start value font, so a value reads the same wherever the reader meets it.
+    static isPlainValue(value) {
+        const text = TermControl.normalizeTermValue(value);
+        if (typeof text !== "string" || text.trim() === "")
+            return false;
+        return Number.isFinite(Number(text));
+    }
+
+    // font-style is set because the selector italicises terms, and a value is not a term.
+    static applyPlainValueStyle(element) {
+        return $(element).css({ fontFamily: "KaTeX_Main, serif", fontSize: "15px", fontStyle: "normal" });
+    }
+
+    static createPlainValueLabel(text, className) {
+        return TermControl.applyPlainValueStyle($("<span>").addClass(className).text(text));
+    }
+
     getTermEditorInputContainer(component) {
         const componentElement = component?.element?.();
         const inputElement = componentElement?.find?.(".dx-texteditor-input")?.first?.();
@@ -1257,18 +1292,31 @@ class TermControl {
 
     syncTermEditorMathField(component, fallbackValue, system) {
         const selectedValue = component.option("value") ?? fallbackValue;
-        const selectedText = Utils.formatMathTermName(String(Utils.getDisplayedTerm(selectedValue, system)));
         const inputContainer = this.getTermEditorInputContainer(component);
         if (!inputContainer?.length)
             return;
-        const existingMathField = inputContainer.find(".mdl-term-editor-math-field").first()[0];
-        let mathFieldElement = existingMathField;
+        const hideInput = () => inputContainer.find(".dx-texteditor-input").css({ color: "transparent", caretColor: "transparent", opacity: 0, textShadow: "none" });
+        if (TermControl.isPlainValue(selectedValue)) {
+            inputContainer.find(".mdl-term-editor-math-field").remove();
+            const displayedText = String(Utils.getDisplayedTerm(selectedValue, system));
+            let valueLabel = inputContainer.find(".mdl-term-editor-value").first();
+            if (!valueLabel.length) {
+                valueLabel = TermControl.createPlainValueLabel("", "mdl-term-editor-value");
+                inputContainer.prepend(valueLabel);
+            }
+            valueLabel.text(displayedText);
+            hideInput();
+            return;
+        }
+        inputContainer.find(".mdl-term-editor-value").remove();
+        const selectedText = Utils.formatMathTermName(String(Utils.getDisplayedTerm(selectedValue, system)));
+        let mathFieldElement = inputContainer.find(".mdl-term-editor-math-field").first()[0];
         if (!mathFieldElement) {
             inputContainer.prepend("<math-field read-only class='form-math-field mdl-term-editor-math-field' style='height:auto;width:auto;display:inline-block'></math-field>");
             mathFieldElement = inputContainer.find(".mdl-term-editor-math-field").first()[0];
         }
         this.setMathFieldValue(mathFieldElement, selectedText);
-        inputContainer.find(".dx-texteditor-input").css({ color: "transparent", caretColor: "transparent", opacity: 0, textShadow: "none" });
+        hideInput();
     }
 
     getTermEditorOptions(item, index) {
@@ -1298,9 +1346,11 @@ class TermControl {
             },
             fieldAddons: {
                 before: data => {
-                    const selectedText = Utils.formatMathTermName(this.resolveTermEditorDisplayedText(data, termValue, system));
+                    const displayedText = this.resolveTermEditorDisplayedText(data, termValue, system);
+                    if (TermControl.isPlainValue(this.resolveTermEditorSelectedValue(data, termValue)))
+                        return TermControl.createPlainValueLabel(displayedText, "mdl-term-editor-value");
                     const mathField = $("<math-field read-only class='form-math-field' style='height:auto;width:auto;display:inline-block'></math-field>");
-                    this.setMathFieldValue(mathField[0], selectedText);
+                    this.setMathFieldValue(mathField[0], Utils.formatMathTermName(displayedText));
                     return mathField;
                 }
             },

@@ -20,6 +20,21 @@ class BlockObjects {
         return bindings;
     }
 
+    // Definitions saved before a parameter was added carry no binding for it, so the instance
+    // property the toolbar writes would never reach the component. Backfill the missing ones.
+    static backfillInstanceParameterBindings(definition) {
+        const componentType = BlockObjects.getComponentType(definition);
+        if (!componentType || !definition.root)
+            return definition;
+        const bindings = definition.root.parameters ?? {};
+        for (const parameter of BlockObjects.getComponentParameters(componentType)) {
+            if (bindings[parameter.id] === undefined)
+                bindings[parameter.id] = { parameter: parameter.id };
+        }
+        definition.root.parameters = bindings;
+        return definition;
+    }
+
     static createComponentInstance(componentType, options = {}) {
         const registration = BlockRegistry.get(componentType);
         if (!registration || registration.category !== "component")

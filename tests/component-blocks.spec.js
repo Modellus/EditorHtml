@@ -7,7 +7,7 @@ async function setupBoard(page) {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
     });
     await page.goto(BOARD_URL);
-    await page.waitForFunction(() => typeof shell !== 'undefined' && shell.board !== null, null, { timeout: 15000 });
+    await page.waitForFunction(() => typeof shell !== 'undefined' && shell !== null && shell.board !== null, null, { timeout: 15000 });
     await page.waitForTimeout(500);
 }
 
@@ -350,6 +350,38 @@ test.describe('reusable blocks build several objects', () => {
             expect(result.nodeCount).toBeGreaterThan(2);
             expect(result.primitives.every(tag => ['g', 'circle', 'line', 'polygon', 'text', 'path', 'rect', 'ellipse', 'image'].includes(tag))).toBe(true);
         }
+    });
+
+    test('the compass rose turns with its rotation variable while the needle keeps its heading', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => modellus.shape.addExpression('Compass equations'));
+        await page.waitForTimeout(300);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Compass equations').properties.expression = 'heading=120\\\\turn=90';
+            shell.reset();
+        });
+        await page.waitForTimeout(400);
+        const result = await page.evaluate(() => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
+            const definition = BlockObjects.createComponentInstance('compass');
+            const build = rotationVariable => {
+                const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('compass'), { headingVariable: 'heading', rotationVariable: rotationVariable });
+                const compilation = compiler.compile(definition, { width: 200, height: 200, parameters: parameters, tokens: new BlockTokens('standard') });
+                const flattened = BlockRenderer.flatten(compilation.nodes);
+                const north = flattened.find(node => node.text === 'N');
+                return {
+                    needle: flattened.filter(node => node.id.includes('needle-north')).map(node => JSON.stringify(node.attributes)).join('|'),
+                    north: { x: Number(north.attributes.x), y: Number(north.attributes.y) }
+                };
+            };
+            return { still: build('0'), turned: build('turn') };
+        });
+        expect(result.still.needle).not.toBe('');
+        expect(result.turned.needle).toBe(result.still.needle);
+        expect(result.still.north.x).toBeCloseTo(100, 1);
+        expect(result.still.north.y).toBeLessThan(100);
+        expect(result.turned.north.x).toBeGreaterThan(100);
+        expect(result.turned.north.y).toBeCloseTo(100, 1);
     });
 
     test('visual presets change styling without changing structure', async ({ page }) => {

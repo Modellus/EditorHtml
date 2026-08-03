@@ -1,5 +1,5 @@
 class BlockBindings {
-    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format"];
+    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat"];
 
     static isBinding(value) {
         if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -144,7 +144,43 @@ class BlockBindings {
             return this.resolveFormula(binding, context, fallbackValue);
         if (kind === "format")
             return this.resolveFormat(binding, context, fallbackValue);
+        if (kind === "choose")
+            return this.resolveChoice(binding, context, fallbackValue);
+        if (kind === "concat")
+            return this.resolveConcat(binding, context, fallbackValue);
         return fallbackValue;
+    }
+
+    // Picks between two bindings, so a declarative definition can express what a create()
+    // function writes as a conditional expression. A blank string and a zero are the empty
+    // cases: "no unit" and "no span left" read as false, as they do in the code they replace.
+    static isTruthy(value) {
+        if (typeof value === "boolean")
+            return value;
+        if (typeof value === "number")
+            return Number.isFinite(value) && value !== 0;
+        if (typeof value === "string")
+            return value !== "" && value !== "false";
+        return value !== null && value !== undefined;
+    }
+
+    // Joins resolved parts into one string, so a readout can be built from a formatted number
+    // and a unit without a create() function to concatenate them.
+    resolveConcat(binding, context, fallbackValue) {
+        if (!Array.isArray(binding.concat))
+            return fallbackValue;
+        return binding.concat.map(part => {
+            const value = this.resolve(part, context, "");
+            return value === null || value === undefined ? "" : String(value);
+        }).join("");
+    }
+
+    resolveChoice(binding, context, fallbackValue) {
+        const condition = this.resolve(binding.choose, context, false);
+        const branch = BlockBindings.isTruthy(condition) ? binding.then : binding.otherwise;
+        if (branch === undefined)
+            return fallbackValue;
+        return this.resolve(branch, context, fallbackValue);
     }
 
     resolveParameter(binding, context, fallbackValue) {
@@ -199,15 +235,20 @@ class BlockBindings {
         return NaN;
     }
 
+    // The decimals, prefix and suffix are resolved like any other binding, so a component can
+    // format a readout with the digits and unit its own parameters carry.
     resolveFormat(binding, context, fallbackValue) {
         const value = this.resolve(binding.format, context, null);
         if (value === null || value === undefined)
             return fallbackValue;
+        const prefix = this.resolve(binding.prefix, context, "");
+        const suffix = this.resolve(binding.suffix, context, "");
         const numeric = Number(value);
         if (!Number.isFinite(numeric))
-            return `${binding.prefix ?? ""}${value}${binding.suffix ?? ""}`;
-        const digits = Number.isFinite(Number(binding.digits)) ? Math.max(0, Math.min(10, Math.floor(Number(binding.digits)))) : 2;
-        return `${binding.prefix ?? ""}${numeric.toFixed(digits)}${binding.suffix ?? ""}`;
+            return `${prefix}${value}${suffix}`;
+        const requestedDigits = Number(this.resolve(binding.digits, context, NaN));
+        const digits = Number.isFinite(requestedDigits) ? Math.max(0, Math.min(10, Math.floor(requestedDigits))) : 2;
+        return `${prefix}${numeric.toFixed(digits)}${suffix}`;
     }
 
     getCaseNumber(binding, context) {

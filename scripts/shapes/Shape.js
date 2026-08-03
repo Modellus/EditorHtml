@@ -1942,7 +1942,10 @@ class BaseShape {
         const normalizedTermText = String(termText ?? "").trim();
         if (normalizedTermText === "")
             return "";
-        const mathFieldMarkup = Utils.buildReadOnlyMathFieldMarkup(normalizedTermText, "height:auto;width:auto;display:inline-block;pointer-events:none");
+        // A value is shown as plain text in the player's start value font; only a term is typeset.
+        const mathFieldMarkup = TermControl.isPlainValue(termValue)
+            ? `<span class="mdl-name-btn-term-value" style="font-family:KaTeX_Main, serif;font-size:15px;font-style:normal">${Utils.escapeXmlText(normalizedTermText)}</span>`
+            : Utils.buildReadOnlyMathFieldMarkup(normalizedTermText, "height:auto;width:auto;display:inline-block;pointer-events:none");
         const isMissingTerm = this.isMissingTermReference(termValue, allowNumeric);
         const className = isMissingTerm ? "mdl-name-btn-term mdl-missing-term" : "mdl-name-btn-term";
         return `<span class="${className}"><span class="mdl-name-btn-term-text">${mathFieldMarkup}</span></span>`;
@@ -1994,8 +1997,8 @@ class BaseShape {
         return items;
     }
 
-    createTermSelectorControl(instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true) {
-        const descriptor = TermControl.createBaseShapeTermFormControl(this, instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle);
+    createTermSelectorControl(instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true, options = {}) {
+        const descriptor = TermControl.createBaseShapeTermFormControl(this, instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle, options);
         this.termFormControls[term] = { termControl: descriptor.termControl, visibilityCheckbox: descriptor.visibilityCheckbox };
         return descriptor.control;
     }

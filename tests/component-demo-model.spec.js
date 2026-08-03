@@ -7,7 +7,7 @@ test('the demo model opens and renders', async ({ page }) => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
     });
     await page.goto(`${BOARD_URL}?model=components-demo`);
-    await page.waitForFunction(() => typeof shell !== 'undefined' && shell.board !== null && shell.board.shapes.shapes.length > 0, null, { timeout: 15000 });
+    await page.waitForFunction(() => typeof shell !== 'undefined' && shell !== null && shell.board !== null && shell.board.shapes.shapes.length > 0, null, { timeout: 15000 });
     await page.waitForTimeout(1200);
     const loaded = await page.evaluate(() => {
         shell.calculator.setIteration(120);

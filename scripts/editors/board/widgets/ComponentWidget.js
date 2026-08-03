@@ -94,7 +94,7 @@ class ComponentShape extends BaseShape {
         const migration = BlockMigrations.migrate(definition);
         if (migration.applied.length > 0)
             this.migrationsApplied = migration.applied;
-        return migration.definition;
+        return BlockObjects.backfillInstanceParameterBindings(migration.definition);
     }
 
     isComponentParameter(name) {

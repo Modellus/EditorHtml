@@ -155,6 +155,52 @@ Give a component the tag `object` if it should appear in the board's Components 
 low-level components (`dial-face`, `tick-ring`, `label-ring`, `pointer-hand`) deliberately
 do not have it.
 
+### Components defined as JSON
+
+A component that only composes other blocks does not need a `create` function at all. It is a
+JSON document in `scripts/blocks/definitions/`, registered by `BlockDefinitionLoader`. Every
+component in the Components palette — analogue clock, compass, speedometer, circular gauge,
+rotating vector, orbit system — is defined this way. Only `dial-face`, `tick-ring`, `label-ring`
+and `pointer-hand` stay in code, because they generate geometry per index rather than compose.
+
+```json
+{
+    "schemaVersion": "1.0.0", "type": "compass", "category": "component",
+    "parameters": [ { "id": "headingVariable", "valueType": "variable", "defaultValue": "0", "category": "model" } ],
+    "locals": [
+        { "id": "w", "value": { "parameter": "$width" } },
+        { "id": "r", "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-6\\right)" },
+        { "id": "needleLength", "formula": "r\\cdot0.66" }
+    ],
+    "root": { "id": "compass", "type": "group", "children": [
+        { "id": "needle", "type": "pointer-hand", "when": { "parameter": "showNeedle" },
+          "parameters": { "length": { "parameter": "needleLength" } } }
+    ] }
+}
+```
+
+* **`locals`** are derived values, evaluated in order onto the component's parameter frame before
+  the tree is compiled. Each may read the parameters and any earlier local, so a value the whole
+  tree needs is worked out once. A formula reads bare names and the loader wires the inputs at
+  registration time, not per draw.
+* **Nothing is implicit.** A formula may only read what the document declares — reach the drawing
+  size by declaring a local bound to `$width` or `$height`. A name that is neither declared nor
+  listed in an explicit `inputs` block is rejected at registration, because it would otherwise
+  fall through to a model term of that name.
+* **`when`** on a child drops it before compilation when the binding is false, so a hidden part
+  costs nothing and does not shift the ids of its siblings.
+* **`choose`** is a binding kind for values that are not numbers: `{ "choose": …, "then": …,
+  "otherwise": … }`, used for the clock's drag variables. A zero and a blank string are false,
+  which is how the gauges guard a zero range and a missing unit without a comparison operator.
+* **`concat`** joins resolved parts into one string, so the gauge readouts build
+  `"64 km/h"` from a `format` binding and their own `unit` parameter. `format` resolves its
+  `digits`, `prefix` and `suffix` as bindings too.
+
+The JSON files are the source of truth. The browser cannot `fetch` them in the offline build,
+which runs from `file://`, so they are delivered by `definitions.generated.js`; regenerate it
+with `UPDATE_DEFINITIONS=1 npx playwright test tests/component-definitions.spec.js`, which
+otherwise fails when the bundle and the JSON have drifted.
+
 ## 7. Parameters and bindings
 
 A `ParameterDefinition` carries `id`, `label`, `description`, `valueType`
@@ -250,8 +296,9 @@ What happens:
 
 1. `ComponentShape.setDefaults()` builds the instance definition and copies the parameter defaults into `properties`.
 2. `draw()` calls `compileComponent()`; the compiler resolves the root component's parameters from `properties`.
-3. `analogue-clock.create()` computes the three hand angles through the expression engine and
-   returns a group of `dial-face`, two `tick-ring`s, a `label-ring`, three `pointer-hand`s and a centre cap.
+3. The clock's JSON definition works out its locals — the three hand angles go through the
+   expression engine — and yields a group of `dial-face`, two `tick-ring`s, a `label-ring`,
+   three `pointer-hand`s and a centre cap, minus any part whose `when` is false.
 4. Each sub-component is compiled recursively down to primitives; the hand's `rotate` modifier
    carries the angle.
 5. `BlockRenderer` writes the SVG once per changed frame and attaches behaviours.

@@ -1,0 +1,193 @@
+{
+    "schemaVersion": "1.0.0",
+    "type": "speedometer",
+    "category": "component",
+    "displayName": "Speedometer",
+    "description": "Sweeping dial with a scale, a needle bound to a model variable and a numeric readout.",
+    "icon": "fa-light fa-gauge-high",
+    "tags": ["object", "gauge", "speed", "dial", "meter", "scale"],
+    "capabilities": ["radial", "angular", "reads-model", "scale"],
+    "parameters": [
+        { "id": "valueVariable", "label": "Value variable", "valueType": "variable", "defaultValue": "0", "category": "model" },
+        { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": 0, "category": "scale" },
+        { "id": "maximum", "label": "Maximum", "valueType": "number", "defaultValue": 100, "category": "scale" },
+        { "id": "startAngle", "label": "Start angle", "valueType": "number", "defaultValue": 225, "category": "scale", "unit": "deg" },
+        { "id": "endAngle", "label": "End angle", "valueType": "number", "defaultValue": -45, "category": "scale", "unit": "deg" },
+        { "id": "majorTicks", "label": "Major ticks", "valueType": "number", "defaultValue": 9, "category": "scale", "minimum": 2, "maximum": 60, "bindable": false },
+        { "id": "minorPerMajor", "label": "Minor ticks per major", "valueType": "number", "defaultValue": 4, "category": "scale", "minimum": 0, "maximum": 20, "bindable": false },
+        { "id": "digits", "label": "Decimals", "valueType": "number", "defaultValue": 0, "category": "display", "minimum": 0, "maximum": 6 },
+        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "", "category": "display" },
+        { "id": "showReadout", "label": "Show readout", "valueType": "boolean", "defaultValue": true, "category": "display" },
+        { "id": "faceColor", "label": "Face colour", "valueType": "colour", "defaultValue": "token:surface.emphasis", "category": "style" },
+        { "id": "borderColor", "label": "Border colour", "valueType": "colour", "defaultValue": "token:stroke.default", "category": "style" },
+        { "id": "needleColor", "label": "Needle colour", "valueType": "colour", "defaultValue": "token:stroke.warning", "category": "style" },
+        { "id": "labelColor", "label": "Label colour", "valueType": "colour", "defaultValue": "token:text.primary", "category": "style" }
+    ],
+    "locals": [
+        { "id": "w", "value": { "parameter": "$width" } },
+        { "id": "h", "value": { "parameter": "$height" } },
+        { "id": "cx", "formula": "\\frac{w}{2}" },
+        { "id": "cy", "formula": "\\frac{h}{2}" },
+        { "id": "r", "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-6\\right)" },
+        { "id": "value", "value": { "parameter": "valueVariable", "as": "number" } },
+        { "id": "majorCount", "formula": "\\max\\left(2,majorTicks-\\mod\\left(majorTicks,1\\right)\\right)" },
+        { "id": "minorSteps", "formula": "\\max\\left(0,minorPerMajor-\\mod\\left(minorPerMajor,1\\right)\\right)" },
+        { "id": "minorCount", "formula": "\\left(majorCount-1\\right)\\cdot minorSteps+1" },
+        { "id": "sweep", "formula": "\\mod\\left(\\mod\\left(startAngle-endAngle,360\\right)+360,360\\right)" },
+        { "id": "step", "formula": "\\frac{maximum-minimum}{majorCount-1}" },
+        { "id": "ratio", "value": { "choose": { "formula": "maximum-minimum" }, "then": { "formula": "\\max\\left(0,\\min\\left(1,\\frac{value-minimum}{maximum-minimum}\\right)\\right)" }, "otherwise": 0 } },
+        { "id": "needleAngle", "formula": "90-\\left(startAngle-ratio\\cdot sweep\\right)" },
+        { "id": "scaleRadius", "formula": "r\\cdot0.9" },
+        { "id": "minorLength", "formula": "r\\cdot0.06" },
+        { "id": "majorLength", "formula": "r\\cdot0.13" },
+        { "id": "labelRadius", "formula": "r\\cdot0.7" },
+        { "id": "labelFontSize", "formula": "\\max\\left(7,r\\cdot0.13\\right)" },
+        { "id": "needleLength", "formula": "r\\cdot0.78" },
+        { "id": "needleTail", "formula": "r\\cdot0.16" },
+        { "id": "needleWidth", "formula": "\\max\\left(3,r\\cdot0.07\\right)" },
+        { "id": "capRadius", "formula": "\\max\\left(3,r\\cdot0.07\\right)" },
+        { "id": "readoutY", "formula": "cy+r\\cdot0.34" },
+        { "id": "readoutFontSize", "formula": "\\max\\left(9,r\\cdot0.17\\right)" },
+        { "id": "strokeStrong", "value": { "token": "strokeWidth.strong" } },
+        { "id": "strokeDefault", "value": { "token": "strokeWidth.default" } },
+        { "id": "strokeHairline", "value": { "token": "strokeWidth.hairline" } },
+        { "id": "readoutWeight", "value": { "token": "font.weight.strong" } },
+        {
+            "id": "readoutText",
+            "value": {
+                "concat": [
+                    { "format": { "parameter": "value" }, "digits": { "parameter": "digits" } },
+                    { "choose": { "parameter": "unit" }, "then": { "concat": [" ", { "parameter": "unit" }] }, "otherwise": "" }
+                ]
+            }
+        }
+    ],
+    "root": {
+        "id": "speedometer",
+        "type": "group",
+        "children": [
+            {
+                "id": "face",
+                "type": "dial-face",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "r" },
+                    "faceColor": { "parameter": "faceColor" },
+                    "borderColor": { "parameter": "borderColor" },
+                    "borderWidth": { "parameter": "strokeStrong" }
+                }
+            },
+            {
+                "id": "scale-arc",
+                "type": "arc",
+                "bindings": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "scaleRadius" },
+                    "startAngle": { "parameter": "startAngle" },
+                    "endAngle": { "parameter": "endAngle" },
+                    "stroke": { "parameter": "borderColor" },
+                    "strokeWidth": { "parameter": "strokeDefault" }
+                },
+                "properties": {
+                    "fill": "none"
+                }
+            },
+            {
+                "id": "minor-ticks",
+                "type": "tick-ring",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "scaleRadius" },
+                    "count": { "parameter": "minorCount" },
+                    "startAngle": { "parameter": "startAngle" },
+                    "spanAngle": { "parameter": "sweep" },
+                    "includeEnd": true,
+                    "length": { "parameter": "minorLength" },
+                    "width": { "parameter": "strokeHairline" },
+                    "color": { "parameter": "borderColor" }
+                }
+            },
+            {
+                "id": "major-ticks",
+                "type": "tick-ring",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "scaleRadius" },
+                    "count": { "parameter": "majorCount" },
+                    "startAngle": { "parameter": "startAngle" },
+                    "spanAngle": { "parameter": "sweep" },
+                    "includeEnd": true,
+                    "length": { "parameter": "majorLength" },
+                    "width": { "parameter": "strokeStrong" },
+                    "color": { "parameter": "borderColor" }
+                }
+            },
+            {
+                "id": "scale-labels",
+                "type": "label-ring",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "labelRadius" },
+                    "count": { "parameter": "majorCount" },
+                    "startAngle": { "parameter": "startAngle" },
+                    "spanAngle": { "parameter": "sweep" },
+                    "includeEnd": true,
+                    "startValue": { "parameter": "minimum" },
+                    "valueStep": { "parameter": "step" },
+                    "wrapAt": 0,
+                    "digits": { "parameter": "digits" },
+                    "fontSize": { "parameter": "labelFontSize" },
+                    "color": { "parameter": "labelColor" }
+                }
+            },
+            {
+                "id": "needle",
+                "type": "pointer-hand",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "angle": { "parameter": "needleAngle" },
+                    "length": { "parameter": "needleLength" },
+                    "tailLength": { "parameter": "needleTail" },
+                    "width": { "parameter": "needleWidth" },
+                    "color": { "parameter": "needleColor" },
+                    "style": "needle"
+                }
+            },
+            {
+                "id": "centre-cap",
+                "type": "circle",
+                "bindings": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "capRadius" },
+                    "fill": { "parameter": "borderColor" }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "readout",
+                "type": "text",
+                "when": { "parameter": "showReadout" },
+                "bindings": {
+                    "x": { "parameter": "cx" },
+                    "y": { "parameter": "readoutY" },
+                    "text": { "parameter": "readoutText" },
+                    "fontSize": { "parameter": "readoutFontSize" },
+                    "fontWeight": { "parameter": "readoutWeight" },
+                    "fill": { "parameter": "labelColor" }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            }
+        ]
+    }
+}

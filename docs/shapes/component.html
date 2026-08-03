@@ -117,7 +117,7 @@
             <thead><tr><th>Component</th><th>What it shows</th></tr></thead>
             <tbody>
                 <tr><td>Analogue clock</td><td>A clock face whose hour, minute and second hands follow model variables</td></tr>
-                <tr><td>Compass</td><td>A compass rose whose needle follows a heading variable</td></tr>
+                <tr><td>Compass</td><td>A compass rose whose needle follows a heading variable, and whose rose can be turned by a second variable</td></tr>
                 <tr><td>Speedometer</td><td>A swept dial with a scale, a needle and a numeric readout</td></tr>
                 <tr><td>Circular gauge</td><td>A ring that fills in proportion to a variable</td></tr>
                 <tr><td>Rotating vector</td><td>A phasor whose angle and length follow variables, with optional projections</td></tr>
@@ -135,6 +135,7 @@
                 <tr><td>Second</td><td>(second mod 60) × 6</td></tr>
             </tbody>
         </table>
+        <p>The compass reads two variables. <em>Heading</em> turns the needle clockwise from north, and <em>Rose rotation</em> turns the rose — its ticks, its cardinal letters and its degree labels — clockwise underneath it. Leaving the rose rotation at 0 gives a plotting compass with north fixed at the top. Binding it to a term equal to minus the heading, and leaving the heading at 0, gives an aviation card compass: the needle stays pointing up as a lubber line while the card turns, so the current heading is always the value under the needle.</p>
         <p>Turn on <em>Hands can be dragged</em> in the settings menu to let the reader drag a hand and write the value back into the model, in the same way a gauge needle can be dragged. Hands bound to a computed value stay read-only.</p>
 
         <h2>Toolbar</h2>
@@ -147,12 +148,12 @@
             <tbody>
                 <tr><td>Name and colours</td><td>The object name and every colour the component draws with</td></tr>
                 <tr><td>Variables</td><td>The model inputs of the component</td></tr>
-                <tr><td>Settings <i class="fa-light fa-sliders"></i></td><td>Display options, scale, interaction and the visual preset</td></tr>
+                <tr><td>Settings <i class="fa-light fa-sliders"></i></td><td>Display options, scale and interaction</td></tr>
             </tbody>
         </table>
 
-        <h2>Visual presets</h2>
-        <p>Each component follows a preset — Standard, Minimal, Scientific, Classroom or High contrast — that supplies its colours, line widths and type sizes. Presets keep components looking native to Modellus; individual colours can still be overridden afterwards.</p>
+        <h2>Colours</h2>
+        <p>A component draws with the standard Modellus palette — its colours, line widths and type sizes come from the shared design tokens, so components look native to the board. Every individual colour can still be overridden in the name and colours menu.</p>
 
         <h2>Asking the assistant for an object</h2>
         <p>The Modellus assistant builds components through the same building blocks. It can only use approved blocks, must bind values to variables that exist in your model, and cannot insert an object that fails validation, so anything it produces behaves like an object you placed yourself and stays fully editable.</p>

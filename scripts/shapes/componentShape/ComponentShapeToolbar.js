@@ -103,11 +103,6 @@ var ComponentShapeToolbarMixin = {
             stacked: parameter.valueType === "variable",
             buildControl: $container => $container.append(this.createComponentParameterControl(parameter))
         }));
-        items.push({
-            text: this.board.translations.get("Visual Preset") ?? "Preset",
-            stacked: false,
-            buildControl: $container => $container.append(this.createComponentPresetControl())
-        });
         this.renderComponentMenuList(contentElement, items);
     },
     buildComponentParameterMenu(contentElement, parameters, stacked) {
@@ -147,12 +142,13 @@ var ComponentShapeToolbarMixin = {
         return this.createComponentTextControl(parameter);
     },
     createComponentVariableControl(parameter) {
-        const control = this.createTermControl(parameter.id, parameter.label, false);
+        // A component input takes a model variable or a plain number, so the selector accepts both.
+        const control = this.createTermControl(parameter.id, parameter.label, false, { allowTypedValue: true });
         this._componentTermControls[parameter.id] = this.termFormControls[parameter.id];
         return control;
     },
     createComponentBooleanControl(parameter) {
-        return $('<div>').dxCheckBox({
+        return $('<div>').dxSwitch({
             value: this.properties[parameter.id] === true,
             onValueChanged: event => {
                 if (!event.event)
@@ -197,19 +193,6 @@ var ComponentShapeToolbarMixin = {
                 if (!event.event)
                     return;
                 this.setPropertyCommand(parameter.id, event.value);
-            }
-        });
-    },
-    createComponentPresetControl() {
-        return $('<div>').dxSelectBox({
-            items: BlockTokens.getPresetNames(),
-            value: this.properties.preset ?? "standard",
-            width: 130,
-            stylingMode: "filled",
-            onValueChanged: event => {
-                if (!event.event)
-                    return;
-                this.setPropertyCommand("preset", event.value);
             }
         });
     },

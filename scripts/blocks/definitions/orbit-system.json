@@ -1,0 +1,482 @@
+{
+    "schemaVersion": "1.0.0",
+    "type": "orbit-system",
+    "category": "component",
+    "displayName": "Orbit system",
+    "description": "Central body with up to four orbiting bodies whose angular positions come from model variables or from simulation time and an orbital period.",
+    "icon": "fa-light fa-sun",
+    "tags": [
+        "object",
+        "orbit",
+        "solar",
+        "planets",
+        "astronomy",
+        "rotation"
+    ],
+    "capabilities": [
+        "radial",
+        "angular",
+        "reads-model"
+    ],
+    "parameters": [
+        {
+            "id": "timeVariable",
+            "label": "Time variable",
+            "valueType": "variable",
+            "defaultValue": "t",
+            "category": "model"
+        },
+        {
+            "id": "bodyCount",
+            "label": "Orbiting bodies",
+            "valueType": "number",
+            "defaultValue": 3,
+            "category": "display",
+            "minimum": 0,
+            "maximum": 4,
+            "bindable": false
+        },
+        {
+            "id": "period1",
+            "label": "Period 1",
+            "valueType": "number",
+            "defaultValue": 4,
+            "category": "orbits",
+            "minimum": 0.0001
+        },
+        {
+            "id": "period2",
+            "label": "Period 2",
+            "valueType": "number",
+            "defaultValue": 8,
+            "category": "orbits",
+            "minimum": 0.0001
+        },
+        {
+            "id": "period3",
+            "label": "Period 3",
+            "valueType": "number",
+            "defaultValue": 16,
+            "category": "orbits",
+            "minimum": 0.0001
+        },
+        {
+            "id": "period4",
+            "label": "Period 4",
+            "valueType": "number",
+            "defaultValue": 32,
+            "category": "orbits",
+            "minimum": 0.0001
+        },
+        {
+            "id": "showOrbits",
+            "label": "Show orbit paths",
+            "valueType": "boolean",
+            "defaultValue": true,
+            "category": "display"
+        },
+        {
+            "id": "starColor",
+            "label": "Central body colour",
+            "valueType": "colour",
+            "defaultValue": "#f08c02",
+            "category": "style"
+        },
+        {
+            "id": "bodyColor",
+            "label": "Orbiting body colour",
+            "valueType": "colour",
+            "defaultValue": "token:stroke.accent",
+            "category": "style"
+        },
+        {
+            "id": "orbitColor",
+            "label": "Orbit colour",
+            "valueType": "colour",
+            "defaultValue": "token:stroke.subtle",
+            "category": "style"
+        }
+    ],
+    "locals": [
+        {
+            "id": "w",
+            "value": {
+                "parameter": "$width"
+            }
+        },
+        {
+            "id": "h",
+            "value": {
+                "parameter": "$height"
+            }
+        },
+        {
+            "id": "cx",
+            "formula": "\\frac{w}{2}"
+        },
+        {
+            "id": "cy",
+            "formula": "\\frac{h}{2}"
+        },
+        {
+            "id": "maxRadius",
+            "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-8\\right)"
+        },
+        {
+            "id": "count",
+            "formula": "\\max\\left(0,\\min\\left(4,bodyCount-\\mod\\left(bodyCount,1\\right)\\right)\\right)"
+        },
+        {
+            "id": "time",
+            "value": {
+                "parameter": "timeVariable",
+                "as": "number"
+            }
+        },
+        {
+            "id": "starRadius",
+            "formula": "\\max\\left(4,maxRadius\\cdot0.12\\right)"
+        },
+        {
+            "id": "bodyRadius",
+            "formula": "\\max\\left(2,maxRadius\\cdot0.06\\right)"
+        },
+        {
+            "id": "hairline",
+            "value": {
+                "token": "strokeWidth.hairline"
+            }
+        },
+        {
+            "id": "orbitRadius0",
+            "formula": "\\frac{maxRadius\\cdot1}{count+0.4}"
+        },
+        {
+            "id": "angle0",
+            "formula": "\\frac{time}{\\max\\left(0.0001,period1\\right)}\\cdot360"
+        },
+        {
+            "id": "bodyX0",
+            "formula": "cx+orbitRadius0\\cdot\\cos\\left(\\frac{angle0\\cdot\\pi}{180}\\right)"
+        },
+        {
+            "id": "bodyY0",
+            "formula": "cy-orbitRadius0\\cdot\\sin\\left(\\frac{angle0\\cdot\\pi}{180}\\right)"
+        },
+        {
+            "id": "bodyShown0",
+            "formula": "\\max\\left(0,count-0\\right)"
+        },
+        {
+            "id": "orbitShown0",
+            "formula": "showOrbits\\cdot bodyShown0"
+        },
+        {
+            "id": "orbitRadius1",
+            "formula": "\\frac{maxRadius\\cdot2}{count+0.4}"
+        },
+        {
+            "id": "angle1",
+            "formula": "\\frac{time}{\\max\\left(0.0001,period2\\right)}\\cdot360"
+        },
+        {
+            "id": "bodyX1",
+            "formula": "cx+orbitRadius1\\cdot\\cos\\left(\\frac{angle1\\cdot\\pi}{180}\\right)"
+        },
+        {
+            "id": "bodyY1",
+            "formula": "cy-orbitRadius1\\cdot\\sin\\left(\\frac{angle1\\cdot\\pi}{180}\\right)"
+        },
+        {
+            "id": "bodyShown1",
+            "formula": "\\max\\left(0,count-1\\right)"
+        },
+        {
+            "id": "orbitShown1",
+            "formula": "showOrbits\\cdot bodyShown1"
+        },
+        {
+            "id": "orbitRadius2",
+            "formula": "\\frac{maxRadius\\cdot3}{count+0.4}"
+        },
+        {
+            "id": "angle2",
+            "formula": "\\frac{time}{\\max\\left(0.0001,period3\\right)}\\cdot360"
+        },
+        {
+            "id": "bodyX2",
+            "formula": "cx+orbitRadius2\\cdot\\cos\\left(\\frac{angle2\\cdot\\pi}{180}\\right)"
+        },
+        {
+            "id": "bodyY2",
+            "formula": "cy-orbitRadius2\\cdot\\sin\\left(\\frac{angle2\\cdot\\pi}{180}\\right)"
+        },
+        {
+            "id": "bodyShown2",
+            "formula": "\\max\\left(0,count-2\\right)"
+        },
+        {
+            "id": "orbitShown2",
+            "formula": "showOrbits\\cdot bodyShown2"
+        },
+        {
+            "id": "orbitRadius3",
+            "formula": "\\frac{maxRadius\\cdot4}{count+0.4}"
+        },
+        {
+            "id": "angle3",
+            "formula": "\\frac{time}{\\max\\left(0.0001,period4\\right)}\\cdot360"
+        },
+        {
+            "id": "bodyX3",
+            "formula": "cx+orbitRadius3\\cdot\\cos\\left(\\frac{angle3\\cdot\\pi}{180}\\right)"
+        },
+        {
+            "id": "bodyY3",
+            "formula": "cy-orbitRadius3\\cdot\\sin\\left(\\frac{angle3\\cdot\\pi}{180}\\right)"
+        },
+        {
+            "id": "bodyShown3",
+            "formula": "\\max\\left(0,count-3\\right)"
+        },
+        {
+            "id": "orbitShown3",
+            "formula": "showOrbits\\cdot bodyShown3"
+        }
+    ],
+    "root": {
+        "id": "orbit-system",
+        "type": "group",
+        "children": [
+            {
+                "id": "star",
+                "type": "circle",
+                "bindings": {
+                    "centerX": {
+                        "parameter": "cx"
+                    },
+                    "centerY": {
+                        "parameter": "cy"
+                    },
+                    "radius": {
+                        "parameter": "starRadius"
+                    },
+                    "fill": {
+                        "parameter": "starColor"
+                    }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "orbit-0",
+                "type": "circle",
+                "when": {
+                    "parameter": "orbitShown0"
+                },
+                "bindings": {
+                    "centerX": {
+                        "parameter": "cx"
+                    },
+                    "centerY": {
+                        "parameter": "cy"
+                    },
+                    "radius": {
+                        "parameter": "orbitRadius0"
+                    },
+                    "stroke": {
+                        "parameter": "orbitColor"
+                    },
+                    "strokeWidth": {
+                        "parameter": "hairline"
+                    }
+                },
+                "properties": {
+                    "fill": "none",
+                    "strokeDash": "2 3"
+                }
+            },
+            {
+                "id": "body-0",
+                "type": "circle",
+                "when": {
+                    "parameter": "bodyShown0"
+                },
+                "bindings": {
+                    "centerX": {
+                        "parameter": "bodyX0"
+                    },
+                    "centerY": {
+                        "parameter": "bodyY0"
+                    },
+                    "radius": {
+                        "parameter": "bodyRadius"
+                    },
+                    "fill": {
+                        "parameter": "bodyColor"
+                    }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "orbit-1",
+                "type": "circle",
+                "when": {
+                    "parameter": "orbitShown1"
+                },
+                "bindings": {
+                    "centerX": {
+                        "parameter": "cx"
+                    },
+                    "centerY": {
+                        "parameter": "cy"
+                    },
+                    "radius": {
+                        "parameter": "orbitRadius1"
+                    },
+                    "stroke": {
+                        "parameter": "orbitColor"
+                    },
+                    "strokeWidth": {
+                        "parameter": "hairline"
+                    }
+                },
+                "properties": {
+                    "fill": "none",
+                    "strokeDash": "2 3"
+                }
+            },
+            {
+                "id": "body-1",
+                "type": "circle",
+                "when": {
+                    "parameter": "bodyShown1"
+                },
+                "bindings": {
+                    "centerX": {
+                        "parameter": "bodyX1"
+                    },
+                    "centerY": {
+                        "parameter": "bodyY1"
+                    },
+                    "radius": {
+                        "parameter": "bodyRadius"
+                    },
+                    "fill": {
+                        "parameter": "bodyColor"
+                    }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "orbit-2",
+                "type": "circle",
+                "when": {
+                    "parameter": "orbitShown2"
+                },
+                "bindings": {
+                    "centerX": {
+                        "parameter": "cx"
+                    },
+                    "centerY": {
+                        "parameter": "cy"
+                    },
+                    "radius": {
+                        "parameter": "orbitRadius2"
+                    },
+                    "stroke": {
+                        "parameter": "orbitColor"
+                    },
+                    "strokeWidth": {
+                        "parameter": "hairline"
+                    }
+                },
+                "properties": {
+                    "fill": "none",
+                    "strokeDash": "2 3"
+                }
+            },
+            {
+                "id": "body-2",
+                "type": "circle",
+                "when": {
+                    "parameter": "bodyShown2"
+                },
+                "bindings": {
+                    "centerX": {
+                        "parameter": "bodyX2"
+                    },
+                    "centerY": {
+                        "parameter": "bodyY2"
+                    },
+                    "radius": {
+                        "parameter": "bodyRadius"
+                    },
+                    "fill": {
+                        "parameter": "bodyColor"
+                    }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "orbit-3",
+                "type": "circle",
+                "when": {
+                    "parameter": "orbitShown3"
+                },
+                "bindings": {
+                    "centerX": {
+                        "parameter": "cx"
+                    },
+                    "centerY": {
+                        "parameter": "cy"
+                    },
+                    "radius": {
+                        "parameter": "orbitRadius3"
+                    },
+                    "stroke": {
+                        "parameter": "orbitColor"
+                    },
+                    "strokeWidth": {
+                        "parameter": "hairline"
+                    }
+                },
+                "properties": {
+                    "fill": "none",
+                    "strokeDash": "2 3"
+                }
+            },
+            {
+                "id": "body-3",
+                "type": "circle",
+                "when": {
+                    "parameter": "bodyShown3"
+                },
+                "bindings": {
+                    "centerX": {
+                        "parameter": "bodyX3"
+                    },
+                    "centerY": {
+                        "parameter": "bodyY3"
+                    },
+                    "radius": {
+                        "parameter": "bodyRadius"
+                    },
+                    "fill": {
+                        "parameter": "bodyColor"
+                    }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            }
+        ]
+    }
+}

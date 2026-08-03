@@ -400,7 +400,9 @@ var BaseShapeToolbarMixin = {
             }
         };
     },
-    createTermControl(termProperty, title, showVisibilityToggle = true) {
+    // allowTypedValue lets the reader type a number straight into the selector instead of only
+    // picking a term, for inputs that accept either.
+    createTermControl(termProperty, title, showVisibilityToggle = true, options = {}) {
         const caseProperty = `${termProperty}Case`;
         const lockedProperty = `${termProperty}Locked`;
         const displayModeProperty = this.getTermDisplayModeProperty(termProperty);
@@ -413,7 +415,7 @@ var BaseShapeToolbarMixin = {
         if (!this.termDisplayEntries.some(entry => entry.term === termProperty))
             this.termDisplayEntries.push({ term: termProperty, caseProperty, title });
         const mockFormInstance = { updateData: (field, value) => this.setPropertyCommand(field, value) };
-        return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, false, displayModeProperty, showVisibilityToggle);
+        return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, options.allowTypedValue === true, displayModeProperty, showVisibilityToggle, { exactTypedValue: options.allowTypedValue === true });
     },
     createColorPickerEditor(dataField, options = {}) {
         const onValueChanged = value => this.setPropertyCommand(dataField, value);

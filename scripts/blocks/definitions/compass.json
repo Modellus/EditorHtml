@@ -1,0 +1,155 @@
+{
+    "schemaVersion": "1.0.0",
+    "type": "compass",
+    "category": "component",
+    "displayName": "Compass",
+    "description": "Compass rose with cardinal labels, a needle whose heading comes from a model variable and a rose that a second variable can turn.",
+    "icon": "fa-light fa-compass",
+    "tags": ["object", "compass", "heading", "navigation", "dial"],
+    "capabilities": ["radial", "angular", "reads-model"],
+    "parameters": [
+        { "id": "headingVariable", "label": "Heading variable", "valueType": "variable", "defaultValue": "0", "category": "model" },
+        { "id": "rotationVariable", "label": "Rose rotation variable", "valueType": "variable", "defaultValue": "0", "category": "model", "unit": "deg", "description": "Turns the rose, its ticks and its labels clockwise. The needle keeps its own heading." },
+        { "id": "showDegrees", "label": "Show degree labels", "valueType": "boolean", "defaultValue": false, "category": "display" },
+        { "id": "faceColor", "label": "Face colour", "valueType": "colour", "defaultValue": "token:surface.default", "category": "style" },
+        { "id": "borderColor", "label": "Border colour", "valueType": "colour", "defaultValue": "token:stroke.default", "category": "style" },
+        { "id": "needleColor", "label": "North needle colour", "valueType": "colour", "defaultValue": "token:stroke.warning", "category": "style" },
+        { "id": "tailColor", "label": "South needle colour", "valueType": "colour", "defaultValue": "token:stroke.subtle", "category": "style" },
+        { "id": "labelColor", "label": "Label colour", "valueType": "colour", "defaultValue": "token:text.primary", "category": "style" }
+    ],
+    "locals": [
+        { "id": "w", "value": { "parameter": "$width" } },
+        { "id": "h", "value": { "parameter": "$height" } },
+        { "id": "cx", "formula": "\\frac{w}{2}" },
+        { "id": "cy", "formula": "\\frac{h}{2}" },
+        { "id": "r", "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-6\\right)" },
+        { "id": "rotation", "value": { "parameter": "rotationVariable", "as": "number" } },
+        { "id": "roseStart", "formula": "90-rotation" },
+        { "id": "heading", "value": { "parameter": "headingVariable", "as": "number" } },
+        { "id": "tailHeading", "formula": "heading+180" },
+        { "id": "tickRadius", "formula": "r\\cdot0.96" },
+        { "id": "tickLength", "formula": "r\\cdot0.05" },
+        { "id": "tickMajorLength", "formula": "r\\cdot0.12" },
+        { "id": "cardinalRadius", "value": { "choose": { "parameter": "showDegrees" }, "then": { "formula": "r\\cdot0.52" }, "otherwise": { "formula": "r\\cdot0.74" } } },
+        { "id": "cardinalFontSize", "formula": "\\max\\left(8,r\\cdot0.2\\right)" },
+        { "id": "degreeRadius", "formula": "r\\cdot0.86" },
+        { "id": "degreeFontSize", "formula": "\\max\\left(6,r\\cdot0.11\\right)" },
+        { "id": "needleLength", "formula": "r\\cdot0.66" },
+        { "id": "needleWidth", "formula": "\\max\\left(4,r\\cdot0.14\\right)" },
+        { "id": "capRadius", "formula": "\\max\\left(2,r\\cdot0.06\\right)" },
+        { "id": "strokeStrong", "value": { "token": "strokeWidth.strong" } },
+        { "id": "strokeHairline", "value": { "token": "strokeWidth.hairline" } },
+        { "id": "cardinalWeight", "value": { "token": "font.weight.strong" } }
+    ],
+    "root": {
+        "id": "compass",
+        "type": "group",
+        "children": [
+            {
+                "id": "face",
+                "type": "dial-face",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "r" },
+                    "faceColor": { "parameter": "faceColor" },
+                    "borderColor": { "parameter": "borderColor" },
+                    "borderWidth": { "parameter": "strokeStrong" }
+                }
+            },
+            {
+                "id": "rose-ticks",
+                "type": "tick-ring",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "tickRadius" },
+                    "count": 72,
+                    "startAngle": { "parameter": "roseStart" },
+                    "spanAngle": 360,
+                    "length": { "parameter": "tickLength" },
+                    "width": { "parameter": "strokeHairline" },
+                    "color": { "parameter": "borderColor" },
+                    "majorEvery": 9,
+                    "majorLength": { "parameter": "tickMajorLength" },
+                    "majorWidth": { "parameter": "strokeStrong" }
+                }
+            },
+            {
+                "id": "cardinals",
+                "type": "label-ring",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "cardinalRadius" },
+                    "count": 4,
+                    "startAngle": { "parameter": "roseStart" },
+                    "spanAngle": 360,
+                    "texts": "N,E,S,W",
+                    "fontSize": { "parameter": "cardinalFontSize" },
+                    "fontWeight": { "parameter": "cardinalWeight" },
+                    "color": { "parameter": "labelColor" }
+                }
+            },
+            {
+                "id": "degrees",
+                "type": "label-ring",
+                "when": { "parameter": "showDegrees" },
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "degreeRadius" },
+                    "count": 12,
+                    "startAngle": { "parameter": "roseStart" },
+                    "spanAngle": 360,
+                    "startValue": 0,
+                    "valueStep": 30,
+                    "wrapAt": 0,
+                    "fontSize": { "parameter": "degreeFontSize" },
+                    "color": { "parameter": "labelColor" }
+                }
+            },
+            {
+                "id": "needle-north",
+                "type": "pointer-hand",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "angle": { "parameter": "heading" },
+                    "length": { "parameter": "needleLength" },
+                    "tailLength": 0,
+                    "width": { "parameter": "needleWidth" },
+                    "color": { "parameter": "needleColor" },
+                    "style": "needle"
+                }
+            },
+            {
+                "id": "needle-south",
+                "type": "pointer-hand",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "angle": { "parameter": "tailHeading" },
+                    "length": { "parameter": "needleLength" },
+                    "tailLength": 0,
+                    "width": { "parameter": "needleWidth" },
+                    "color": { "parameter": "tailColor" },
+                    "style": "needle"
+                }
+            },
+            {
+                "id": "centre-cap",
+                "type": "circle",
+                "bindings": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "capRadius" },
+                    "fill": { "parameter": "borderColor" }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            }
+        ]
+    }
+}

@@ -59,7 +59,7 @@ test('the catalogue file matches the registry', async ({ page }) => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
     });
     await page.goto(BOARD_URL);
-    await page.waitForFunction(() => typeof shell !== 'undefined' && shell.board !== null, null, { timeout: 15000 });
+    await page.waitForFunction(() => typeof shell !== 'undefined' && shell !== null && shell.board !== null, null, { timeout: 15000 });
     const blocks = await page.evaluate(() => BlockRegistry.list(null, { agentAccessibleOnly: true }).map(registration => BlockRegistry.describe(registration.type)));
     const catalogue = renderCatalogue(blocks);
     if (process.env.UPDATE_CATALOGUE === '1') {
