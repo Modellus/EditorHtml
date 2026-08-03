@@ -304,26 +304,11 @@ class GaugeShape extends BaseShape {
     }
 
     getArcPoint(centerX, centerY, radius, angleDegrees) {
-        const radians = angleDegrees * Math.PI / 180;
-        return { x: centerX + radius * Math.cos(radians), y: centerY - radius * Math.sin(radians) };
+        return BlockGeometry.polarPoint(centerX, centerY, radius, angleDegrees);
     }
 
     buildAnnularSectorPath(centerX, centerY, innerRadius, outerRadius, startAngle, endAngle) {
-        const span = ((startAngle - endAngle) % 360 + 360) % 360;
-        if (span < 0.001)
-            return "";
-        const largeArc = span > 180 ? 1 : 0;
-        const outerStart = this.getArcPoint(centerX, centerY, outerRadius, startAngle);
-        const outerEnd = this.getArcPoint(centerX, centerY, outerRadius, endAngle);
-        const innerEnd = this.getArcPoint(centerX, centerY, innerRadius, endAngle);
-        const innerStart = this.getArcPoint(centerX, centerY, innerRadius, startAngle);
-        return [
-            `M ${outerStart.x} ${outerStart.y}`,
-            `A ${outerRadius} ${outerRadius} 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
-            `L ${innerEnd.x} ${innerEnd.y}`,
-            `A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerStart.x} ${innerStart.y}`,
-            "Z"
-        ].join(" ");
+        return BlockGeometry.annularSectorPath(centerX, centerY, innerRadius, outerRadius, startAngle, endAngle);
     }
 
     addGaugeTick(value, isEndpoint, geometry, range) {

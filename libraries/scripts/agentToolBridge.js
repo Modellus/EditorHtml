@@ -40,6 +40,8 @@
         }
 
         normalizeToolName(toolName) {
+            if (toolName.startsWith("modellus_blocks_"))
+                return `modellus.blocks.tools.${toolName.slice("modellus_blocks_".length)}`;
             const aliases = this.getToolNameAliases();
             return aliases[toolName] || toolName;
         }

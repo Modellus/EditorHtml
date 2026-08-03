@@ -69,6 +69,7 @@
             <li><a href="/docs/shapes/referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
             <li><a href="/docs/shapes/question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
             <li><a href="/docs/shapes/mindmap.html"><i class="fa-light fa-diagram-project"></i> Mind Map</a></li>
+            <li><a href="/docs/shapes/component.html"><i class="fa-light fa-shapes"></i> Components</a></li>
         </ul>
         <h5>Data Analysis</h5>
         <ul>
@@ -132,6 +133,7 @@
                 <tr><td>mindMapRectangle</td><td>MindMapRectangleShape</td><td>Rounded-box mind map node with a text label</td><td>No</td></tr>
                 <tr><td>mindMapCircle</td><td>MindMapCircleShape</td><td>Ellipse mind map node with a text label</td><td>No</td></tr>
                 <tr><td>mindMapConnector</td><td>MindMapConnectorShape</td><td>Line or arrow that follows the shapes it links</td><td>No</td></tr>
+                <tr><td>component</td><td>ComponentShape</td><td>Object composed from registered building blocks (clock, compass, speedometer, circular gauge, rotating vector, orbit system, or a bespoke composition)</td><td>No</td></tr>
             </tbody>
         </table>
 
@@ -219,6 +221,55 @@ e (or \E) = 2.71828...</code></pre>
 }</code></pre>
         <p>Block <code>type</code> values: <code>header</code>, <code>text</code>, <code>expression</code>, <code>chart</code>, <code>table</code>, <code>simulation</code>, <code>gauge</code>, <code>slider</code>, <code>value</code>, <code>media</code>, <code>question</code>, <code>ruler</code>, <code>protractor</code>, <code>slope</code>. Expression blocks store the same LaTeX expression language in <code>content</code>; blocks are rendered top to bottom in array order.</p>
 
+        <h2>Building Blocks and Component Objects</h2>
+        <p>Visual objects that are not one of the shape classes above are built from <strong>building blocks</strong>: approved primitives, modifiers, behaviours and components held in a single registry. An agent never writes rendering code — it composes a declarative object definition through structured tools and the deterministic compiler turns it into an editable <code>ComponentShape</code>.</p>
+        <table class="docs-table">
+            <thead><tr><th>Layer</th><th>Examples</th></tr></thead>
+            <tbody>
+                <tr><td>Primitives</td><td><code>rect</code>, <code>circle</code>, <code>ellipse</code>, <code>line</code>, <code>polyline</code>, <code>polygon</code>, <code>arc</code>, <code>ring</code>, <code>path</code>, <code>text</code>, <code>image</code>, <code>group</code></td></tr>
+                <tr><td>Modifiers</td><td><code>translate</code>, <code>rotate</code>, <code>scale</code>, <code>mirror</code>, <code>opacity</code>, <code>visibility</code>, <code>stroke</code>, <code>fill</code>, <code>z-order</code>, <code>repeat</code></td></tr>
+                <tr><td>Behaviours</td><td><code>selectable</code>, <code>draggable</code>, <code>resizable</code>, <code>rotatable</code>, <code>hoverable</code>, <code>tooltip</code>, <code>drag-angle</code>, <code>clickable</code></td></tr>
+                <tr><td>Components</td><td><code>dial-face</code>, <code>tick-ring</code>, <code>label-ring</code>, <code>pointer-hand</code>, <code>analogue-clock</code>, <code>compass</code>, <code>speedometer</code>, <code>circular-gauge</code>, <code>rotating-vector</code>, <code>orbit-system</code></td></tr>
+            </tbody>
+        </table>
+        <p>Call <code>list_building_blocks</code> for the live catalogue; it is generated from the same registry the renderer uses, so it never drifts.</p>
+
+        <h3>Tools</h3>
+        <table class="docs-table">
+            <thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
+            <tbody>
+                <tr><td><code>list_building_blocks</code>, <code>search_building_blocks</code>, <code>get_building_block_schema</code></td><td>Discover blocks and read their properties, defaults and ranges</td></tr>
+                <tr><td><code>list_model_variables</code></td><td>Read the variables of the open model with their current values</td></tr>
+                <tr><td><code>create_object_draft</code>, <code>get_object_draft</code></td><td>Start and read a draft, optionally seeded with a component</td></tr>
+                <tr><td><code>add_primitive</code>, <code>add_component</code>, <code>add_group</code>, <code>add_child</code></td><td>Build the node tree</td></tr>
+                <tr><td><code>set_property</code>, <code>set_parameter</code>, <code>apply_modifier</code>, <code>add_behaviour</code></td><td>Configure nodes</td></tr>
+                <tr><td><code>bind_variable</code>, <code>bind_expression</code></td><td>Drive a property from a model variable or a LaTeX expression</td></tr>
+                <tr><td><code>validate_object</code>, <code>render_object_preview</code></td><td>Check the draft and preview it in isolation</td></tr>
+                <tr><td><code>insert_object</code>, <code>save_custom_component</code></td><td>Insert a valid object into the document or register it for reuse</td></tr>
+            </tbody>
+        </table>
+        <p>Over the chat tool bridge these are named <code>modellus_blocks_&lt;tool&gt;</code>, for example <code>modellus_blocks_bind_expression</code>.</p>
+
+        <h3>Workflow</h3>
+        <ol>
+            <li><code>list_model_variables</code> and <code>list_building_blocks</code> to see what exists</li>
+            <li><code>create_object_draft</code>, then add nodes, parameters, modifiers, behaviours and bindings</li>
+            <li><code>validate_object</code> — errors come back as <code>{ code, path, message, expected, suggestion }</code></li>
+            <li>Correct the draft with the same tools and validate again</li>
+            <li><code>render_object_preview</code> to check the result, then <code>insert_object</code></li>
+        </ol>
+        <p>Example error:</p>
+        <pre><code>{ "valid": false, "errors": [ { "code": "UNKNOWN_VARIABLE", "path": "root.children[2].bindings.rotation", "message": "The variable 'minutes' does not exist in the current model.", "suggestion": "minute" } ] }</code></pre>
+
+        <h3>Limits</h3>
+        <ul>
+            <li>Only registered block types may appear in a definition; unknown types are rejected</li>
+            <li>Expressions are parsed by the Modellus engine — there is no JavaScript, <code>eval</code> or code tool</li>
+            <li>Image sources are limited to <code>https:</code>, <code>data:image/</code> and relative paths; path data must match the SVG path grammar</li>
+            <li>At most 2 000 nodes, 16 levels of nesting, 8 levels of component nesting, 720 repeats and 512 characters per expression</li>
+            <li>An invalid draft can be neither inserted nor saved</li>
+        </ul>
+
         <h2>Key Rules for Agents</h2>
         <ul>
             <li>Term names must be globally unique across all Expression shapes in a model</li>
@@ -230,6 +281,7 @@ e (or \E) = 2.71828...</code></pre>
             <li>The expression field stores LaTeX in a <code>\displaylines{}</code> wrapper with <code>\\</code> line separators</li>
             <li>Data columns in Tables produce terms of type DATA</li>
             <li>Regression results produce terms of type REGRESSION</li>
+            <li>Objects that are not a built-in shape are composed from building blocks and inserted as a ComponentShape — never by writing rendering code</li>
         </ul>
 
         <div class="callout callout-info">

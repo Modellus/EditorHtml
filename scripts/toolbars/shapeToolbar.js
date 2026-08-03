@@ -16,6 +16,42 @@ class ModellusShapeToolbar {
         ];
     }
 
+    static getComponentObjectTypes() {
+        return BlockRegistry.list("component", { agentAccessibleOnly: true }).filter(registration => registration.tags.includes("object"));
+    }
+
+    static createComponentsDropDownButton(shell) {
+        const dropdownElement = $('<div id="components-button" class="mdl-component-type-selector">');
+        dropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            icon: "fa-light fa-shapes",
+            onInitialized: event => shell.createTranslatedTooltip(event, "Components Tooltip", 280),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-shape-overlay-popup" },
+                width: "auto",
+                contentTemplate: contentElement => {
+                    $(contentElement).empty();
+                    $("<div>").appendTo(contentElement).dxList({
+                        dataSource: ModellusShapeToolbar.getComponentObjectTypes(),
+                        scrollingEnabled: false,
+                        itemTemplate: (data, _, el) => {
+                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${data.icon}"></i><span class="mdl-dropdown-list-label">${data.displayName}</span></div>`;
+                        },
+                        onItemClick: event => {
+                            dropdownElement.dxDropDownButton("instance").close();
+                            const componentProperties = ComponentShape.createInstanceProperties(event.itemData.type);
+                            shell.shapeDrawController.toggle("ComponentShape", componentProperties.name, "components-button", componentProperties);
+                        }
+                    });
+                }
+            }
+        });
+        return dropdownElement;
+    }
+
     static createMindMapDropDownButton(shell) {
         const dropdownElement = $('<div id="mindmap-button" class="mdl-mindmap-type-selector">');
         dropdownElement.dxDropDownButton({
@@ -343,6 +379,10 @@ class ModellusShapeToolbar {
             {
                 location: "center",
                 template: () => ModellusShapeToolbar.createMindMapDropDownButton(shell)
+            },
+            {
+                location: "center",
+                template: () => ModellusShapeToolbar.createComponentsDropDownButton(shell)
             },
             {
                 location: "center",

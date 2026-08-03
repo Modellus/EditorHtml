@@ -171,11 +171,7 @@ class ProtractorShape extends BaseShape {
     }
 
     getArcPoint(centerX, centerY, radius, angleDegrees) {
-        const radians = angleDegrees * Math.PI / 180;
-        return {
-            x: centerX + radius * Math.cos(radians),
-            y: centerY - radius * Math.sin(radians)
-        };
+        return BlockGeometry.polarPoint(centerX, centerY, radius, angleDegrees);
     }
 
     drawProtractorBody(geometry) {
@@ -185,16 +181,7 @@ class ProtractorShape extends BaseShape {
             const cy = geometry.centerY;
             const outerR = geometry.outerRadius;
             const innerR = geometry.innerRadius;
-            const path = [
-                `M ${cx - outerR} ${cy}`,
-                `A ${outerR} ${outerR} 0 1 1 ${cx + outerR} ${cy}`,
-                `A ${outerR} ${outerR} 0 1 1 ${cx - outerR} ${cy}`,
-                `Z`,
-                `M ${cx - innerR} ${cy}`,
-                `A ${innerR} ${innerR} 0 1 0 ${cx + innerR} ${cy}`,
-                `A ${innerR} ${innerR} 0 1 0 ${cx - innerR} ${cy}`,
-                `Z`
-            ].join(" ");
+            const path = BlockGeometry.ringPath(cx, cy, innerR, outerR);
             this.ringPath.setAttribute("d", path);
             this.ringPath.setAttribute("fill", this.properties.backgroundColor);
             this.ringPath.setAttribute("fill-rule", "evenodd");

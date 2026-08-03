@@ -52,6 +52,7 @@ const ShapeToolbarIconMap = {
     MindMapRectangleShape: "fa-light fa-rectangle",
     MindMapCircleShape: "fa-light fa-circle",
     MindMapConnectorShape: "fa-light fa-arrow-right-long",
+    ComponentShape: "fa-light fa-shapes",
     BodyNotebookShape: "fa-light fa-circle",
     PointNotebookShape: "fa-solid fa-dot",
     VectorNotebookShape: "fa-light fa-arrow-right-long",

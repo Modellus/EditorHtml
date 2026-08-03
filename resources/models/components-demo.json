@@ -1,0 +1,1416 @@
+{
+  "properties": {
+    "name": "Building blocks demo",
+    "description": "Six objects composed from the same building blocks — clock, compass, speedometer, circular gauge, rotating vector and orbit system — all driven by one simulation.",
+    "backgroundColor": "#FFFFFF",
+    "precision": 2,
+    "angleUnit": "radians",
+    "independent": {
+      "name": "t",
+      "start": 0,
+      "end": 60,
+      "step": 0.1,
+      "noLimit": false
+    },
+    "iterationTerm": "n",
+    "iterationTermStart": 1,
+    "playerTerm": "independent",
+    "casesCount": 1,
+    "initialValuesByCase": {
+      "1": {
+        "hour": 10,
+        "minute": 0,
+        "second": 0,
+        "speed": 30,
+        "heading": 90,
+        "vectorLength": 0.5
+      }
+    },
+    "iterationDuration": null,
+    "thumbnailUrl": "",
+    "instructions": "",
+    "educationLevel": "university",
+    "gridSize": 20,
+    "snapToGrid": false,
+    "backgroundId": "",
+    "autoPlay": false,
+    "userInputsByCase": null
+  },
+  "board": [
+    {
+      "type": "ExpressionWidget",
+      "id": "b7d33013-1a90-493c-891f-2a130ce1b11d",
+      "properties": {
+        "foregroundColor": "#000000",
+        "borderColor": "#000000",
+        "backgroundColor": "#f7f7f7",
+        "rotation": 0,
+        "flipHorizontal": false,
+        "flipVertical": false,
+        "opacity": 1,
+        "showName": false,
+        "nameColor": "#000000",
+        "visibleToUsers": true,
+        "lockedForUsers": false,
+        "interactableForUsers": true,
+        "name": "Simulation",
+        "x": 700,
+        "y": 400,
+        "width": 300,
+        "height": 150,
+        "expression": "\\displaylines{hour=10\\\\ minute=\\mod\\left(t,60\\right)\\\\ second=\\mod\\left(t\\cdot6,60\\right)\\\\ speed=30+30\\cdot\\sin\\left(\\frac{t}{10}\\right)\\\\ heading=\\mod\\left(90+3\\cdot t,360\\right)\\\\ vectorLength=\\frac{speed}{60}}"
+      }
+    },
+    {
+      "type": "ComponentShape",
+      "id": "42934644-fc0e-473e-b47b-0c8be5ef5cbd",
+      "properties": {
+        "foregroundColor": "#000000",
+        "borderColor": "#1e1e1e",
+        "backgroundColor": "#f7f7f7",
+        "rotation": 0,
+        "flipHorizontal": false,
+        "flipVertical": false,
+        "opacity": 1,
+        "showName": true,
+        "nameColor": "#000000",
+        "visibleToUsers": true,
+        "lockedForUsers": false,
+        "interactableForUsers": true,
+        "name": "Clock",
+        "width": 200,
+        "height": 200,
+        "x": 80,
+        "y": 120,
+        "preset": "standard",
+        "definition": {
+          "schemaVersion": "1.0.0",
+          "id": "1314133a-dc70-4ba2-a149-55f44ff40478",
+          "type": "analogue-clock",
+          "name": "Clock",
+          "preset": "standard",
+          "root": {
+            "id": "root",
+            "type": "analogue-clock",
+            "parameters": {
+              "hourVariable": {
+                "parameter": "hourVariable"
+              },
+              "minuteVariable": {
+                "parameter": "minuteVariable"
+              },
+              "secondVariable": {
+                "parameter": "secondVariable"
+              },
+              "showSecondHand": {
+                "parameter": "showSecondHand"
+              },
+              "showNumbers": {
+                "parameter": "showNumbers"
+              },
+              "showMinuteTicks": {
+                "parameter": "showMinuteTicks"
+              },
+              "faceColor": {
+                "parameter": "faceColor"
+              },
+              "borderColor": {
+                "parameter": "borderColor"
+              },
+              "handColor": {
+                "parameter": "handColor"
+              },
+              "secondHandColor": {
+                "parameter": "secondHandColor"
+              },
+              "numberColor": {
+                "parameter": "numberColor"
+              },
+              "interactive": {
+                "parameter": "interactive"
+              }
+            }
+          },
+          "parameters": [
+            {
+              "id": "hourVariable",
+              "label": "Hour variable",
+              "valueType": "variable",
+              "defaultValue": "0",
+              "description": "Model variable or number giving the hour.",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "model"
+            },
+            {
+              "id": "minuteVariable",
+              "label": "Minute variable",
+              "valueType": "variable",
+              "defaultValue": "0",
+              "description": "Model variable or number giving the minute.",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "model"
+            },
+            {
+              "id": "secondVariable",
+              "label": "Second variable",
+              "valueType": "variable",
+              "defaultValue": "0",
+              "description": "Model variable or number giving the second.",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "model"
+            },
+            {
+              "id": "showSecondHand",
+              "label": "Show second hand",
+              "valueType": "boolean",
+              "defaultValue": true,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            },
+            {
+              "id": "showNumbers",
+              "label": "Show numbers",
+              "valueType": "boolean",
+              "defaultValue": true,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            },
+            {
+              "id": "showMinuteTicks",
+              "label": "Show minute ticks",
+              "valueType": "boolean",
+              "defaultValue": true,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            },
+            {
+              "id": "faceColor",
+              "label": "Face colour",
+              "valueType": "colour",
+              "defaultValue": "token:surface.default",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "borderColor",
+              "label": "Border colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.default",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "handColor",
+              "label": "Hand colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.strong",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "secondHandColor",
+              "label": "Second hand colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.warning",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "numberColor",
+              "label": "Number colour",
+              "valueType": "colour",
+              "defaultValue": "token:text.primary",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "interactive",
+              "label": "Hands can be dragged",
+              "valueType": "boolean",
+              "defaultValue": false,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "interaction"
+            }
+          ],
+          "metadata": {
+            "source": "developer",
+            "createdAt": "2026-08-02T00:18:07.075Z",
+            "blocksUsed": [],
+            "edited": true
+          }
+        },
+        "hourVariable": "hour",
+        "minuteVariable": "minute",
+        "secondVariable": "second",
+        "showSecondHand": true,
+        "showNumbers": true,
+        "showMinuteTicks": true,
+        "faceColor": "#ffffff",
+        "handColor": "#000000",
+        "secondHandColor": "#e03130",
+        "numberColor": "#1e1e1e",
+        "interactive": false
+      }
+    },
+    {
+      "type": "ComponentShape",
+      "id": "6a098bac-c612-4568-bd58-9c9bb7c54225",
+      "properties": {
+        "foregroundColor": "#000000",
+        "borderColor": "#1e1e1e",
+        "backgroundColor": "#f7f7f7",
+        "rotation": 0,
+        "flipHorizontal": false,
+        "flipVertical": false,
+        "opacity": 1,
+        "showName": true,
+        "nameColor": "#000000",
+        "visibleToUsers": true,
+        "lockedForUsers": false,
+        "interactableForUsers": true,
+        "name": "Compass",
+        "width": 200,
+        "height": 200,
+        "x": 320,
+        "y": 120,
+        "preset": "standard",
+        "definition": {
+          "schemaVersion": "1.0.0",
+          "id": "d54abe17-0aee-4565-8df1-19096b3f2b41",
+          "type": "compass",
+          "name": "Compass",
+          "preset": "standard",
+          "root": {
+            "id": "root",
+            "type": "compass",
+            "parameters": {
+              "headingVariable": {
+                "parameter": "headingVariable"
+              },
+              "showDegrees": {
+                "parameter": "showDegrees"
+              },
+              "faceColor": {
+                "parameter": "faceColor"
+              },
+              "borderColor": {
+                "parameter": "borderColor"
+              },
+              "needleColor": {
+                "parameter": "needleColor"
+              },
+              "tailColor": {
+                "parameter": "tailColor"
+              },
+              "labelColor": {
+                "parameter": "labelColor"
+              }
+            }
+          },
+          "parameters": [
+            {
+              "id": "headingVariable",
+              "label": "Heading variable",
+              "valueType": "variable",
+              "defaultValue": "0",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "model"
+            },
+            {
+              "id": "showDegrees",
+              "label": "Show degree labels",
+              "valueType": "boolean",
+              "defaultValue": false,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            },
+            {
+              "id": "faceColor",
+              "label": "Face colour",
+              "valueType": "colour",
+              "defaultValue": "token:surface.default",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "borderColor",
+              "label": "Border colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.default",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "needleColor",
+              "label": "North needle colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.warning",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "tailColor",
+              "label": "South needle colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.subtle",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "labelColor",
+              "label": "Label colour",
+              "valueType": "colour",
+              "defaultValue": "token:text.primary",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            }
+          ],
+          "metadata": {
+            "source": "developer",
+            "createdAt": "2026-08-02T00:18:07.107Z",
+            "blocksUsed": [],
+            "edited": true
+          }
+        },
+        "hourVariable": "0",
+        "minuteVariable": "0",
+        "secondVariable": "0",
+        "showSecondHand": true,
+        "showNumbers": true,
+        "showMinuteTicks": true,
+        "faceColor": "#ffffff",
+        "handColor": "#000000",
+        "secondHandColor": "#e03130",
+        "numberColor": "#1e1e1e",
+        "interactive": false,
+        "headingVariable": "heading",
+        "showDegrees": true,
+        "needleColor": "#e03130",
+        "tailColor": "#9a9a9a",
+        "labelColor": "#1e1e1e"
+      }
+    },
+    {
+      "type": "ComponentShape",
+      "id": "74ba9f64-2e28-4e33-a09a-1ace79e9ce29",
+      "properties": {
+        "foregroundColor": "#000000",
+        "borderColor": "#1e1e1e",
+        "backgroundColor": "#f7f7f7",
+        "rotation": 0,
+        "flipHorizontal": false,
+        "flipVertical": false,
+        "opacity": 1,
+        "showName": true,
+        "nameColor": "#000000",
+        "visibleToUsers": true,
+        "lockedForUsers": false,
+        "interactableForUsers": true,
+        "name": "Speedometer",
+        "width": 220,
+        "height": 220,
+        "x": 560,
+        "y": 120,
+        "preset": "standard",
+        "definition": {
+          "schemaVersion": "1.0.0",
+          "id": "2c64c70c-345c-470c-a628-c6061acbc9bd",
+          "type": "speedometer",
+          "name": "Speedometer",
+          "preset": "standard",
+          "root": {
+            "id": "root",
+            "type": "speedometer",
+            "parameters": {
+              "valueVariable": {
+                "parameter": "valueVariable"
+              },
+              "minimum": {
+                "parameter": "minimum"
+              },
+              "maximum": {
+                "parameter": "maximum"
+              },
+              "startAngle": {
+                "parameter": "startAngle"
+              },
+              "endAngle": {
+                "parameter": "endAngle"
+              },
+              "majorTicks": {
+                "parameter": "majorTicks"
+              },
+              "minorPerMajor": {
+                "parameter": "minorPerMajor"
+              },
+              "digits": {
+                "parameter": "digits"
+              },
+              "unit": {
+                "parameter": "unit"
+              },
+              "showReadout": {
+                "parameter": "showReadout"
+              },
+              "faceColor": {
+                "parameter": "faceColor"
+              },
+              "borderColor": {
+                "parameter": "borderColor"
+              },
+              "needleColor": {
+                "parameter": "needleColor"
+              },
+              "labelColor": {
+                "parameter": "labelColor"
+              }
+            }
+          },
+          "parameters": [
+            {
+              "id": "valueVariable",
+              "label": "Value variable",
+              "valueType": "variable",
+              "defaultValue": "0",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "model"
+            },
+            {
+              "id": "minimum",
+              "label": "Minimum",
+              "valueType": "number",
+              "defaultValue": 0,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale"
+            },
+            {
+              "id": "maximum",
+              "label": "Maximum",
+              "valueType": "number",
+              "defaultValue": 100,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale"
+            },
+            {
+              "id": "startAngle",
+              "label": "Start angle",
+              "valueType": "number",
+              "defaultValue": 225,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale",
+              "unit": "deg"
+            },
+            {
+              "id": "endAngle",
+              "label": "End angle",
+              "valueType": "number",
+              "defaultValue": -45,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale",
+              "unit": "deg"
+            },
+            {
+              "id": "majorTicks",
+              "label": "Major ticks",
+              "valueType": "number",
+              "defaultValue": 9,
+              "description": "",
+              "required": false,
+              "bindable": false,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale",
+              "minimum": 2,
+              "maximum": 60
+            },
+            {
+              "id": "minorPerMajor",
+              "label": "Minor ticks per major",
+              "valueType": "number",
+              "defaultValue": 4,
+              "description": "",
+              "required": false,
+              "bindable": false,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale",
+              "minimum": 0,
+              "maximum": 20
+            },
+            {
+              "id": "digits",
+              "label": "Decimals",
+              "valueType": "number",
+              "defaultValue": 0,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display",
+              "minimum": 0,
+              "maximum": 6
+            },
+            {
+              "id": "unit",
+              "label": "Unit",
+              "valueType": "string",
+              "defaultValue": "",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            },
+            {
+              "id": "showReadout",
+              "label": "Show readout",
+              "valueType": "boolean",
+              "defaultValue": true,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            },
+            {
+              "id": "faceColor",
+              "label": "Face colour",
+              "valueType": "colour",
+              "defaultValue": "token:surface.emphasis",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "borderColor",
+              "label": "Border colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.default",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "needleColor",
+              "label": "Needle colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.warning",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "labelColor",
+              "label": "Label colour",
+              "valueType": "colour",
+              "defaultValue": "token:text.primary",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            }
+          ],
+          "metadata": {
+            "source": "developer",
+            "createdAt": "2026-08-02T00:18:07.129Z",
+            "blocksUsed": [],
+            "edited": true
+          }
+        },
+        "hourVariable": "0",
+        "minuteVariable": "0",
+        "secondVariable": "0",
+        "showSecondHand": true,
+        "showNumbers": true,
+        "showMinuteTicks": true,
+        "faceColor": "#f7f7f7",
+        "handColor": "#000000",
+        "secondHandColor": "#e03130",
+        "numberColor": "#1e1e1e",
+        "interactive": false,
+        "valueVariable": "speed",
+        "minimum": 0,
+        "maximum": 80,
+        "startAngle": 225,
+        "endAngle": -45,
+        "majorTicks": 9,
+        "minorPerMajor": 4,
+        "digits": 0,
+        "unit": "km/h",
+        "showReadout": true,
+        "needleColor": "#e03130",
+        "labelColor": "#1e1e1e"
+      }
+    },
+    {
+      "type": "ComponentShape",
+      "id": "5dea85b9-ad0a-4881-8b11-2bbdb2217473",
+      "properties": {
+        "foregroundColor": "#000000",
+        "borderColor": "#1e1e1e",
+        "backgroundColor": "#f7f7f7",
+        "rotation": 0,
+        "flipHorizontal": false,
+        "flipVertical": false,
+        "opacity": 1,
+        "showName": true,
+        "nameColor": "#000000",
+        "visibleToUsers": true,
+        "lockedForUsers": false,
+        "interactableForUsers": true,
+        "name": "Fuel",
+        "width": 180,
+        "height": 180,
+        "x": 820,
+        "y": 130,
+        "preset": "standard",
+        "definition": {
+          "schemaVersion": "1.0.0",
+          "id": "4da5ba52-fec2-48eb-92fb-faceac587fda",
+          "type": "circular-gauge",
+          "name": "Fuel",
+          "preset": "standard",
+          "root": {
+            "id": "root",
+            "type": "circular-gauge",
+            "parameters": {
+              "valueVariable": {
+                "parameter": "valueVariable"
+              },
+              "minimum": {
+                "parameter": "minimum"
+              },
+              "maximum": {
+                "parameter": "maximum"
+              },
+              "startAngle": {
+                "parameter": "startAngle"
+              },
+              "spanAngle": {
+                "parameter": "spanAngle"
+              },
+              "thickness": {
+                "parameter": "thickness"
+              },
+              "trackColor": {
+                "parameter": "trackColor"
+              },
+              "fillColor": {
+                "parameter": "fillColor"
+              },
+              "labelColor": {
+                "parameter": "labelColor"
+              },
+              "digits": {
+                "parameter": "digits"
+              },
+              "unit": {
+                "parameter": "unit"
+              },
+              "showReadout": {
+                "parameter": "showReadout"
+              }
+            }
+          },
+          "parameters": [
+            {
+              "id": "valueVariable",
+              "label": "Value variable",
+              "valueType": "variable",
+              "defaultValue": "0",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "model"
+            },
+            {
+              "id": "minimum",
+              "label": "Minimum",
+              "valueType": "number",
+              "defaultValue": 0,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale"
+            },
+            {
+              "id": "maximum",
+              "label": "Maximum",
+              "valueType": "number",
+              "defaultValue": 100,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale"
+            },
+            {
+              "id": "startAngle",
+              "label": "Start angle",
+              "valueType": "number",
+              "defaultValue": 90,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale",
+              "unit": "deg"
+            },
+            {
+              "id": "spanAngle",
+              "label": "Span",
+              "valueType": "number",
+              "defaultValue": 360,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale",
+              "unit": "deg",
+              "minimum": 1,
+              "maximum": 360
+            },
+            {
+              "id": "thickness",
+              "label": "Ring thickness",
+              "valueType": "number",
+              "defaultValue": 0.22,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style",
+              "minimum": 0.02,
+              "maximum": 1
+            },
+            {
+              "id": "trackColor",
+              "label": "Track colour",
+              "valueType": "colour",
+              "defaultValue": "token:surface.muted",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "fillColor",
+              "label": "Fill colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.accent",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "labelColor",
+              "label": "Label colour",
+              "valueType": "colour",
+              "defaultValue": "token:text.primary",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "digits",
+              "label": "Decimals",
+              "valueType": "number",
+              "defaultValue": 0,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display",
+              "minimum": 0,
+              "maximum": 6
+            },
+            {
+              "id": "unit",
+              "label": "Unit",
+              "valueType": "string",
+              "defaultValue": "",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            },
+            {
+              "id": "showReadout",
+              "label": "Show readout",
+              "valueType": "boolean",
+              "defaultValue": true,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            }
+          ],
+          "metadata": {
+            "source": "developer",
+            "createdAt": "2026-08-02T00:18:07.147Z",
+            "blocksUsed": [],
+            "edited": true
+          }
+        },
+        "hourVariable": "0",
+        "minuteVariable": "0",
+        "secondVariable": "0",
+        "showSecondHand": true,
+        "showNumbers": true,
+        "showMinuteTicks": true,
+        "faceColor": "#ffffff",
+        "handColor": "#000000",
+        "secondHandColor": "#e03130",
+        "numberColor": "#1e1e1e",
+        "interactive": false,
+        "valueVariable": "speed",
+        "minimum": 0,
+        "maximum": 80,
+        "startAngle": 90,
+        "spanAngle": 360,
+        "thickness": 0.22,
+        "trackColor": "#eeeeee",
+        "fillColor": "#1871c2",
+        "labelColor": "#1e1e1e",
+        "digits": 0,
+        "unit": "%",
+        "showReadout": true
+      }
+    },
+    {
+      "type": "ComponentShape",
+      "id": "93b06546-c0f8-4d18-b698-0aa795b4f8d6",
+      "properties": {
+        "foregroundColor": "#000000",
+        "borderColor": "#1e1e1e",
+        "backgroundColor": "#f7f7f7",
+        "rotation": 0,
+        "flipHorizontal": false,
+        "flipVertical": false,
+        "opacity": 1,
+        "showName": true,
+        "nameColor": "#000000",
+        "visibleToUsers": true,
+        "lockedForUsers": false,
+        "interactableForUsers": true,
+        "name": "Velocity vector",
+        "width": 200,
+        "height": 200,
+        "x": 80,
+        "y": 380,
+        "preset": "standard",
+        "definition": {
+          "schemaVersion": "1.0.0",
+          "id": "043cd815-ec0f-4591-b0ea-ad8feb373af8",
+          "type": "rotating-vector",
+          "name": "Velocity vector",
+          "preset": "standard",
+          "root": {
+            "id": "root",
+            "type": "rotating-vector",
+            "parameters": {
+              "angleVariable": {
+                "parameter": "angleVariable"
+              },
+              "lengthVariable": {
+                "parameter": "lengthVariable"
+              },
+              "lengthScale": {
+                "parameter": "lengthScale"
+              },
+              "showCircle": {
+                "parameter": "showCircle"
+              },
+              "showProjections": {
+                "parameter": "showProjections"
+              },
+              "vectorColor": {
+                "parameter": "vectorColor"
+              },
+              "circleColor": {
+                "parameter": "circleColor"
+              },
+              "projectionColor": {
+                "parameter": "projectionColor"
+              }
+            }
+          },
+          "parameters": [
+            {
+              "id": "angleVariable",
+              "label": "Angle variable",
+              "valueType": "variable",
+              "defaultValue": "0",
+              "description": "Angle in degrees, measured counter-clockwise from the positive x axis.",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "model"
+            },
+            {
+              "id": "lengthVariable",
+              "label": "Length variable",
+              "valueType": "variable",
+              "defaultValue": "1",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "model"
+            },
+            {
+              "id": "lengthScale",
+              "label": "Length scale",
+              "valueType": "number",
+              "defaultValue": 1,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "scale",
+              "minimum": 0
+            },
+            {
+              "id": "showCircle",
+              "label": "Show reference circle",
+              "valueType": "boolean",
+              "defaultValue": true,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            },
+            {
+              "id": "showProjections",
+              "label": "Show projections",
+              "valueType": "boolean",
+              "defaultValue": false,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            },
+            {
+              "id": "vectorColor",
+              "label": "Vector colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.accent",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "circleColor",
+              "label": "Circle colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.subtle",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "projectionColor",
+              "label": "Projection colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.subtle",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            }
+          ],
+          "metadata": {
+            "source": "developer",
+            "createdAt": "2026-08-02T00:18:07.161Z",
+            "blocksUsed": [],
+            "edited": true
+          }
+        },
+        "hourVariable": "0",
+        "minuteVariable": "0",
+        "secondVariable": "0",
+        "showSecondHand": true,
+        "showNumbers": true,
+        "showMinuteTicks": true,
+        "faceColor": "#ffffff",
+        "handColor": "#000000",
+        "secondHandColor": "#e03130",
+        "numberColor": "#1e1e1e",
+        "interactive": false,
+        "angleVariable": "heading",
+        "lengthVariable": "vectorLength",
+        "lengthScale": 90,
+        "showCircle": true,
+        "showProjections": true,
+        "vectorColor": "#1871c2",
+        "circleColor": "#9a9a9a",
+        "projectionColor": "#9a9a9a"
+      }
+    },
+    {
+      "type": "ComponentShape",
+      "id": "afcc9118-0d5d-4c4f-b9be-393a12ee1912",
+      "properties": {
+        "foregroundColor": "#000000",
+        "borderColor": "#1e1e1e",
+        "backgroundColor": "#f7f7f7",
+        "rotation": 0,
+        "flipHorizontal": false,
+        "flipVertical": false,
+        "opacity": 1,
+        "showName": true,
+        "nameColor": "#000000",
+        "visibleToUsers": true,
+        "lockedForUsers": false,
+        "interactableForUsers": true,
+        "name": "Orbits",
+        "width": 240,
+        "height": 240,
+        "x": 320,
+        "y": 380,
+        "preset": "standard",
+        "definition": {
+          "schemaVersion": "1.0.0",
+          "id": "c731d30a-ddb2-4880-b84b-43b325bb5294",
+          "type": "orbit-system",
+          "name": "Orbits",
+          "preset": "standard",
+          "root": {
+            "id": "root",
+            "type": "orbit-system",
+            "parameters": {
+              "timeVariable": {
+                "parameter": "timeVariable"
+              },
+              "bodyCount": {
+                "parameter": "bodyCount"
+              },
+              "period1": {
+                "parameter": "period1"
+              },
+              "period2": {
+                "parameter": "period2"
+              },
+              "period3": {
+                "parameter": "period3"
+              },
+              "period4": {
+                "parameter": "period4"
+              },
+              "showOrbits": {
+                "parameter": "showOrbits"
+              },
+              "starColor": {
+                "parameter": "starColor"
+              },
+              "bodyColor": {
+                "parameter": "bodyColor"
+              },
+              "orbitColor": {
+                "parameter": "orbitColor"
+              }
+            }
+          },
+          "parameters": [
+            {
+              "id": "timeVariable",
+              "label": "Time variable",
+              "valueType": "variable",
+              "defaultValue": "t",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "model"
+            },
+            {
+              "id": "bodyCount",
+              "label": "Orbiting bodies",
+              "valueType": "number",
+              "defaultValue": 3,
+              "description": "",
+              "required": false,
+              "bindable": false,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display",
+              "minimum": 0,
+              "maximum": 4
+            },
+            {
+              "id": "period1",
+              "label": "Period 1",
+              "valueType": "number",
+              "defaultValue": 4,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "orbits",
+              "minimum": 0.0001
+            },
+            {
+              "id": "period2",
+              "label": "Period 2",
+              "valueType": "number",
+              "defaultValue": 8,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "orbits",
+              "minimum": 0.0001
+            },
+            {
+              "id": "period3",
+              "label": "Period 3",
+              "valueType": "number",
+              "defaultValue": 16,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "orbits",
+              "minimum": 0.0001
+            },
+            {
+              "id": "period4",
+              "label": "Period 4",
+              "valueType": "number",
+              "defaultValue": 32,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "orbits",
+              "minimum": 0.0001
+            },
+            {
+              "id": "showOrbits",
+              "label": "Show orbit paths",
+              "valueType": "boolean",
+              "defaultValue": true,
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "display"
+            },
+            {
+              "id": "starColor",
+              "label": "Central body colour",
+              "valueType": "colour",
+              "defaultValue": "#f08c02",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "bodyColor",
+              "label": "Orbiting body colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.accent",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "orbitColor",
+              "label": "Orbit colour",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.subtle",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            }
+          ],
+          "metadata": {
+            "source": "developer",
+            "createdAt": "2026-08-02T00:18:07.176Z",
+            "blocksUsed": [],
+            "edited": true
+          }
+        },
+        "hourVariable": "0",
+        "minuteVariable": "0",
+        "secondVariable": "0",
+        "showSecondHand": true,
+        "showNumbers": true,
+        "showMinuteTicks": true,
+        "faceColor": "#ffffff",
+        "handColor": "#000000",
+        "secondHandColor": "#e03130",
+        "numberColor": "#1e1e1e",
+        "interactive": false,
+        "timeVariable": "t",
+        "bodyCount": 3,
+        "period1": 8,
+        "period2": 20,
+        "period3": 45,
+        "period4": 32,
+        "showOrbits": true,
+        "starColor": "#f08c02",
+        "bodyColor": "#1871c2",
+        "orbitColor": "#9a9a9a"
+      }
+    }
+  ]
+}

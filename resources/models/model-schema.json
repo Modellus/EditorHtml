@@ -99,6 +99,7 @@
         "MindMapBubbleShape":    { "type": "string", "const": "Speech bubble node for a mind map. properties.text holds its label. Annotation only, not connected to calculator terms. Place it directly on the board (parent = null)." },
         "MindMapRectangleShape": { "type": "string", "const": "Rounded box node for a mind map. properties.text holds its label. Annotation only, not connected to calculator terms. Place it directly on the board (parent = null)." },
         "MindMapCircleShape":    { "type": "string", "const": "Ellipse node for a mind map, usually the central idea. properties.text holds its label. Annotation only, not connected to calculator terms." },
+        "ComponentShape":    { "type": "string", "const": "An object composed from registered building blocks rather than a dedicated shape class: analogue clock, compass, speedometer, circular gauge, rotating vector and orbit system, plus anything built from primitives (circle, line, polygon, arc, text, ...), modifiers (rotate, repeat, ...) and behaviours. properties.definition holds the versioned definition and every component parameter is a flat property beside it, so a variable parameter such as hourVariable holds a term name exactly like BodyShape.xTerm does. Build these with the modellus_blocks_* tools, never by hand-writing node trees." },
         "MindMapConnectorShape": { "type": "string", "const": "Line or arrow linking two shapes of any type. startShapeId/endShapeId are shape ids; startRelativeX/Y and endRelativeX/Y (0..1 fractions of the attached shape's box) fix the point inside the shape the end is attached to, so it follows and rescales when that shape moves or resizes. Leave an id null and use startX/startY or endX/endY for a free end. startTipType/endTipType choose the ends, routing chooses the path, properties.text places a label in the middle. bendAlong/bendOffset position a draggable bend handle that reshapes the path: for straight routing it kinks the line at an angle, for curved routing it adjusts the curve on top of its automatic bulge, for orthogonal routing only bendAlong applies and slides the elbow." }
       }
     },
@@ -537,7 +538,8 @@
         { "$ref": "#/$defs/MindMapBubbleShape" },
         { "$ref": "#/$defs/MindMapRectangleShape" },
         { "$ref": "#/$defs/MindMapCircleShape" },
-        { "$ref": "#/$defs/MindMapConnectorShape" }
+        { "$ref": "#/$defs/MindMapConnectorShape" },
+        { "$ref": "#/$defs/ComponentShape" }
       ]
     },
 
@@ -1748,6 +1750,132 @@
             }
           ]
         }
+      }
+    },
+
+    "ComponentShape": {
+      "title": "ComponentShape",
+      "description": "An object composed from registered building blocks (primitives, modifiers, behaviours and components) instead of a dedicated shape class. properties.definition holds the versioned component definition; every component parameter is stored as a flat property beside it, which is what the property editor, undo/redo and copy/paste operate on.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["ComponentShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "required": ["definition"],
+              "properties": {
+                "definition": { "$ref": "#/$defs/ComponentDefinition" },
+                "preset": {
+                  "type": "string",
+                  "enum": ["standard", "minimal", "scientific", "classroom", "high-contrast"],
+                  "default": "standard",
+                  "description": "Visual preset supplying the design tokens the component draws with."
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "ComponentDefinition": {
+      "title": "ComponentDefinition",
+      "description": "Versioned declarative definition of an object built from building blocks. The root node names a registered component or group; parameter bindings of the form { \"parameter\": \"<id>\" } read the flat shape properties.",
+      "type": "object",
+      "required": ["schemaVersion", "id", "type", "name", "root"],
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0.0",
+          "description": "Building-block schema version. Older versions are upgraded on load by BlockMigrations."
+        },
+        "id": { "type": "string" },
+        "type": { "type": "string", "description": "Registered component type, or 'object' for a bespoke composition." },
+        "name": { "type": "string" },
+        "preset": { "type": "string", "enum": ["standard", "minimal", "scientific", "classroom", "high-contrast"] },
+        "root": { "$ref": "#/$defs/ComponentNode" },
+        "parameters": { "type": "array", "items": { "type": "object" } },
+        "metadata": {
+          "type": "object",
+          "description": "Provenance only; never affects rendering.",
+          "properties": {
+            "source": { "type": "string", "enum": ["developer", "agent", "user"] },
+            "createdAt": { "type": "string" },
+            "request": { "type": ["string", "null"], "description": "The natural-language request an agent-created object came from." },
+            "blocksUsed": { "type": "array", "items": { "type": "string" } },
+            "edited": { "type": "boolean", "description": "True once a person has changed the object by hand." }
+          }
+        }
+      }
+    },
+
+    "ComponentNode": {
+      "title": "ComponentNode",
+      "description": "One node of a component tree. 'type' must name a registered primitive or component; 'properties' are constants, 'bindings' and 'parameters' may hold declarative bindings, 'modifiers' transform the node and 'behaviours' make it interactive. Only the 'group' primitive accepts children.",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "properties": { "type": "object" },
+        "bindings": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/ComponentBinding" }
+        },
+        "parameters": { "type": "object" },
+        "modifiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type"],
+            "properties": { "type": { "type": "string" } }
+          }
+        },
+        "behaviours": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type"],
+            "properties": { "type": { "type": "string" } }
+          }
+        },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/ComponentNode" } }
+      }
+    },
+
+    "ComponentBinding": {
+      "title": "ComponentBinding",
+      "description": "Declarative value for a node property. Exactly one of constant, parameter, variable, expression, formula, token or format is present. Expressions use the Modellus LaTeX expression language and are evaluated by the model engine; no JavaScript is ever evaluated.",
+      "type": "object",
+      "oneOf": [
+        { "required": ["constant"] },
+        { "required": ["parameter"] },
+        { "required": ["variable"] },
+        { "required": ["expression"] },
+        { "required": ["formula"] },
+        { "required": ["token"] },
+        { "required": ["format"] }
+      ],
+      "properties": {
+        "constant": { "description": "A fixed value." },
+        "parameter": { "type": "string", "description": "Id of a parameter of the enclosing component." },
+        "as": { "type": "string", "enum": ["number", "value"], "description": "With 'parameter', reads the parameter's value as a model variable name or numeric literal." },
+        "variable": { "type": "string", "description": "Model variable name, or a numeric literal." },
+        "case": { "type": "number", "minimum": 1, "default": 1 },
+        "expression": { "type": "string", "description": "Modellus LaTeX expression over model variables." },
+        "formula": { "type": "string", "description": "Modellus LaTeX expression whose free names come from 'inputs'." },
+        "inputs": { "type": "object", "additionalProperties": { "$ref": "#/$defs/ComponentBinding" } },
+        "token": { "type": "string", "description": "Design token name, e.g. stroke.default." },
+        "format": { "$ref": "#/$defs/ComponentBinding" },
+        "digits": { "type": "number", "minimum": 0, "maximum": 10 },
+        "prefix": { "type": "string" },
+        "suffix": { "type": "string" }
       }
     },
 

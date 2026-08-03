@@ -27,7 +27,8 @@ class BaseShape {
         MindMapBubbleShape: "fa-light fa-comment",
         MindMapRectangleShape: "fa-light fa-rectangle",
         MindMapCircleShape: "fa-light fa-circle",
-        MindMapConnectorShape: "fa-light fa-arrow-right-long"
+        MindMapConnectorShape: "fa-light fa-arrow-right-long",
+        ComponentShape: "fa-light fa-shapes"
     };
 
     static buildShapeTreeItem(shape) {

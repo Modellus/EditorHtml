@@ -21,6 +21,14 @@ var modellus = {
         setProperties: (name, properties) => shell.commands.setShapeProperties(name, properties),
         getProperties: name => shell.board.shapes.getByName(name)?.properties
     },
+    blocks: {
+        tools: {},
+        execute: (toolName, input) => shell.blockTools.execute(toolName, input),
+        getToolDefinitions: () => shell.blockTools.getToolDefinitions(),
+        getCatalogue: () => BlockRegistry.toAgentCatalogue(),
+        addComponent: (componentType, name) => shell.commands.addComponent(componentType, name),
+        inspect: name => shell.board.shapes.getByName(name)?.getInspectionReport() ?? null
+    },
     file: {
         open: () => shell.importFromFile(),
         save: () => shell.exportToFile(),
@@ -55,4 +63,10 @@ var modellus = {
             }
         }
     }
-} 
+}
+
+if (typeof BlockAgentTools !== "undefined") {
+    for (const toolName of BlockAgentTools.toolNames)
+        modellus.blocks.tools[toolName] = input => shell.blockTools.execute(toolName, input);
+}
+

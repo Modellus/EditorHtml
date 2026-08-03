@@ -56,6 +56,30 @@ class Commands {
         this.invoker.execute(command);
     }
 
+    addComponent(componentType, name) {
+        const componentProperties = ComponentShape.createInstanceProperties(componentType, name);
+        return this.addComponentFromProperties(componentProperties);
+    }
+
+    addComponentFromDefinition(definition) {
+        return this.addComponentFromProperties(ComponentShape.createDefinitionProperties(definition));
+    }
+
+    addComponentFromProperties(componentProperties) {
+        const shape = this.shapes.createShape("ComponentShape", null);
+        const position = this.getFreePosition(shape);
+        shape.setProperties(Object.assign({}, componentProperties, {
+            name: this.uniquifyShapeName(componentProperties.name),
+            x: position.x,
+            y: position.y
+        }));
+        shape.element.addEventListener("changed", e => this.shell.onShapeChanged(e));
+        const command = new AddShapeCommand(this.shell.board, shape);
+        this.invoker.execute(command);
+        shape.draw();
+        return shape;
+    }
+
     uniquifyShapeName(name) {
         if (!this.shapes.getByName(name))
             return name;
