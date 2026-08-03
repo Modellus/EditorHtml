@@ -264,6 +264,7 @@ class TopToolbar {
     }
 
     async showWhatsNewIfNeeded() {
+        if (this.shell.isAnonymous()) return;
         if (!this.shell.modelsApiClient) return;
         const entries = await this.shell.modelsApiClient.fetchWhatsNew().catch(() => []);
         if (!entries.length) return;
