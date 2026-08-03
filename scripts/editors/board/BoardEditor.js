@@ -1092,7 +1092,7 @@ class BoardEditor extends Workspace {
         if (this.calculator.hookFunction) {
             try {
                 const values = this.calculator.get();
-                this.calculator.hookFunction(values, this.calculator.setTermValue.bind(this.calculator));
+                this.calculator.hookFunction(values, this.calculator.setComputedTermValue.bind(this.calculator));
             } catch (error) {
                 console.warn("Hook execution error:", error);
             }

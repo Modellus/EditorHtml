@@ -1049,4 +1049,119 @@ test.describe('Cases table', () => {
         });
         expect(sections).not.toContain('Moments');
     });
+
+    test('an interactive value change on a moment is recorded there and mirrored in the table', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.addGroup();
+            tableShape.moveGroupIteration(2, 20);
+            for (let index = 0; index < 40; index++)
+                shell.calculator.engine.iterate();
+            const iteration = shell.calculator.setIteration(20);
+            shell.calculator.setTermValue('v', 7, iteration, 1);
+            shell.calculator.calculate();
+            tableShape.refreshTableRows();
+            return {
+                iteration,
+                groupIterations: tableShape.getGroupIterations(),
+                recorded: shell.calculator.getUserInput('v', 20, 1),
+                cell: tableShape.table.rows.find(row => row.key === 'v|20')?.case1
+            };
+        });
+
+        expect(result.iteration).toBe(20);
+        expect(result.groupIterations).toEqual([1, 20]);
+        expect(result.recorded).toBeCloseTo(7, 8);
+        expect(result.cell).toBeCloseTo(7, 8);
+    });
+
+    test('an interactive value change away from a moment stays transient', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.addGroup();
+            tableShape.moveGroupIteration(2, 20);
+            for (let index = 0; index < 40; index++)
+                shell.calculator.engine.iterate();
+            const iteration = shell.calculator.setIteration(13);
+            shell.calculator.setTermValue('v', 99, iteration, 1);
+            shell.calculator.calculate();
+            tableShape.refreshTableRows();
+            return {
+                iteration,
+                groupIterations: tableShape.getGroupIterations(),
+                recorded: shell.calculator.getUserInput('v', 13, 1),
+                displayed: shell.calculator.system.getByNameOnIteration(13, 'v', 1)
+            };
+        });
+
+        expect(result.iteration).toBe(13);
+        expect(result.groupIterations).toEqual([1, 20]);
+        expect(result.recorded).toBeUndefined();
+        expect(result.displayed).toBeCloseTo(99, 8);
+    });
+
+    test('an interactive value change on iteration 1 still updates the term initial value', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 2);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            shell.calculator.setIteration(1);
+            shell.calculator.setTermValue('v', 4, 1, 2);
+            shell.calculator.calculate();
+            tableShape.refreshTableRows();
+            const row = tableShape.table.rows.find(r => r.key === 'v|1');
+            return {
+                case1: row?.case1,
+                case2: row?.case2,
+                recorded: shell.calculator.getUserInput('v', 1, 2)
+            };
+        });
+
+        expect(result.case2).toBeCloseTo(4, 8);
+        expect(result.case1).toBeCloseTo(0, 8);
+        expect(result.recorded).toBeUndefined();
+    });
+
+    test('a slider dragged on a moment writes into that moment for its own case', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 2);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.addGroup();
+            tableShape.moveGroupIteration(2, 20);
+            shell.commands.addShape('SliderShape', 'Slider1');
+            const slider = shell.board.shapes.getByName('Slider1');
+            slider.properties.term = 'v';
+            slider.properties.termCase = 2;
+            slider.update();
+            for (let index = 0; index < 40; index++)
+                shell.calculator.engine.iterate();
+            const iteration = shell.calculator.setIteration(20);
+            const config = slider.buildSliderConfig();
+            const target = (config.minimum + config.maximum) / 2;
+            slider.setSplitterValue(target);
+            tableShape.refreshTableRows();
+            const row = tableShape.table.rows.find(r => r.key === 'v|20');
+            return {
+                iteration,
+                target,
+                recordedCase2: shell.calculator.getUserInput('v', 20, 2),
+                recordedCase1: shell.calculator.getUserInput('v', 20, 1),
+                cell2: row?.case2
+            };
+        });
+
+        expect(result.iteration).toBe(20);
+        expect(result.recordedCase2).toBeCloseTo(result.target, 6);
+        expect(result.cell2).toBeCloseTo(result.target, 6);
+        expect(result.recordedCase1).not.toBeCloseTo(result.target, 6);
+    });
 });

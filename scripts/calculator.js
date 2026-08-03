@@ -752,7 +752,38 @@ class Calculator extends EventTarget {
         this.engine.reset();
     }
 
+    // A moment is an iteration the scenarios shape shows as a group: iteration 1 plus every
+    // iteration that already holds a user input. Cases are pooled because a group spans every
+    // case column, so a group opened on case 1 is also a moment for case 2.
+    isMomentIteration(iteration = 1) {
+        const normalizedIteration = Math.max(1, Math.floor(Number(iteration) || 1));
+        if (normalizedIteration === 1)
+            return true;
+        const caseKeys = Object.keys(this.userInputsByCase);
+        for (let i = 0; i < caseKeys.length; i++) {
+            const termInputs = this.userInputsByCase[caseKeys[i]];
+            const termKeys = Object.keys(termInputs);
+            for (let j = 0; j < termKeys.length; j++)
+                if (termInputs[termKeys[j]][normalizedIteration] !== undefined)
+                    return true;
+        }
+        return false;
+    }
+
+    // Value changes the user drives from a shape are anchored to the moment they happen on, so the
+    // scenarios shape mirrors them the same way it mirrors iteration 1. Moments are only ever
+    // opened from the scenarios shape itself, so a change away from one stays transient.
     setTermValue(name = "", value = 0, iteration = this.system.iteration, caseNumber = 1) {
+        const normalizedIteration = Math.max(1, Math.floor(Number(iteration) || 1));
+        this.setComputedTermValue(name, value, normalizedIteration, caseNumber);
+        if (normalizedIteration > 1 && this.isMomentIteration(normalizedIteration))
+            this.setUserInput(name, value, normalizedIteration, caseNumber);
+    }
+
+    // The write the model itself drives, used for the model hook: it runs on every iteration, so
+    // recording it would turn computed values into saved scenario overrides that the next run then
+    // re-applies as initial values.
+    setComputedTermValue(name = "", value = 0, iteration = this.system.iteration, caseNumber = 1) {
         const system = this.system;
         var term = system.getTerm(name);
         if (!term)
