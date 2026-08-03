@@ -700,13 +700,16 @@ var BaseShapeToolbarMixin = {
             });
         });
     },
+    getTermsTooltipKey() {
+        return "Terms Tooltip";
+    },
     createTermsDropDownButton(itemElement) {
         this._termsDropdownElement = $('<div class="mdl-terms-selector">');
         this._termsDropdownElement.dxDropDownButton({
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            onInitialized: e => Utils.createTranslatedTooltip(e, "Terms Tooltip", this.board.translations, 280),
+            onInitialized: e => Utils.createTranslatedTooltip(e, this.getTermsTooltipKey(), this.board.translations, 280),
             template: (data, element) => this.renderTermsButtonTemplate(element[0]),
             dropDownOptions: {
                 container: document.body,

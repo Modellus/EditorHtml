@@ -9,7 +9,6 @@ class CasesTableShape extends BaseTableShape {
         this.properties.columns = this.buildDefaultColumns();
         this.properties.groupColors = {};
         this.properties.visibleCases = null;
-        this.properties.columnsUserDefined = false;
     }
 
     tick() {
@@ -19,6 +18,7 @@ class CasesTableShape extends BaseTableShape {
             this._lastCasesCount = casesCount;
             if (this._termsMenuContentElement)
                 this.buildTermsMenuContent(this._termsMenuContentElement);
+            this.refreshShapeSpecificToolbarControls();
         }
     }
 
@@ -32,6 +32,11 @@ class CasesTableShape extends BaseTableShape {
         return [...derivatives, ...parameters].filter(term => calculator.isUserInputTerm(term));
     }
 
+    createElement() {
+        this.syncAutomaticColumns();
+        return super.createElement();
+    }
+
     refreshTermReferenceState() {
         if (this.syncAutomaticColumns())
             this.update();
@@ -39,8 +44,6 @@ class CasesTableShape extends BaseTableShape {
     }
 
     syncAutomaticColumns() {
-        if (this.properties.columnsUserDefined === true)
-            return false;
         const automaticTerms = this.getAutomaticColumnTerms();
         const currentTerms = this.getSelectedColumns().map(column => column.term);
         if (automaticTerms.join("\n") === currentTerms.join("\n"))
@@ -50,24 +53,32 @@ class CasesTableShape extends BaseTableShape {
         return true;
     }
 
-    onColumnsChanged() {
-        if (this.properties.columnsUserDefined !== true)
-            this.setPropertyCommand("columnsUserDefined", true);
-        this.refreshTableColumns();
-    }
-
     getFallbackColumns() {
         return [{ term: "", case: 1 }];
     }
 
-    getTermsButtonPlaceholder() {
-        return this.board.translations.get("Rows") ?? "Rows";
+    getTermsTooltipKey() {
+        return "Cases Tooltip";
     }
 
     populateTermsMenuSections(listItems) {
         if (this.getCasesCount() > 1)
             listItems.push({ text: this.board.translations.get("Cases") ?? "Scenarios", stacked: true, buildControl: $p => $p.append(this.createCasesVisibilityControl()) });
-        listItems.push({ text: this.board.translations.get("Rows") ?? "Rows", stacked: true, buildControl: $p => $p.append(this.createColumnsControl()) });
+    }
+
+    renderTermsButtonTemplate(element) {
+        const visibleCaseNumbers = this.getVisibleCaseNumbers();
+        const iconClass = TermControl.getCaseNumberIconClass(visibleCaseNumbers[0]);
+        const iconColor = TermControl.getCaseIconColor(visibleCaseNumbers[0]);
+        const extraCount = visibleCaseNumbers.length - 1;
+        const extraPart = extraCount > 0 ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-extra">+${extraCount}</span></span>` : "";
+        element.innerHTML = `<span class="mdl-name-btn-term"><i class="${iconClass}" style="color:${iconColor}"></i></span>${extraPart}`;
+    }
+
+    refreshShapeSpecificToolbarControls() {
+        if (this._casesItemElement)
+            this._casesItemElement.css("display", this.getCasesCount() > 1 ? "flex" : "none");
+        this.refreshTermsToolbarControl();
     }
 
     createCasesVisibilityControl() {
@@ -102,6 +113,7 @@ class CasesTableShape extends BaseTableShape {
             return;
         }
         this.setPropertyCommand("visibleCases", selectedCases);
+        this.refreshTermsToolbarControl();
         this.update();
     }
 
@@ -114,6 +126,7 @@ class CasesTableShape extends BaseTableShape {
         else
             visibleCases.delete(caseNumber);
         this.setPropertyCommand("visibleCases", [...visibleCases].sort((a, b) => a - b));
+        this.refreshTermsToolbarControl();
         this.update();
     }
 
@@ -135,31 +148,6 @@ class CasesTableShape extends BaseTableShape {
 
     getMomentColumnKey() {
         return this.getCaseColumnKey(this.getVisibleCaseNumbers()[0]);
-    }
-
-    createColumnsControl() {
-        this.normalizeColumns();
-        this._columnsControl = TermControl.createShapeTermsCollectionControl(this, "columns", {
-            hostClassName: "shape-terms-control table-columns-control",
-            listClassName: "shape-terms-list table-columns-list",
-            rowClassName: "shape-term-row table-column-row",
-            dragHandleClassName: "shape-term-drag-handle table-column-drag-handle",
-            includeColor: false,
-            includeCase: false,
-            lock: null,
-            getTermItems: item => this.buildInputTermItems(item),
-            normalizeTermValue: value => this.normalizeColumnValue(value),
-            createEmptyItem: () => this.createEmptyColumnListItem(),
-            getFallbackItems: () => this.getFallbackColumns(),
-            onChanged: () => this.onColumnsChanged()
-        });
-        return this._columnsControl.createHost();
-    }
-
-    buildInputTermItems(item) {
-        const items = TermControl.buildShapeTermsCollectionTermItems(this, item?.term, value => this.normalizeColumnValue(value));
-        const currentTerm = this.normalizeColumnValue(item?.term);
-        return items.filter(termItem => termItem.term === currentTerm || this.board.calculator.isUserInputTerm(termItem.term));
     }
 
     getColumnsCollectionOptions() {
@@ -240,6 +228,21 @@ class CasesTableShape extends BaseTableShape {
         this.refreshTableRows();
     }
 
+    // Iteration 1 is the model's own initial values, which the engine never records as user input,
+    // so the base group always lists every selected term while later moments list only what they hold.
+    getTermNamesForIteration(iteration, columns = this._activeColumns ?? this.getSelectedColumns()) {
+        const terms = this.getSelectedTermNames(columns);
+        if (iteration <= 1)
+            return terms;
+        const calculator = this.board.calculator;
+        return terms.filter(term => calculator.getUserInputIterations(term).includes(iteration));
+    }
+
+    getTermNamesMissingFromIteration(iteration) {
+        const groupTerms = this.getTermNamesForIteration(iteration);
+        return this.getSelectedTermNames().filter(term => !groupTerms.includes(term));
+    }
+
     getGroupIterations() {
         const calculator = this.board.calculator;
         const terms = this.getSelectedTermNames();
@@ -304,7 +307,6 @@ class CasesTableShape extends BaseTableShape {
         const calculator = this.board.calculator;
         const system = calculator.system;
         const visibleCaseNumbers = this.getVisibleCaseNumbers();
-        const terms = this.getSelectedTermNames(columns);
         const groupIterations = this.getGroupIterations();
         const independentName = this.formatTermSymbol(this.formatIndependentName());
         const momentColumnKey = this.getMomentColumnKey();
@@ -324,8 +326,9 @@ class CasesTableShape extends BaseTableShape {
                 spanColumnKey: momentColumnKey,
                 spanLabel: independentName
             });
-            for (let index = 0; index < terms.length; index++) {
-                const term = terms[index];
+            const groupTerms = this.getTermNamesForIteration(iteration, columns);
+            for (let index = 0; index < groupTerms.length; index++) {
+                const term = groupTerms[index];
                 const row = {
                     key: `${term}|${iteration}`,
                     termName: term,
@@ -469,21 +472,63 @@ class CasesTableShape extends BaseTableShape {
         if (terms.length === 0)
             return false;
         const nextIteration = Math.max(...this.getGroupIterations()) + 1;
-        const casesCount = this.getCasesCount();
-        for (let index = 0; index < terms.length; index++) {
-            const term = terms[index];
-            for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
-                let value = calculator.system.getByNameOnIteration(nextIteration, term, caseNumber);
-                if (!Number.isFinite(value))
-                    value = calculator.system.getByNameOnIteration(1, term, caseNumber);
-                if (!Number.isFinite(value))
-                    value = 0;
-                calculator.setUserInput(term, value, nextIteration, caseNumber);
-            }
-        }
+        for (let index = 0; index < terms.length; index++)
+            this.seedTermAtIteration(terms[index], nextIteration);
         calculator.emit("iterate", { calculator: calculator });
         this.refreshTableRows();
         return true;
+    }
+
+    addTermToGroup(term, iteration) {
+        iteration = Math.floor(Number(iteration) || 0);
+        if (iteration <= 1 || !this.getSelectedTermNames().includes(term))
+            return false;
+        if (!this.seedTermAtIteration(term, iteration))
+            return false;
+        const calculator = this.board.calculator;
+        calculator.emit("iterate", { calculator: calculator });
+        this.refreshTableRows();
+        return true;
+    }
+
+    // Swapping carries the values across: the point is to move what was typed onto the term it
+    // should have been on, which is what tells a swap apart from a delete followed by an add.
+    swapGroupTerm(fromTerm, toTerm, iteration) {
+        iteration = Math.floor(Number(iteration) || 0);
+        if (iteration <= 1 || fromTerm === toTerm)
+            return false;
+        if (!this.getTermNamesMissingFromIteration(iteration).includes(toTerm))
+            return false;
+        const calculator = this.board.calculator;
+        const casesCount = this.getCasesCount();
+        let swapped = false;
+        for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
+            const value = calculator.getUserInput(fromTerm, iteration, caseNumber);
+            if (value === undefined)
+                continue;
+            calculator.removeUserInput(fromTerm, iteration, caseNumber);
+            swapped = calculator.setUserInput(toTerm, value, iteration, caseNumber) || swapped;
+        }
+        if (!swapped)
+            return false;
+        calculator.emit("iterate", { calculator: calculator });
+        this.refreshTableRows();
+        return true;
+    }
+
+    seedTermAtIteration(term, iteration) {
+        const calculator = this.board.calculator;
+        const casesCount = this.getCasesCount();
+        let seeded = false;
+        for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
+            let value = calculator.system.getByNameOnIteration(iteration, term, caseNumber);
+            if (!Number.isFinite(value))
+                value = calculator.system.getByNameOnIteration(1, term, caseNumber);
+            if (!Number.isFinite(value))
+                value = 0;
+            seeded = calculator.setUserInput(term, value, iteration, caseNumber) || seeded;
+        }
+        return seeded;
     }
 
     clearFocusAndRefresh() {
@@ -507,6 +552,22 @@ class CasesTableShape extends BaseTableShape {
                 location: "center",
                 template: () => {
                     const container = $('<div></div>');
+                    this.createFocusedAddTermButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div></div>');
+                    this.createFocusedSwapTermButton(container);
+                    return container;
+                }
+            },
+            {
+                location: "center",
+                template: () => {
+                    const container = $('<div></div>');
                     this.createFocusedInputDeleteButton(container);
                     return container;
                 }
@@ -518,13 +579,44 @@ class CasesTableShape extends BaseTableShape {
         if (!super.shouldShowCellsContextToolbar())
             return false;
         const focusedRow = this._focusedCellsPayload?.focusedRows?.[0]?.row;
-        if (!focusedRow?.isIndependentRow)
+        if (focusedRow?.isIndependentRow)
+            return this._focusedCellsPayload?.focusedColumn?.key === this.getMomentColumnKey();
+        return this.isMomentTermRow(focusedRow);
+    }
+
+    isMomentTermRow(row) {
+        if (!row || row.isIndependentRow === true)
             return false;
-        return this._focusedCellsPayload?.focusedColumn?.key === this.getMomentColumnKey();
+        return Math.floor(Number(row.iteration) || 1) > 1;
+    }
+
+    isFocusedGroupRow() {
+        return this._focusedCellsPayload?.focusedRows?.[0]?.row?.isIndependentRow === true && this.shouldShowCellsContextToolbar();
+    }
+
+    getFocusedGroupIteration() {
+        const focusedRow = this._focusedCellsPayload?.focusedRows?.[0]?.row;
+        return Math.max(1, Math.floor(Number(focusedRow?.iteration) || 1));
+    }
+
+    getFocusedTermName() {
+        return this._focusedCellsPayload?.focusedRows?.[0]?.row?.termName;
+    }
+
+    isFocusedCellsToolbarOverlayOpen() {
+        if (this.getDropDownButtonInstance(this._focusedAddTermButtonElement)?.option("opened") === true)
+            return true;
+        return this.getDropDownButtonInstance(this._focusedSwapTermButtonElement)?.option("opened") === true;
     }
 
     refreshFocusedCellsToolbarControl() {
         this._focusedDeleteButtonElement?.dxButton("instance")?.option("visible", this.isFocusedRowDeletable());
+        this.getDropDownButtonInstance(this._focusedAddTermButtonElement)?.option("visible", this.isFocusedAddTermAvailable());
+        this.getDropDownButtonInstance(this._focusedSwapTermButtonElement)?.option("visible", this.isFocusedSwapTermAvailable());
+        if (this._focusedAddTermMenuContentElement)
+            this.buildFocusedTermMenuContent(this._focusedAddTermMenuContentElement, term => this.applyFocusedAddTerm(term));
+        if (this._focusedSwapTermMenuContentElement)
+            this.buildFocusedTermMenuContent(this._focusedSwapTermMenuContentElement, term => this.applyFocusedSwapTerm(term));
         this.refreshFocusedColorSlot();
     }
 
@@ -532,16 +624,87 @@ class CasesTableShape extends BaseTableShape {
         if (!this._focusedColorSlotElement)
             return;
         this._focusedColorSlotElement.empty();
-        if (!this.shouldShowCellsContextToolbar())
+        if (!this.isFocusedGroupRow())
             return;
-        const focusedRow = this._focusedCellsPayload?.focusedRows?.[0]?.row;
-        const iteration = Math.floor(Number(focusedRow.iteration) || 1);
+        const iteration = this.getFocusedGroupIteration();
         const picker = this.getColorControl().createEditor(this.getGroupColor(iteration), value => this.setGroupColor(iteration, value));
         picker.appendTo(this._focusedColorSlotElement);
     }
 
     isFocusedRowDeletable() {
         return this.shouldShowCellsContextToolbar();
+    }
+
+    isFocusedAddTermAvailable() {
+        if (!this.isFocusedGroupRow() || this.getFocusedGroupIteration() <= 1)
+            return false;
+        return this.getTermNamesMissingFromIteration(this.getFocusedGroupIteration()).length > 0;
+    }
+
+    isFocusedSwapTermAvailable() {
+        if (!this.isMomentTermRow(this._focusedCellsPayload?.focusedRows?.[0]?.row))
+            return false;
+        return this.getTermNamesMissingFromIteration(this.getFocusedGroupIteration()).length > 0;
+    }
+
+    createFocusedAddTermButton(itemElement) {
+        this._focusedAddTermButtonElement = this.createFocusedTermMenuButton(itemElement, "mdl-add-term-selector", "fa-light fa-plus", contentElement => {
+            this._focusedAddTermMenuContentElement = contentElement;
+            this.buildFocusedTermMenuContent(contentElement, term => this.applyFocusedAddTerm(term));
+        });
+    }
+
+    createFocusedSwapTermButton(itemElement) {
+        this._focusedSwapTermButtonElement = this.createFocusedTermMenuButton(itemElement, "mdl-swap-term-selector", "fa-light fa-right-left", contentElement => {
+            this._focusedSwapTermMenuContentElement = contentElement;
+            this.buildFocusedTermMenuContent(contentElement, term => this.applyFocusedSwapTerm(term));
+        });
+    }
+
+    createFocusedTermMenuButton(itemElement, className, iconClass, buildContent) {
+        const buttonElement = $(`<div class="${className}">`);
+        buttonElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            visible: false,
+            template: (_, element) => {
+                element[0].innerHTML = `<span class="mdl-focused-toolbar-button"><i class="${iconClass}"></i></span>`;
+            },
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: "auto",
+                contentTemplate: contentElement => buildContent(contentElement)
+            }
+        });
+        buttonElement.appendTo(itemElement);
+        return buttonElement;
+    }
+
+    buildFocusedTermMenuContent(contentElement, onTermSelected) {
+        const missingTerms = this.getTermNamesMissingFromIteration(this.getFocusedGroupIteration());
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: Utils.getTerms(missingTerms, this.board.calculator.system),
+            scrollingEnabled: false,
+            itemTemplate: (itemData, _, itemElement) => {
+                itemElement[0].innerHTML = `<div class="mdl-variable-selector">${Utils.buildReadOnlyMathFieldMarkup(itemData.text, "height:auto;width:auto;display:inline-block;pointer-events:none")}</div>`;
+            },
+            onItemClick: event => onTermSelected(event.itemData.term)
+        });
+    }
+
+    applyFocusedAddTerm(term) {
+        this.getDropDownButtonInstance(this._focusedAddTermButtonElement)?.close();
+        this.addTermToGroup(term, this.getFocusedGroupIteration());
+        this.clearFocusAndRefresh();
+    }
+
+    applyFocusedSwapTerm(term) {
+        this.getDropDownButtonInstance(this._focusedSwapTermButtonElement)?.close();
+        this.swapGroupTerm(this.getFocusedTermName(), term, this.getFocusedGroupIteration());
+        this.clearFocusAndRefresh();
     }
 
     createFocusedInputDeleteButton(itemElement) {

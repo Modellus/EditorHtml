@@ -18,14 +18,12 @@ var CasesTableShapeToolbarMixin = {
             {
                 location: "center",
                 template: () => {
-                    const container = $('<div></div>');
-                    this.createTermsDropDownButton(container);
-                    return container;
+                    this._casesItemElement = $('<div class="mdl-cases-item" style="display:none;align-items:center"></div>');
+                    const buttonContainer = $('<div></div>');
+                    this._casesItemElement.append(buttonContainer, $('<div class="toolbar-separator">|</div>'));
+                    this.createTermsDropDownButton(buttonContainer);
+                    return this._casesItemElement;
                 }
-            },
-            {
-                location: "center",
-                template: () => $('<div class="toolbar-separator">|</div>')
             },
             {
                 location: "center",

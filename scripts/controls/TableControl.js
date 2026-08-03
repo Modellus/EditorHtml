@@ -747,10 +747,12 @@ class TableControl {
         });
     }
 
+    // The span row draws through setTermValueTextContent, whose tspans carry a central dominant
+    // baseline, so y is the middle of the glyphs here and not the baseline the other cells position by.
     appendSpanRowText(layerElement, y, rowHeight, row, valueText) {
         const text = this.createSvgElement("text");
         text.setAttribute("x", `${this.getSpanRowTextX()}`);
-        text.setAttribute("y", `${y + rowHeight / 2 + 4}`);
+        text.setAttribute("y", `${y + rowHeight / 2}`);
         text.setAttribute("text-anchor", "start");
         text.setAttribute("font-size", `${this.options.headerFontSize}`);
         text.setAttribute("fill", this.getRowTextColor(row));
