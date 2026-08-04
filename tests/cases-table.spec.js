@@ -571,6 +571,26 @@ test.describe('Cases table', () => {
         expect(after).toEqual([2]);
     });
 
+    test('a model saved with the legacy InitialValuesTableShape type still opens', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 2);
+
+        const result = await page.evaluate(() => {
+            const model = shell.serialize();
+            const legacyShape = model.board.find(shape => shape.type === 'CasesTableShape');
+            legacyShape.type = 'InitialValuesTableShape';
+            shell.openModel(JSON.stringify(model));
+            const restoredShape = shell.board.shapes.getByName(legacyShape.properties.name);
+            return {
+                restoredShapeClass: restoredShape?.constructor?.name ?? null,
+                reserializedType: shell.serialize().board.find(shape => shape.id === legacyShape.id)?.type ?? null
+            };
+        });
+
+        expect(result.restoredShapeClass).toBe('CasesTableShape');
+        expect(result.reserializedType).toBe('CasesTableShape');
+    });
+
     test('user inputs at a non-default moment survive serialize and open roundtrip', async ({ page }) => {
         await setupEditor(page);
         await setupModelWithCasesTable(page, 2);

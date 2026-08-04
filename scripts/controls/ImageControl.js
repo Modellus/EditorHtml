@@ -1,4 +1,10 @@
 class ImageControl {
+    static documentPasteCount = 0;
+
+    static isDocumentPasteActive() {
+        return ImageControl.documentPasteCount > 0;
+    }
+
     constructor(options = {}) {
         this.options = {
             imageSource: "",
@@ -227,6 +233,7 @@ class ImageControl {
             return;
         this._boundDocumentPaste = event => this.onDocumentKeyDown(event);
         document.addEventListener("keydown", this._boundDocumentPaste, { capture: true });
+        ImageControl.documentPasteCount++;
     }
 
     deactivateDocumentPaste() {
@@ -234,6 +241,7 @@ class ImageControl {
             return;
         document.removeEventListener("keydown", this._boundDocumentPaste, { capture: true });
         this._boundDocumentPaste = null;
+        ImageControl.documentPasteCount--;
     }
 
     async onDocumentKeyDown(event) {

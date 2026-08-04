@@ -1730,8 +1730,12 @@ class BaseShape {
         const text = await navigator.clipboard.readText();
         let data;
         try { data = JSON.parse(text); } catch (_) { return; }
+        BaseShape.pasteShapeData(board, parent, data);
+    }
+
+    static pasteShapeData(board, parent, data) {
         if (!data?.type || !data?.properties)
-            return;
+            return false;
         data.properties.x = (data.properties.x ?? 0) + 20;
         data.properties.y = (data.properties.y ?? 0) + 20;
         const shape = board.createShape(data.type, parent ?? null);
@@ -1741,6 +1745,7 @@ class BaseShape {
         BaseShape.pasteChildren(board, shape, data.children);
         shape.draw();
         shape.update();
+        return true;
     }
 
     duplicate() {

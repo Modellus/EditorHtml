@@ -22,6 +22,7 @@ class BoardEditor extends Workspace {
         this.board.svg.addEventListener("backgroundClicked", e => this.backgroundToolbar.toggle(e.detail));
         this.contextMenuController = new ContextMenuController(this);
         this.shapeDrawController = new ShapeDrawController(this);
+        this.clipboardPasteController = new ClipboardPasteController(this);
         this.connectorTargetHighlighter = new ConnectorTargetHighlighter(this);
         this.topToolbar = new TopToolbar(this);
         this.chatController = new ChatController(this);
@@ -57,6 +58,7 @@ class BoardEditor extends Workspace {
         this.commands.registerShapeAlias("TableShape", TableWidget);
         this.commands.registerShapeAlias("DataTableShape", DataTableWidget);
         this.commands.registerShapeAlias("CasesTableShape", CasesTableWidget);
+        this.commands.registerShapeAlias("InitialValuesTableShape", CasesTableWidget);
         this.commands.registerShapeAlias("SliderShape", SliderWidget);
         this.commands.registerShapeAlias("GaugeShape", GaugeWidget);
         this.commands.registerShapeAlias("VectorShape", VectorWidget);
@@ -1034,7 +1036,7 @@ class BoardEditor extends Workspace {
     }
 
     parseCsv(text) {
-        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+        const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(line => line.trim().length > 0);
         const names = lines[0].split(",").map(name => name.trim());
         const values = [];
         for (let i = 1; i < lines.length; i++) {
@@ -1218,11 +1220,6 @@ class BoardEditor extends Workspace {
             if (e.key === "c" && shape) {
                 e.preventDefault();
                 shape.copyToClipboard();
-                return;
-            }
-            if (e.key === "v") {
-                e.preventDefault();
-                BaseShape.pasteFromClipboard(this.board, shape?.parent);
                 return;
             }
             if (e.key === "d") {
