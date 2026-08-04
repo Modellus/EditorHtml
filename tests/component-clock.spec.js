@@ -330,6 +330,262 @@ test.describe('analogue clock component', () => {
     });
 });
 
+test.describe('compass component', () => {
+    async function addCompassModel(page) {
+        await page.evaluate(() => modellus.shape.addExpression('Compass equations'));
+        await page.waitForTimeout(300);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Compass equations').properties.expression = '\\frac{dheading}{dt}=0\\\\\\frac{dturn}{dt}=0';
+            shell.reset();
+        });
+        await page.waitForTimeout(400);
+        await page.evaluate(() => {
+            shell.board.calculator.setTermValue('heading', 120, 1, 1);
+            shell.board.calculator.setTermValue('turn', 0, 1, 1);
+            shell.board.calculator.calculate();
+            shell.board.forceRefresh();
+        });
+        await page.waitForTimeout(300);
+    }
+
+    async function addCompass(page) {
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('compass', 'Compass');
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200, headingVariable: 'heading', rotationVariable: 'turn' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+    }
+
+    // The compass is 200 by 200, so its rose radius is 94: the needle reaches 62 and the rim the
+    // drag ring covers runs from 66 outwards. Points are given as a radius and a clockwise angle
+    // from north, the same way the component reads them.
+    async function dragOnCompass(page, from, to) {
+        const points = await page.evaluate(([from, to]) => {
+            const shape = shell.board.shapes.getByName('Compass');
+            const matrix = shell.board.svg.getScreenCTM();
+            const centre = { x: shape.properties.x + shape.properties.width / 2, y: shape.properties.y + shape.properties.height / 2 };
+            const place = point => {
+                const radians = point.degrees * Math.PI / 180;
+                const screen = new DOMPoint(centre.x + point.radius * Math.sin(radians), centre.y - point.radius * Math.cos(radians)).matrixTransform(matrix);
+                return { x: screen.x, y: screen.y };
+            };
+            return [place(from), place(to)];
+        }, [from, to]);
+        await page.mouse.move(points[0].x, points[0].y);
+        await page.mouse.down();
+        if (to.degrees !== from.degrees || to.radius !== from.radius)
+            await page.mouse.move(points[1].x, points[1].y, { steps: 8 });
+        await page.mouse.up();
+        await page.waitForTimeout(300);
+    }
+
+    async function readTerms(page) {
+        return page.evaluate(() => ({
+            heading: shell.board.calculator.getByName('heading', 1),
+            turn: shell.board.calculator.getByName('turn', 1)
+        }));
+    }
+
+    test('drags the needle to set the heading variable', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await addCompass(page);
+        expect(await readTerms(page)).toEqual({ heading: 120, turn: 0 });
+        await dragOnCompass(page, { radius: 40, degrees: 120 }, { radius: 55, degrees: 90 });
+        const terms = await readTerms(page);
+        expect(terms.heading).toBeCloseTo(90, 1);
+        expect(terms.turn).toBe(0);
+    });
+
+    test('drags the rim of the rose to turn it, leaving the needle alone', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await addCompass(page);
+        await dragOnCompass(page, { radius: 80, degrees: 0 }, { radius: 80, degrees: 90 });
+        const terms = await readTerms(page);
+        expect(terms.turn).toBeCloseTo(90, 1);
+        expect(terms.heading).toBe(120);
+    });
+
+    test('turns the rose by how far the pointer travels, so grabbing it moves nothing', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await addCompass(page);
+        await dragOnCompass(page, { radius: 80, degrees: 45 }, { radius: 80, degrees: 45 });
+        expect((await readTerms(page)).turn).toBe(0);
+        await dragOnCompass(page, { radius: 80, degrees: 45 }, { radius: 80, degrees: 25 });
+        expect((await readTerms(page)).turn).toBeCloseTo(340, 1);
+    });
+
+    // The grab areas are invisible, so the cursor and the rim highlight are the only things telling
+    // a reader that the compass can be turned at all. They are the feature as far as the eye goes.
+    async function readAffordance(page, point) {
+        const screenPoint = await page.evaluate(point => {
+            const shape = shell.board.shapes.getByName('Compass');
+            const matrix = shell.board.svg.getScreenCTM();
+            const radians = point.degrees * Math.PI / 180;
+            const centre = { x: shape.properties.x + shape.properties.width / 2, y: shape.properties.y + shape.properties.height / 2 };
+            const placed = new DOMPoint(centre.x + point.radius * Math.sin(radians), centre.y - point.radius * Math.cos(radians)).matrixTransform(matrix);
+            return { x: placed.x, y: placed.y };
+        }, point);
+        await page.mouse.move(screenPoint.x, screenPoint.y);
+        await page.waitForTimeout(150);
+        return page.evaluate(point => {
+            const element = document.elementFromPoint(point.x, point.y);
+            const ring = document.querySelector('[data-block-id$=":rose-grab"]');
+            return {
+                cursor: element ? window.getComputedStyle(element).cursor : null,
+                ringFill: ring?.getAttribute('fill') ?? 'absent'
+            };
+        }, screenPoint);
+    }
+
+    test('shows the grab cursor and lights the rim while the pointer rests on it', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await addCompass(page);
+        const rim = await readAffordance(page, { radius: 80, degrees: 0 });
+        expect(rim.cursor).toBe('grab');
+        expect(rim.ringFill).not.toBe('none');
+        const needle = await readAffordance(page, { radius: 40, degrees: 120 });
+        expect(needle.cursor).toBe('grab');
+        expect(needle.ringFill).toBe('none');
+        const middle = await readAffordance(page, { radius: 20, degrees: 90 });
+        expect(middle.cursor).toBe('auto');
+    });
+
+    test('keeps the affordance while the shape is selected and the move handle covers it', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await addCompass(page);
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Compass')));
+        await page.waitForTimeout(300);
+        const rim = await readAffordance(page, { radius: 80, degrees: 0 });
+        expect(rim.cursor).toBe('grab');
+        expect(rim.ringFill).not.toBe('none');
+    });
+
+    test('marks the targets locked when the variables are worked out by the model', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Compass equations').properties.expression = '\\frac{dheading}{dt}=0\\\\\\frac{dturn}{dt}=0\\\\computed=2\\cdot heading';
+            shell.reset();
+        });
+        await page.waitForTimeout(400);
+        await addCompass(page);
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Compass');
+            shape.setProperties({ headingVariable: 'computed', rotationVariable: 'computed' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        expect((await readAffordance(page, { radius: 80, degrees: 0 })).cursor).toBe('not-allowed');
+    });
+
+    async function addValueCompass(page) {
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('compass', 'Compass');
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200, headingVariable: 30, rotationVariable: 0 });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+    }
+
+    async function readCompassProperties(page) {
+        return page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Compass');
+            return { heading: Number(shape.properties.headingVariable), rotation: Number(shape.properties.rotationVariable) };
+        });
+    }
+
+    test('drags the needle of a compass holding plain numbers, writing the property itself', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await addValueCompass(page);
+        expect((await readAffordance(page, { radius: 40, degrees: 30 })).cursor).toBe('grab');
+        await dragOnCompass(page, { radius: 40, degrees: 30 }, { radius: 55, degrees: 90 });
+        const properties = await readCompassProperties(page);
+        expect(properties.heading).toBeCloseTo(90, 1);
+        expect(properties.rotation).toBe(0);
+    });
+
+    test('turns the rose of a compass holding plain numbers', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await addValueCompass(page);
+        await dragOnCompass(page, { radius: 80, degrees: 0 }, { radius: 80, degrees: 90 });
+        const properties = await readCompassProperties(page);
+        expect(properties.rotation).toBeCloseTo(90, 1);
+        expect(properties.heading).toBe(30);
+    });
+
+    test('puts a property drag in the undo history', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await addValueCompass(page);
+        await dragOnCompass(page, { radius: 40, degrees: 30 }, { radius: 55, degrees: 90 });
+        expect((await readCompassProperties(page)).heading).toBeCloseTo(90, 1);
+        await page.evaluate(() => shell.commands.undo());
+        await page.waitForTimeout(300);
+        expect((await readCompassProperties(page)).heading).toBe(30);
+        await page.evaluate(() => shell.commands.redo());
+        await page.waitForTimeout(300);
+        expect((await readCompassProperties(page)).heading).toBeCloseTo(90, 1);
+    });
+
+    // Nothing has to be switched on and nothing has to be bound: a compass straight from the
+    // palette shows plain numbers, and dragging it edits those numbers.
+    test('drags a compass straight from the palette, with nothing bound and nothing switched on', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('compass', 'Compass');
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200 });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        expect((await readAffordance(page, { radius: 80, degrees: 0 })).cursor).toBe('grab');
+        expect((await readAffordance(page, { radius: 40, degrees: 0 })).cursor).toBe('grab');
+        await dragOnCompass(page, { radius: 40, degrees: 0 }, { radius: 55, degrees: 90 });
+        expect((await readCompassProperties(page)).heading).toBeCloseTo(90, 1);
+    });
+
+    // A compass reloaded from a model saved before any of this existed carries no interaction
+    // property at all. It has to drag all the same.
+    test('drags a compass restored from a saved model that knew nothing about dragging', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await addValueCompass(page);
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Compass');
+            const saved = JSON.parse(JSON.stringify(shape.serialize()));
+            shell.board.removeShape(shape);
+            const restored = shell.board.shapes.deserialize(shell.board, saved);
+            shell.board.addShape(restored, false);
+            restored.draw();
+        });
+        await page.waitForTimeout(300);
+        await dragOnCompass(page, { radius: 40, degrees: 30 }, { radius: 55, degrees: 90 });
+        expect((await readCompassProperties(page)).heading).toBeCloseTo(90, 1);
+    });
+
+    test('leaves the model alone when the shape is not interactable', async ({ page }) => {
+        await setupBoard(page);
+        await addCompassModel(page);
+        await addCompass(page);
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Compass');
+            shape.setProperties({ interactableForUsers: false });
+            shape.draw();
+        });
+        await dragOnCompass(page, { radius: 40, degrees: 120 }, { radius: 55, degrees: 90 });
+        await dragOnCompass(page, { radius: 80, degrees: 0 }, { radius: 80, degrees: 90 });
+        expect(await readTerms(page)).toEqual({ heading: 120, turn: 0 });
+    });
+});
+
 test.describe('component variable inputs', () => {
     async function addCompass(page) {
         await page.evaluate(() => {

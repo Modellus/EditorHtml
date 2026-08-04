@@ -134,6 +134,7 @@
                     "color": { "parameter": "handColor" },
                     "style": "needle",
                     "dragVariable": { "parameter": "hourDrag" },
+                    "dragProperty": "hourVariable",
                     "degreesPerUnit": 30,
                     "wrapAt": 12
                 }
@@ -151,6 +152,7 @@
                     "color": { "parameter": "handColor" },
                     "style": "needle",
                     "dragVariable": { "parameter": "minuteDrag" },
+                    "dragProperty": "minuteVariable",
                     "degreesPerUnit": 6,
                     "wrapAt": 60
                 }
@@ -169,6 +171,7 @@
                     "color": { "parameter": "secondHandColor" },
                     "style": "line",
                     "dragVariable": { "parameter": "secondDrag" },
+                    "dragProperty": "secondVariable",
                     "degreesPerUnit": 6,
                     "wrapAt": 60
                 }

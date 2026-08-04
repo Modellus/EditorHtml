@@ -150,6 +150,14 @@ class ComponentShape extends BaseShape {
 
     renderComponent() {
         this.lastCompilation = this.compileComponent();
+        // Behaviours are attached while the markup is written, and the markup is only rewritten when
+        // the drawing changes. Locking a shape or taking interaction away from it changes neither,
+        // so the render has to be forced or the listeners from before it was locked live on.
+        const interactionState = `${this.isInteractable()}:${this.isLocked()}`;
+        if (this._lastInteractionState !== interactionState) {
+            this._lastInteractionState = interactionState;
+            this.contentGroup._blockMarkupSignature = null;
+        }
         BlockRenderer.render(this.contentGroup, this.lastCompilation.nodes, this);
     }
 
@@ -160,17 +168,53 @@ class ComponentShape extends BaseShape {
 
     attachBlockBehaviour(element, behaviour, node) {
         if (behaviour.type === "drag-angle")
-            this.attachDragAngleBehaviour(element, behaviour.input);
+            this.attachDragAngleBehaviour(element, behaviour.input, false);
+        if (behaviour.type === "drag-rotate")
+            this.attachDragAngleBehaviour(element, behaviour.input, true);
         if (behaviour.type === "clickable")
             this.attachClickableBehaviour(element, behaviour.input);
     }
 
-    attachDragAngleBehaviour(element, input) {
-        if (!this.isAngleDragAllowed(input))
+    attachDragAngleBehaviour(element, input, relative = false) {
+        if (!this.isAngleDragAllowed(input)) {
+            this.markAngleDragLocked(element, input);
             return;
+        }
         element.style.cursor = "grab";
         element.setAttribute("pointer-events", "all");
-        element.addEventListener("pointerdown", event => this.onAngleDragStart(event, input));
+        element.addEventListener("pointerdown", event => this.onAngleDragStart(event, input, relative));
+        this.attachAngleDragHover(element, input);
+    }
+
+    // A grab area with no fill of its own is invisible, so the pointer has nothing to find. Filling
+    // it faintly while the pointer rests on it shows how far the area reaches. The move handle that
+    // covers a selected shape forwards pointermove and pointerleave but not pointerenter, so the
+    // highlight is driven by those two.
+    attachAngleDragHover(element, input) {
+        const fill = String(input.hoverFill ?? "none");
+        if (fill === "none" || fill === "")
+            return;
+        const opacity = Number(input.hoverOpacity);
+        element.addEventListener("pointermove", () => {
+            element.setAttribute("fill", fill);
+            element.setAttribute("fill-opacity", Number.isFinite(opacity) ? opacity : 0.15);
+        });
+        element.addEventListener("pointerleave", () => {
+            element.setAttribute("fill", "none");
+            element.removeAttribute("fill-opacity");
+        });
+    }
+
+    // A target reading a value the model works out for itself can never be dragged. Saying so with
+    // the same cursor a locked handle uses beats no feedback at all. A target reading a plain number
+    // is left alone: nothing there refuses the drag, so there is nothing to explain.
+    markAngleDragLocked(element, input) {
+        if (!this.isInteractable() || this.isLocked())
+            return;
+        if (!this.board.calculator.isTerm(String(input.variable ?? "")))
+            return;
+        element.style.cursor = "not-allowed";
+        element.setAttribute("pointer-events", "all");
     }
 
     attachClickableBehaviour(element, input) {
@@ -188,32 +232,87 @@ class ComponentShape extends BaseShape {
         if (!this.isInteractable() || this.isLocked())
             return false;
         const variable = String(input.variable ?? "");
-        if (variable === "" || !this.board.calculator.isTerm(variable))
+        if (variable === "")
             return false;
-        return this.board.calculator.isEditable(variable);
+        if (this.board.calculator.isTerm(variable))
+            return this.board.calculator.isEditable(variable);
+        // A property showing a plain number is edited on the shape itself, the way a gauge edits its
+        // own value when it is not bound to a term.
+        return this.getAngleDragProperty(input) !== null;
     }
 
-    onAngleDragStart(event, input) {
+    getAngleDragProperty(input) {
+        const property = String(input.property ?? "");
+        if (property === "" || !this.isComponentParameter(property))
+            return null;
+        return property;
+    }
+
+    // A drag that writes a property changes the drawing itself rather than the model, so it belongs
+    // in the undo history the way any other property edit does.
+    isAngleDragPropertyWrite(input) {
+        return !this.board.calculator.isTerm(String(input.variable ?? "")) && this.getAngleDragProperty(input) !== null;
+    }
+
+    onAngleDragStart(event, input, relative = false) {
+        // Asked again here because the model can stop letting a variable be written between the
+        // moment the listener went on and the moment the pointer comes down.
+        if (!this.isAngleDragAllowed(input))
+            return;
         event.preventDefault();
         this.board.pointerLocked = true;
         this._angleDragInput = input;
+        this._angleDragTurn = relative ? this.startAngleDragTurn(event, input) : null;
+        this._angleDragRecordsUndo = this.isAngleDragPropertyWrite(input);
+        if (this._angleDragRecordsUndo)
+            this.dragStart();
         this._angleDragMove = moveEvent => this.onAngleDragMove(moveEvent, input);
         this._angleDragEnd = () => this.onAngleDragEnd();
         window.addEventListener("pointermove", this._angleDragMove);
         window.addEventListener("pointerup", this._angleDragEnd);
         window.addEventListener("pointercancel", this._angleDragEnd);
-        this.onAngleDragMove(event, input);
+        // A relative drag turns the object by however far the pointer travels, so the grab itself
+        // must not move it. An absolute drag points the object at the pointer straight away.
+        if (!relative)
+            this.onAngleDragMove(event, input);
     }
 
-    onAngleDragMove(event, input) {
+    // Remembers where the object stood when it was grabbed, so the pointer angle can be read as a
+    // turn from that point instead of as the value itself.
+    startAngleDragTurn(event, input) {
+        const value = this.readAngleDragValue(input);
+        return {
+            lastDegrees: this.getAngleDragDegrees(event, input),
+            turnedDegrees: 0,
+            startValue: Number.isFinite(value) ? value : 0
+        };
+    }
+
+    advanceAngleDragTurn(pointerDegrees) {
+        const turn = this._angleDragTurn;
+        if (turn.lastDegrees !== null)
+            turn.turnedDegrees += BlockGeometry.normalizeSignedDegrees(pointerDegrees - turn.lastDegrees);
+        turn.lastDegrees = pointerDegrees;
+        return turn.turnedDegrees;
+    }
+
+    getAngleDragDegrees(event, input) {
         const localPoint = this.getComponentLocalPoint(event);
         const deltaX = localPoint.x - Number(input.centerX);
         const deltaY = localPoint.y - Number(input.centerY);
         if (Math.hypot(deltaX, deltaY) < 2)
+            return null;
+        return BlockGeometry.normalizeDegrees(Math.atan2(deltaX, -deltaY) * 180 / Math.PI);
+    }
+
+    onAngleDragMove(event, input) {
+        const rotationDegrees = this.getAngleDragDegrees(event, input);
+        if (rotationDegrees === null)
             return;
-        const rotationDegrees = BlockGeometry.normalizeDegrees(Math.atan2(deltaX, -deltaY) * 180 / Math.PI);
         const degreesPerUnit = Number(input.degreesPerUnit) || 6;
-        let value = (rotationDegrees - (Number(input.offsetDegrees) || 0)) / degreesPerUnit;
+        let value = this._angleDragTurn
+            ? this._angleDragTurn.startValue + this.advanceAngleDragTurn(rotationDegrees) / degreesPerUnit
+            : (rotationDegrees - (Number(input.offsetDegrees) || 0)) / degreesPerUnit;
         const wrapAt = Number(input.wrapAt);
         if (Number.isFinite(wrapAt) && wrapAt > 0)
             value = ((value % wrapAt) + wrapAt) % wrapAt;
@@ -221,7 +320,7 @@ class ComponentShape extends BaseShape {
             value = Math.max(Number(input.minimum), value);
         if (input.maximum !== null && input.maximum !== undefined && Number.isFinite(Number(input.maximum)))
             value = Math.min(Number(input.maximum), value);
-        this.writeModelValue(input.variable, value);
+        this.writeAngleDragValue(input, value);
     }
 
     onAngleDragEnd() {
@@ -230,7 +329,31 @@ class ComponentShape extends BaseShape {
         window.removeEventListener("pointercancel", this._angleDragEnd);
         this._angleDragMove = null;
         this._angleDragEnd = null;
+        this._angleDragTurn = null;
         this.board.pointerLocked = false;
+        if (this._angleDragRecordsUndo)
+            this.dragEnd();
+        this._angleDragRecordsUndo = false;
+    }
+
+    // A drag target reads and writes the same place: a model term when the property names one, and
+    // the property itself when it holds a plain number.
+    readAngleDragValue(input) {
+        const variable = String(input.variable ?? "");
+        const value = this.board.calculator.isTerm(variable)
+            ? this.board.calculator.getByName(variable, this.getTermCaseNumber("caseNumber"))
+            : Number(variable);
+        return Number.isFinite(Number(value)) ? Number(value) : 0;
+    }
+
+    writeAngleDragValue(input, value) {
+        const property = this.getAngleDragProperty(input);
+        if (this.board.calculator.isTerm(String(input.variable ?? "")) || property === null) {
+            this.writeModelValue(input.variable, value);
+            return;
+        }
+        this.setProperty(property, Utils.roundToPrecision(value, this.board.calculator.getPrecision()));
+        this.board.markDirty(this);
     }
 
     getComponentLocalPoint(event) {

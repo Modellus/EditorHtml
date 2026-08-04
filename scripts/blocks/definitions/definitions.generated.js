@@ -430,6 +430,7 @@ BlockDefinitionLoader.registerAll([
                         "dragVariable": {
                             "parameter": "hourDrag"
                         },
+                        "dragProperty": "hourVariable",
                         "degreesPerUnit": 30,
                         "wrapAt": 12
                     }
@@ -463,6 +464,7 @@ BlockDefinitionLoader.registerAll([
                         "dragVariable": {
                             "parameter": "minuteDrag"
                         },
+                        "dragProperty": "minuteVariable",
                         "degreesPerUnit": 6,
                         "wrapAt": 60
                     }
@@ -499,6 +501,7 @@ BlockDefinitionLoader.registerAll([
                         "dragVariable": {
                             "parameter": "secondDrag"
                         },
+                        "dragProperty": "secondVariable",
                         "degreesPerUnit": 6,
                         "wrapAt": 60
                     }
@@ -856,7 +859,7 @@ BlockDefinitionLoader.registerAll([
         "type": "compass",
         "category": "component",
         "displayName": "Compass",
-        "description": "Compass rose with cardinal labels, a needle whose heading comes from a model variable and a rose that a second variable can turn.",
+        "description": "Compass rose with cardinal labels, a needle whose heading comes from a model variable and a rose that a second variable can turn. The needle and the rim of the rose can be dragged to write those variables back.",
         "icon": "fa-light fa-compass",
         "tags": [
             "object",
@@ -868,7 +871,9 @@ BlockDefinitionLoader.registerAll([
         "capabilities": [
             "radial",
             "angular",
-            "reads-model"
+            "reads-model",
+            "interaction",
+            "writes-model"
         ],
         "parameters": [
             {
@@ -1044,6 +1049,16 @@ BlockDefinitionLoader.registerAll([
                 "value": {
                     "token": "font.weight.strong"
                 }
+            },
+            {
+                "id": "roseGrabRadius",
+                "formula": "r\\cdot0.7"
+            },
+            {
+                "id": "grabColor",
+                "value": {
+                    "token": "handle.stroke"
+                }
             }
         ],
         "root": {
@@ -1173,6 +1188,49 @@ BlockDefinitionLoader.registerAll([
                     }
                 },
                 {
+                    "id": "rose-grab",
+                    "type": "ring",
+                    "bindings": {
+                        "centerX": {
+                            "parameter": "cx"
+                        },
+                        "centerY": {
+                            "parameter": "cy"
+                        },
+                        "innerRadius": {
+                            "parameter": "roseGrabRadius"
+                        },
+                        "outerRadius": {
+                            "parameter": "r"
+                        }
+                    },
+                    "properties": {
+                        "fill": "none",
+                        "stroke": "none"
+                    },
+                    "behaviours": [
+                        {
+                            "type": "drag-rotate",
+                            "variable": {
+                                "parameter": "rotationVariable"
+                            },
+                            "property": "rotationVariable",
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            },
+                            "degreesPerUnit": 1,
+                            "wrapAt": 360,
+                            "hoverFill": {
+                                "parameter": "grabColor"
+                            },
+                            "hoverOpacity": 0.18
+                        }
+                    ]
+                },
+                {
                     "id": "needle-north",
                     "type": "pointer-hand",
                     "parameters": {
@@ -1195,7 +1253,13 @@ BlockDefinitionLoader.registerAll([
                         "color": {
                             "parameter": "needleColor"
                         },
-                        "style": "needle"
+                        "style": "needle",
+                        "dragVariable": {
+                            "parameter": "headingVariable"
+                        },
+                        "dragProperty": "headingVariable",
+                        "degreesPerUnit": 1,
+                        "wrapAt": 360
                     }
                 },
                 {
@@ -1221,7 +1285,14 @@ BlockDefinitionLoader.registerAll([
                         "color": {
                             "parameter": "tailColor"
                         },
-                        "style": "needle"
+                        "style": "needle",
+                        "dragVariable": {
+                            "parameter": "headingVariable"
+                        },
+                        "dragProperty": "headingVariable",
+                        "degreesPerUnit": 1,
+                        "offsetDegrees": 180,
+                        "wrapAt": 360
                     }
                 },
                 {

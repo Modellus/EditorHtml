@@ -194,7 +194,9 @@ var BlockComponentHelpers = {
             BlockComponentHelpers.parameter("color", "Colour", "colour", "token:stroke.strong"),
             BlockComponentHelpers.parameter("style", "Style", "string", "needle", { enumValues: ["needle", "line", "arrow"] }),
             BlockComponentHelpers.parameter("dragVariable", "Drag variable", "variable", "", { description: "Model variable written when the user drags this hand." }),
+            BlockComponentHelpers.parameter("dragProperty", "Drag property", "string", "", { description: "Component property written when the drag variable holds a plain number instead of naming a model term." }),
             BlockComponentHelpers.parameter("degreesPerUnit", "Degrees per unit", "number", 6),
+            BlockComponentHelpers.parameter("offsetDegrees", "Zero offset", "number", 0, { unit: "deg", description: "Angle the hand shows when the variable is zero, so a tail can be dragged as well as a tip." }),
             BlockComponentHelpers.parameter("wrapAt", "Wrap at", "number", 0, { minimum: 0 })
         ],
         create: (parameters, context) => {
@@ -251,9 +253,11 @@ var BlockComponentHelpers = {
                 behaviours.push({
                     type: "drag-angle",
                     variable: parameters.dragVariable,
+                    property: parameters.dragProperty,
                     centerX: centerX,
                     centerY: centerY,
                     degreesPerUnit: parameters.degreesPerUnit,
+                    offsetDegrees: parameters.offsetDegrees,
                     wrapAt: parameters.wrapAt
                 });
             }

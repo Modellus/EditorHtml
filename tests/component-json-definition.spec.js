@@ -5,6 +5,8 @@ const path = require('path');
 const BOARD_URL = '/pages/board/index.html';
 // Captured from the create() functions that used to build these components, before the JSON
 // definitions replaced them. They are the proof that the declarative form draws the same thing.
+// The compass entries were re-recorded when its rose gained a drag ring: that ring draws nothing,
+// so only the invisible node and the behaviours it carries separate them from the captured ones.
 const BASELINES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'coded-component-baselines.json'), 'utf8'));
 
 const cases = [

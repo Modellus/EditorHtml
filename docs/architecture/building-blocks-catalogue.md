@@ -383,6 +383,7 @@ Capabilities: `interaction`, `angular`, `writes-model`
 | Property | Type | Default | Range |
 | --- | --- | --- | --- |
 | `variable` | variable | "" |  |
+| `property` | string | "" |  |
 | `centerX` | number | 0 |  |
 | `centerY` | number | 0 |  |
 | `degreesPerUnit` | number | 6 |  |
@@ -390,6 +391,25 @@ Capabilities: `interaction`, `angular`, `writes-model`
 | `minimum` | number | null |  |
 | `maximum` | number | null |  |
 | `wrapAt` | number | null |  |
+
+### `drag-rotate` — Drag rotate
+
+Lets the user turn the node around an anchor point by dragging it. The variable moves by the angle the pointer travels, so the grabbed point follows the pointer instead of jumping to it, which is what a rose, a bezel or a dial ring needs.
+
+Capabilities: `interaction`, `angular`, `writes-model`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `variable` | variable | "" |  |
+| `property` | string | "" |  |
+| `centerX` | number | 0 |  |
+| `centerY` | number | 0 |  |
+| `degreesPerUnit` | number | 1 |  |
+| `minimum` | number | null |  |
+| `maximum` | number | null |  |
+| `wrapAt` | number | null |  |
+| `hoverFill` | colour | "none" |  |
+| `hoverOpacity` | number | 0.15 | min 0, max 1 |
 
 ### `draggable` — Draggable
 
@@ -487,9 +507,9 @@ Capabilities: `radial`, `angular`, `reads-model`
 
 ### `compass` — Compass
 
-Compass rose with cardinal labels, a needle whose heading comes from a model variable and a rose that a second variable can turn.
+Compass rose with cardinal labels, a needle whose heading comes from a model variable and a rose that a second variable can turn. The needle and the rim of the rose can be dragged to write those variables back.
 
-Capabilities: `radial`, `angular`, `reads-model`
+Capabilities: `radial`, `angular`, `reads-model`, `interaction`, `writes-model`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
@@ -579,7 +599,9 @@ Capabilities: `angular`, `rotation`, `interaction`
 | `color` | colour | "token:stroke.strong" |  |
 | `style` | string | "needle" | needle \| line \| arrow |
 | `dragVariable` | variable | "" |  |
+| `dragProperty` | string | "" |  |
 | `degreesPerUnit` | number | 6 |  |
+| `offsetDegrees` | number | 0 |  |
 | `wrapAt` | number | 0 | min 0 |
 
 ### `rotating-vector` — Rotating vector

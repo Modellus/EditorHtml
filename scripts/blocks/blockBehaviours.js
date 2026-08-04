@@ -95,6 +95,7 @@ var BlockBehaviours = {
         inputSchema: {
             properties: {
                 variable: { valueType: "variable", defaultValue: "", label: "Variable", bindable: false },
+                property: { valueType: "string", defaultValue: "", label: "Component property", description: "Property written when the variable holds a plain number instead of naming a model term." },
                 centerX: { valueType: "number", defaultValue: 0, label: "Anchor X" },
                 centerY: { valueType: "number", defaultValue: 0, label: "Anchor Y" },
                 degreesPerUnit: { valueType: "number", defaultValue: 6, label: "Degrees per unit" },
@@ -102,6 +103,29 @@ var BlockBehaviours = {
                 minimum: { valueType: "number", defaultValue: null, label: "Minimum" },
                 maximum: { valueType: "number", defaultValue: null, label: "Maximum" },
                 wrapAt: { valueType: "number", defaultValue: null, label: "Wrap at" }
+            }
+        }
+    });
+
+    registry.register({
+        type: "drag-rotate",
+        category: "behaviour",
+        displayName: "Drag rotate",
+        description: "Lets the user turn the node around an anchor point by dragging it. The variable moves by the angle the pointer travels, so the grabbed point follows the pointer instead of jumping to it, which is what a rose, a bezel or a dial ring needs.",
+        tags: ["interaction", "angle", "input", "rose", "bezel", "ring"],
+        capabilities: ["interaction", "angular", "writes-model"],
+        inputSchema: {
+            properties: {
+                variable: { valueType: "variable", defaultValue: "", label: "Variable", bindable: false },
+                property: { valueType: "string", defaultValue: "", label: "Component property", description: "Property written when the variable holds a plain number instead of naming a model term." },
+                centerX: { valueType: "number", defaultValue: 0, label: "Anchor X" },
+                centerY: { valueType: "number", defaultValue: 0, label: "Anchor Y" },
+                degreesPerUnit: { valueType: "number", defaultValue: 1, label: "Degrees per unit" },
+                minimum: { valueType: "number", defaultValue: null, label: "Minimum" },
+                maximum: { valueType: "number", defaultValue: null, label: "Maximum" },
+                wrapAt: { valueType: "number", defaultValue: null, label: "Wrap at" },
+                hoverFill: { valueType: "colour", defaultValue: "none", label: "Hover fill", description: "Colour the node takes while the pointer rests on it, so an otherwise invisible grab area shows itself." },
+                hoverOpacity: { valueType: "number", defaultValue: 0.15, minimum: 0, maximum: 1, label: "Hover opacity" }
             }
         }
     });

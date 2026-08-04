@@ -12,7 +12,8 @@ Five layers, one registry, no runtime code evaluation.
 ```
 Primitives   circle, rect, ellipse, line, polyline, polygon, arc, ring, path, text, image, group
 Modifiers    translate, rotate, scale, mirror, opacity, visibility, stroke, fill, z-order, repeat
-Behaviours   selectable, draggable, resizable, rotatable, hoverable, tooltip, drag-angle, clickable, …
+Behaviours   selectable, draggable, resizable, rotatable, hoverable, tooltip, drag-angle,
+             drag-rotate, clickable, …
 Bindings     constant | parameter | variable | expression | formula | token | format
 Components   dial-face, tick-ring, label-ring, pointer-hand, analogue-clock, compass, speedometer,
              circular-gauge, rotating-vector, orbit-system, + custom components
@@ -125,8 +126,8 @@ BlockRegistry.register({
 
 A behaviour with an `attach` function is applied by `BlockRenderer` right after the SVG is
 written. A behaviour without one is handled by the host shape
-(`ComponentShape.attachBlockBehaviour`) — that is where `drag-angle` and `clickable` live,
-because they need the board, the calculator and the shape's coordinate system.
+(`ComponentShape.attachBlockBehaviour`) — that is where `drag-angle`, `drag-rotate` and
+`clickable` live, because they need the board, the calculator and the shape's coordinate system.
 `selectable`, `draggable`, `resizable` and `rotatable` are registered for discovery only:
 every component gets them from `BaseShape`.
 

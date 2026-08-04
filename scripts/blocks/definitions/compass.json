@@ -3,10 +3,10 @@
     "type": "compass",
     "category": "component",
     "displayName": "Compass",
-    "description": "Compass rose with cardinal labels, a needle whose heading comes from a model variable and a rose that a second variable can turn.",
+    "description": "Compass rose with cardinal labels, a needle whose heading comes from a model variable and a rose that a second variable can turn. The needle and the rim of the rose can be dragged to write those variables back.",
     "icon": "fa-light fa-compass",
     "tags": ["object", "compass", "heading", "navigation", "dial"],
-    "capabilities": ["radial", "angular", "reads-model"],
+    "capabilities": ["radial", "angular", "reads-model", "interaction", "writes-model"],
     "parameters": [
         { "id": "headingVariable", "label": "Heading variable", "valueType": "variable", "defaultValue": "0", "category": "model" },
         { "id": "rotationVariable", "label": "Rose rotation variable", "valueType": "variable", "defaultValue": "0", "category": "model", "unit": "deg", "description": "Turns the rose, its ticks and its labels clockwise. The needle keeps its own heading." },
@@ -39,7 +39,9 @@
         { "id": "capRadius", "formula": "\\max\\left(2,r\\cdot0.06\\right)" },
         { "id": "strokeStrong", "value": { "token": "strokeWidth.strong" } },
         { "id": "strokeHairline", "value": { "token": "strokeWidth.hairline" } },
-        { "id": "cardinalWeight", "value": { "token": "font.weight.strong" } }
+        { "id": "cardinalWeight", "value": { "token": "font.weight.strong" } },
+        { "id": "roseGrabRadius", "formula": "r\\cdot0.7" },
+        { "id": "grabColor", "value": { "token": "handle.stroke" } }
     ],
     "root": {
         "id": "compass",
@@ -110,6 +112,33 @@
                 }
             },
             {
+                "id": "rose-grab",
+                "type": "ring",
+                "bindings": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "innerRadius": { "parameter": "roseGrabRadius" },
+                    "outerRadius": { "parameter": "r" }
+                },
+                "properties": {
+                    "fill": "none",
+                    "stroke": "none"
+                },
+                "behaviours": [
+                    {
+                        "type": "drag-rotate",
+                        "variable": { "parameter": "rotationVariable" },
+                        "property": "rotationVariable",
+                        "centerX": { "parameter": "cx" },
+                        "centerY": { "parameter": "cy" },
+                        "degreesPerUnit": 1,
+                        "wrapAt": 360,
+                        "hoverFill": { "parameter": "grabColor" },
+                        "hoverOpacity": 0.18
+                    }
+                ]
+            },
+            {
                 "id": "needle-north",
                 "type": "pointer-hand",
                 "parameters": {
@@ -120,7 +149,11 @@
                     "tailLength": 0,
                     "width": { "parameter": "needleWidth" },
                     "color": { "parameter": "needleColor" },
-                    "style": "needle"
+                    "style": "needle",
+                    "dragVariable": { "parameter": "headingVariable" },
+                    "dragProperty": "headingVariable",
+                    "degreesPerUnit": 1,
+                    "wrapAt": 360
                 }
             },
             {
@@ -134,7 +167,12 @@
                     "tailLength": 0,
                     "width": { "parameter": "needleWidth" },
                     "color": { "parameter": "tailColor" },
-                    "style": "needle"
+                    "style": "needle",
+                    "dragVariable": { "parameter": "headingVariable" },
+                    "dragProperty": "headingVariable",
+                    "degreesPerUnit": 1,
+                    "offsetDegrees": 180,
+                    "wrapAt": 360
                 }
             },
             {
