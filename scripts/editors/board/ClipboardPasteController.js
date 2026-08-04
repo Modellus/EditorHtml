@@ -5,6 +5,8 @@ class ClipboardPasteController {
         this.pointerPosition = null;
         this.mediaWidth = 300;
         this.mediaHeight = 200;
+        this.embedWidth = 400;
+        this.embedHeight = 225;
         this.dataTableWidth = 400;
         this.dataTableHeight = 300;
         this.textWidth = 400;
@@ -27,9 +29,16 @@ class ClipboardPasteController {
         return target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "MATH-FIELD" || target?.isContentEditable === true;
     }
 
+    getPastePoint() {
+        return this.pointerPosition ?? this.board.getClientCenter();
+    }
+
     getPastePosition(width, height) {
-        const center = this.pointerPosition ?? this.board.getClientCenter();
-        return { x: center.x - width / 2, y: center.y - height / 2 };
+        return this.centerPosition(this.getPastePoint(), width, height);
+    }
+
+    centerPosition(point, width, height) {
+        return { x: point.x - width / 2, y: point.y - height / 2 };
     }
 
     onPaste(event) {
@@ -58,7 +67,9 @@ class ClipboardPasteController {
         if (text.trim() === "")
             return;
         event.preventDefault();
-        if (this.isCsvText(text))
+        if (this.isUrlText(text))
+            this.pasteUrl(text.trim());
+        else if (this.isCsvText(text))
             this.pasteCsvText(text);
         else
             this.pasteText(text);
@@ -72,7 +83,70 @@ class ClipboardPasteController {
     }
 
     findMediaFile(clipboardData) {
-        return Array.from(clipboardData.files).find(file => file.type.startsWith("image/") || file.type.startsWith("video/")) ?? null;
+        return Array.from(clipboardData.files).find(file => this.getMediaKind(file.type) != null) ?? null;
+    }
+
+    getMediaKind(contentType) {
+        if (contentType.startsWith("image/"))
+            return "image";
+        if (contentType.startsWith("video/"))
+            return "video";
+        if (contentType.startsWith("audio/"))
+            return "audio";
+        return null;
+    }
+
+    escapeHtml(text) {
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    isUrlText(text) {
+        const trimmed = text.trim();
+        return /^https?:\/\/\S+$/i.test(trimmed);
+    }
+
+    getEmbedUrl(url) {
+        const youtubeId = this.getYoutubeVideoId(url);
+        if (youtubeId)
+            return `https://www.youtube.com/embed/${youtubeId}`;
+        const vimeoId = url.match(/^https?:\/\/(?:www\.)?vimeo\.com\/(\d+)/i)?.[1];
+        if (vimeoId)
+            return `https://player.vimeo.com/video/${vimeoId}`;
+        return null;
+    }
+
+    getYoutubeVideoId(url) {
+        const shortMatch = url.match(/^https?:\/\/(?:www\.)?youtu\.be\/([\w-]+)/i);
+        if (shortMatch)
+            return shortMatch[1];
+        const longMatch = url.match(/^https?:\/\/(?:www\.)?youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/)([\w-]+)/i);
+        if (longMatch)
+            return longMatch[1];
+        return null;
+    }
+
+    getUrlKindFromExtension(url) {
+        const path = url.split("?")[0].split("#")[0].toLowerCase();
+        if (/\.(png|jpe?g|gif|webp|svg|bmp|avif)$/.test(path))
+            return "image";
+        if (/\.(mp4|webm|ogv|mov|avi|mkv)$/.test(path))
+            return "video";
+        if (/\.(mp3|wav|ogg|m4a|aac|flac)$/.test(path))
+            return "audio";
+        if (/\.csv$/.test(path))
+            return "csv";
+        return null;
+    }
+
+    async getUrlKindFromContentType(url) {
+        let response;
+        try { response = await fetch(url, { method: "HEAD" }); } catch (_) { return null; }
+        if (!response.ok)
+            return null;
+        const contentType = (response.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+        if (contentType === "text/csv")
+            return "csv";
+        return this.getMediaKind(contentType);
     }
 
     findCsvFile(clipboardData) {
@@ -97,21 +171,58 @@ class ClipboardPasteController {
     }
 
     async pasteMediaFile(file) {
-        const position = this.getPastePosition(this.mediaWidth, this.mediaHeight);
+        const point = this.getPastePoint();
         const assetId = crypto.randomUUID();
         const url = await this.board.assetManager.uploadAsset(assetId, file, file.name);
         if (!url)
             return;
-        const shape = this.board.createShape("MediaShape", null, assetId);
+        this.addMediaShape(url, this.getMediaKind(file.type), point, assetId);
+    }
+
+    async pasteUrl(url) {
+        const point = this.getPastePoint();
+        const embedUrl = this.getEmbedUrl(url);
+        if (embedUrl) {
+            this.addMediaShape(embedUrl, "embed", point);
+            return;
+        }
+        const kind = this.getUrlKindFromExtension(url) ?? await this.getUrlKindFromContentType(url);
+        if (kind === "csv") {
+            this.pasteCsvUrl(url, point);
+            return;
+        }
+        if (kind == null) {
+            this.addLinkTextShape(url, point);
+            return;
+        }
+        this.addMediaShape(url, kind, point);
+    }
+
+    addLinkTextShape(url, point) {
+        const escapedUrl = this.escapeHtml(url);
+        this.addTextShape(`<a href="${escapedUrl}">${escapedUrl}</a>`, this.centerPosition(point, this.textWidth, this.textHeight));
+    }
+
+    addMediaShape(url, kind, point, id) {
+        const isEmbed = kind === "embed";
+        const width = isEmbed ? this.embedWidth : this.mediaWidth;
+        const height = isEmbed ? this.embedHeight : this.mediaHeight;
+        const position = this.centerPosition(point, width, height);
+        const shape = this.board.createShape("MediaShape", null, id);
         const properties = {
             name: this.shell.commands.uniquifyShapeName("Media"),
             x: position.x,
             y: position.y,
-            width: this.mediaWidth,
-            height: this.mediaHeight
+            width: width,
+            height: height
         };
-        if (file.type.startsWith("video/"))
+        if (isEmbed) {
+            properties.embedUrl = url;
+            properties.mediaAspectRatio = width / height;
+        } else if (kind === "video")
             properties.videoUrl = url;
+        else if (kind === "audio")
+            properties.audioUrl = url;
         else
             properties.imageUrl = url;
         shape.setProperties(properties);
@@ -126,6 +237,20 @@ class ClipboardPasteController {
         const position = this.getPastePosition(this.dataTableWidth, this.dataTableHeight);
         const text = await file.text();
         this.addDataTableShape(text, position);
+    }
+
+    async pasteCsvUrl(url, point) {
+        let text;
+        try {
+            const response = await fetch(url);
+            if (!response.ok)
+                throw new Error(response.status);
+            text = await response.text();
+        } catch (_) {
+            this.addLinkTextShape(url, point);
+            return;
+        }
+        this.addDataTableShape(text, this.centerPosition(point, this.dataTableWidth, this.dataTableHeight));
     }
 
     addDataTableShape(text, position) {
@@ -143,7 +268,10 @@ class ClipboardPasteController {
     }
 
     pasteText(text) {
-        const position = this.getPastePosition(this.textWidth, this.textHeight);
+        this.addTextShape(text, this.getPastePosition(this.textWidth, this.textHeight));
+    }
+
+    addTextShape(text, position) {
         const shape = this.board.createShape("TextShape", null);
         shape.setProperties({
             name: this.shell.commands.uniquifyShapeName("Text"),

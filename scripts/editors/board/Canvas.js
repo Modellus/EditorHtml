@@ -120,6 +120,7 @@ class Canvas {
             this.connectorIndex.unregister(shape);
         this.selection.deselect(shape);
         this.dispatchShapeEvent("shapeRemoved", shape);
+        shape.onRemoved();
     }
 
     getShape(id) {

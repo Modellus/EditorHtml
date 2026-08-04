@@ -1853,6 +1853,9 @@ class BaseShape {
             this.shapeNameLayer.parentNode.removeChild(this.shapeNameLayer);
     }
 
+    onRemoved() {
+    }
+
     getShapeNameColor() {
         return this.properties.nameColor ?? this.properties.foregroundColor ?? "#000000";
     }

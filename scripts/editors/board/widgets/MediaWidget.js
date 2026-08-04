@@ -18,7 +18,7 @@ class MediaShape extends BaseShape {
     }
 
     _getMediaIcon() {
-        if (this.properties.videoUrl)
+        if (this.properties.videoUrl || this.properties.embedUrl)
             return "fa-light fa-film";
         if (this.properties.audioUrl)
             return "fa-light fa-music";
@@ -57,6 +57,7 @@ class MediaShape extends BaseShape {
 
     onImageControlChanged(url, mimeType) {
         this.properties.imageBase64 = "";
+        this.properties.embedUrl = "";
         if (typeof mimeType === "string" && mimeType.startsWith("video/")) {
             this.properties.imageUrl = "";
             this.properties.audioUrl = "";
@@ -79,6 +80,7 @@ class MediaShape extends BaseShape {
         this.properties.imageBase64 = "";
         this.properties.videoUrl = "";
         this.properties.audioUrl = "";
+        this.properties.embedUrl = "";
         this.setPropertyCommand("imageUrl", "");
         this._updateMediaSettingsButtonIcon();
     }
@@ -94,6 +96,7 @@ class MediaShape extends BaseShape {
         this.properties.imageBase64 = "";
         this.properties.videoUrl = "";
         this.properties.audioUrl = "";
+        this.properties.embedUrl = "";
         this.properties.videoStepsPerFrame = 1;
         this.properties.lockAspectRatio = true;
         this.properties.mediaAspectRatio = 0;
@@ -161,7 +164,22 @@ class MediaShape extends BaseShape {
         const isNonSynced = this.properties.mediaSynced === false;
         const videoUrl = this.properties.videoUrl ?? "";
         const audioUrl = this.properties.audioUrl ?? "";
+        const embedUrl = this.properties.embedUrl ?? "";
         const isSelected = this.board.selection.selectedShape === this;
+        if (embedUrl) {
+            this._overlayVideoElement.style.display = "none";
+            this._overlayAudioElement.style.display = "none";
+            this._overlayFrameElement.style.display = "block";
+            if (this._loadedOverlayUrl !== embedUrl) {
+                this._loadedOverlayUrl = embedUrl;
+                this._overlayFrameElement.src = embedUrl;
+            }
+            this._mediaOverlayDiv.style.pointerEvents = isSelected ? "auto" : "none";
+            this._mediaOverlayDiv.style.display = "block";
+            this._positionMediaOverlay();
+            return;
+        }
+        this._overlayFrameElement.style.display = "none";
         if (!isNonSynced || !(videoUrl || audioUrl)) {
             this._mediaOverlayDiv.style.display = "none";
             return;
@@ -190,6 +208,14 @@ class MediaShape extends BaseShape {
         this._mediaOverlayDiv.style.pointerEvents = isSelected ? "auto" : "none";
         this._mediaOverlayDiv.style.display = "block";
         this._positionMediaOverlay();
+    }
+
+    onRemoved() {
+        this._mediaOverlayDiv.style.display = "none";
+        this._overlayFrameElement.src = "";
+        this._overlayVideoElement.pause();
+        this._overlayAudioElement.pause();
+        this._loadedOverlayUrl = null;
     }
 
     _onVideoOverlayPointerDown(event) {
@@ -294,10 +320,16 @@ class MediaShape extends BaseShape {
         this._overlayVideoElement.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:none;object-fit:contain;";
         this._overlayAudioElement = document.createElement("audio");
         this._overlayAudioElement.style.cssText = "width:100%;display:none;";
+        this._overlayFrameElement = document.createElement("iframe");
+        this._overlayFrameElement.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:none;border:0;";
+        this._overlayFrameElement.setAttribute("allow", "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture");
+        this._overlayFrameElement.setAttribute("allowfullscreen", "");
+        this._overlayFrameElement.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
         this._mediaOverlayDiv.addEventListener("pointerdown", event => this._onVideoOverlayPointerDown(event), { capture: true });
         this._mediaOverlayDiv.addEventListener("click", event => this._onVideoOverlayClick(event), { capture: true });
         this._mediaOverlayDiv.appendChild(this._overlayVideoElement);
         this._mediaOverlayDiv.appendChild(this._overlayAudioElement);
+        this._mediaOverlayDiv.appendChild(this._overlayFrameElement);
         this._mediaOverlayDiv.addEventListener("mouseleave", () => {
             if (this.board.selection.selectedShape !== this) {
                 this._isActive = false;
@@ -378,8 +410,15 @@ class MediaShape extends BaseShape {
         const isNonSynced = this.properties.mediaSynced === false;
         const videoUrl = this.properties.videoUrl ?? "";
         const audioUrl = this.properties.audioUrl ?? "";
+        const embedUrl = this.properties.embedUrl ?? "";
         if (this._mediaOverlayDiv.style.display !== "none")
             this._positionMediaOverlay();
+        if (embedUrl) {
+            this._updateControlsOverlay();
+            this.image.setAttribute("display", "none");
+            this.videoForeignObject.setAttribute("display", "none");
+            return;
+        }
         if (videoUrl) {
             if (isNonSynced) {
                 this.image.setAttribute("display", "none");
