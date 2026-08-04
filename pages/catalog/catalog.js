@@ -659,7 +659,7 @@ class ModelsApp {
       }
       return items;
     }
-    items.push({ text: this.translations.get("Open"), icon: "fa-light fa-arrow-up-right-from-square", action: () => this.openModel(modelData) });
+    items.push({ text: this.translations.get("Duplicate"), icon: "fa-light fa-clone", action: () => this.duplicateModel(modelData) });
     items.push({ text: this.translations.get("Open in new tab"), icon: "fa-light fa-up-right-from-square", action: () => this.openModelInNewTab(modelData) });
     items.push({ text: this.translations.get("Copy link"), icon: "fa-light fa-link", action: () => this.copyModelLink(modelData) });
     if (canEdit) {
@@ -4176,6 +4176,25 @@ class ModelsApp {
       this.loadModels();
     } catch (error) {
       this.setStatus(error && error.message ? error.message : this.translations.get("Failed to update visibility."), true);
+    }
+  }
+
+  async duplicateModel(modelData) {
+    const modelId = modelData && modelData.id;
+    if (!modelId)
+      return;
+    this.userSdk.refreshState(this.state);
+    if (!this.state.session || !this.state.session.token) {
+      this.setStatus(this.translations.get("Sign-in required to create a model."), true);
+      return;
+    }
+    this.setStatus(this.translations.get("Duplicating model…"));
+    try {
+      await this.apiClient.createModel({}, modelId);
+      this.setStatus(this.translations.get("Model duplicated."));
+      this.loadModels();
+    } catch (error) {
+      this.setStatus(error && error.message ? error.message : this.translations.get("Failed to duplicate model."), true);
     }
   }
 
