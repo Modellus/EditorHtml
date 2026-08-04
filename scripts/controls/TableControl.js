@@ -457,7 +457,7 @@ class TableControl {
         const titleWidth = this.estimateTextWidth(Utils.normalizeMathTermForWidth(title), Number(this.options.headerFontSize) || 16);
         let caseIconWidth = 0;
         if (column?.showCase === true)
-            caseIconWidth = Utils.getCaseIconSize(column.caseNumber, Number(this.options.headerFontSize) || 16).width + 8;
+            caseIconWidth = Utils.getCaseIconSize(column.caseNumber, Number(this.options.headerFontSize) || 16).width + Utils.caseIconGap;
         const paddingWidth = 18;
         return Math.max(this.getMinColumnWidth(), Math.ceil(titleWidth + caseIconWidth + paddingWidth));
     }

@@ -1,4 +1,6 @@
     class TermDisplay {
+    static _labelFontSize = null;
+
     constructor(shape) {
         this.shape = shape;
         this.layer = null;
@@ -202,24 +204,26 @@
         return { group: labelGroup, backgroundRect: backgroundRect, caseIconGroup: caseIconGroup, labelText: labelText };
     }
 
+    getLabelFontSize(labelText) {
+        if (TermDisplay._labelFontSize == null)
+            TermDisplay._labelFontSize = parseFloat(getComputedStyle(labelText).fontSize) || 10;
+        return TermDisplay._labelFontSize;
+    }
+
     getCaseIconLayout(label, labelText) {
-        const iconSize = 9;
-        const gap = 3;
+        const iconSize = this.getLabelFontSize(labelText);
+        const gap = Utils.caseIconGap + Utils.termLabelPaddingX;
         const y = label.y - iconSize / 2;
         if (!label.caseNumber)
             return { visible: false, iconSize: iconSize, iconX: 0, iconY: y, textX: label.x };
         if (label.anchor == "start")
             return { visible: true, iconSize: iconSize, iconX: label.x, iconY: y, textX: label.x + iconSize + gap };
-        if (label.anchor == "end")
-            return { visible: true, iconSize: iconSize, iconX: label.x - iconSize, iconY: y, textX: label.x - iconSize - gap };
         let labelLeft = label.x;
         if (labelText?.getBBox)
             try {
                 labelLeft = labelText.getBBox().x;
             } catch (_) {}
-        const textX = label.x;
-        const iconX = labelLeft - gap - iconSize;
-        return { visible: true, iconSize: iconSize, iconX: iconX, iconY: y, textX: textX };
+        return { visible: true, iconSize: iconSize, iconX: labelLeft - gap - iconSize, iconY: y, textX: label.x };
     }
 
     applyCaseIcon(caseIconGroup, caseNumber, layout) {

@@ -193,6 +193,8 @@ class Utils {
     static _caseIconData = {};
     static _caseIconsLoadingPromise = null;
     static _caseIconsLoadedCallbacks = [];
+    static caseIconGap = 3;
+    static termLabelPaddingX = 4;
 
     static getCaseIconColor(caseNumber) {
         const caseColors = [
@@ -205,7 +207,7 @@ class Utils {
 
     static getCaseIconSize(caseNumber, fontSize) {
         const iconData = Utils._caseIconData[caseNumber];
-        const baseHeight = Math.max(8, fontSize * 0.85);
+        const baseHeight = Math.max(8, fontSize);
         const iconWidth = iconData?.width ?? 448;
         const iconHeight = iconData?.height ?? 512;
         return { width: baseHeight * (iconWidth / iconHeight), height: baseHeight };
@@ -215,7 +217,7 @@ class Utils {
         const termWidth = Utils.estimateMathTermWidth(termLatex, fontSize);
         if (caseNumber == null)
             return termWidth;
-        return termWidth + 3 + Utils.getCaseIconSize(caseNumber, fontSize).width;
+        return termWidth + Utils.caseIconGap + Utils.getCaseIconSize(caseNumber, fontSize).width;
     }
 
     static ensureCaseIconsLoaded(onLoaded) {
@@ -260,17 +262,17 @@ class Utils {
         const svgNs = "http://www.w3.org/2000/svg";
         const group = document.createElementNS(svgNs, "g");
         layer.appendChild(group);
+        let termX = x;
         if (caseNumber != null) {
+            const iconSize = Utils.getCaseIconSize(caseNumber, fontSize);
+            termX = x + iconSize.width + Utils.caseIconGap;
             const iconData = Utils._caseIconData[caseNumber];
             if (iconData?.pathData) {
-                const iconSize = Utils.getCaseIconSize(caseNumber, fontSize);
-                const termWidth = Utils.estimateMathTermWidth(termLatex, fontSize);
-                const iconX = x + termWidth + 3;
                 const topY = baselineY - iconSize.height * 0.82;
                 const scaleX = iconSize.width / iconData.width;
                 const scaleY = iconSize.height / iconData.height;
                 const iconGroup = document.createElementNS(svgNs, "g");
-                iconGroup.setAttribute("transform", `translate(${iconX} ${topY}) scale(${scaleX} ${scaleY})`);
+                iconGroup.setAttribute("transform", `translate(${x} ${topY}) scale(${scaleX} ${scaleY})`);
                 const iconPath = document.createElementNS(svgNs, "path");
                 iconPath.setAttribute("d", iconData.pathData);
                 iconPath.setAttribute("fill", Utils.getCaseIconColor(caseNumber));
@@ -294,7 +296,7 @@ class Utils {
                 cloned.style.color = fill;
                 cloned.style.overflow = "visible";
                 const wrapper = document.createElementNS(svgNs, "g");
-                wrapper.setAttribute("transform", `translate(${x}, ${topY})`);
+                wrapper.setAttribute("transform", `translate(${termX}, ${topY})`);
                 wrapper.appendChild(cloned);
                 group.appendChild(wrapper);
             });
@@ -406,7 +408,7 @@ class Utils {
     }
 
     static applyTermLabelBackground(backgroundRect, textElement, color, anchor) {
-        const paddingX = 4;
+        const paddingX = Utils.termLabelPaddingX;
         const paddingY = 2;
         let textWidth = 0;
         let textHeight = 12;

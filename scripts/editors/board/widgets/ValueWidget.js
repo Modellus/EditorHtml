@@ -456,20 +456,35 @@ class ValueShape extends BaseShape {
         Utils.setTermValueTextContent(this.valueText, termText, valueText);
     }
 
+    getValueFontSize() {
+        const resolvedFontSize = this.resolveTermNumeric(this.properties.fontSizeTerm, this.properties.fontSizeTermCase ?? 1);
+        return Number.isFinite(resolvedFontSize) ? Math.max(1, resolvedFontSize) : 14;
+    }
+
+    isCaseIconVisible(termText) {
+        return this.shouldShowCaseIcon(termText) && termText !== "";
+    }
+
+    getCaseIconOffset(termText) {
+        if (!this.isCaseIconVisible(termText))
+            return 0;
+        return (this.getValueFontSize() + Utils.caseIconGap) / 2;
+    }
+
     updateCaseIcon(caseNumber, termText, showCaseIcon) {
-        Utils.applyCaseIconSvg(this.caseIconGroup, 0, 0, 10, showCaseIcon && termText !== "" ? caseNumber : null);
+        Utils.applyCaseIconSvg(this.caseIconGroup, 0, 0, this.getValueFontSize(), showCaseIcon && termText !== "" ? caseNumber : null);
     }
 
     placeCaseIcon(position, width, height) {
         if (!this.caseIconGroup.firstChild)
             return;
-        let textRight = position.x + width / 2;
+        const iconSize = this.getValueFontSize();
+        let textLeft = position.x + width / 2;
         try {
             const box = this.valueText.getBBox();
-            textRight = box.x + box.width;
+            textLeft = box.x;
         } catch (_) {}
-        const iconSize = 10;
-        const iconX = Math.min(position.x + width - iconSize - 4, textRight + 4);
+        const iconX = textLeft - Utils.caseIconGap - iconSize;
         const iconY = position.y + (height - iconSize) / 2;
         this.caseIconGroup.setAttribute("transform", `translate(${iconX} ${iconY})`);
     }
@@ -548,18 +563,17 @@ class ValueShape extends BaseShape {
         const valueText = this.resolveDisplayedValue(termText, caseNumber);
         const isEditingCurrentTerm = this.isEditingValue && this.editingTerm === termText && termText !== "";
         const textVerticalOffset = isEditingCurrentTerm ? this.getEditingTextVerticalOffset() : 0;
-        this.valueText.setAttribute("x", `${position.x + width / 2}`);
+        this.valueText.setAttribute("x", `${position.x + width / 2 + this.getCaseIconOffset(termText)}`);
         this.valueText.setAttribute("y", `${position.y + height / 2 + textVerticalOffset}`);
         this.valueText.setAttribute("fill", this.isMissingTermReference(termText) ? "#d13438" : this.properties.foregroundColor);
-        const resolvedFontSize = this.resolveTermNumeric(this.properties.fontSizeTerm, this.properties.fontSizeTermCase ?? 1);
-        this.valueText.setAttribute("font-size", Number.isFinite(resolvedFontSize) ? Math.max(1, resolvedFontSize) : 14);
+        this.valueText.setAttribute("font-size", this.getValueFontSize());
         this.valueText.setAttribute("font-weight", this.properties.fontBold ? "bold" : "normal");
         this.valueText.setAttribute("font-style", this.properties.fontItalic ? "italic" : "normal");
         this.setValueTextContent(this.properties.termDisplayMode === "nameValue" ? termText : "", valueText);
         const valueTextBounds = isEditingCurrentTerm ? this.getValueTextBounds() : null;
         if (isEditingCurrentTerm && this.valueText.lastChild)
             this.valueText.lastChild.setAttribute("fill-opacity", "0");
-        this.updateCaseIcon(caseNumber, termText, this.shouldShowCaseIcon(termText));
+        this.updateCaseIcon(caseNumber, termText, this.isCaseIconVisible(termText));
         this.placeCaseIcon(position, width, height);
         if (isEditingCurrentTerm) {
             this.showValueEditor();
