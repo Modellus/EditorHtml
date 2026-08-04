@@ -2776,7 +2776,7 @@ class ModelsApp {
         const usage = await this.apiClient.fetchModelUsage(model.id);
         return {
           model,
-          totalUsage: typeof usage?.total_usage === "number" ? usage.total_usage : this.getModelUsageCount(model),
+          totalUsage: typeof usage?.usage_count === "number" ? usage.usage_count : this.getModelUsageCount(model),
           distinctUsers: typeof usage?.distinct_users === "number" ? usage.distinct_users : null
         };
       } catch {
@@ -2803,9 +2803,9 @@ class ModelsApp {
     const rowsMarkup = entries.map(entry => {
       const label = entry.model.title || this.translations.get("Untitled model");
       const width = Math.max(6, Math.round((entry.totalUsage / maximumUsage) * 100));
-      const usersMarkup = entry.distinctUsers === null
-        ? ""
-        : ` <small>· ${this.formatDashboardNumber(entry.distinctUsers)} ${this.translations.get("users")}</small>`;
+      const usageParts = [`${this.formatDashboardNumber(entry.totalUsage)} ${this.translations.get("usage")}`];
+      if (entry.distinctUsers !== null)
+        usageParts.unshift(`${this.formatDashboardNumber(entry.distinctUsers)} ${this.translations.get("users")}`);
       const authorName = entry.model.creator_name || "";
       const metaLabel = [authorName, this.formatDashboardDate(entry.model.createdAt)]
         .filter(Boolean).join(" · ");
@@ -2819,7 +2819,7 @@ class ModelsApp {
         <div class="usage-breakdown-row">
           <div class="usage-breakdown-row-head">
             <span class="usage-breakdown-label">${this.escapeHtml(label)}</span>
-            <span class="usage-breakdown-count">${this.formatDashboardNumber(entry.totalUsage)} ${this.translations.get("uses")}${usersMarkup}</span>
+            <span class="usage-breakdown-count">${this.escapeHtml(usageParts.join(" · "))}</span>
           </div>
           ${metaMarkup}
           <div class="usage-breakdown-track"><span style="width:${width}%"></span></div>

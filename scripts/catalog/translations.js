@@ -294,7 +294,7 @@ CatalogTranslations._strings = {
     "Try again": "Try again",
     "Top models": "Top models",
     "By total usage and distinct users": "By total usage and distinct users",
-    "uses": "uses",
+    "usage": "usage",
     "users": "users",
     "different user countries": "different user countries",
     "Untitled model": "Untitled model"
@@ -465,7 +465,7 @@ CatalogTranslations._strings = {
     "Try again": "Tentar novamente",
     "Top models": "Modelos mais usados",
     "By total usage and distinct users": "Por utilizações totais e utilizadores distintos",
-    "uses": "utilizações",
+    "usage": "utilizações",
     "users": "utilizadores",
     "different user countries": "países diferentes de utilizadores",
     "Untitled model": "Modelo sem título"
