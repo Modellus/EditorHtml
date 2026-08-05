@@ -3,6 +3,8 @@ class BaseShape {
     static embeddedFontStyles = "";
     static embeddedMathStyles = "";
     static interactiveHandleClasses = ["splitter", "gauge-pointer"];
+    static defaultNameFontSize = 10;
+    static nameFontSizes = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48];
     static shapeIcons = {
         BodyShape: "fa-light fa-circle",
         PointShape: "fa-solid fa-dot",
@@ -133,6 +135,8 @@ class BaseShape {
         this.properties.opacity = 1;
         this.properties.showName = false;
         this.properties.nameColor = null;
+        this.properties.nameFontSize = BaseShape.defaultNameFontSize;
+        this.properties.nameBackgroundColor = "transparent";
         this.properties.visibleToUsers = true;
         this.properties.lockedForUsers = false;
         this.properties.interactableForUsers = true;
@@ -1833,6 +1837,7 @@ class BaseShape {
     initializeShapeNameLayer() {
         this.shapeNameLayer = null;
         this.shapeNameText = null;
+        this.shapeNameBackground = null;
         if (!this.element)
             return;
         this.shapeNameLayer = this.board.createSvgElement("g");
@@ -1860,6 +1865,20 @@ class BaseShape {
 
     getShapeNameColor() {
         return this.properties.nameColor ?? this.properties.foregroundColor ?? "#000000";
+    }
+
+    getShapeNameFontSize() {
+        const fontSize = Number(this.properties.nameFontSize);
+        if (!Number.isFinite(fontSize) || fontSize <= 0)
+            return BaseShape.defaultNameFontSize;
+        return Math.min(200, Math.max(4, fontSize));
+    }
+
+    getShapeNameBackgroundColor() {
+        const backgroundColor = this.properties.nameBackgroundColor;
+        if (backgroundColor == null || backgroundColor === "" || backgroundColor === "transparent" || backgroundColor === "#00000000")
+            return null;
+        return backgroundColor;
     }
 
     getBorderColor() {
@@ -1895,7 +1914,7 @@ class BaseShape {
     }
 
     getShapeNameLabelAnchor() {
-        const margin = 8;
+        const margin = 4 + this.getShapeNameFontSize() * 0.4;
         const position = this.getBoardPosition?.();
         if (!position)
             return null;
@@ -1917,22 +1936,44 @@ class BaseShape {
         return { x: position.x, y: position.y - margin };
     }
 
+    ensureShapeNameElements() {
+        if (!this.shapeNameBackground) {
+            this.shapeNameBackground = this.board.createSvgElement("rect");
+            this.shapeNameBackground.setAttribute("class", "shape-name-label-bg");
+            this.shapeNameBackground.setAttribute("rx", "3");
+            this.shapeNameBackground.setAttribute("display", "none");
+            this.shapeNameLayer.insertBefore(this.shapeNameBackground, this.shapeNameLayer.firstChild);
+        }
+        if (!this.shapeNameText) {
+            this.shapeNameText = this.board.createSvgElement("text");
+            this.shapeNameText.setAttribute("class", "shape-name-label");
+            this.shapeNameLayer.appendChild(this.shapeNameText);
+        }
+    }
+
+    applyShapeNameBackground() {
+        const backgroundColor = this.getShapeNameBackgroundColor();
+        if (!backgroundColor) {
+            this.shapeNameBackground.setAttribute("display", "none");
+            return;
+        }
+        Utils.applyTermLabelBackground(this.shapeNameBackground, this.shapeNameText, backgroundColor, "middle");
+    }
+
     drawShapeNameLabel() {
         if (!this.shapeNameLayer)
             return;
         if (!this.isShapeNameVisible()) {
             if (this.shapeNameText)
                 this.shapeNameText.textContent = "";
+            if (this.shapeNameBackground)
+                this.shapeNameBackground.setAttribute("display", "none");
             return;
         }
         const anchor = this.getShapeNameLabelAnchor();
         if (!anchor)
             return;
-        if (!this.shapeNameText) {
-            this.shapeNameText = this.board.createSvgElement("text");
-            this.shapeNameText.setAttribute("class", "shape-name-label");
-            this.shapeNameLayer.appendChild(this.shapeNameText);
-        }
+        this.ensureShapeNameElements();
         if (this.shapeNameLayer.parentNode == this.element && this.shapeNameLayer.nextSibling != null)
             this.element.appendChild(this.shapeNameLayer);
         if (this.board?.svg && this.shapeNameLayer.parentNode == this.board.svg && this.board.svg.lastChild != this.shapeNameLayer)
@@ -1941,7 +1982,9 @@ class BaseShape {
         this.shapeNameText.setAttribute("y", anchor.y);
         this.shapeNameText.setAttribute("text-anchor", "middle");
         this.shapeNameText.setAttribute("fill", this.getShapeNameColor());
+        this.shapeNameText.style.fontSize = `${this.getShapeNameFontSize()}px`;
         this.shapeNameText.textContent = this.properties.name;
+        this.applyShapeNameBackground();
     }
 
     static escapeMathTermName(text) {

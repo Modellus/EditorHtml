@@ -596,6 +596,18 @@
           "default": null,
           "description": "Color of the name label. Inherits foregroundColor when null."
         },
+        "nameFontSize": {
+          "type": "number",
+          "default": 10,
+          "minimum": 4,
+          "maximum": 200,
+          "description": "Font size in canvas pixels used to render the name label."
+        },
+        "nameBackgroundColor": {
+          "type": "string",
+          "default": "transparent",
+          "description": "Background color drawn behind the name label (hex or 'transparent')."
+        },
         "visibleToUsers": {
           "type": "boolean",
           "default": true,

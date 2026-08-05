@@ -248,8 +248,11 @@ var ShapeToolbarPresentationMixin = {
     },
     refreshNameToolbarControl() {
         this._nameTextBoxInstance?.option("value", this.properties.name);
+        this._nameFontSizeInstance?.option("value", this.getNameFontSizeValue());
         if (this._nameColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._nameColorPicker, this.properties.nameColor);
+        if (this._nameBackgroundColorPicker)
+            this.getColorControl().refreshColorPickerButtonTemplate(this._nameBackgroundColorPicker, this.properties.nameBackgroundColor);
     },
     // The actions menu content is built once and kept, so the solid icon that
     // marks an axis as flipped is updated in place instead of re-rendered.
@@ -459,13 +462,37 @@ var BaseShapeToolbarMixin = {
             buildControl: $container => $container.append(this.createOpacitySliderControl())
         };
     },
+    getNameFontSizeValue() {
+        return this.getShapeNameFontSize?.() ?? BaseShape.defaultNameFontSize;
+    },
+    createNameFontSizeControl() {
+        const fontSizeHost = $("<div>").addClass("name-packed-control__size");
+        fontSizeHost.dxSelectBox({
+            items: BaseShape.nameFontSizes,
+            value: this.getNameFontSizeValue(),
+            stylingMode: "filled",
+            acceptCustomValue: true,
+            dropDownOptions: { container: document.body, wrapperAttr: this.getShapeNestedOverlayWrapperAttr() },
+            onInitialized: e => { this._nameFontSizeInstance = e.component; },
+            onCustomItemCreating: event => {
+                const customFontSize = Number(event.text);
+                event.customItem = Number.isFinite(customFontSize) && customFontSize > 0 ? customFontSize : null;
+            },
+            onValueChanged: event => {
+                if (event.value != null)
+                    this.setPropertyCommand("nameFontSize", Number(event.value));
+            }
+        });
+        return fontSizeHost;
+    },
     createNameFormControl() {
         const control = $("<div>").addClass("name-packed-control");
         const visibilityHost = $("<div>").addClass("name-packed-control__button");
         const colorHost = $("<div>").addClass("name-packed-control__color");
+        const backgroundColorHost = $("<div>").addClass("name-packed-control__color");
         const inputHost = $("<div>").addClass("name-packed-control__input");
         const isVisible = this.properties.showName === true;
-        control.append(visibilityHost, colorHost, inputHost);
+        control.append(visibilityHost, colorHost, backgroundColorHost, this.createNameFontSizeControl(), inputHost);
         TermControl.createVisibilityCheckbox(visibilityHost, isVisible, value => {
             this.setPropertyCommand("showName", value);
         });
@@ -473,6 +500,10 @@ var BaseShapeToolbarMixin = {
         colorPicker.addClass("name-packed-control__picker");
         this._nameColorPicker = colorPicker;
         colorHost.append(colorPicker);
+        const backgroundColorPicker = this.createColorPickerEditor("nameBackgroundColor");
+        backgroundColorPicker.addClass("name-packed-control__picker");
+        this._nameBackgroundColorPicker = backgroundColorPicker;
+        backgroundColorHost.append(backgroundColorPicker);
         inputHost.dxTextBox({
             value: this.properties.name,
             stylingMode: "filled",
