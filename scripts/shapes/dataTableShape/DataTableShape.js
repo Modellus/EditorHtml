@@ -137,26 +137,22 @@ class DataTableShape extends BaseValueTableShape {
 
     renderDataCaseButtonTemplate(element) {
         const caseNumber = this.getClampedCaseNumber(this.properties.dataCase ?? 1);
-        const iconClass = TermControl.getCaseNumberIconClass(caseNumber);
-        const iconColor = TermControl.getCaseIconColor(caseNumber);
-        element.innerHTML = `<span class="mdl-name-btn-term"><i class="${iconClass}" style="color:${iconColor}"></i></span>`;
+        element.innerHTML = `<span class="mdl-name-btn-term"></span>`;
+        element.firstChild.appendChild(Utils.createCaseIconHost(caseNumber));
     }
 
     buildDataCaseMenuContent(contentElement) {
         const casesCount = this.getCasesCount();
         const items = [];
         for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
-            items.push({
-                value: caseNumber,
-                iconClass: TermControl.getCaseNumberIconClass(caseNumber),
-                iconColor: TermControl.getCaseIconColor(caseNumber)
-            });
+            items.push({ value: caseNumber });
         $(contentElement).empty();
         $('<div>').appendTo(contentElement).dxList({
             dataSource: items,
             scrollingEnabled: false,
             itemTemplate: (itemData, _, itemElement) => {
-                itemElement[0].innerHTML = `<div class="mdl-dropdown-list-item mdl-dropdown-list-item--icon-only"><i class="${itemData.iconClass}" style="color:${itemData.iconColor}"></i></div>`;
+                itemElement[0].innerHTML = `<div class="mdl-dropdown-list-item mdl-dropdown-list-item--icon-only"></div>`;
+                Utils.renderCaseIcon(itemElement[0].firstChild, itemData.value);
             },
             onItemClick: event => {
                 this.getDropDownButtonInstance(this._dataCaseElement)?.close();

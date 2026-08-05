@@ -68,11 +68,10 @@ class CasesTableShape extends BaseTableShape {
 
     renderTermsButtonTemplate(element) {
         const visibleCaseNumbers = this.getVisibleCaseNumbers();
-        const iconClass = TermControl.getCaseNumberIconClass(visibleCaseNumbers[0]);
-        const iconColor = TermControl.getCaseIconColor(visibleCaseNumbers[0]);
         const extraCount = visibleCaseNumbers.length - 1;
         const extraPart = extraCount > 0 ? `<span class="mdl-name-btn-term"><span class="mdl-name-btn-extra">+${extraCount}</span></span>` : "";
-        element.innerHTML = `<span class="mdl-name-btn-term"><i class="${iconClass}" style="color:${iconColor}"></i></span>${extraPart}`;
+        element.innerHTML = `<span class="mdl-name-btn-term"></span>${extraPart}`;
+        element.firstChild.appendChild(Utils.createCaseIconHost(visibleCaseNumbers[0]));
     }
 
     refreshShapeSpecificToolbarControls() {
@@ -85,11 +84,7 @@ class CasesTableShape extends BaseTableShape {
         const casesCount = this.getCasesCount();
         const items = [];
         for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
-            items.push({
-                key: caseNumber,
-                iconClass: TermControl.getCaseNumberIconClass(caseNumber),
-                iconColor: TermControl.getCaseIconColor(caseNumber)
-            });
+            items.push({ key: caseNumber });
         const container = $('<div>');
         container.dxButtonGroup({
             items: items,
@@ -98,9 +93,7 @@ class CasesTableShape extends BaseTableShape {
             selectedItemKeys: this.getVisibleCaseNumbers(),
             stylingMode: "outlined",
             elementAttr: { class: "mdl-pill-group mdl-small-icon shape-cases-visibility-group" },
-            buttonTemplate: (data, buttonContainer) => {
-                buttonContainer[0].innerHTML = `<i class="${data.iconClass}" style="color:${data.iconColor}"></i>`;
-            },
+            buttonTemplate: (data, buttonContainer) => Utils.renderCaseIcon(buttonContainer[0], data.key),
             onSelectionChanged: e => this.onCasesSelectionChanged(e)
         });
         return container;

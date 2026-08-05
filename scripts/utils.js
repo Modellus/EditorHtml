@@ -196,13 +196,23 @@ class Utils {
     static caseIconGap = 3;
     static termLabelPaddingX = 4;
 
-    static getCaseIconColor(caseNumber) {
+    static getCaseIconColor(caseNumber = 1) {
         const caseColors = [
             "#E53935", "#FB8C00", "#F9A825", "#43A047", "#1E88E5",
             "#8E24AA", "#00897B", "#6D4C41", "#546E7A"
         ];
-        const normalizedCaseNumber = Math.max(1, Math.min(9, parseInt(caseNumber, 10) || 1));
+        const parsedCaseNumber = parseInt(caseNumber, 10);
+        const normalizedCaseNumber = !Number.isFinite(parsedCaseNumber) ? 1 : Math.max(1, Math.min(9, parsedCaseNumber));
         return caseColors[normalizedCaseNumber - 1];
+    }
+
+    static getCaseNumberIconClass(caseNumber) {
+        const parsedCaseNumber = parseInt(caseNumber, 10);
+        if (!Number.isFinite(parsedCaseNumber) || parsedCaseNumber < 1)
+            return "fa-solid fa-square-1";
+        if (parsedCaseNumber > 9)
+            return "fa-solid fa-square-9";
+        return `fa-solid fa-square-${parsedCaseNumber}`;
     }
 
     static getCaseIconSize(caseNumber, fontSize) {
@@ -266,19 +276,9 @@ class Utils {
         if (caseNumber != null) {
             const iconSize = Utils.getCaseIconSize(caseNumber, fontSize);
             termX = x + iconSize.width + Utils.caseIconGap;
-            const iconData = Utils._caseIconData[caseNumber];
-            if (iconData?.pathData) {
-                const topY = baselineY - iconSize.height * 0.82;
-                const scaleX = iconSize.width / iconData.width;
-                const scaleY = iconSize.height / iconData.height;
-                const iconGroup = document.createElementNS(svgNs, "g");
-                iconGroup.setAttribute("transform", `translate(${x} ${topY}) scale(${scaleX} ${scaleY})`);
-                const iconPath = document.createElementNS(svgNs, "path");
-                iconPath.setAttribute("d", iconData.pathData);
-                iconPath.setAttribute("fill", Utils.getCaseIconColor(caseNumber));
-                iconGroup.appendChild(iconPath);
+            const iconGroup = Utils.createCaseIconSvg(caseNumber, x, baselineY - iconSize.height * 0.82, iconSize.width, iconSize.height);
+            if (iconGroup)
                 group.appendChild(iconGroup);
-            }
         }
         MathJax.startup.promise
             .then(() => MathJax.tex2svgPromise(String(termLatex ?? "")))
@@ -387,50 +387,123 @@ class Utils {
         return Utils._iconFontLoadPromises[fontFamily];
     }
 
+    // The digit of a square-n icon is a hole in the path, so it is drawn by whatever sits behind the
+    // icon: it only reads as the case number when a plate of its own is painted there, in the color that
+    // contrasts with the case color. The plate is inset by the corner radius of the square so it never
+    // pokes out of the rounded outline.
+    static caseIconPlateInset = 0.14;
+
+    // The single place a case icon is drawn: every svg surface that shows cases goes through here, so
+    // the number is protected against whatever the icon is drawn on. Width and height are the box the
+    // whole icon viewBox is scaled into, with the top left corner at (x, y).
+    static createCaseIconSvg(caseNumber, x, y, width, height) {
+        const iconData = Utils._caseIconData[caseNumber];
+        if (!iconData?.pathData)
+            return null;
+        const svgNs = "http://www.w3.org/2000/svg";
+        const iconColor = Utils.getCaseIconColor(caseNumber);
+        const iconGroup = document.createElementNS(svgNs, "g");
+        iconGroup.setAttribute("transform", `translate(${x} ${y}) scale(${width / iconData.width} ${height / iconData.height})`);
+        const plateInsetX = iconData.width * Utils.caseIconPlateInset;
+        const plateInsetY = iconData.height * Utils.caseIconPlateInset;
+        const plate = document.createElementNS(svgNs, "rect");
+        plate.setAttribute("x", plateInsetX);
+        plate.setAttribute("y", plateInsetY);
+        plate.setAttribute("width", Math.max(0, iconData.width - plateInsetX * 2));
+        plate.setAttribute("height", Math.max(0, iconData.height - plateInsetY * 2));
+        plate.setAttribute("fill", Utils.getContrastColor(iconColor));
+        iconGroup.appendChild(plate);
+        const iconPath = document.createElementNS(svgNs, "path");
+        iconPath.setAttribute("d", iconData.pathData);
+        iconPath.setAttribute("fill", iconColor);
+        iconGroup.appendChild(iconPath);
+        return iconGroup;
+    }
+
+    // The same icon for html surfaces (toolbars, dropdowns), which cannot use the font glyph and stay
+    // protected. It is sized in em, so the font size the icon inherits drives it exactly like the glyph.
+    static createCaseIconElement(caseNumber) {
+        const iconData = Utils._caseIconData[caseNumber];
+        const iconGroup = Utils.createCaseIconSvg(caseNumber, 0, 0, iconData?.width ?? 0, iconData?.height ?? 0);
+        if (!iconGroup)
+            return null;
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", `0 0 ${iconData.width} ${iconData.height}`);
+        svg.setAttribute("focusable", "false");
+        svg.style.cssText = `display:inline-block;width:${iconData.width / iconData.height}em;height:1em;vertical-align:-0.125em;overflow:visible;`;
+        svg.appendChild(iconGroup);
+        return svg;
+    }
+
+    // Fills a host element with the case icon. The icons are fetched once, so until they are there the
+    // host keeps the font glyph it always had, and is drawn again as soon as they load.
+    static renderCaseIcon(hostElement, caseNumber) {
+        if (!hostElement)
+            return null;
+        const icon = Utils.createCaseIconElement(caseNumber);
+        if (icon) {
+            hostElement.replaceChildren(icon);
+            return hostElement;
+        }
+        hostElement.innerHTML = `<i class="${Utils.getCaseNumberIconClass(caseNumber)}" style="color:${Utils.getCaseIconColor(caseNumber)}"></i>`;
+        Utils.ensureCaseIconsLoaded(() => Utils.renderCaseIcon(hostElement, caseNumber));
+        return hostElement;
+    }
+
+    static createCaseIconHost(caseNumber, className = "") {
+        const host = document.createElement("span");
+        host.className = className;
+        host.style.lineHeight = "1";
+        Utils.renderCaseIcon(host, caseNumber);
+        return host;
+    }
+
     static applyCaseIconSvg(group, iconX, iconY, iconSize, caseNumber) {
         while (group.firstChild)
             group.removeChild(group.firstChild);
         if (caseNumber == null)
             return;
-        const iconData = Utils._caseIconData[caseNumber];
-        if (!iconData?.pathData)
-            return;
-        const svgNs = "http://www.w3.org/2000/svg";
-        const scaleX = iconSize / iconData.width;
-        const scaleY = iconSize / iconData.height;
-        const iconGroup = document.createElementNS(svgNs, "g");
-        iconGroup.setAttribute("transform", `translate(${iconX} ${iconY}) scale(${scaleX} ${scaleY})`);
-        const iconPath = document.createElementNS(svgNs, "path");
-        iconPath.setAttribute("d", iconData.pathData);
-        iconPath.setAttribute("fill", Utils.getCaseIconColor(caseNumber));
-        iconGroup.appendChild(iconPath);
-        group.appendChild(iconGroup);
+        const iconGroup = Utils.createCaseIconSvg(caseNumber, iconX, iconY, iconSize, iconSize);
+        if (iconGroup)
+            group.appendChild(iconGroup);
     }
 
-    static applyTermLabelBackground(backgroundRect, textElement, color, anchor) {
+    // extraBounds covers anything drawn next to the text that shares its background, such as the case
+    // icon, so the whole label is protected against whatever is behind it.
+    static applyTermLabelBackground(backgroundRect, textElement, color, anchor, extraBounds = null) {
         const paddingX = Utils.termLabelPaddingX;
         const paddingY = 2;
-        let textWidth = 0;
-        let textHeight = 12;
-        let textX = 0;
-        let textY = 0;
+        let left = 0;
+        let top = 0;
+        let right = 0;
+        let bottom = 0;
+        let hasBounds = false;
         if (textElement?.getBBox)
             try {
                 const bbox = textElement.getBBox();
-                textWidth = bbox.width;
-                textHeight = bbox.height;
-                textX = bbox.x;
-                textY = bbox.y;
+                if (bbox.width > 0) {
+                    left = bbox.x;
+                    top = bbox.y;
+                    right = bbox.x + bbox.width;
+                    bottom = bbox.y + bbox.height;
+                    hasBounds = true;
+                }
             } catch (_) {}
-        if (textWidth <= 0) {
+        if (!hasBounds) {
             backgroundRect.setAttribute("display", "none");
             return;
         }
+        if (extraBounds && extraBounds.width > 0 && extraBounds.height > 0) {
+            left = Math.min(left, extraBounds.x);
+            top = Math.min(top, extraBounds.y);
+            right = Math.max(right, extraBounds.x + extraBounds.width);
+            bottom = Math.max(bottom, extraBounds.y + extraBounds.height);
+        }
         backgroundRect.removeAttribute("display");
-        backgroundRect.setAttribute("x", textX - paddingX);
-        backgroundRect.setAttribute("y", textY - paddingY);
-        backgroundRect.setAttribute("width", textWidth + paddingX * 2);
-        backgroundRect.setAttribute("height", textHeight + paddingY * 2);
+        backgroundRect.setAttribute("x", left - paddingX);
+        backgroundRect.setAttribute("y", top - paddingY);
+        backgroundRect.setAttribute("width", right - left + paddingX * 2);
+        backgroundRect.setAttribute("height", bottom - top + paddingY * 2);
         backgroundRect.setAttribute("fill", color);
     }
 
@@ -808,22 +881,6 @@ class Utils {
         return fo;
     }
 
-    static getCaseIconColor(caseNumber = 1) {
-        const parsedCaseNumber = parseInt(caseNumber, 10);
-        const normalizedCaseNumber = !Number.isFinite(parsedCaseNumber) ? 1 : Math.max(1, Math.min(9, parsedCaseNumber));
-        const caseColors = [
-            "#E53935",
-            "#FB8C00",
-            "#F9A825",
-            "#43A047",
-            "#1E88E5",
-            "#8E24AA",
-            "#00897B",
-            "#6D4C41",
-            "#546E7A"
-        ];
-        return caseColors[normalizedCaseNumber - 1];
-    }
 }
 
 if (typeof module !== "undefined" && module.exports)

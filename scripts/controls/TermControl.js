@@ -57,18 +57,15 @@ class TermControl {
     }
 
     static getCaseNumberIconClass(caseNumber) {
-        const parsedCaseNumber = parseInt(caseNumber, 10);
-        if (!Number.isFinite(parsedCaseNumber))
-            return "fa-solid fa-square-1";
-        if (parsedCaseNumber < 1)
-            return "fa-solid fa-square-1";
-        if (parsedCaseNumber > 9)
-            return "fa-solid fa-square-9";
-        return `fa-solid fa-square-${parsedCaseNumber}`;
+        return Utils.getCaseNumberIconClass(caseNumber);
     }
 
     static getCaseIconColor(caseNumber = 1) {
         return Utils.getCaseIconColor(caseNumber);
+    }
+
+    static createCaseIcon(caseNumber, className = "case-select__icon") {
+        return $(Utils.createCaseIconHost(caseNumber, className));
     }
 
     static getVisibilityIconClass(value) {
@@ -244,23 +241,13 @@ class TermControl {
     }
 
     static createBaseShapeCaseFieldAddonRenderer(baseShape) {
-        return data => {
-            const caseNumber = data?.value ?? 1;
-            const iconClass = TermControl.getCaseNumberIconClass(caseNumber);
-            const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", TermControl.getCaseIconColor(caseNumber));
-            return icon;
-        };
+        return data => TermControl.createCaseIcon(data?.value ?? 1);
     }
 
     static createBaseShapeCaseItemTemplate(baseShape) {
         return (itemData, _, element) => {
             const content = $("<div>").addClass("case-select");
-            const caseNumber = itemData.value;
-            const iconClass = TermControl.getCaseNumberIconClass(caseNumber);
-            const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", TermControl.getCaseIconColor(caseNumber));
-            content.append(icon);
+            content.append(TermControl.createCaseIcon(itemData.value));
             const label = $("<span>").addClass("case-select__label").text(itemData.value);
             content.append(label);
             element.append(content);
@@ -426,19 +413,8 @@ class TermControl {
         return normalizedCaseNumber;
     }
 
-    static getCaseIconText(caseNumber = 1) {
-        const normalizedCaseNumber = Math.max(1, Math.min(9, parseInt(caseNumber, 10) || 1));
-        return String.fromCodePoint(0xe255 + normalizedCaseNumber);
-    }
-
     static createCaseFieldAddonRenderer() {
-        return data => {
-            const caseNumber = data?.value ?? 1;
-            const iconClass = TermControl.getCaseNumberIconClass(caseNumber);
-            const icon = $(`<i class="${iconClass} case-select__icon"></i>`);
-            icon.css("color", TermControl.getCaseIconColor(caseNumber));
-            return icon;
-        };
+        return data => TermControl.createCaseIcon(data?.value ?? 1);
     }
 
     static buildShapeCaseItems(shape) {

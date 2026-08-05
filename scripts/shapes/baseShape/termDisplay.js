@@ -212,7 +212,7 @@
 
     getCaseIconLayout(label, labelText) {
         const iconSize = this.getLabelFontSize(labelText);
-        const gap = Utils.caseIconGap + Utils.termLabelPaddingX;
+        const gap = Utils.caseIconGap;
         const y = label.y - iconSize / 2;
         if (!label.caseNumber)
             return { visible: false, iconSize: iconSize, iconX: 0, iconY: y, textX: label.x };
@@ -224,6 +224,12 @@
                 labelLeft = labelText.getBBox().x;
             } catch (_) {}
         return { visible: true, iconSize: iconSize, iconX: labelLeft - gap - iconSize, iconY: y, textX: label.x };
+    }
+
+    getCaseIconBounds(layout) {
+        if (!layout?.visible)
+            return null;
+        return { x: layout.iconX, y: layout.iconY, width: layout.iconSize, height: layout.iconSize };
     }
 
     applyCaseIcon(caseIconGroup, caseNumber, layout) {
@@ -389,12 +395,12 @@
             const iconLayout = this.getCaseIconLayout(label, labelText);
             labelText.setAttribute("x", iconLayout.textX);
             this.applyCaseIcon(labelElements.caseIconGroup, label.caseNumber, iconLayout);
-            this.applyLabelBackground(labelElements.backgroundRect, labelText, labelColor, label.anchor);
+            this.applyLabelBackground(labelElements.backgroundRect, labelText, labelColor, label.anchor, this.getCaseIconBounds(iconLayout));
         }
     }
 
-    applyLabelBackground(backgroundRect, labelText, color, anchor) {
-        Utils.applyTermLabelBackground(backgroundRect, labelText, color, anchor);
+    applyLabelBackground(backgroundRect, labelText, color, anchor, caseIconBounds) {
+        Utils.applyTermLabelBackground(backgroundRect, labelText, color, anchor, caseIconBounds);
     }
 }
 
