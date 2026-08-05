@@ -36,10 +36,14 @@ Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
 | `scripts/blocks/blockRenderer.js` | `BlockRenderer` | render nodes → SVG |
 | `scripts/blocks/blockValidator.js` | `BlockValidator` | schema/semantic/runtime/visual validation |
 | `scripts/blocks/blockComponents.js` | `BlockComponentHelpers` | component registrations |
+| `scripts/blocks/blockChartGeometry.js` | `BlockChartGeometry` | scales, series points, area/line paths, bar layout |
+| `scripts/blocks/blockChartComponents.js` | — | the chart components |
 | `scripts/blocks/blockObjects.js` | `BlockObjects` | object definitions and component instances |
 | `scripts/blocks/blockAgentTools.js` | `BlockAgentTools` | the agent-safe tool surface |
 | `scripts/editors/board/widgets/ComponentWidget.js` | `ComponentShape` | the host shape |
 | `scripts/shapes/componentShape/ComponentShapeToolbar.js` | — | its property editor |
+| `scripts/controls/BlockChartControl.js` | `BlockChartControl` | the chart control that paints through blocks |
+| `scripts/shapes/blockChartShape/BlockChartShape.js` | `BlockChartShape` | the chart shape built on blocks |
 
 ## 2. The object definition
 
@@ -201,6 +205,38 @@ The JSON files are the source of truth. The browser cannot `fetch` them in the o
 which runs from `file://`, so they are delivered by `definitions.generated.js`; regenerate it
 with `UPDATE_DEFINITIONS=1 npx playwright test tests/component-definitions.spec.js`, which
 otherwise fails when the bundle and the JSON have drifted.
+
+### The chart components
+
+`chart` composes `chart-frame`, `chart-grid`, `chart-axes`, `chart-series` and `chart-bars` into a
+whole chart. It is the one component family that is not free to work out its own numbers: the plot
+box, the domain, the ticks and the data rows arrive as parameters, because the host control needs
+the very same numbers for hit testing, the focus markers and the crosshair. Turning them into
+pixels is the components' own work, through `BlockChartGeometry`, which the drawn `ChartControl`
+also calls — one implementation of the mapping, two ways of painting it.
+
+Three things follow from a chart being a drawing of a whole run rather than a dial:
+
+* **`clip`** is a modifier that clips a node to a clip path the host drawing already declares
+  (`{ type: "clip", clipId: "…" }`). The grid and the series are clipped to the plot, the axes to
+  the shape, the tick marks to their axis strip. The id is checked against the shape of an id and
+  can only ever point inside the document that holds the drawing; it is not agent-accessible.
+* **The node limit is per compiler.** `new BlockCompiler(registry, bindings, { maxNodes: 20000 })`
+  raises it for one host only — a scatter of a long run legitimately draws a marker per point.
+  `BlockCompiler.limits` stays the default for everything else.
+* **The chart components are not agent-accessible** and carry no `object` tag, so they stay out of
+  the Components palette and out of the agent catalogue: without a host to hand them a plan there
+  is nothing for them to draw.
+
+`BlockChartShape` is the host, and it is placed from the board's Components palette beside the
+component objects: the palette lists the component types tagged `object` and, after them, the
+objects that are built from blocks but are shapes of their own. It inherits every behaviour from `ChartShape` — the same properties,
+the same toolbar, the same term collection, the same domain handling, the same drags — and only
+swaps the control for `BlockChartControl`, which compiles the `chart` component and writes it with
+`BlockRenderer` instead of writing SVG itself. The axis title, the series legend and the area
+readout stay with the base control: they are term labels with case icons and an icon glyph over a
+measured background, which the primitives do not describe. `tests/block-chart-shape.spec.js` holds
+both drawings to the same geometry, tag for tag and coordinate for coordinate.
 
 ## 7. Parameters and bindings
 

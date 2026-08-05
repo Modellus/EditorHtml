@@ -35,6 +35,7 @@ const ShapeToolbarIconMap = {
     LineShape: "fa-light fa-slash-forward",
     ArcShape: "fa-light fa-circle-half-stroke",
     ChartShape: "fa-light fa-chart-line",
+    BlockChartShape: "fa-light fa-chart-line",
     TableShape: "fa-light fa-table",
     DataTableShape: "fa-light fa-flask",
     SliderShape: "fa-light fa-slider",

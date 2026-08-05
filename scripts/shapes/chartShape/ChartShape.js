@@ -161,6 +161,12 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         this.board.pointerLocked = false;
     }
 
+    // The control that draws the chart. A chart shape built on blocks answers with the
+    // block-drawing control, and inherits everything else from here.
+    getChartControlClass() {
+        return ChartControl;
+    }
+
     createElement() {
         const element = this.board.createSvgElement("g");
         this.chartRows = [];
@@ -168,7 +174,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         this.lastSyncedCalculatedIteration = 0;
         this.lastSyncedRecalculationRevision = 0;
         this.chartDataConfig = null;
-        this.chart = new ChartControl(element, this.getChartControlOptions());
+        const ChartControlClass = this.getChartControlClass();
+        this.chart = new ChartControlClass(element, this.getChartControlOptions());
         this._appliedConfig = {};
         this._appliedDomainConfig = null;
         return element;

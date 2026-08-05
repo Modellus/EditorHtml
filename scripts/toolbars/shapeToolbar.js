@@ -20,13 +20,40 @@ class ModellusShapeToolbar {
         return BlockRegistry.list("component", { agentAccessibleOnly: true }).filter(registration => registration.tags.includes("object"));
     }
 
+    // The palette lists the component objects and, beside them, the objects that are built from
+    // blocks but are shapes of their own. The two are placed differently — a component carries
+    // its instance properties, a shape only its type — so each item says which it is.
+    static getComponentPaletteItems(shell) {
+        const items = ModellusShapeToolbar.getComponentObjectTypes().map(registration => ({
+            text: registration.displayName,
+            icon: registration.icon,
+            componentType: registration.type
+        }));
+        items.push({
+            text: shell.board.translations.get("Block Chart Name") ?? "Chart",
+            icon: BaseShape.shapeIcons.BlockChartShape,
+            shapeType: "BlockChartShape",
+            shapeName: shell.board.translations.get("Chart Name") ?? "Chart"
+        });
+        return items;
+    }
+
+    static placeComponentPaletteItem(shell, item) {
+        if (item.componentType) {
+            const componentProperties = ComponentShape.createInstanceProperties(item.componentType);
+            shell.shapeDrawController.toggle("ComponentShape", componentProperties.name, "components-button", componentProperties);
+            return;
+        }
+        shell.shapeDrawController.toggle(item.shapeType, item.shapeName, "components-button");
+    }
+
     static createComponentsDropDownButton(shell) {
         const dropdownElement = $('<div id="components-button" class="mdl-component-type-selector">');
         dropdownElement.dxDropDownButton({
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
-            icon: "fa-light fa-shapes",
+            icon: "fa-light fa-compass-drafting",
             onInitialized: event => shell.createTranslatedTooltip(event, "Components Tooltip", 280),
             dropDownOptions: {
                 container: document.body,
@@ -35,15 +62,14 @@ class ModellusShapeToolbar {
                 contentTemplate: contentElement => {
                     $(contentElement).empty();
                     $("<div>").appendTo(contentElement).dxList({
-                        dataSource: ModellusShapeToolbar.getComponentObjectTypes(),
+                        dataSource: ModellusShapeToolbar.getComponentPaletteItems(shell),
                         scrollingEnabled: false,
                         itemTemplate: (data, _, el) => {
-                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${data.icon}"></i><span class="mdl-dropdown-list-label">${data.displayName}</span></div>`;
+                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${data.icon}"></i><span class="mdl-dropdown-list-label">${data.text}</span></div>`;
                         },
                         onItemClick: event => {
                             dropdownElement.dxDropDownButton("instance").close();
-                            const componentProperties = ComponentShape.createInstanceProperties(event.itemData.type);
-                            shell.shapeDrawController.toggle("ComponentShape", componentProperties.name, "components-button", componentProperties);
+                            ModellusShapeToolbar.placeComponentPaletteItem(shell, event.itemData);
                         }
                     });
                 }

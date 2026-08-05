@@ -188,6 +188,30 @@ var BlockModifiers = {
         }
     });
 
+    // Clips a node to a clip path the host drawing already declares. The id is checked against
+    // the shape of an id and nothing else: it can only ever point inside the document that holds
+    // the drawing, which is why this stays out of the agent's reach.
+    registry.register({
+        type: "clip",
+        category: "modifier",
+        displayName: "Clip",
+        description: "Clips a node to a clip path declared by the host drawing.",
+        tags: ["layout", "mask", "window"],
+        capabilities: ["layout"],
+        agentAccessible: false,
+        inputSchema: {
+            properties: {
+                clipId: { valueType: "string", defaultValue: "", label: "Clip path id" }
+            }
+        },
+        apply: (input, accumulator) => {
+            const clipId = String(input.clipId ?? "");
+            if (/^[A-Za-z][A-Za-z0-9_:.-]*$/.test(clipId))
+                accumulator.style["clip-path"] = `url(#${clipId})`;
+            return accumulator;
+        }
+    });
+
     registry.register({
         type: "repeat",
         category: "modifier",

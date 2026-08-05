@@ -285,15 +285,7 @@ class ChartControl {
     }
 
     getNumericValue(row, fieldName) {
-        if (!row)
-            return null;
-        const rawValue = row[fieldName];
-        if (rawValue == null || rawValue === "")
-            return null;
-        const numericValue = Number(rawValue);
-        if (!Number.isFinite(numericValue))
-            return null;
-        return numericValue;
+        return BlockChartGeometry.getNumericValue(row, fieldName);
     }
 
     setDomainOverride(override) {
@@ -536,38 +528,14 @@ class ChartControl {
     }
 
     getScales(layout, domain) {
-        const xScale = value => {
-            const ratio = (value - domain.xMin) / (domain.xMax - domain.xMin);
-            return layout.plotLeft + ratio * layout.plotWidth;
-        };
-        const yScale = value => {
-            const ratio = (value - domain.yMin) / (domain.yMax - domain.yMin);
-            return layout.plotBottom - ratio * layout.plotHeight;
-        };
-        return { xScale: xScale, yScale: yScale };
+        return BlockChartGeometry.createScales(layout, domain);
     }
 
     equalizeDomain(domain, plotWidth, plotHeight) {
-        const xRange = domain.xMax - domain.xMin;
-        const yRange = domain.yMax - domain.yMin;
-        if (xRange <= 0 || yRange <= 0 || plotWidth <= 0 || plotHeight <= 0)
-            return domain;
-        const xPixelsPerUnit = plotWidth / xRange;
-        const yPixelsPerUnit = plotHeight / yRange;
-        if (xPixelsPerUnit > yPixelsPerUnit) {
-            const targetXRange = plotWidth / yPixelsPerUnit;
-            const xCenter = (domain.xMin + domain.xMax) / 2;
-            return { xMin: xCenter - targetXRange / 2, xMax: xCenter + targetXRange / 2, yMin: domain.yMin, yMax: domain.yMax };
-        }
-        const targetYRange = plotHeight / xPixelsPerUnit;
-        const yCenter = (domain.yMin + domain.yMax) / 2;
-        return { xMin: domain.xMin, xMax: domain.xMax, yMin: yCenter - targetYRange / 2, yMax: yCenter + targetYRange / 2 };
+        return BlockChartGeometry.equalizeDomain(domain, plotWidth, plotHeight);
     }
 
-    render() {
-        const size = this.getChartSize();
-        const width = size.width;
-        const height = size.height;
+    clearRenderLayers() {
         this.clearLayer(this.backgroundLayer);
         this.clearLayer(this.gridLayer);
         this.clearLayer(this.seriesLayer);
@@ -577,10 +545,38 @@ class ChartControl {
         this.clearLayer(this.crosshairLayer);
         this.clearLayer(this.tickInteractionLayer);
         this.clearLayer(this.crosshairInteractionLayer);
+    }
+
+    render() {
+        const size = this.getChartSize();
+        const width = size.width;
+        const height = size.height;
+        this.clearRenderLayers();
         this.renderState = null;
         if (width <= 2 || height <= 2)
             return;
-        this.renderBackground(width, height);
+        const plan = this.buildRenderPlan(width, height);
+        this.applyClipRects(plan);
+        this.paintChart(plan);
+        this.renderState = {
+            layout: plan.layout,
+            domain: plan.domain,
+            xScale: plan.xScale,
+            yScale: plan.yScale,
+            xTicks: plan.xTicks,
+            yTicks: plan.yTicks,
+            series: this.options.series,
+            argumentField: this.options.argumentField
+        };
+        this.renderTickHitAreas(plan.layout, plan.xScale, plan.yScale, plan.xTicks, plan.yTicks);
+        this.renderCrosshairHitArea(plan.layout);
+        this.renderFocus();
+    }
+
+    // Everything the drawing needs, worked out once: the domain the data and the overrides ask
+    // for, the ticks that fit it, the box left for the plot and the two scales. Held apart from
+    // the painting so a control that draws through the block layer can reuse all of it.
+    buildRenderPlan(width, height) {
         const rawDomain = this.getDomain(this.options.argumentField, this.options.series);
         const preliminaryXTicks = this.buildTicks(rawDomain.xMin, rawDomain.xMax, 5, this.options.xAxisType);
         const preliminaryYTicks = this.buildTicks(rawDomain.yMin, rawDomain.yMax, 5, this.options.yAxisType);
@@ -599,42 +595,49 @@ class ChartControl {
         const ySubdivisions = minorTickDivisions(layout.plotHeight * yMajorStep / (domain.yMax - domain.yMin));
         const xMinorTicks = this.buildMinorTicks(xMajorTicks, domain.xMin, domain.xMax, xSubdivisions);
         const yMinorTicks = this.buildMinorTicks(yMajorTicks, domain.yMin, domain.yMax, ySubdivisions);
-        this.plotClipRect.setAttribute("x", `${layout.plotLeft}`);
-        this.plotClipRect.setAttribute("y", `${layout.plotTop}`);
-        this.plotClipRect.setAttribute("width", `${layout.plotWidth}`);
-        this.plotClipRect.setAttribute("height", `${layout.plotHeight}`);
-        this.shapeClipRect.setAttribute("x", "0");
-        this.shapeClipRect.setAttribute("y", "0");
-        this.shapeClipRect.setAttribute("width", `${width}`);
-        this.shapeClipRect.setAttribute("height", `${height}`);
-        this.shapeClipRect.setAttribute("rx", `${this.options.borderRadius ?? 4}`);
-        this.xTicksClipRect.setAttribute("x", `${layout.plotLeft}`);
-        this.xTicksClipRect.setAttribute("y", "0");
-        this.xTicksClipRect.setAttribute("width", `${layout.plotWidth}`);
-        this.xTicksClipRect.setAttribute("height", `${height}`);
-        this.yTicksClipRect.setAttribute("x", "0");
-        this.yTicksClipRect.setAttribute("y", `${layout.plotTop}`);
-        this.yTicksClipRect.setAttribute("width", `${width}`);
-        this.yTicksClipRect.setAttribute("height", `${layout.plotHeight}`);
         const scales = this.getScales(layout, domain);
-        this.renderDataAreaBackground(layout);
-        this.renderGrid(layout, scales.xScale, scales.yScale, xTicks, yTicks, xMinorTicks, yMinorTicks);
-        this.renderAxes(layout, scales.xScale, scales.yScale, xTicks, yTicks, xMinorTicks, yMinorTicks);
-        this.renderSeries(layout, scales.xScale, scales.yScale);
-        this.renderTitles(layout, width, height);
-        this.renderState = {
+        return {
+            width: width,
+            height: height,
             layout: layout,
             domain: domain,
             xScale: scales.xScale,
             yScale: scales.yScale,
             xTicks: xTicks,
             yTicks: yTicks,
-            series: this.options.series,
-            argumentField: this.options.argumentField
+            xMinorTicks: xMinorTicks,
+            yMinorTicks: yMinorTicks
         };
-        this.renderTickHitAreas(layout, scales.xScale, scales.yScale, xTicks, yTicks);
-        this.renderCrosshairHitArea(layout);
-        this.renderFocus();
+    }
+
+    applyClipRects(plan) {
+        const layout = plan.layout;
+        this.plotClipRect.setAttribute("x", `${layout.plotLeft}`);
+        this.plotClipRect.setAttribute("y", `${layout.plotTop}`);
+        this.plotClipRect.setAttribute("width", `${layout.plotWidth}`);
+        this.plotClipRect.setAttribute("height", `${layout.plotHeight}`);
+        this.shapeClipRect.setAttribute("x", "0");
+        this.shapeClipRect.setAttribute("y", "0");
+        this.shapeClipRect.setAttribute("width", `${plan.width}`);
+        this.shapeClipRect.setAttribute("height", `${plan.height}`);
+        this.shapeClipRect.setAttribute("rx", `${this.options.borderRadius ?? 4}`);
+        this.xTicksClipRect.setAttribute("x", `${layout.plotLeft}`);
+        this.xTicksClipRect.setAttribute("y", "0");
+        this.xTicksClipRect.setAttribute("width", `${layout.plotWidth}`);
+        this.xTicksClipRect.setAttribute("height", `${plan.height}`);
+        this.yTicksClipRect.setAttribute("x", "0");
+        this.yTicksClipRect.setAttribute("y", `${layout.plotTop}`);
+        this.yTicksClipRect.setAttribute("width", `${plan.width}`);
+        this.yTicksClipRect.setAttribute("height", `${layout.plotHeight}`);
+    }
+
+    paintChart(plan) {
+        this.renderBackground(plan.width, plan.height);
+        this.renderDataAreaBackground(plan.layout);
+        this.renderGrid(plan.layout, plan.xScale, plan.yScale, plan.xTicks, plan.yTicks, plan.xMinorTicks, plan.yMinorTicks);
+        this.renderAxes(plan.layout, plan.xScale, plan.yScale, plan.xTicks, plan.yTicks, plan.xMinorTicks, plan.yMinorTicks);
+        this.renderSeries(plan.layout, plan.xScale, plan.yScale);
+        this.renderTitles(plan.layout, plan.width, plan.height);
     }
 
     renderBackground(width, height) {
@@ -776,31 +779,7 @@ class ChartControl {
     }
 
     getSeriesPoints(series, xScale, yScale) {
-        const points = [];
-        let effectiveRowIndex = 0;
-        for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
-            const row = this.dataRows[rowIndex];
-            const rawXValue = this.getNumericValue(row, this.options.argumentField);
-            const rawYValue = this.getNumericValue(row, series.valueField);
-            if (rawXValue == null || rawYValue == null) {
-                effectiveRowIndex++;
-                continue;
-            }
-            if (row[`singularity_${series.valueField}`] === true)
-                effectiveRowIndex++;
-            const pixelX = xScale(rawXValue);
-            const pixelY = yScale(rawYValue);
-            points.push({
-                rowIndex: effectiveRowIndex,
-                xValue: rawXValue,
-                yValue: rawYValue,
-                x: pixelX,
-                y: pixelY,
-                isOutlier: row[`outlier_${series.valueField}`] === true
-            });
-            effectiveRowIndex++;
-        }
-        return points;
+        return BlockChartGeometry.getSeriesPoints(this.dataRows, this.options.argumentField, series, xScale, yScale);
     }
 
     renderSeries(layout, xScale, yScale) {
@@ -946,48 +925,25 @@ class ChartControl {
         this.appendSvgMarkup(this.seriesLayer, markersMarkup);
     }
 
+    getBarWidth(barSeriesCount, layout, xScale) {
+        return BlockChartGeometry.getBarWidth(this.dataRows, this.options.argumentField, barSeriesCount, xScale, layout.plotWidth);
+    }
+
     renderBarSeries(layout, xScale, yScale, barSeriesList) {
         if (barSeriesList.length === 0)
             return;
-        const xValues = [];
-        for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
-            const rawXValue = this.getNumericValue(this.dataRows[rowIndex], this.options.argumentField);
-            if (rawXValue == null)
-                continue;
-            xValues.push(rawXValue);
-        }
-        const uniqueXValues = [...new Set(xValues)].sort((leftValue, rightValue) => leftValue - rightValue);
-        let stepPixels = layout.plotWidth / Math.max(1, uniqueXValues.length + 1);
-        for (let index = 1; index < uniqueXValues.length; index++) {
-            const diff = Math.abs(xScale(uniqueXValues[index]) - xScale(uniqueXValues[index - 1]));
-            if (diff > 0)
-                stepPixels = Math.min(stepPixels, diff);
-        }
-        const barWidth = Math.max(2, Math.min(24, stepPixels / Math.max(1, barSeriesList.length + 1)));
-        const baselineY = yScale(0);
+        const barWidth = this.getBarWidth(barSeriesList.length, layout, xScale);
         let barsMarkup = "";
         const outlierPointsBySeries = [];
         for (let seriesIndex = 0; seriesIndex < barSeriesList.length; seriesIndex++) {
             const series = barSeriesList[seriesIndex];
-            const offset = (seriesIndex - (barSeriesList.length - 1) / 2) * barWidth;
-            const seriesOutlierPoints = [];
-            for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
-                const row = this.dataRows[rowIndex];
-                const rawXValue = this.getNumericValue(row, this.options.argumentField);
-                const rawYValue = this.getNumericValue(row, series.valueField);
-                if (rawXValue == null || rawYValue == null)
-                    continue;
-                if (row[`outlier_${series.valueField}`] === true) {
-                    seriesOutlierPoints.push({ x: xScale(rawXValue), y: yScale(rawYValue) });
-                    continue;
-                }
-                const xPosition = xScale(rawXValue) + offset - barWidth * 0.45;
-                const yPosition = yScale(rawYValue);
+            const geometry = BlockChartGeometry.getBarGeometry(this.dataRows, this.options.argumentField, series, seriesIndex, barSeriesList.length, barWidth, xScale, yScale);
+            for (const bar of geometry.bars) {
                 barsMarkup += `
-                    <rect x="${xPosition}" y="${Math.min(yPosition, baselineY)}" width="${barWidth * 0.9}" height="${Math.max(1, Math.abs(yPosition - baselineY))}" fill="${series.color}" fill-opacity="0.8" />
+                    <rect x="${bar.x}" y="${bar.y}" width="${bar.width}" height="${bar.height}" fill="${series.color}" fill-opacity="0.8" />
                 `;
             }
-            outlierPointsBySeries.push({ points: seriesOutlierPoints, color: series.color });
+            outlierPointsBySeries.push({ points: geometry.outliers, color: series.color });
         }
         this.appendSvgMarkup(this.seriesLayer, barsMarkup);
         for (let seriesIndex = 0; seriesIndex < outlierPointsBySeries.length; seriesIndex++) {
@@ -998,22 +954,11 @@ class ChartControl {
     }
 
     getPolylinePath(points) {
-        if (points.length === 0)
-            return "";
-        let pathValue = `M ${points[0].x} ${points[0].y}`;
-        for (let index = 1; index < points.length; index++)
-            pathValue += points[index].rowIndex !== points[index - 1].rowIndex + 1 ? ` M ${points[index].x} ${points[index].y}` : ` L ${points[index].x} ${points[index].y}`;
-        return pathValue;
+        return BlockChartGeometry.getPolylinePath(points);
     }
 
     getAreaPath(points, baseY) {
-        if (points.length === 0)
-            return "";
-        let pathValue = `M ${points[0].x} ${baseY}`;
-        for (let index = 0; index < points.length; index++)
-            pathValue += ` L ${points[index].x} ${points[index].y}`;
-        pathValue += ` L ${points[points.length - 1].x} ${baseY} Z`;
-        return pathValue;
+        return BlockChartGeometry.getAreaPath(points, baseY);
     }
 
     updateTitleClipRects(layout, height) {

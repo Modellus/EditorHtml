@@ -7,9 +7,13 @@ class BlockCompiler {
         maxExpressionLength: 512
     };
 
-    constructor(registry = BlockRegistry, bindings = null) {
+    // The limits are the defaults every object is held to. A host that knows what it is drawing
+    // may raise them for itself — a chart of a long run legitimately draws a marker per point —
+    // without loosening the bound for everything else.
+    constructor(registry = BlockRegistry, bindings = null, limits = null) {
         this.registry = registry;
         this.bindings = bindings ?? new BlockBindings(null);
+        this.limits = Object.assign({}, BlockCompiler.limits, limits ?? {});
     }
 
     setCalculator(calculator) {
@@ -74,12 +78,12 @@ class BlockCompiler {
     }
 
     compileNode(node, compilation, context, path, depth, siblingIndex) {
-        if (compilation.stats.nodeCount >= BlockCompiler.limits.maxNodes) {
-            this.addDiagnostic(compilation, "NODE_LIMIT_EXCEEDED", path, `A compiled object may contain at most ${BlockCompiler.limits.maxNodes} nodes.`);
+        if (compilation.stats.nodeCount >= this.limits.maxNodes) {
+            this.addDiagnostic(compilation, "NODE_LIMIT_EXCEEDED", path, `A compiled object may contain at most ${this.limits.maxNodes} nodes.`);
             return [];
         }
-        if (depth > BlockCompiler.limits.maxDepth) {
-            this.addDiagnostic(compilation, "NESTING_LIMIT_EXCEEDED", path, `Nesting is limited to ${BlockCompiler.limits.maxDepth} levels.`);
+        if (depth > this.limits.maxDepth) {
+            this.addDiagnostic(compilation, "NESTING_LIMIT_EXCEEDED", path, `Nesting is limited to ${this.limits.maxDepth} levels.`);
             return [];
         }
         if (!node || typeof node !== "object") {
@@ -112,8 +116,8 @@ class BlockCompiler {
     compileRepeatedNode(node, repeatModifier, compilation, context, path, depth, siblingIndex) {
         const repeatInput = this.resolveModifierInput(repeatModifier, compilation, context, `${path}.repeat`);
         const requestedCount = Math.floor(Number(repeatInput.count) || 0);
-        if (requestedCount > BlockCompiler.limits.maxRepeatCount) {
-            this.addDiagnostic(compilation, "REPEAT_LIMIT_EXCEEDED", path, `Repeat count ${requestedCount} exceeds the limit of ${BlockCompiler.limits.maxRepeatCount}.`);
+        if (requestedCount > this.limits.maxRepeatCount) {
+            this.addDiagnostic(compilation, "REPEAT_LIMIT_EXCEEDED", path, `Repeat count ${requestedCount} exceeds the limit of ${this.limits.maxRepeatCount}.`);
             return [];
         }
         const count = Math.max(0, requestedCount);
@@ -184,8 +188,8 @@ class BlockCompiler {
             this.addDiagnostic(compilation, "CIRCULAR_COMPONENT_REFERENCE", path, `Component "${registration.type}" references itself through ${context.componentStack.join(" → ")}.`);
             return [];
         }
-        if (context.componentDepth >= BlockCompiler.limits.maxComponentDepth) {
-            this.addDiagnostic(compilation, "COMPONENT_DEPTH_EXCEEDED", path, `Component nesting is limited to ${BlockCompiler.limits.maxComponentDepth} levels.`);
+        if (context.componentDepth >= this.limits.maxComponentDepth) {
+            this.addDiagnostic(compilation, "COMPONENT_DEPTH_EXCEEDED", path, `Component nesting is limited to ${this.limits.maxComponentDepth} levels.`);
             return [];
         }
         if (typeof registration.create !== "function") {
@@ -435,7 +439,7 @@ class BlockCompiler {
     }
 
     collectNodeDependencies(node, variables, parameters, depth) {
-        if (!node || typeof node !== "object" || depth > BlockCompiler.limits.maxDepth)
+        if (!node || typeof node !== "object" || depth > this.limits.maxDepth)
             return;
         const collections = [node.bindings ?? {}, node.parameters ?? {}, node.properties ?? {}];
         for (const collection of collections) {
