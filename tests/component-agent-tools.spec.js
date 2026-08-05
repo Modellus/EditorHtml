@@ -260,6 +260,76 @@ test.describe('agent tool surface', () => {
         expect(result.invalidName.errors[0].code).toBe('INVALID_COMPONENT_TYPE');
     });
 
+    test('an object the agent saves is carried by the model that uses it', async ({ page }) => {
+        await setupBoard(page);
+        await addClockModel(page);
+        const saved = await page.evaluate(() => {
+            const draftId = modellus.blocks.execute('create_object_draft', { name: 'Agent dial' }).draftId;
+            modellus.blocks.execute('add_component', { draftId: draftId, type: 'dial-face', id: 'face', parameters: { centerX: 60, centerY: 60, radius: 50 } });
+            modellus.blocks.execute('add_component', { draftId: draftId, type: 'pointer-hand', id: 'hand', parameters: { centerX: 60, centerY: 60, length: 40, width: 5, color: '#1871c2' } });
+            const result = modellus.blocks.execute('save_custom_component', { draftId: draftId, type: 'agent-dial', displayName: 'Agent dial' });
+            modellus.blocks.addComponent('agent-dial', 'Dial');
+            return { ok: result.ok, hasDocument: !!BlockObjectLibrary.getDocument('agent-dial') };
+        });
+        expect(saved).toEqual({ ok: true, hasDocument: true });
+        await page.waitForTimeout(300);
+        const model = await page.evaluate(() => JSON.stringify(shell.serialize()));
+        expect(JSON.parse(model).objects.map(document => document.type)).toEqual(['agent-dial']);
+
+        // A session that never met the object: only what the model carries can draw it.
+        await page.evaluate(() => {
+            shell.clear();
+            BlockRegistry.registrations.delete('agent-dial');
+            BlockDefinitionLoader.documents.delete('agent-dial');
+        });
+        await page.evaluate(serialized => shell.openModel(serialized), model);
+        await page.waitForTimeout(400);
+        const reopened = await page.evaluate(() => ({
+            registered: BlockRegistry.has('agent-dial'),
+            drawn: shell.board.shapes.getByName('Dial').contentGroup.childElementCount
+        }));
+        expect(reopened.registered).toBe(true);
+        expect(reopened.drawn).toBeGreaterThan(0);
+    });
+
+    test('an object the agent saves is offered by the object palette', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            const draftId = modellus.blocks.execute('create_object_draft', { name: 'Agent ring' }).draftId;
+            modellus.blocks.execute('add_primitive', { draftId: draftId, type: 'circle', id: 'ring', properties: { centerX: 60, centerY: 60, radius: 40, fill: 'none', stroke: '#2563eb', strokeWidth: 5 } });
+            return modellus.blocks.execute('save_custom_component', { draftId: draftId, type: 'agent-ring', displayName: 'Agent ring', description: 'A ring the agent saved.' });
+        });
+        await page.click('#components-button');
+        await page.waitForSelector('[data-object-key="agent-ring"]');
+        const card = await page.evaluate(() => {
+            const element = document.querySelector('[data-object-key="agent-ring"]');
+            return {
+                title: element.querySelector('.mdl-catalog-data-title').textContent,
+                description: element.querySelector('.mdl-object-picker-description').textContent,
+                previewNodes: element.querySelectorAll('.mdl-object-picker-preview svg *').length
+            };
+        });
+        expect(card.title).toBe('Agent ring');
+        expect(card.description).toBe('A ring the agent saved.');
+        expect(card.previewNodes).toBeGreaterThan(0);
+    });
+
+    test('the definition of an object on the board can be copied for the catalogue', async ({ page, context }) => {
+        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+        await setupBoard(page);
+        await page.evaluate(() => modellus.blocks.addComponent('compass', 'Compass'));
+        await page.waitForTimeout(300);
+        const copied = await page.evaluate(async () => {
+            const shape = shell.board.shapes.getByName('Compass');
+            shape.copyComponentDefinition();
+            return await navigator.clipboard.readText();
+        });
+        const definitionDocument = JSON.parse(copied);
+        expect(definitionDocument.type).toBe('compass');
+        expect(definitionDocument.category).toBe('component');
+        expect(definitionDocument.root).toBeTruthy();
+    });
+
     test('is reachable through the agent tool bridge naming convention', async ({ page }) => {
         await setupBoard(page);
         const result = await page.evaluate(async () => {

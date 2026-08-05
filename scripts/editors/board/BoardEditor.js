@@ -22,6 +22,7 @@ class BoardEditor extends Workspace {
         this.board.svg.addEventListener("backgroundClicked", e => this.backgroundToolbar.toggle(e.detail));
         this.contextMenuController = new ContextMenuController(this);
         this.shapeDrawController = new ShapeDrawController(this);
+        this.objectPicker = new ObjectPicker(this);
         this.clipboardPasteController = new ClipboardPasteController(this);
         this.connectorTargetHighlighter = new ConnectorTargetHighlighter(this);
         this.topToolbar = new TopToolbar(this);
@@ -544,10 +545,17 @@ class BoardEditor extends Workspace {
     }
 
     serialize() {
-        return this.serializeWorkspace("board", () => this.board.serialize());
+        const model = this.serializeWorkspace("board", () => this.board.serialize());
+        const objects = BlockObjectLibrary.collectFromShapes(this.board.shapes.shapes);
+        if (objects.length > 0)
+            model.objects = objects;
+        return model;
     }
 
     deserialise(model) {
+        const objects = BlockObjectLibrary.registerAll(model.objects);
+        if (objects.problems.length > 0)
+            console.warn("Objects the model carries could not be registered:", objects.problems);
         this.applySerializedSession(model, properties => this.setProperties(properties));
         this.board.deserialize(model.board);
         this.applyGrid();
@@ -861,7 +869,7 @@ class BoardEditor extends Workspace {
         if (!this.collabCoordinator || this.collabCoordinator.isApplyingRemote())
             return;
         if (command instanceof AddShapeCommand) {
-            this.collabCoordinator.sendOp({ type: "addShape", shapeData: command.shape.serialize() });
+            this.collabCoordinator.sendOp({ type: "addShape", shapeData: command.shape.serialize(), objects: BlockObjectLibrary.collectFromShapes([command.shape]) });
             this.collabCoordinator.sendSnapshot(this.serialize());
             return;
         }
@@ -897,7 +905,7 @@ class BoardEditor extends Workspace {
         }
         if (command instanceof RemoveShapeCommand) {
             for (const entry of command.removedShapes)
-                this.collabCoordinator.sendOp({ type: "addShape", shapeData: entry.shape.serialize() });
+                this.collabCoordinator.sendOp({ type: "addShape", shapeData: entry.shape.serialize(), objects: BlockObjectLibrary.collectFromShapes([entry.shape]) });
             this.collabCoordinator.sendSnapshot(this.serialize());
             return;
         }
@@ -911,6 +919,7 @@ class BoardEditor extends Workspace {
             const existingShape = this.board.shapes.getById(op.shapeData.id);
             if (existingShape)
                 return;
+            BlockObjectLibrary.registerAll(op.objects);
             const parentShape = op.shapeData.parent ? this.board.shapes.getById(op.shapeData.parent) : null;
             const newShape = this.board.createShape(op.shapeData.type, parentShape, op.shapeData.id);
             newShape.setProperties(op.shapeData.properties);

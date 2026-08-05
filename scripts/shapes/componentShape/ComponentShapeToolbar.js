@@ -103,7 +103,28 @@ var ComponentShapeToolbarMixin = {
             stacked: parameter.valueType === "variable",
             buildControl: $container => $container.append(this.createComponentParameterControl(parameter))
         }));
+        if (BlockObjectLibrary.getDocument(this.getComponentType()))
+            items.push({
+                text: this.board.translations.get("Copy Object Definition"),
+                buildControl: $container => $container.append(this.createCopyDefinitionButton())
+            });
         this.renderComponentMenuList(contentElement, items);
+    },
+    // The definition document is what the catalogue's object editor takes, so an object invented on
+    // the board — by the agent or by hand — can be published without being written out again.
+    createCopyDefinitionButton() {
+        const button = $('<div class="mdl-copy-definition-button">');
+        button.dxButton({
+            icon: "fa-light fa-copy",
+            stylingMode: "text",
+            onClick: () => this.copyComponentDefinition()
+        });
+        return button;
+    },
+    copyComponentDefinition() {
+        const definitionDocument = BlockObjectLibrary.getDocument(this.getComponentType());
+        navigator.clipboard.writeText(JSON.stringify(definitionDocument, null, 4));
+        DevExpress.ui.notify(this.board.translations.get("Definition Copied"), "success", 2000);
     },
     buildComponentParameterMenu(contentElement, parameters, stacked) {
         const items = parameters.map(parameter => ({

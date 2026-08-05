@@ -850,6 +850,104 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Delete data set thumbnail failed (${response.status})`);
   }
 
+  async fetchObjectsPage(options = {}) {
+    const url = new URL(`${this.apiBaseUrl}/objects`);
+    url.searchParams.set("limit", String(options.limit || 20));
+    url.searchParams.set("offset", String(options.offset || 0));
+    if (options.search) url.searchParams.set("q", options.search);
+    if (options.educationLevelId) url.searchParams.set("education_level_id", options.educationLevelId);
+    if (options.scienceId) url.searchParams.set("science_id", options.scienceId);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch objects failed (${response.status})`);
+    return this.parsePagedResponse(await response.json());
+  }
+
+  async fetchObjectsFacets() {
+    const response = await fetch(`${this.apiBaseUrl}/objects/facets`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch object facets failed (${response.status})`);
+    return this.parseTaxonomyFacets(await response.json());
+  }
+
+  async fetchObjects(filters = {}) {
+    const url = new URL(`${this.apiBaseUrl}/objects`);
+    if (filters.science_id) url.searchParams.set("science_id", filters.science_id);
+    if (filters.education_level_id) url.searchParams.set("education_level_id", filters.education_level_id);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch objects failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async fetchObjectById(objectId) {
+    const response = await fetch(`${this.apiBaseUrl}/objects/${encodeURIComponent(objectId)}`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch object failed (${response.status})`);
+    return await response.json();
+  }
+
+  async fetchObjectDefinition(objectId) {
+    const response = await fetch(`${this.apiBaseUrl}/objects/${encodeURIComponent(objectId)}/definition`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch object definition failed (${response.status})`);
+    return await response.json();
+  }
+
+  async createObject(payload, thumbnailFile) {
+    const formData = new FormData();
+    formData.append("title", payload.title);
+    formData.append("definition", JSON.stringify(payload.definition));
+    if (payload.description) formData.append("description", payload.description);
+    if (payload.science_id) formData.append("science_id", payload.science_id);
+    if (payload.education_level_id) formData.append("education_level_id", payload.education_level_id);
+    if (thumbnailFile) formData.append("asset", thumbnailFile);
+    const response = await fetch(`${this.apiBaseUrl}/objects`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      throw new Error(`Create object failed (${response.status})${errorBody?.error ? ': ' + errorBody.error : ''}`);
+    }
+    return await response.json();
+  }
+
+  async patchObject(objectId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/objects/${encodeURIComponent(objectId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update object failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteObject(objectId) {
+    const response = await fetch(`${this.apiBaseUrl}/objects/${encodeURIComponent(objectId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete object failed (${response.status})`);
+  }
+
+  async uploadObjectThumbnail(objectId, imageFile) {
+    const formData = new FormData();
+    formData.append("asset", imageFile);
+    const response = await fetch(`${this.apiBaseUrl}/objects/${encodeURIComponent(objectId)}/thumbnail`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Upload object thumbnail failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteObjectThumbnail(objectId) {
+    const response = await fetch(`${this.apiBaseUrl}/objects/${encodeURIComponent(objectId)}/thumbnail`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete object thumbnail failed (${response.status})`);
+  }
+
   async fetchCharacters() {
     const response = await fetch(`${this.apiBaseUrl}/characters`, { headers: this.buildAuthHeaders() });
     if (!response.ok) throw new Error(`Fetch characters failed (${response.status})`);

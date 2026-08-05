@@ -1737,6 +1737,7 @@ class BaseShape {
     static pasteShapeData(board, parent, data) {
         if (!data?.type || !data?.properties)
             return false;
+        BaseShape.registerPastedObjects?.(data.objects);
         data.properties.x = (data.properties.x ?? 0) + 20;
         data.properties.y = (data.properties.y ?? 0) + 20;
         const shape = board.createShape(data.type, parent ?? null);

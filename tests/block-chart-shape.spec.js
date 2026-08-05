@@ -138,7 +138,7 @@ test.describe('block chart shape', () => {
         await addModel(page);
         await page.click('#components-button');
         await page.waitForTimeout(300);
-        await page.click('.mdl-dropdown-list-label:has-text("Chart (blocks)")');
+        await page.click('.mdl-object-picker-card:has-text("Chart (blocks)")');
         await page.waitForTimeout(200);
         expect(await page.evaluate(() => shell.shapeDrawController.pendingShapeType)).toBe('BlockChartShape');
 

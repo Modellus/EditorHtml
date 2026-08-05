@@ -128,7 +128,7 @@ test.describe('analogue clock component', () => {
         await setupBoard(page);
         await page.click('#components-button');
         await page.waitForTimeout(300);
-        await page.click('.mdl-dropdown-list-label:has-text("Analogue clock")');
+        await page.click('.mdl-object-picker-card:has-text("Analogue clock")');
         await page.waitForTimeout(200);
         const armed = await page.evaluate(() => shell.shapeDrawController.isArmed());
         expect(armed).toBe(true);

@@ -7,6 +7,7 @@
     "icon": "fa-light fa-arrow-right-long",
     "tags": ["object", "vector", "phasor", "arrow", "rotation", "oscillation"],
     "capabilities": ["angular", "reads-model", "vector"],
+    "preview": { "parameters": { "angleVariable": "35", "lengthScale": 48, "showProjections": true } },
     "parameters": [
         { "id": "angleVariable", "label": "Angle variable", "valueType": "variable", "defaultValue": "0", "category": "model", "description": "Angle in degrees, measured counter-clockwise from the positive x axis." },
         { "id": "lengthVariable", "label": "Length variable", "valueType": "variable", "defaultValue": "1", "category": "model" },

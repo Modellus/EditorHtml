@@ -7,6 +7,7 @@
     "icon": "fa-light fa-circle-notch",
     "tags": ["object", "gauge", "progress", "ring", "meter"],
     "capabilities": ["radial", "angular", "reads-model"],
+    "preview": { "parameters": { "valueVariable": "68", "unit": "%" } },
     "parameters": [
         { "id": "valueVariable", "label": "Value variable", "valueType": "variable", "defaultValue": "0", "category": "model" },
         { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": 0, "category": "scale" },

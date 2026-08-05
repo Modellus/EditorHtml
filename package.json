@@ -7,6 +7,7 @@
     "test": "npx playwright test",
     "build:offline": "node electron/build-offline.js",
     "icons": "node electron/generate-icons.js",
+    "seed:objects": "node tests/seed-objects.js",
     "start": "electron .",
     "dist": "electron-builder"
   },

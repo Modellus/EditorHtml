@@ -510,6 +510,21 @@ class BlockAgentTools {
         return this.success({ shapeId: shape.id, name: shape.properties.name });
     }
 
+    buildCustomComponentDocument(definition, input, type) {
+        return {
+            schemaVersion: BlockMigrations.currentVersion,
+            type: type,
+            category: "component",
+            displayName: input.displayName ?? definition.name,
+            description: input.description ?? `Custom component saved from "${definition.name}".`,
+            icon: "fa-light fa-shapes",
+            tags: ["object", "custom"],
+            capabilities: ["custom"],
+            parameters: definition.parameters ?? [],
+            root: BlockObjects.cloneDefinition(definition).root
+        };
+    }
+
     saveCustomComponent(input) {
         const definition = this.requireDraft(input);
         const type = String(input.type ?? "");
@@ -520,20 +535,13 @@ class BlockAgentTools {
         const validation = this.getValidator().validate(definition, this.getPreviewContext(input));
         if (!validation.valid)
             return { ok: false, errors: validation.errors, warnings: validation.warnings };
-        const savedRoot = BlockObjects.cloneDefinition(definition).root;
-        this.registry.registerCustomComponent({
-            type: type,
-            version: "1.0.0",
-            category: "component",
-            displayName: input.displayName ?? definition.name,
-            description: input.description ?? `Custom component saved from "${definition.name}".`,
-            tags: ["custom"],
-            capabilities: ["custom"],
-            inputSchema: { properties: {} },
-            parameters: definition.parameters ?? [],
-            agentAccessible: true,
-            create: () => BlockObjects.cloneDefinition({ root: savedRoot }).root
-        });
+        const document = this.buildCustomComponentDocument(definition, input, type);
+        try {
+            BlockObjectLibrary.registerDocument(document);
+        } catch (error) {
+            return this.failure("COMPONENT_NOT_SAVEABLE", error.message, { path: "draftId" });
+        }
+        this.registry.markCustomComponent(type);
         return this.success({ type: type, component: this.registry.describe(type) });
     }
 }

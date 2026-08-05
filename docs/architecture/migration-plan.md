@@ -54,9 +54,19 @@ objects are created as `ComponentShape`, existing documents keep the legacy shap
 * **Notebook editor.** `pages/notebook/index.html` does not load the block layer and has its own
   placeholder blocks (`scripts/editors/notebook/blocks/`). A `ComponentBlock` wrapper is the
   natural next step; it needs the same script includes and a notebook-side toolbar adapter.
-* **Custom component persistence.** `save_custom_component` registers a component for the session
-  and the inserted object carries its own definition, so documents stay self-contained. Sharing a
-  custom component across documents needs a store (model file section or API), not yet designed.
+* **Custom component persistence.** Done. A model carries every object it uses that the editor does
+  not ship with, in a top-level `objects` section written and read by `BlockObjectLibrary` (see §9 of
+  [`building-blocks.md`](building-blocks.md)); the section also travels on the `addShape`
+  collaboration op and on clipboard data. `save_custom_component` registers through the same library,
+  so an object the agent invents is saved with the model, offered by the palette, and readable back
+  out through **Copy definition**. Sharing an object *between* models is what the
+  catalogue store does, and everything in this repository for it is built: authoring under
+  Assets → Objects in the catalogue, the client methods, the board palette that offers them
+  (`BlockObjectCatalogue`, `ObjectPicker`), and `node tests/seed-objects.js` to publish the six
+  bundled definitions with a screenshot each. What remains is the API itself, specified in
+  [`objects-api.md`](objects-api.md) — it lives outside this repository. Until it is deployed the
+  catalogue reads as empty, the palette shows the bundled objects, and the seed dry run is the way
+  to see what the first write will do.
 * **Visual regression snapshots.** Compilation is deterministic, so
   `BlockRenderer.toMarkup(compilation.nodes)` is already a stable snapshot key; wiring it to
   Playwright's screenshot comparison for the presets and for pre/post-migration shapes is the

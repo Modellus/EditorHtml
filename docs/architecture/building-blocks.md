@@ -38,10 +38,15 @@ Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
 | `scripts/blocks/blockComponents.js` | `BlockComponentHelpers` | component registrations |
 | `scripts/blocks/blockChartGeometry.js` | `BlockChartGeometry` | scales, series points, area/line paths, bar layout |
 | `scripts/blocks/blockChartComponents.js` | — | the chart components |
+| `scripts/blocks/blockObjectLibrary.js` | `BlockObjectLibrary` | the objects a model carries with it |
+| `scripts/blocks/blockObjectCatalogue.js` | `BlockObjectCatalogue` | the objects the catalogue offers |
+| `scripts/catalog/objectDrawing.js` | `ObjectDrawing` | compiles an object and photographs it |
+| `scripts/catalog/objectSeeder.js` | `ObjectSeeder` | publishes the bundled objects to the catalogue |
 | `scripts/blocks/blockObjects.js` | `BlockObjects` | object definitions and component instances |
 | `scripts/blocks/blockAgentTools.js` | `BlockAgentTools` | the agent-safe tool surface |
 | `scripts/editors/board/widgets/ComponentWidget.js` | `ComponentShape` | the host shape |
 | `scripts/shapes/componentShape/ComponentShapeToolbar.js` | — | its property editor |
+| `scripts/toolbars/objectPicker.js` | `ObjectPicker` | the object palette: previews, descriptions, search |
 | `scripts/controls/BlockChartControl.js` | `BlockChartControl` | the chart control that paints through blocks |
 | `scripts/shapes/blockChartShape/BlockChartShape.js` | `BlockChartShape` | the chart shape built on blocks |
 
@@ -200,6 +205,11 @@ and `pointer-hand` stay in code, because they generate geometry per index rather
 * **`concat`** joins resolved parts into one string, so the gauge readouts build
   `"64 km/h"` from a `format` binding and their own `unit` parameter. `format` resolves its
   `digits`, `prefix` and `suffix` as bindings too.
+* **`preview`** holds the parameter values the object picker draws its thumbnail with:
+  `{ "preview": { "parameters": { "valueVariable": "64", "unit": "km/h" } } }`. It is not part of
+  the object — nothing else reads it — and the defaults are used when a document omits it. An
+  object whose defaults draw nothing recognisable (a phasor of length one, a gauge reading zero)
+  needs it; a clock does not.
 
 The JSON files are the source of truth. The browser cannot `fetch` them in the offline build,
 which runs from `file://`, so they are delivered by `definitions.generated.js`; regenerate it
@@ -300,6 +310,100 @@ BlockMigrations.registerMigration("1.0.0", "1.1.0", definition => { … return d
 open, upgrade in memory and are written back at the current version on the next save.
 Unrecognised properties are never dropped.
 
+### Objects the model carries
+
+An instance stores a reference — `properties.definition.root` is `{ type: "analogue-clock", parameters: {…} }`
+— and the drawing itself lives in the registry. That is enough for the objects the editor ships,
+because `definitions.generated.js` registers them at load time on every page. It is not enough for
+an object that came from somewhere else: the catalogue, the agent, another author's board. So the
+model file carries those objects with it, in a top-level `objects` array of definition documents:
+
+```js
+{ properties: {…}, board: [ …shapes… ], objects: [ <definition document>, … ] }
+```
+
+`BlockObjectLibrary` is what puts them there and takes them out again:
+
+| Call | Role |
+| --- | --- |
+| `sealBuiltIns()` | runs once at load, recording every component the editor registers for itself |
+| `collectFromShapes(shapes)` | the documents those shapes need, built-ins excluded, followed through the objects an object is itself built from |
+| `registerAll(documents)` | registers them again on the far side, reporting `{ registered, problems }` |
+
+`BoardEditor.serialize()` writes the section only when there is something to write, and
+`deserialise()` registers it before the shapes are read, so a component is always registered by the
+time a shape asks for it. The same pair of calls carries objects on the `addShape` collaboration op
+and on clipboard data, so pasting into another document brings the object along.
+
+A document naming a type the editor already ships is ignored: the bundled object is the one that
+page was tested with, and honouring the model's copy would freeze it at the version it was saved at.
+
+### Objects the catalogue offers
+
+`BlockObjectCatalogue` reads the catalogue through `ModelsApiClient.fetchObjectsPage()` the first
+time the palette opens, and `ObjectPicker` merges the result with what the registry already holds —
+one card per type, the catalogue entry preferred, because it is the one with a screenshot and the
+description its author wrote. The definition is fetched only when an object is placed
+(`ensureRegistered()` → `fetchObjectDefinition()` → `BlockObjectLibrary.registerDocument()`), which
+is also the moment the model starts carrying it.
+
+The catalogue is an addition, never a condition: a failed read leaves the palette showing everything
+the editor ships with and retries the next time it opens, which is also how the offline board — no
+API client at all — behaves. [`objects-api.md`](objects-api.md) is the endpoint contract.
+
+Objects are authored in the catalogue itself, under **Assets → Objects** in
+[`pages/catalog`](../../pages/catalog), which loads the block layer for the purpose. The editor takes
+the definition JSON and draws it beside the text as it is written: `inspectObjectDefinition()` runs
+`BlockDefinitionLoader.inspect()`, refuses a type the editor ships with, registers the document and
+compiles it, and either paints the drawing or lists every problem. An object cannot be published
+until that list is empty.
+
+The screenshot is not uploaded by hand — `ObjectDrawing.toScreenshotFile()` rasterises the very
+drawing the preview shows, so a catalogue card can never advertise something the object does not
+draw. The same `preview.parameters` the palette uses picks the values it is drawn with, and the
+drawing is always compiled at `ObjectDrawing.previewSize` and rasterised larger: a parameter written
+in pixels would otherwise shrink against a bigger canvas.
+
+`ObjectDrawing` compiles through a `Calculator`, because an object works out its geometry with
+formulas and a formula is evaluated by the calculator. Bind it to nothing and every formula falls
+back to zero — the object still validates and still "draws", with every radius at 0.
+
+### Objects the agent invents
+
+`save_custom_component` registers its draft as a definition document through
+`BlockObjectLibrary.registerDocument()`. Three things follow from that, none of which needed
+special-casing: the model carries the object the way it carries a catalogue one, the palette lists
+it (the document is tagged `object`) with a preview compiled from it, and its definition can be read
+back out. Registering a `create()` function instead — as it once did — left the drawing in the
+session that made it, so the model reopened with an object it could not draw.
+
+The **Copy definition** item in a component's settings menu writes that document to the clipboard in
+the shape the catalogue's object editor expects. That is the path from an object invented on the
+board to one published for everyone: invent, copy, paste, publish. It appears only for objects that
+have a document behind them.
+
+### Seeding the bundled objects
+
+The six objects the editor ships with belong in the catalogue's listing too, so that browsing it
+shows everything rather than everything-except-the-built-ins. `ObjectSeeder` publishes them, keyed
+by the definition's own type, so running it twice changes nothing:
+
+```
+npx http-server . -p 8432 -c-1 --silent          # in another terminal
+node tests/seed-objects.js                       # dry run: says what it would do
+node tests/seed-objects.js --out=/tmp/drawings   # …and writes the drawings out to look at
+node tests/seed-objects.js --write --token=…     # creates whatever is missing
+node tests/seed-objects.js --write --update      # also rewrites what is already there
+```
+
+The definitions stay bundled regardless: a seeded object carries a built-in type, so
+`BlockObjectLibrary.registerDocument()` refuses to register it and the board keeps drawing the copy
+it ships with. What seeding adds is the catalogue card — the screenshot and the description.
+
+Writing needs to know what the catalogue already holds, so a listing that cannot be read stops a
+write; a dry run carries on against an empty catalogue, which is what makes the plan readable before
+the endpoints exist at all.
+
 ## 10. Security constraints
 
 * Only registered block types can appear in a definition; the compiler and the validator both refuse unknown types.
@@ -308,10 +412,22 @@ Unrecognised properties are never dropped.
 * Image sources and path data are allow-listed.
 * Complexity limits bound the work one object can cause per frame.
 * `insert_object` and `save_custom_component` re-run the full validation and refuse invalid drafts.
+* `save_custom_component` saves a **definition document**, not a `create()` function, so the object
+  it invents is one `BlockObjectLibrary` can collect into the model — and one a person can read.
 
 ## 11. Testing a new block
 
 * `tests/component-blocks.spec.js` — registry, geometry, bindings, compiler, validator, presets.
+* `tests/model-objects.spec.js` — the objects a model carries: what is collected, what is left to the
+  editor, and that an object the session has never seen still draws when the model is reopened.
+* `tests/object-picker.spec.js` — the palette: what it lists, the drawn previews, search, and what
+  choosing an object arms for drawing.
+* `tests/object-catalogue.spec.js` — the catalogue against a stubbed API: the screenshot cards, the
+  definition read on placement only, degrading to the built-in objects, and the model that results.
+* `tests/catalog-objects.spec.js` — the catalogue's own Objects section: the branch and its cards,
+  the live preview, every way a definition is refused, and what publishing sends.
+* `tests/object-seed.spec.js` — seeding against a stubbed catalogue: the plan, the write, seeding
+  twice, updating, one object refused, and that every bundled object really draws something.
 * `tests/component-clock.spec.js` — rendering, model binding, editing, undo/redo, serialization,
   duplication, selection/resize, hand dragging, and the other components on the board.
 * `tests/component-agent-tools.spec.js` — tool schemas, discovery, the full build→validate→preview→insert

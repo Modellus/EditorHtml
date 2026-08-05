@@ -413,6 +413,14 @@ class ComponentShape extends BaseShape {
         const compilation = this.compileComponent();
         return BlockRenderer.toStandaloneSvg(compilation.nodes, Number(this.properties.width) || 180, Number(this.properties.height) || 180, "none");
     }
+
+    getClipboardData() {
+        const data = super.getClipboardData();
+        data.objects = BlockObjectLibrary.collectFromShapes([this]);
+        return data;
+    }
 }
 
 var ComponentWidget = ComponentShape;
+
+BaseShape.registerPastedObjects = objects => BlockObjectLibrary.registerAll(objects);

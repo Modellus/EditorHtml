@@ -1491,3 +1491,65 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.media-thumb-placeholder.object-thumb {
+  background: linear-gradient(135deg, #ecfeff, #a5f3fc);
+}
+
+.object-editor-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 12px;
+  align-items: start;
+}
+
+.object-preview-host {
+  height: 300px;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: #f8fafc;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.object-preview-drawing {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.object-preview-drawing svg {
+  width: 100%;
+  height: auto;
+  max-width: 240px;
+}
+
+.object-preview-empty {
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-align: center;
+  padding: 0 12px;
+}
+
+.object-preview-problems {
+  align-self: stretch;
+  width: 100%;
+  font-size: 0.75rem;
+  color: #b91c1c;
+  overflow: auto;
+}
+
+.object-preview-problems ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.object-preview-problems li {
+  margin-bottom: 0.35rem;
+  line-height: 1.35;
+}

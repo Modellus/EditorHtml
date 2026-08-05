@@ -549,6 +549,12 @@ BlockDefinitionLoader.registerAll([
             "angular",
             "reads-model"
         ],
+        "preview": {
+            "parameters": {
+                "valueVariable": "68",
+                "unit": "%"
+            }
+        },
         "parameters": [
             {
                 "id": "valueVariable",
@@ -1821,6 +1827,13 @@ BlockDefinitionLoader.registerAll([
             "reads-model",
             "vector"
         ],
+        "preview": {
+            "parameters": {
+                "angleVariable": "35",
+                "lengthScale": 48,
+                "showProjections": true
+            }
+        },
         "parameters": [
             {
                 "id": "angleVariable",
@@ -2113,6 +2126,12 @@ BlockDefinitionLoader.registerAll([
             "reads-model",
             "scale"
         ],
+        "preview": {
+            "parameters": {
+                "valueVariable": "64",
+                "unit": "km/h"
+            }
+        },
         "parameters": [
             {
                 "id": "valueVariable",

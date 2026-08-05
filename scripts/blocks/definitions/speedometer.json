@@ -7,6 +7,7 @@
     "icon": "fa-light fa-gauge-high",
     "tags": ["object", "gauge", "speed", "dial", "meter", "scale"],
     "capabilities": ["radial", "angular", "reads-model", "scale"],
+    "preview": { "parameters": { "valueVariable": "64", "unit": "km/h" } },
     "parameters": [
         { "id": "valueVariable", "label": "Value variable", "valueType": "variable", "defaultValue": "0", "category": "model" },
         { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": 0, "category": "scale" },

@@ -27,6 +27,9 @@ const treeNodeIds = {
   catalogDataEducation: "catalog-data-education",
   catalogDataSciences: "catalog-data-sciences",
   catalogCharacters: "catalog-characters",
+  catalogObjects: "catalog-objects",
+  catalogObjectsEducation: "catalog-objects-education",
+  catalogObjectsSciences: "catalog-objects-sciences",
   samples: "samples",
   samplesModels: "samples-models",
   samplesEducation: "samples-education",
@@ -98,12 +101,14 @@ class ModelsApp {
     this.videosSource = { filter: {} };
     this.dataSetsSource = { filter: {} };
     this.charactersSource = { filter: {} };
+    this.objectsSource = { filter: {} };
     this.assetsFeedTotals = null;
     this.publicFacets = { education: [], sciences: [], total: 0 };
     this.sampleFacets = { education: [], sciences: [], total: 0 };
     this.videoFacets = { education: [], sciences: [], total: 0 };
     this.dataFacets = { education: [], sciences: [], total: 0 };
     this.characterFacets = { categories: [], uncategorized: 0, total: 0 };
+    this.objectFacets = { education: [], sciences: [], total: 0 };
     this.videosData = [];
     this.dataSetData = [];
     this.educationLookupOptions = [];
@@ -283,6 +288,19 @@ class ModelsApp {
           widget: "dxButton",
           visible: isAuthenticated,
           options: {
+            elementAttr: { id: "nav-add-object", title: "Add Object" },
+            stylingMode: "text",
+            template: (_, contentElement) => {
+              const host = contentElement.get(0);
+              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-shapes mdl-nav-action-icon" style="color:#0891b2;font-size:1rem"></i><i class="fa-solid fa-shapes mdl-nav-action-icon-hover" style="color:#0891b2;font-size:1rem"></i><span>Add Object</span></span>`;
+            }
+          }
+        },
+        {
+          location: "after",
+          widget: "dxButton",
+          visible: isAuthenticated,
+          options: {
             elementAttr: { id: "nav-new-model", title: "Create Model" },
             stylingMode: "text",
             template: (_, contentElement) => {
@@ -372,6 +390,7 @@ class ModelsApp {
     this.elements.navUploadVideo = document.getElementById("nav-upload-video");
     this.elements.navUploadData = document.getElementById("nav-upload-data");
     this.elements.navAddCharacter = document.getElementById("nav-add-character");
+    this.elements.navAddObject = document.getElementById("nav-add-object");
     this.elements.userMenu = document.getElementById("user-menu");
     this.elements.navLogin = document.getElementById("nav-login");
     this.userSdk.applyUserMenu(this.elements.userMenu, this.state.session);
@@ -740,6 +759,13 @@ class ModelsApp {
     this.dataSetsFeed = null;
   }
 
+  disposeObjectsCardView() {
+    if (!this.objectsCardViewInstance) return;
+    this.objectsCardViewInstance.dispose();
+    this.objectsCardViewInstance = null;
+    this.objectsFeed = null;
+  }
+
   disposeCharacterCardView() {
     if (!this.characterCardViewInstance) return;
     this.characterCardViewInstance.dispose();
@@ -787,8 +813,8 @@ class ModelsApp {
         const currentUserId = this.userSdk.getUserId(this.state.session);
         const isAssetsView = this.state.selectedTreeNodeId === treeNodeIds.assets;
         const canEdit = !isAssetsView && (this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId));
-        const assetIcon = data.asset_type === "video" ? "fa-light fa-video" : data.asset_type === "data" ? "fa-light fa-table" : "fa-light fa-person-running";
-        const assetLabel = data.asset_type === "video" ? this.translations.get("Videos") : data.asset_type === "data" ? this.translations.get("Data") : this.translations.get("Characters");
+        const assetIcon = data.asset_type === "video" ? "fa-light fa-video" : data.asset_type === "data" ? "fa-light fa-table" : data.asset_type === "object" ? "fa-light fa-shapes" : "fa-light fa-person-running";
+        const assetLabel = data.asset_type === "video" ? this.translations.get("Videos") : data.asset_type === "data" ? this.translations.get("Data") : data.asset_type === "object" ? this.translations.get("Objects") : this.translations.get("Characters");
         const thumbContent = assetUrl
           ? `<img class="card-thumb character-card-thumb" src="${this.escapeHtml(assetUrl)}" alt="${this.escapeHtml(data.title || "")}">`
           : `<div class="media-thumb-placeholder character-thumb"><i class="${assetIcon} media-thumb-icon" aria-hidden="true"></i></div>`;
@@ -1019,6 +1045,181 @@ class ModelsApp {
     this.videosFeed = this.createFeed(this.videosCardViewInstance, (search, offset, limit) => this.fetchVideosFeedPage(search, offset, limit));
   }
 
+  ensureObjectsCardView() {
+    if (this.objectsCardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
+    const CardView = DevExpress.ui.dxCardView;
+    this.elements.cardView.innerHTML = "";
+    this.objectsCardViewInstance = new CardView(this.elements.cardView, {
+      onContentReady: () => this.bindFeedScroll(this.objectsFeed),
+      onOptionChanged: event => this.handleFeedSearchChange(this.objectsFeed, event),
+      dataSource: [],
+      height: "100%",
+      repaintChangesOnly: true,
+      scrolling: { mode: "virtual" },
+      paging: { enabled: false },
+      pager: { visible: false },
+      noDataText: this.translations.get("No models found."),
+      showBorders: false,
+      focusStateEnabled: false,
+      hoverStateEnabled: false,
+      allowColumnReordering: false,
+      allowColumnResizing: false,
+      columnHidingEnabled: true,
+      headerPanel: { visible: false },
+      groupPanel: { visible: false },
+      searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search…") },
+      grouping: { autoExpandAll: false, contextMenuEnabled: false },
+      sorting: { mode: "none" },
+      cardsPerRow: 4,
+      cardMinWidth: 125,
+      columns: [
+        { dataField: "title", caption: this.translations.get("Title") },
+        { dataField: "description", caption: this.translations.get("Description") }
+      ],
+      cardTemplate: (cardData, cardElement) => {
+        const host = cardElement.get(0);
+        const data = cardData.card.data;
+        const thumbnailUrl = data.thumbnail_url || "";
+        const educationLookupId = data.education_level_id;
+        const scienceLookupId = data.science_id;
+        const educationLabel = this.educationLookupNameById.get(educationLookupId) || data.education_level || this.translations.get("Uncategorized");
+        const scienceLabel = this.scienceLookupNameById.get(scienceLookupId) || data.science || this.translations.get("Uncategorized");
+        const educationColor = this.educationLookupColorById.get(educationLookupId) || "#8b5cf6";
+        const scienceColor = this.scienceLookupColorById.get(scienceLookupId) || "#0ea5e9";
+        const escapedEducationLabel = this.escapeHtml(educationLabel);
+        const escapedScienceLabel = this.escapeHtml(scienceLabel);
+        const descriptionLabel = this.escapeHtml(data.description || "");
+        const createdDate = this.formatShortDate(data.created_at);
+        const currentUserId = this.userSdk.getUserId(this.state.session);
+        const canEdit = this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId);
+        const taxonomyMarkup = `
+          <div class="card-thumb-dropdowns">
+            <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
+            <div class="card-thumb-dropdown science-dropdown-host" data-lookup-id="${scienceLookupId}">${escapedScienceLabel}</div>
+          </div>
+        `;
+        const thumbContent = thumbnailUrl
+          ? `<img class="card-thumb" src="${this.escapeHtml(thumbnailUrl)}" alt="${this.escapeHtml(data.title || "")}">`
+          : `<div class="media-thumb-placeholder object-thumb"><i class="fa-light fa-shapes media-thumb-icon" aria-hidden="true"></i></div>`;
+        const cardMarkup = `
+          <div class="card-tile" data-item-id="${this.escapeHtml(data.id || "")}">
+            <div class="card-thumb-wrap">${thumbContent}${taxonomyMarkup}</div>
+            <div class="card-actions">
+              ${canEdit ? `<button class="edit-button" aria-label="Edit object"><i class="fa-light fa-pen" aria-hidden="true"></i></button>` : ""}
+              ${canEdit ? `<button class="delete-button" aria-label="Delete object"><i class="fa-light fa-trash-can trash" aria-hidden="true"></i><i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i></button>` : ""}
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">${this.escapeHtml(data.title) || "Untitled"}</h3>
+              <p class="card-desc">${descriptionLabel}</p>
+              <div class="card-meta">
+                <div class="card-dates">
+                  ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        host.innerHTML = cardMarkup;
+        const cardDescElement = host.querySelector(".card-desc");
+        const editButton = host.querySelector(".edit-button");
+        const deleteButton = host.querySelector(".delete-button");
+        const educationDropdownHost = host.querySelector(".education-dropdown-host");
+        const scienceDropdownHost = host.querySelector(".science-dropdown-host");
+        if (educationDropdownHost) educationDropdownHost.style.setProperty("--pill-color", educationColor);
+        if (scienceDropdownHost) scienceDropdownHost.style.setProperty("--pill-color", scienceColor);
+        if (cardDescElement && (data.title || data.description)) {
+          $('<div>').appendTo('body').dxTooltip({
+            target: cardDescElement,
+            contentTemplate: contentElement => {
+              contentElement.append($('<div class="card-desc-tooltip">').html(`<strong>${this.escapeHtml(data.title || "")}</strong>${data.description ? `<p>${this.escapeHtml(data.description)}</p>` : ""}`) );
+            },
+            showEvent: { delay: 600, name: 'mouseenter' },
+            hideEvent: 'mouseleave',
+            position: 'bottom',
+            maxWidth: 300
+          });
+        }
+        if (editButton)
+          editButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.showObjectPopup(data);
+          });
+        if (deleteButton)
+          deleteButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.deleteObjectItem(data);
+          });
+        if (educationDropdownHost) {
+          educationDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("click", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(educationDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchEducationLevelLookups(),
+              byKey: lookupId => this.apiClient.fetchEducationLevelLookupById(lookupId)
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: educationLookupId === undefined || educationLookupId === null || educationLookupId === "" ? null : educationLookupId,
+            text: educationLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              const nextEducationLookupId = event.itemData.id;
+              if (nextEducationLookupId === data.education_level_id) return;
+              try {
+                await this.apiClient.patchObject(data.id, { education_level_id: nextEducationLookupId });
+                data.education_level_id = nextEducationLookupId;
+                data.education_level = event.itemData.name || data.education_level;
+                data.education_level_color = event.itemData.color || data.education_level_color;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
+              }
+            }
+          });
+        }
+        if (scienceDropdownHost) {
+          scienceDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("click", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(scienceDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchScienceLookups(),
+              byKey: lookupId => this.apiClient.fetchScienceLookupById(lookupId)
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: scienceLookupId === undefined || scienceLookupId === null || scienceLookupId === "" ? null : scienceLookupId,
+            text: scienceLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              const nextScienceLookupId = event.itemData.id;
+              if (nextScienceLookupId === data.science_id) return;
+              try {
+                await this.apiClient.patchObject(data.id, { science_id: nextScienceLookupId });
+                data.science_id = nextScienceLookupId;
+                data.science = event.itemData.name || data.science;
+                data.science_color = event.itemData.color || data.science_color;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
+              }
+            }
+          });
+        }
+      }
+    });
+    this.objectsFeed = this.createFeed(this.objectsCardViewInstance, (search, offset, limit) => this.fetchObjectsFeedPage(search, offset, limit));
+  }
+
   ensureDataCardView() {
     if (this.dataCardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
     const CardView = DevExpress.ui.dxCardView;
@@ -1205,6 +1406,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     this.ensureVideosCardView();
   }
 
@@ -1219,6 +1421,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     this.ensureDataCardView();
   }
 
@@ -1233,7 +1436,23 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeDataCardView();
+    this.disposeObjectsCardView();
     this.ensureCharacterCardView();
+  }
+
+  showObjectsCardView() {
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
+    this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
+    this.disposeVideosCardView();
+    this.disposeDataCardView();
+    this.disposeCharacterCardView();
+    this.ensureObjectsCardView();
   }
 
   renderVideos() {
@@ -1249,6 +1468,11 @@ class ModelsApp {
   renderCharacters() {
     this.showCharacterCardView();
     this.startFeed(this.charactersFeed);
+  }
+
+  renderObjects() {
+    this.showObjectsCardView();
+    this.startFeed(this.objectsFeed);
   }
 
   renderAssets() {
@@ -1295,6 +1519,21 @@ class ModelsApp {
       this.loadModels();
     } catch (error) {
       this.setStatus(error?.message || "Failed to delete data set.", true);
+    }
+  }
+
+  async deleteObjectItem(objectData) {
+    const objectId = objectData && objectData.id;
+    if (!objectId) return;
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    this.setStatus("Deleting object…");
+    try {
+      await this.apiClient.deleteObject(objectId);
+      this.setStatus("Object deleted.");
+      this.loadModels();
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to delete object.", true);
     }
   }
 
@@ -1582,6 +1821,228 @@ class ModelsApp {
       showCloseButton: true,
       contentTemplate: contentElement => buildContent(contentElement)
     });
+  }
+
+  // The definition is the object: everything else on the form is how the catalogue talks about it.
+  // So it is checked the way the editor checks it — schema, declared names, registered block types,
+  // and a compile that has to produce something — before the object can be saved at all.
+  inspectObjectDefinition(definitionText) {
+    let definitionDocument = null;
+    try {
+      definitionDocument = JSON.parse(definitionText);
+    } catch (error) {
+      return { document: null, problems: [`The definition is not valid JSON: ${error.message}`] };
+    }
+    const problems = BlockDefinitionLoader.inspect(definitionDocument);
+    if (BlockObjectLibrary.isBuiltIn(definitionDocument.type))
+      problems.push(`"${definitionDocument.type}" is an object the editor ships with, so a catalogue object cannot take that type.`);
+    if (problems.length > 0)
+      return { document: definitionDocument, problems };
+    try {
+      BlockDefinitionLoader.register(definitionDocument);
+    } catch (error) {
+      return { document: definitionDocument, problems: [error.message] };
+    }
+    const compilation = ObjectDrawing.compile(definitionDocument, ObjectDrawing.previewSize);
+    for (const diagnostic of compilation.diagnostics)
+      problems.push(`${diagnostic.path}: ${diagnostic.message}`);
+    if (compilation.nodes.length === 0)
+      problems.push("The definition compiles to nothing: it would draw an empty object.");
+    return { document: definitionDocument, problems, compilation };
+  }
+
+  // The preview follows the definition as it is written, so the drawing and the problems are never
+  // a click behind what the editor holds.
+  scheduleObjectPreview(definitionText) {
+    if (this._objectPreviewTimer)
+      clearTimeout(this._objectPreviewTimer);
+    this._objectPreviewTimer = setTimeout(() => this.renderObjectPreview(definitionText), 400);
+  }
+
+  renderObjectPreview(definitionText) {
+    const inspection = this.inspectObjectDefinition(definitionText);
+    this._objectPreviewSvg = inspection.problems.length > 0 ? null : BlockRenderer.toStandaloneSvg(inspection.compilation.nodes, ObjectDrawing.previewSize, ObjectDrawing.previewSize, "none");
+    this._objectPreviewProblems = inspection.problems;
+    this.paintObjectPreview();
+    return inspection;
+  }
+
+  // The form rebuilds its items whenever a template resolves, so what the preview shows is held
+  // here and painted again into whichever host the template built last. Looking the host up by id
+  // instead would drop the painting whenever the click lands inside a rebuild.
+  paintObjectPreview() {
+    const previewHost = this._objectPreviewHostElement;
+    if (!previewHost)
+      return;
+    if (this._objectPreviewSvg) {
+      previewHost.innerHTML = `<div class="object-preview-drawing">${this._objectPreviewSvg}</div>`;
+      return;
+    }
+    if (this._objectPreviewProblems?.length > 0) {
+      previewHost.innerHTML = `<div class="object-preview-problems"><ul>${this._objectPreviewProblems.map(problem => `<li>${this.escapeHtml(problem)}</li>`).join("")}</ul></div>`;
+      return;
+    }
+    previewHost.innerHTML = `<div class="object-preview-empty">The preview is drawn from the definition.</div>`;
+  }
+
+  showObjectPopup(objectData = null) {
+    let popupHost = document.getElementById("object-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="object-popup"></div>`);
+      popupHost = document.getElementById("object-popup");
+    }
+    this._objectPreviewSvg = null;
+    this._objectPreviewProblems = [];
+    const isEdit = objectData !== null;
+    const formData = { title: objectData?.title || "", definition: "" };
+    const buildContent = contentElement => {
+      const host = contentElement.get(0);
+      host.innerHTML = `<div id="object-form"></div>`;
+      const formHost = document.getElementById("object-form");
+      this._objectFormInstance = new DevExpress.ui.dxForm(formHost, {
+        formData,
+        colCount: 1,
+        items: [
+          {
+            dataField: "title",
+            label: { text: "Title" },
+            validationRules: [{ type: "required" }],
+            editorOptions: {
+              elementAttr: { id: "object-title-editor" },
+              inputAttr: { style: "font-family: 'Atma', cursive; font-weight: 600;" }
+            }
+          },
+          {
+            label: { text: "Description" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get(0);
+              itemHost.insertAdjacentHTML("beforeend", `
+                <div id="object-html-editor"></div>
+                <div id="object-html-toolbar" class="html-editor-toolbar"></div>
+              `);
+              this._objectHTMLEditor = new DevExpress.ui.dxHtmlEditor(document.getElementById("object-html-editor"), {
+                value: "",
+                valueType: "html",
+                height: 160,
+                toolbar: {
+                  container: document.getElementById("object-html-toolbar"),
+                  items: ["bold", "italic", "underline", "strike", "separator", "orderedList", "bulletList", "separator", "link", "separator", "undo", "redo"]
+                }
+              });
+              if (objectData?.description)
+                Utils.toHtml(objectData.description).then(descriptionHtml => this._objectHTMLEditor.option("value", descriptionHtml));
+            }
+          },
+          {
+            label: { text: "Definition" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get(0);
+              itemHost.innerHTML = `
+                <div class="object-editor-split">
+                  <div id="object-definition-host"></div>
+                  <div id="object-preview-host" class="object-preview-host"></div>
+                </div>`;
+              this._objectPreviewHostElement = itemHost.querySelector(".object-preview-host");
+              this._objectDefinitionEditor = new DevExpress.ui.dxTextArea(document.getElementById("object-definition-host"), {
+                value: "",
+                height: 300,
+                spellcheck: false,
+                valueChangeEvent: "input",
+                onValueChanged: event => this.scheduleObjectPreview(event.value),
+                elementAttr: { id: "object-definition-editor", class: "object-definition-editor" },
+                inputAttr: { style: "font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;" },
+                placeholder: "Paste the object definition JSON here"
+              });
+              this.paintObjectPreview();
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "left",
+            buttonOptions: {
+              text: "Check and preview",
+              icon: "fa-light fa-wand-magic-sparkles",
+              elementAttr: { id: "object-check-button" },
+              onClick: () => this.renderObjectPreview(this._objectDefinitionEditor.option("value"))
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "right",
+            buttonOptions: {
+              text: isEdit ? "Save" : "Publish",
+              type: "default",
+              elementAttr: { id: "object-save-button" },
+              onClick: () => this.saveObject(objectData)
+            }
+          }
+        ]
+      });
+      if (isEdit)
+        this.loadObjectDefinitionIntoEditor(objectData);
+    };
+    const popupTitle = isEdit ? "Edit Object" : "Add Object";
+    if (this.objectPopupInstance) {
+      this.objectPopupInstance.option("title", popupTitle);
+      buildContent(this.objectPopupInstance.content());
+      this.objectPopupInstance.show();
+      return;
+    }
+    this.objectPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: popupTitle,
+      width: 900,
+      height: "auto",
+      maxHeight: "90vh",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
+  }
+
+  async loadObjectDefinitionIntoEditor(objectData) {
+    this.setStatus("Loading object definition…");
+    try {
+      const definitionDocument = await this.apiClient.fetchObjectDefinition(objectData.id);
+      this._objectDefinitionEditor.option("value", JSON.stringify(definitionDocument, null, 4));
+      this.renderObjectPreview(this._objectDefinitionEditor.option("value"));
+      this.setStatus("");
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to load the object definition.", true);
+    }
+  }
+
+  async saveObject(objectData) {
+    const validation = this._objectFormInstance.validate();
+    if (!validation.isValid) return;
+    const inspection = this.renderObjectPreview(this._objectDefinitionEditor.option("value"));
+    if (inspection.problems.length > 0) {
+      this.setStatus("The definition has to be usable before the object can be saved.", true);
+      return;
+    }
+    const isEdit = objectData !== null;
+    const values = this._objectFormInstance.option("formData");
+    const rawDescription = this._objectHTMLEditor ? this._objectHTMLEditor.option("value") : "";
+    const descriptionValue = rawDescription ? (await Utils.fromHtml(rawDescription)).trim() || null : null;
+    const screenshot = await ObjectDrawing.toScreenshotFile(this._objectPreviewSvg);
+    this.setStatus(isEdit ? "Saving object…" : "Publishing object…");
+    try {
+      if (isEdit) {
+        await this.apiClient.patchObject(objectData.id, { title: values.title, description: descriptionValue, definition: inspection.document });
+        if (screenshot)
+          await this.apiClient.uploadObjectThumbnail(objectData.id, screenshot);
+        this.setStatus("Object saved.");
+      } else {
+        await this.apiClient.createObject({ title: values.title, description: descriptionValue, definition: inspection.document }, screenshot);
+        this.setStatus("Object published.");
+      }
+      this.objectPopupInstance.hide();
+      this.loadModels();
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to save the object.", true);
+    }
   }
 
   showUploadVideoPopup() {
@@ -2263,6 +2724,7 @@ class ModelsApp {
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     const maintenanceStore = this.buildMaintenanceStore(maintenanceType);
     if (!this.maintenanceGridInstance) {
       this.elements.cardView.innerHTML = "";
@@ -2332,6 +2794,7 @@ class ModelsApp {
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     this.ensureCardView();
   }
 
@@ -2359,6 +2822,7 @@ class ModelsApp {
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     const systemTemplatesStore = new DevExpress.data.CustomStore({
       key: "id",
       load: async () => {
@@ -2461,6 +2925,7 @@ class ModelsApp {
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     const allModelsStore = new DevExpress.data.CustomStore({
       key: "id",
       load: async () => {
@@ -2868,6 +3333,7 @@ class ModelsApp {
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     this.disposeUsageDashboard();
     this.elements.cardView.innerHTML = `
       <div class="usage-dashboard-loading">
@@ -2973,6 +3439,7 @@ class ModelsApp {
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     const usersStore = new DevExpress.data.CustomStore({
       key: "id",
       load: () => this.apiClient.fetchUsers(),
@@ -3215,6 +3682,12 @@ class ModelsApp {
       this.setStatus("");
       return;
     }
+    if (this.isObjectNodeId(this.state.selectedTreeNodeId)) {
+      this.objectsSource = { filter: this.resolveTaxonomyFilter(this.state.selectedTreeNodeId, "catalog-object-education-item:", "catalog-object-science-item:") };
+      this.renderObjects();
+      this.setStatus("");
+      return;
+    }
     this.modelsSource = this.resolveModelsSource(this.state.selectedTreeNodeId);
     this.renderModels();
     this.setStatus("");
@@ -3274,10 +3747,11 @@ class ModelsApp {
       this.apiClient.fetchVideosFacets(),
       this.apiClient.fetchDataSetsFacets(),
       this.apiClient.fetchCharacterFacets(),
+      this.apiClient.fetchObjectsFacets(),
       this.apiClient.fetchCharacterCategories(),
       isAuthenticated ? this.apiClient.fetchDeletedModels() : Promise.resolve([])
     ];
-    const [personalModelsResult, publicFacetsResult, sampleFacetsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videoFacetsResult, dataFacetsResult, characterFacetsResult, characterCategoriesResult, deletedModelsResult] = await Promise.allSettled(requests);
+    const [personalModelsResult, publicFacetsResult, sampleFacetsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videoFacetsResult, dataFacetsResult, characterFacetsResult, objectFacetsResult, characterCategoriesResult, deletedModelsResult] = await Promise.allSettled(requests);
     const personalModels = personalModelsResult.status === "fulfilled" ? personalModelsResult.value : [];
     if (publicFacetsResult.status !== "fulfilled")
       throw publicFacetsResult.reason;
@@ -3298,6 +3772,7 @@ class ModelsApp {
     this.videoFacets = videoFacetsResult.status === "fulfilled" ? videoFacetsResult.value : { education: [], sciences: [], total: 0 };
     this.dataFacets = dataFacetsResult.status === "fulfilled" ? dataFacetsResult.value : { education: [], sciences: [], total: 0 };
     this.characterFacets = characterFacetsResult.status === "fulfilled" ? characterFacetsResult.value : { categories: [], uncategorized: 0, total: 0 };
+    this.objectFacets = objectFacetsResult.status === "fulfilled" ? objectFacetsResult.value : { education: [], sciences: [], total: 0 };
     this.videosData = [];
     this.dataSetData = [];
     this.charactersData = [];
@@ -3521,6 +3996,12 @@ class ModelsApp {
       .then(result => ({ items: this.applyModelLookupLabels(result.items), total: result.total }));
   }
 
+  fetchObjectsFeedPage(search, offset, limit) {
+    const filter = this.objectsSource?.filter || {};
+    return this.apiClient.fetchObjectsPage({ search, educationLevelId: filter.educationLevelId, scienceId: filter.scienceId, offset, limit })
+      .then(result => ({ items: this.applyModelLookupLabels(result.items), total: result.total }));
+  }
+
   fetchCharactersFeedPage(search, offset, limit) {
     const filter = this.charactersSource?.filter || {};
     return this.apiClient.fetchCharactersPage({ search, categoryId: filter.categoryId, offset, limit })
@@ -3529,15 +4010,16 @@ class ModelsApp {
 
   async getAssetsFeedTotals(search) {
     if (!search)
-      return { search, videos: this.videoFacets.total, data: this.dataFacets.total, characters: this.characterFacets.total };
+      return { search, videos: this.videoFacets.total, data: this.dataFacets.total, characters: this.characterFacets.total, objects: this.objectFacets.total };
     if (this.assetsFeedTotals?.search === search)
       return this.assetsFeedTotals;
-    const [videos, data, characters] = await Promise.all([
+    const [videos, data, characters, objects] = await Promise.all([
       this.apiClient.fetchVideosPage({ search, offset: 0, limit: 1 }),
       this.apiClient.fetchDataSetsPage({ search, offset: 0, limit: 1 }),
-      this.apiClient.fetchCharactersPage({ search, offset: 0, limit: 1 })
+      this.apiClient.fetchCharactersPage({ search, offset: 0, limit: 1 }),
+      this.apiClient.fetchObjectsPage({ search, offset: 0, limit: 1 })
     ]);
-    this.assetsFeedTotals = { search, videos: videos.total, data: data.total, characters: characters.total };
+    this.assetsFeedTotals = { search, videos: videos.total, data: data.total, characters: characters.total, objects: objects.total };
     return this.assetsFeedTotals;
   }
 
@@ -3563,8 +4045,15 @@ class ModelsApp {
       const take = Math.min(remaining, totals.characters - characterOffset);
       const result = await this.apiClient.fetchCharactersPage({ search, offset: characterOffset, limit: take });
       items.push(...result.items.map(item => Object.assign({ asset_type: "character" }, item)));
+      remaining -= result.items.length;
     }
-    return { items, total: totals.videos + totals.data + totals.characters };
+    const objectOffset = Math.max(0, offset - totals.videos - totals.data - totals.characters);
+    if (remaining && objectOffset < totals.objects) {
+      const take = Math.min(remaining, totals.objects - objectOffset);
+      const result = await this.apiClient.fetchObjectsPage({ search, offset: objectOffset, limit: take });
+      items.push(...result.items.map(item => Object.assign({ asset_type: "object" }, item)));
+    }
+    return { items, total: totals.videos + totals.data + totals.characters + totals.objects };
   }
 
   // Maps an education/science child node to a { educationLevelId | scienceId } filter.
@@ -3606,6 +4095,13 @@ class ModelsApp {
   isCharacterNodeId(nodeId) {
     return nodeId === treeNodeIds.catalogCharacters
       || (typeof nodeId === "string" && nodeId.startsWith("catalog-character-category-item:"));
+  }
+
+  isObjectNodeId(nodeId) {
+    return nodeId === treeNodeIds.catalogObjects
+      || nodeId === treeNodeIds.catalogObjectsEducation
+      || nodeId === treeNodeIds.catalogObjectsSciences
+      || (typeof nodeId === "string" && (nodeId.startsWith("catalog-object-education-item:") || nodeId.startsWith("catalog-object-science-item:")));
   }
 
   getEducationLabel(model) {
@@ -3681,6 +4177,10 @@ class ModelsApp {
     return this.buildGroupedPublicItems(type, { facets: this.dataFacets, prefixBase: "catalog-data" });
   }
 
+  buildGroupedObjectItems(type) {
+    return this.buildGroupedPublicItems(type, { facets: this.objectFacets, prefixBase: "catalog-object" });
+  }
+
   buildGroupedCharacterItems() {
     const facets = this.characterFacets || { categories: [], uncategorized: 0 };
     const items = (facets.categories || [])
@@ -3711,12 +4211,15 @@ class ModelsApp {
     const dataEducationItems = this.buildGroupedDataItems("education");
     const dataScienceItems = this.buildGroupedDataItems("science");
     const characterCategoryItems = this.buildGroupedCharacterItems();
+    const objectEducationItems = this.buildGroupedObjectItems("education");
+    const objectScienceItems = this.buildGroupedObjectItems("science");
     const publicModelsCount = this.publicFacets?.total || 0;
     const sampleModelsCount = this.sampleFacets?.total || 0;
     const videosCount = this.videoFacets?.total || 0;
     const dataCount = this.dataFacets?.total || 0;
     const charactersCount = this.characterFacets?.total || 0;
-    const assetsCount = videosCount + dataCount + charactersCount;
+    const objectsCount = this.objectFacets?.total || 0;
+    const assetsCount = videosCount + dataCount + charactersCount + objectsCount;
     const sampleEducationItems = this.buildGroupedPublicItems("education", { facets: this.sampleFacets, prefixBase: "samples" });
     const sampleScienceItems = this.buildGroupedPublicItems("science", { facets: this.sampleFacets, prefixBase: "samples" });
     const treeData = [];
@@ -3905,6 +4408,31 @@ class ModelsApp {
             iconColor: "#7c3aed",
             expanded: false,
             items: characterCategoryItems
+          },
+          {
+            id: treeNodeIds.catalogObjects,
+            text: `${this.translations.get("Objects")} (${objectsCount})`,
+            iconClass: "fa-light fa-shapes",
+            iconColor: "#0891b2",
+            expanded: false,
+            items: [
+              {
+                id: treeNodeIds.catalogObjectsEducation,
+                text: `${this.translations.get("Education Levels")} (${objectsCount})`,
+                iconClass: "fa-light fa-graduation-cap",
+                iconColor: "#8b5cf6",
+                expanded: false,
+                items: objectEducationItems
+              },
+              {
+                id: treeNodeIds.catalogObjectsSciences,
+                text: `${this.translations.get("Sciences")} (${objectsCount})`,
+                iconClass: "fa-light fa-flask",
+                iconColor: "#0ea5e9",
+                expanded: false,
+                items: objectScienceItems
+              }
+            ]
           }
         ]
       }
@@ -4290,6 +4818,12 @@ class ModelsApp {
       if (addCharacterContainer)
         addCharacterContainer.style.display = canAccess ? "" : "none";
     }
+    const addObjectElement = this.elements.navAddObject;
+    if (addObjectElement) {
+      const addObjectContainer = addObjectElement.closest(".dx-item");
+      if (addObjectContainer)
+        addObjectContainer.style.display = canAccess ? "" : "none";
+    }
     if (createNotebookElement) {
       const createNotebookContainer = createNotebookElement.closest(".dx-item");
       if (createNotebookContainer)
@@ -4314,6 +4848,7 @@ class ModelsApp {
     if (this.elements.navUploadVideo) this.elements.navUploadVideo.addEventListener("click", () => this.showUploadVideoPopup());
     if (this.elements.navUploadData) this.elements.navUploadData.addEventListener("click", () => this.showDataPopup());
     if (this.elements.navAddCharacter) this.elements.navAddCharacter.addEventListener("click", () => this.showCharacterPopup());
+    if (this.elements.navAddObject) this.elements.navAddObject.addEventListener("click", () => this.showObjectPopup());
   }
   async createModel() {
     this.userSdk.refreshState(this.state);
@@ -4725,6 +5260,7 @@ class ModelsApp {
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     const statusColors = {
       "new": { background: "#dbeafe", color: "#1d4ed8" },
       "todo": { background: "#fef3c7", color: "#b45309" },
@@ -4854,6 +5390,7 @@ class ModelsApp {
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     const categoriesStore = new DevExpress.data.CustomStore({
       key: "id",
       load: () => this.apiClient.fetchCharacterCategories(),
@@ -4944,6 +5481,7 @@ class ModelsApp {
     this.disposeVideosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
     const whatsNewStore = new DevExpress.data.CustomStore({
       key: "id",
       load: () => this.apiClient.fetchWhatsNew(),
@@ -5214,5 +5752,5 @@ class ModelsApp {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  new ModelsApp();
+  window.modelsApp = new ModelsApp();
 });

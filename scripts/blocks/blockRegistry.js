@@ -18,6 +18,11 @@ class BuildingBlockRegistry {
         return normalized;
     }
 
+    markCustomComponent(type) {
+        this.customComponentTypes.add(type);
+        return type;
+    }
+
     normalizeRegistration(registration) {
         return {
             type: registration.type,
