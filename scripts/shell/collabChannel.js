@@ -6,6 +6,7 @@ class CollabChannel {
         this.onOp = options.onOp;
         this.onSnapshot = options.onSnapshot;
         this.onOpen = options.onOpen;
+        this.onClose = options.onClose;
         this.ws = null;
         this._applyingRemote = false;
         this._destroyed = false;
@@ -54,6 +55,7 @@ class CollabChannel {
         this.ws = null;
         if (this._destroyed)
             return;
+        this.onClose?.();
         this._reconnectTimeoutId = setTimeout(() => this.connect(), 3000);
     }
 

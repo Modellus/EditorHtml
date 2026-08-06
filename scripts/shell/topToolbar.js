@@ -93,11 +93,15 @@ class TopToolbar {
                     location: "after",
                     template: () => {
                         const wrapper = $('<div class="mdl-collab-host"></div>');
+                        const status = $('<div id="collab-status" class="mdl-collab-status"></div>');
                         const facepile = $('<div id="collab-facepile" class="mdl-collab-facepile"></div>');
                         const collabContainer = $('<div id="collab-button-host"></div>');
                         this._createCollabDropDownButton(collabContainer);
-                        wrapper.append(facepile).append(collabContainer);
+                        wrapper.append(status).append(facepile).append(collabContainer);
+                        this._collabStatusElement = status[0];
                         this._collabFacepileElement = facepile[0];
+                        this._collabStatusElement.addEventListener("click", () => this._toggleCollaboration());
+                        this._renderCollabStatus();
                         this._renderCollabFacepile(this._collabPresenceList ?? []);
                         return wrapper;
                     }
@@ -300,6 +304,18 @@ class TopToolbar {
             icon.style.display = "none";
     }
 
+    showSaveErrorIndicator() {
+        const container = document.getElementById("model-info-label");
+        if (!container || container.querySelector("#save-error-badge"))
+            return;
+        const label = this.shell.board.translations.get("Save Error Badge");
+        container.insertAdjacentHTML("beforeend", `<span id="save-error-badge" title="${label}"><i class="fa-light fa-triangle-exclamation"></i><span>${label}</span></span>`);
+    }
+
+    hideSaveErrorIndicator() {
+        document.getElementById("save-error-badge")?.remove();
+    }
+
     updateModelName() {
         const label = document.getElementById("model-name-label");
         if (!label)
@@ -380,6 +396,11 @@ class TopToolbar {
     }
 
     _buildCollabDropdownContent(contentElement) {
+        if (!this.shell.isModelCreator()) {
+            this._buildCollabParticipantsContent(contentElement);
+            return;
+        }
+        const translations = this.shell.board.translations;
         $(contentElement).html(`
             <div class="mdl-collab-panel">
                 <div class="mdl-collab-list-host"></div>
@@ -387,13 +408,22 @@ class TopToolbar {
                     <div class="mdl-collab-search-host"></div>
                     <div class="mdl-collab-add-btn-host"></div>
                 </div>
+                <div class="mdl-collab-stop-row"><div class="mdl-collab-stop-btn-host"></div></div>
             </div>`);
+        $(contentElement).find(".mdl-collab-stop-btn-host").dxButton({
+            text: translations.get("Collab Stop Sharing"),
+            icon: "fa-light fa-user-slash",
+            type: "danger",
+            stylingMode: "text",
+            onClick: () => this._stopSharingModel()
+        });
+        this._collabStopSharingInstance = $(contentElement).find(".mdl-collab-stop-btn-host").dxButton("instance");
         const listHost = $(contentElement).find(".mdl-collab-list-host");
         const searchHost = $(contentElement).find(".mdl-collab-search-host");
         const addBtnHost = $(contentElement).find(".mdl-collab-add-btn-host");
         $(listHost).dxList({
             dataSource: [],
-            noDataText: "No collaborators",
+            noDataText: translations.get("Collab No Collaborators"),
             itemTemplate: data => `
                 <div class="mdl-collab-list-item">
                     ${Utils.buildAvatarMarkup(data.name ?? data.email, data.avatar, { size: 24, className: "mdl-collab-avatar" })}
@@ -443,11 +473,161 @@ class TopToolbar {
         });
     }
 
+    _buildCollabParticipantsContent(contentElement) {
+        const translations = this.shell.board.translations;
+        const ownerName = this.shell.modelCreatorName;
+        const ownerRow = ownerName
+            ? `<div class="mdl-collab-list-item">
+                   ${Utils.buildAvatarMarkup(ownerName, this.shell.modelCreatorAvatar, { size: 24, className: "mdl-collab-avatar" })}
+                   <span class="mdl-collab-name">${ownerName}</span>
+                   <span class="mdl-collab-role">${translations.get("Collab Role Owner")}</span>
+               </div>`
+            : "";
+        $(contentElement).html(`
+            <div class="mdl-collab-panel">
+                <div class="mdl-collab-section-title">${translations.get("Collab Participants Title")}</div>
+                ${ownerRow}
+                <div class="mdl-collab-list-host"></div>
+            </div>`);
+        const listHost = $(contentElement).find(".mdl-collab-list-host");
+        $(listHost).dxList({
+            dataSource: [],
+            noDataText: translations.get("Collab No Collaborators"),
+            itemTemplate: data => `
+                <div class="mdl-collab-list-item">
+                    ${Utils.buildAvatarMarkup(data.name ?? data.email, data.avatar, { size: 24, className: "mdl-collab-avatar" })}
+                    <span class="mdl-collab-name">${data.name ?? data.email ?? ""}</span>
+                </div>`
+        });
+        this._collabListInstance = $(listHost).dxList("instance");
+        this._loadCollabData();
+    }
+
+    async _stopSharingModel() {
+        const modelId = this.shell.getCurrentModelId();
+        if (!modelId)
+            return;
+        const translations = this.shell.board.translations;
+        const collaborators = this._collabCollaborators ?? [];
+        if (collaborators.length === 0)
+            return;
+        const dialog = window.DevExpress.ui.dialog.custom({
+            title: translations.get("Collab Stop Sharing"),
+            messageHtml: `<div style="line-height:1.45">${translations.get("Collab Stop Sharing Confirm").replace("{count}", collaborators.length)}</div>`,
+            buttons: [
+                {
+                    text: translations.get("Cancel"),
+                    type: "normal",
+                    stylingMode: "outlined",
+                    onClick: () => false
+                },
+                {
+                    text: translations.get("Collab Stop Sharing"),
+                    type: "danger",
+                    stylingMode: "contained",
+                    onClick: () => true
+                }
+            ]
+        });
+        const confirmed = await dialog.show();
+        if (!confirmed)
+            return;
+        try {
+            for (const collaborator of collaborators)
+                await this.shell.modelsApiClient.removeCollaborator(modelId, collaborator.id);
+        } catch (error) {
+            console.error("stopSharingModel failed:", error);
+            window.DevExpress.ui.notify({ message: translations.get("Collab Stop Sharing Error"), type: "error", displayTime: 3000, position: { at: "center", my: "center" } });
+        }
+        await this._loadCollabData();
+        window.DevExpress.ui.notify({ message: translations.get("Collab Stop Sharing Done"), type: "success", displayTime: 3000, position: { at: "center", my: "center" } });
+    }
+
     // Live presence (who is currently connected) drives the facepile next to the
     // collaboration button. The dropdown list below is the model's access list.
     updateCollaboratorPresence(list) {
         this._collabPresenceList = Array.isArray(list) ? list : [];
         this._renderCollabFacepile(this._collabPresenceList);
+        this._renderCollabStatus();
+    }
+
+    updateCollabConnectionState(state) {
+        this._collabConnectionState = state;
+        this._renderCollabStatus();
+    }
+
+    // The status pill is about this model being shared with other people, not
+    // about a socket being open: a private model the creator is alone in never
+    // shows it, however healthy its connection.
+    async refreshCollabSharingState() {
+        if (!this.shell.getCurrentModelId())
+            return;
+        if (this.shell.isModelCreator())
+            await this._loadCollabData();
+        this._renderCollabStatus();
+    }
+
+    _isModelShared() {
+        if (!this.shell.getCurrentModelId())
+            return false;
+        if (!this.shell.isModelCreator())
+            return true;
+        if ((this._collabPresenceList?.length ?? 0) > 0)
+            return true;
+        return (this._collabCollaborators?.length ?? 0) > 0;
+    }
+
+    _renderCollabStatus() {
+        const host = this._collabStatusElement;
+        if (!host)
+            return;
+        const state = this._collabConnectionState;
+        if (!state || !this._isModelShared()) {
+            host.style.display = "none";
+            return;
+        }
+        const translations = this.shell.board.translations;
+        const descriptors = {
+            connecting: { icon: "fa-light fa-cloud-arrow-up", text: translations.get("Collab Status Connecting"), hint: translations.get("Collab Status Connecting Hint") },
+            live: { icon: "fa-solid fa-circle", text: translations.get("Collab Status Live"), hint: translations.get("Collab Status Live Hint") },
+            reconnecting: { icon: "fa-light fa-triangle-exclamation", text: translations.get("Collab Status Reconnecting"), hint: translations.get("Collab Status Reconnecting Hint") },
+            stopped: { icon: "fa-light fa-link-slash", text: translations.get("Collab Status Stopped"), hint: translations.get("Collab Status Stopped Hint") }
+        };
+        const descriptor = descriptors[state];
+        host.style.display = "inline-flex";
+        host.className = `mdl-collab-status mdl-collab-status-${state}`;
+        host.title = descriptor.hint;
+        host.innerHTML = `<i class="${descriptor.icon}"></i><span>${descriptor.text}</span>`;
+    }
+
+    async _toggleCollaboration() {
+        if (!this.shell.isCollaborationActive()) {
+            this.shell.resumeCollaboration();
+            return;
+        }
+        const translations = this.shell.board.translations;
+        const dialog = window.DevExpress.ui.dialog.custom({
+            title: translations.get("Collab Stop Confirm Title"),
+            messageHtml: `<div style="line-height:1.45">${translations.get("Collab Stop Confirm")}</div>`,
+            buttons: [
+                {
+                    text: translations.get("Cancel"),
+                    type: "normal",
+                    stylingMode: "outlined",
+                    onClick: () => false
+                },
+                {
+                    text: translations.get("Collab Stop Confirm Title"),
+                    type: "danger",
+                    stylingMode: "contained",
+                    onClick: () => true
+                }
+            ]
+        });
+        const confirmed = await dialog.show();
+        if (!confirmed)
+            return;
+        this.shell.stopCollaboration();
     }
 
     async _loadCollabData() {
@@ -463,6 +643,8 @@ class TopToolbar {
             this._collabCollaborators = [];
             this._collabListInstance?.option("dataSource", []);
         }
+        this._collabStopSharingInstance?.option("disabled", (this._collabCollaborators?.length ?? 0) === 0);
+        this._renderCollabStatus();
     }
 
     _renderCollabFacepile(collaborators) {
@@ -510,8 +692,7 @@ class TopToolbar {
         if (!this._collabButtonContainer)
             return;
         const modelId = this.shell.getCurrentModelId();
-        const visible = !!modelId && this.shell.isModelCreator();
-        this._collabButtonContainer.style.display = visible ? "" : "none";
+        this._collabButtonContainer.style.display = modelId ? "" : "none";
     }
 
     async _submitFeedback() {        const formInstance = $("#feedback-form").dxForm("instance");

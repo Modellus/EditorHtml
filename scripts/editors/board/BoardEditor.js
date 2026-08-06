@@ -80,6 +80,7 @@ class BoardEditor extends Workspace {
         this._resumeOnSpaceUp = false;
         this._hasChanges = false;
         this._autoSaveTimer = null;
+        this._removedShapeIds = new Set();
         this.initializeShapeInteractionController();
         this.initializeBoardSelectionAdapter();
         window.addEventListener("keydown", e => this.onKeyDown(e));
@@ -705,7 +706,10 @@ class BoardEditor extends Workspace {
         try {
             await this.session.modelsApiClient.saveModel(modelId, payload);
             this._hasChanges = false;
-        } catch (_) {
+            this.topToolbar?.hideSaveErrorIndicator();
+        } catch (error) {
+            console.error("autoSaveModel failed:", error);
+            this.topToolbar?.showSaveErrorIndicator();
         } finally {
             this.topToolbar?.hideSavingIndicator();
         }
@@ -734,7 +738,9 @@ class BoardEditor extends Workspace {
             getToken: () => window.modellus?.auth?.getSession?.()?.token ?? "",
             onRemoteOp: op => this.applyRemoteOp(op),
             onRemoteSnapshot: model => this.applyRemoteSnapshot(model),
-            getSnapshot: () => this.serialize()
+            getSnapshot: () => this.serialize(),
+            getRemovedShapeIds: () => Array.from(this._removedShapeIds),
+            onConnectionStateChange: state => this.topToolbar?.updateCollabConnectionState(state)
         });
         // Broadcast both executed and recorded commands. Drag and expression-edit
         // commits use invoker.record() (not execute()), so onRecord is required for
@@ -746,6 +752,26 @@ class BoardEditor extends Workspace {
         this.setupCollabCursors();
         this.setupCollabPresence();
         this.collabCoordinator.start();
+        this.topToolbar?.refreshCollabSharingState();
+    }
+
+    isCollaborationActive() {
+        return this.collabCoordinator?.channel != null;
+    }
+
+    stopCollaboration() {
+        this.collabCoordinator?.destroy();
+        this.collabCursors?.destroy();
+        this._collabPresence?.clear();
+        this._renderPresenceFacepile();
+    }
+
+    resumeCollaboration() {
+        if (!this.collabCoordinator)
+            return;
+        this.setupCollabCursors();
+        this.collabCoordinator.start();
+        this._sendPresence();
     }
 
     setupCollabPresence() {
@@ -874,6 +900,7 @@ class BoardEditor extends Workspace {
             return;
         }
         if (command instanceof RemoveShapeCommand) {
+            this.rememberRemovedShapes(command);
             this.collabCoordinator.sendOp({ type: "removeShape", shapeId: command.shape.id });
             this.collabCoordinator.sendSnapshot(this.serialize());
             return;
@@ -899,17 +926,27 @@ class BoardEditor extends Workspace {
         if (!this.collabCoordinator || this.collabCoordinator.isApplyingRemote())
             return;
         if (command instanceof AddShapeCommand) {
+            this._removedShapeIds.add(String(command.shape.id));
             this.collabCoordinator.sendOp({ type: "removeShape", shapeId: command.shape.id });
             this.collabCoordinator.sendSnapshot(this.serialize());
             return;
         }
         if (command instanceof RemoveShapeCommand) {
-            for (const entry of command.removedShapes)
+            for (const entry of command.removedShapes) {
+                this._removedShapeIds.delete(String(entry.shape.id));
                 this.collabCoordinator.sendOp({ type: "addShape", shapeData: entry.shape.serialize(), objects: BlockObjectLibrary.collectFromShapes([entry.shape]) });
+            }
             this.collabCoordinator.sendSnapshot(this.serialize());
             return;
         }
         this.broadcastCommand(command);
+    }
+
+    rememberRemovedShapes(command) {
+        for (const entry of command.removedShapes)
+            this._removedShapeIds.add(String(entry.shape.id));
+        for (const connector of command.attachedConnectors)
+            this._removedShapeIds.add(String(connector.id));
     }
 
     applyRemoteOp(op) {
@@ -929,6 +966,7 @@ class BoardEditor extends Workspace {
             return;
         }
         if (op.type === "removeShape") {
+            this._removedShapeIds.add(String(op.shapeId));
             const targetShape = this.board.shapes.getById(op.shapeId);
             if (targetShape)
                 this.board.removeShape(targetShape);
@@ -959,14 +997,30 @@ class BoardEditor extends Workspace {
     applyRemoteSnapshot(model) {
         if (!model || !this.collabCoordinator)
             return;
+        const mergedModel = this.mergeLocalShapesIntoSnapshot(model);
         this.board.enableSelection(true);
-        this.deserialise(model);
+        this.deserialise(mergedModel);
         this.collabCursors?.reattach();
         this.reparseCalculateAndRefreshWorkspace(() => {
             this.reset();
             this.calculator.stop();
         });
-        this._hasChanges = false;
+        this._hasChanges = mergedModel !== model;
+    }
+
+    mergeLocalShapesIntoSnapshot(model) {
+        if (!Array.isArray(model.board))
+            return model;
+        const snapshotShapeIds = new Set(model.board.map(data => String(data.id)));
+        const removedShapeIds = new Set((model.collab?.removedShapeIds ?? []).map(id => String(id)));
+        const isMissingLocally = id => !snapshotShapeIds.has(String(id)) && !removedShapeIds.has(String(id));
+        const localOnlyShapes = this.board.shapes.shapes.filter(shape => isMissingLocally(shape.id)).map(shape => shape.serialize());
+        const localOnlyUnloadedShapes = this.board.unloadedShapes.filter(data => isMissingLocally(data.id));
+        const preservedShapes = [...localOnlyShapes, ...localOnlyUnloadedShapes];
+        if (preservedShapes.length === 0)
+            return model;
+        console.warn(`Remote snapshot omitted ${preservedShapes.length} shape(s) that exist locally; keeping them.`);
+        return { ...model, board: [...model.board, ...preservedShapes] };
     }
 
     async onPopState(event) {

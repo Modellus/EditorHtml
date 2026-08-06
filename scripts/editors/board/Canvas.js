@@ -14,6 +14,7 @@ class Canvas {
         this.pointerLocked = false;
         this.invoker = null;
         this._isModelCreator = null;
+        this.unloadedShapes = [];
     }
 
     isModelCreator() {
@@ -40,6 +41,7 @@ class Canvas {
         this.svg.appendChild(this.motionLayer);
         this.shapes.clear();
         this.connectorIndex.clear();
+        this.unloadedShapes = [];
         this._gridDefs = null;
         this._gridRect = null;
         this._gridPattern = null;
@@ -49,14 +51,27 @@ class Canvas {
 
     deserialize(model) {
         this.clear();
-        model.map(data => {
-            var shape = this.shapes.deserialize(this, data);
-            this.addShape(shape, false);
+        model.forEach(data => {
+            try {
+                const shape = this.shapes.deserialize(this, data);
+                this.addShape(shape, false);
+            } catch (error) {
+                this.unloadedShapes.push(data);
+                console.error(`Shape "${data.type}" (${data.id}) could not be loaded and will be preserved as-is:`, error);
+            }
         });
+        if (this.unloadedShapes.length > 0)
+            this.dispatchUnloadedShapesEvent();
+    }
+
+    dispatchUnloadedShapesEvent() {
+        const unloadedEvent = new CustomEvent("shapesUnloaded", { detail: { shapes: this.unloadedShapes.slice() } });
+        this.svg.dispatchEvent(unloadedEvent);
     }
 
     serialize() {
-        var content = this.shapes.serialize();
+        const content = this.shapes.serialize();
+        content.push(...this.unloadedShapes);
         return content;
     }
 
