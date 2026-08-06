@@ -101,6 +101,13 @@ input,
     background-color: transparent;
 }
 
+.dx-datagrid-header-panel .dx-toolbar-after,
+.dx-datagrid-header-panel .dx-toolbar-before,
+.dx-datagrid-header-panel .dx-toolbar-center {
+    box-shadow: none;
+    background-color: transparent;
+}
+
 .dx-slider-tooltip-position-top {
     padding-top: 0 !important;
 }

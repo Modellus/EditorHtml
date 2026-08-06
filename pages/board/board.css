@@ -772,14 +772,12 @@ svg:active.pan-available {
     vertical-align: middle;
 }
 
-/* The theme elevates the toolbar sections, which shows up as a dark band
-   under the floating text editor toolbar. */
-.mdl-text-editor-toolbar,
-.mdl-text-editor-toolbar .dx-toolbar,
+/* The shared toolbar section card (common.css) shows up as a dark band under
+   the floating text editor toolbar, which draws its own border. */
 .mdl-text-editor-toolbar .dx-toolbar-before,
 .mdl-text-editor-toolbar .dx-toolbar-center,
 .mdl-text-editor-toolbar .dx-toolbar-after {
-    box-shadow: none !important;
+    box-shadow: none;
 }
 
 .shape-terms-list .shape-term-drag-handle {
