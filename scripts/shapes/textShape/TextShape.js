@@ -47,8 +47,8 @@ class TextShape extends BaseShape {
         $wrapper.css({ "width": "100%", "height": "100%", "display": "flex", "flex-direction": "column", "overflow": "hidden" });
         this.$editorHost = $("<div>").appendTo($wrapper);
         this.$editorHost.css({ "flex": "1", "min-height": "0", "overflow": "auto" });
-        this.$toolbarHost = $("<div>").appendTo(document.body);
-        this.$toolbarHost.css({ "display": "none", "position": "fixed", "z-index": "10000", "background-color": "#fff", "border": "1px solid #e0e0e0", "border-radius": "4px", "box-shadow": "0 2px 8px rgba(0,0,0,0.15)", "width": this.properties.width + "px" });
+        this.$toolbarHost = $("<div>").addClass("mdl-text-editor-toolbar").appendTo(document.body);
+        this.$toolbarHost.css({ "display": "none", "position": "fixed", "z-index": "10000", "background-color": "#fff", "border": "1px solid #e0e0e0", "border-radius": "4px", "width": this.properties.width + "px" });
         this.htmlEditor = this.$editorHost.dxHtmlEditor({
             valueType: "markdown",
             mediaResizing: { enabled: true },
@@ -63,7 +63,7 @@ class TextShape extends BaseShape {
                 multiline: false,
                 items: [
                     "undo", "redo", "separator",
-                    "bold", "italic", "underline", "strike", "separator",
+                    "bold", "italic", "underline", "strike", "superscript", "subscript", "separator",
                     {
                         name: "header",
                         acceptedValues: [false, 1, 2, 3, 4, 5],
