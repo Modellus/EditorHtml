@@ -419,7 +419,7 @@ var BaseShapeToolbarMixin = {
         if (!this.termDisplayEntries.some(entry => entry.term === termProperty))
             this.termDisplayEntries.push({ term: termProperty, caseProperty, title });
         const mockFormInstance = { updateData: (field, value) => this.setPropertyCommand(field, value) };
-        return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, options.allowTypedValue === true, displayModeProperty, showVisibilityToggle, { exactTypedValue: options.allowTypedValue === true });
+        return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, options.allowTypedValue === true, displayModeProperty, showVisibilityToggle, { exactTypedValue: options.allowTypedValue === true, colorProperty: options.colorProperty ?? "" });
     },
     createColorPickerEditor(dataField, options = {}) {
         const onValueChanged = value => this.setPropertyCommand(dataField, value);
@@ -578,7 +578,6 @@ var BaseShapeToolbarMixin = {
                 items: [
                     {
                         text: "Name",
-                        stacked: true,
                         buildControl: $p => $p.append(this.createNameFormControl())
                     },
                     {
@@ -602,15 +601,7 @@ var BaseShapeToolbarMixin = {
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
             dataSource: listItems,
             scrollingEnabled: false,
-            itemTemplate: (data, _, el) => {
-                if (data.stacked) {
-                    el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
-                    data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
-                } else {
-                    el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
-                    data.buildControl($(el).find(".mdl-dropdown-list-control"));
-                }
-            }
+            itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
         });
     },
     createRemoveToolbarItem() {
@@ -765,17 +756,7 @@ var BaseShapeToolbarMixin = {
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
             dataSource: listItems,
             scrollingEnabled: false,
-            itemTemplate: (data, _, el) => {
-                if (data.stacked) {
-                    el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
-                    data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
-                } else if (data.parentSelector) {
-                    data.buildControl($(el));
-                } else {
-                    el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
-                    data.buildControl($(el).find(".mdl-dropdown-list-control"));
-                }
-            }
+            itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
         });
     },
     createTermPairFormControls(formAdapter) {

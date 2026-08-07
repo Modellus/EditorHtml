@@ -185,11 +185,11 @@ class ArcShape extends ChildShape {
 
     populateTermsMenuSections(listItems) {
         listItems.push(
-            { text: "Point X", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
-            { text: "Point Y", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) },
-            { text: "Radius", stacked: true, buildControl: $p => $p.append(this._radiusDescriptor.control) },
-            { text: "Start Angle", stacked: true, buildControl: $p => $p.append(this._startAngleDescriptor.control) },
-            { text: "End Angle", stacked: true, buildControl: $p => $p.append(this._endAngleDescriptor.control) },
+            { text: "Point X", buildControl: $p => $p.append(this._xDescriptor.control) },
+            { text: "Point Y", buildControl: $p => $p.append(this._yDescriptor.control) },
+            { text: "Radius", buildControl: $p => $p.append(this._radiusDescriptor.control) },
+            { text: "Start Angle", buildControl: $p => $p.append(this._startAngleDescriptor.control) },
+            { text: "End Angle", buildControl: $p => $p.append(this._endAngleDescriptor.control) },
             {
                 text: "Attached To",
                 parentSelector: true,

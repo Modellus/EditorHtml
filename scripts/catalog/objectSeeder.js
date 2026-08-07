@@ -10,6 +10,10 @@ class ObjectSeeder {
         return new Map(page.items.map(entry => [entry.type, entry]));
     }
 
+    static isCatalogueObject(definitionDocument) {
+        return (definitionDocument.tags ?? []).includes("object");
+    }
+
     static describe(definitionDocument) {
         return {
             title: definitionDocument.displayName ?? definitionDocument.type,

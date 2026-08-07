@@ -177,7 +177,7 @@ class ComponentShape extends BaseShape {
 
     attachDragAngleBehaviour(element, input, relative = false) {
         if (!this.isAngleDragAllowed(input)) {
-            this.markAngleDragLocked(element, input);
+            this.markWriteLocked(element, input);
             return;
         }
         element.style.cursor = "grab";
@@ -205,10 +205,10 @@ class ComponentShape extends BaseShape {
         });
     }
 
-    // A target reading a value the model works out for itself can never be dragged. Saying so with
+    // A target reading a value the model works out for itself can never be written. Saying so with
     // the same cursor a locked handle uses beats no feedback at all. A target reading a plain number
-    // is left alone: nothing there refuses the drag, so there is nothing to explain.
-    markAngleDragLocked(element, input) {
+    // is left alone: nothing there refuses the write, so there is nothing to explain.
+    markWriteLocked(element, input) {
         if (!this.isInteractable() || this.isLocked())
             return;
         if (!this.board.calculator.isTerm(String(input.variable ?? "")))
@@ -218,13 +218,46 @@ class ComponentShape extends BaseShape {
     }
 
     attachClickableBehaviour(element, input) {
-        if (!this.isInteractable() || this.isLocked())
+        if (!this.isClickAllowed(input)) {
+            this.markWriteLocked(element, input);
             return;
+        }
         element.style.cursor = "pointer";
         element.setAttribute("pointer-events", "all");
         element.addEventListener("pointerdown", event => {
             event.preventDefault();
-            this.writeModelValue(input.variable, Number(input.value));
+            this.writeClickValue(input, Number(input.value));
+        });
+    }
+
+    isClickAllowed(input) {
+        if (!this.isInteractable() || this.isLocked())
+            return false;
+        const variable = String(input.variable ?? "");
+        if (this.board.calculator.isTerm(variable))
+            return this.board.calculator.isEditable(variable);
+        return this.getBehaviourProperty(input) !== null;
+    }
+
+    writeClickValue(input, value) {
+        const property = this.getBehaviourProperty(input);
+        if (this.board.calculator.isTerm(String(input.variable ?? "")) || property === null) {
+            this.writeModelValue(input.variable, value);
+            return;
+        }
+        this.beginClickEdit();
+        this.setProperty(property, value);
+        this.board.markDirty(this);
+    }
+
+    beginClickEdit() {
+        if (this._clickEditOpen)
+            return;
+        this._clickEditOpen = true;
+        this.dragStart();
+        queueMicrotask(() => {
+            this._clickEditOpen = false;
+            this.dragEnd();
         });
     }
 
@@ -238,10 +271,10 @@ class ComponentShape extends BaseShape {
             return this.board.calculator.isEditable(variable);
         // A property showing a plain number is edited on the shape itself, the way a gauge edits its
         // own value when it is not bound to a term.
-        return this.getAngleDragProperty(input) !== null;
+        return this.getBehaviourProperty(input) !== null;
     }
 
-    getAngleDragProperty(input) {
+    getBehaviourProperty(input) {
         const property = String(input.property ?? "");
         if (property === "" || !this.isComponentParameter(property))
             return null;
@@ -251,7 +284,7 @@ class ComponentShape extends BaseShape {
     // A drag that writes a property changes the drawing itself rather than the model, so it belongs
     // in the undo history the way any other property edit does.
     isAngleDragPropertyWrite(input) {
-        return !this.board.calculator.isTerm(String(input.variable ?? "")) && this.getAngleDragProperty(input) !== null;
+        return !this.board.calculator.isTerm(String(input.variable ?? "")) && this.getBehaviourProperty(input) !== null;
     }
 
     onAngleDragStart(event, input, relative = false) {
@@ -347,7 +380,7 @@ class ComponentShape extends BaseShape {
     }
 
     writeAngleDragValue(input, value) {
-        const property = this.getAngleDragProperty(input);
+        const property = this.getBehaviourProperty(input);
         if (this.board.calculator.isTerm(String(input.variable ?? "")) || property === null) {
             this.writeModelValue(input.variable, value);
             return;

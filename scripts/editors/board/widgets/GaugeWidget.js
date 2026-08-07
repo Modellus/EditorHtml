@@ -90,7 +90,7 @@ class GaugeShape extends BaseShape {
     }
 
     populateTermsMenuSections(listItems) {
-        listItems.push({ text: "Value", stacked: true, buildControl: $container => $container.append(this._termControl) });
+        listItems.push({ text: "Value", buildControl: $container => $container.append(this._termControl) });
     }
 
     renderTermsButtonTemplate(element) {

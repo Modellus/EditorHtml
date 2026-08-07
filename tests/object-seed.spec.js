@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
+const ObjectSeeder = require('../scripts/catalog/objectSeeder.js');
 
 const HARNESS_URL = '/tests/object-seed-harness.html';
 const API_BASE = 'https://objects-api.test';
@@ -10,7 +11,8 @@ function readDefinitions() {
     return fs.readdirSync(DEFINITIONS_DIRECTORY)
         .filter(name => name.endsWith('.json'))
         .sort()
-        .map(name => JSON.parse(fs.readFileSync(path.join(DEFINITIONS_DIRECTORY, name), 'utf8')));
+        .map(name => JSON.parse(fs.readFileSync(path.join(DEFINITIONS_DIRECTORY, name), 'utf8')))
+        .filter(document => ObjectSeeder.isCatalogueObject(document));
 }
 
 // Stands in for the catalogue: remembers what was written so a test can read it back, and can be
@@ -68,7 +70,7 @@ test.describe('seeding the bundled objects', () => {
         await openHarness(page);
         const seeding = await seed(page, readDefinitions(), { write: false });
         expect(seeding.results.map(result => result.type)).toEqual([
-            'analogue-clock', 'circular-gauge', 'compass', 'orbit-system', 'rotating-vector', 'speedometer'
+            'analogue-clock', 'calculator', 'circular-gauge', 'compass', 'orbit-system', 'rotating-vector', 'speedometer'
         ]);
         expect(seeding.results.every(result => result.action === 'create')).toBe(true);
         expect(state.created).toHaveLength(0);
@@ -79,8 +81,8 @@ test.describe('seeding the bundled objects', () => {
         await stubObjectsApi(page, state);
         await openHarness(page);
         const seeding = await seed(page, readDefinitions(), { write: true });
-        expect(state.created).toHaveLength(6);
-        expect(seeding.results.map(result => result.id)).toEqual(['id-1', 'id-2', 'id-3', 'id-4', 'id-5', 'id-6']);
+        expect(state.created).toHaveLength(7);
+        expect(seeding.results.map(result => result.id)).toEqual(['id-1', 'id-2', 'id-3', 'id-4', 'id-5', 'id-6', 'id-7']);
         const clockBody = state.created[0].body;
         expect(clockBody).toContain('name="title"');
         expect(clockBody).toContain('Analogue clock');
@@ -96,7 +98,7 @@ test.describe('seeding the bundled objects', () => {
         const compass = seeding.results.find(result => result.type === 'compass');
         expect(compass.action).toBe('skip');
         expect(compass.id).toBe('obj-1');
-        expect(state.created).toHaveLength(5);
+        expect(state.created).toHaveLength(6);
         expect(state.updated).toHaveLength(0);
     });
 
@@ -121,7 +123,7 @@ test.describe('seeding the bundled objects', () => {
         const compass = seeding.results.find(result => result.type === 'compass');
         expect(compass.action).toBe('failed');
         expect(compass.error).toContain('that one is not allowed');
-        expect(state.created).toHaveLength(5);
+        expect(state.created).toHaveLength(6);
     });
 
     test('a catalogue that cannot be listed stops a write but not a dry run', async ({ page }) => {
@@ -131,7 +133,7 @@ test.describe('seeding the bundled objects', () => {
         await openHarness(page);
         const dryRun = await seed(page, readDefinitions(), { write: false });
         expect(dryRun.catalogueProblem).toContain('Fetch objects failed (500)');
-        expect(dryRun.results).toHaveLength(6);
+        expect(dryRun.results).toHaveLength(7);
         const writeAttempt = await page.evaluate(async input => {
             const seeder = window.createObjectSeeder(input.apiBase, 'test-token');
             try {

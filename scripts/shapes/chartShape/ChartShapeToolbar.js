@@ -390,8 +390,8 @@ var ChartShapeToolbarMixin = {
     },
     populateTermsMenuSections(listItems) {
         listItems.push(
-            { text: "Horizontal", stacked: true, buildControl: $container => $container.append(this._xTermControl) },
-            { text: "Vertical", stacked: true, buildControl: $container => $container.append(this.createYTermsControl()) }
+            { text: "Horizontal", buildControl: $container => $container.append(this._xTermControl) },
+            { text: "Vertical", buildControl: $container => $container.append(this.createYTermsControl()) }
         );
     },
     renderTermsButtonTemplate(element) {

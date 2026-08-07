@@ -56,7 +56,7 @@ class BaseValueTableShape extends BaseTableShape {
     // ---- Menu sections ---------------------------------------------------
 
     populateTermsMenuSections(listItems) {
-        listItems.push({ text: "Columns", stacked: true, buildControl: $p => $p.append(this.createColumnsControl()) });
+        listItems.push({ text: "Columns", buildControl: $p => $p.append(this.createColumnsControl()) });
     }
 
     // "Row Step" skips iterations when building rows. Iteration-based tables add this to their

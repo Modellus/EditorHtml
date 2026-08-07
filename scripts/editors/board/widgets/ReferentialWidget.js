@@ -124,7 +124,6 @@ class ReferentialShape extends BaseShape {
         super.populateShapeColorMenuSections(sections);
         sections[0].items.push({
             text: "Background Image",
-            stacked: true,
             buildControl: $p => $p.append(this.createBackgroundImageDropZoneEditor())
         });
     }

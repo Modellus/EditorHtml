@@ -1,0 +1,1948 @@
+{
+    "schemaVersion": "1.0.0",
+    "type": "calculator",
+    "category": "component",
+    "displayName": "Calculator",
+    "description": "Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, and the result can be written back into a model variable.",
+    "icon": "fa-light fa-calculator",
+    "tags": [
+        "object",
+        "calculator",
+        "keypad",
+        "arithmetic",
+        "reads-model"
+    ],
+    "capabilities": [
+        "interaction",
+        "textual",
+        "reads-model",
+        "writes-model"
+    ],
+    "preview": {
+        "parameters": {
+            "n": 1234,
+            "dp": 0
+        }
+    },
+    "parameters": [
+        {
+            "id": "n",
+            "label": "Entry",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "state",
+            "userEditable": false,
+            "description": "The number on the display."
+        },
+        {
+            "id": "a",
+            "label": "Stored operand",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "state",
+            "userEditable": false
+        },
+        {
+            "id": "p",
+            "label": "Pending operation",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "state",
+            "userEditable": false,
+            "description": "0 none, 1 add, 2 subtract, 3 multiply, 4 divide."
+        },
+        {
+            "id": "s",
+            "label": "Entry scale",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "state",
+            "userEditable": false,
+            "description": "Zero while whole digits are typed, then the place value the next digit takes."
+        },
+        {
+            "id": "dp",
+            "label": "Entry decimals",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "state",
+            "userEditable": false
+        },
+        {
+            "id": "ad",
+            "label": "Stored operand decimals",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "state",
+            "userEditable": false
+        },
+        {
+            "id": "fresh",
+            "label": "Start a new entry",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "state",
+            "userEditable": false,
+            "description": "Set after a result or a term key, so the next digit starts a number instead of extending one."
+        },
+        {
+            "id": "termA",
+            "label": "Key 1",
+            "valueType": "variable",
+            "defaultValue": "",
+            "category": "model",
+            "description": "Model variable this key loads, read at the iteration on screen.",
+            "colorParameter": "keyAColor"
+        },
+        {
+            "id": "termB",
+            "label": "Key 2",
+            "valueType": "variable",
+            "defaultValue": "",
+            "category": "model",
+            "colorParameter": "keyBColor",
+            "description": "Model variable this key loads, read at the iteration on screen."
+        },
+        {
+            "id": "termC",
+            "label": "Key 3",
+            "valueType": "variable",
+            "defaultValue": "",
+            "category": "model",
+            "colorParameter": "keyCColor",
+            "description": "Model variable this key loads, read at the iteration on screen."
+        },
+        {
+            "id": "termD",
+            "label": "Key 4",
+            "valueType": "variable",
+            "defaultValue": "",
+            "category": "model",
+            "colorParameter": "keyDColor",
+            "description": "Model variable this key loads, read at the iteration on screen."
+        },
+        {
+            "id": "keyAColor",
+            "label": "Key 1 colour",
+            "valueType": "colour",
+            "defaultValue": "token:surface.muted",
+            "category": "model",
+            "userEditable": false
+        },
+        {
+            "id": "keyBColor",
+            "label": "Key 2 colour",
+            "valueType": "colour",
+            "defaultValue": "token:surface.muted",
+            "category": "model",
+            "userEditable": false
+        },
+        {
+            "id": "keyCColor",
+            "label": "Key 3 colour",
+            "valueType": "colour",
+            "defaultValue": "token:surface.muted",
+            "category": "model",
+            "userEditable": false
+        },
+        {
+            "id": "keyDColor",
+            "label": "Key 4 colour",
+            "valueType": "colour",
+            "defaultValue": "token:surface.muted",
+            "category": "model",
+            "userEditable": false
+        },
+        {
+            "id": "resultVariable",
+            "label": "Result variable",
+            "valueType": "variable",
+            "defaultValue": "",
+            "category": "model",
+            "description": "Model variable the equals key writes the result into, at the iteration on screen. Left empty the calculator writes nothing."
+        },
+        {
+            "id": "digits",
+            "label": "Result decimals",
+            "valueType": "number",
+            "defaultValue": 2,
+            "category": "display",
+            "minimum": 0,
+            "maximum": 6
+        },
+        {
+            "id": "bodyColor",
+            "label": "Body colour",
+            "valueType": "colour",
+            "defaultValue": "token:surface.emphasis",
+            "category": "style"
+        },
+        {
+            "id": "displayColor",
+            "label": "Display colour",
+            "valueType": "colour",
+            "defaultValue": "token:surface.default",
+            "category": "style"
+        },
+        {
+            "id": "keyColor",
+            "label": "Digit key colour",
+            "valueType": "colour",
+            "defaultValue": "token:surface.default",
+            "category": "style"
+        },
+        {
+            "id": "functionKeyColor",
+            "label": "Function key colour",
+            "valueType": "colour",
+            "defaultValue": "token:surface.muted",
+            "category": "style"
+        },
+        {
+            "id": "accentColor",
+            "label": "Operator key colour",
+            "valueType": "colour",
+            "defaultValue": "token:stroke.accent",
+            "category": "style"
+        },
+        {
+            "id": "borderColor",
+            "label": "Border colour",
+            "valueType": "colour",
+            "defaultValue": "token:stroke.subtle",
+            "category": "style"
+        },
+        {
+            "id": "textColor",
+            "label": "Text colour",
+            "valueType": "colour",
+            "defaultValue": "token:text.primary",
+            "category": "style"
+        },
+        {
+            "id": "accentTextColor",
+            "label": "Operator label colour",
+            "valueType": "colour",
+            "defaultValue": "token:text.inverse",
+            "category": "style"
+        },
+        {
+            "id": "mutedTextColor",
+            "label": "Secondary text colour",
+            "valueType": "colour",
+            "defaultValue": "token:text.secondary",
+            "category": "style"
+        }
+    ],
+    "locals": [
+        {
+            "id": "w",
+            "value": {
+                "parameter": "$width"
+            }
+        },
+        {
+            "id": "h",
+            "value": {
+                "parameter": "$height"
+            }
+        },
+        {
+            "id": "pad",
+            "value": 10
+        },
+        {
+            "id": "gap",
+            "value": 6
+        },
+        {
+            "id": "displayH",
+            "formula": "\\max\\left(34,h\\cdot0.17\\right)"
+        },
+        {
+            "id": "termH",
+            "formula": "\\max\\left(16,h\\cdot0.07\\right)"
+        },
+        {
+            "id": "stripH",
+            "formula": "termH+gap"
+        },
+        {
+            "id": "keypadTop",
+            "formula": "pad+displayH+gap+stripH"
+        },
+        {
+            "id": "keyW",
+            "formula": "\\frac{w-2\\cdot pad-3\\cdot gap}{4}"
+        },
+        {
+            "id": "keyH",
+            "formula": "\\max\\left(6,\\frac{h-keypadTop-pad-4\\cdot gap}{5}\\right)"
+        },
+        {
+            "id": "colStep",
+            "formula": "keyW+gap"
+        },
+        {
+            "id": "rowStep",
+            "formula": "keyH+gap"
+        },
+        {
+            "id": "x1",
+            "formula": "pad"
+        },
+        {
+            "id": "x2",
+            "formula": "pad+colStep"
+        },
+        {
+            "id": "x3",
+            "formula": "pad+2\\cdot colStep"
+        },
+        {
+            "id": "x4",
+            "formula": "pad+3\\cdot colStep"
+        },
+        {
+            "id": "y1",
+            "formula": "keypadTop"
+        },
+        {
+            "id": "y2",
+            "formula": "keypadTop+rowStep"
+        },
+        {
+            "id": "y3",
+            "formula": "keypadTop+2\\cdot rowStep"
+        },
+        {
+            "id": "y4",
+            "formula": "keypadTop+3\\cdot rowStep"
+        },
+        {
+            "id": "y5",
+            "formula": "keypadTop+4\\cdot rowStep"
+        },
+        {
+            "id": "tallH",
+            "formula": "2\\cdot keyH+gap"
+        },
+        {
+            "id": "wideW",
+            "formula": "2\\cdot keyW+gap"
+        },
+        {
+            "id": "termW",
+            "formula": "\\frac{w-2\\cdot pad-3\\cdot gap}{4}"
+        },
+        {
+            "id": "termStep",
+            "formula": "termW+gap"
+        },
+        {
+            "id": "termY",
+            "formula": "pad+displayH+gap"
+        },
+        {
+            "id": "termX1",
+            "formula": "pad"
+        },
+        {
+            "id": "termX2",
+            "formula": "pad+1\\cdot termStep"
+        },
+        {
+            "id": "termX3",
+            "formula": "pad+2\\cdot termStep"
+        },
+        {
+            "id": "termX4",
+            "formula": "pad+3\\cdot termStep"
+        },
+        {
+            "id": "displayW",
+            "formula": "w-2\\cdot pad"
+        },
+        {
+            "id": "readoutX",
+            "formula": "w-pad-8"
+        },
+        {
+            "id": "readoutY",
+            "formula": "pad+displayH\\cdot0.66"
+        },
+        {
+            "id": "tapeY",
+            "formula": "pad+displayH\\cdot0.27"
+        },
+        {
+            "id": "readoutFont",
+            "formula": "\\max\\left(13,displayH\\cdot0.44\\right)"
+        },
+        {
+            "id": "tapeFont",
+            "formula": "\\max\\left(8,displayH\\cdot0.2\\right)"
+        },
+        {
+            "id": "keyFont",
+            "formula": "\\max\\left(10,keyH\\cdot0.42\\right)"
+        },
+        {
+            "id": "termFont",
+            "formula": "\\max\\left(8,termH\\cdot0.5\\right)"
+        },
+        {
+            "id": "radiusLarge",
+            "value": {
+                "token": "radius.large"
+            }
+        },
+        {
+            "id": "radiusMedium",
+            "value": {
+                "token": "radius.medium"
+            }
+        },
+        {
+            "id": "radiusSmall",
+            "value": {
+                "token": "radius.small"
+            }
+        },
+        {
+            "id": "strongWeight",
+            "value": {
+                "token": "font.weight.strong"
+            }
+        },
+        {
+            "id": "hairline",
+            "value": {
+                "token": "strokeWidth.hairline"
+            }
+        },
+        {
+            "id": "result",
+            "value": {
+                "choose": {
+                    "formula": "p-1"
+                },
+                "then": {
+                    "choose": {
+                        "formula": "p-2"
+                    },
+                    "then": {
+                        "choose": {
+                            "formula": "p-3"
+                        },
+                        "then": {
+                            "choose": {
+                                "formula": "p-4"
+                            },
+                            "then": {
+                                "parameter": "n"
+                            },
+                            "otherwise": {
+                                "formula": "\\frac{a}{n}"
+                            }
+                        },
+                        "otherwise": {
+                            "formula": "a\\cdot n"
+                        }
+                    },
+                    "otherwise": {
+                        "formula": "a-n"
+                    }
+                },
+                "otherwise": {
+                    "formula": "a+n"
+                }
+            }
+        },
+        {
+            "id": "opSymbol",
+            "value": {
+                "choose": {
+                    "formula": "p-1"
+                },
+                "then": {
+                    "choose": {
+                        "formula": "p-2"
+                    },
+                    "then": {
+                        "choose": {
+                            "formula": "p-3"
+                        },
+                        "then": {
+                            "choose": {
+                                "formula": "p-4"
+                            },
+                            "then": "",
+                            "otherwise": "÷"
+                        },
+                        "otherwise": "×"
+                    },
+                    "otherwise": "−"
+                },
+                "otherwise": "+"
+            }
+        },
+        {
+            "id": "readoutText",
+            "value": {
+                "format": {
+                    "parameter": "n"
+                },
+                "digits": {
+                    "parameter": "dp"
+                }
+            }
+        },
+        {
+            "id": "tapeText",
+            "value": {
+                "concat": [
+                    {
+                        "format": {
+                            "parameter": "a"
+                        },
+                        "digits": {
+                            "parameter": "ad"
+                        }
+                    },
+                    " ",
+                    {
+                        "parameter": "opSymbol"
+                    }
+                ]
+            }
+        }
+    ],
+    "root": {
+        "id": "calculator",
+        "type": "group",
+        "children": [
+            {
+                "id": "body",
+                "type": "rect",
+                "bindings": {
+                    "width": {
+                        "parameter": "w"
+                    },
+                    "height": {
+                        "parameter": "h"
+                    },
+                    "cornerRadius": {
+                        "parameter": "radiusLarge"
+                    },
+                    "fill": {
+                        "parameter": "bodyColor"
+                    },
+                    "stroke": {
+                        "parameter": "borderColor"
+                    }
+                },
+                "properties": {
+                    "x": 0,
+                    "y": 0,
+                    "strokeWidth": 1
+                }
+            },
+            {
+                "id": "display",
+                "type": "rect",
+                "bindings": {
+                    "x": {
+                        "parameter": "pad"
+                    },
+                    "y": {
+                        "parameter": "pad"
+                    },
+                    "width": {
+                        "parameter": "displayW"
+                    },
+                    "height": {
+                        "parameter": "displayH"
+                    },
+                    "cornerRadius": {
+                        "parameter": "radiusMedium"
+                    },
+                    "fill": {
+                        "parameter": "displayColor"
+                    },
+                    "stroke": {
+                        "parameter": "borderColor"
+                    },
+                    "strokeWidth": {
+                        "parameter": "hairline"
+                    }
+                }
+            },
+            {
+                "id": "tape",
+                "type": "text",
+                "when": {
+                    "parameter": "p"
+                },
+                "bindings": {
+                    "x": {
+                        "parameter": "readoutX"
+                    },
+                    "y": {
+                        "parameter": "tapeY"
+                    },
+                    "text": {
+                        "parameter": "tapeText"
+                    },
+                    "fontSize": {
+                        "parameter": "tapeFont"
+                    },
+                    "fill": {
+                        "parameter": "mutedTextColor"
+                    }
+                },
+                "properties": {
+                    "stroke": "none",
+                    "textAnchor": "end",
+                    "baseline": "central"
+                }
+            },
+            {
+                "id": "readout",
+                "type": "text",
+                "bindings": {
+                    "x": {
+                        "parameter": "readoutX"
+                    },
+                    "y": {
+                        "parameter": "readoutY"
+                    },
+                    "text": {
+                        "parameter": "readoutText"
+                    },
+                    "fontSize": {
+                        "parameter": "readoutFont"
+                    },
+                    "fontWeight": {
+                        "parameter": "strongWeight"
+                    },
+                    "fill": {
+                        "parameter": "textColor"
+                    }
+                },
+                "properties": {
+                    "stroke": "none",
+                    "textAnchor": "end",
+                    "baseline": "central"
+                }
+            },
+            {
+                "id": "term-a",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "termX1"
+                            },
+                            "y": {
+                                "parameter": "termY"
+                            },
+                            "width": {
+                                "parameter": "termW"
+                            },
+                            "height": {
+                                "parameter": "termH"
+                            },
+                            "label": {
+                                "choose": {
+                                    "parameter": "termA"
+                                },
+                                "then": {
+                                    "parameter": "termA"
+                                },
+                                "otherwise": "—"
+                            },
+                            "fill": {
+                                "parameter": "keyAColor"
+                            },
+                            "borderColor": {
+                                "parameter": "borderColor"
+                            },
+                            "borderWidth": {
+                                "parameter": "hairline"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusSmall"
+                            },
+                            "labelColor": {
+                                "contrast": {
+                                    "parameter": "keyAColor"
+                                }
+                            },
+                            "fontSize": {
+                                "parameter": "termFont"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "tooltip",
+                        "text": {
+                            "choose": {
+                                "parameter": "termA"
+                            },
+                            "then": {
+                                "concat": [
+                                    {
+                                        "parameter": "termA"
+                                    },
+                                    " = ",
+                                    {
+                                        "format": {
+                                            "parameter": "termA",
+                                            "as": "number"
+                                        },
+                                        "digits": {
+                                            "parameter": "digits"
+                                        }
+                                    }
+                                ]
+                            },
+                            "otherwise": ""
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": {
+                            "parameter": "termA",
+                            "as": "number"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": {
+                            "parameter": "digits"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 1
+                    }
+                ]
+            },
+            {
+                "id": "term-b",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "termX2"
+                            },
+                            "y": {
+                                "parameter": "termY"
+                            },
+                            "width": {
+                                "parameter": "termW"
+                            },
+                            "height": {
+                                "parameter": "termH"
+                            },
+                            "label": {
+                                "choose": {
+                                    "parameter": "termB"
+                                },
+                                "then": {
+                                    "parameter": "termB"
+                                },
+                                "otherwise": "—"
+                            },
+                            "fill": {
+                                "parameter": "keyBColor"
+                            },
+                            "borderColor": {
+                                "parameter": "borderColor"
+                            },
+                            "borderWidth": {
+                                "parameter": "hairline"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusSmall"
+                            },
+                            "labelColor": {
+                                "contrast": {
+                                    "parameter": "keyBColor"
+                                }
+                            },
+                            "fontSize": {
+                                "parameter": "termFont"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "tooltip",
+                        "text": {
+                            "choose": {
+                                "parameter": "termB"
+                            },
+                            "then": {
+                                "concat": [
+                                    {
+                                        "parameter": "termB"
+                                    },
+                                    " = ",
+                                    {
+                                        "format": {
+                                            "parameter": "termB",
+                                            "as": "number"
+                                        },
+                                        "digits": {
+                                            "parameter": "digits"
+                                        }
+                                    }
+                                ]
+                            },
+                            "otherwise": ""
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": {
+                            "parameter": "termB",
+                            "as": "number"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": {
+                            "parameter": "digits"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 1
+                    }
+                ]
+            },
+            {
+                "id": "term-c",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "termX3"
+                            },
+                            "y": {
+                                "parameter": "termY"
+                            },
+                            "width": {
+                                "parameter": "termW"
+                            },
+                            "height": {
+                                "parameter": "termH"
+                            },
+                            "label": {
+                                "choose": {
+                                    "parameter": "termC"
+                                },
+                                "then": {
+                                    "parameter": "termC"
+                                },
+                                "otherwise": "—"
+                            },
+                            "fill": {
+                                "parameter": "keyCColor"
+                            },
+                            "borderColor": {
+                                "parameter": "borderColor"
+                            },
+                            "borderWidth": {
+                                "parameter": "hairline"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusSmall"
+                            },
+                            "labelColor": {
+                                "contrast": {
+                                    "parameter": "keyCColor"
+                                }
+                            },
+                            "fontSize": {
+                                "parameter": "termFont"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "tooltip",
+                        "text": {
+                            "choose": {
+                                "parameter": "termC"
+                            },
+                            "then": {
+                                "concat": [
+                                    {
+                                        "parameter": "termC"
+                                    },
+                                    " = ",
+                                    {
+                                        "format": {
+                                            "parameter": "termC",
+                                            "as": "number"
+                                        },
+                                        "digits": {
+                                            "parameter": "digits"
+                                        }
+                                    }
+                                ]
+                            },
+                            "otherwise": ""
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": {
+                            "parameter": "termC",
+                            "as": "number"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": {
+                            "parameter": "digits"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 1
+                    }
+                ]
+            },
+            {
+                "id": "term-d",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "termX4"
+                            },
+                            "y": {
+                                "parameter": "termY"
+                            },
+                            "width": {
+                                "parameter": "termW"
+                            },
+                            "height": {
+                                "parameter": "termH"
+                            },
+                            "label": {
+                                "choose": {
+                                    "parameter": "termD"
+                                },
+                                "then": {
+                                    "parameter": "termD"
+                                },
+                                "otherwise": "—"
+                            },
+                            "fill": {
+                                "parameter": "keyDColor"
+                            },
+                            "borderColor": {
+                                "parameter": "borderColor"
+                            },
+                            "borderWidth": {
+                                "parameter": "hairline"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusSmall"
+                            },
+                            "labelColor": {
+                                "contrast": {
+                                    "parameter": "keyDColor"
+                                }
+                            },
+                            "fontSize": {
+                                "parameter": "termFont"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "tooltip",
+                        "text": {
+                            "choose": {
+                                "parameter": "termD"
+                            },
+                            "then": {
+                                "concat": [
+                                    {
+                                        "parameter": "termD"
+                                    },
+                                    " = ",
+                                    {
+                                        "format": {
+                                            "parameter": "termD",
+                                            "as": "number"
+                                        },
+                                        "digits": {
+                                            "parameter": "digits"
+                                        }
+                                    }
+                                ]
+                            },
+                            "otherwise": ""
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": {
+                            "parameter": "termD",
+                            "as": "number"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": {
+                            "parameter": "digits"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 1
+                    }
+                ]
+            },
+            {
+                "id": "key-clear",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "x1"
+                            },
+                            "y": {
+                                "parameter": "y1"
+                            },
+                            "width": {
+                                "parameter": "keyW"
+                            },
+                            "height": {
+                                "parameter": "keyH"
+                            },
+                            "label": "C",
+                            "fill": {
+                                "parameter": "functionKeyColor"
+                            },
+                            "borderColor": {
+                                "parameter": "borderColor"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusMedium"
+                            },
+                            "labelColor": {
+                                "parameter": "textColor"
+                            },
+                            "fontSize": {
+                                "parameter": "keyFont"
+                            },
+                            "fontWeight": {
+                                "parameter": "strongWeight"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "a",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "p",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "ad",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 0
+                    }
+                ]
+            },
+            {
+                "id": "key-sign",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "x2"
+                            },
+                            "y": {
+                                "parameter": "y1"
+                            },
+                            "width": {
+                                "parameter": "keyW"
+                            },
+                            "height": {
+                                "parameter": "keyH"
+                            },
+                            "label": "±",
+                            "fill": {
+                                "parameter": "functionKeyColor"
+                            },
+                            "borderColor": {
+                                "parameter": "borderColor"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusMedium"
+                            },
+                            "labelColor": {
+                                "parameter": "textColor"
+                            },
+                            "fontSize": {
+                                "parameter": "keyFont"
+                            },
+                            "fontWeight": {
+                                "parameter": "strongWeight"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": {
+                            "formula": "0-n"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 0
+                    }
+                ]
+            },
+            {
+                "id": "key-divide",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "x3"
+                            },
+                            "y": {
+                                "parameter": "y1"
+                            },
+                            "width": {
+                                "parameter": "keyW"
+                            },
+                            "height": {
+                                "parameter": "keyH"
+                            },
+                            "label": "÷",
+                            "fill": {
+                                "parameter": "accentColor"
+                            },
+                            "borderColor": {
+                                "parameter": "accentColor"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusMedium"
+                            },
+                            "labelColor": {
+                                "parameter": "accentTextColor"
+                            },
+                            "fontSize": {
+                                "parameter": "keyFont"
+                            },
+                            "fontWeight": {
+                                "parameter": "strongWeight"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "clickable",
+                        "property": "a",
+                        "value": {
+                            "parameter": "result"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "ad",
+                        "value": {
+                            "parameter": "dp"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "p",
+                        "value": 4
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 0
+                    }
+                ]
+            },
+            {
+                "id": "key-multiply",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "x4"
+                            },
+                            "y": {
+                                "parameter": "y1"
+                            },
+                            "width": {
+                                "parameter": "keyW"
+                            },
+                            "height": {
+                                "parameter": "keyH"
+                            },
+                            "label": "×",
+                            "fill": {
+                                "parameter": "accentColor"
+                            },
+                            "borderColor": {
+                                "parameter": "accentColor"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusMedium"
+                            },
+                            "labelColor": {
+                                "parameter": "accentTextColor"
+                            },
+                            "fontSize": {
+                                "parameter": "keyFont"
+                            },
+                            "fontWeight": {
+                                "parameter": "strongWeight"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "clickable",
+                        "property": "a",
+                        "value": {
+                            "parameter": "result"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "ad",
+                        "value": {
+                            "parameter": "dp"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "p",
+                        "value": 3
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 0
+                    }
+                ]
+            },
+            {
+                "id": "key-subtract",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "x4"
+                            },
+                            "y": {
+                                "parameter": "y2"
+                            },
+                            "width": {
+                                "parameter": "keyW"
+                            },
+                            "height": {
+                                "parameter": "keyH"
+                            },
+                            "label": "−",
+                            "fill": {
+                                "parameter": "accentColor"
+                            },
+                            "borderColor": {
+                                "parameter": "accentColor"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusMedium"
+                            },
+                            "labelColor": {
+                                "parameter": "accentTextColor"
+                            },
+                            "fontSize": {
+                                "parameter": "keyFont"
+                            },
+                            "fontWeight": {
+                                "parameter": "strongWeight"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "clickable",
+                        "property": "a",
+                        "value": {
+                            "parameter": "result"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "ad",
+                        "value": {
+                            "parameter": "dp"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "p",
+                        "value": 2
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 0
+                    }
+                ]
+            },
+            {
+                "id": "key-add",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "x4"
+                            },
+                            "y": {
+                                "parameter": "y3"
+                            },
+                            "width": {
+                                "parameter": "keyW"
+                            },
+                            "height": {
+                                "parameter": "keyH"
+                            },
+                            "label": "+",
+                            "fill": {
+                                "parameter": "accentColor"
+                            },
+                            "borderColor": {
+                                "parameter": "accentColor"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusMedium"
+                            },
+                            "labelColor": {
+                                "parameter": "accentTextColor"
+                            },
+                            "fontSize": {
+                                "parameter": "keyFont"
+                            },
+                            "fontWeight": {
+                                "parameter": "strongWeight"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "clickable",
+                        "property": "a",
+                        "value": {
+                            "parameter": "result"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "ad",
+                        "value": {
+                            "parameter": "dp"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "p",
+                        "value": 1
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 0
+                    }
+                ]
+            },
+            {
+                "id": "key-equals",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "x4"
+                            },
+                            "y": {
+                                "parameter": "y4"
+                            },
+                            "width": {
+                                "parameter": "keyW"
+                            },
+                            "height": {
+                                "parameter": "tallH"
+                            },
+                            "label": "=",
+                            "fill": {
+                                "parameter": "accentColor"
+                            },
+                            "borderColor": {
+                                "parameter": "accentColor"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusMedium"
+                            },
+                            "labelColor": {
+                                "parameter": "accentTextColor"
+                            },
+                            "fontSize": {
+                                "parameter": "keyFont"
+                            },
+                            "fontWeight": {
+                                "parameter": "strongWeight"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "clickable",
+                        "variable": {
+                            "parameter": "resultVariable"
+                        },
+                        "value": {
+                            "parameter": "result"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": {
+                            "parameter": "result"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "a",
+                        "value": {
+                            "parameter": "result"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "p",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": 0
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": {
+                            "parameter": "digits"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 1
+                    }
+                ]
+            },
+            {
+                "id": "key-digit",
+                "type": "group",
+                "modifiers": [
+                    {
+                        "type": "repeat",
+                        "count": 9
+                    }
+                ],
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "formula": "pad+\\mod\\left(i,3\\right)\\cdot colStep",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "y": {
+                                "formula": "keypadTop+\\left(3-\\frac{i-\\mod\\left(i,3\\right)}{3}\\right)\\cdot rowStep",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "width": {
+                                "parameter": "keyW"
+                            },
+                            "height": {
+                                "parameter": "keyH"
+                            },
+                            "label": {
+                                "format": {
+                                    "formula": "i+1",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "digits": 0
+                            },
+                            "fill": {
+                                "parameter": "keyColor"
+                            },
+                            "borderColor": {
+                                "parameter": "borderColor"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusMedium"
+                            },
+                            "labelColor": {
+                                "parameter": "textColor"
+                            },
+                            "fontSize": {
+                                "parameter": "keyFont"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": {
+                            "choose": {
+                                "parameter": "fresh"
+                            },
+                            "then": {
+                                "formula": "i+1",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "otherwise": {
+                                "choose": {
+                                    "parameter": "s"
+                                },
+                                "then": {
+                                    "formula": "n+\\left(i+1\\right)\\cdot s",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "otherwise": {
+                                    "formula": "10\\cdot n+i+1",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": {
+                            "choose": {
+                                "parameter": "s"
+                            },
+                            "then": {
+                                "formula": "\\frac{s}{10}"
+                            },
+                            "otherwise": 0
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": {
+                            "choose": {
+                                "parameter": "s"
+                            },
+                            "then": {
+                                "formula": "dp+1"
+                            },
+                            "otherwise": 0
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 0
+                    }
+                ]
+            },
+            {
+                "id": "key-zero",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "x1"
+                            },
+                            "y": {
+                                "parameter": "y5"
+                            },
+                            "width": {
+                                "parameter": "wideW"
+                            },
+                            "height": {
+                                "parameter": "keyH"
+                            },
+                            "label": "0",
+                            "fill": {
+                                "parameter": "keyColor"
+                            },
+                            "borderColor": {
+                                "parameter": "borderColor"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusMedium"
+                            },
+                            "labelColor": {
+                                "parameter": "textColor"
+                            },
+                            "fontSize": {
+                                "parameter": "keyFont"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": {
+                            "choose": {
+                                "parameter": "fresh"
+                            },
+                            "then": 0,
+                            "otherwise": {
+                                "choose": {
+                                    "parameter": "s"
+                                },
+                                "then": {
+                                    "parameter": "n"
+                                },
+                                "otherwise": {
+                                    "formula": "10\\cdot n"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": {
+                            "choose": {
+                                "parameter": "s"
+                            },
+                            "then": {
+                                "formula": "\\frac{s}{10}"
+                            },
+                            "otherwise": 0
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": {
+                            "choose": {
+                                "parameter": "s"
+                            },
+                            "then": {
+                                "formula": "dp+1"
+                            },
+                            "otherwise": 0
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 0
+                    }
+                ]
+            },
+            {
+                "id": "key-point",
+                "type": "group",
+                "children": [
+                    {
+                        "id": "cap",
+                        "type": "key-cap",
+                        "parameters": {
+                            "x": {
+                                "parameter": "x3"
+                            },
+                            "y": {
+                                "parameter": "y5"
+                            },
+                            "width": {
+                                "parameter": "keyW"
+                            },
+                            "height": {
+                                "parameter": "keyH"
+                            },
+                            "label": ".",
+                            "fill": {
+                                "parameter": "keyColor"
+                            },
+                            "borderColor": {
+                                "parameter": "borderColor"
+                            },
+                            "cornerRadius": {
+                                "parameter": "radiusMedium"
+                            },
+                            "labelColor": {
+                                "parameter": "textColor"
+                            },
+                            "fontSize": {
+                                "parameter": "keyFont"
+                            },
+                            "fontWeight": {
+                                "parameter": "strongWeight"
+                            }
+                        }
+                    }
+                ],
+                "behaviours": [
+                    {
+                        "type": "clickable",
+                        "property": "n",
+                        "value": {
+                            "choose": {
+                                "parameter": "fresh"
+                            },
+                            "then": 0,
+                            "otherwise": {
+                                "parameter": "n"
+                            }
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "dp",
+                        "value": {
+                            "choose": {
+                                "parameter": "fresh"
+                            },
+                            "then": 0,
+                            "otherwise": {
+                                "parameter": "dp"
+                            }
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "s",
+                        "value": {
+                            "choose": {
+                                "parameter": "s"
+                            },
+                            "then": {
+                                "parameter": "s"
+                            },
+                            "otherwise": 0.1
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "property": "fresh",
+                        "value": 0
+                    }
+                ]
+            }
+        ]
+    }
+}

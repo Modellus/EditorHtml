@@ -930,21 +930,6 @@ svg:active.pan-available {
     padding-top: 4px;
 }
 
-.mdl-dropdown-list-item-stacked {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.mdl-dropdown-list-stacked-label {
-    font-size: 11px;
-    opacity: 0.7;
-}
-
-.mdl-dropdown-list-stacked-control {
-    width: 100%;
-}
-
 .mdl-dropdown-grid {
     display: grid;
     grid-template-columns: auto 1fr;

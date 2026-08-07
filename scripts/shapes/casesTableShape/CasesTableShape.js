@@ -63,7 +63,7 @@ class CasesTableShape extends BaseTableShape {
 
     populateTermsMenuSections(listItems) {
         if (this.getCasesCount() > 1)
-            listItems.push({ text: this.board.translations.get("Cases") ?? "Scenarios", stacked: true, buildControl: $p => $p.append(this.createCasesVisibilityControl()) });
+            listItems.push({ text: this.board.translations.get("Cases") ?? "Scenarios", buildControl: $p => $p.append(this.createCasesVisibilityControl()) });
     }
 
     renderTermsButtonTemplate(element) {

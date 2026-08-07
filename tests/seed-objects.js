@@ -11,6 +11,7 @@
 const { chromium } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
+const ObjectSeeder = require('../scripts/catalog/objectSeeder.js');
 
 const DEFINITIONS_DIRECTORY = path.join(__dirname, '..', 'scripts', 'blocks', 'definitions');
 const HARNESS_URL = '/tests/object-seed-harness.html';
@@ -43,7 +44,8 @@ function readDefinitions() {
     return fs.readdirSync(DEFINITIONS_DIRECTORY)
         .filter(name => name.endsWith('.json'))
         .sort()
-        .map(name => JSON.parse(fs.readFileSync(path.join(DEFINITIONS_DIRECTORY, name), 'utf8')));
+        .map(name => JSON.parse(fs.readFileSync(path.join(DEFINITIONS_DIRECTORY, name), 'utf8')))
+        .filter(document => ObjectSeeder.isCatalogueObject(document));
 }
 
 function reportLine(result, isDryRun) {

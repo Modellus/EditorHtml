@@ -95,10 +95,7 @@ var SlopeShapeToolbarMixin = {
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
             dataSource: listItems,
             scrollingEnabled: false,
-            itemTemplate: (data, _, element) => {
-                element[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
-                data.buildControl($(element).find(".mdl-dropdown-list-control"));
-            }
+            itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)
         });
     },
     createSlopeNumberListItem(text, property) {

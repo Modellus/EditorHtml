@@ -542,17 +542,17 @@ class BodyShape extends ChildShape {
             const xPhysicalControl = this.createPhysicalTermVisibilityControl(formAdapter, "xTerm", this.getTermDisplayModeProperty("xTerm"));
             const yPhysicalControl = this.createPhysicalTermVisibilityControl(formAdapter, "yTerm", this.getTermDisplayModeProperty("yTerm"));
             listItems.push(
-                { text: "Horizontal", stacked: true, buildControl: $p => $p.append(xPhysicalControl.control) },
-                { text: "Vertical", stacked: true, buildControl: $p => $p.append(yPhysicalControl.control) }
+                { text: "Horizontal", buildControl: $p => $p.append(xPhysicalControl.control) },
+                { text: "Vertical", buildControl: $p => $p.append(yPhysicalControl.control) }
             );
         } else {
             listItems.push(
-                { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
-                { text: "Vertical", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) }
+                { text: "Horizontal", buildControl: $p => $p.append(this._xDescriptor.control) },
+                { text: "Vertical", buildControl: $p => $p.append(this._yDescriptor.control) }
             );
         }
         listItems.push(
-            { text: "Size", stacked: true, buildControl: $p => $p.append(this._sizeDescriptor.control) },
+            { text: "Size", buildControl: $p => $p.append(this._sizeDescriptor.control) },
             {
                 text: "Physical body",
                 buildControl: $p => {

@@ -64,8 +64,8 @@ class PointShape extends ChildShape {
 
     populateTermsMenuSections(listItems) {
         listItems.push(
-            { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
-            { text: "Vertical", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) },
+            { text: "Horizontal", buildControl: $p => $p.append(this._xDescriptor.control) },
+            { text: "Vertical", buildControl: $p => $p.append(this._yDescriptor.control) },
             {
                 text: "Attached To",
                 parentSelector: true,

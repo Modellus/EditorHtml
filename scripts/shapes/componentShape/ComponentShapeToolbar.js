@@ -74,7 +74,7 @@ var ComponentShapeToolbarMixin = {
                 container: document.body,
                 wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
-                contentTemplate: contentElement => this.buildComponentParameterMenu(contentElement, this.getParametersByCategory(["model", "orbits"]), true)
+                contentTemplate: contentElement => this.buildComponentParameterMenu(contentElement, this.getParametersByCategory(["model", "orbits"]))
             }
         });
         this._componentModelDropdownElement.appendTo(itemElement);
@@ -100,7 +100,6 @@ var ComponentShapeToolbarMixin = {
         const parameters = this.getParametersByCategory(["display", "scale", "interaction", "general"]);
         const items = parameters.map(parameter => ({
             text: parameter.label,
-            stacked: parameter.valueType === "variable",
             buildControl: $container => $container.append(this.createComponentParameterControl(parameter))
         }));
         if (BlockObjectLibrary.getDocument(this.getComponentType()))
@@ -126,10 +125,9 @@ var ComponentShapeToolbarMixin = {
         navigator.clipboard.writeText(JSON.stringify(definitionDocument, null, 4));
         DevExpress.ui.notify(this.board.translations.get("Definition Copied"), "success", 2000);
     },
-    buildComponentParameterMenu(contentElement, parameters, stacked) {
+    buildComponentParameterMenu(contentElement, parameters) {
         const items = parameters.map(parameter => ({
             text: parameter.label,
-            stacked: stacked && parameter.valueType === "variable",
             buildControl: $container => $container.append(this.createComponentParameterControl(parameter))
         }));
         this.renderComponentMenuList(contentElement, items);
@@ -140,13 +138,7 @@ var ComponentShapeToolbarMixin = {
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
             dataSource: items,
             scrollingEnabled: false,
-            itemTemplate: (data, _, element) => {
-                element[0].innerHTML = data.stacked
-                    ? `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><div class="mdl-dropdown-list-stacked-control"></div></div>`
-                    : `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
-                const controlSelector = data.stacked ? ".mdl-dropdown-list-stacked-control" : ".mdl-dropdown-list-control";
-                data.buildControl($(element).find(controlSelector));
-            }
+            itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)
         });
     },
     createComponentParameterControl(parameter) {
@@ -164,7 +156,8 @@ var ComponentShapeToolbarMixin = {
     },
     createComponentVariableControl(parameter) {
         // A component input takes a model variable or a plain number, so the selector accepts both.
-        const control = this.createTermControl(parameter.id, parameter.label, false, { allowTypedValue: true });
+        // A definition naming a colour parameter gets the swatch for it in the same row.
+        const control = this.createTermControl(parameter.id, parameter.label, false, { allowTypedValue: true, colorProperty: parameter.colorParameter ?? "" });
         this._componentTermControls[parameter.id] = this.termFormControls[parameter.id];
         return control;
     },

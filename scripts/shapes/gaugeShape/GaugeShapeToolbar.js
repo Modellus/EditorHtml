@@ -271,13 +271,7 @@ var GaugeShapeToolbarMixin = {
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
             dataSource: listItems,
             scrollingEnabled: false,
-            itemTemplate: (data, _, element) => {
-                element[0].innerHTML = data.stacked
-                    ? `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><div class="mdl-dropdown-list-stacked-control"></div></div>`
-                    : `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
-                const controlSelector = data.stacked ? ".mdl-dropdown-list-stacked-control" : ".mdl-dropdown-list-control";
-                data.buildControl($(element).find(controlSelector));
-            }
+            itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)
         });
         this.refreshGaugeScaleControls();
     }

@@ -134,12 +134,13 @@ var BlockBehaviours = {
         type: "clickable",
         category: "behaviour",
         displayName: "Clickable",
-        description: "Sets a model variable to a fixed value when the node is clicked.",
-        tags: ["interaction", "click", "input"],
+        description: "Writes a value into a model variable or into a component parameter when the node is clicked. The value is a binding like any other, so a key can write what the model or the object itself currently holds rather than only a constant.",
+        tags: ["interaction", "click", "input", "key", "button"],
         capabilities: ["interaction", "writes-model"],
         inputSchema: {
             properties: {
-                variable: { valueType: "variable", defaultValue: "", label: "Variable", bindable: false },
+                variable: { valueType: "variable", defaultValue: "", label: "Variable" },
+                property: { valueType: "string", defaultValue: "", label: "Component property", description: "Property written when the variable does not name a model term." },
                 value: { valueType: "number", defaultValue: 0, label: "Value" }
             }
         }

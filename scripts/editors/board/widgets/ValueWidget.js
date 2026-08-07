@@ -40,10 +40,9 @@ class ValueShape extends BaseShape {
 
     populateTermsMenuSections(listItems) {
         listItems.push(
-            { text: "Term", stacked: true, buildControl: $p => $p.append(this._termControl) },
+            { text: "Term", buildControl: $p => $p.append(this._termControl) },
             {
                 text: "Sound",
-                stacked: true,
                 buildControl: $p => {
                     const selectHost = $('<div class="value-sound-selector"></div>');
                     selectHost.dxSelectBox({
@@ -125,12 +124,10 @@ class ValueShape extends BaseShape {
         const listItems = [
             {
                 text: "Size",
-                stacked: true,
                 buildControl: $parent => $parent.append(this._fontSizeTermControl)
             },
             {
                 text: "Style",
-                stacked: true,
                 buildControl: $parent => {
                     const boldButtonId = `font-bold-btn-${this.id}`;
                     const italicButtonId = `font-italic-btn-${this.id}`;
@@ -161,10 +158,7 @@ class ValueShape extends BaseShape {
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
             dataSource: listItems,
             scrollingEnabled: false,
-            itemTemplate: (data, _, el) => {
-                el[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
-                data.buildControl($(el).find(".mdl-dropdown-list-stacked-control"));
-            }
+            itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
         });
     }
 

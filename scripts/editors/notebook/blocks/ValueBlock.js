@@ -5,8 +5,8 @@ class ValueNotebookShape extends PlaceholderNotebookShape {
 
     populateTermsMenuSections(listItems) {
         listItems.push(
-            { text: "Term", stacked: true, buildControl: $container => $container.append(this._termControl) },
-            { text: "Size", stacked: true, buildControl: $container => $container.append(this._fontSizeTermControl) }
+            { text: "Term", buildControl: $container => $container.append(this._termControl) },
+            { text: "Size", buildControl: $container => $container.append(this._fontSizeTermControl) }
         );
     }
 
@@ -27,12 +27,10 @@ class ValueNotebookShape extends PlaceholderNotebookShape {
             dataSource: [
                 {
                     text: "Size",
-                    stacked: true,
                     buildControl: $parent => $parent.append(this._fontSizeTermControl)
                 },
                 {
                     text: "Style",
-                    stacked: true,
                     buildControl: $parent => {
                         $parent[0].innerHTML = `<div style="display:flex;gap:4px"><div id="${boldButtonId}"></div><div id="${italicButtonId}"></div></div>`;
                         $(`#${boldButtonId}`, $parent).dxButton({
@@ -57,10 +55,7 @@ class ValueNotebookShape extends PlaceholderNotebookShape {
                 }
             ],
             scrollingEnabled: false,
-            itemTemplate: (data, _, element) => {
-                element[0].innerHTML = `<div class="mdl-dropdown-list-item-stacked"><span class="mdl-dropdown-list-stacked-label">${data.text}</span><span class="mdl-dropdown-list-stacked-control"></span></div>`;
-                data.buildControl($(element).find(".mdl-dropdown-list-stacked-control"));
-            }
+            itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)
         });
     }
 

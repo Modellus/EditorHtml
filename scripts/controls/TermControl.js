@@ -267,13 +267,32 @@ class TermControl {
         return items;
     }
 
-    static getBaseShapeTermControlStateKey(baseShape, term, caseProperty) {
+    static getBaseShapeTermControlStateKey(baseShape, term, caseProperty, colorProperty = "") {
         const selectedTerm = TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]);
         const selectedCase = TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1);
         const lockedProperty = `${term}Locked`;
         const locked = baseShape.properties[lockedProperty] === true;
         const terms = baseShape.board.calculator.getTermsNames();
-        return `${selectedTerm}|${selectedCase}|${locked}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}`;
+        const color = colorProperty ? TermControl.normalizeColorValue(baseShape.properties[colorProperty]) : "";
+        return `${selectedTerm}|${selectedCase}|${locked}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}|${color}`;
+    }
+
+    // A term selector can carry the colour of whatever the term drives, so the choice of what to
+    // show and the choice of how it looks are made in the same row. The property the swatch writes
+    // is named by the caller, which is how a component definition asks for one.
+    static createBaseShapeTermColorSelection(baseShape, colorProperty) {
+        if (!colorProperty)
+            return null;
+        return {
+            width: "42px",
+            control: baseShape.getColorControl(),
+            show: () => true,
+            getValue: () => TermControl.normalizeColorValue(baseShape.properties[colorProperty]),
+            onValueChanged: (_, value) => {
+                baseShape.setPropertyCommand(colorProperty, TermControl.normalizeColorValue(value));
+                baseShape.board.markDirty(baseShape);
+            }
+        };
     }
 
     static syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl = null) {
@@ -324,7 +343,8 @@ class TermControl {
             rowGap: "0",
             rowMarginBottom: "0",
             getItems: () => [{ term: TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1), locked: baseShape.properties[lockedProperty] === true }],
-            getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty),
+            getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty, options.colorProperty ?? ""),
+            colorSelection: TermControl.createBaseShapeTermColorSelection(baseShape, options.colorProperty ?? ""),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term, normalizeCustomValue),
             getBoard: () => baseShape.board,
             getSystem: () => baseShape.board?.calculator?.system,

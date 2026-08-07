@@ -84,7 +84,7 @@ test.describe('analogue clock component', () => {
         await expect(settingsButton).toHaveCount(1);
         await settingsButton.click();
         await page.waitForTimeout(300);
-        const labels = await page.$$eval('.mdl-shape-overlay-popup .mdl-dropdown-list-label, .mdl-shape-overlay-popup .mdl-dropdown-list-stacked-label',
+        const labels = await page.$$eval('.mdl-shape-overlay-popup .mdl-dropdown-list-label',
             elements => elements.map(element => element.textContent.trim()));
         expect(labels).toContain('Show second hand');
         expect(labels).toContain('Hands can be dragged');
@@ -652,7 +652,7 @@ test.describe('component variable inputs', () => {
         await page.waitForTimeout(500);
         const report = await page.evaluate(() => {
             const popups = document.querySelectorAll('.mdl-shape-overlay-popup');
-            const rows = Array.from(popups[popups.length - 1].querySelectorAll('.mdl-dropdown-list-stacked-control, .mdl-dropdown-list-control'));
+            const rows = Array.from(popups[popups.length - 1].querySelectorAll('.mdl-dropdown-list-control'));
             const describe = row => {
                 const value = row.querySelector('.mdl-term-editor-value');
                 const style = value ? getComputedStyle(value) : null;

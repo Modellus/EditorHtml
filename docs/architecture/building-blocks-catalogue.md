@@ -365,13 +365,14 @@ Capabilities: `layout`
 
 ### `clickable` — Clickable
 
-Sets a model variable to a fixed value when the node is clicked.
+Writes a value into a model variable or into a component parameter when the node is clicked. The value is a binding like any other, so a key can write what the model or the object itself currently holds rather than only a constant.
 
 Capabilities: `interaction`, `writes-model`
 
 | Property | Type | Default | Range |
 | --- | --- | --- | --- |
 | `variable` | variable | "" |  |
+| `property` | string | "" |  |
 | `value` | number | 0 |  |
 
 ### `drag-angle` — Drag angle
@@ -484,6 +485,41 @@ Capabilities: `radial`, `angular`, `reads-model`, `interaction`
 | `numberColor` | colour | "token:text.primary" |  |
 | `interactive` | boolean | false |  |
 
+### `calculator` — Calculator
+
+Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, and the result can be written back into a model variable.
+
+Capabilities: `interaction`, `textual`, `reads-model`, `writes-model`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `n` | number | 0 |  |
+| `a` | number | 0 |  |
+| `p` | number | 0 |  |
+| `s` | number | 0 |  |
+| `dp` | number | 0 |  |
+| `ad` | number | 0 |  |
+| `fresh` | number | 0 |  |
+| `termA` | variable | "" |  |
+| `termB` | variable | "" |  |
+| `termC` | variable | "" |  |
+| `termD` | variable | "" |  |
+| `keyAColor` | colour | "token:surface.muted" |  |
+| `keyBColor` | colour | "token:surface.muted" |  |
+| `keyCColor` | colour | "token:surface.muted" |  |
+| `keyDColor` | colour | "token:surface.muted" |  |
+| `resultVariable` | variable | "" |  |
+| `digits` | number | 2 | min 0, max 6 |
+| `bodyColor` | colour | "token:surface.emphasis" |  |
+| `displayColor` | colour | "token:surface.default" |  |
+| `keyColor` | colour | "token:surface.default" |  |
+| `functionKeyColor` | colour | "token:surface.muted" |  |
+| `accentColor` | colour | "token:stroke.accent" |  |
+| `borderColor` | colour | "token:stroke.subtle" |  |
+| `textColor` | colour | "token:text.primary" |  |
+| `accentTextColor` | colour | "token:text.inverse" |  |
+| `mutedTextColor` | colour | "token:text.secondary" |  |
+
 ### `circular-gauge` — Circular gauge
 
 Ring gauge that fills clockwise in proportion to a model variable.
@@ -538,6 +574,27 @@ Capabilities: `radial`, `background`
 | `borderWidth` | number | 2 | min 0, max 40 |
 | `bezelWidth` | number | 0 | min 0, max 60 |
 | `bezelColor` | colour | "token:surface.emphasis" |  |
+
+### `key-cap` — Key cap
+
+Rounded key with a centred label. It carries no interaction of its own: put it inside a group and give that group the behaviour the key performs, so the same cap serves a keypad, a legend or a toolbar.
+
+Capabilities: `sizable`, `textual`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `x` | number | 0 |  |
+| `y` | number | 0 |  |
+| `width` | number | 44 | min 0 |
+| `height` | number | 32 | min 0 |
+| `label` | string | "" |  |
+| `fill` | colour | "token:surface.default" |  |
+| `borderColor` | colour | "token:stroke.subtle" |  |
+| `borderWidth` | number | 1 | min 0 |
+| `cornerRadius` | number | 6 | min 0 |
+| `labelColor` | colour | "token:text.primary" |  |
+| `fontSize` | number | 14 | min 1 |
+| `fontWeight` | number | 500 | min 100, max 900 |
 
 ### `label-ring` — Label ring
 

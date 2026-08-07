@@ -881,6 +881,19 @@ class Utils {
         return fo;
     }
 
+    // Every toolbar drop-down writes its rows through here, so a label always sits to the left of
+    // the control it names instead of each menu deciding that for itself.
+    static renderDropdownListItem(element, data) {
+        const host = element instanceof Element ? element : element[0];
+        if (data.parentSelector) {
+            data.buildControl($(host));
+            return;
+        }
+        const iconMarkup = data.icon ? `<i class="dx-icon ${data.icon}"></i>` : "";
+        host.innerHTML = `<div class="mdl-dropdown-list-item">${iconMarkup}<span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+        data.buildControl($(host).find(".mdl-dropdown-list-control"));
+    }
+
 }
 
 if (typeof module !== "undefined" && module.exports)

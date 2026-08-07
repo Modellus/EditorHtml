@@ -1,5 +1,5 @@
 class BlockBindings {
-    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat"];
+    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast"];
 
     static isBinding(value) {
         if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -148,7 +148,18 @@ class BlockBindings {
             return this.resolveChoice(binding, context, fallbackValue);
         if (kind === "concat")
             return this.resolveConcat(binding, context, fallbackValue);
+        if (kind === "contrast")
+            return this.resolveContrast(binding, context, fallbackValue);
         return fallbackValue;
+    }
+
+    // Reads back as black or white against whatever colour it is given, so a label placed on a
+    // surface the reader chooses stays legible without the definition guessing the surface.
+    resolveContrast(binding, context, fallbackValue) {
+        const color = this.resolve(binding.contrast, context, null);
+        if (color === null || color === undefined || color === "")
+            return fallbackValue;
+        return Utils.getContrastColor(String(color));
     }
 
     // Picks between two bindings, so a declarative definition can express what a create()

@@ -145,10 +145,10 @@ class VectorShape extends ChildShape {
 
     populateTermsMenuSections(listItems) {
         listItems.push(
-            { text: "Horizontal", stacked: true, buildControl: $p => $p.append(this._xDescriptor.control) },
-            { text: "Vertical", stacked: true, buildControl: $p => $p.append(this._yDescriptor.control) },
-            { text: "Origin X", stacked: true, buildControl: $p => $p.append(this._xOriginDescriptor.control) },
-            { text: "Origin Y", stacked: true, buildControl: $p => $p.append(this._yOriginDescriptor.control) },
+            { text: "Horizontal", buildControl: $p => $p.append(this._xDescriptor.control) },
+            { text: "Vertical", buildControl: $p => $p.append(this._yDescriptor.control) },
+            { text: "Origin X", buildControl: $p => $p.append(this._xOriginDescriptor.control) },
+            { text: "Origin Y", buildControl: $p => $p.append(this._yOriginDescriptor.control) },
             {
                 text: "Attached To",
                 parentSelector: true,
@@ -382,10 +382,7 @@ class VectorShape extends ChildShape {
                     $('<div>').appendTo(contentElement).dxList({
                         dataSource: listItems,
                         scrollingEnabled: false,
-                        itemTemplate: (data, _, el) => {
-                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
-                            data.buildControl($(el).find(".mdl-dropdown-list-control"));
-                        }
+                        itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
                     });
                 }
             }
