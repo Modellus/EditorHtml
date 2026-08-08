@@ -46,6 +46,9 @@ class BlockCompiler {
             width: Number(context.width) || tokens.getNumber("size.default.width", 180),
             height: Number(context.height) || tokens.getNumber("size.default.height", 180),
             caseNumber: Number(context.caseNumber) || 1,
+            iteration: Number(context.iteration) || 1,
+            playing: context.playing === true,
+            precision: Number.isFinite(Number(context.precision)) ? Number(context.precision) : 2,
             componentStack: [],
             componentDepth: 0
         };
@@ -288,8 +291,17 @@ class BlockCompiler {
         return resolved;
     }
 
+    // A default may itself name a token — that is how a primitive says "whatever the board writes
+    // in" rather than naming a font of its own — so the default is read through the tokens before it
+    // is used, both as the value and as what a failed binding falls back to.
+    resolveDefaultValue(defaultValue, context) {
+        if (!context.tokens.isTokenReference(defaultValue))
+            return defaultValue;
+        return context.tokens.resolveValue(defaultValue, null);
+    }
+
     resolvePropertyValue(value, definition, compilation, context, path) {
-        const fallbackValue = definition.defaultValue;
+        const fallbackValue = this.resolveDefaultValue(definition.defaultValue, context);
         if (value === undefined)
             return fallbackValue;
         let resolved = value;
@@ -332,7 +344,7 @@ class BlockCompiler {
     resolveComponentParameters(node, registration, compilation, context, path) {
         const resolved = {};
         for (const parameter of registration.parameters ?? [])
-            resolved[parameter.id] = parameter.defaultValue;
+            resolved[parameter.id] = this.resolveDefaultValue(parameter.defaultValue, context);
         const supplied = node.parameters ?? {};
         for (const [name, value] of Object.entries(supplied)) {
             const parameter = (registration.parameters ?? []).find(entry => entry.id === name);
@@ -344,21 +356,32 @@ class BlockCompiler {
         }
         resolved.$width = context.width;
         resolved.$height = context.height;
+        // The iteration on screen, so a drawing built from what the model holds per iteration can
+        // stand on the same one the rest of the board is showing, and whether the model is running:
+        // a drawing that answers the pointer while it stands still has to know when it stops doing so.
+        resolved.$iteration = context.iteration;
+        resolved.$playing = context.playing ? 1 : 0;
+        // How many decimals the model is read to, so a value shown beside the drawing is rounded the
+        // way the same value is rounded everywhere else on the board.
+        resolved.$precision = context.precision;
         return resolved;
     }
 
     resolveParameterValue(value, parameter, compilation, context, path) {
+        if (parameter.structured === true && !BlockBindings.isBinding(value))
+            return this.resolveStructuredValue(value, context, 0);
+        const fallbackValue = this.resolveDefaultValue(parameter.defaultValue, context);
         let resolved = value;
         if (BlockBindings.isBinding(value))
-            resolved = this.bindings.resolve(value, context, parameter.defaultValue);
+            resolved = this.bindings.resolve(value, context, fallbackValue);
         if (context.tokens.isTokenReference(resolved))
-            resolved = context.tokens.resolveValue(resolved, parameter.defaultValue);
+            resolved = context.tokens.resolveValue(resolved, fallbackValue);
         if (resolved === undefined || resolved === null)
-            return parameter.defaultValue;
+            return fallbackValue;
         if (parameter.valueType === "number") {
             const numeric = Number(resolved);
             if (!Number.isFinite(numeric))
-                return parameter.defaultValue;
+                return fallbackValue;
             if (Number.isFinite(parameter.minimum) && numeric < parameter.minimum)
                 return parameter.minimum;
             if (Number.isFinite(parameter.maximum) && numeric > parameter.maximum)
@@ -367,6 +390,25 @@ class BlockCompiler {
         }
         if (parameter.valueType === "boolean")
             return resolved === true || resolved === "true" || resolved === 1;
+        return resolved;
+    }
+
+    // A structured parameter carries a shape rather than a single value — a list of actions, a row
+    // template — and the bindings inside it are resolved along with the ones around it. Only a
+    // parameter that declares itself structured is walked, so a component handed a long run of
+    // plain data rows is not searched for bindings that cannot be there.
+    resolveStructuredValue(value, context, depth) {
+        if (depth > 4 || value === null || value === undefined)
+            return value;
+        if (BlockBindings.isBinding(value))
+            return this.bindings.resolve(value, context, null);
+        if (Array.isArray(value))
+            return value.map(entry => this.resolveStructuredValue(entry, context, depth + 1));
+        if (typeof value !== "object")
+            return value;
+        const resolved = {};
+        for (const [name, entry] of Object.entries(value))
+            resolved[name] = this.resolveStructuredValue(entry, context, depth + 1);
         return resolved;
     }
 
@@ -423,6 +465,11 @@ class BlockCompiler {
                 this.addDiagnostic(compilation, "BEHAVIOUR_NOT_SUPPORTED", `${path}.behaviours[${index}]`, `"${node.type}" does not support the behaviour "${behaviour.type}".`);
                 continue;
             }
+            // A behaviour carrying a "when" that resolves false is left off, the way a child
+            // carrying one is left out: a key that records a completed operation must do nothing
+            // when there is no operation to record, without the key itself disappearing.
+            if (behaviour.when !== undefined && !BlockBindings.isTruthy(this.bindings.resolve(behaviour.when, context, false)))
+                continue;
             const input = {};
             for (const [name, definition] of Object.entries(registration.inputSchema.properties))
                 input[name] = this.resolvePropertyValue(behaviour[name], definition, compilation, context, `${path}.behaviours[${index}].${name}`);

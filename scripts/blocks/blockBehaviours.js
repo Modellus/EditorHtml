@@ -147,6 +147,106 @@ var BlockBehaviours = {
     });
 
     registry.register({
+        type: "remember",
+        category: "behaviour",
+        displayName: "Remember",
+        description: "Appends a row to one of the object's memories when the node is clicked. A row carries a label and two numbers, all of them bindings, so a key records what the object held at the moment it was pressed.",
+        tags: ["interaction", "click", "memory", "history", "record"],
+        capabilities: ["interaction", "memory"],
+        inputSchema: {
+            properties: {
+                memory: { valueType: "string", defaultValue: "", label: "Memory", bindable: false, description: "Parameter the rows are kept in." },
+                text: { valueType: "string", defaultValue: "", label: "Label" },
+                x: { valueType: "number", defaultValue: 0, label: "First number" },
+                y: { valueType: "number", defaultValue: 0, label: "Second number" },
+                limit: { valueType: "number", defaultValue: 50, minimum: 1, maximum: 2000, label: "Rows kept", description: "Oldest rows are dropped once the memory is this long." }
+            }
+        }
+    });
+
+    registry.register({
+        type: "forget",
+        category: "behaviour",
+        displayName: "Forget",
+        description: "Empties one of the object's memories when the node is clicked.",
+        tags: ["interaction", "click", "memory", "clear"],
+        capabilities: ["interaction", "memory"],
+        inputSchema: {
+            properties: {
+                memory: { valueType: "string", defaultValue: "", label: "Memory", bindable: false }
+            }
+        }
+    });
+
+    registry.register({
+        type: "track-pointer",
+        category: "behaviour",
+        displayName: "Track pointer",
+        description: "Records where the pointer is while it is dragged over the node, one sample every sampling interval, into one of the object's memories. The sample is written in the units the node is scaled in, so what is recorded is a pair of values rather than a pair of pixels — and when the memory names model terms, the run becomes the values those terms take, iteration by iteration.",
+        tags: ["interaction", "pointer", "memory", "record", "track", "writes-model"],
+        capabilities: ["interaction", "memory", "writes-model"],
+        inputSchema: {
+            properties: {
+                memory: { valueType: "string", defaultValue: "", label: "Memory", bindable: false },
+                mode: { valueType: "string", defaultValue: "replace", enumValues: ["replace", "append"], label: "Mode", bindable: false, description: "Whether a new drag starts a fresh recording or carries on from the last one." },
+                limit: { valueType: "number", defaultValue: 600, minimum: 1, maximum: 2000, label: "Samples kept" },
+                sampleMs: { valueType: "number", defaultValue: 33, minimum: 10, maximum: 1000, label: "Sampling interval", unit: "ms" },
+                originX: { valueType: "number", defaultValue: 0, label: "Origin X", description: "Pixel the horizontal value zero sits at." },
+                originY: { valueType: "number", defaultValue: 0, label: "Origin Y" },
+                scaleX: { valueType: "number", defaultValue: 1, label: "Pixels per unit across" },
+                scaleY: { valueType: "number", defaultValue: -1, label: "Pixels per unit up" },
+                minimumX: { valueType: "number", defaultValue: null, label: "Minimum X" },
+                maximumX: { valueType: "number", defaultValue: null, label: "Maximum X" },
+                minimumY: { valueType: "number", defaultValue: null, label: "Minimum Y" },
+                maximumY: { valueType: "number", defaultValue: null, label: "Maximum Y" }
+            }
+        }
+    });
+
+    registry.register({
+        type: "follow-pointer",
+        category: "behaviour",
+        displayName: "Follow pointer",
+        description: "Reports where the pointer is over the node, in the units the node is scaled in, so a drawing can show the value under the cursor. What is reported is not kept: it lasts as long as the pointer is over the node, and the model is not touched.",
+        tags: ["interaction", "pointer", "hover", "readout"],
+        capabilities: ["interaction"],
+        inputSchema: {
+            properties: {
+                xParameter: { valueType: "string", defaultValue: "", label: "Horizontal parameter", bindable: false, description: "Parameter the horizontal value is reported in." },
+                yParameter: { valueType: "string", defaultValue: "", label: "Vertical parameter", bindable: false },
+                activeParameter: { valueType: "string", defaultValue: "", label: "Pointer-over parameter", bindable: false, description: "Parameter that reads 1 while the pointer is over the node." },
+                originX: { valueType: "number", defaultValue: 0, label: "Origin X" },
+                originY: { valueType: "number", defaultValue: 0, label: "Origin Y" },
+                scaleX: { valueType: "number", defaultValue: 1, label: "Pixels per unit across" },
+                scaleY: { valueType: "number", defaultValue: -1, label: "Pixels per unit up" },
+                minimumX: { valueType: "number", defaultValue: null, label: "Minimum X" },
+                maximumX: { valueType: "number", defaultValue: null, label: "Maximum X" },
+                minimumY: { valueType: "number", defaultValue: null, label: "Minimum Y" },
+                maximumY: { valueType: "number", defaultValue: null, label: "Maximum Y" }
+            }
+        }
+    });
+
+    registry.register({
+        type: "drag-axis-tick",
+        category: "behaviour",
+        displayName: "Drag axis tick",
+        description: "Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have.",
+        tags: ["interaction", "drag", "axis", "scale", "ticks"],
+        capabilities: ["interaction"],
+        inputSchema: {
+            properties: {
+                axis: { valueType: "string", defaultValue: "x", enumValues: ["x", "y"], label: "Axis", bindable: false },
+                value: { valueType: "number", defaultValue: 0, label: "Tick value" },
+                minimumProperty: { valueType: "string", defaultValue: "", label: "Minimum property", bindable: false, description: "Component property the axis starts at; it is held still while the tick is dragged." },
+                maximumProperty: { valueType: "string", defaultValue: "", label: "Maximum property", bindable: false },
+                originPixel: { valueType: "number", defaultValue: 0, label: "Axis origin", description: "Pixel the axis minimum sits at." },
+                lengthPixels: { valueType: "number", defaultValue: 0, label: "Axis length", minimum: 0 }
+            }
+        }
+    });
+
+    registry.register({
         type: "respond-to-simulation",
         category: "behaviour",
         displayName: "Respond to simulation updates",

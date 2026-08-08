@@ -2,6 +2,11 @@ const { test, expect } = require('@playwright/test');
 
 const BOARD_URL = '/pages/board/index.html';
 
+// The font the board writes in, and the one the classroom preset writes in instead. Spelled out
+// here rather than read from the tokens, so a preset that quietly loses its font is a failure.
+const BOARD_FONT = 'Katex_Main, Inter, serif';
+const CLASSROOM_FONT = 'Indie Flower, Katex_Main, cursive';
+
 async function setupBoard(page) {
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
@@ -404,5 +409,272 @@ test.describe('reusable blocks build several objects', () => {
         expect(result.sameStructure).toBe(true);
         expect(result.sameMarkup).toBe(false);
         expect(result.presets).toEqual(expect.arrayContaining(['standard', 'minimal', 'scientific', 'classroom', 'high-contrast']));
+    });
+});
+
+test.describe('one look for the whole board', () => {
+    test('no object names a font: every text is written in the one the tokens hold', async ({ page }) => {
+        await setupBoard(page);
+        const result = await page.evaluate(() => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
+            const fontsOf = preset => {
+                const fonts = new Set();
+                for (const type of ['analogue-clock', 'compass', 'speedometer', 'circular-gauge', 'calculator', 'mouse-tracker']) {
+                    const definition = BlockObjects.createComponentInstance(type, { preset: preset });
+                    const parameters = BlockObjects.getInstancePropertyDefaults(type, preset);
+                    const compilation = compiler.compile(definition, { width: 280, height: 280, parameters: parameters, tokens: new BlockTokens(preset) });
+                    for (const node of BlockRenderer.flatten(compilation.nodes).filter(node => node.tag === 'text'))
+                        fonts.add(node.attributes['font-family']);
+                }
+                return Array.from(fonts);
+            };
+            return { standard: fontsOf('standard'), classroom: fontsOf('classroom') };
+        });
+        expect(result.standard).toEqual([BOARD_FONT]);
+        expect(result.classroom).toEqual([CLASSROOM_FONT]);
+    });
+
+    test('the axis, the grid and the crosshair are drawn to the measurements the tokens hold', async ({ page }) => {
+        await setupBoard(page);
+        const result = await page.evaluate(() => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(null));
+            const tokens = new BlockTokens('standard');
+            const plot = { x: 20, y: 10, width: 100, height: 100, minimumX: 0, maximumX: 10, minimumY: 0, maximumY: 10 };
+            const definition = {
+                id: 'plot', type: 'component', name: 'Plot', preset: 'standard',
+                root: {
+                    id: 'root', type: 'group', children: [
+                        { id: 'grid', type: 'plot-grid', parameters: Object.assign({ ticksX: 5, ticksY: 5 }, plot) },
+                        { id: 'axes', type: 'plot-axes', parameters: Object.assign({ ticksX: 5, ticksY: 5, digits: 0 }, plot) },
+                        { id: 'crosshair', type: 'plot-crosshair', parameters: Object.assign({ valueX: 5, valueY: 5, digits: 0 }, plot) }
+                    ]
+                }
+            };
+            const flattened = BlockRenderer.flatten(compiler.compile(definition, { width: 140, height: 140, parameters: {}, tokens: tokens }).nodes);
+            const find = id => flattened.find(node => node.id.endsWith(`:${id}`));
+            return {
+                axisWidth: Number(find('axis-x').attributes['stroke-width']),
+                axisColor: find('axis-x').attributes.stroke,
+                gridColor: find('x-0').attributes.stroke,
+                gridOpacity: Number(find('x-0').attributes.opacity),
+                tickLength: Number(find('x-tick-0').attributes.y2) - Number(find('x-tick-0').attributes.y1),
+                labelGap: Number(find('x-label-0').attributes.y) - 110,
+                labelFont: Number(find('x-label-0').attributes['font-size']),
+                crosshairDash: find('vertical').attributes['stroke-dasharray'],
+                crosshairOpacity: Number(find('vertical').attributes.opacity),
+                badgeText: find('pointer-values-text').text,
+                tokens: {
+                    axisWidth: tokens.getNumber('axis.strokeWidth'),
+                    axisColor: tokens.get('axis.color'),
+                    gridColor: tokens.get('grid.color'),
+                    gridOpacity: tokens.getNumber('grid.majorOpacity'),
+                    tickLength: tokens.getNumber('axis.tickLength'),
+                    tickFont: tokens.getNumber('font.size.tick'),
+                    labelGap: tokens.getNumber('font.size.tick') * tokens.getNumber('axis.labelGapX'),
+                    crosshairDash: tokens.get('crosshair.dash'),
+                    crosshairOpacity: tokens.getNumber('crosshair.opacity')
+                }
+            };
+        });
+        expect(result.axisWidth).toBe(result.tokens.axisWidth);
+        expect(result.axisColor).toBe(result.tokens.axisColor);
+        expect(result.gridColor).toBe(result.tokens.gridColor);
+        expect(result.gridOpacity).toBe(result.tokens.gridOpacity);
+        expect(result.tickLength).toBe(result.tokens.tickLength);
+        expect(result.labelFont).toBe(result.tokens.tickFont);
+        expect(result.labelGap).toBeCloseTo(result.tokens.labelGap, 5);
+        expect(result.crosshairDash).toBe(result.tokens.crosshairDash);
+        expect(result.crosshairOpacity).toBe(result.tokens.crosshairOpacity);
+        // Where the pointer is, read as a pair under it — the crosshair with no points to answer with.
+        expect(result.badgeText).toBe('5, 5');
+    });
+
+    test('the badge and the crosshair the hand-written shapes draw come from the same tokens', async ({ page }) => {
+        await setupBoard(page);
+        const result = await page.evaluate(() => {
+            const tokens = new BlockTokens('standard');
+            return {
+                crosshair: Utils.crosshairLineSvgMarkup(0, 0, 10, 0, '#000000'),
+                badge: Utils.valueBadgeSvgMarkup('5', 0, 0, { backgroundColor: '#000000' }),
+                dash: tokens.get('crosshair.dash'),
+                opacity: tokens.getNumber('crosshair.opacity'),
+                cornerRadius: tokens.getNumber('badge.cornerRadius'),
+                font: tokens.get('font.family')
+            };
+        });
+        expect(result.crosshair).toContain(`stroke-dasharray="${result.dash}"`);
+        expect(result.crosshair).toContain(`stroke-opacity="${result.opacity}"`);
+        expect(result.badge).toContain(`rx="${result.cornerRadius}"`);
+        expect(result.badge).toContain(`font-family="${result.font}"`);
+    });
+});
+
+test.describe('memory', () => {
+    test('rows are appended, capped and read back by index from either end', async ({ page }) => {
+        await setupBoard(page);
+        const result = await page.evaluate(() => {
+            let rows = [];
+            for (const value of [1, 2, 3, 4])
+                rows = BlockMemory.append(rows, BlockMemory.createRow(`row ${value}`, value, value * 2), 3);
+            return {
+                kept: rows,
+                count: BlockMemory.count(rows),
+                oldest: BlockMemory.getField(rows, 0, 'start', 'text'),
+                newest: BlockMemory.getField(rows, 0, 'end', 'text'),
+                secondNewest: BlockMemory.getField(rows, 1, 'end', 'x'),
+                pastTheEnd: BlockMemory.getField(rows, 9, 'start', 'x'),
+                emptyRow: BlockMemory.createRow('', 0, 0),
+                points: BlockMemory.toPoints(rows),
+                hardLimit: BlockMemory.getLimit(999999)
+            };
+        });
+        expect(result.kept.map(row => row.text)).toEqual(['row 2', 'row 3', 'row 4']);
+        expect(result.count).toBe(3);
+        expect(result.oldest).toBe('row 2');
+        expect(result.newest).toBe('row 4');
+        expect(result.secondNewest).toBe(3);
+        expect(result.pastTheEnd).toBeNull();
+        expect(result.emptyRow).toEqual({});
+        expect(result.points).toEqual([{ x: 2, y: 4 }, { x: 3, y: 6 }, { x: 4, y: 8 }]);
+        expect(result.hardLimit).toBe(2000);
+    });
+
+    test('bindings read a memory as a list, a row, a field and a count', async ({ page }) => {
+        await setupBoard(page);
+        const result = await page.evaluate(() => {
+            const bindings = new BlockBindings(shell.board.calculator);
+            const context = { parameters: { log: [{ text: 'first', x: 1 }, { text: 'second', x: 2, y: 5 }], head: 1 }, tokens: new BlockTokens('standard') };
+            return {
+                whole: bindings.resolve({ memory: 'log' }, context, null),
+                count: bindings.resolve({ memoryCount: 'log' }, context, 0),
+                field: bindings.resolve({ memory: 'log', row: { parameter: 'head' }, field: 'text' }, context, ''),
+                newest: bindings.resolve({ memory: 'log', row: 0, from: 'end', field: 'x' }, context, 0),
+                missing: bindings.resolve({ memory: 'log', row: 7, field: 'x' }, context, -1),
+                unknownMemory: bindings.resolve({ memoryCount: 'nothing' }, context, 0),
+                dependencies: bindings.getBindingDependencies({ memory: 'log', field: 'x' })
+            };
+        });
+        expect(result.whole).toHaveLength(2);
+        expect(result.count).toBe(2);
+        expect(result.field).toBe('second');
+        expect(result.newest).toBe(2);
+        expect(result.missing).toBe(-1);
+        expect(result.unknownMemory).toBe(0);
+        expect(result.dependencies).toEqual({ variables: [], parameters: ['log'] });
+    });
+
+    test('a structured parameter has the bindings inside it resolved, and a plain one does not', async ({ page }) => {
+        await setupBoard(page);
+        const result = await page.evaluate(() => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
+            const context = compiler.createRootContext({}, { parameters: { digits: 3 }, tokens: new BlockTokens('standard') });
+            const value = [{ property: 'dp', value: { parameter: 'digits' } }, { property: 'fresh', value: 1 }];
+            return {
+                structured: compiler.resolveParameterValue(value, { id: 'rowActions', valueType: 'object', structured: true }, { diagnostics: [] }, context, 'path'),
+                plain: compiler.resolveParameterValue(value, { id: 'rowActions', valueType: 'object' }, { diagnostics: [] }, context, 'path')
+            };
+        });
+        expect(result.structured).toEqual([{ property: 'dp', value: 3 }, { property: 'fresh', value: 1 }]);
+        expect(result.plain).toEqual([{ property: 'dp', value: { parameter: 'digits' } }, { property: 'fresh', value: 1 }]);
+    });
+
+    test('a behaviour is left off when its condition is false', async ({ page }) => {
+        await setupBoard(page);
+        const attached = await page.evaluate(() => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
+            const build = pending => {
+                const definition = {
+                    schemaVersion: '1.0.0', id: 'when-test', type: 'group', name: 'When test', preset: 'standard',
+                    root: {
+                        id: 'key', type: 'rect', properties: { width: 40, height: 20, fill: '#000000' },
+                        behaviours: [
+                            { type: 'remember', when: { parameter: 'p' }, memory: 'log', text: 'recorded', x: 1 },
+                            { type: 'clickable', property: 'n', value: 1 }
+                        ]
+                    }
+                };
+                const compilation = compiler.compile(definition, { width: 100, height: 100, parameters: { p: pending, log: [], n: 0 }, tokens: new BlockTokens('standard') });
+                return compilation.nodes[0].behaviours.map(behaviour => behaviour.type);
+            };
+            return { pending: build(1), settled: build(0) };
+        });
+        expect(attached.pending).toEqual(['remember', 'clickable']);
+        expect(attached.settled).toEqual(['clickable']);
+    });
+
+    test('a memory list draws its rows and a trace maps them onto the plot', async ({ page }) => {
+        await setupBoard(page);
+        const drawn = await page.evaluate(() => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
+            const definition = {
+                schemaVersion: '1.0.0', id: 'memory-drawing', type: 'group', name: 'Memory drawing', preset: 'standard',
+                root: {
+                    id: 'root', type: 'group', children: [
+                        { id: 'list', type: 'memory-list', parameters: { rows: { memory: 'log' }, x: 0, y: 0, width: 120, height: 60, rowHeight: 20, digits: 1 } },
+                        { id: 'trace', type: 'memory-trace', parameters: { rows: { memory: 'log' }, originX: 10, originY: 100, scaleX: 2, scaleY: -2 } }
+                    ]
+                }
+            };
+            const parameters = { log: [{ text: 'oldest', x: 1, y: 2 }, { text: 'newest', x: 3, y: 4 }] };
+            const compilation = compiler.compile(definition, { width: 200, height: 200, parameters: parameters, tokens: new BlockTokens('standard') });
+            const flattened = BlockRenderer.flatten(compilation.nodes);
+            return {
+                labels: flattened.filter(node => node.sourceId === 'label').map(node => node.text),
+                values: flattened.filter(node => node.sourceId === 'value').map(node => node.text),
+                points: flattened.find(node => node.tag === 'polyline').attributes.points
+            };
+        });
+        expect(drawn.labels).toEqual(['newest', 'oldest']);
+        expect(drawn.values).toEqual(['3.0', '1.0']);
+        expect(drawn.points).toBe('12,96 16,92');
+    });
+});
+
+test.describe('memories the model runs on', () => {
+    test('a memory becomes one column per named field', async ({ page }) => {
+        await setupBoard(page);
+        const series = await page.evaluate(() => {
+            const rows = [{ text: 'first', x: 1, y: 2 }, { text: 'second', x: 3 }];
+            return {
+                both: BlockMemory.toTermSeries(rows, { x: 'px', y: 'py' }),
+                onlyOne: BlockMemory.toTermSeries(rows, { x: 'px', y: '' }),
+                none: BlockMemory.toTermSeries(rows, { x: '', y: '' }),
+                empty: BlockMemory.toTermSeries([], { x: 'px' })
+            };
+        });
+        expect(series.both).toEqual({ names: ['px', 'py'], values: [[1, 2], [3, 0]] });
+        expect(series.onlyOne).toEqual({ names: ['px'], values: [[1], [3]] });
+        expect(series.none).toEqual({ names: [], values: [] });
+        expect(series.empty).toEqual({ names: ['px'], values: [] });
+    });
+
+    test('the calculator merges every set of values it is given into one table', async ({ page }) => {
+        await setupBoard(page);
+        const merged = await page.evaluate(() => Calculator.mergeDataSources([
+            { names: ['t', 'p'], values: [[0, 10], [1, 20]] },
+            { names: ['px', 'py'], values: [[1, 2], [3, 4], [5, 6]] }
+        ]));
+        expect(merged.names).toEqual(['t', 'p', 'px', 'py']);
+        expect(merged.values[0]).toEqual([0, 10, 1, 2]);
+        expect(merged.values[1]).toEqual([1, 20, 3, 4]);
+        expect(merged.values[2][0]).toBeNaN();
+        expect(merged.values[2].slice(2)).toEqual([5, 6]);
+    });
+
+    test('a source that is emptied stops feeding the model and leaves the others alone', async ({ page }) => {
+        await setupBoard(page);
+        const states = await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            calculator.setDataSource('one', ['a'], [[1], [2]]);
+            calculator.setDataSource('two', ['b'], [[3], [4]]);
+            const both = calculator.system.preloadedData.names.slice();
+            calculator.setDataSource('two', ['b'], []);
+            const afterEmptying = calculator.system.preloadedData.names.slice();
+            calculator.removeDataSource('one');
+            return { both: both, afterEmptying: afterEmptying, afterRemoving: calculator.system.preloadedData.names.slice() };
+        });
+        expect(states.both).toEqual(['a', 'b']);
+        expect(states.afterEmptying).toEqual(['a']);
+        expect(states.afterRemoving).toEqual([]);
     });
 });

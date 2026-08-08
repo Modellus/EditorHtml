@@ -1781,6 +1781,11 @@ class BaseShape {
         }
     }
 
+    // Values a shape hands the model to run on — a data table's columns, an object's memory — are
+    // registered again whenever the model is reset, because resetting clears what it was holding.
+    publishModelData() {
+    }
+
     dragStart() {
         this._dragStartSnapshot = Utils.cloneProperties(this.properties);
         this.dispatchEvent("shapeDragStart", {});

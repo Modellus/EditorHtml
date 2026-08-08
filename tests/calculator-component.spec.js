@@ -210,3 +210,118 @@ test('one key press is one undo step', async ({ page }) => {
     await page.waitForTimeout(100);
     expect(await state(page)).toMatchObject({ n: 5 });
 });
+
+// The history panel is only drawn once the object is wide enough to hold it beside the keypad.
+const WIDE = { width: 340, height: 340 };
+
+test('every completed operation is remembered, newest at the top', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page, WIDE);
+
+    await press(page, DIGIT(7));
+    await press(page, 'key-add');
+    await press(page, DIGIT(5));
+    await press(page, 'key-equals');
+    await press(page, 'key-multiply');
+    await press(page, DIGIT(2));
+    await press(page, 'key-equals');
+
+    const history = await page.evaluate(() => shell.board.shapes.getByName('Calc').properties.history);
+    expect(history).toEqual([
+        { text: '7 + 5', x: 12 },
+        { text: '12.00 × 2', x: 24 }
+    ]);
+    const rows = await page.evaluate(() => Array.from(document.querySelectorAll('[data-source-component="memory-list"] [data-source-id^="row-"] text')).map(node => node.textContent));
+    expect(rows).toEqual(['12.00 × 2', '24.00', '7 + 5', '12.00']);
+});
+
+test('equals with nothing to complete remembers nothing', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page, WIDE);
+    await press(page, DIGIT(4));
+    await press(page, 'key-equals');
+    await press(page, 'key-equals');
+    expect(await page.evaluate(() => shell.board.shapes.getByName('Calc').properties.history)).toEqual([]);
+});
+
+test('choosing a remembered operation puts its result back on the display', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page, WIDE);
+    await press(page, DIGIT(9));
+    await press(page, 'key-add');
+    await press(page, DIGIT(3));
+    await press(page, 'key-equals');
+    await press(page, DIGIT(1));
+    expect(await state(page)).toMatchObject({ n: 1 });
+    await press(page, 'row-0');
+    expect(await state(page)).toMatchObject({ n: 12, s: 0, dp: 2, fresh: 1 });
+    await press(page, DIGIT(5));
+    expect(await state(page)).toMatchObject({ n: 5 });
+});
+
+test('the history is emptied from the bin rather than from a key on the drawing', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page, WIDE);
+    await press(page, DIGIT(8));
+    await press(page, 'key-subtract');
+    await press(page, DIGIT(3));
+    await press(page, 'key-equals');
+    expect(await page.evaluate(() => shell.board.shapes.getByName('Calc').properties.history)).toHaveLength(1);
+    // Nothing on the calculator's own face clears it: remove, reset and clear all live under the bin.
+    expect(await page.locator('[data-source-id="history-clear"]').count()).toBe(0);
+    await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Calc')));
+    await page.waitForTimeout(300);
+    await page.locator('.shape-context-toolbar.visible .mdl-remove-selector').click();
+    await page.waitForTimeout(300);
+    await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item'))
+        .find(item => item.querySelector('.mdl-dropdown-list-label').textContent === 'Clear').click());
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => shell.board.shapes.getByName('Calc').properties.history)).toEqual([]);
+    expect(await page.locator('[data-source-component="memory-list"] text').count()).toBe(1);
+});
+
+test('the history is kept to its length, survives a save and is put back by undo', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page, Object.assign({ historyLimit: 2 }, WIDE));
+    for (const digit of [1, 2, 3]) {
+        await press(page, DIGIT(digit));
+        await press(page, 'key-add');
+        await press(page, DIGIT(1));
+        await press(page, 'key-equals');
+        await press(page, 'key-clear');
+    }
+    const kept = await page.evaluate(() => shell.board.shapes.getByName('Calc').properties.history);
+    expect(kept.map(row => row.x)).toEqual([3, 4]);
+
+    const roundTrip = await page.evaluate(() => {
+        const serialized = JSON.parse(JSON.stringify(shell.serialize()));
+        return serialized.board.find(shape => shape.properties.name === 'Calc').properties.history;
+    });
+    expect(roundTrip).toEqual(kept);
+
+    await page.evaluate(() => shell.board.invoker.undo());
+    await page.waitForTimeout(100);
+    expect(await page.evaluate(() => shell.board.shapes.getByName('Calc').properties.history)).toHaveLength(2);
+});
+
+test('the history panel can be turned off and gives its room back to the keypad', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page, WIDE);
+    const withPanel = await page.evaluate(() => document.querySelector('[data-source-id="key-add"] rect').getBoundingClientRect().width);
+    expect(await page.locator('[data-source-id="history-panel"]').count()).toBe(1);
+    await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Calc');
+        shape.setProperty('showHistory', false);
+        shell.board.draw();
+    });
+    await page.waitForTimeout(200);
+    const withoutPanel = await page.evaluate(() => document.querySelector('[data-source-id="key-add"] rect').getBoundingClientRect().width);
+    expect(await page.locator('[data-source-id="history-panel"]').count()).toBe(0);
+    expect(withoutPanel).toBeGreaterThan(withPanel);
+});

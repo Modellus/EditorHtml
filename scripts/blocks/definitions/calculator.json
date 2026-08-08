@@ -3,25 +3,42 @@
     "type": "calculator",
     "category": "component",
     "displayName": "Calculator",
-    "description": "Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, and the result can be written back into a model variable.",
+    "description": "Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.",
     "icon": "fa-light fa-calculator",
     "tags": [
         "object",
         "calculator",
         "keypad",
         "arithmetic",
-        "reads-model"
+        "reads-model",
+        "memory",
+        "history"
     ],
     "capabilities": [
         "interaction",
         "textual",
         "reads-model",
-        "writes-model"
+        "writes-model",
+        "memory"
     ],
     "preview": {
         "parameters": {
             "n": 1234,
-            "dp": 0
+            "dp": 0,
+            "history": [
+                {
+                    "text": "12 + 5 =",
+                    "x": 17
+                },
+                {
+                    "text": "8 × 3 =",
+                    "x": 24
+                },
+                {
+                    "text": "24 ÷ 2 =",
+                    "x": 12
+                }
+            ]
         }
     },
     "parameters": [
@@ -84,6 +101,16 @@
             "category": "state",
             "userEditable": false,
             "description": "Set after a result or a term key, so the next digit starts a number instead of extending one."
+        },
+        {
+            "id": "history",
+            "label": "History",
+            "valueType": "memory",
+            "defaultValue": [],
+            "category": "state",
+            "userEditable": false,
+            "agentAccessible": false,
+            "description": "The operations the calculator has completed, newest last."
         },
         {
             "id": "termA",
@@ -171,6 +198,24 @@
             "maximum": 6
         },
         {
+            "id": "showHistory",
+            "label": "Show history",
+            "valueType": "boolean",
+            "defaultValue": true,
+            "category": "display",
+            "description": "Draws the list of completed operations down the side of the keypad."
+        },
+        {
+            "id": "historyLimit",
+            "label": "History length",
+            "valueType": "number",
+            "defaultValue": 24,
+            "category": "display",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Operations kept before the oldest is dropped."
+        },
+        {
             "id": "bodyColor",
             "label": "Body colour",
             "valueType": "colour",
@@ -256,6 +301,34 @@
             "value": 6
         },
         {
+            "id": "historyW",
+            "value": {
+                "choose": {
+                    "parameter": "showHistory"
+                },
+                "then": {
+                    "formula": "\\max\\left(64,w\\cdot0.32\\right)\\cdot\\max\\left(0,\\min\\left(1,w-264\\right)\\right)"
+                },
+                "otherwise": 0
+            }
+        },
+        {
+            "id": "historyGap",
+            "value": {
+                "choose": {
+                    "parameter": "historyW"
+                },
+                "then": {
+                    "parameter": "gap"
+                },
+                "otherwise": 0
+            }
+        },
+        {
+            "id": "contentW",
+            "formula": "w-2\\cdot pad-historyW-historyGap"
+        },
+        {
             "id": "displayH",
             "formula": "\\max\\left(34,h\\cdot0.17\\right)"
         },
@@ -273,7 +346,7 @@
         },
         {
             "id": "keyW",
-            "formula": "\\frac{w-2\\cdot pad-3\\cdot gap}{4}"
+            "formula": "\\frac{contentW-3\\cdot gap}{4}"
         },
         {
             "id": "keyH",
@@ -333,7 +406,7 @@
         },
         {
             "id": "termW",
-            "formula": "\\frac{w-2\\cdot pad-3\\cdot gap}{4}"
+            "formula": "\\frac{contentW-3\\cdot gap}{4}"
         },
         {
             "id": "termStep",
@@ -361,11 +434,11 @@
         },
         {
             "id": "displayW",
-            "formula": "w-2\\cdot pad"
+            "formula": "contentW"
         },
         {
             "id": "readoutX",
-            "formula": "w-pad-8"
+            "formula": "pad+contentW-8"
         },
         {
             "id": "readoutY",
@@ -390,6 +463,42 @@
         {
             "id": "termFont",
             "formula": "\\max\\left(8,termH\\cdot0.5\\right)"
+        },
+        {
+            "id": "historyPad",
+            "value": 6
+        },
+        {
+            "id": "historyX",
+            "formula": "pad+contentW+historyGap"
+        },
+        {
+            "id": "historyPanelH",
+            "formula": "h-2\\cdot pad"
+        },
+        {
+            "id": "historyRowH",
+            "formula": "\\max\\left(24,h\\cdot0.09\\right)"
+        },
+        {
+            "id": "historyFont",
+            "formula": "\\max\\left(8,historyRowH\\cdot0.36\\right)"
+        },
+        {
+            "id": "historyListX",
+            "formula": "historyX+historyPad"
+        },
+        {
+            "id": "historyListW",
+            "formula": "\\max\\left(0,historyW-2\\cdot historyPad\\right)"
+        },
+        {
+            "id": "historyListY",
+            "formula": "pad+historyPad"
+        },
+        {
+            "id": "historyListH",
+            "formula": "\\max\\left(0,h-2\\cdot pad-2\\cdot historyPad\\right)"
         },
         {
             "id": "radiusLarge",
@@ -1577,6 +1686,44 @@
                 ],
                 "behaviours": [
                     {
+                        "type": "remember",
+                        "when": {
+                            "parameter": "p"
+                        },
+                        "memory": "history",
+                        "text": {
+                            "concat": [
+                                {
+                                    "format": {
+                                        "parameter": "a"
+                                    },
+                                    "digits": {
+                                        "parameter": "ad"
+                                    }
+                                },
+                                " ",
+                                {
+                                    "parameter": "opSymbol"
+                                },
+                                " ",
+                                {
+                                    "format": {
+                                        "parameter": "n"
+                                    },
+                                    "digits": {
+                                        "parameter": "dp"
+                                    }
+                                }
+                            ]
+                        },
+                        "x": {
+                            "parameter": "result"
+                        },
+                        "limit": {
+                            "parameter": "historyLimit"
+                        }
+                    },
+                    {
                         "type": "clickable",
                         "variable": {
                             "parameter": "resultVariable"
@@ -1942,6 +2089,102 @@
                         "value": 0
                     }
                 ]
+            },
+            {
+                "id": "history-panel",
+                "type": "rect",
+                "when": {
+                    "parameter": "historyW"
+                },
+                "bindings": {
+                    "x": {
+                        "parameter": "historyX"
+                    },
+                    "y": {
+                        "parameter": "pad"
+                    },
+                    "width": {
+                        "parameter": "historyW"
+                    },
+                    "height": {
+                        "parameter": "historyPanelH"
+                    },
+                    "cornerRadius": {
+                        "parameter": "radiusMedium"
+                    },
+                    "fill": {
+                        "parameter": "displayColor"
+                    },
+                    "stroke": {
+                        "parameter": "borderColor"
+                    },
+                    "strokeWidth": {
+                        "parameter": "hairline"
+                    }
+                }
+            },
+            {
+                "id": "history-list",
+                "type": "memory-list",
+                "when": {
+                    "parameter": "historyW"
+                },
+                "parameters": {
+                    "rows": {
+                        "memory": "history"
+                    },
+                    "x": {
+                        "parameter": "historyListX"
+                    },
+                    "y": {
+                        "parameter": "historyListY"
+                    },
+                    "width": {
+                        "parameter": "historyListW"
+                    },
+                    "height": {
+                        "parameter": "historyListH"
+                    },
+                    "rowHeight": {
+                        "parameter": "historyRowH"
+                    },
+                    "fontSize": {
+                        "parameter": "historyFont"
+                    },
+                    "digits": {
+                        "parameter": "digits"
+                    },
+                    "order": "newest",
+                    "layout": "stacked",
+                    "textColor": {
+                        "parameter": "mutedTextColor"
+                    },
+                    "valueColor": {
+                        "parameter": "textColor"
+                    },
+                    "rowColor": "none",
+                    "emptyText": "—",
+                    "rowActions": [
+                        {
+                            "property": "n",
+                            "field": "x"
+                        },
+                        {
+                            "property": "s",
+                            "value": 0
+                        },
+                        {
+                            "property": "dp",
+                            "value": {
+                                "parameter": "digits"
+                            }
+                        },
+                        {
+                            "property": "fresh",
+                            "value": 1
+                        }
+                    ]
+                }
             }
         ]
     }

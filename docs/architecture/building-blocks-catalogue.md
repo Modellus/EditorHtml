@@ -237,9 +237,9 @@ Capabilities: `fillable`, `textual`
 | `x` | number | 0 |  |
 | `y` | number | 0 |  |
 | `text` | string | "" |  |
-| `fontSize` | number | 11 | min 1, max 400 |
-| `fontFamily` | string | "Inter, Segoe UI, sans-serif" |  |
-| `fontWeight` | number | 400 | min 100, max 900 |
+| `fontSize` | number | "token:font.size.default" | min 1, max 400 |
+| `fontFamily` | string | "token:font.family" |  |
+| `fontWeight` | number | "token:font.weight.default" | min 100, max 900 |
 | `textAnchor` | string | "middle" | start \| middle \| end |
 | `baseline` | string | "central" | auto \| central \| hanging |
 
@@ -393,6 +393,21 @@ Capabilities: `interaction`, `angular`, `writes-model`
 | `maximum` | number | null |  |
 | `wrapAt` | number | null |  |
 
+### `drag-axis-tick` — Drag axis tick
+
+Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have.
+
+Capabilities: `interaction`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `axis` | string | "x" | x \| y |
+| `value` | number | 0 |  |
+| `minimumProperty` | string | "" |  |
+| `maximumProperty` | string | "" |  |
+| `originPixel` | number | 0 |  |
+| `lengthPixels` | number | 0 | min 0 |
+
 ### `drag-rotate` — Drag rotate
 
 Lets the user turn the node around an anchor point by dragging it. The variable moves by the angle the pointer travels, so the grabbed point follows the pointer instead of jumping to it, which is what a rose, a bezel or a dial ring needs.
@@ -418,6 +433,36 @@ The object can be moved with the move handle. Provided by the host shape for eve
 
 Capabilities: `interaction`
 
+### `follow-pointer` — Follow pointer
+
+Reports where the pointer is over the node, in the units the node is scaled in, so a drawing can show the value under the cursor. What is reported is not kept: it lasts as long as the pointer is over the node, and the model is not touched.
+
+Capabilities: `interaction`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `xParameter` | string | "" |  |
+| `yParameter` | string | "" |  |
+| `activeParameter` | string | "" |  |
+| `originX` | number | 0 |  |
+| `originY` | number | 0 |  |
+| `scaleX` | number | 1 |  |
+| `scaleY` | number | -1 |  |
+| `minimumX` | number | null |  |
+| `maximumX` | number | null |  |
+| `minimumY` | number | null |  |
+| `maximumY` | number | null |  |
+
+### `forget` — Forget
+
+Empties one of the object's memories when the node is clicked.
+
+Capabilities: `interaction`, `memory`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `memory` | string | "" |  |
+
 ### `hoverable` — Hoverable
 
 The node reacts to pointer hover with the standard highlight cursor.
@@ -427,6 +472,20 @@ Capabilities: `interaction`
 | Property | Type | Default | Range |
 | --- | --- | --- | --- |
 | `cursor` | string | "pointer" |  |
+
+### `remember` — Remember
+
+Appends a row to one of the object's memories when the node is clicked. A row carries a label and two numbers, all of them bindings, so a key records what the object held at the moment it was pressed.
+
+Capabilities: `interaction`, `memory`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `memory` | string | "" |  |
+| `text` | string | "" |  |
+| `x` | number | 0 |  |
+| `y` | number | 0 |  |
+| `limit` | number | 50 | min 1, max 2000 |
 
 ### `resizable` — Resizable
 
@@ -462,6 +521,27 @@ Capabilities: `interaction`, `textual`
 | --- | --- | --- | --- |
 | `text` | string | "" |  |
 
+### `track-pointer` — Track pointer
+
+Records where the pointer is while it is dragged over the node, one sample every sampling interval, into one of the object's memories. The sample is written in the units the node is scaled in, so what is recorded is a pair of values rather than a pair of pixels — and when the memory names model terms, the run becomes the values those terms take, iteration by iteration.
+
+Capabilities: `interaction`, `memory`, `writes-model`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `memory` | string | "" |  |
+| `mode` | string | "replace" | replace \| append |
+| `limit` | number | 600 | min 1, max 2000 |
+| `sampleMs` | number | 33 | min 10, max 1000 |
+| `originX` | number | 0 |  |
+| `originY` | number | 0 |  |
+| `scaleX` | number | 1 |  |
+| `scaleY` | number | -1 |  |
+| `minimumX` | number | null |  |
+| `maximumX` | number | null |  |
+| `minimumY` | number | null |  |
+| `maximumY` | number | null |  |
+
 ## Components
 
 ### `analogue-clock` — Analogue clock
@@ -487,9 +567,9 @@ Capabilities: `radial`, `angular`, `reads-model`, `interaction`
 
 ### `calculator` — Calculator
 
-Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, and the result can be written back into a model variable.
+Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.
 
-Capabilities: `interaction`, `textual`, `reads-model`, `writes-model`
+Capabilities: `interaction`, `textual`, `reads-model`, `writes-model`, `memory`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
@@ -500,6 +580,7 @@ Capabilities: `interaction`, `textual`, `reads-model`, `writes-model`
 | `dp` | number | 0 |  |
 | `ad` | number | 0 |  |
 | `fresh` | number | 0 |  |
+| `history` | memory | [] |  |
 | `termA` | variable | "" |  |
 | `termB` | variable | "" |  |
 | `termC` | variable | "" |  |
@@ -510,6 +591,8 @@ Capabilities: `interaction`, `textual`, `reads-model`, `writes-model`
 | `keyDColor` | colour | "token:surface.muted" |  |
 | `resultVariable` | variable | "" |  |
 | `digits` | number | 2 | min 0, max 6 |
+| `showHistory` | boolean | true |  |
+| `historyLimit` | number | 24 | min 1, max 200 |
 | `bodyColor` | colour | "token:surface.emphasis" |  |
 | `displayColor` | colour | "token:surface.default" |  |
 | `keyColor` | colour | "token:surface.default" |  |
@@ -620,6 +703,80 @@ Capabilities: `radial`, `angular`, `textual`
 | `fontWeight` | number | 400 | min 100, max 900 |
 | `color` | colour | "token:text.primary" |  |
 
+### `memory-list` — Memory list
+
+The rows of a memory drawn as a list, newest first, with the label on the left and the number on the right. Rows can carry actions, so choosing one puts what it holds back into the object.
+
+Capabilities: `memory`, `textual`, `interaction`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `rows` | object | [] |  |
+| `x` | number | 0 |  |
+| `y` | number | 0 |  |
+| `width` | number | 120 | min 0 |
+| `height` | number | 160 | min 0 |
+| `rowHeight` | number | 20 | min 6 |
+| `order` | string | "newest" | newest \| oldest |
+| `layout` | string | "row" | row \| stacked |
+| `digits` | number | 2 | min 0, max 6 |
+| `fontSize` | number | "token:font.size.default" | min 1 |
+| `textColor` | colour | "token:text.secondary" |  |
+| `valueColor` | colour | "token:text.primary" |  |
+| `rowColor` | colour | "none" |  |
+| `cornerRadius` | number | 4 | min 0 |
+| `emptyText` | string | "" |  |
+| `rowActions` | object | [] |  |
+
+### `memory-trace` — Memory trace
+
+The path the rows of a memory draw, mapped from the values they hold to the pixels of a plot with the same origin and scale the recording used.
+
+Capabilities: `memory`, `linear`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `rows` | object | [] |  |
+| `originX` | number | 0 |  |
+| `originY` | number | 0 |  |
+| `scaleX` | number | 1 |  |
+| `scaleY` | number | -1 |  |
+| `color` | colour | "token:stroke.accent" |  |
+| `lineWidth` | number | 2 | min 0 |
+| `opacity` | number | 1 | min 0, max 1 |
+| `showPoints` | boolean | false |  |
+| `pointRadius` | number | 1.5 | min 0 |
+
+### `mouse-tracker` — Mouse tracker
+
+Records where the pointer goes while it is dragged across the plot, against a horizontal and a vertical axis. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.
+
+Capabilities: `interaction`, `memory`, `linear`, `writes-model`, `textual`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `samples` | memory | [] |  |
+| `xVariable` | variable | "" |  |
+| `yVariable` | variable | "" |  |
+| `characterKey` | character | "" |  |
+| `characterImage` | string | "" |  |
+| `characterPivotX` | number | 0.5 |  |
+| `characterPivotY` | number | 0.5 |  |
+| `characterAspect` | number | 1 |  |
+| `hoverX` | number | 0 |  |
+| `hoverY` | number | 0 |  |
+| `hovering` | number | 0 |  |
+| `autoScale` | boolean | false |  |
+| `equalScales` | boolean | false |  |
+| `minimumX` | number | 0 |  |
+| `maximumX` | number | 10 |  |
+| `minimumY` | number | 0 |  |
+| `maximumY` | number | 10 |  |
+| `ticks` | number | 5 | min 2, max 11 |
+| `backgroundColor` | colour | "token:surface.emphasis" |  |
+| `dataAreaColor` | colour | "token:surface.default" |  |
+| `axisColor` | colour | "token:axis.color" |  |
+
 ### `orbit-system` — Orbit system
 
 Central body with up to four orbiting bodies whose angular positions come from model variables or from simulation time and an orbital period.
@@ -638,6 +795,88 @@ Capabilities: `radial`, `angular`, `reads-model`
 | `starColor` | colour | "#f08c02" |  |
 | `bodyColor` | colour | "token:stroke.accent" |  |
 | `orbitColor` | colour | "token:stroke.subtle" |  |
+
+### `plot-axes` — Plot axes
+
+Horizontal and vertical axis of a plot box, with tick marks and numbered labels. Any object that shows a value against a scale reads the same way a chart does.
+
+Capabilities: `layout`, `textual`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `x` | number | 0 |  |
+| `y` | number | 0 |  |
+| `width` | number | 100 | min 1 |
+| `height` | number | 100 | min 1 |
+| `minimumX` | number | 0 |  |
+| `maximumX` | number | 10 |  |
+| `minimumY` | number | 0 |  |
+| `maximumY` | number | 10 |  |
+| `ticksX` | number | 5 | min 2, max 41 |
+| `ticksY` | number | 5 | min 2, max 41 |
+| `showLabels` | boolean | true |  |
+| `showBorder` | boolean | false |  |
+| `showZeroLines` | boolean | true |  |
+| `minimumXProperty` | string | "" |  |
+| `maximumXProperty` | string | "" |  |
+| `minimumYProperty` | string | "" |  |
+| `maximumYProperty` | string | "" |  |
+| `color` | colour | "token:axis.color" |  |
+| `labelColor` | colour | "token:axis.labelColor" |  |
+| `fontFamily` | string | "token:font.family" |  |
+| `fontSize` | number | "token:font.size.tick" | min 1 |
+| `lineWidth` | number | "token:axis.strokeWidth" | min 0 |
+| `tickLength` | number | "token:axis.tickLength" | min 0 |
+
+### `plot-crosshair` — Plot crosshair
+
+Dashed lines from a point out to both axes, with the value it stands at read on a badge against each one — the way a chart answers where a point is.
+
+Capabilities: `layout`, `textual`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `x` | number | 0 |  |
+| `y` | number | 0 |  |
+| `width` | number | 100 | min 1 |
+| `height` | number | 100 | min 1 |
+| `minimumX` | number | 0 |  |
+| `maximumX` | number | 10 |  |
+| `minimumY` | number | 0 |  |
+| `maximumY` | number | 10 |  |
+| `valueX` | number | 0 |  |
+| `valueY` | number | 0 |  |
+| `rows` | object | [] |  |
+| `digits` | number | 2 | min 0, max 6 |
+| `showBadges` | boolean | true |  |
+| `color` | colour | "token:stroke.default" |  |
+| `pointColor` | colour | "token:stroke.accent" |  |
+| `axisBadgeColor` | colour | "token:axis.labelColor" |  |
+| `badgeColor` | colour | "token:text.secondary" |  |
+| `badgeTextColor` | colour | "token:text.inverse" |  |
+| `fontFamily` | string | "token:font.family" |  |
+| `fontSize` | number | "token:font.size.tick" | min 1 |
+
+### `plot-grid` — Plot grid
+
+Grid inside a plot box: one line at every tick of both axes, drawn the way the chart draws its own.
+
+Capabilities: `layout`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `x` | number | 0 |  |
+| `y` | number | 0 |  |
+| `width` | number | 100 | min 1 |
+| `height` | number | 100 | min 1 |
+| `minimumX` | number | 0 |  |
+| `maximumX` | number | 10 |  |
+| `minimumY` | number | 0 |  |
+| `maximumY` | number | 10 |  |
+| `ticksX` | number | 5 | min 2, max 41 |
+| `ticksY` | number | 5 | min 2, max 41 |
+| `color` | colour | "token:grid.color" |  |
+| `lineWidth` | number | "token:strokeWidth.default" | min 0 |
 
 ### `pointer-hand` — Pointer hand
 

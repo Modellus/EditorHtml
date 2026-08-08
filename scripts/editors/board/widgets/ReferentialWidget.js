@@ -447,14 +447,27 @@ class ReferentialShape extends BaseShape {
         this.board.markDirty(this);
     }
 
+    // The referential has no domain of its own to keep: its ends are wherever its origin and its
+    // scale put them, so a bound that is written is turned back into an origin and a scale.
+    getAxisRangeControl() {
+        this._axisRangeControl ??= new AxisRangeControl({
+            read: (axis, bound) => this.getVisibleDomain()[`${axis}${bound}`],
+            write: (axis, bound, value) => {
+                const domain = this.getVisibleDomain();
+                domain[`${axis}${bound}`] = value;
+                if (axis === "x")
+                    this.applyVisibleDomainX(domain);
+                else
+                    this.applyVisibleDomainY(domain);
+            },
+            isDisabled: axis => this.properties.autoScale !== false || (axis === "y" && this.properties.equalAxisScales === true),
+            editorOptions: () => this.getPrecisionNumberEditorOptions({ showSpinButtons: false })
+        });
+        return this._axisRangeControl;
+    }
+
     refreshDomainBoxes() {
-        const autoScale = this.properties.autoScale !== false;
-        const equalScales = this.properties.equalAxisScales === true;
-        const domain = this.getVisibleDomain();
-        this._xMinBoxInstance?.option({ value: domain.xMin, disabled: autoScale });
-        this._xMaxBoxInstance?.option({ value: domain.xMax, disabled: autoScale });
-        this._yMinBoxInstance?.option({ value: domain.yMin, disabled: autoScale || equalScales });
-        this._yMaxBoxInstance?.option({ value: domain.yMax, disabled: autoScale || equalScales });
+        this._axisRangeControl?.refresh();
     }
 
     updateTickInteractionHandles({ horizontalTicks, verticalTicks, axisX, axisY, position }) {

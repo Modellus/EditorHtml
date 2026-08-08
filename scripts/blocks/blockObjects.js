@@ -8,7 +8,13 @@ class BlockObjects {
         const defaults = {};
         for (const parameter of BlockObjects.getComponentParameters(componentType)) {
             const value = parameter.defaultValue;
-            defaults[parameter.id] = tokens.isTokenReference(value) ? tokens.resolveValue(value) : value;
+            if (tokens.isTokenReference(value))
+                defaults[parameter.id] = tokens.resolveValue(value);
+            else
+                // A memory starts empty, and the empty list in the registration belongs to the
+                // registration: every instance needs one of its own or they would all record into
+                // the same array.
+                defaults[parameter.id] = Array.isArray(value) ? BlockMigrations.clone(value) : value;
         }
         return defaults;
     }

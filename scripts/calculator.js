@@ -16,6 +16,8 @@ class Calculator extends EventTarget {
         this.properties = this.createDefaultProperties();
         /** @type {{ [caseNumber: number]: { [term: string]: { [iteration: number]: number } } }} */
         this.userInputsByCase = {};
+        /** @type {Map<string, { names: string[], values: number[][] }>} */
+        this.dataSources = new Map();
         this.setDefaults();
     }
 
@@ -155,6 +157,7 @@ class Calculator extends EventTarget {
 
     reset() {
         this.system.clear();
+        this.dataSources.clear();
         this.system.independent = this.properties.independent.name;
         this.system.setInitialIndependent(this.properties.independent.start);
         this.system.step = this.properties.independent.step;
@@ -190,16 +193,89 @@ class Calculator extends EventTarget {
         this.hookFunction = null;
     }
 
-    loadExternalData(names, values) {
-        this.system.loadTerms(names, values);
+    // Every set of values a shape hands the model — a data table's columns, an object's memory —
+    // is held here under the id of what owns it, so several of them feed the model at once and one
+    // being rewritten does not take the others with it. Row i is iteration i + 1: that is what
+    // makes measurements, and a recording, a run the model can be stepped through.
+    setDataSource(sourceId, names, values) {
+        const rows = Array.isArray(values) ? values : [];
+        const termNames = Array.isArray(names) ? names : [];
+        if (termNames.length === 0 || rows.length === 0)
+            this.dataSources.delete(sourceId);
+        else
+            this.dataSources.set(sourceId, { names: termNames, values: rows });
+        this.applyDataSources();
+    }
+
+    removeDataSource(sourceId) {
+        if (!this.dataSources.delete(sourceId))
+            return;
+        this.applyDataSources();
+    }
+
+    getDataSource(sourceId) {
+        return this.dataSources.get(sourceId) ?? null;
+    }
+
+    applyDataSources() {
+        const merged = Calculator.mergeDataSources(Array.from(this.dataSources.values()));
+        this.system.loadTerms(merged.names, merged.values);
+    }
+
+    // Sources of different lengths become one table as long as the longest, with the rows a source
+    // does not reach left blank, which is what a data table with an empty cell already means.
+    static mergeDataSources(sources) {
+        const names = [];
+        for (const source of sources) {
+            for (const name of source.names) {
+                if (!names.includes(name))
+                    names.push(name);
+            }
+        }
+        const rowCount = sources.reduce((longest, source) => Math.max(longest, source.values.length), 0);
+        const values = [];
+        for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            const row = new Array(names.length).fill(NaN);
+            for (const source of sources) {
+                const sourceRow = source.values[rowIndex];
+                if (!sourceRow)
+                    continue;
+                for (let columnIndex = 0; columnIndex < source.names.length; columnIndex++)
+                    row[names.indexOf(source.names[columnIndex])] = sourceRow[columnIndex];
+            }
+            values.push(row);
+        }
+        return { names: names, values: values };
+    }
+
+    loadExternalData(names, values, sourceId = "external-data") {
+        this.setDataSource(sourceId, names, values);
         this.engine.reset();
     }
 
-    refreshExternalData(names, values) {
-        this.system.loadTerms(names, values);
+    refreshExternalData(names, values, sourceId = "external-data") {
+        this.setDataSource(sourceId, names, values);
+        this.refreshDataSources();
+    }
+
+    // What follows an edit to any of the values the model runs on: it works them through again and
+    // says so, which is what everything reading them redraws on.
+    refreshDataSources() {
         this.engine.reset();
         this.system.reset();
         this.emit("iterate", { calculator: this });
+    }
+
+    // The values themselves come back through the terms they feed, the way measurements do; this is
+    // for whoever asked the model to hold them and needs to see what it is holding.
+    getDataSourceValues(sourceId, termName) {
+        const source = this.getDataSource(sourceId);
+        if (!source)
+            return [];
+        const columnIndex = source.names.indexOf(termName);
+        if (columnIndex < 0)
+            return [];
+        return source.values.map(row => row[columnIndex]);
     }
 
     getOutlierIterations() {
@@ -488,6 +564,10 @@ class Calculator extends EventTarget {
 
     getIteration() {
         return this.system.iteration;
+    }
+
+    isPlaying() {
+        return this.status === STATUS.PLAYING;
     }
 
     getLastIteration() {

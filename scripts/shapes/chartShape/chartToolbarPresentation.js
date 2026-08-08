@@ -14,13 +14,3 @@ function renderChartTermsToolbarButton(shape, element) {
     else
         element.innerHTML = `${xPart}${separator}${yPart}${extraPart}`;
 }
-
-function refreshChartDomainEditorValues(shape) {
-    const autoScale = shape.properties.autoScale === true;
-    const equalScales = shape.properties.equalScales === true;
-    const domain = autoScale ? shape.chart?.renderState?.domain : shape.properties.domainOverride;
-    shape._xMinBoxInstance?.option({ value: domain?.xMin ?? null, disabled: autoScale });
-    shape._xMaxBoxInstance?.option({ value: domain?.xMax ?? null, disabled: autoScale });
-    shape._yMinBoxInstance?.option({ value: domain?.yMin ?? null, disabled: autoScale || equalScales });
-    shape._yMaxBoxInstance?.option({ value: domain?.yMax ?? null, disabled: autoScale || equalScales });
-}

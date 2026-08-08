@@ -535,25 +535,42 @@ BlockDefinitionLoader.registerAll([
         "type": "calculator",
         "category": "component",
         "displayName": "Calculator",
-        "description": "Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, and the result can be written back into a model variable.",
+        "description": "Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.",
         "icon": "fa-light fa-calculator",
         "tags": [
             "object",
             "calculator",
             "keypad",
             "arithmetic",
-            "reads-model"
+            "reads-model",
+            "memory",
+            "history"
         ],
         "capabilities": [
             "interaction",
             "textual",
             "reads-model",
-            "writes-model"
+            "writes-model",
+            "memory"
         ],
         "preview": {
             "parameters": {
                 "n": 1234,
-                "dp": 0
+                "dp": 0,
+                "history": [
+                    {
+                        "text": "12 + 5 =",
+                        "x": 17
+                    },
+                    {
+                        "text": "8 × 3 =",
+                        "x": 24
+                    },
+                    {
+                        "text": "24 ÷ 2 =",
+                        "x": 12
+                    }
+                ]
             }
         },
         "parameters": [
@@ -616,6 +633,16 @@ BlockDefinitionLoader.registerAll([
                 "category": "state",
                 "userEditable": false,
                 "description": "Set after a result or a term key, so the next digit starts a number instead of extending one."
+            },
+            {
+                "id": "history",
+                "label": "History",
+                "valueType": "memory",
+                "defaultValue": [],
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false,
+                "description": "The operations the calculator has completed, newest last."
             },
             {
                 "id": "termA",
@@ -703,6 +730,24 @@ BlockDefinitionLoader.registerAll([
                 "maximum": 6
             },
             {
+                "id": "showHistory",
+                "label": "Show history",
+                "valueType": "boolean",
+                "defaultValue": true,
+                "category": "display",
+                "description": "Draws the list of completed operations down the side of the keypad."
+            },
+            {
+                "id": "historyLimit",
+                "label": "History length",
+                "valueType": "number",
+                "defaultValue": 24,
+                "category": "display",
+                "minimum": 1,
+                "maximum": 200,
+                "description": "Operations kept before the oldest is dropped."
+            },
+            {
                 "id": "bodyColor",
                 "label": "Body colour",
                 "valueType": "colour",
@@ -788,6 +833,34 @@ BlockDefinitionLoader.registerAll([
                 "value": 6
             },
             {
+                "id": "historyW",
+                "value": {
+                    "choose": {
+                        "parameter": "showHistory"
+                    },
+                    "then": {
+                        "formula": "\\max\\left(64,w\\cdot0.32\\right)\\cdot\\max\\left(0,\\min\\left(1,w-264\\right)\\right)"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "historyGap",
+                "value": {
+                    "choose": {
+                        "parameter": "historyW"
+                    },
+                    "then": {
+                        "parameter": "gap"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "contentW",
+                "formula": "w-2\\cdot pad-historyW-historyGap"
+            },
+            {
                 "id": "displayH",
                 "formula": "\\max\\left(34,h\\cdot0.17\\right)"
             },
@@ -805,7 +878,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "keyW",
-                "formula": "\\frac{w-2\\cdot pad-3\\cdot gap}{4}"
+                "formula": "\\frac{contentW-3\\cdot gap}{4}"
             },
             {
                 "id": "keyH",
@@ -865,7 +938,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "termW",
-                "formula": "\\frac{w-2\\cdot pad-3\\cdot gap}{4}"
+                "formula": "\\frac{contentW-3\\cdot gap}{4}"
             },
             {
                 "id": "termStep",
@@ -893,11 +966,11 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "displayW",
-                "formula": "w-2\\cdot pad"
+                "formula": "contentW"
             },
             {
                 "id": "readoutX",
-                "formula": "w-pad-8"
+                "formula": "pad+contentW-8"
             },
             {
                 "id": "readoutY",
@@ -922,6 +995,42 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "termFont",
                 "formula": "\\max\\left(8,termH\\cdot0.5\\right)"
+            },
+            {
+                "id": "historyPad",
+                "value": 6
+            },
+            {
+                "id": "historyX",
+                "formula": "pad+contentW+historyGap"
+            },
+            {
+                "id": "historyPanelH",
+                "formula": "h-2\\cdot pad"
+            },
+            {
+                "id": "historyRowH",
+                "formula": "\\max\\left(24,h\\cdot0.09\\right)"
+            },
+            {
+                "id": "historyFont",
+                "formula": "\\max\\left(8,historyRowH\\cdot0.36\\right)"
+            },
+            {
+                "id": "historyListX",
+                "formula": "historyX+historyPad"
+            },
+            {
+                "id": "historyListW",
+                "formula": "\\max\\left(0,historyW-2\\cdot historyPad\\right)"
+            },
+            {
+                "id": "historyListY",
+                "formula": "pad+historyPad"
+            },
+            {
+                "id": "historyListH",
+                "formula": "\\max\\left(0,h-2\\cdot pad-2\\cdot historyPad\\right)"
             },
             {
                 "id": "radiusLarge",
@@ -2109,6 +2218,44 @@ BlockDefinitionLoader.registerAll([
                     ],
                     "behaviours": [
                         {
+                            "type": "remember",
+                            "when": {
+                                "parameter": "p"
+                            },
+                            "memory": "history",
+                            "text": {
+                                "concat": [
+                                    {
+                                        "format": {
+                                            "parameter": "a"
+                                        },
+                                        "digits": {
+                                            "parameter": "ad"
+                                        }
+                                    },
+                                    " ",
+                                    {
+                                        "parameter": "opSymbol"
+                                    },
+                                    " ",
+                                    {
+                                        "format": {
+                                            "parameter": "n"
+                                        },
+                                        "digits": {
+                                            "parameter": "dp"
+                                        }
+                                    }
+                                ]
+                            },
+                            "x": {
+                                "parameter": "result"
+                            },
+                            "limit": {
+                                "parameter": "historyLimit"
+                            }
+                        },
+                        {
                             "type": "clickable",
                             "variable": {
                                 "parameter": "resultVariable"
@@ -2474,6 +2621,102 @@ BlockDefinitionLoader.registerAll([
                             "value": 0
                         }
                     ]
+                },
+                {
+                    "id": "history-panel",
+                    "type": "rect",
+                    "when": {
+                        "parameter": "historyW"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "historyX"
+                        },
+                        "y": {
+                            "parameter": "pad"
+                        },
+                        "width": {
+                            "parameter": "historyW"
+                        },
+                        "height": {
+                            "parameter": "historyPanelH"
+                        },
+                        "cornerRadius": {
+                            "parameter": "radiusMedium"
+                        },
+                        "fill": {
+                            "parameter": "displayColor"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "hairline"
+                        }
+                    }
+                },
+                {
+                    "id": "history-list",
+                    "type": "memory-list",
+                    "when": {
+                        "parameter": "historyW"
+                    },
+                    "parameters": {
+                        "rows": {
+                            "memory": "history"
+                        },
+                        "x": {
+                            "parameter": "historyListX"
+                        },
+                        "y": {
+                            "parameter": "historyListY"
+                        },
+                        "width": {
+                            "parameter": "historyListW"
+                        },
+                        "height": {
+                            "parameter": "historyListH"
+                        },
+                        "rowHeight": {
+                            "parameter": "historyRowH"
+                        },
+                        "fontSize": {
+                            "parameter": "historyFont"
+                        },
+                        "digits": {
+                            "parameter": "digits"
+                        },
+                        "order": "newest",
+                        "layout": "stacked",
+                        "textColor": {
+                            "parameter": "mutedTextColor"
+                        },
+                        "valueColor": {
+                            "parameter": "textColor"
+                        },
+                        "rowColor": "none",
+                        "emptyText": "—",
+                        "rowActions": [
+                            {
+                                "property": "n",
+                                "field": "x"
+                            },
+                            {
+                                "property": "s",
+                                "value": 0
+                            },
+                            {
+                                "property": "dp",
+                                "value": {
+                                    "parameter": "digits"
+                                }
+                            },
+                            {
+                                "property": "fresh",
+                                "value": 1
+                            }
+                        ]
+                    }
                 }
             ]
         }
@@ -3455,6 +3698,1015 @@ BlockDefinitionLoader.registerAll([
                         "textAnchor": "middle",
                         "baseline": "central"
                     }
+                }
+            ]
+        }
+    },
+    {
+        "schemaVersion": "1.0.0",
+        "type": "mouse-tracker",
+        "category": "component",
+        "displayName": "Mouse tracker",
+        "description": "Records where the pointer goes while it is dragged across the plot, against a horizontal and a vertical axis. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.",
+        "icon": "fa-light fa-arrow-pointer",
+        "tags": [
+            "object",
+            "mouse",
+            "pointer",
+            "tracker",
+            "memory",
+            "recording",
+            "measurements",
+            "chart",
+            "writes-model"
+        ],
+        "capabilities": [
+            "interaction",
+            "memory",
+            "linear",
+            "writes-model",
+            "textual"
+        ],
+        "preview": {
+            "parameters": {
+                "samples": [
+                    {
+                        "x": 1,
+                        "y": 5
+                    },
+                    {
+                        "x": 1.296,
+                        "y": 5.749
+                    },
+                    {
+                        "x": 1.593,
+                        "y": 6.462
+                    },
+                    {
+                        "x": 1.889,
+                        "y": 7.102
+                    },
+                    {
+                        "x": 2.185,
+                        "y": 7.64
+                    },
+                    {
+                        "x": 2.481,
+                        "y": 8.047
+                    },
+                    {
+                        "x": 2.778,
+                        "y": 8.305
+                    },
+                    {
+                        "x": 3.074,
+                        "y": 8.4
+                    },
+                    {
+                        "x": 3.37,
+                        "y": 8.327
+                    },
+                    {
+                        "x": 3.667,
+                        "y": 8.092
+                    },
+                    {
+                        "x": 3.963,
+                        "y": 7.704
+                    },
+                    {
+                        "x": 4.259,
+                        "y": 7.183
+                    },
+                    {
+                        "x": 4.556,
+                        "y": 6.555
+                    },
+                    {
+                        "x": 4.852,
+                        "y": 5.85
+                    },
+                    {
+                        "x": 5.148,
+                        "y": 5.104
+                    },
+                    {
+                        "x": 5.444,
+                        "y": 4.352
+                    },
+                    {
+                        "x": 5.741,
+                        "y": 3.632
+                    },
+                    {
+                        "x": 6.037,
+                        "y": 2.98
+                    },
+                    {
+                        "x": 6.333,
+                        "y": 2.427
+                    },
+                    {
+                        "x": 6.63,
+                        "y": 2
+                    },
+                    {
+                        "x": 6.926,
+                        "y": 1.721
+                    },
+                    {
+                        "x": 7.222,
+                        "y": 1.604
+                    },
+                    {
+                        "x": 7.519,
+                        "y": 1.653
+                    },
+                    {
+                        "x": 7.815,
+                        "y": 1.867
+                    },
+                    {
+                        "x": 8.111,
+                        "y": 2.235
+                    },
+                    {
+                        "x": 8.407,
+                        "y": 2.739
+                    },
+                    {
+                        "x": 8.704,
+                        "y": 3.354
+                    },
+                    {
+                        "x": 9,
+                        "y": 4.05
+                    }
+                ]
+            }
+        },
+        "parameters": [
+            {
+                "id": "samples",
+                "label": "Recording",
+                "valueType": "memory",
+                "defaultValue": [],
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false,
+                "termParameters": {
+                    "x": "xVariable",
+                    "y": "yVariable"
+                },
+                "description": "The positions the pointer was recorded at, oldest first. Named variables take these values iteration by iteration, the way measurements do."
+            },
+            {
+                "id": "xVariable",
+                "label": "Horizontal variable",
+                "valueType": "variable",
+                "defaultValue": "",
+                "category": "model",
+                "description": "Model variable that takes the horizontal position of sample n at iteration n. Left empty the recording stays with the object."
+            },
+            {
+                "id": "yVariable",
+                "label": "Vertical variable",
+                "valueType": "variable",
+                "defaultValue": "",
+                "category": "model",
+                "description": "Model variable that takes the vertical position of sample n at iteration n."
+            },
+            {
+                "id": "characterKey",
+                "label": "Marker character",
+                "valueType": "character",
+                "defaultValue": "",
+                "category": "display",
+                "description": "Character drawn at the recorded position, placed by its own pivot point. Left unchosen the tracker draws a dot."
+            },
+            {
+                "id": "characterImage",
+                "label": "Character image",
+                "valueType": "string",
+                "defaultValue": "",
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "characterPivotX",
+                "label": "Character pivot X",
+                "valueType": "number",
+                "defaultValue": 0.5,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "characterPivotY",
+                "label": "Character pivot Y",
+                "valueType": "number",
+                "defaultValue": 0.5,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "characterAspect",
+                "label": "Character aspect",
+                "valueType": "number",
+                "defaultValue": 1,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "hoverX",
+                "label": "Pointer X",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "hoverY",
+                "label": "Pointer Y",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "hovering",
+                "label": "Pointer over the plot",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "autoScale",
+                "label": "Auto Scale",
+                "valueType": "boolean",
+                "defaultValue": false,
+                "category": "scale",
+                "description": "Fits both axes to the recording, with the margins a chart leaves around its data."
+            },
+            {
+                "id": "equalScales",
+                "label": "Equal Scales",
+                "valueType": "boolean",
+                "defaultValue": false,
+                "category": "scale",
+                "description": "Makes one unit across measure the same as one unit up, which is what a trajectory needs."
+            },
+            {
+                "id": "minimumX",
+                "label": "Minimum X",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "scale"
+            },
+            {
+                "id": "maximumX",
+                "label": "Maximum X",
+                "valueType": "number",
+                "defaultValue": 10,
+                "category": "scale"
+            },
+            {
+                "id": "minimumY",
+                "label": "Minimum Y",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "scale"
+            },
+            {
+                "id": "maximumY",
+                "label": "Maximum Y",
+                "valueType": "number",
+                "defaultValue": 10,
+                "category": "scale"
+            },
+            {
+                "id": "ticks",
+                "label": "Axis ticks",
+                "valueType": "number",
+                "defaultValue": 5,
+                "category": "display",
+                "minimum": 2,
+                "maximum": 11
+            },
+            {
+                "id": "backgroundColor",
+                "label": "Background",
+                "valueType": "colour",
+                "defaultValue": "token:surface.emphasis",
+                "category": "style"
+            },
+            {
+                "id": "dataAreaColor",
+                "label": "Data Area",
+                "valueType": "colour",
+                "defaultValue": "token:surface.default",
+                "category": "style"
+            },
+            {
+                "id": "axisColor",
+                "label": "Axis",
+                "valueType": "colour",
+                "defaultValue": "token:axis.color",
+                "category": "style"
+            }
+        ],
+        "locals": [
+            {
+                "id": "w",
+                "value": {
+                    "parameter": "$width"
+                }
+            },
+            {
+                "id": "h",
+                "value": {
+                    "parameter": "$height"
+                }
+            },
+            {
+                "id": "pad",
+                "value": 10
+            },
+            {
+                "id": "tickFont",
+                "value": {
+                    "token": "font.size.tick"
+                }
+            },
+            {
+                "id": "labelFont",
+                "formula": "\\max\\left(8,\\min\\left(tickFont,h\\cdot0.05\\right)\\right)"
+            },
+            {
+                "id": "labelBandX",
+                "formula": "labelFont\\cdot2.2"
+            },
+            {
+                "id": "labelBandY",
+                "formula": "\\max\\left(20,labelFont\\cdot3.4\\right)"
+            },
+            {
+                "id": "plotX",
+                "formula": "pad+labelBandY"
+            },
+            {
+                "id": "plotY",
+                "formula": "pad+\\frac{labelFont}{2}"
+            },
+            {
+                "id": "plotW",
+                "formula": "\\max\\left(10,w-plotX-pad\\right)"
+            },
+            {
+                "id": "plotH",
+                "formula": "\\max\\left(10,h-plotY-pad-labelBandX\\right)"
+            },
+            {
+                "id": "plotRight",
+                "formula": "plotX+plotW"
+            },
+            {
+                "id": "plotBottom",
+                "formula": "plotY+plotH"
+            },
+            {
+                "id": "spanX",
+                "formula": "\\max\\left(0.000001,maximumX-minimumX\\right)"
+            },
+            {
+                "id": "spanY",
+                "formula": "\\max\\left(0.000001,maximumY-minimumY\\right)"
+            },
+            {
+                "id": "scaleX",
+                "formula": "\\frac{plotW}{spanX}"
+            },
+            {
+                "id": "scaleY",
+                "formula": "-\\frac{plotH}{spanY}"
+            },
+            {
+                "id": "originX",
+                "formula": "plotX-minimumX\\cdot scaleX"
+            },
+            {
+                "id": "originY",
+                "formula": "plotBottom-minimumY\\cdot scaleY"
+            },
+            {
+                "id": "yFixed",
+                "value": {
+                    "choose": {
+                        "parameter": "autoScale"
+                    },
+                    "then": 1,
+                    "otherwise": {
+                        "parameter": "equalScales"
+                    }
+                }
+            },
+            {
+                "id": "sampleCount",
+                "value": {
+                    "memoryCount": "samples"
+                }
+            },
+            {
+                "id": "playing",
+                "value": {
+                    "parameter": "$playing"
+                }
+            },
+            {
+                "id": "following",
+                "value": {
+                    "choose": {
+                        "parameter": "playing"
+                    },
+                    "then": 0,
+                    "otherwise": {
+                        "parameter": "hovering"
+                    }
+                }
+            },
+            {
+                "id": "shownIteration",
+                "value": {
+                    "parameter": "$iteration"
+                }
+            },
+            {
+                "id": "head",
+                "formula": "\\max\\left(0,\\min\\left(sampleCount-1,shownIteration-1\\right)\\right)"
+            },
+            {
+                "id": "headX",
+                "value": {
+                    "memory": "samples",
+                    "row": {
+                        "parameter": "head"
+                    },
+                    "field": "x"
+                },
+                "fallback": 0
+            },
+            {
+                "id": "headY",
+                "value": {
+                    "memory": "samples",
+                    "row": {
+                        "parameter": "head"
+                    },
+                    "field": "y"
+                },
+                "fallback": 0
+            },
+            {
+                "id": "valueX",
+                "value": {
+                    "choose": {
+                        "parameter": "following"
+                    },
+                    "then": {
+                        "parameter": "hoverX"
+                    },
+                    "otherwise": {
+                        "parameter": "headX"
+                    }
+                }
+            },
+            {
+                "id": "valueY",
+                "value": {
+                    "choose": {
+                        "parameter": "following"
+                    },
+                    "then": {
+                        "parameter": "hoverY"
+                    },
+                    "otherwise": {
+                        "parameter": "headY"
+                    }
+                }
+            },
+            {
+                "id": "marked",
+                "value": {
+                    "choose": {
+                        "parameter": "following"
+                    },
+                    "then": 1,
+                    "otherwise": {
+                        "parameter": "sampleCount"
+                    }
+                }
+            },
+            {
+                "id": "precision",
+                "value": {
+                    "parameter": "$precision"
+                }
+            },
+            {
+                "id": "labelColor",
+                "value": {
+                    "token": "axis.labelColor"
+                }
+            },
+            {
+                "id": "gridColor",
+                "value": {
+                    "token": "grid.color"
+                }
+            },
+            {
+                "id": "traceColor",
+                "value": {
+                    "token": "stroke.accent"
+                }
+            },
+            {
+                "id": "markerColor",
+                "value": {
+                    "token": "stroke.warning"
+                }
+            },
+            {
+                "id": "borderColor",
+                "value": {
+                    "token": "stroke.subtle"
+                }
+            },
+            {
+                "id": "markerX",
+                "formula": "originX+valueX\\cdot scaleX"
+            },
+            {
+                "id": "markerY",
+                "formula": "originY+valueY\\cdot scaleY"
+            },
+            {
+                "id": "markerSize",
+                "formula": "\\max\\left(12,\\min\\left(plotW,plotH\\right)\\cdot0.12\\right)"
+            },
+            {
+                "id": "markerRadius",
+                "formula": "\\max\\left(3,markerSize\\cdot0.16\\right)"
+            },
+            {
+                "id": "aspect",
+                "formula": "\\max\\left(0.01,characterAspect\\right)"
+            },
+            {
+                "id": "characterW",
+                "formula": "markerSize\\cdot\\min\\left(1,aspect\\right)"
+            },
+            {
+                "id": "characterH",
+                "formula": "markerSize\\cdot\\min\\left(1,\\frac{1}{aspect}\\right)"
+            },
+            {
+                "id": "characterX",
+                "formula": "markerX-\\frac{markerSize-characterW}{2}-characterPivotX\\cdot characterW"
+            },
+            {
+                "id": "characterY",
+                "formula": "markerY-\\frac{markerSize-characterH}{2}-characterPivotY\\cdot characterH"
+            },
+            {
+                "id": "radiusLarge",
+                "value": {
+                    "token": "radius.large"
+                }
+            },
+            {
+                "id": "radiusSmall",
+                "value": {
+                    "token": "radius.small"
+                }
+            },
+            {
+                "id": "hairline",
+                "value": {
+                    "token": "strokeWidth.hairline"
+                }
+            }
+        ],
+        "root": {
+            "id": "mouse-tracker",
+            "type": "group",
+            "children": [
+                {
+                    "id": "body",
+                    "type": "rect",
+                    "bindings": {
+                        "width": {
+                            "parameter": "w"
+                        },
+                        "height": {
+                            "parameter": "h"
+                        },
+                        "cornerRadius": {
+                            "parameter": "radiusLarge"
+                        },
+                        "fill": {
+                            "parameter": "backgroundColor"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        }
+                    },
+                    "properties": {
+                        "x": 0,
+                        "y": 0,
+                        "strokeWidth": 1
+                    }
+                },
+                {
+                    "id": "plot",
+                    "type": "rect",
+                    "bindings": {
+                        "x": {
+                            "parameter": "plotX"
+                        },
+                        "y": {
+                            "parameter": "plotY"
+                        },
+                        "width": {
+                            "parameter": "plotW"
+                        },
+                        "height": {
+                            "parameter": "plotH"
+                        },
+                        "cornerRadius": {
+                            "parameter": "radiusSmall"
+                        },
+                        "fill": {
+                            "parameter": "dataAreaColor"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "hairline"
+                        }
+                    }
+                },
+                {
+                    "id": "grid",
+                    "type": "plot-grid",
+                    "parameters": {
+                        "x": {
+                            "parameter": "plotX"
+                        },
+                        "y": {
+                            "parameter": "plotY"
+                        },
+                        "width": {
+                            "parameter": "plotW"
+                        },
+                        "height": {
+                            "parameter": "plotH"
+                        },
+                        "minimumX": {
+                            "parameter": "minimumX"
+                        },
+                        "maximumX": {
+                            "parameter": "maximumX"
+                        },
+                        "minimumY": {
+                            "parameter": "minimumY"
+                        },
+                        "maximumY": {
+                            "parameter": "maximumY"
+                        },
+                        "ticksX": {
+                            "parameter": "ticks"
+                        },
+                        "ticksY": {
+                            "parameter": "ticks"
+                        },
+                        "color": {
+                            "parameter": "gridColor"
+                        }
+                    }
+                },
+                {
+                    "id": "trace",
+                    "type": "memory-trace",
+                    "parameters": {
+                        "rows": {
+                            "memory": "samples"
+                        },
+                        "originX": {
+                            "parameter": "originX"
+                        },
+                        "originY": {
+                            "parameter": "originY"
+                        },
+                        "scaleX": {
+                            "parameter": "scaleX"
+                        },
+                        "scaleY": {
+                            "parameter": "scaleY"
+                        },
+                        "color": {
+                            "parameter": "traceColor"
+                        },
+                        "lineWidth": 2
+                    }
+                },
+                {
+                    "id": "axes",
+                    "type": "plot-axes",
+                    "parameters": {
+                        "x": {
+                            "parameter": "plotX"
+                        },
+                        "y": {
+                            "parameter": "plotY"
+                        },
+                        "width": {
+                            "parameter": "plotW"
+                        },
+                        "height": {
+                            "parameter": "plotH"
+                        },
+                        "minimumX": {
+                            "parameter": "minimumX"
+                        },
+                        "maximumX": {
+                            "parameter": "maximumX"
+                        },
+                        "minimumY": {
+                            "parameter": "minimumY"
+                        },
+                        "maximumY": {
+                            "parameter": "maximumY"
+                        },
+                        "ticksX": {
+                            "parameter": "ticks"
+                        },
+                        "ticksY": {
+                            "parameter": "ticks"
+                        },
+                        "fontSize": {
+                            "parameter": "labelFont"
+                        },
+                        "color": {
+                            "parameter": "axisColor"
+                        },
+                        "labelColor": {
+                            "parameter": "labelColor"
+                        },
+                        "minimumXProperty": {
+                            "choose": {
+                                "parameter": "autoScale"
+                            },
+                            "then": "",
+                            "otherwise": "minimumX"
+                        },
+                        "maximumXProperty": {
+                            "choose": {
+                                "parameter": "autoScale"
+                            },
+                            "then": "",
+                            "otherwise": "maximumX"
+                        },
+                        "minimumYProperty": {
+                            "choose": {
+                                "parameter": "yFixed"
+                            },
+                            "then": "",
+                            "otherwise": "minimumY"
+                        },
+                        "maximumYProperty": {
+                            "choose": {
+                                "parameter": "yFixed"
+                            },
+                            "then": "",
+                            "otherwise": "maximumY"
+                        }
+                    }
+                },
+                {
+                    "id": "crosshair",
+                    "type": "plot-crosshair",
+                    "when": {
+                        "choose": {
+                            "parameter": "following"
+                        },
+                        "then": 1,
+                        "otherwise": {
+                            "parameter": "sampleCount"
+                        }
+                    },
+                    "parameters": {
+                        "x": {
+                            "parameter": "plotX"
+                        },
+                        "y": {
+                            "parameter": "plotY"
+                        },
+                        "width": {
+                            "parameter": "plotW"
+                        },
+                        "height": {
+                            "parameter": "plotH"
+                        },
+                        "minimumX": {
+                            "parameter": "minimumX"
+                        },
+                        "maximumX": {
+                            "parameter": "maximumX"
+                        },
+                        "minimumY": {
+                            "parameter": "minimumY"
+                        },
+                        "maximumY": {
+                            "parameter": "maximumY"
+                        },
+                        "valueX": {
+                            "parameter": "valueX"
+                        },
+                        "valueY": {
+                            "parameter": "valueY"
+                        },
+                        "fontSize": {
+                            "parameter": "labelFont"
+                        },
+                        "color": {
+                            "parameter": "axisColor"
+                        },
+                        "badgeColor": {
+                            "parameter": "markerColor"
+                        },
+                        "rows": {
+                            "memory": "samples"
+                        },
+                        "pointColor": {
+                            "parameter": "traceColor"
+                        },
+                        "digits": {
+                            "parameter": "precision"
+                        }
+                    }
+                },
+                {
+                    "id": "marker-dot",
+                    "type": "circle",
+                    "when": {
+                        "choose": {
+                            "parameter": "characterImage"
+                        },
+                        "then": 0,
+                        "otherwise": {
+                            "parameter": "marked"
+                        }
+                    },
+                    "bindings": {
+                        "centerX": {
+                            "parameter": "markerX"
+                        },
+                        "centerY": {
+                            "parameter": "markerY"
+                        },
+                        "radius": {
+                            "parameter": "markerRadius"
+                        },
+                        "fill": {
+                            "parameter": "markerColor"
+                        }
+                    }
+                },
+                {
+                    "id": "marker-character",
+                    "type": "image",
+                    "when": {
+                        "choose": {
+                            "parameter": "characterImage"
+                        },
+                        "then": {
+                            "parameter": "marked"
+                        },
+                        "otherwise": 0
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "characterX"
+                        },
+                        "y": {
+                            "parameter": "characterY"
+                        },
+                        "width": {
+                            "parameter": "markerSize"
+                        },
+                        "height": {
+                            "parameter": "markerSize"
+                        },
+                        "href": {
+                            "parameter": "characterImage"
+                        }
+                    },
+                    "properties": {
+                        "preserveAspectRatio": "xMidYMid meet"
+                    }
+                },
+                {
+                    "id": "capture",
+                    "type": "rect",
+                    "bindings": {
+                        "x": {
+                            "parameter": "plotX"
+                        },
+                        "y": {
+                            "parameter": "plotY"
+                        },
+                        "width": {
+                            "parameter": "plotW"
+                        },
+                        "height": {
+                            "parameter": "plotH"
+                        }
+                    },
+                    "properties": {
+                        "fill": "none",
+                        "stroke": "none"
+                    },
+                    "behaviours": [
+                        {
+                            "type": "track-pointer",
+                            "memory": "samples",
+                            "mode": "replace",
+                            "limit": 600,
+                            "originX": {
+                                "parameter": "originX"
+                            },
+                            "originY": {
+                                "parameter": "originY"
+                            },
+                            "scaleX": {
+                                "parameter": "scaleX"
+                            },
+                            "scaleY": {
+                                "parameter": "scaleY"
+                            },
+                            "minimumX": {
+                                "parameter": "minimumX"
+                            },
+                            "maximumX": {
+                                "parameter": "maximumX"
+                            },
+                            "minimumY": {
+                                "parameter": "minimumY"
+                            },
+                            "maximumY": {
+                                "parameter": "maximumY"
+                            }
+                        },
+                        {
+                            "type": "follow-pointer",
+                            "xParameter": "hoverX",
+                            "yParameter": "hoverY",
+                            "activeParameter": "hovering",
+                            "originX": {
+                                "parameter": "originX"
+                            },
+                            "originY": {
+                                "parameter": "originY"
+                            },
+                            "scaleX": {
+                                "parameter": "scaleX"
+                            },
+                            "scaleY": {
+                                "parameter": "scaleY"
+                            },
+                            "minimumX": {
+                                "parameter": "minimumX"
+                            },
+                            "maximumX": {
+                                "parameter": "maximumX"
+                            },
+                            "minimumY": {
+                                "parameter": "minimumY"
+                            },
+                            "maximumY": {
+                                "parameter": "maximumY"
+                            }
+                        }
+                    ]
                 }
             ]
         }

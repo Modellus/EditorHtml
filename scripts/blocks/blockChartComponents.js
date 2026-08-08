@@ -104,17 +104,19 @@
         agentAccessible: false,
         parameters: [
             chartParameter("plot", "Plot box", "object", null),
-            chartParameter("color", "Grid colour", "colour", "#d3d3d3"),
+            chartParameter("color", "Grid colour", "colour", "token:grid.color"),
             chartParameter("xMajor", "Major x positions", "object", []),
             chartParameter("yMajor", "Major y positions", "object", []),
             chartParameter("xMinor", "Minor x positions", "object", []),
             chartParameter("yMinor", "Minor y positions", "object", [])
         ],
-        create: parameters => {
+        create: (parameters, context) => {
             const plot = parameters.plot;
             const children = [];
             if (!plot)
                 return { id: "chart-grid", type: "group", children: children };
+            const majorOpacity = context.tokens.getNumber("grid.majorOpacity", 0.75);
+            const minorOpacity = context.tokens.getNumber("grid.minorOpacity", 0.4);
             const addVertical = (positions, opacity, prefix) => {
                 for (let index = 0; index < positions.length; index++)
                     children.push(strokeLine(`${prefix}${index}`, positions[index], plot.plotTop, positions[index], plot.plotBottom, parameters.color, 1, opacity));
@@ -123,10 +125,10 @@
                 for (let index = 0; index < positions.length; index++)
                     children.push(strokeLine(`${prefix}${index}`, plot.plotLeft, positions[index], plot.plotRight, positions[index], parameters.color, 1, opacity));
             };
-            addVertical(parameters.xMinor ?? [], 0.4, "x-minor-");
-            addHorizontal(parameters.yMinor ?? [], 0.4, "y-minor-");
-            addVertical(parameters.xMajor ?? [], 0.75, "x-major-");
-            addHorizontal(parameters.yMajor ?? [], 0.75, "y-major-");
+            addVertical(parameters.xMinor ?? [], minorOpacity, "x-minor-");
+            addHorizontal(parameters.yMinor ?? [], minorOpacity, "y-minor-");
+            addVertical(parameters.xMajor ?? [], majorOpacity, "x-major-");
+            addHorizontal(parameters.yMajor ?? [], majorOpacity, "y-major-");
             return { id: "chart-grid", type: "group", children: children };
         }
     });
@@ -141,10 +143,10 @@
         agentAccessible: false,
         parameters: [
             chartParameter("plot", "Plot box", "object", null),
-            chartParameter("color", "Axis colour", "colour", "#7a7a7a"),
-            chartParameter("labelColor", "Label colour", "colour", "#666666"),
-            chartParameter("fontFamily", "Font family", "string", "Katex_Main"),
-            chartParameter("fontSize", "Font size", "number", 10, { minimum: 1 }),
+            chartParameter("color", "Axis colour", "colour", "token:axis.color"),
+            chartParameter("labelColor", "Label colour", "colour", "token:axis.labelColor"),
+            chartParameter("fontFamily", "Font family", "string", "token:font.family"),
+            chartParameter("fontSize", "Font size", "number", "token:font.size.tick", { minimum: 1 }),
             chartParameter("originX", "Origin x position", "number", NaN),
             chartParameter("originY", "Origin y position", "number", NaN),
             chartParameter("xTicks", "X ticks", "object", []),
@@ -154,30 +156,38 @@
             chartParameter("xTicksClipId", "X tick clip", "string", ""),
             chartParameter("yTicksClipId", "Y tick clip", "string", "")
         ],
-        create: parameters => {
+        create: (parameters, context) => {
             const plot = parameters.plot;
             const children = [];
             if (!plot)
                 return { id: "chart-axes", type: "group", children: children };
             const color = parameters.color;
-            children.push(strokeLine("border-left", plot.plotLeft, plot.plotTop, plot.plotLeft, plot.plotBottom, color, 1.2));
-            children.push(strokeLine("border-bottom", plot.plotLeft, plot.plotBottom, plot.plotRight, plot.plotBottom, color, 1.2));
-            children.push(strokeLine("border-top", plot.plotLeft, plot.plotTop, plot.plotRight, plot.plotTop, color, 1.2));
-            children.push(strokeLine("border-right", plot.plotRight, plot.plotTop, plot.plotRight, plot.plotBottom, color, 1.2));
+            const axisWidth = context.tokens.getNumber("axis.strokeWidth", 1.2);
+            const tickLength = context.tokens.getNumber("axis.tickLength", 4);
+            const minorLength = context.tokens.getNumber("axis.minorTickLength", 2.5);
+            const minorOpacity = context.tokens.getNumber("axis.minorOpacity", 0.45);
+            const fontSize = Number(parameters.fontSize);
+            const labelGapX = fontSize * context.tokens.getNumber("axis.labelGapX", 1.8);
+            const labelGapY = fontSize * context.tokens.getNumber("axis.labelGapY", 0.7);
+            const labelRise = fontSize * context.tokens.getNumber("axis.labelRise", 0.3);
+            children.push(strokeLine("border-left", plot.plotLeft, plot.plotTop, plot.plotLeft, plot.plotBottom, color, axisWidth));
+            children.push(strokeLine("border-bottom", plot.plotLeft, plot.plotBottom, plot.plotRight, plot.plotBottom, color, axisWidth));
+            children.push(strokeLine("border-top", plot.plotLeft, plot.plotTop, plot.plotRight, plot.plotTop, color, axisWidth));
+            children.push(strokeLine("border-right", plot.plotRight, plot.plotTop, plot.plotRight, plot.plotBottom, color, axisWidth));
             const originY = Number(parameters.originY);
             if (Number.isFinite(originY) && originY > plot.plotTop && originY < plot.plotBottom)
-                children.push(strokeLine("origin-x", plot.plotLeft, originY, plot.plotRight, originY, color, 1.2));
+                children.push(strokeLine("origin-x", plot.plotLeft, originY, plot.plotRight, originY, color, axisWidth));
             const originX = Number(parameters.originX);
             if (Number.isFinite(originX) && originX > plot.plotLeft && originX < plot.plotRight)
-                children.push(strokeLine("origin-y", originX, plot.plotTop, originX, plot.plotBottom, color, 1.2));
+                children.push(strokeLine("origin-y", originX, plot.plotTop, originX, plot.plotBottom, color, axisWidth));
             const xMinor = parameters.xMinor ?? [];
             for (let index = 0; index < xMinor.length; index++) {
                 children.push(clipped({
                     id: `x-minor-tick-${index}`,
                     type: "group",
                     children: [
-                        strokeLine("below", xMinor[index], plot.plotBottom, xMinor[index], plot.plotBottom + 2.5, color, 1, 0.45),
-                        strokeLine("above", xMinor[index], plot.plotTop, xMinor[index], plot.plotTop - 2.5, color, 1, 0.45)
+                        strokeLine("below", xMinor[index], plot.plotBottom, xMinor[index], plot.plotBottom + minorLength, color, 1, minorOpacity),
+                        strokeLine("above", xMinor[index], plot.plotTop, xMinor[index], plot.plotTop - minorLength, color, 1, minorOpacity)
                     ]
                 }, parameters.xTicksClipId));
             }
@@ -187,8 +197,8 @@
                     id: `y-minor-tick-${index}`,
                     type: "group",
                     children: [
-                        strokeLine("left", plot.plotLeft - 2.5, yMinor[index], plot.plotLeft, yMinor[index], color, 1, 0.45),
-                        strokeLine("right", plot.plotRight, yMinor[index], plot.plotRight + 2.5, yMinor[index], color, 1, 0.45)
+                        strokeLine("left", plot.plotLeft - minorLength, yMinor[index], plot.plotLeft, yMinor[index], color, 1, minorOpacity),
+                        strokeLine("right", plot.plotRight, yMinor[index], plot.plotRight + minorLength, yMinor[index], color, 1, minorOpacity)
                     ]
                 }, parameters.yTicksClipId));
             }
@@ -209,8 +219,8 @@
                     id: `x-tick-${index}`,
                     type: "group",
                     children: [
-                        strokeLine("below", tick.position, plot.plotBottom, tick.position, plot.plotBottom + 4, color, 1),
-                        strokeLine("above", tick.position, plot.plotTop, tick.position, plot.plotTop - 4, color, 1)
+                        strokeLine("below", tick.position, plot.plotBottom, tick.position, plot.plotBottom + tickLength, color, 1),
+                        strokeLine("above", tick.position, plot.plotTop, tick.position, plot.plotTop - tickLength, color, 1)
                     ]
                 }, parameters.xTicksClipId));
                 children.push({
@@ -218,7 +228,7 @@
                     type: "text",
                     properties: {
                         x: labelX,
-                        y: plot.plotBottom + 18,
+                        y: plot.plotBottom + labelGapX,
                         text: tick.label,
                         textAnchor: anchor,
                         baseline: "auto",
@@ -235,16 +245,16 @@
                     id: `y-tick-${index}`,
                     type: "group",
                     children: [
-                        strokeLine("left", plot.plotLeft - 4, tick.position, plot.plotLeft, tick.position, color, 1),
-                        strokeLine("right", plot.plotRight, tick.position, plot.plotRight + 4, tick.position, color, 1)
+                        strokeLine("left", plot.plotLeft - tickLength, tick.position, plot.plotLeft, tick.position, color, 1),
+                        strokeLine("right", plot.plotRight, tick.position, plot.plotRight + tickLength, tick.position, color, 1)
                     ]
                 }, parameters.yTicksClipId));
                 children.push({
                     id: `y-tick-label-${index}`,
                     type: "text",
                     properties: {
-                        x: plot.plotLeft - 7,
-                        y: tick.position + 3,
+                        x: plot.plotLeft - labelGapY,
+                        y: tick.position + labelRise,
                         text: tick.label,
                         textAnchor: "end",
                         baseline: "auto",

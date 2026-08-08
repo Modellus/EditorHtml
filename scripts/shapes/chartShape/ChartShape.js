@@ -32,27 +32,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
     }
 
     populateShapeColorMenuSections(sections) {
-        const bgLabel = this.board.translations.get("Background") ?? "Background";
-        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
-        sections[0].items.push({
-            text: bgLabel,
-            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
-            buildControl: $p => $p.append(this._bgColorPicker)
-        });
-        const dataAreaLabel = this.board.translations.get("Data Area") ?? "Data Area";
-        this._dataAreaColorPicker = this.createColorPickerEditor("dataAreaColor");
-        sections[0].items.push({
-            text: dataAreaLabel,
-            iconHtml: this.menuIconHtml("fa-chart-area", !!this.properties.dataAreaColor),
-            buildControl: $p => $p.append(this._dataAreaColorPicker)
-        });
-        const axisLabel = this.board.translations.get("Axis") ?? "Axis";
-        this._axisColorPicker = this.createColorPickerEditor("axisColor");
-        sections[0].items.push({
-            text: axisLabel,
-            iconHtml: this.menuIconHtml("fa-axis-x", !!this.properties.axisColor),
-            buildControl: $p => $p.append(this._axisColorPicker)
-        });
+        for (const [property, item] of Object.entries(BaseShapeToolbarMixin.plotColorMenuItems))
+            this.pushColorMenuItem(sections, property, item.label, item.icon);
     }
 
     setDefaults() {

@@ -13,10 +13,13 @@ Five layers, one registry, no runtime code evaluation.
 Primitives   circle, rect, ellipse, line, polyline, polygon, arc, ring, path, text, image, group
 Modifiers    translate, rotate, scale, mirror, opacity, visibility, stroke, fill, z-order, repeat
 Behaviours   selectable, draggable, resizable, rotatable, hoverable, tooltip, drag-angle,
-             drag-rotate, clickable, …
-Bindings     constant | parameter | variable | expression | formula | token | format
-Components   dial-face, tick-ring, label-ring, pointer-hand, analogue-clock, compass, speedometer,
-             circular-gauge, rotating-vector, orbit-system, + custom components
+             drag-rotate, drag-axis-tick, follow-pointer, clickable, remember, forget,
+             track-pointer, …
+Bindings     constant | parameter | variable | expression | formula | token | format | memory
+Components   dial-face, tick-ring, label-ring, pointer-hand, plot-grid, plot-axes,
+             plot-crosshair, memory-list, memory-trace, analogue-clock, compass, speedometer,
+             circular-gauge, rotating-vector, orbit-system, calculator, mouse-tracker,
+             + custom components
 ```
 
 Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
@@ -24,8 +27,9 @@ Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
 
 | File | Global | Role |
 | --- | --- | --- |
-| `scripts/blocks/designTokens.js` | `BlockTokens` | semantic tokens and the five visual presets |
+| `scripts/blocks/designTokens.js` | `BlockTokens` | the board's visual language: colours, font, axis, grid, crosshair, and the five presets |
 | `scripts/blocks/blockGeometry.js` | `BlockGeometry` | polar points, arcs, rings, tick rings, needles |
+| `scripts/blocks/blockMemory.js` | `BlockMemory` | the rows an object remembers, and the columns they make |
 | `scripts/blocks/blockBindings.js` | `BlockBindings` | declarative value resolution |
 | `scripts/blocks/blockRegistry.js` | `BlockRegistry` | the one catalogue |
 | `scripts/blocks/blockPrimitives.js` | — | primitive registrations |
@@ -36,7 +40,10 @@ Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
 | `scripts/blocks/blockRenderer.js` | `BlockRenderer` | render nodes → SVG |
 | `scripts/blocks/blockValidator.js` | `BlockValidator` | schema/semantic/runtime/visual validation |
 | `scripts/blocks/blockComponents.js` | `BlockComponentHelpers` | component registrations |
+| `scripts/controls/AxisTickDrag.js` | — | the axis toolkit every axis on the board is built from: nice ticks, minor ticks, tick labels, tick dragging |
+| `scripts/controls/AxisRangeControl.js` | `AxisRangeControl` | the one editor for how far an axis runs |
 | `scripts/blocks/blockChartGeometry.js` | `BlockChartGeometry` | scales, series points, area/line paths, bar layout |
+| `scripts/blocks/blockMemoryComponents.js` | — | the list and the trace a memory is read back as |
 | `scripts/blocks/blockChartComponents.js` | — | the chart components |
 | `scripts/blocks/blockObjectLibrary.js` | `BlockObjectLibrary` | the objects a model carries with it |
 | `scripts/blocks/blockObjectCatalogue.js` | `BlockObjectCatalogue` | the objects the catalogue offers |
@@ -44,8 +51,10 @@ Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
 | `scripts/catalog/objectSeeder.js` | `ObjectSeeder` | publishes the bundled objects to the catalogue |
 | `scripts/blocks/blockObjects.js` | `BlockObjects` | object definitions and component instances |
 | `scripts/blocks/blockAgentTools.js` | `BlockAgentTools` | the agent-safe tool surface |
+| `scripts/calculator.js` | `Calculator` | the model, and the one place the values it runs on are held |
 | `scripts/editors/board/widgets/ComponentWidget.js` | `ComponentShape` | the host shape |
 | `scripts/shapes/componentShape/ComponentShapeToolbar.js` | — | its property editor |
+| `scripts/shapes/shared/characterPicker.js` | `CharacterLibrary`, `CharacterPickerMixin` | the characters a shape can wear, and the popup that picks one |
 | `scripts/toolbars/objectPicker.js` | `ObjectPicker` | the object palette: previews, descriptions, search |
 | `scripts/controls/BlockChartControl.js` | `BlockChartControl` | the chart control that paints through blocks |
 | `scripts/shapes/blockChartShape/BlockChartShape.js` | `BlockChartShape` | the chart shape built on blocks |
@@ -216,6 +225,87 @@ which runs from `file://`, so they are delivered by `definitions.generated.js`; 
 with `UPDATE_DEFINITIONS=1 npx playwright test tests/component-definitions.spec.js`, which
 otherwise fails when the bundle and the JSON have drifted.
 
+### The look is not the object's to invent
+
+An object drawn from blocks has to look like the board it stands on, and the board already has a
+look: it writes in `Katex_Main`, its axes are `#7a7a7a` at 1.2, its tick marks are 4 long with the
+number 1.8 font sizes below in `#666666`, its grid is `#d3d3d3`, its crosshair is dashed `4 3` at a
+quarter opacity and its values are read on a rounded plate at 0.85. Those are `ChartControl`'s own
+option defaults, so an object drawing against a scale is the same grey as a chart beside it. Those numbers are the design tokens.
+`Utils.valueBadgeSvgMarkup` and `Utils.crosshairLineSvgMarkup` — what the hand-written shapes draw
+with — read them from `BlockTokens` too, so there is one place a value lives and no second copy to
+drift. The gaps around a tick label are multiples of the tick font rather than pixel counts, so a
+200px object's labels sit as close to its axis as a full-sized chart's do.
+
+Two rules follow, and together they mean **no definition ever names a font or an axis colour**:
+
+* A **default may be a token reference**: `"defaultValue": "token:font.family"`. The compiler reads
+  it through the tokens wherever a default is used — as the value, and as what a failed binding
+  falls back to. The `text` primitive defaults its family, size and weight this way, which is why
+  changing a preset restyles every object at once.
+* **Anything cartesian is a component, not a drawing.** `plot-grid`, `plot-axes` and
+  `plot-crosshair` take a box (`x`, `y`, `width`, `height`), the range shown in it
+  (`minimumX`…`maximumY`) and a target tick count, and draw the board's own axis. The mouse tracker
+  is nothing but those three over a `memory-trace`; before them it drew its own lines and labels,
+  and looked it.
+
+An axis drawn this way is the chart's axis, down to the arithmetic — all of it comes from
+`AxisTickDrag.js`, the file the ruler and the referential already shared:
+
+* **The ticks land on round numbers.** `buildNiceTickValues` picks the step, so a count is a target
+  rather than a division of whatever the range happens to be, and `formatAxisTickValue` writes the
+  number under it — which is why an axis needs no decimals setting.
+* **Each interval is subdivided** as far as `minorTickDivisions` says the minor ticks can be told
+  apart, drawn short and faint against the axis and faint again across the grid.
+* **A tick is a handle.** An axis that names the properties holding its ends
+  (`minimumXProperty`, `maximumXProperty`, …) gets a grab area over every numbered tick carrying the
+  `drag-axis-tick` behaviour: pulling one holds the near end still and moves the far one, writing the
+  object's own maximum. It is the chart's interaction and the chart's formula — `AxisTickDrag`,
+  `newScale = |tickOffsetValue / pixelOffset|` — and the whole drag is one undo step.
+
+`plot-crosshair` answers a pointer the way the chart's crosshair answers a hovered x: both dashed
+lines cross the whole plot, the pointer's own place is read as a pair on a badge under it, and the
+point nearest that horizontal value — from the rows the component is handed — is marked and read off
+both axes, its height on the left in the colour of the run it belongs to and its own horizontal value
+on the axis below. Every one of those readouts is rounded to `$precision`, the reserved parameter
+carrying the decimals the model is read to, so a value beside a drawing reads the way the same value
+reads everywhere else on the board.
+
+**What the pointer is over is not something the object keeps.** `follow-pointer` reports where the
+pointer is, in the units the node is scaled in, into parameters the definition names — and the host
+hands those values to the next compilation rather than writing them to the shape, so hovering leaves
+no edit, no undo entry and no changed file. It answers only while the model stands still: `$playing`
+is a reserved parameter beside `$iteration`, and a drawing that follows the pointer stops doing so
+the moment the player starts, because what it shows then is the iteration everything else is showing.
+The mouse tracker's crosshair and marker work exactly this way.
+
+**What a shape can be taken back to lives under the bin.** `getRemoveMenuItems()` on the base toolbar
+offers remove and reset; an object holding a memory adds clear, which empties it and takes it out of
+the model. Neither the tracker nor the calculator draws a clear key of its own any more, and the
+bin's tooltip names all three.
+
+The **ends of an axis are edited by one control** wherever they appear. `AxisRangeControl` draws a
+minimum and a maximum side by side, with whatever else that axis needs after them, and is told only
+how to read a bound and how to write one: the chart writes its domain override, the referential
+turns the bound back into an origin and a scale, an object built from blocks writes two of its own
+parameters. A component that declares `minimumX`/`maximumX`/`minimumY`/`maximumY` gets those two
+rows in its settings menu instead of four separate number boxes, with no code of its own.
+
+It can also declare **`autoScale`** and **`equalScales`**, the chart's own two switches, and gets the
+chart's own behaviour: auto scale fits both axes to what the object is holding, padded by
+`BlockChartGeometry.padDomain` — the margins the chart pads its data with — and equal scale widens
+whichever axis needs it through `equalizeDomain`, the function the chart itself calls, measured on
+the box the object names `plot`. What they work out is handed to the drawing and shown in the number
+boxes, disabled, and is never written down: the ends the object was set to survive the switch being
+turned off again. An axis the object is deciding for itself is not an axis to drag, so its tick
+handles are not drawn.
+
+**Colours are named once too.** `BaseShapeToolbarMixin.plotColorMenuItems` maps `backgroundColor`,
+`dataAreaColor` and `axisColor` to the label and icon they are offered under, and `pushColorMenuItem`
+builds the row. A definition that names its colours those three gets the chart's colour menu exactly —
+the mouse tracker does, and paints its grid, labels, trace and marker from them and from the tokens
+rather than asking for a colour per part.
+
 ### The chart components
 
 `chart` composes `chart-frame`, `chart-grid`, `chart-axes`, `chart-series` and `chart-bars` into a
@@ -251,10 +341,16 @@ both drawings to the same geometry, tag for tag and coordinate for coordinate.
 ## 7. Parameters and bindings
 
 A `ParameterDefinition` carries `id`, `label`, `description`, `valueType`
-(`number | string | boolean | colour | variable | expression`), `defaultValue`, `required`,
-`minimum`, `maximum`, `enumValues`, `unit`, `category`, `bindable`, `agentAccessible`,
-`userEditable`. `category` drives where the editor puts it: `style` goes in the shape/colour
-menu, `model` and `orbits` in the variables menu, everything else in the settings menu.
+(`number | string | boolean | colour | variable | expression | memory | character | object`),
+`defaultValue`, `required`, `minimum`, `maximum`, `enumValues`, `unit`, `category`, `bindable`,
+`agentAccessible`, `userEditable`, `structured`. `category` drives where the editor puts it:
+`style` goes in the shape/colour menu, `model` and `orbits` in the variables menu, `state` is what
+the object keeps for itself and is never editable, everything else goes in the settings menu.
+A `character` parameter is edited with the catalogue's character picker, the one a body uses.
+A `structured` parameter carries a shape rather than a value — a list of actions, a row template —
+and the bindings inside it are resolved along with the ones around it; a parameter that does not
+declare it is passed through untouched, so a component handed a long run of data rows is not
+searched for bindings that cannot be there.
 
 Bindings:
 
@@ -267,6 +363,8 @@ Bindings:
 | `{ formula: "…", inputs: { m: { variable: "minute" } } }` | an expression whose free names are supplied by other bindings |
 | `{ token: "stroke.default" }` | a design token |
 | `{ format: <binding>, digits: 1, prefix, suffix }` | a number rendered as text |
+| `{ memory: "history", row: <binding>, field: "x", from: "end" }` | a memory: the whole list, one row, or one field of it |
+| `{ memoryCount: "history" }` | how many rows a memory holds |
 
 Expressions are parsed by `Modellus.Parser` (the same engine that runs the model) into a
 `Branch` and evaluated with `branch.calculate(values)`. There is no `eval`, no `new Function`,
@@ -280,7 +378,122 @@ minuteHand.rotation = \mod\left(m,60\right)\cdot6                              m
 secondHand.rotation = \mod\left(s,60\right)\cdot6                              s←second
 ```
 
-## 8. Validation
+## 8. Memory — what an object keeps
+
+Some objects have to hold more than a value. A calculator keeps the operations it has completed; a
+tracker keeps where the pointer went. A **memory** is an ordered list of rows an object writes as it
+is used and reads back when it draws — and it is not a new kind of storage. It is a parameter whose
+`valueType` is `memory`, so it lives in `shape.properties` beside the numbers, which is what makes
+the model carry it, undo restore it, the clipboard take it and collaboration send it with nothing
+added anywhere for the purpose.
+
+A row carries a label and a point — `{ text, x, y }` — and writes only the fields it holds, because
+a missing field reads back as empty or as zero, exactly what it would have been written as. A
+calculator history row is `{ text: "12 + 5", x: 17 }`; a tracker sample is `{ x: 3.4, y: 7.1 }`.
+
+### A memory that names terms is measurements
+
+A memory parameter may declare **`termParameters`**, which maps its fields to the parameters holding
+the names of the model terms they feed:
+
+```json
+{ "id": "samples", "valueType": "memory", "termParameters": { "x": "xVariable", "y": "yVariable" } }
+```
+
+When those parameters name variables, the rows stop being only a drawing's private notes: **row n is
+iteration n** of those terms, the same thing a data table's rows are, and the model runs on them.
+A chart of `px` draws the recording, a body bound to it walks the recording, and the board's own
+player replays it, because there is nothing to replay separately — the model's timeline is the
+recording's timeline. A memory that names nothing stays with the object and feeds the model nothing.
+
+The values are held **centrally, by the `Calculator`**, on the same path measurements take:
+
+| Call | Role |
+| --- | --- |
+| `setDataSource(sourceId, names, values)` | registers one set of values under the id of whatever owns it |
+| `removeDataSource(sourceId)` | takes it away again |
+| `applyDataSources()` | merges every registered set into the one preloaded table the engine reads |
+| `loadExternalData` / `refreshExternalData` | what a data table calls; they are `setDataSource` with the engine reset that follows an edit |
+
+Merging is what makes several of them possible at once: the columns are the union of the sources',
+the table is as long as the longest, and the rows a shorter source does not reach are left blank —
+which is what a data table with an empty cell already means. Before this, a second set of values
+quietly replaced the first.
+
+`ComponentShape` is what registers an object's memories: `publishModelData()` writes them into the
+calculator, `refreshModelData()` does that and then works the model through, and `BaseShape` carries
+an empty `publishModelData()` so `BoardEditor.reset()` can ask every shape for its values right after
+the model has been cleared — beside the loop that reloads the data tables. A column is left out when
+the model works that name out for itself, so a recording can never overwrite an answer the model owns.
+
+### Writing and reading a memory
+
+Three behaviours write one, and the host shape attaches all three, because they need the board, the
+model and the shape's coordinate system the way `clickable` and `drag-angle` do:
+
+| Behaviour | What it does |
+| --- | --- |
+| `remember` | appends a row when the node is clicked. The label and both numbers are bindings, so a key records what the object held at the moment it was pressed |
+| `forget` | empties a memory |
+| `track-pointer` | records the pointer while it is dragged over the node, one sample every `sampleMs`, converted through the node's own origin and scale so what is stored is a pair of values rather than a pair of pixels |
+
+Two bindings and two components read one back:
+
+```json
+{ "memory": "history" }                                                 the whole list
+{ "memory": "history", "row": { "parameter": "head" }, "field": "x" }   one field of one row
+{ "memory": "samples", "row": 0, "from": "end" }                        the newest row
+{ "memoryCount": "history" }                                            how many rows there are
+```
+
+`memory-list` draws the rows as a list, newest first, label left and number right — or stacked, which
+is what a narrow column needs — and gives each row the actions its `rowActions` parameter declares:
+`{ property, field }` writes one of the row's own numbers, `{ property, value }` a fixed one, which is
+how choosing a line of the calculator's history puts that result back on the display. `memory-trace`
+draws the path the rows describe, mapped through the same origin and scale the recording used. Both
+generate geometry per row rather than compose other blocks, which is why they are code components
+rather than JSON documents.
+
+Three rules bound what a memory can cost: a memory holds at most `BlockMemory.maxRows` (2 000) rows,
+each writing behaviour carries its own `limit` and drops the oldest row past it, and stored numbers
+are rounded to six decimals. A recording is one edit — the drag opens with `dragStart()` and closes
+with `dragEnd()`, so a whole run is a single undo entry and a single collaboration op rather than one
+per sample, and the model is worked through once, when the pointer comes up.
+
+A behaviour may carry a **`when`**, resolved like a child's: a behaviour whose condition is false is
+not attached. That is how the calculator's equals key records a completed operation and records
+nothing when there is no operation to complete, without the key itself disappearing.
+
+The two objects built on this are the reference examples:
+
+* **`calculator`** keeps `history`, which names no terms: the working is the object's own. The equals
+  key carries `remember` under `when: { parameter: "p" }`, labelled with the same `concat` the tape
+  above the display is built from, and the panel down the side is a `memory-list` whose `rowActions`
+  load the chosen result back into the entry. The `⌫` key under it is a `forget`, and it is only there
+  when there is something to forget. The panel takes what is left once the keypad has the room it
+  needs, so a calculator too narrow to hold both is all keypad.
+* **`mouse-tracker`** keeps `samples`, which names `xVariable` and `yVariable`. A transparent rectangle
+  over the plot carries `track-pointer`, so dragging across it records the pointer against the
+  horizontal and vertical axes drawn beside it. There is no playhead of its own: the marker stands on
+  the sample belonging to **the iteration on screen**, read through `$iteration`, so stepping or
+  playing the model walks it along the trace. The marker is either a dot or the character the user
+  picked, placed by that character's own pivot point: `ComponentShape` resolves the chosen
+  `characterKey` through `CharacterLibrary` and hands the definition the image, the pivot and the
+  shape of the image, which the definition turns into a letterboxed offset with formulas.
+
+`$iteration` is the third reserved parameter, beside `$width` and `$height`: the iteration the board
+is showing, so a drawing of what the model holds per iteration stands on the same one as everything
+else. A definition reaches it by declaring a local bound to it, as it does for the drawing size.
+
+### Formulas are parsed away from the model
+
+Parsing a name is what makes it a term, so a formula parsed by the model's own parser would leave the
+model holding every name a drawing invented — `pad`, `gap`, `plotX` — in each of its variable pickers,
+and a local named like something the engine keeps for itself would break the engine outright.
+`BlockBindings` therefore parses against a system of this layer's own. The values a formula reads
+still come from the model, at evaluation, through `getModelValues()`.
+
+## 9. Validation
 
 `BlockValidator.validate(definition, context)` returns `{ valid, errors, warnings }` where each
 entry is `{ code, path, message, expected?, suggestion? }`. Four levels run in order:
@@ -294,7 +507,7 @@ entry is `{ code, path, message, expected?, suggestion? }`. Four levels run in o
 4. **Visual** — nothing drawn, everything invisible, zero-size interactive targets, nodes far
    outside the object box.
 
-## 9. Serialization and migration
+## 10. Serialization and migration
 
 A `ComponentShape` serializes like every other shape: `{ type: "ComponentShape", id, parent, properties }`,
 with the definition under `properties.definition` and the parameter values as flat properties.
@@ -404,7 +617,7 @@ Writing needs to know what the catalogue already holds, so a listing that cannot
 write; a dry run carries on against an empty catalogue, which is what makes the plan readable before
 the endpoints exist at all.
 
-## 10. Security constraints
+## 11. Security constraints
 
 * Only registered block types can appear in a definition; the compiler and the validator both refuse unknown types.
 * The agent never sends code — every tool takes a structured, schema-checked input.
@@ -415,9 +628,15 @@ the endpoints exist at all.
 * `save_custom_component` saves a **definition document**, not a `create()` function, so the object
   it invents is one `BlockObjectLibrary` can collect into the model — and one a person can read.
 
-## 11. Testing a new block
+## 12. Testing a new block
 
-* `tests/component-blocks.spec.js` — registry, geometry, bindings, compiler, validator, presets.
+* `tests/component-blocks.spec.js` — registry, geometry, bindings, compiler, validator, presets, the
+  memory layer (rows, the bindings that read one, structured parameters, conditional behaviours, the
+  columns a memory makes and the merging of everything the model runs on), and the one look: that no
+  object names a font of its own, that the axis, grid and crosshair components are drawn to the
+  measurements the tokens hold, and that `Utils` draws its badge and crosshair from the same ones.
+* `tests/axis-range-control.spec.js` — the one min/max editor, driven from all three of its owners:
+  the chart's domain override, the referential's origin and scale, and an object's own parameters.
 * `tests/model-objects.spec.js` — the objects a model carries: what is collected, what is left to the
   editor, and that an object the session has never seen still draws when the model is reopened.
 * `tests/object-picker.spec.js` — the palette: what it lists, the drawn previews, search, and what
@@ -430,6 +649,20 @@ the endpoints exist at all.
   twice, updating, one object refused, and that every bundled object really draws something.
 * `tests/component-clock.spec.js` — rendering, model binding, editing, undo/redo, serialization,
   duplication, selection/resize, hand dragging, and the other components on the board.
+* `tests/calculator-component.spec.js` — the keypad, the term keys, the result written back, and the
+  history: what is remembered, what choosing a line puts back, clearing it from the bin, and what a
+  save keeps.
+* `tests/mouse-tracker-component.spec.js` — recording a drag against the axes, one undo step for a
+  whole run, the variables taking the recording iteration by iteration, a recording and a data table
+  feeding the model side by side, the marker following the iteration on screen and hanging from its
+  character's pivot, the axes coming from the shared component, an axis rescaled by dragging one of
+  its own ticks, both of its ends edited on one row, the crosshair and marker following the pointer
+  while the model stands still and the iteration once it plays, the crosshair marking the recorded
+  point at the pointer's horizontal value and reading the pointer's own place under it, the recording
+  emptied from the bin,
+  the colour menu matching the chart's, the axis, ticks and grid drawn in the colours the chart's
+  control defaults to, auto scale fitting the axes to the recording and equal axis matching the two
+  scales, and the recording a reopened model brings back.
 * `tests/component-agent-tools.spec.js` — tool schemas, discovery, the full build→validate→preview→insert
   loop, structured errors and correction, refusal of unknown types and injection attempts,
   custom components, and the tool-bridge naming convention.
@@ -438,7 +671,7 @@ Add unit-level assertions to the first file, board behaviour to the second, and 
 agent can reach to the third. Compilation is deterministic, so
 `BlockRenderer.toMarkup(compilation.nodes)` is a stable snapshot value.
 
-## 12. Analogue clock walkthrough
+## 13. Analogue clock walkthrough
 
 ```js
 const shape = shell.commands.addComponent("analogue-clock", "Clock");

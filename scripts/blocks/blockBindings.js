@@ -1,5 +1,5 @@
 class BlockBindings {
-    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast"];
+    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "memory", "memoryCount"];
 
     static isBinding(value) {
         if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -45,8 +45,14 @@ class BlockBindings {
         this.parseErrors.clear();
     }
 
+    // Formulas are parsed against a system of this layer's own, never the model's. Parsing a name
+    // is what makes it a term, so parsing "plotX+gap" with the model's parser would leave the model
+    // holding variables the drawing invented — and a local named like something the engine keeps for
+    // itself would break it. The values a formula reads still come from the model, at evaluation.
     getParser() {
-        return this.calculator?.parser ?? null;
+        if (!this.formulaParser)
+            this.formulaParser = new Modellus.Parser(new Modellus.System("t", "n"));
+        return this.formulaParser;
     }
 
     parseLatex(latex) {
@@ -150,7 +156,25 @@ class BlockBindings {
             return this.resolveConcat(binding, context, fallbackValue);
         if (kind === "contrast")
             return this.resolveContrast(binding, context, fallbackValue);
+        if (kind === "memory")
+            return this.resolveMemory(binding, context, fallbackValue);
+        if (kind === "memoryCount")
+            return BlockMemory.count(BlockMemory.read(context.parameters, binding.memoryCount));
         return fallbackValue;
+    }
+
+    // Reads one of the object's own memories: the whole list when nothing else is asked for, the
+    // row at an index, or one field of it. The index is a binding like any other, so a repeated
+    // node draws row $index and a playhead reads the row it stands on.
+    resolveMemory(binding, context, fallbackValue) {
+        const rows = BlockMemory.read(context.parameters, binding.memory);
+        if (binding.row === undefined && binding.field === undefined)
+            return rows;
+        const index = this.resolveNumber(binding.row, context, 0);
+        if (binding.field === undefined)
+            return BlockMemory.getRow(rows, index, binding.from) ?? fallbackValue;
+        const value = BlockMemory.getField(rows, index, binding.from, binding.field);
+        return value === null ? fallbackValue : value;
     }
 
     // Reads back as black or white against whatever colour it is given, so a label placed on a
@@ -321,6 +345,10 @@ class BlockBindings {
         }
         if (kind === "format")
             return this.getBindingDependencies(binding.format);
+        if (kind === "memory")
+            return { variables: [], parameters: [binding.memory] };
+        if (kind === "memoryCount")
+            return { variables: [], parameters: [binding.memoryCount] };
         return { variables: [], parameters: [] };
     }
 }

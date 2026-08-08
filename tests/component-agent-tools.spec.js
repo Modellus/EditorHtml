@@ -314,22 +314,6 @@ test.describe('agent tool surface', () => {
         expect(card.previewNodes).toBeGreaterThan(0);
     });
 
-    test('the definition of an object on the board can be copied for the catalogue', async ({ page, context }) => {
-        await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-        await setupBoard(page);
-        await page.evaluate(() => modellus.blocks.addComponent('compass', 'Compass'));
-        await page.waitForTimeout(300);
-        const copied = await page.evaluate(async () => {
-            const shape = shell.board.shapes.getByName('Compass');
-            shape.copyComponentDefinition();
-            return await navigator.clipboard.readText();
-        });
-        const definitionDocument = JSON.parse(copied);
-        expect(definitionDocument.type).toBe('compass');
-        expect(definitionDocument.category).toBe('component');
-        expect(definitionDocument.root).toBeTruthy();
-    });
-
     test('is reachable through the agent tool bridge naming convention', async ({ page }) => {
         await setupBoard(page);
         const result = await page.evaluate(async () => {

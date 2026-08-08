@@ -162,74 +162,11 @@ var ReferentialShapeToolbarMixin = {
                         },
                         {
                             text: "Horizontal",
-                            buildControl: $p => {
-                                const wrapper = $('<div style="display: flex; gap: 6px;">');
-                                const domain = this.getVisibleDomain();
-                                const disabled = this.properties.autoScale !== false;
-                                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                                    value: domain.xMin,
-                                    placeholder: "Min",
-                                    disabled: disabled,
-                                    onInitialized: e => { this._xMinBoxInstance = e.component; },
-                                    onValueChanged: e => {
-                                        if (this.properties.autoScale !== false)
-                                            return;
-                                        const d = this.getVisibleDomain();
-                                        d.xMin = e.value;
-                                        this.applyVisibleDomainX(d);
-                                    }
-                                }));
-                                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                                    value: domain.xMax,
-                                    placeholder: "Max",
-                                    disabled: disabled,
-                                    onInitialized: e => { this._xMaxBoxInstance = e.component; },
-                                    onValueChanged: e => {
-                                        if (this.properties.autoScale !== false)
-                                            return;
-                                        const d = this.getVisibleDomain();
-                                        d.xMax = e.value;
-                                        this.applyVisibleDomainX(d);
-                                    }
-                                }));
-                                wrapper.appendTo($p);
-                            }
+                            buildControl: $p => this.getAxisRangeControl().createRow("x").appendTo($p)
                         },
                         {
                             text: "Vertical",
-                            buildControl: $p => {
-                                const wrapper = $('<div style="display: flex; gap: 6px;">');
-                                const domain = this.getVisibleDomain();
-                                const autoScale = this.properties.autoScale !== false;
-                                const equalScales = this.properties.equalAxisScales === true;
-                                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                                    value: domain.yMin,
-                                    placeholder: "Min",
-                                    disabled: autoScale || equalScales,
-                                    onInitialized: e => { this._yMinBoxInstance = e.component; },
-                                    onValueChanged: e => {
-                                        if (this.properties.autoScale !== false)
-                                            return;
-                                        const d = this.getVisibleDomain();
-                                        d.yMin = e.value;
-                                        this.applyVisibleDomainY(d);
-                                    }
-                                }));
-                                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                                    value: domain.yMax,
-                                    placeholder: "Max",
-                                    disabled: autoScale || equalScales,
-                                    onInitialized: e => { this._yMaxBoxInstance = e.component; },
-                                    onValueChanged: e => {
-                                        if (this.properties.autoScale !== false)
-                                            return;
-                                        const d = this.getVisibleDomain();
-                                        d.yMax = e.value;
-                                        this.applyVisibleDomainY(d);
-                                    }
-                                }));
-                                wrapper.appendTo($p);
-                            }
+                            buildControl: $p => this.getAxisRangeControl().createRow("y").appendTo($p)
                         },
                         {
                             text: "Snap to Ticks",

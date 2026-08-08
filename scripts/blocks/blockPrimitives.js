@@ -270,9 +270,9 @@ var BlockPrimitiveRenderers = {
             x: { valueType: "number", defaultValue: 0, label: "X" },
             y: { valueType: "number", defaultValue: 0, label: "Y" },
             text: { valueType: "string", defaultValue: "", label: "Text" },
-            fontSize: { valueType: "number", defaultValue: 11, minimum: 1, maximum: 400, label: "Font size" },
-            fontFamily: { valueType: "string", defaultValue: "Inter, Segoe UI, sans-serif", label: "Font family" },
-            fontWeight: { valueType: "number", defaultValue: 400, minimum: 100, maximum: 900, label: "Font weight" },
+            fontSize: { valueType: "number", defaultValue: "token:font.size.default", minimum: 1, maximum: 400, label: "Font size" },
+            fontFamily: { valueType: "string", defaultValue: "token:font.family", label: "Font family" },
+            fontWeight: { valueType: "number", defaultValue: "token:font.weight.default", minimum: 100, maximum: 900, label: "Font weight" },
             textAnchor: { valueType: "string", defaultValue: "middle", enumValues: ["start", "middle", "end"], label: "Anchor" },
             baseline: { valueType: "string", defaultValue: "central", enumValues: ["auto", "central", "hanging"], label: "Baseline" }
         }),

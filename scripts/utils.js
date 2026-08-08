@@ -1,4 +1,6 @@
 class Utils {
+    static designTokens = null;
+
     static mergeProperties(source, target) {
         for (const key in source) {
             if (source[key] instanceof Object) {
@@ -727,16 +729,24 @@ class Utils {
         return ((channelValue + 0.055) / 1.055) ** 2.4;
     }
 
+    // The badge and the crosshair are drawn to the same measurements wherever they appear — a chart,
+    // a ruler, an object built from blocks — so both read them from the design tokens rather than
+    // carrying numbers of their own.
+    static getDesignTokens() {
+        return Utils.designTokens ??= new BlockTokens("standard");
+    }
+
     static valueBadgeSvgMarkup(text, x, y, options = {}) {
-        const fontSize = options.fontSize ?? 10;
-        const fontFamily = options.fontFamily ?? "Katex_Main";
-        const backgroundColor = options.backgroundColor ?? "#666666";
+        const tokens = Utils.getDesignTokens();
+        const fontSize = options.fontSize ?? tokens.getNumber("font.size.tick", 10);
+        const fontFamily = options.fontFamily ?? tokens.get("font.family");
+        const backgroundColor = options.backgroundColor ?? tokens.get("text.secondary");
         const textColor = options.textColor ?? Utils.getContrastColor(backgroundColor);
         const anchor = options.anchor ?? "middle";
-        const paddingX = options.paddingX ?? 4;
-        const paddingY = options.paddingY ?? 2;
+        const paddingX = options.paddingX ?? tokens.getNumber("badge.paddingX", 4);
+        const paddingY = options.paddingY ?? tokens.getNumber("badge.paddingY", 2);
         const height = fontSize + paddingY * 2;
-        const charWidth = fontSize * 0.58;
+        const charWidth = fontSize * tokens.getNumber("badge.charWidth", 0.58);
         const textWidth = String(text ?? "").length * charWidth;
         const width = textWidth + paddingX * 2;
         let rectX = x - width / 2;
@@ -747,11 +757,12 @@ class Utils {
         const rectY = y - height / 2;
         const textY = y + fontSize * 0.35;
         const escapedText = String(text ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-        return `<rect x="${rectX}" y="${rectY}" width="${width}" height="${height}" rx="3" fill="${backgroundColor}" fill-opacity="0.85" /><text x="${x}" y="${textY}" text-anchor="${anchor}" font-family="${fontFamily}" font-size="${fontSize}" fill="${textColor}">${escapedText}</text>`;
+        return `<rect x="${rectX}" y="${rectY}" width="${width}" height="${height}" rx="${tokens.getNumber("badge.cornerRadius", 3)}" fill="${backgroundColor}" fill-opacity="${tokens.getNumber("badge.opacity", 0.85)}" /><text x="${x}" y="${textY}" text-anchor="${anchor}" font-family="${fontFamily}" font-size="${fontSize}" fill="${textColor}">${escapedText}</text>`;
     }
 
     static crosshairLineSvgMarkup(x1, y1, x2, y2, color) {
-        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="1" stroke-dasharray="4 3" stroke-opacity="0.25" />`;
+        const tokens = Utils.getDesignTokens();
+        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${tokens.getNumber("crosshair.strokeWidth", 1)}" stroke-dasharray="${tokens.get("crosshair.dash", "4 3")}" stroke-opacity="${tokens.getNumber("crosshair.opacity", 0.25)}" />`;
     }
 
     static createTooltip(e, html, width, canShow, wrapperClassName) {

@@ -7,6 +7,8 @@ const BOARD_URL = '/pages/board/index.html';
 // definitions replaced them. They are the proof that the declarative form draws the same thing.
 // The compass entries were re-recorded when its rose gained a drag ring: that ring draws nothing,
 // so only the invisible node and the behaviours it carries separate them from the captured ones.
+// The font in them was rewritten once, when the text primitive stopped naming a family of its own
+// and took the board's from the design tokens; every coordinate is still the captured one.
 const BASELINES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'coded-component-baselines.json'), 'utf8'));
 
 const cases = [

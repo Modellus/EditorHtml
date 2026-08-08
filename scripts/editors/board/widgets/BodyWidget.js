@@ -1,18 +1,10 @@
 class BodyShape extends ChildShape {
-    static apiCharacterDefinitions = new Map();
-    static pendingApiCharacterFetches = new Map();
-    static characterImageAspectCache = new Map();
+    static apiCharacterDefinitions = CharacterLibrary.definitions;
+    static pendingApiCharacterFetches = CharacterLibrary.pendingFetches;
+    static characterImageAspectCache = CharacterLibrary.aspectRatios;
 
     loadImageAspectIfNeeded(imageUrl) {
-        if (!imageUrl || BodyShape.characterImageAspectCache.has(imageUrl))
-            return;
-        BodyShape.characterImageAspectCache.set(imageUrl, null);
-        const img = new Image();
-        img.onload = () => {
-            BodyShape.characterImageAspectCache.set(imageUrl, img.naturalWidth / img.naturalHeight);
-            this.board.markDirty(this);
-        };
-        img.src = imageUrl;
+        CharacterLibrary.loadAspectRatio(imageUrl, () => this.board.markDirty(this));
     }
 
     // Every animation frame is a separate image, and its aspect ratio is only known
@@ -66,54 +58,11 @@ class BodyShape extends ChildShape {
     }
 
     static adaptApiCharacterDefinition(definition) {
-        const animations = (definition.animations ?? []).map(animation => {
-            const sortedFrames = [...(animation.frames ?? [])].sort((a, b) => (a.frame_index ?? 0) - (b.frame_index ?? 0));
-            const frameUrls = sortedFrames.map(frame => frame.image_url);
-            return {
-                name: animation.name || "Idle",
-                frames: frameUrls.length || 1,
-                frameUrls,
-                startIndex: 0
-            };
-        });
-        return {
-            id: definition.id,
-            name: definition.title || "",
-            title: definition.title || "",
-            thumbnail_url: definition.thumbnail_url,
-            folder: null,
-            centerPoint: { x: definition.pivot_x ?? 0.5, y: definition.pivot_y ?? 0.5 },
-            shouldRotate: !!definition.should_rotate,
-            animations
-        };
+        return CharacterLibrary.adapt(definition);
     }
 
     static fetchApiCharacterDefinition(characterKey, apiClient) {
-        if (this.apiCharacterDefinitions.has(characterKey))
-            return Promise.resolve(this.apiCharacterDefinitions.get(characterKey));
-        if (this.pendingApiCharacterFetches.has(characterKey))
-            return this.pendingApiCharacterFetches.get(characterKey);
-        const promise = Promise.all([
-                apiClient.fetchCharacterById(characterKey),
-                apiClient.fetchCharacterDefinition(characterKey)
-            ])
-            .then(([character, definition]) => {
-                const merged = Object.assign({}, definition, {
-                    pivot_x: character.pivot_x,
-                    pivot_y: character.pivot_y,
-                    should_rotate: character.should_rotate
-                });
-                const adapted = BodyShape.adaptApiCharacterDefinition(merged);
-                BodyShape.apiCharacterDefinitions.set(characterKey, adapted);
-                BodyShape.pendingApiCharacterFetches.delete(characterKey);
-                return adapted;
-            })
-            .catch(error => {
-                BodyShape.pendingApiCharacterFetches.delete(characterKey);
-                throw error;
-            });
-        this.pendingApiCharacterFetches.set(characterKey, promise);
-        return promise;
+        return CharacterLibrary.fetch(characterKey, apiClient);
     }
 
     constructor(board, parent, id) {
@@ -355,102 +304,6 @@ class BodyShape extends ChildShape {
         return { control };
     }
 
-    _buildCharacterPickerContent(contentElement) {
-        const host = contentElement.get ? contentElement.get(0) : contentElement;
-        host.innerHTML = `<div class="mdl-catalog-data-status"><i class="fa-light fa-spinner fa-spin"></i></div>`;
-        const apiClient = this.board.shell?.modelsApiClient;
-        if (!apiClient) {
-            host.innerHTML = `<div class="mdl-catalog-data-status">Characters unavailable.</div>`;
-            return;
-        }
-        Promise.all([
-            apiClient.fetchCharacters().catch(() => []),
-            apiClient.fetchCharacterCategories().catch(() => [])
-        ]).then(([characters, categories]) => {
-            const categoryNameById = new Map(categories.map(cat => [cat.id, cat.name]));
-            const grouped = new Map();
-            const sortedCharacters = [...characters].sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-            for (const character of sortedCharacters) {
-                const categoryId = character.category_id || null;
-                const categoryName = categoryId ? (categoryNameById.get(categoryId) || categoryId) : "Uncategorized";
-                const groupKey = categoryId || "__uncategorized__";
-                if (!grouped.has(groupKey))
-                    grouped.set(groupKey, { name: categoryName, characters: [] });
-                grouped.get(groupKey).characters.push(character);
-            }
-            const sortedGroups = Array.from(grouped.values()).sort((a, b) => {
-                if (a.name === "Uncategorized") return 1;
-                if (b.name === "Uncategorized") return -1;
-                return a.name.localeCompare(b.name);
-            });
-            host.innerHTML = `
-                <div class="mdl-char-picker-container">
-                    <div class="mdl-char-picker-search-bar">
-                        <input class="mdl-char-picker-search-input" type="text" placeholder="Search characters…" autocomplete="off">
-                    </div>
-                    <div class="mdl-catalog-data-scroll mdl-char-picker-scroll"><div class="mdl-char-picker-body"></div></div>
-                </div>`;
-            const body = host.querySelector(".mdl-char-picker-body");
-            const searchInput = host.querySelector(".mdl-char-picker-search-input");
-            for (const group of sortedGroups) {
-                const groupId = `char-picker-group-${CSS.escape(group.name)}`;
-                body.insertAdjacentHTML("beforeend", `
-                    <div class="mdl-char-picker-group" id="${groupId}">
-                        <div class="mdl-char-picker-group-label">${this._escapePickerHtml(group.name)}</div>
-                        <div class="mdl-catalog-data-grid"></div>
-                    </div>`);
-                const grid = body.querySelector(`#${groupId} .mdl-catalog-data-grid`);
-                for (const character of group.characters) {
-                    const cardId = `char-card-${CSS.escape(character.id)}`;
-                    const isSelected = this._selectedCharacterKey === character.id;
-                    const thumbHtml = character.thumbnail_url
-                        ? `<img class="mdl-catalog-data-thumb" src="${this._escapePickerHtml(character.thumbnail_url)}" alt="${this._escapePickerHtml(character.title || "")}">`
-                        : `<div class="mdl-catalog-data-thumb-placeholder"><i class="fa-light fa-person-running"></i></div>`;
-                    grid.insertAdjacentHTML("beforeend", `
-                        <div class="mdl-catalog-data-card${isSelected ? " selected" : ""}" id="${cardId}" data-character-id="${this._escapePickerHtml(character.id)}" data-character-title="${this._escapePickerHtml((character.title || "").toLowerCase())}">
-                            ${thumbHtml}
-                            <div class="mdl-catalog-data-title">${this._escapePickerHtml(character.title || "")}</div>
-                        </div>`);
-                    const card = grid.lastElementChild;
-                    card.addEventListener("click", () => {
-                        host.querySelectorAll(".mdl-catalog-data-card").forEach(c => c.classList.remove("selected"));
-                        card.classList.add("selected");
-                        this._selectedCharacterKey = character.id;
-                    });
-                    if (character.title || character.description) {
-                        $('<div>').appendTo('body').dxTooltip({
-                            target: card,
-                            contentTemplate: tooltipContent => {
-                                tooltipContent.append($('<div class="card-desc-tooltip">').html(`<strong>${this._escapePickerHtml(character.title || "")}</strong>${character.description ? `<p>${this._escapePickerHtml(character.description)}</p>` : ``}`));
-                            },
-                            showEvent: { delay: 600, name: "mouseenter" },
-                            hideEvent: "mouseleave",
-                            position: "bottom",
-                            maxWidth: 300,
-                            zIndex: 95000
-                        });
-                    }
-                }
-            }
-            searchInput.addEventListener("input", event => {
-                const query = event.target.value.toLowerCase().trim();
-                body.querySelectorAll(".mdl-char-picker-group:not([data-none-group])").forEach(group => {
-                    let visibleCount = 0;
-                    group.querySelectorAll(".mdl-catalog-data-card").forEach(card => {
-                        const matches = !query || card.dataset.characterTitle.includes(query);
-                        card.style.display = matches ? "" : "none";
-                        if (matches) visibleCount++;
-                    });
-                    group.style.display = visibleCount > 0 ? "" : "none";
-                });
-            });
-        });
-    }
-
-    _escapePickerHtml(text) {
-        return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-    }
-
     resolveCharacterImageSrc(character) {
         return character.thumbnail_url || null;
     }
@@ -514,7 +367,7 @@ class BodyShape extends ChildShape {
                             $('<div>').dxButton({
                                 icon: "fa-light fa-person-running",
                                 stylingMode: "text",
-                                onClick: () => this.showCharacterPickerPopup()
+                                onClick: () => this.showCharacterPickerPopup({ onSelected: () => this.refreshShapeColorToolbarControl() })
                             }).appendTo($p);
                         }
                     }

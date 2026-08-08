@@ -1,4 +1,6 @@
 var ComponentShapeToolbarMixin = {
+    // The two switches that decide the ends of an axis instead of a person setting them.
+    axisRangeSwitches: ["autoScale", "equalScales"],
     createToolbar() {
         const items = resolveShapeToolbarBaseItems(this, ComponentShapeToolbarMixin.createToolbar);
         this._componentTermControls = {};
@@ -42,15 +44,28 @@ var ComponentShapeToolbarMixin = {
     getParametersByCategory(categories) {
         return this.getEditableParameters().filter(parameter => categories.includes(parameter.category ?? "general"));
     },
+    // An object that paints a background, a plot and an axis names them the way the chart does, and
+    // is offered the same three colours under the same labels and icons. Anything else a definition
+    // colours keeps its own label.
     populateShapeColorMenuSections(sections) {
         for (const parameter of this.getParametersByCategory(["style"])) {
-            const picker = this.createComponentParameterControl(parameter);
-            sections[0].items.push({
-                text: parameter.label,
-                iconHtml: this.menuIconHtml("fa-droplet", true),
-                buildControl: $container => $container.append(picker)
-            });
+            const known = BaseShapeToolbarMixin.plotColorMenuItems[parameter.id];
+            this.pushColorMenuItem(sections, parameter.id, known?.label ?? parameter.label, known?.icon ?? "fa-droplet");
         }
+    },
+    // Emptying what the object is holding is one of the ways it can be taken back, so it sits with
+    // remove and reset rather than as a key on the drawing.
+    getRemoveMenuItems() {
+        const items = BaseShapeToolbarMixin.getRemoveMenuItems.call(this);
+        if (this.getMemoryParameters().length === 0)
+            return items;
+        items.push({ text: "Clear", icon: "fa-light fa-eraser", action: () => this.clearMemories() });
+        return items;
+    },
+    clearMemories() {
+        for (const parameter of this.getMemoryParameters())
+            this.setPropertyCommand(parameter.id, []);
+        this.refreshModelData();
     },
     renderComponentModelButtonTemplate(element) {
         const modelParameters = this.getParametersByCategory(["model"]);
@@ -97,33 +112,59 @@ var ComponentShapeToolbarMixin = {
         this._componentSettingsDropdownElement.appendTo(itemElement);
     },
     buildComponentSettingsMenu(contentElement) {
-        const parameters = this.getParametersByCategory(["display", "scale", "interaction", "general"]);
-        const items = parameters.map(parameter => ({
-            text: parameter.label,
-            buildControl: $container => $container.append(this.createComponentParameterControl(parameter))
-        }));
-        if (BlockObjectLibrary.getDocument(this.getComponentType()))
+        const rangeParameters = this.getAxisRangeParameters();
+        const items = [];
+        // Auto scale and equal axis stand above the ends they govern, in the chart's own order.
+        for (const parameter of this.getEditableParameters().filter(entry => ComponentShapeToolbarMixin.axisRangeSwitches.includes(entry.id))) {
+            rangeParameters.push(parameter.id);
+            items.push({ text: parameter.label, buildControl: $container => $container.append(this.createAxisRangeSwitch(parameter)) });
+        }
+        if (this.getAxisRangeParameters().length === 4) {
+            const control = this.getAxisRangeControl();
+            items.push({ text: "Horizontal", buildControl: $container => control.createRow("x").appendTo($container) });
+            items.push({ text: "Vertical", buildControl: $container => control.createRow("y").appendTo($container) });
+        }
+        for (const parameter of this.getParametersByCategory(["display", "scale", "interaction", "general"])) {
+            if (rangeParameters.includes(parameter.id))
+                continue;
             items.push({
-                text: this.board.translations.get("Copy Object Definition"),
-                buildControl: $container => $container.append(this.createCopyDefinitionButton())
+                text: parameter.label,
+                buildControl: $container => $container.append(this.createComponentParameterControl(parameter))
             });
+        }
         this.renderComponentMenuList(contentElement, items);
     },
-    // The definition document is what the catalogue's object editor takes, so an object invented on
-    // the board — by the agent or by hand — can be published without being written out again.
-    createCopyDefinitionButton() {
-        const button = $('<div class="mdl-copy-definition-button">');
-        button.dxButton({
-            icon: "fa-light fa-copy",
-            stylingMode: "text",
-            onClick: () => this.copyComponentDefinition()
-        });
-        return button;
+    // An object that says how far its axes run edits them the way the chart and the referential do:
+    // one row per axis, a minimum and a maximum on it, and the same control drawing all three.
+    getAxisRangeParameters() {
+        const names = ["minimumX", "maximumX", "minimumY", "maximumY"];
+        return this.getEditableParameters().filter(parameter => names.includes(parameter.id)).map(parameter => parameter.id);
     },
-    copyComponentDefinition() {
-        const definitionDocument = BlockObjectLibrary.getDocument(this.getComponentType());
-        navigator.clipboard.writeText(JSON.stringify(definitionDocument, null, 4));
-        DevExpress.ui.notify(this.board.translations.get("Definition Copied"), "success", 2000);
+    getAxisRangeProperty(axis, bound) {
+        return `${bound === "Min" ? "minimum" : "maximum"}${axis.toUpperCase()}`;
+    },
+    // An end the object is working out for itself is shown but not editable, which is how the chart
+    // says the same thing.
+    getAxisRangeControl() {
+        this._axisRangeControl ??= new AxisRangeControl({
+            read: (axis, bound) => this.getEffectiveAxisRange()[`${axis}${bound}`],
+            write: (axis, bound, value) => this.setPropertyCommand(this.getAxisRangeProperty(axis, bound), value),
+            isDisabled: axis => this.properties.autoScale === true || (axis === "y" && this.properties.equalScales === true),
+            editorOptions: () => this.getPrecisionNumberEditorOptions({ showSpinButtons: false })
+        });
+        return this._axisRangeControl;
+    },
+    createAxisRangeSwitch(parameter) {
+        return $('<div>').dxSwitch({
+            value: this.properties[parameter.id] === true,
+            onValueChanged: event => {
+                if (!event.event)
+                    return;
+                this.setPropertyCommand(parameter.id, event.value);
+                this.board.markDirty(this);
+                this._axisRangeControl?.refresh();
+            }
+        });
     },
     buildComponentParameterMenu(contentElement, parameters) {
         const items = parameters.map(parameter => ({
@@ -150,6 +191,8 @@ var ComponentShapeToolbarMixin = {
             return this.createComponentBooleanControl(parameter);
         if (parameter.valueType === "number")
             return this.createComponentNumberControl(parameter);
+        if (parameter.valueType === "character")
+            return this.createComponentCharacterControl(parameter);
         if (parameter.enumValues)
             return this.createComponentEnumControl(parameter);
         return this.createComponentTextControl(parameter);
@@ -198,6 +241,15 @@ var ComponentShapeToolbarMixin = {
             }
         });
     },
+    // The same catalogue of characters a body wears, offered to any component that says it draws
+    // one: the object stores the key and places the drawing by the character's own pivot point.
+    createComponentCharacterControl(parameter) {
+        return $('<div>').dxButton({
+            icon: "fa-light fa-person-running",
+            stylingMode: "text",
+            onClick: () => this.showCharacterPickerPopup({ property: parameter.id })
+        });
+    },
     createComponentTextControl(parameter) {
         return $('<div>').dxTextBox({
             value: String(this.properties[parameter.id] ?? ""),
@@ -218,6 +270,7 @@ var ComponentShapeToolbarMixin = {
             this.renderComponentModelButtonTemplate(buttonContentElement);
         for (const controls of Object.values(this._componentTermControls ?? {}))
             controls?.termControl?.refresh();
+        this._axisRangeControl?.refresh();
     },
     showContextToolbar() {
         this.refreshComponentToolbarControls();
@@ -225,4 +278,4 @@ var ComponentShapeToolbarMixin = {
     }
 };
 
-if (typeof ComponentShape !== "undefined") Object.assign(ComponentShape.prototype, ComponentShapeToolbarMixin);
+if (typeof ComponentShape !== "undefined") Object.assign(ComponentShape.prototype, CharacterPickerMixin, ComponentShapeToolbarMixin);

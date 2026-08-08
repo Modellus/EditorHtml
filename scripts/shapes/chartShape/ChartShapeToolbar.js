@@ -256,85 +256,9 @@ var ChartShapeToolbarMixin = {
             text: "Tangent",
             buildControl: $container => $container.append(this._tangentColorPicker)
         });
-        listItems.push({
-            text: "Horizontal",
-            buildControl: $container => {
-                const wrapper = $('<div style="display: flex; gap: 6px;">');
-                const disabled = this.properties.autoScale === true;
-                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                    value: this.properties.domainOverride?.xMin ?? null,
-                    placeholder: "Min",
-                    disabled: disabled,
-                    onInitialized: e => { this._xMinBoxInstance = e.component; },
-                    onValueChanged: e => {
-                        if (this.properties.autoScale === true)
-                            return;
-                        if (!this.properties.domainOverride)
-                            this.properties.domainOverride = this.getDefaultDomainOverride();
-                        this.properties.domainOverride.xMin = e.value;
-                        this.chart.setDomainOverride(this.properties.domainOverride);
-                        this.board.markDirty(this);
-                    }
-                }));
-                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                    value: this.properties.domainOverride?.xMax ?? null,
-                    placeholder: "Max",
-                    disabled: disabled,
-                    onInitialized: e => { this._xMaxBoxInstance = e.component; },
-                    onValueChanged: e => {
-                        if (this.properties.autoScale === true)
-                            return;
-                        if (!this.properties.domainOverride)
-                            this.properties.domainOverride = this.getDefaultDomainOverride();
-                        this.properties.domainOverride.xMax = e.value;
-                        this.chart.setDomainOverride(this.properties.domainOverride);
-                        this.board.markDirty(this);
-                    }
-                }));
-                this.createAxisTypeButtonGroup("xAxisType").appendTo(wrapper);
-                wrapper.appendTo($container);
-            }
-        });
-        listItems.push({
-            text: "Vertical",
-            buildControl: $container => {
-                const wrapper = $('<div style="display: flex; gap: 6px;">');
-                const autoScale = this.properties.autoScale === true;
-                const equalScales = this.properties.equalScales === true;
-                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                    value: this.properties.domainOverride?.yMin ?? null,
-                    placeholder: "Min",
-                    disabled: autoScale || equalScales,
-                    onInitialized: e => { this._yMinBoxInstance = e.component; },
-                    onValueChanged: e => {
-                        if (this.properties.autoScale === true)
-                            return;
-                        if (!this.properties.domainOverride)
-                            this.properties.domainOverride = this.getDefaultDomainOverride();
-                        this.properties.domainOverride.yMin = e.value;
-                        this.chart.setDomainOverride(this.properties.domainOverride);
-                        this.board.markDirty(this);
-                    }
-                }));
-                $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
-                    value: this.properties.domainOverride?.yMax ?? null,
-                    placeholder: "Max",
-                    disabled: autoScale || equalScales,
-                    onInitialized: e => { this._yMaxBoxInstance = e.component; },
-                    onValueChanged: e => {
-                        if (this.properties.autoScale === true)
-                            return;
-                        if (!this.properties.domainOverride)
-                            this.properties.domainOverride = this.getDefaultDomainOverride();
-                        this.properties.domainOverride.yMax = e.value;
-                        this.chart.setDomainOverride(this.properties.domainOverride);
-                        this.board.markDirty(this);
-                    }
-                }));
-                this.createAxisTypeButtonGroup("yAxisType").appendTo(wrapper);
-                wrapper.appendTo($container);
-            }
-        });
+        this._axisRangeControl = this.createAxisRangeControl();
+        listItems.push({ text: "Horizontal", buildControl: $container => this._axisRangeControl.createRow("x").appendTo($container) });
+        listItems.push({ text: "Vertical", buildControl: $container => this._axisRangeControl.createRow("y").appendTo($container) });
         $(contentElement).empty();
         $(contentElement).dxScrollView({ height: 400, width: "100%" });
         const grid = $('<div class="mdl-dropdown-grid">');
@@ -345,6 +269,28 @@ var ChartShapeToolbarMixin = {
             grid.append(control);
         }
         grid.appendTo($(contentElement).dxScrollView("instance").content());
+    },
+    // The chart's ends live in its domain override, and are only its own to set while it is not
+    // scaling itself; the axis type sits on the same row.
+    createAxisRangeControl() {
+        return new AxisRangeControl({
+            read: (axis, bound) => this.getEditedDomain()?.[`${axis}${bound}`] ?? null,
+            write: (axis, bound, value) => {
+                if (!this.properties.domainOverride)
+                    this.properties.domainOverride = this.getDefaultDomainOverride();
+                this.properties.domainOverride[`${axis}${bound}`] = value;
+                this.chart.setDomainOverride(this.properties.domainOverride);
+                this.board.markDirty(this);
+            },
+            isDisabled: axis => this.properties.autoScale === true || (axis === "y" && this.properties.equalScales === true),
+            editorOptions: () => this.getPrecisionNumberEditorOptions({ showSpinButtons: false }),
+            trailing: axis => this.createAxisTypeButtonGroup(`${axis}AxisType`)
+        });
+    },
+    // While the chart is scaling itself the boxes show what it worked out; once it is not, they show
+    // what they have been set to.
+    getEditedDomain() {
+        return this.properties.autoScale === true ? this.chart?.renderState?.domain : this.properties.domainOverride;
     },
     createAxisTypeButtonGroup(axisProperty) {
         const currentType = this.properties[axisProperty] || "decimal";
@@ -398,7 +344,7 @@ var ChartShapeToolbarMixin = {
         renderChartTermsToolbarButton(this, element);
     },
     refreshDomainBoxes() {
-        refreshChartDomainEditorValues(this);
+        this._axisRangeControl?.refresh();
     },
     showContextToolbar() {
         this.termFormControls["xTerm"]?.termControl?.refresh();

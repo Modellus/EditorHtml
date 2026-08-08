@@ -26,6 +26,27 @@ class BlockChartGeometry {
         return { xScale: xScale, yScale: yScale };
     }
 
+    // The room a range fitted to values leaves around them, and what it does when the values are all
+    // the same one. A chart pads its data this way; an object that fits its axes to a recording pads
+    // it the same, so "auto scale" means one thing on the board.
+    static padDomain(xMinimum, xMaximum, yMinimum, yMaximum) {
+        let xMin = xMinimum;
+        let xMax = xMaximum;
+        let yMin = yMinimum;
+        let yMax = yMaximum;
+        if (xMin === xMax) {
+            xMin -= 1;
+            xMax += 1;
+        }
+        if (yMin === yMax) {
+            yMin -= 1;
+            yMax += 1;
+        }
+        const xPadding = (xMax - xMin) * 0.04;
+        const yPadding = (yMax - yMin) * 0.08;
+        return { xMin: xMin - xPadding, xMax: xMax + xPadding, yMin: yMin - yPadding, yMax: yMax + yPadding };
+    }
+
     // Widens the axis that has the finer pixels-per-unit so that one unit of x and one unit of
     // y measure the same on screen, which is what a phase portrait or a trajectory needs.
     static equalizeDomain(domain, plotWidth, plotHeight) {

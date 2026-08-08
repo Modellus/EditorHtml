@@ -229,7 +229,10 @@ class BlockValidator {
                 this.addError(result, "UNKNOWN_PARAMETER", `${path}.parameters.${name}`, `Component "${node.type}" has no parameter "${name}".`, { suggestion: this.suggestParameter(registration, name) });
                 continue;
             }
-            if (parameter.agentAccessible === false)
+            // The pass-through an instance carries for every parameter — { parameter: "<its own
+            // id>" } — is not a value set on the object: it is how the shape's own property reaches
+            // it, and a parameter the object keeps for itself has one like every other.
+            if (parameter.agentAccessible === false && value?.parameter !== name)
                 this.addWarning(result, "PARAMETER_NOT_AGENT_ACCESSIBLE", `${path}.parameters.${name}`, `Parameter "${name}" is not meant to be set automatically.`);
             this.validatePropertyValue(value, Object.assign({ bindable: parameter.bindable !== false }, parameter), result, `${path}.parameters.${name}`);
         }

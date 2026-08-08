@@ -327,26 +327,7 @@ class ChartControl {
             xValues.push(0, 1);
         if (yValues.length === 0)
             yValues.push(0, 1);
-        let xMin = Math.min(...xValues);
-        let xMax = Math.max(...xValues);
-        let yMin = Math.min(...yValues);
-        let yMax = Math.max(...yValues);
-        if (xMin === xMax) {
-            xMin -= 1;
-            xMax += 1;
-        }
-        if (yMin === yMax) {
-            yMin -= 1;
-            yMax += 1;
-        }
-        const xPadding = (xMax - xMin) * 0.04;
-        const yPadding = (yMax - yMin) * 0.08;
-        const domain = {
-            xMin: xMin - xPadding,
-            xMax: xMax + xPadding,
-            yMin: yMin - yPadding,
-            yMax: yMax + yPadding
-        };
+        const domain = BlockChartGeometry.padDomain(Math.min(...xValues), Math.max(...xValues), Math.min(...yValues), Math.max(...yValues));
         if (this.domainOverride.xMin != null)
             domain.xMin = this.domainOverride.xMin;
         if (this.domainOverride.xMax != null)
@@ -399,42 +380,7 @@ class ChartControl {
     }
 
     formatAxisValue(value, axisType = "decimal") {
-        if (!Number.isFinite(value))
-            return "";
-        if (axisType === "pi")
-            return this.formatPiValue(value);
-        const absoluteValue = Math.abs(value);
-        if (absoluteValue >= 10000 || (absoluteValue > 0 && absoluteValue < 0.001))
-            return value.toExponential(2);
-        const roundedValue = Math.round(value * 1000) / 1000;
-        return String(roundedValue);
-    }
-
-    formatPiValue(value) {
-        if (!Number.isFinite(value))
-            return "";
-        if (Math.abs(value) < 1e-10)
-            return "0";
-        const ratio = value / Math.PI;
-        const sign = ratio < 0 ? "-" : "";
-        const absoluteRatio = Math.abs(ratio);
-        let match = null;
-        for (let denominator = 1; denominator <= 12; denominator++) {
-            const numerator = Math.round(absoluteRatio * denominator);
-            if (numerator === 0)
-                continue;
-            if (Math.abs(absoluteRatio - numerator / denominator) < 1e-6) {
-                match = { numerator: numerator, denominator: denominator };
-                break;
-            }
-        }
-        if (!match)
-            return `${this.formatAxisValue(ratio)}π`;
-        const divisor = greatestCommonDivisor(match.numerator, match.denominator);
-        const numerator = match.numerator / divisor;
-        const denominator = match.denominator / divisor;
-        const numeratorText = numerator === 1 ? "π" : `${numerator}π`;
-        return denominator === 1 ? `${sign}${numeratorText}` : `${sign}${numeratorText}/${denominator}`;
+        return formatAxisTickValue(value, axisType);
     }
 
     formatCrosshairValue(value) {

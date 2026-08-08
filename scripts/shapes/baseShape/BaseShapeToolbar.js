@@ -291,13 +291,7 @@ var ShapeToolbarPresentationMixin = {
         return `<i class="${weight} ${iconName} mdl-menu-icon"></i>`;
     },
     populateShapeColorMenuSections(sections) {
-        const backgroundLabel = this.board.translations.get("Background Color") ?? "Background";
-        this._bgColorPicker = this.createColorPickerEditor("backgroundColor");
-        sections[0].items.push({
-            text: backgroundLabel,
-            iconHtml: this.menuIconHtml("fa-fill", !!this.properties.backgroundColor),
-            buildControl: $container => $container.append(this._bgColorPicker)
-        });
+        this.pushColorMenuItem(sections, "backgroundColor", "Background Color", "fa-fill");
     },
     refreshShapeColorToolbarControl() {
         if (!this._shapeColorDropdownElement)
@@ -309,8 +303,8 @@ var ShapeToolbarPresentationMixin = {
             this.getColorControl().refreshColorPickerButtonTemplate(this._fgColorPicker, this.properties.foregroundColor);
         if (this._borderColorPicker)
             this.getColorControl().refreshColorPickerButtonTemplate(this._borderColorPicker, this.properties.borderColor);
-        if (this._bgColorPicker)
-            this.getColorControl().refreshColorPickerButtonTemplate(this._bgColorPicker, this.properties.backgroundColor);
+        for (const [property, picker] of Object.entries(this._colorMenuPickers ?? {}))
+            this.getColorControl().refreshColorPickerButtonTemplate(picker, this.properties[property]);
         this._opacitySliderInstance?.option("value", Math.round(resolveShapeToolbarOpacity(this) * 100));
     },
     getCopySubMenuItems() {
@@ -633,11 +627,35 @@ var BaseShapeToolbarMixin = {
         });
         this._removeDropdownElement.appendTo(itemElement);
     },
-    buildRemoveMenuContent(contentElement) {
-        const items = [
+    // What a colour is called and shown as, wherever it is offered: a chart, a referential and an
+    // object built from blocks all paint the same three things, so they all label them the same.
+    plotColorMenuItems: {
+        backgroundColor: { label: "Background", icon: "fa-fill" },
+        dataAreaColor: { label: "Data Area", icon: "fa-chart-area" },
+        axisColor: { label: "Axis", icon: "fa-axis-x" }
+    },
+    pushColorMenuItem(sections, property, label, icon) {
+        const picker = this.createColorPickerEditor(property);
+        this._colorMenuPickers ??= {};
+        this._colorMenuPickers[property] = picker;
+        sections[0].items.push({
+            text: this.board.translations.get(label) ?? label,
+            iconHtml: this.menuIconHtml(icon, !!this.properties[property]),
+            buildControl: $container => $container.append(picker)
+        });
+        return picker;
+    },
+    // Everything a shape can be taken back to: the whole shape, the settings it came with, and — for
+    // a shape that holds something it was given — what it is holding. A shape that has nothing to
+    // clear does not offer it.
+    getRemoveMenuItems() {
+        return [
             { text: "Remove", icon: "fa-light fa-trash-can", action: () => this.remove() },
             { text: "Reset", icon: "fa-light fa-arrow-rotate-left", action: () => this.resetToDefaults() }
         ];
+    },
+    buildRemoveMenuContent(contentElement) {
+        const items = this.getRemoveMenuItems();
         $(contentElement).empty();
         $('<div>').appendTo(contentElement).dxList({
             dataSource: items,

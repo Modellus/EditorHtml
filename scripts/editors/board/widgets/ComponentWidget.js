@@ -3,6 +3,7 @@ class ComponentShape extends BaseShape {
 
     constructor(board, parent, id) {
         super(board, null, id);
+        this._axisTickDrag = new AxisTickDrag();
     }
 
     static createInstanceProperties(componentType, name = null) {
@@ -82,12 +83,18 @@ class ComponentShape extends BaseShape {
         super.setProperties(properties);
         if (!properties.definition && Object.keys(properties).some(name => this.isComponentParameter(name)))
             BlockObjects.markEdited(this.properties.definition);
+        if (Object.keys(properties).some(name => this.isMemoryDataProperty(name)))
+            this.refreshModelData();
     }
 
     setProperty(name, value) {
         super.setProperty(name, value);
         if (name !== "definition" && this.isComponentParameter(name))
             BlockObjects.markEdited(this.properties.definition);
+        // Recording writes a sample at a time, so the model is told what it now holds and works it
+        // through once, when the recording ends.
+        if (this.isMemoryDataProperty(name))
+            this.publishModelData();
     }
 
     migrateDefinition(definition) {
@@ -117,10 +124,122 @@ class ComponentShape extends BaseShape {
         return {
             width: Number(this.properties.width) || 180,
             height: Number(this.properties.height) || 180,
-            parameters: this.properties,
+            parameters: this.getCompilationParameters(),
             caseNumber: this.getTermCaseNumber("caseNumber"),
+            iteration: this.board.calculator.getIteration(),
+            playing: this.board.calculator.isPlaying(),
+            precision: this.board.calculator.getPrecision(),
             tokens: new BlockTokens(this.properties.preset ?? this.properties.definition?.preset ?? "standard")
         };
+    }
+
+    // The character a component wears is chosen by key and drawn from the catalogue, so what the
+    // definition needs — the image, the pivot and the shape of the image — is worked out here and
+    // handed to the compilation beside the properties the shape holds itself.
+    getCompilationParameters() {
+        const character = this.getComponentCharacterValues();
+        const range = this.getAxisRangeValues();
+        if (!character && !this._pointerValues && !range)
+            return this.properties;
+        return Object.assign({}, this.properties, character, this._pointerValues, range);
+    }
+
+    // Auto scale and equal axis are the chart's two, and an object gets them by declaring them: the
+    // run is fitted with the margins the chart pads its data with, and the axes are made to share a
+    // scale by the same function the chart calls. What they work out is handed to the drawing and to
+    // the toolbar, and never written down — the ends the object was set to are still its own.
+    hasAxisRangeOptions() {
+        return this.isComponentParameter("autoScale") || this.isComponentParameter("equalScales");
+    }
+
+    getStoredAxisRange() {
+        return {
+            xMin: Number(this.properties.minimumX),
+            xMax: Number(this.properties.maximumX),
+            yMin: Number(this.properties.minimumY),
+            yMax: Number(this.properties.maximumY)
+        };
+    }
+
+    getEffectiveAxisRange() {
+        const fitted = this.properties.autoScale === true ? this.getFittedAxisRange() : null;
+        const domain = fitted ?? this.getStoredAxisRange();
+        if (this.properties.equalScales !== true)
+            return domain;
+        const plot = this.getPlotBox();
+        if (!plot)
+            return domain;
+        return BlockChartGeometry.equalizeDomain(domain, plot.width, plot.height);
+    }
+
+    // What the object is holding, in the units of its own axes. Nothing recorded is nothing to fit.
+    getFittedAxisRange() {
+        const xValues = [];
+        const yValues = [];
+        for (const parameter of this.getMemoryParameters()) {
+            for (const row of this.readMemory(parameter.id)) {
+                xValues.push(BlockMemory.readField(row, "x"));
+                yValues.push(BlockMemory.readField(row, "y"));
+            }
+        }
+        if (xValues.length === 0)
+            return null;
+        return BlockChartGeometry.padDomain(Math.min(...xValues), Math.max(...xValues), Math.min(...yValues), Math.max(...yValues));
+    }
+
+    getAxisRangeValues() {
+        if (!this.hasAxisRangeOptions())
+            return null;
+        const domain = this.getEffectiveAxisRange();
+        return { minimumX: domain.xMin, maximumX: domain.xMax, minimumY: domain.yMin, maximumY: domain.yMax };
+    }
+
+    // Equal axis is about pixels, so it needs the box the drawing plots in. The object says where
+    // that is by naming the node "plot"; the box is the same whatever the range is, so the one the
+    // last drawing used is the one to measure.
+    getPlotBox() {
+        const node = BlockRenderer.flatten(this.lastCompilation?.nodes ?? []).find(entry => entry.sourceId === "plot");
+        if (!node)
+            return null;
+        return { width: Number(node.attributes.width), height: Number(node.attributes.height) };
+    }
+
+    getCharacterParameter() {
+        return BlockObjects.getComponentParameters(this.getComponentType()).find(parameter => parameter.valueType === "character") ?? null;
+    }
+
+    getComponentCharacterValues() {
+        const parameter = this.getCharacterParameter();
+        if (!parameter)
+            return null;
+        const characterKey = String(this.properties[parameter.id] ?? "");
+        if (characterKey === "")
+            return null;
+        const character = CharacterLibrary.get(characterKey);
+        if (!character) {
+            this.loadComponentCharacter(characterKey);
+            return null;
+        }
+        const imageUrl = CharacterLibrary.getImageUrl(character);
+        CharacterLibrary.loadAspectRatio(imageUrl, () => this.board.markDirty(this));
+        return {
+            characterImage: imageUrl,
+            characterPivotX: character.centerPoint?.x ?? 0.5,
+            characterPivotY: character.centerPoint?.y ?? 0.5,
+            characterAspect: CharacterLibrary.getAspectRatio(imageUrl) ?? 1
+        };
+    }
+
+    // Asked for once per key: a draw that is waiting for the definition must not ask again, or the
+    // drawing that follows every answer would ask a third time.
+    loadComponentCharacter(characterKey) {
+        const apiClient = this.board.shell?.modelsApiClient;
+        if (!apiClient || this._characterFetchKey === characterKey)
+            return;
+        this._characterFetchKey = characterKey;
+        CharacterLibrary.fetch(characterKey, apiClient)
+            .then(() => this.board.markDirty(this))
+            .catch(() => {});
     }
 
     compileComponent() {
@@ -173,6 +292,263 @@ class ComponentShape extends BaseShape {
             this.attachDragAngleBehaviour(element, behaviour.input, true);
         if (behaviour.type === "clickable")
             this.attachClickableBehaviour(element, behaviour.input);
+        if (behaviour.type === "remember")
+            this.attachRememberBehaviour(element, behaviour.input);
+        if (behaviour.type === "forget")
+            this.attachForgetBehaviour(element, behaviour.input);
+        if (behaviour.type === "track-pointer")
+            this.attachTrackPointerBehaviour(element, behaviour.input);
+        if (behaviour.type === "drag-axis-tick")
+            this.attachAxisTickDragBehaviour(element, behaviour.input);
+        if (behaviour.type === "follow-pointer")
+            this.attachFollowPointerBehaviour(element, behaviour.input);
+    }
+
+    // Where the pointer is, in the units the drawing is scaled in. It is answered while the model is
+    // standing still: once it is playing, what the object shows is the iteration on screen, and the
+    // pointer has nothing to say about it. Nothing is written to the shape — the values are handed
+    // to the next compilation and forgotten — so hovering leaves no edit, no undo and no dirty file.
+    attachFollowPointerBehaviour(element, input) {
+        if (!this.isInteractable())
+            return;
+        element.setAttribute("pointer-events", "all");
+        element.addEventListener("pointermove", event => this.onFollowPointerMove(event, input));
+        element.addEventListener("pointerleave", () => this.onFollowPointerLeave());
+    }
+
+    onFollowPointerMove(event, input) {
+        if (this.board.calculator.isPlaying())
+            return;
+        const sample = this.getTrackedSample(input, this.getComponentLocalPoint(event));
+        this._pointerValues = {
+            [input.xParameter]: sample.x,
+            [input.yParameter]: sample.y,
+            [input.activeParameter]: 1
+        };
+        this.board.markDirty(this);
+    }
+
+    onFollowPointerLeave() {
+        if (!this._pointerValues)
+            return;
+        this._pointerValues = null;
+        this.board.markDirty(this);
+    }
+
+    // Pulling a tick stretches the axis under it: the end the axis starts from stays where it is and
+    // the other end follows, which is the chart's own arithmetic — the new scale is how much value
+    // one pixel is worth once the tick has been dragged to where the pointer is.
+    attachAxisTickDragBehaviour(element, input) {
+        if (!this.isInteractable() || this.isLocked())
+            return;
+        if (this.getBehaviourProperty({ property: input.minimumProperty }) === null || this.getBehaviourProperty({ property: input.maximumProperty }) === null)
+            return;
+        element.style.cursor = input.axis === "x" ? "ew-resize" : "ns-resize";
+        element.setAttribute("pointer-events", "all");
+        element.addEventListener("pointerdown", event => this.onAxisTickDragStart(event, input));
+    }
+
+    onAxisTickDragStart(event, input) {
+        event.preventDefault();
+        event.stopPropagation();
+        const minimum = Number(this.properties[input.minimumProperty]);
+        const originPixel = Number(input.originPixel);
+        const lengthPixels = Number(input.lengthPixels);
+        const tickPixel = input.axis === "x"
+            ? originPixel + (Number(input.value) - minimum) / (Number(this.properties[input.maximumProperty]) - minimum) * lengthPixels
+            : originPixel - (Number(input.value) - minimum) / (Number(this.properties[input.maximumProperty]) - minimum) * lengthPixels;
+        const started = this._axisTickDrag.start(event, {
+            tickOffsetValue: Number(input.value) - minimum,
+            tickOffsetPixel: input.axis === "x" ? tickPixel - originPixel : originPixel - tickPixel,
+            getPixelOffset: moveEvent => {
+                const point = this.getComponentLocalPoint(moveEvent);
+                return input.axis === "x" ? point.x - originPixel : originPixel - point.y;
+            },
+            onMove: newScale => {
+                this.setProperty(input.maximumProperty, minimum + newScale * lengthPixels);
+                this.board.markDirty(this);
+            },
+            onEnd: () => {
+                this.board.pointerLocked = false;
+                this.dragEnd();
+            }
+        });
+        if (!started)
+            return;
+        this.board.pointerLocked = true;
+        this.dragStart();
+    }
+
+    // A memory is a parameter of the object like any other, so writing one is writing a property:
+    // the model carries it, undo restores it and collaboration sends it with nothing else to do.
+    getMemoryParameter(input) {
+        const memory = String(input.memory ?? "");
+        if (memory === "" || !this.isComponentParameter(memory))
+            return null;
+        return memory;
+    }
+
+    isMemoryInteractionAllowed() {
+        return this.isInteractable() && !this.isLocked();
+    }
+
+    readMemory(memory) {
+        return BlockMemory.read(this.properties, memory);
+    }
+
+    appendMemoryRow(memory, row, limit) {
+        const rows = BlockMemory.append(this.readMemory(memory), row, limit);
+        this.setProperty(memory, rows);
+        return rows;
+    }
+
+    attachRememberBehaviour(element, input) {
+        const memory = this.getMemoryParameter(input);
+        if (memory === null || !this.isMemoryInteractionAllowed())
+            return;
+        element.style.cursor = "pointer";
+        element.setAttribute("pointer-events", "all");
+        element.addEventListener("pointerdown", event => {
+            event.preventDefault();
+            this.beginClickEdit();
+            this.appendMemoryRow(memory, BlockMemory.createRow(input.text, input.x, input.y), input.limit);
+            this.refreshModelData();
+        });
+    }
+
+    attachForgetBehaviour(element, input) {
+        const memory = this.getMemoryParameter(input);
+        if (memory === null || !this.isMemoryInteractionAllowed())
+            return;
+        element.style.cursor = "pointer";
+        element.setAttribute("pointer-events", "all");
+        element.addEventListener("pointerdown", event => {
+            event.preventDefault();
+            this.beginClickEdit();
+            this.setProperty(memory, []);
+            this.refreshModelData();
+        });
+    }
+
+    attachTrackPointerBehaviour(element, input) {
+        const memory = this.getMemoryParameter(input);
+        if (memory === null || !this.isMemoryInteractionAllowed())
+            return;
+        element.style.cursor = "crosshair";
+        element.setAttribute("pointer-events", "all");
+        element.addEventListener("pointerdown", event => this.onTrackPointerStart(event, input, memory));
+    }
+
+    // The whole drag is one recording: it opens with the pointer going down, samples on its own
+    // clock so a pause is recorded as a pause rather than as nothing, and closes as one edit.
+    onTrackPointerStart(event, input, memory) {
+        if (!this.isMemoryInteractionAllowed())
+            return;
+        event.preventDefault();
+        this.board.pointerLocked = true;
+        this._trackInput = input;
+        this._trackMemory = memory;
+        this._trackPoint = this.getComponentLocalPoint(event);
+        this.dragStart();
+        if (input.mode === "replace")
+            this.setProperty(memory, []);
+        this._trackMove = moveEvent => { this._trackPoint = this.getComponentLocalPoint(moveEvent); };
+        this._trackEnd = () => this.onTrackPointerEnd();
+        window.addEventListener("pointermove", this._trackMove);
+        window.addEventListener("pointerup", this._trackEnd);
+        window.addEventListener("pointercancel", this._trackEnd);
+        this.recordTrackedSample();
+        this._trackTimer = setInterval(() => this.recordTrackedSample(), Math.max(10, Number(input.sampleMs)));
+    }
+
+    recordTrackedSample() {
+        const input = this._trackInput;
+        const sample = this.getTrackedSample(input, this._trackPoint);
+        this.appendMemoryRow(this._trackMemory, BlockMemory.createRow("", sample.x, sample.y), input.limit);
+    }
+
+    // What is recorded is a pair of values, not a pair of pixels: the node hands over the origin and
+    // the scale it is drawn with, so the sample means the same thing the axes beside it read.
+    getTrackedSample(input, point) {
+        const scaleX = Number(input.scaleX) || 1;
+        const scaleY = Number(input.scaleY) || 1;
+        return {
+            x: this.clampSampleValue((point.x - Number(input.originX)) / scaleX, input.minimumX, input.maximumX),
+            y: this.clampSampleValue((point.y - Number(input.originY)) / scaleY, input.minimumY, input.maximumY)
+        };
+    }
+
+    clampSampleValue(value, minimum, maximum) {
+        let result = value;
+        if (minimum !== null && minimum !== undefined && Number.isFinite(Number(minimum)))
+            result = Math.max(Number(minimum), result);
+        if (maximum !== null && maximum !== undefined && Number.isFinite(Number(maximum)))
+            result = Math.min(Number(maximum), result);
+        return result;
+    }
+
+    onTrackPointerEnd() {
+        clearInterval(this._trackTimer);
+        window.removeEventListener("pointermove", this._trackMove);
+        window.removeEventListener("pointerup", this._trackEnd);
+        window.removeEventListener("pointercancel", this._trackEnd);
+        this._trackTimer = null;
+        this._trackMove = null;
+        this._trackEnd = null;
+        this.board.pointerLocked = false;
+        this.dragEnd();
+        this.refreshModelData();
+    }
+
+    // A memory whose fields name model terms is measurements: the model takes row i as iteration i,
+    // the way it takes a data table's rows, and everything reading those terms — a chart, a table,
+    // a body — reads the recording without knowing where it came from. The values stay on the shape
+    // as well, because that is what the file, undo and collaboration carry.
+    getMemoryParameters() {
+        return BlockObjects.getComponentParameters(this.getComponentType()).filter(parameter => parameter.valueType === "memory");
+    }
+
+    getMemorySourceId(parameterId) {
+        return `memory:${this.id}:${parameterId}`;
+    }
+
+    buildMemorySeries(parameter) {
+        const fieldTerms = {};
+        for (const [field, termParameter] of Object.entries(parameter.termParameters ?? {})) {
+            const termName = String(this.properties[termParameter] ?? "");
+            // A name the model works out for itself would be overwritten by the recording, so the
+            // column is left out and the model keeps its own answer.
+            if (termName === "" || !this.board.calculator.isEditable(termName))
+                continue;
+            fieldTerms[field] = termName;
+        }
+        return BlockMemory.toTermSeries(this.readMemory(parameter.id), fieldTerms);
+    }
+
+    isMemoryDataProperty(name) {
+        for (const parameter of this.getMemoryParameters()) {
+            if (parameter.id === name || Object.values(parameter.termParameters ?? {}).includes(name))
+                return true;
+        }
+        return false;
+    }
+
+    publishModelData() {
+        let feedsModel = false;
+        for (const parameter of this.getMemoryParameters()) {
+            const series = this.buildMemorySeries(parameter);
+            this.board.calculator.setDataSource(this.getMemorySourceId(parameter.id), series.names, series.values);
+            feedsModel = feedsModel || series.names.length > 0;
+        }
+        return feedsModel;
+    }
+
+    // The editing path: the model is holding different measurements now, so it works them through
+    // and everything reading them is redrawn, exactly as editing a data table does.
+    refreshModelData() {
+        if (!this.publishModelData())
+            return;
+        this.board.calculator.refreshDataSources();
     }
 
     attachDragAngleBehaviour(element, input, relative = false) {

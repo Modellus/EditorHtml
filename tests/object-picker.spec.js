@@ -53,7 +53,7 @@ test.describe('object picker', () => {
         await openPicker(page);
         const cards = await readCards(page);
         expect(cards.map(card => card.key)).toEqual([
-            'analogue-clock', 'calculator', 'circular-gauge', 'compass', 'orbit-system', 'rotating-vector', 'speedometer', 'BlockChartShape'
+            'analogue-clock', 'calculator', 'circular-gauge', 'compass', 'mouse-tracker', 'orbit-system', 'rotating-vector', 'speedometer', 'BlockChartShape'
         ]);
         for (const card of cards.filter(entry => entry.key !== 'BlockChartShape')) {
             expect(card.previewNodeCount, card.key).toBeGreaterThan(0);

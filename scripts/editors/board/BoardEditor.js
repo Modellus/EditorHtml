@@ -465,7 +465,8 @@ class BoardEditor extends Workspace {
         });
         this.board.shapes.shapes.forEach(shape => {
             if (shape.properties?.externalData)
-                this.calculator.loadExternalData(shape.properties.externalData.names, shape.properties.externalData.values);
+                this.calculator.loadExternalData(shape.properties.externalData.names, shape.properties.externalData.values, shape.id);
+            shape.publishModelData();
         });
         this.calculator.applyPreloadedOutlierIterations();
         this.calculator.applyPreloadedRegressionTerms();
