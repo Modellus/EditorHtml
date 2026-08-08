@@ -670,6 +670,72 @@ var BlockComponentHelpers = {
         }
     });
 
+    // A part, not an object: it carries no interaction of its own and never appears in the picker.
+    // Put it inside a group and give that group the behaviour the key performs, so the same cap
+    // serves a keypad, a legend or a toolbar.
+    registry.register({
+        type: "key-cap",
+        category: "component",
+        displayName: "Key cap",
+        description: "Rounded key with a centred label. It carries no interaction of its own: put it inside a group and give that group the behaviour the key performs, so the same cap serves a keypad, a legend or a toolbar.",
+        icon: "fa-light fa-square",
+        tags: ["key", "button", "label", "panel"],
+        capabilities: ["sizable", "textual"],
+        parameters: [
+            BlockComponentHelpers.parameter("x", "X", "number", 0, { category: "layout" }),
+            BlockComponentHelpers.parameter("y", "Y", "number", 0, { category: "layout" }),
+            BlockComponentHelpers.parameter("width", "Width", "number", 44, { category: "layout", minimum: 0 }),
+            BlockComponentHelpers.parameter("height", "Height", "number", 32, { category: "layout", minimum: 0 }),
+            BlockComponentHelpers.parameter("label", "Label", "string", "", { category: "display" }),
+            BlockComponentHelpers.parameter("fill", "Key colour", "colour", "token:surface.default", { category: "style" }),
+            BlockComponentHelpers.parameter("borderColor", "Border colour", "colour", "token:stroke.subtle", { category: "style" }),
+            BlockComponentHelpers.parameter("borderWidth", "Border width", "number", 1, { category: "style", minimum: 0 }),
+            BlockComponentHelpers.parameter("cornerRadius", "Corner radius", "number", 6, { category: "style", minimum: 0 }),
+            BlockComponentHelpers.parameter("labelColor", "Label colour", "colour", "token:text.primary", { category: "style" }),
+            BlockComponentHelpers.parameter("fontSize", "Font size", "number", 14, { category: "style", minimum: 1 }),
+            BlockComponentHelpers.parameter("fontWeight", "Font weight", "number", 500, { category: "style", minimum: 100, maximum: 900 })
+        ],
+        create: (parameters, context) => {
+            const labelX = Number(parameters.x) + Number(parameters.width) / 2;
+            const labelY = Number(parameters.y) + Number(parameters.height) / 2;
+            return {
+                id: "key-cap",
+                type: "group",
+                children: [
+                    {
+                        id: "cap",
+                        type: "rect",
+                        properties: {
+                            x: parameters.x,
+                            y: parameters.y,
+                            width: parameters.width,
+                            height: parameters.height,
+                            cornerRadius: parameters.cornerRadius,
+                            fill: context.tokens.resolveValue(parameters.fill),
+                            stroke: context.tokens.resolveValue(parameters.borderColor),
+                            strokeWidth: parameters.borderWidth
+                        }
+                    },
+                    {
+                        id: "label",
+                        type: "text",
+                        properties: {
+                            x: labelX,
+                            y: labelY,
+                            text: parameters.label,
+                            fontSize: parameters.fontSize,
+                            fontWeight: parameters.fontWeight,
+                            fill: context.tokens.resolveValue(parameters.labelColor),
+                            stroke: "none",
+                            textAnchor: "middle",
+                            baseline: "central"
+                        }
+                    }
+                ]
+            };
+        }
+    });
+
 })(BlockRegistry);
 
 if (typeof module !== "undefined" && module.exports)
