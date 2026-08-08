@@ -1218,6 +1218,13 @@ svg:active.pan-available {
     box-sizing: border-box;
 }
 
+.mdl-shape-color-btn-thumb {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    display: block;
+}
+
 .mdl-shape-color-popup-content {
     display: flex;
     flex-direction: column;

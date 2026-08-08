@@ -116,6 +116,15 @@ class ComponentShape extends BaseShape {
         return BlockRegistry.get(this.getComponentType());
     }
 
+    getShapeIcon() {
+        return this.getComponentRegistration()?.icon ?? super.getShapeIcon();
+    }
+
+    getShapeThumbnailUrl() {
+        const componentType = this.getComponentType();
+        return BlockObjectCatalogue.getEntries().find(entry => entry.type === componentType)?.thumbnail_url ?? null;
+    }
+
     getEditableParameters() {
         return BlockObjects.getEditableParameters(this.properties.definition);
     }

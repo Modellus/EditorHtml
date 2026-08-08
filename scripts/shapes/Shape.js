@@ -31,7 +31,25 @@ class BaseShape {
         MindMapRectangleShape: "fa-light fa-rectangle",
         MindMapCircleShape: "fa-light fa-circle",
         MindMapConnectorShape: "fa-light fa-arrow-right-long",
-        ComponentShape: "fa-light fa-shapes"
+        ComponentShape: "fa-light fa-shapes",
+        BodyNotebookShape: "fa-light fa-circle",
+        PointNotebookShape: "fa-solid fa-dot",
+        VectorNotebookShape: "fa-light fa-arrow-right-long",
+        LineNotebookShape: "fa-light fa-slash-forward",
+        ArcNotebookShape: "fa-light fa-circle-half-stroke",
+        ChartNotebookShape: "fa-light fa-chart-line",
+        TableNotebookShape: "fa-light fa-table",
+        SliderNotebookShape: "fa-light fa-slider",
+        ValueNotebookShape: "fa-light fa-input-numeric",
+        MediaNotebookShape: "fa-light fa-photo-film-music",
+        ExpressionNotebookShape: "fa-light fa-function",
+        TextNotebookShape: "fa-light fa-text",
+        QuestionNotebookShape: "fa-light fa-clipboard-question",
+        RulerNotebookShape: "fa-light fa-ruler",
+        ProtractorNotebookShape: "fa-light fa-angle",
+        SlopeNotebookShape: "fa-light fa-ruler-triangle",
+        ReferentialNotebookShape: "fa-light fa-shapes",
+        GaugeNotebookShape: "fa-light fa-gauge"
     };
 
     static buildShapeTreeItem(shape) {
@@ -40,7 +58,8 @@ class BaseShape {
         return {
             id: shape.id,
             text: shape.properties.name ?? "",
-            icon: BaseShape.shapeIcons[shape.constructor.name] ?? "fa-light fa-shapes",
+            icon: shape.getShapeIcon(),
+            thumbnailUrl: shape.getShapeThumbnailUrl(),
             color: shape.properties.foregroundColor ?? null,
             characterImage,
             expanded: true,
@@ -51,6 +70,8 @@ class BaseShape {
     static renderShapeTreeItemHtml(data) {
         if (data.characterImage)
             return `<img class="mdl-parent-tree-character" src="${data.characterImage}" alt="${data.text}" title="${data.text}"/><span title="${data.text}">${data.text}</span>`;
+        if (data.thumbnailUrl)
+            return `<img class="mdl-parent-tree-character" src="${data.thumbnailUrl}" alt="${data.text}" title="${data.text}"/><span title="${data.text}">${data.text}</span>`;
         const solidIcon = data.icon.replace("fa-light", "fa-solid");
         const colorPart = data.color ? `color:${data.color};` : "";
         return `<i class="dx-icon ${solidIcon}" style="${colorPart}margin-right:8px"></i><span title="${data.text}">${data.text}</span>`;
@@ -58,6 +79,14 @@ class BaseShape {
 
     static setup() {
         BaseShape.loadEmbeddedFonts();
+    }
+
+    getShapeIcon() {
+        return BaseShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes";
+    }
+
+    getShapeThumbnailUrl() {
+        return null;
     }
 
     static async loadEmbeddedFonts() {
@@ -1209,8 +1238,7 @@ class BaseShape {
 
     renderShapeColorButtonTemplate(element) {
         const name = this.properties.name ?? "";
-        const icon = BaseShape.shapeIcons[this.constructor.name] ?? "fa-light fa-shapes";
-        element.innerHTML = `<span class="mdl-shape-color-btn"><i class="${icon}"></i></span><span>${name}</span>`;
+        element.innerHTML = `<span class="mdl-shape-color-btn"><i class="${this.getShapeIcon()}"></i></span><span>${name}</span>`;
     }
 
     renderAddShapeButtonTemplate(element) {

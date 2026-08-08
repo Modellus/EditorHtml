@@ -28,58 +28,22 @@ function resolveShapeToolbarBaseItems(shape, currentCreateToolbar = null) {
     return createToolbar.call(shape) ?? [];
 }
 
-const ShapeToolbarIconMap = {
-    BodyShape: "fa-light fa-circle",
-    PointShape: "fa-solid fa-dot",
-    VectorShape: "fa-light fa-arrow-right-long",
-    LineShape: "fa-light fa-slash-forward",
-    ArcShape: "fa-light fa-circle-half-stroke",
-    ChartShape: "fa-light fa-chart-line",
-    BlockChartShape: "fa-light fa-chart-line",
-    TableShape: "fa-light fa-table",
-    DataTableShape: "fa-light fa-flask",
-    SliderShape: "fa-light fa-slider",
-    ValueShape: "fa-light fa-input-numeric",
-    MediaShape: "fa-light fa-photo-film-music",
-    ExpressionShape: "fa-light fa-function",
-    TextShape: "fa-light fa-text",
-    QuestionShape: "fa-light fa-clipboard-question",
-    RulerShape: "fa-light fa-ruler",
-    ProtractorShape: "fa-light fa-angle",
-    SlopeShape: "fa-light fa-ruler-triangle",
-    ReferentialShape: "fa-light fa-shapes",
-    GaugeShape: "fa-light fa-gauge",
-    MindMapBubbleShape: "fa-light fa-comment",
-    MindMapRectangleShape: "fa-light fa-rectangle",
-    MindMapCircleShape: "fa-light fa-circle",
-    MindMapConnectorShape: "fa-light fa-arrow-right-long",
-    ComponentShape: "fa-light fa-shapes",
-    BodyNotebookShape: "fa-light fa-circle",
-    PointNotebookShape: "fa-solid fa-dot",
-    VectorNotebookShape: "fa-light fa-arrow-right-long",
-    LineNotebookShape: "fa-light fa-slash-forward",
-    ArcNotebookShape: "fa-light fa-circle-half-stroke",
-    ChartNotebookShape: "fa-light fa-chart-line",
-    TableNotebookShape: "fa-light fa-table",
-    SliderNotebookShape: "fa-light fa-slider",
-    ValueNotebookShape: "fa-light fa-input-numeric",
-    MediaNotebookShape: "fa-light fa-photo-film-music",
-    ExpressionNotebookShape: "fa-light fa-function",
-    TextNotebookShape: "fa-light fa-text",
-    QuestionNotebookShape: "fa-light fa-clipboard-question",
-    RulerNotebookShape: "fa-light fa-ruler",
-    ProtractorNotebookShape: "fa-light fa-angle",
-    SlopeNotebookShape: "fa-light fa-ruler-triangle",
-    ReferentialNotebookShape: "fa-light fa-shapes",
-    GaugeNotebookShape: "fa-light fa-gauge"
-};
-
 function resolveShapeToolbarIcon(shape) {
     const injectedIcon = shape?.toolbarAdapter?.getShapeIcon?.(shape);
     if (injectedIcon)
         return injectedIcon;
-    const baseShapeIcons = typeof BaseShape !== "undefined" ? BaseShape.shapeIcons : null;
-    return baseShapeIcons?.[shape.constructor.name] ?? ShapeToolbarIconMap[shape.constructor.name] ?? "fa-light fa-shapes";
+    if (typeof shape.getShapeIcon === "function")
+        return shape.getShapeIcon();
+    return BaseShape.shapeIcons[shape.constructor.name] ?? "fa-light fa-shapes";
+}
+
+function resolveShapeToolbarThumbnail(shape) {
+    const injectedThumbnail = shape?.toolbarAdapter?.getShapeThumbnailUrl?.(shape);
+    if (injectedThumbnail)
+        return injectedThumbnail;
+    if (typeof shape.getShapeThumbnailUrl === "function")
+        return shape.getShapeThumbnailUrl();
+    return null;
 }
 
 function resolveShapeToolbarPaste(shape) {
@@ -268,6 +232,11 @@ var ShapeToolbarPresentationMixin = {
     },
     renderShapeColorButtonTemplate(element) {
         const name = this.properties.name ?? "";
+        const thumbnailUrl = resolveShapeToolbarThumbnail(this);
+        if (thumbnailUrl) {
+            element.innerHTML = `<span class="mdl-shape-color-btn"><img class="mdl-shape-color-btn-thumb" src="${thumbnailUrl}" alt="${name}"/></span><span>${name}</span>`;
+            return;
+        }
         const icon = resolveShapeToolbarIcon(this);
         element.innerHTML = `<span class="mdl-shape-color-btn"><i class="${icon}"></i></span><span>${name}</span>`;
     },
