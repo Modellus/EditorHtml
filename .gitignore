@@ -14,6 +14,10 @@ build/*
 !build/icon.png
 out/
 
+# Catalogue snapshot for the application build, collected by electron/build-catalogue.js.
+# Not committed: it is a copy of live data, and the web deploy publishes this directory.
+resources/catalogue/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

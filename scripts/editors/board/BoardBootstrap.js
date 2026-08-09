@@ -40,9 +40,13 @@ function redirectBoardToLogin() {
     window.location.href = "/pages/login/index.html";
 }
 
+// An installed copy carries the catalogue it was built with, so the pickers are given a client
+// that reads it. Without a snapshot there is nothing to read and they are told so, which is what
+// a build that skipped the collecting step has always done.
 function createOfflineBoardEditor() {
     const storedModel = sessionStorage.getItem("mp.anon.model");
-    const modelSession = new ModelSession(null);
+    const hasLocalCatalogue = typeof LocalCatalogueClient !== "undefined" && LocalCatalogueClient.isAvailable();
+    const modelSession = new ModelSession(hasLocalCatalogue ? new LocalCatalogueClient() : null);
     const boardEditor = new BoardEditor(modelSession, storedModel || null);
     boardEditor.saveToApi = () => boardEditor.exportToFile();
     boardEditor.saveAsModel = () => boardEditor.exportToFile();
