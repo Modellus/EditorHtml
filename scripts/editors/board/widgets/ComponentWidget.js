@@ -49,6 +49,12 @@ class ComponentShape extends BaseShape {
         this.properties.x = center.x - this.properties.width / 2;
         this.properties.y = center.y - this.properties.height / 2;
         this.properties.preset = "standard";
+        // Every shape runs this from its constructor, and a component is almost always about to be
+        // given the definition it was created for. The default type is a fallback for the one that
+        // is not, so an editor that does not carry it still builds the shape and waits for
+        // setProperties to say what it draws.
+        if (!registration)
+            return;
         this.properties.definition = BlockObjects.createComponentInstance(componentType, { name: this.properties.name, source: "developer" });
         Object.assign(this.properties, BlockObjects.getInstancePropertyDefaults(componentType, this.properties.preset));
     }
