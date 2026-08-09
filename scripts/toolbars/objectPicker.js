@@ -140,11 +140,16 @@ class ObjectPicker {
     // A catalogue entry and a registered object can name the same type — once an object has been
     // placed, it is registered for the session and the model carries it. The catalogue entry wins:
     // it is the one with a screenshot and the description its author wrote.
+    // By name, because the palette is scanned by name. It is also what keeps the grid still: the
+    // picker draws what is registered and draws again when the catalogue answers, and the
+    // catalogue lists newest first, so any order that follows the source would rearrange the
+    // cards under the pointer. The chart is a shape rather than an object and stays at the end.
     getItems() {
         const catalogueItems = this.getCatalogueItems();
         const catalogueTypes = new Set(catalogueItems.map(item => item.componentType));
         const registryItems = this.getObjectItems().filter(item => !catalogueTypes.has(item.componentType));
-        return registryItems.concat(catalogueItems, this.getShapeItems());
+        const objectItems = registryItems.concat(catalogueItems).sort((left, right) => left.title.localeCompare(right.title));
+        return objectItems.concat(this.getShapeItems());
     }
 
     getCatalogueItems() {
