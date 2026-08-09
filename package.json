@@ -6,11 +6,12 @@
   "scripts": {
     "test": "npx playwright test",
     "build:offline": "node electron/build-offline.js",
+    "build:catalogue": "node electron/build-catalogue.js",
     "icons": "node electron/generate-icons.js",
     "seed:objects": "node tests/seed-objects.js",
     "start": "electron .",
-    "dist": "electron-builder",
-    "build:catalogue": "node electron/build-catalogue.js"
+    "predist": "npm run build:catalogue",
+    "dist": "electron-builder"
   },
   "dependencies": {
     "agents": "^0.7.5",
