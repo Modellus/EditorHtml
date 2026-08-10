@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+    <path id="north" d="M100 40 L108 100 L92 100 Z" fill="#e03130"/>
+    <path id="south" d="M100 160 L108 100 L92 100 Z" fill="#9a9a9a"/>
+    <circle id="cap" cx="100" cy="100" r="5" fill="#1e1e1e"/>
+</svg>

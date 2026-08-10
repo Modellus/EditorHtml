@@ -82,7 +82,8 @@ class BlockValidator {
         this.validateNodeBindings(node, registration, result, path);
         this.validateNodeParameters(node, registration, result, path);
         this.validateNodeModifiers(node, result, path);
-        this.validateNodeBehaviours(node, registration, result, path);
+        this.validateNodeBehaviours(node, registration, result, path, definition);
+        this.validateCondition(node.when, result, `${path}.when`, definition);
         if ((node.children ?? []).length > 0 && !registration.supportsChildren)
             this.addError(result, "CHILDREN_NOT_SUPPORTED", `${path}.children`, `"${node.type}" cannot contain children.`, { suggestion: "group" });
         for (let index = 0; index < (node.children ?? []).length; index++)
@@ -268,10 +269,45 @@ class BlockValidator {
         }
     }
 
-    validateNodeBehaviours(node, registration, result, path) {
+    validateCondition(condition, result, path, definition) {
+        if (condition === undefined)
+            return;
+        if (!BlockBindings.isBinding(condition)) {
+            if (typeof condition === "boolean" || typeof condition === "number" || typeof condition === "string")
+                return;
+            this.addError(result, "INVALID_CONDITION", path, "A \"when\" must be a binding or a constant.", { expected: BlockBindings.kinds.join(", ") });
+            return;
+        }
+        this.validateBinding(condition, { id: "when", valueType: "boolean", bindable: true }, result, path);
+        const declared = (definition?.parameters ?? []).map(parameter => parameter.id).concat((definition?.locals ?? []).map(local => local.id));
+        if (declared.length === 0)
+            return;
+        for (const name of this.collectBindingParameters(condition, [])) {
+            if (name.startsWith("$") || declared.includes(name))
+                continue;
+            this.addError(result, "UNKNOWN_PARAMETER", path, `The condition reads "${name}", which the definition does not declare.`, { expected: "a declared parameter or local", suggestion: this.findClosest(name, declared) });
+        }
+    }
+
+    collectBindingParameters(binding, names) {
+        if (!BlockBindings.isBinding(binding))
+            return names;
+        if (BlockBindings.getKind(binding) === "parameter")
+            names.push(String(binding.parameter));
+        for (const value of Object.values(binding)) {
+            if (Array.isArray(value))
+                value.forEach(entry => this.collectBindingParameters(entry, names));
+            else if (value !== null && typeof value === "object")
+                this.collectBindingParameters(value, names);
+        }
+        return names;
+    }
+
+    validateNodeBehaviours(node, registration, result, path, definition) {
         for (let index = 0; index < (node.behaviours ?? []).length; index++) {
             const behaviour = node.behaviours[index];
             const behaviourPath = `${path}.behaviours[${index}]`;
+            this.validateCondition(behaviour?.when, result, `${behaviourPath}.when`, definition);
             if (!behaviour || typeof behaviour !== "object") {
                 this.addError(result, "INVALID_BEHAVIOUR", behaviourPath, "Behaviour must be an object with a type.", { expected: "object" });
                 continue;

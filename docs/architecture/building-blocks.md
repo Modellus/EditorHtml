@@ -1,7 +1,8 @@
 # Building blocks — developer guide
 
 How Modellus objects are composed from reusable blocks, how to add new ones, and the rules
-the AI agent plays by. See [`building-blocks-assessment.md`](building-blocks-assessment.md)
+the AI agent plays by. See [`object-blueprint.md`](object-blueprint.md) for the template a new
+object is written from, [`building-blocks-assessment.md`](building-blocks-assessment.md)
 for why the architecture looks like this, [`building-blocks-catalogue.md`](building-blocks-catalogue.md)
 for the block list, and [`migration-plan.md`](migration-plan.md) for the remaining shapes.
 
@@ -22,6 +23,78 @@ Components   dial-face, tick-ring, label-ring, pointer-hand, plot-grid, plot-axe
              + custom components
 ```
 
+### How a drawing is made
+
+The spine is the same for every object on the board: the shape holds the parameter values, the
+compiler turns them into nodes, the renderer writes them once. Everything above the spine is a
+source the compiler reads, and the only thing that flows backwards is an interaction.
+
+```mermaid
+flowchart LR
+    registry["BlockRegistry<br>every primitive, modifier,<br>behaviour and component"]
+    tokens["BlockTokens<br>the board's colours,<br>font, axis and grid"]
+    bindings["BlockBindings<br>parameter · variable · formula<br>token · format · memory"]
+    calculator["Calculator<br>the model at the<br>iteration on screen"]
+
+    shape["ComponentShape<br>the object on the board;<br>its properties are the<br>parameter values"]
+    compiler["BlockCompiler<br>locals, then when,<br>then repeat, then<br>down to primitives"]
+    nodes["Render nodes"]
+    renderer["BlockRenderer<br>writes the SVG"]
+    svg["The drawing"]
+
+    behaviours["Behaviours<br>click, drag, record"]
+    writeback["One command:<br>a property of the shape,<br>or a model variable"]
+    validator["BlockValidator<br>schema · semantic<br>runtime · visual"]
+
+    shape --> compiler
+    registry --> compiler
+    tokens --> compiler
+    calculator --> bindings
+    bindings --> compiler
+    compiler --> nodes
+    nodes --> renderer
+    renderer --> svg
+    renderer -->|attach| behaviours
+    behaviours --> writeback
+    nodes -.->|on author, insert, inspect| validator
+```
+
+Nothing else can draw: a type the registry does not hold is refused by both the compiler and the
+validator. The loop closes through the next frame — an interaction writes one command, and what it
+wrote is read back the next time the object compiles, which is why a whole drag is a single undo
+entry and why nothing on the board has a redraw path of its own.
+
+### Where a definition comes from
+
+The registry does not care which way an object arrived, which is why one invented by the agent, one
+placed from the catalogue and one the editor ships with all behave identically.
+
+```mermaid
+flowchart LR
+    bundled["Bundled<br>definitions/*.json"]
+    catalogue["Catalogue<br>Assets → Objects"]
+    agent["Agent<br>save_custom_component"]
+    incoming["Another document<br>clipboard · collab ·<br>a model opened here"]
+    library["BlockObjectLibrary<br>a type the editor<br>ships with is refused"]
+    registry["BlockRegistry"]
+    picker["ObjectPicker<br>the Components palette"]
+    shape["ComponentShape<br>on the board"]
+    carried["The model's<br>objects section"]
+
+    bundled -->|definitions.generated.js| registry
+    catalogue -->|fetched when placed| library
+    agent --> library
+    incoming --> library
+    library -->|registerAll| registry
+    registry --> picker
+    picker --> shape
+    shape -->|collectFromShapes| carried
+```
+
+The last box is the first one again: what a board writes into the model's objects section is what
+arrives as *another document* when that model is opened somewhere else. That is the whole reason the
+section exists — an object the editor does not ship with has to travel with the model that uses it.
+
 Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
 `pages/board/board-offline.html`, in this order):
 
@@ -39,6 +112,7 @@ Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
 | `scripts/blocks/blockCompiler.js` | `BlockCompiler` | definition → render nodes |
 | `scripts/blocks/blockRenderer.js` | `BlockRenderer` | render nodes → SVG |
 | `scripts/blocks/blockValidator.js` | `BlockValidator` | schema/semantic/runtime/visual validation |
+| `scripts/blocks/blockSvgImport.js` | `BlockSvgImport` | turns a drawing into blocks: SVG in, primitive nodes out |
 | `scripts/blocks/blockComponents.js` | `BlockComponentHelpers` | component registrations |
 | `scripts/controls/AxisTickDrag.js` | — | the axis toolkit every axis on the board is built from: nice ticks, minor ticks, tick labels, tick dragging |
 | `scripts/controls/AxisRangeControl.js` | `AxisRangeControl` | the one editor for how far an axis runs |
@@ -214,6 +288,9 @@ and `pointer-hand` stay in code, because they generate geometry per index rather
 * **`concat`** joins resolved parts into one string, so the gauge readouts build
   `"64 km/h"` from a `format` binding and their own `unit` parameter. `format` resolves its
   `digits`, `prefix` and `suffix` as bindings too.
+* **`art`** names the drawing files a definition's imported nodes came from, so a redrawn file can be
+  imported again over the same document. It is provenance only — nothing reads it at runtime, and the
+  nodes it produced are in `root` like any others.
 * **`preview`** holds the parameter values the object picker draws its thumbnail with:
   `{ "preview": { "parameters": { "valueVariable": "64", "unit": "km/h" } } }`. It is not part of
   the object — nothing else reads it — and the defaults are used when a document omits it. An
@@ -224,6 +301,58 @@ The JSON files are the source of truth. The browser cannot `fetch` them in the o
 which runs from `file://`, so they are delivered by `definitions.generated.js`; regenerate it
 with `UPDATE_DEFINITIONS=1 npx playwright test tests/component-definitions.spec.js`, which
 otherwise fails when the bundle and the JSON have drifted.
+
+### Drawings imported from SVG
+
+Some objects are illustration rather than arithmetic — a compass rose, a body, an instrument face.
+Composing one from primitives by hand is the wrong tool: it belongs in a drawing program.
+`BlockSvgImport.import(markup)` takes SVG and returns **primitive nodes**, which are then part of the
+definition like any others.
+
+It converts, it does not embed. Nothing about the runtime changes: no new node type, no markup
+reaching `BlockRenderer`, nothing for the compiler, the validator or the serializer to learn. That is
+also the security boundary — [`toMarkup()`](../../scripts/blocks/blockRenderer.js) builds every tag
+itself and escapes every value, and a definition travels through the model file, the clipboard, a
+collaboration op, the catalogue and the agent. An imported drawing arrives as data that has already
+been through the allow-list; a string of SVG would arrive as a drawing nobody had read.
+
+```js
+const imported = BlockSvgImport.import(markup);       // { nodes, viewBox, count, problems, mapped, unmapped }
+const merged = BlockSvgImport.merge(previousNodes, imported.nodes);
+```
+
+* **Converted**: `svg`, `g`, `circle`, `ellipse`, `rect`, `line`, `polyline`, `polygon`, `path`,
+  `text`, `image`, with fill, stroke, width, dash, linecap, opacity and visibility read from either
+  the attribute or the inline `style`. `transform` becomes `translate`, `rotate` and `scale`
+  modifiers; `matrix()` and `skew()` are reported rather than approximated.
+* **Refused, and reported**: `script`, `style`, `foreignObject`, animation elements, `on*` handlers,
+  links, image sources outside the `image` primitive's allow-list, and path data outside the path
+  grammar. Nothing is dropped silently — every refusal is a line in `problems`.
+* **Unsupported, and reported**: `use`, `defs`, gradients, masks, filters, clip paths. A drawing that
+  leans on them imports into something that differs from the file, which the author has to know.
+* **Colours become tokens.** A fill matching a token in the standard preset is written as
+  `token:surface.default` rather than `#ffffff`, preferring the family that suits the property — text
+  fills look for `text.*`, strokes for `stroke.*`. That is what keeps an imported object following the
+  presets like a hand-written one. What could not be matched is listed in `unmapped`.
+* **Ids are the contract.** An id in the file is the id of the node, so the definition attaches
+  `bindings`, `modifiers`, `behaviours` and `when` to the parts it names. Everything else gets a
+  generated id.
+* **Re-import keeps the wiring.** `merge()` takes the geometry from the new import and the wiring from
+  the old nodes, matched by id, so a redrawn file does not cost the bindings. It reports what it
+  `kept` and what it `lost` — wiring whose id the new drawing no longer has. Modifiers are only
+  carried over when they hold a binding, which is what separates one an author added from one a
+  `transform` produced.
+
+**Interaction is in the object's pixels, not the drawing's.** `getComponentLocalPoint()` answers in
+the shape's own box, so a node carrying `drag-angle`, `drag-rotate`, `track-pointer` or
+`follow-pointer` has to be expressed there — outside the group that scales the art. The compass puts
+its two grab areas beside the art rather than inside it for exactly this reason.
+
+**Import illustration, not measurement.** Art is authored at one size and has one layout: it cannot
+put ticks on round numbers, keep a label legible when the object is small, or move one part to make
+room for another. Those stay components — which is why the compass is imported art for its face, its
+needle and the one tick a `repeat` puts around the rim, and `label-ring` for the cardinal and degree
+labels: they have to stay legible at 80px and move apart when the degrees are shown.
 
 ### The look is not the object's to invent
 
@@ -663,6 +792,9 @@ the endpoints exist at all.
   the colour menu matching the chart's, the axis, ticks and grid drawn in the colours the chart's
   control defaults to, auto scale fitting the axes to the recording and equal axis matching the two
   scales, and the recording a reopened model brings back.
+* `tests/svg-import.spec.js` — the importer: what it converts, what it refuses and reports, transforms
+  becoming modifiers, colours becoming tokens, ids, re-import keeping the wiring — and the `when`
+  conditions the validator now checks on both nodes and behaviours.
 * `tests/component-agent-tools.spec.js` — tool schemas, discovery, the full build→validate→preview→insert
   loop, structured errors and correction, refusal of unknown types and injection attempts,
   custom components, and the tool-bridge naming convention.

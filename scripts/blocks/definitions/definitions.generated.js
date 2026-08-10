@@ -3072,6 +3072,10 @@ BlockDefinitionLoader.registerAll([
             "interaction",
             "writes-model"
         ],
+        "art": {
+            "rose": "art/compass-rose.svg",
+            "needle": "art/compass-needle.svg"
+        },
         "parameters": [
             {
                 "id": "headingVariable",
@@ -3091,7 +3095,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "showDegrees",
-                "label": "Show degree labels",
+                "label": "Degrees",
                 "valueType": "boolean",
                 "defaultValue": false,
                 "category": "display"
@@ -3108,6 +3112,13 @@ BlockDefinitionLoader.registerAll([
                 "label": "Border colour",
                 "valueType": "colour",
                 "defaultValue": "token:stroke.default",
+                "category": "style"
+            },
+            {
+                "id": "tickColor",
+                "label": "Tick colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.subtle",
                 "category": "style"
             },
             {
@@ -3146,6 +3157,22 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "size",
+                "formula": "\\min\\left(w,h\\right)"
+            },
+            {
+                "id": "k",
+                "formula": "\\frac{\\max\\left(size,1\\right)}{200}"
+            },
+            {
+                "id": "dx",
+                "formula": "\\frac{w-size}{2}"
+            },
+            {
+                "id": "dy",
+                "formula": "\\frac{h-size}{2}"
+            },
+            {
                 "id": "cx",
                 "formula": "\\frac{w}{2}"
             },
@@ -3155,7 +3182,18 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "r",
-                "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-6\\right)"
+                "formula": "96\\cdot k"
+            },
+            {
+                "id": "roseGrabInner",
+                "formula": "r\\cdot0.7"
+            },
+            {
+                "id": "heading",
+                "value": {
+                    "parameter": "headingVariable",
+                    "as": "number"
+                }
             },
             {
                 "id": "rotation",
@@ -3169,77 +3207,22 @@ BlockDefinitionLoader.registerAll([
                 "formula": "90-rotation"
             },
             {
-                "id": "heading",
-                "value": {
-                    "parameter": "headingVariable",
-                    "as": "number"
-                }
-            },
-            {
-                "id": "tailHeading",
-                "formula": "heading+180"
-            },
-            {
-                "id": "tickRadius",
-                "formula": "r\\cdot0.96"
-            },
-            {
-                "id": "tickLength",
-                "formula": "r\\cdot0.05"
-            },
-            {
-                "id": "tickMajorLength",
-                "formula": "r\\cdot0.12"
-            },
-            {
                 "id": "cardinalRadius",
                 "value": {
                     "choose": {
                         "parameter": "showDegrees"
                     },
-                    "then": {
-                        "formula": "r\\cdot0.52"
-                    },
-                    "otherwise": {
-                        "formula": "r\\cdot0.74"
-                    }
+                    "then": 50,
+                    "otherwise": 71
                 }
             },
             {
                 "id": "cardinalFontSize",
-                "formula": "\\max\\left(8,r\\cdot0.2\\right)"
-            },
-            {
-                "id": "degreeRadius",
-                "formula": "r\\cdot0.86"
+                "formula": "\\max\\left(\\frac{8}{k},19.2\\right)"
             },
             {
                 "id": "degreeFontSize",
-                "formula": "\\max\\left(6,r\\cdot0.11\\right)"
-            },
-            {
-                "id": "needleLength",
-                "formula": "r\\cdot0.66"
-            },
-            {
-                "id": "needleWidth",
-                "formula": "\\max\\left(4,r\\cdot0.14\\right)"
-            },
-            {
-                "id": "capRadius",
-                "formula": "\\max\\left(2,r\\cdot0.06\\right)"
-            },
-            {
-                "id": "strokeStrong",
-                "value": {
-                    "token": "strokeWidth.strong"
-                }
-            },
-            {
-                "id": "strokeHairline",
-                "value": {
-                    "token": "strokeWidth.hairline"
-                }
+                "formula": "\\max\\left(\\frac{6}{k},10.6\\right)"
             },
             {
                 "id": "cardinalWeight",
@@ -3248,8 +3231,18 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
-                "id": "roseGrabRadius",
-                "formula": "r\\cdot0.7"
+                "id": "labelFont",
+                "value": {
+                    "token": "font.family.sans"
+                }
+            },
+            {
+                "id": "tickCount",
+                "value": 72
+            },
+            {
+                "id": "majorTickCount",
+                "value": 8
             },
             {
                 "id": "grabColor",
@@ -3263,126 +3256,256 @@ BlockDefinitionLoader.registerAll([
             "type": "group",
             "children": [
                 {
-                    "id": "face",
-                    "type": "dial-face",
-                    "parameters": {
-                        "centerX": {
-                            "parameter": "cx"
+                    "id": "art",
+                    "type": "group",
+                    "modifiers": [
+                        {
+                            "type": "translate",
+                            "dx": {
+                                "parameter": "dx"
+                            },
+                            "dy": {
+                                "parameter": "dy"
+                            }
                         },
-                        "centerY": {
-                            "parameter": "cy"
-                        },
-                        "radius": {
-                            "parameter": "r"
-                        },
-                        "faceColor": {
-                            "parameter": "faceColor"
-                        },
-                        "borderColor": {
-                            "parameter": "borderColor"
-                        },
-                        "borderWidth": {
-                            "parameter": "strokeStrong"
+                        {
+                            "type": "scale",
+                            "scaleX": {
+                                "parameter": "k"
+                            },
+                            "scaleY": {
+                                "parameter": "k"
+                            },
+                            "centerX": 0,
+                            "centerY": 0
                         }
-                    }
-                },
-                {
-                    "id": "rose-ticks",
-                    "type": "tick-ring",
-                    "parameters": {
-                        "centerX": {
-                            "parameter": "cx"
+                    ],
+                    "children": [
+                        {
+                            "id": "rose",
+                            "type": "group",
+                            "modifiers": [
+                                {
+                                    "type": "rotate",
+                                    "angle": {
+                                        "parameter": "rotation"
+                                    },
+                                    "centerX": 100,
+                                    "centerY": 100
+                                }
+                            ],
+                            "children": [
+                                {
+                                    "id": "face",
+                                    "type": "circle",
+                                    "properties": {
+                                        "centerX": 100,
+                                        "centerY": 100,
+                                        "radius": 96,
+                                        "fill": "token:surface.default",
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 2
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "faceColor"
+                                        },
+                                        "stroke": {
+                                            "parameter": "borderColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "tick",
+                                    "type": "line",
+                                    "properties": {
+                                        "x1": 100,
+                                        "y1": 6,
+                                        "x2": 100,
+                                        "y2": 13,
+                                        "stroke": "token:stroke.subtle",
+                                        "strokeWidth": 0.5
+                                    },
+                                    "bindings": {
+                                        "stroke": {
+                                            "parameter": "tickColor"
+                                        }
+                                    },
+                                    "modifiers": [
+                                        {
+                                            "type": "repeat",
+                                            "count": {
+                                                "parameter": "tickCount"
+                                            },
+                                            "angleStep": 5,
+                                            "centerX": 100,
+                                            "centerY": 100
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": "tick-major",
+                                    "type": "line",
+                                    "properties": {
+                                        "x1": 100,
+                                        "y1": 6,
+                                        "x2": 100,
+                                        "y2": 20,
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 2
+                                    },
+                                    "bindings": {
+                                        "stroke": {
+                                            "parameter": "borderColor"
+                                        }
+                                    },
+                                    "modifiers": [
+                                        {
+                                            "type": "repeat",
+                                            "count": {
+                                                "parameter": "majorTickCount"
+                                            },
+                                            "angleStep": 45,
+                                            "centerX": 100,
+                                            "centerY": 100
+                                        }
+                                    ]
+                                }
+                            ]
                         },
-                        "centerY": {
-                            "parameter": "cy"
+                        {
+                            "id": "cardinals",
+                            "type": "label-ring",
+                            "parameters": {
+                                "centerX": 100,
+                                "centerY": 100,
+                                "radius": {
+                                    "parameter": "cardinalRadius"
+                                },
+                                "count": 4,
+                                "startAngle": {
+                                    "parameter": "roseStart"
+                                },
+                                "spanAngle": 360,
+                                "texts": "N,E,S,W",
+                                "fontSize": {
+                                    "parameter": "cardinalFontSize"
+                                },
+                                "fontFamily": {
+                                    "parameter": "labelFont"
+                                },
+                                "fontWeight": {
+                                    "parameter": "cardinalWeight"
+                                },
+                                "color": {
+                                    "parameter": "labelColor"
+                                }
+                            }
                         },
-                        "radius": {
-                            "parameter": "tickRadius"
+                        {
+                            "id": "degrees",
+                            "type": "label-ring",
+                            "when": {
+                                "parameter": "showDegrees"
+                            },
+                            "parameters": {
+                                "centerX": 100,
+                                "centerY": 100,
+                                "radius": 76,
+                                "count": 12,
+                                "startAngle": {
+                                    "parameter": "roseStart"
+                                },
+                                "spanAngle": 360,
+                                "startValue": 0,
+                                "valueStep": 30,
+                                "wrapAt": 0,
+                                "fontSize": {
+                                    "parameter": "degreeFontSize"
+                                },
+                                "fontFamily": {
+                                    "parameter": "labelFont"
+                                },
+                                "color": {
+                                    "parameter": "labelColor"
+                                }
+                            }
                         },
-                        "count": 72,
-                        "startAngle": {
-                            "parameter": "roseStart"
-                        },
-                        "spanAngle": 360,
-                        "length": {
-                            "parameter": "tickLength"
-                        },
-                        "width": {
-                            "parameter": "strokeHairline"
-                        },
-                        "color": {
-                            "parameter": "borderColor"
-                        },
-                        "majorEvery": 9,
-                        "majorLength": {
-                            "parameter": "tickMajorLength"
-                        },
-                        "majorWidth": {
-                            "parameter": "strokeStrong"
+                        {
+                            "id": "needle",
+                            "type": "group",
+                            "modifiers": [
+                                {
+                                    "type": "rotate",
+                                    "angle": {
+                                        "parameter": "heading"
+                                    },
+                                    "centerX": 100,
+                                    "centerY": 100
+                                }
+                            ],
+                            "behaviours": [
+                                {
+                                    "type": "drag-angle",
+                                    "variable": {
+                                        "parameter": "headingVariable"
+                                    },
+                                    "property": "headingVariable",
+                                    "centerX": {
+                                        "parameter": "cx"
+                                    },
+                                    "centerY": {
+                                        "parameter": "cy"
+                                    },
+                                    "degreesPerUnit": 1,
+                                    "wrapAt": 360
+                                }
+                            ],
+                            "children": [
+                                {
+                                    "id": "north",
+                                    "type": "path",
+                                    "properties": {
+                                        "d": "M100 40 L108 100 L92 100 Z",
+                                        "fill": "token:stroke.warning"
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "needleColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "south",
+                                    "type": "path",
+                                    "properties": {
+                                        "d": "M100 160 L108 100 L92 100 Z",
+                                        "fill": "token:stroke.subtle"
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "tailColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "cap",
+                                    "type": "circle",
+                                    "properties": {
+                                        "centerX": 100,
+                                        "centerY": 100,
+                                        "radius": 5,
+                                        "fill": "token:stroke.default"
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "borderColor"
+                                        }
+                                    }
+                                }
+                            ]
                         }
-                    }
-                },
-                {
-                    "id": "cardinals",
-                    "type": "label-ring",
-                    "parameters": {
-                        "centerX": {
-                            "parameter": "cx"
-                        },
-                        "centerY": {
-                            "parameter": "cy"
-                        },
-                        "radius": {
-                            "parameter": "cardinalRadius"
-                        },
-                        "count": 4,
-                        "startAngle": {
-                            "parameter": "roseStart"
-                        },
-                        "spanAngle": 360,
-                        "texts": "N,E,S,W",
-                        "fontSize": {
-                            "parameter": "cardinalFontSize"
-                        },
-                        "fontWeight": {
-                            "parameter": "cardinalWeight"
-                        },
-                        "color": {
-                            "parameter": "labelColor"
-                        }
-                    }
-                },
-                {
-                    "id": "degrees",
-                    "type": "label-ring",
-                    "when": {
-                        "parameter": "showDegrees"
-                    },
-                    "parameters": {
-                        "centerX": {
-                            "parameter": "cx"
-                        },
-                        "centerY": {
-                            "parameter": "cy"
-                        },
-                        "radius": {
-                            "parameter": "degreeRadius"
-                        },
-                        "count": 12,
-                        "startAngle": {
-                            "parameter": "roseStart"
-                        },
-                        "spanAngle": 360,
-                        "startValue": 0,
-                        "valueStep": 30,
-                        "wrapAt": 0,
-                        "fontSize": {
-                            "parameter": "degreeFontSize"
-                        },
-                        "color": {
-                            "parameter": "labelColor"
-                        }
-                    }
+                    ]
                 },
                 {
                     "id": "rose-grab",
@@ -3395,7 +3518,7 @@ BlockDefinitionLoader.registerAll([
                             "parameter": "cy"
                         },
                         "innerRadius": {
-                            "parameter": "roseGrabRadius"
+                            "parameter": "roseGrabInner"
                         },
                         "outerRadius": {
                             "parameter": "r"
@@ -3426,92 +3549,6 @@ BlockDefinitionLoader.registerAll([
                             "hoverOpacity": 0.18
                         }
                     ]
-                },
-                {
-                    "id": "needle-north",
-                    "type": "pointer-hand",
-                    "parameters": {
-                        "centerX": {
-                            "parameter": "cx"
-                        },
-                        "centerY": {
-                            "parameter": "cy"
-                        },
-                        "angle": {
-                            "parameter": "heading"
-                        },
-                        "length": {
-                            "parameter": "needleLength"
-                        },
-                        "tailLength": 0,
-                        "width": {
-                            "parameter": "needleWidth"
-                        },
-                        "color": {
-                            "parameter": "needleColor"
-                        },
-                        "style": "needle",
-                        "dragVariable": {
-                            "parameter": "headingVariable"
-                        },
-                        "dragProperty": "headingVariable",
-                        "degreesPerUnit": 1,
-                        "wrapAt": 360
-                    }
-                },
-                {
-                    "id": "needle-south",
-                    "type": "pointer-hand",
-                    "parameters": {
-                        "centerX": {
-                            "parameter": "cx"
-                        },
-                        "centerY": {
-                            "parameter": "cy"
-                        },
-                        "angle": {
-                            "parameter": "tailHeading"
-                        },
-                        "length": {
-                            "parameter": "needleLength"
-                        },
-                        "tailLength": 0,
-                        "width": {
-                            "parameter": "needleWidth"
-                        },
-                        "color": {
-                            "parameter": "tailColor"
-                        },
-                        "style": "needle",
-                        "dragVariable": {
-                            "parameter": "headingVariable"
-                        },
-                        "dragProperty": "headingVariable",
-                        "degreesPerUnit": 1,
-                        "offsetDegrees": 180,
-                        "wrapAt": 360
-                    }
-                },
-                {
-                    "id": "centre-cap",
-                    "type": "circle",
-                    "bindings": {
-                        "centerX": {
-                            "parameter": "cx"
-                        },
-                        "centerY": {
-                            "parameter": "cy"
-                        },
-                        "radius": {
-                            "parameter": "capRadius"
-                        },
-                        "fill": {
-                            "parameter": "borderColor"
-                        }
-                    },
-                    "properties": {
-                        "stroke": "none"
-                    }
                 }
             ]
         }

@@ -613,7 +613,7 @@ test.describe('component variable inputs', () => {
         return page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Compass');
             const needle = shape.getInspectionReport().nodes
-                .find(node => node.sourceComponent === 'pointer-hand' && node.transform.startsWith('rotate('));
+                .find(node => node.id.endsWith(':needle') && node.transform.startsWith('rotate('));
             return { headingVariable: shape.properties.headingVariable, needleTransform: needle?.transform ?? '' };
         });
     }

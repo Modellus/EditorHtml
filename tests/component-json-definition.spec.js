@@ -7,6 +7,10 @@ const BOARD_URL = '/pages/board/index.html';
 // definitions replaced them. They are the proof that the declarative form draws the same thing.
 // The compass entries were re-recorded when its rose gained a drag ring: that ring draws nothing,
 // so only the invisible node and the behaviours it carries separate them from the captured ones.
+// They were re-recorded a second time, and stopped being captures at all, when the rose became
+// imported SVG art: the compass deliberately draws something the create() function never could,
+// so its five entries are the drawing as it stands rather than proof of the port. Every other
+// component here is still held to what its deleted create() drew.
 // The font in them was rewritten once, when the text primitive stopped naming a family of its own
 // and took the board's from the design tokens; every coordinate is still the captured one.
 const BASELINES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'coded-component-baselines.json'), 'utf8'));
@@ -143,7 +147,7 @@ test.describe('components built from JSON definitions', () => {
         const result = await page.evaluate(() => {
             const original = BlockRegistry.get('compass');
             const edited = JSON.parse(JSON.stringify(BlockDefinitionLoader.getDocument('compass')));
-            edited.locals.find(local => local.id === 'tickRadius').formula = 'r\\cdot0.5';
+            edited.locals.find(local => local.id === 'cardinalFontSize').formula = '\\max\\left(\\frac{8}{k},32\\right)';
             BlockDefinitionLoader.register(edited, BlockRegistry);
             const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
             const build = () => {

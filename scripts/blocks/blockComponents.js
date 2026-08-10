@@ -337,11 +337,13 @@ var BlockComponentHelpers = {
             BlockComponentHelpers.parameter("digits", "Decimals", "number", 0, { minimum: 0, maximum: 6 }),
             BlockComponentHelpers.parameter("texts", "Fixed texts", "string", "", { description: "Comma separated labels used instead of numbers." }),
             BlockComponentHelpers.parameter("fontSize", "Font size", "number", 12, { minimum: 1 }),
+            BlockComponentHelpers.parameter("fontFamily", "Font family", "string", "token:font.family"),
             BlockComponentHelpers.parameter("fontWeight", "Font weight", "number", 400, { minimum: 100, maximum: 900 }),
             BlockComponentHelpers.parameter("color", "Text colour", "colour", "token:text.primary")
         ],
         create: (parameters, context) => {
             const color = context.tokens.resolveValue(parameters.color);
+            const fontFamily = context.tokens.resolveValue(parameters.fontFamily);
             const fixedTexts = String(parameters.texts ?? "").split(",").map(text => text.trim()).filter(text => text !== "");
             const angles = BlockGeometry.distributeAngles(parameters.count, parameters.startAngle, parameters.spanAngle, parameters.includeEnd === true);
             const children = angles.map((angle, index) => {
@@ -362,6 +364,7 @@ var BlockComponentHelpers = {
                         y: position.y,
                         text: text,
                         fontSize: parameters.fontSize,
+                        fontFamily: fontFamily,
                         fontWeight: parameters.fontWeight,
                         fill: color,
                         stroke: "none",

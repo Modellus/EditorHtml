@@ -2,9 +2,12 @@ const { test, expect } = require('@playwright/test');
 
 const BOARD_URL = '/pages/board/index.html';
 
-// The font the board writes in, and the one the classroom preset writes in instead. Spelled out
+// The fonts the board writes in, and the one the classroom preset writes in instead. Spelled out
 // here rather than read from the tokens, so a preset that quietly loses its font is a failure.
+// An object may pick the sans face over the serif one — the compass does — but only ever by naming
+// a token, which is what this holds every object to.
 const BOARD_FONT = 'Katex_Main, Inter, serif';
+const BOARD_SANS_FONT = 'Inter, Assistant, system-ui, sans-serif';
 const CLASSROOM_FONT = 'Indie Flower, Katex_Main, cursive';
 
 async function setupBoard(page) {
@@ -375,7 +378,8 @@ test.describe('reusable blocks build several objects', () => {
                 const flattened = BlockRenderer.flatten(compilation.nodes);
                 const north = flattened.find(node => node.text === 'N');
                 return {
-                    needle: flattened.filter(node => node.id.includes('needle-north')).map(node => JSON.stringify(node.attributes)).join('|'),
+                    needle: flattened.find(node => node.id.endsWith(':needle')).transform,
+                    rose: flattened.find(node => node.id.endsWith(':rose')).transform,
                     north: { x: Number(north.attributes.x), y: Number(north.attributes.y) }
                 };
             };
@@ -383,6 +387,7 @@ test.describe('reusable blocks build several objects', () => {
         });
         expect(result.still.needle).not.toBe('');
         expect(result.turned.needle).toBe(result.still.needle);
+        expect(result.turned.rose).not.toBe(result.still.rose);
         expect(result.still.north.x).toBeCloseTo(100, 1);
         expect(result.still.north.y).toBeLessThan(100);
         expect(result.turned.north.x).toBeGreaterThan(100);
@@ -428,10 +433,22 @@ test.describe('one look for the whole board', () => {
                 }
                 return Array.from(fonts);
             };
-            return { standard: fontsOf('standard'), classroom: fontsOf('classroom') };
+            const tokenFontsOf = preset => new BlockTokens(preset).listTokens()
+                .filter(entry => entry.name.startsWith('font.family'))
+                .map(entry => entry.value);
+            return {
+                standard: fontsOf('standard'),
+                classroom: fontsOf('classroom'),
+                standardTokens: tokenFontsOf('standard'),
+                classroomTokens: tokenFontsOf('classroom')
+            };
         });
-        expect(result.standard).toEqual([BOARD_FONT]);
+        expect(result.standard.sort()).toEqual([BOARD_FONT, BOARD_SANS_FONT].sort());
         expect(result.classroom).toEqual([CLASSROOM_FONT]);
+        for (const font of result.standard)
+            expect(result.standardTokens, `${font} must come from a token`).toContain(font);
+        for (const font of result.classroom)
+            expect(result.classroomTokens, `${font} must come from a token`).toContain(font);
     });
 
     test('the axis, the grid and the crosshair are drawn to the measurements the tokens hold', async ({ page }) => {

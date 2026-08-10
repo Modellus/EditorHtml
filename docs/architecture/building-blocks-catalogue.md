@@ -637,6 +637,7 @@ Capabilities: `radial`, `angular`, `reads-model`, `interaction`, `writes-model`
 | `showDegrees` | boolean | false |  |
 | `faceColor` | colour | "token:surface.default" |  |
 | `borderColor` | colour | "token:stroke.default" |  |
+| `tickColor` | colour | "token:stroke.subtle" |  |
 | `needleColor` | colour | "token:stroke.warning" |  |
 | `tailColor` | colour | "token:stroke.subtle" |  |
 | `labelColor` | colour | "token:text.primary" |  |
@@ -700,6 +701,7 @@ Capabilities: `radial`, `angular`, `textual`
 | `digits` | number | 0 | min 0, max 6 |
 | `texts` | string | "" |  |
 | `fontSize` | number | 12 | min 1 |
+| `fontFamily` | string | "token:font.family" |  |
 | `fontWeight` | number | 400 | min 100, max 900 |
 | `color` | colour | "token:text.primary" |  |
 
