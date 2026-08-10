@@ -76,6 +76,43 @@ async function getTableRowPoint(page, shapeName, rowIndex, localX) {
     return point;
 }
 
+async function getColumnLayout(page, shapeName) {
+    return await page.evaluate(({ shapeName }) => {
+        const tableShape = shell.board.shapes.getByName(shapeName);
+        const table = tableShape.table;
+        const layout = table.getLayout();
+        return {
+            keys: table.options.columns.map(column => column.key),
+            widths: table.options.columns.map(column => table.getColumnWidth(column)),
+            storedWidths: [...(tableShape.properties.columnWidths ?? [])],
+            headerHeight: layout.headerHeight,
+            scale: table.rootElement.getScreenCTM().a
+        };
+    }, { shapeName });
+}
+
+// Drags the right-hand divider of a column: over a body row when rowIndex is given, otherwise
+// over the header strip, which is where the table shape puts its resize handles.
+async function dragColumnDivider(page, shapeName, columnIndex, rowIndex, deltaX) {
+    const point = await page.evaluate(({ shapeName, columnIndex, rowIndex }) => {
+        const table = shell.board.shapes.getByName(shapeName)?.table;
+        const layout = table.getLayout();
+        const geometry = table.getColumnGeometry(layout, table.options.columns);
+        const dividerX = geometry[columnIndex].x + geometry[columnIndex].width;
+        let localY = layout.headerHeight / 2;
+        if (rowIndex != null) {
+            const cellBox = table.cellBoxes.find(box => box.rowIndex === rowIndex);
+            localY = cellBox.y + cellBox.height / 2;
+        }
+        const screenPoint = new DOMPoint(dividerX, localY).matrixTransform(table.rootElement.getScreenCTM());
+        return { x: screenPoint.x, y: screenPoint.y };
+    }, { shapeName, columnIndex, rowIndex });
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    await page.mouse.move(point.x + deltaX, point.y, { steps: 5 });
+    await page.mouse.up();
+}
+
 test.describe('Cases table', () => {
     test('base group: independent row followed by term rows, in a single flat color', async ({ page }) => {
         await setupEditor(page);
@@ -1411,5 +1448,115 @@ test.describe('Cases table', () => {
         expect(afterSwap.vCase2).toBeCloseTo(11, 8);
         expect(afterSwap.xCase1).toBeUndefined();
         expect(afterSwap.baseTerms).toEqual(['v', 'x']);
+    });
+
+    test('a separator marks where the integrated terms end and the parameters begin, in every moment that holds both', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+        await addExpressionAndReparse(page, 'Expr2', '\\frac{dy}{dt}=w');
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.addGroup();
+            tableShape.refreshTableRows();
+            const table = tableShape.table;
+            table.render();
+            const layout = table.getLayout();
+            const rowHeight = Math.max(16, Number(table.options.rowHeight) || 24);
+            const separatorRowIndex = table.rows.findIndex(row => row.separatorAbove === true);
+            const separatorY = layout.headerHeight + separatorRowIndex * rowHeight;
+            const separators = Array.from(table.rowsLayer.querySelectorAll('line'))
+                .filter(line => line.getAttribute('y1') === line.getAttribute('y2')
+                    && Number(line.getAttribute('y1')) === separatorY
+                    && line.getAttribute('stroke-opacity') != null);
+            return {
+                rows: table.rows.map(row => ({ key: row.key, separatorAbove: row.separatorAbove === true })),
+                gridColor: table.options.gridColor,
+                separatorStroke: separators[0]?.getAttribute('stroke') ?? null,
+                separatorOpacity: separators[0]?.getAttribute('stroke-opacity') ?? null,
+                separatorWidth: Number(separators[0]?.getAttribute('x2') ?? 0),
+                bodyWidth: layout.bodyWidth
+            };
+        });
+
+        // Integrated terms first, then the parameters they depend on, with the rule on the first parameter row.
+        expect(result.rows).toEqual([
+            { key: 'independent|1', separatorAbove: false },
+            { key: 'x|1', separatorAbove: false },
+            { key: 'y|1', separatorAbove: false },
+            { key: 'v|1', separatorAbove: true },
+            { key: 'w|1', separatorAbove: false },
+            { key: 'independent|2', separatorAbove: false },
+            { key: 'x|2', separatorAbove: false },
+            { key: 'y|2', separatorAbove: false },
+            { key: 'v|2', separatorAbove: true },
+            { key: 'w|2', separatorAbove: false }
+        ]);
+        // Discreet: it spans the table like a grid line but is drawn darker so the split still reads.
+        expect(result.separatorStroke).not.toBe(null);
+        expect(result.separatorStroke.toLowerCase()).not.toBe(result.gridColor.toLowerCase());
+        expect(Number(result.separatorOpacity)).toBeLessThan(1);
+        expect(result.separatorWidth).toBeCloseTo(result.bodyWidth, 5);
+    });
+
+    test('with the case header hidden, columns resize by dragging the divider on a term row', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const before = await getColumnLayout(page, 'Inputs1');
+        expect(before.headerHeight).toBe(0);
+
+        await dragColumnDivider(page, 'Inputs1', 0, 1, 40);
+        await page.waitForTimeout(200);
+
+        const after = await getColumnLayout(page, 'Inputs1');
+        expect(after.widths[0]).toBeCloseTo(before.widths[0] + 40 / before.scale, 0);
+        expect(after.storedWidths[0]).toBe(after.widths[0]);
+        expect(after.widths[1]).toBe(before.widths[1]);
+    });
+
+    test('dragging along a moment row still focuses the moment instead of resizing a column', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const before = await getColumnLayout(page, 'Inputs1');
+        await dragColumnDivider(page, 'Inputs1', 0, 0, 40);
+        await page.waitForTimeout(200);
+
+        const after = await getColumnLayout(page, 'Inputs1');
+        expect(after.widths).toEqual(before.widths);
+        expect(after.storedWidths).toEqual(before.storedWidths);
+    });
+
+    test('a case resized while another one is hidden keeps its width, and the hidden case does not inherit it', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 3);
+
+        const before = await getColumnLayout(page, 'Inputs1');
+        expect(before.keys).toEqual(['term', 'case1', 'case2', 'case3']);
+        expect(before.headerHeight).toBeGreaterThan(0);
+
+        await page.evaluate(() => shell.board.shapes.getByName('Inputs1').setCaseVisible(1, false));
+        await page.waitForTimeout(300);
+
+        // case2 now sits where case1 used to be, so a width stored by position would land on the wrong case.
+        const hidden = await getColumnLayout(page, 'Inputs1');
+        expect(hidden.keys).toEqual(['term', 'case2', 'case3']);
+
+        await dragColumnDivider(page, 'Inputs1', 1, null, 40);
+        await page.waitForTimeout(200);
+
+        const resized = await getColumnLayout(page, 'Inputs1');
+        expect(resized.widths[1]).toBeCloseTo(hidden.widths[1] + 40 / hidden.scale, 0);
+        expect(resized.widths[2]).toBe(hidden.widths[2]);
+
+        await page.evaluate(() => shell.board.shapes.getByName('Inputs1').setCaseVisible(1, true));
+        await page.waitForTimeout(300);
+
+        const afterShow = await getColumnLayout(page, 'Inputs1');
+        expect(afterShow.keys).toEqual(['term', 'case1', 'case2', 'case3']);
+        expect(afterShow.widths[1]).toBe(before.widths[1]);
+        expect(afterShow.widths[2]).toBe(resized.widths[1]);
+        expect(afterShow.widths[3]).toBe(before.widths[3]);
     });
 });

@@ -718,6 +718,23 @@ class TableControl {
         rowLine.setAttribute("stroke", this.options.gridColor);
         rowLine.setAttribute("stroke-width", "1");
         this.rowsLayer.appendChild(rowLine);
+        this.renderRowSeparator(layout, y, row);
+    }
+
+    // A section rule between blocks of rows: it sits on the grid line the previous row already
+    // drew, so only its darker tone tells the two apart and the table still reads as one table.
+    renderRowSeparator(layout, y, row) {
+        if (row.separatorAbove !== true)
+            return;
+        const separator = this.createSvgElement("line");
+        separator.setAttribute("x1", "0");
+        separator.setAttribute("y1", `${y}`);
+        separator.setAttribute("x2", `${layout.bodyWidth}`);
+        separator.setAttribute("y2", `${y}`);
+        separator.setAttribute("stroke", this.getRowTextColor(row));
+        separator.setAttribute("stroke-opacity", "0.35");
+        separator.setAttribute("stroke-width", "1");
+        this.rowsLayer.appendChild(separator);
     }
 
     renderSpanRowCell(layout, rowIndex, y, rowHeight, row, spanColumnIndex) {
@@ -1641,8 +1658,21 @@ class TableControl {
         return -1;
     }
 
+    // Without a header there is no strip to grab, so the column dividers themselves become the
+    // handles; only rows that actually draw a divider count, which keeps full-width rows clickable.
+    isPointInColumnResizeBand(point) {
+        if (this.options.showHeader !== false)
+            return this.isPointInHeader(point);
+        if (!this.isPointInBody(point))
+            return false;
+        const row = this.getRowByIndex(this.getBodyRowIndexFromY(point.y));
+        if (!row || row.hideColumnDividers === true)
+            return false;
+        return this.getRowSpanColumnIndex(row) < 0;
+    }
+
     getResizeColumnIndexAtPoint(point) {
-        if (!this.isPointInHeader(point))
+        if (!this.isPointInColumnResizeBand(point))
             return -1;
         const layout = this.getLayout();
         const geometry = this.getColumnGeometry(layout, this.options.columns);

@@ -32,6 +32,10 @@ class CasesTableShape extends BaseTableShape {
         return [...derivatives, ...parameters].filter(term => calculator.isUserInputTerm(term));
     }
 
+    isIntegratedTerm(term) {
+        return this.board.calculator.system.getTerm(term)?.type === Modellus.TermType.DIFFERENTIAL;
+    }
+
     createElement() {
         this.syncAutomaticColumns();
         return super.createElement();
@@ -251,7 +255,6 @@ class CasesTableShape extends BaseTableShape {
     buildControlColumns(columns = this._activeColumns) {
         const precision = this.board.calculator.getPrecision();
         const visibleCaseNumbers = this.getVisibleCaseNumbers();
-        const columnWidths = Array.isArray(this.properties.columnWidths) ? this.properties.columnWidths : [];
         const controlColumns = [
             {
                 key: "term",
@@ -260,7 +263,7 @@ class CasesTableShape extends BaseTableShape {
                 editable: false,
                 useHeaderFontSize: true,
                 valueDisplayMode: "none",
-                width: Number.isFinite(columnWidths[0]) ? columnWidths[0] : null,
+                width: this.getStoredColumnWidth(0),
                 precision: precision
             }
         ];
@@ -273,11 +276,37 @@ class CasesTableShape extends BaseTableShape {
                 showCase: this.getCasesCount() > 1,
                 editable: true,
                 valueDisplayMode: "none",
-                width: Number.isFinite(columnWidths[caseNumber]) ? columnWidths[caseNumber] : null,
+                width: this.getStoredColumnWidth(caseNumber),
                 precision: precision
             });
         }
         return controlColumns;
+    }
+
+    // Widths are stored per case rather than per visible position, so hiding a case and bringing
+    // it back does not hand its width over to whichever case happens to sit in that slot next.
+    getColumnWidthSlot(column) {
+        if (!column)
+            return -1;
+        if (column.key === "term")
+            return 0;
+        const caseNumber = Math.floor(Number(column.caseNumber));
+        return Number.isFinite(caseNumber) && caseNumber >= 1 ? caseNumber : -1;
+    }
+
+    getStoredColumnWidth(slot) {
+        const columnWidths = Array.isArray(this.properties.columnWidths) ? this.properties.columnWidths : [];
+        return Number.isFinite(columnWidths[slot]) ? columnWidths[slot] : null;
+    }
+
+    onTableColumnWidthChanged(payload) {
+        const slot = this.getColumnWidthSlot(payload?.column);
+        const width = Number(payload?.width);
+        if (slot < 0 || !Number.isFinite(width) || width <= 0)
+            return;
+        const columnWidths = Array.isArray(this.properties.columnWidths) ? [...this.properties.columnWidths] : [];
+        columnWidths[slot] = width;
+        this.setPropertyCommand("columnWidths", columnWidths);
     }
 
     getTableControlOptions(columns = this._activeColumns, controlColumns = this.buildControlColumns(columns)) {
@@ -327,7 +356,8 @@ class CasesTableShape extends BaseTableShape {
                     termName: term,
                     term: this.formatTermSymbol(term),
                     iteration: iteration,
-                    textIndent: 14
+                    textIndent: 14,
+                    separatorAbove: index > 0 && this.isIntegratedTerm(groupTerms[index - 1]) && !this.isIntegratedTerm(term)
                 };
                 for (let i = 0; i < visibleCaseNumbers.length; i++) {
                     const caseNumber = visibleCaseNumbers[i];
