@@ -443,11 +443,17 @@ class ValueShape extends BaseShape {
         const numericValue = Number(term);
         if (Number.isFinite(numericValue))
             return this.formatModelValue(numericValue);
-        return this.formatTermForDisplay(term);
+        return "\u2014";
     }
 
-    setValueTextContent(termText, valueText) {
-        Utils.setTermValueTextContent(this.valueText, termText, valueText);
+    setValueTextContent(termLatex, valueText) {
+        Utils.setTermValueTextContent(this.valueText, termLatex, valueText);
+    }
+
+    isTermNameVisible(term) {
+        if (this.properties.termDisplayMode === "nameValue")
+            return true;
+        return this.isMissingTermReference(term);
     }
 
     getValueFontSize() {
@@ -563,7 +569,7 @@ class ValueShape extends BaseShape {
         this.valueText.setAttribute("font-size", this.getValueFontSize());
         this.valueText.setAttribute("font-weight", this.properties.fontBold ? "bold" : "normal");
         this.valueText.setAttribute("font-style", this.properties.fontItalic ? "italic" : "normal");
-        this.setValueTextContent(this.properties.termDisplayMode === "nameValue" ? termText : "", valueText);
+        this.setValueTextContent(this.isTermNameVisible(termText) ? this.formatTermForDisplay(termText) : "", valueText);
         const valueTextBounds = isEditingCurrentTerm ? this.getValueTextBounds() : null;
         if (isEditingCurrentTerm && this.valueText.lastChild)
             this.valueText.lastChild.setAttribute("fill-opacity", "0");
