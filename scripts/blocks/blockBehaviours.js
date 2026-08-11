@@ -182,7 +182,7 @@ var BlockBehaviours = {
         type: "track-pointer",
         category: "behaviour",
         displayName: "Track pointer",
-        description: "Records where the pointer is while it is dragged over the node, one sample every sampling interval, into one of the object's memories. The sample is written in the units the node is scaled in, so what is recorded is a pair of values rather than a pair of pixels — and when the memory names model terms, the run becomes the values those terms take, iteration by iteration.",
+        description: "Records where the pointer is while it is dragged over the node, one sample every sampling interval, into one of the object's memories. The sample is written in the units the node is scaled in, so what is recorded is a pair of values rather than a pair of pixels — and when the memory names model terms, the run becomes the values those terms take, iteration by iteration. Nothing is recorded until the pointer travels: a click that never moves leaves the memory alone, and a drag opens its run at the point the pointer went down.",
         tags: ["interaction", "pointer", "memory", "record", "track", "writes-model"],
         capabilities: ["interaction", "memory", "writes-model"],
         inputSchema: {
@@ -191,6 +191,8 @@ var BlockBehaviours = {
                 mode: { valueType: "string", defaultValue: "replace", enumValues: ["replace", "append"], label: "Mode", bindable: false, description: "Whether a new drag starts a fresh recording or carries on from the last one." },
                 limit: { valueType: "number", defaultValue: 600, minimum: 1, maximum: 2000, label: "Samples kept" },
                 sampleMs: { valueType: "number", defaultValue: 33, minimum: 10, maximum: 1000, label: "Sampling interval", unit: "ms" },
+                minimumMovePixels: { valueType: "number", defaultValue: 0, minimum: 0, maximum: 50, label: "Movement before another sample", unit: "px", description: "How far the pointer must have travelled since the last sample for the clock to take another one. Left at zero the clock records a pause inside a drag as a pause; above it a pointer resting adds nothing where it rests." },
+                breakOnDrag: { valueType: "boolean", defaultValue: false, bindable: false, label: "Break before a drag", description: "Writes a break into the memory in front of a gesture that travels, so each drag is a run of its own: a trace draws it as its own line and the model reads the break as one iteration with nothing measured at it. A click that never moves carries on from where the recording was left." },
                 originX: { valueType: "number", defaultValue: 0, label: "Origin X", description: "Pixel the horizontal value zero sits at." },
                 originY: { valueType: "number", defaultValue: 0, label: "Origin Y" },
                 scaleX: { valueType: "number", defaultValue: 1, label: "Pixels per unit across" },

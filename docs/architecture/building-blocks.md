@@ -564,7 +564,7 @@ model and the shape's coordinate system the way `clickable` and `drag-angle` do:
 | --- | --- |
 | `remember` | appends a row when the node is clicked. The label and both numbers are bindings, so a key records what the object held at the moment it was pressed |
 | `forget` | empties a memory |
-| `track-pointer` | records the pointer while it is dragged over the node, one sample every `sampleMs`, converted through the node's own origin and scale so what is stored is a pair of values rather than a pair of pixels |
+| `track-pointer` | records the pointer while it is dragged over the node, one sample every `sampleMs`, converted through the node's own origin and scale so what is stored is a pair of values rather than a pair of pixels. Nothing is recorded until the pointer travels — a click that never moves writes nothing and opens no edit, so undo is never given a step that takes nothing back — and a drag opens its run at the point the pointer went down. `minimumMovePixels` says how far it must have travelled since the last sample for the clock to take another: left at zero a pause inside a drag is recorded as a pause, above it a pointer resting adds nothing where it rests. `breakOnDrag` writes a break in front of each drag, so every one of them is a run of its own |
 
 Two bindings and two components read one back:
 
@@ -582,6 +582,15 @@ how choosing a line of the calculator's history puts that result back on the dis
 draws the path the rows describe, mapped through the same origin and scale the recording used. Both
 generate geometry per row rather than compose other blocks, which is why they are code components
 rather than JSON documents.
+
+A row may instead be a **break**: `{ "gap": 1 }`, holding no point, written by `BlockMemory.createGapRow()`
+and read by `BlockMemory.isGap()`. `memory-trace` ends one line at a break and opens the next after
+it, so runs recorded separately are drawn separately, and `toTermSeries` gives the model `NaN` for
+that row — one iteration with nothing measured at it, which is what a data table's empty cell already
+means. NaN is not what is stored: a memory is saved as JSON, where `NaN` is written as `null` and
+would come back as a zero, a point at the origin nobody put there. Whatever reads the points of a
+memory has to know about it — the trace, the fit an object's auto scale works out, and the point a
+crosshair answers the pointer with all leave breaks out.
 
 Three rules bound what a memory can cost: a memory holds at most `BlockMemory.maxRows` (2 000) rows,
 each writing behaviour carries its own `limit` and drops the oldest row past it, and stored numbers
@@ -603,12 +612,42 @@ The two objects built on this are the reference examples:
   needs, so a calculator too narrow to hold both is all keypad.
 * **`mouse-tracker`** keeps `samples`, which names `xVariable` and `yVariable`. A transparent rectangle
   over the plot carries `track-pointer`, so dragging across it records the pointer against the
-  horizontal and vertical axes drawn beside it. There is no playhead of its own: the marker stands on
+  horizontal and vertical axes drawn beside it. It records in `append` mode with a two-pixel
+  `minimumMovePixels` and `breakOnDrag`, so each drag lays a run of samples behind a break and several
+  of them build one recording — the sets of discrete data a person marks out by hand, each drag its
+  own line and all of them feeding the one pair of named variables. A click records nothing at all,
+  which is what leaves the plot free to be pressed without marking it. Starting over is `Clear`,
+  beside remove and reset. The marker and the crosshair stand down on an iteration a break falls on,
+  because there is no point there to stand on. Beside the three colours
+  the chart names it colours the sample it is standing on — the marker and the pair of values under
+  it, which used to be fixed red. Each of its two variables carries a colour as well, for the
+  crosshair line standing at that value and the badge reading it, and that one is picked on the
+  variable's own row through `colorParameter`, the way the calculator's term keys carry theirs,
+  rather than on a colour menu that would name the same thing twice. The two colours every shape
+  already has — foreground and border — are declared as parameters of its own so the drawing reads
+  them instead of tokens: the numbers along the axes are the foreground and both outlines are the
+  border, defaulting to the tokens they were drawn from, so the swatch on each row is the colour the
+  object is actually drawn in. A component that draws from a token where the toolbar offers a
+  property has a swatch that lies, and worse, `ComponentShape.setDefaults` seeds every component with
+  the *default* component type's defaults, so the row shows that object's colour until the real
+  definition names one.
+
+A parameter added after a model was saved needs two backfills, not one. `backfillInstanceParameterBindings`
+gives the stored definition the binding that reads the property; `backfillComponentProperties` gives the
+shape the value, from the same defaults a new instance is built with. Without the second, the drawing
+still looks right — a binding that resolves to nothing falls back to the parameter's own default — while
+every control offering that property reads `undefined` and shows a fallback of its own, which is how a
+colour swatch ends up black beside a grey drawing. There is no playhead of
+  its own: the marker stands on
   the sample belonging to **the iteration on screen**, read through `$iteration`, so stepping or
   playing the model walks it along the trace. The marker is either a dot or the character the user
   picked, placed by that character's own pivot point: `ComponentShape` resolves the chosen
   `characterKey` through `CharacterLibrary` and hands the definition the image, the pivot and the
-  shape of the image, which the definition turns into a letterboxed offset with formulas.
+  shape of the image, which the definition turns into a letterboxed offset with formulas. What it is
+  drawn as by default is a plain white sheet: `showGrid` and `showTicks` both start off and both
+  surfaces are `surface.default`, so nothing rules the area a gesture is drawn on. The axes stay, and
+  so do the grab areas over where their ticks would be — `plot-axes` works its ticks out whether or
+  not it draws them, so an axis with no marks is still rescaled by pulling one.
 
 `$iteration` is the third reserved parameter, beside `$width` and `$height`: the iteration the board
 is showing, so a drawing of what the model holds per iteration stands on the same one as everything

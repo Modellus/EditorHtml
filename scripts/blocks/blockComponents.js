@@ -124,7 +124,8 @@ var BlockComponentHelpers = {
     // the horizontal axis, and its height read against the vertical one. The chart answers a hovered
     // x this way, and a run of samples is answered the same.
     pointAtPointerNodes(parameters, box, badge, context) {
-        const rows = Array.isArray(parameters.rows) ? parameters.rows : [];
+        // A break is not a point the pointer can be answered with.
+        const rows = (Array.isArray(parameters.rows) ? parameters.rows : []).filter(row => !BlockMemory.isGap(row));
         if (rows.length === 0)
             return [];
         const value = Number(parameters.valueX);
@@ -135,9 +136,12 @@ var BlockComponentHelpers = {
         if (positionY < box.top || positionY > box.bottom)
             return [];
         const pointColor = context.tokens.resolveValue(parameters.pointColor);
-        const axisBadge = Object.assign({}, badge, { backgroundColor: context.tokens.resolveValue(parameters.axisBadgeColor) });
-        axisBadge.textColor = Utils.getContrastColor(axisBadge.backgroundColor);
-        const valueBadge = Object.assign({}, badge, { backgroundColor: pointColor, textColor: Utils.getContrastColor(pointColor) });
+        // Each badge is painted in the colour its own value is given, and falls back to the colour
+        // that badge has always been drawn in.
+        const axisBadgeColor = context.tokens.resolveValue(parameters.xColor || parameters.axisBadgeColor);
+        const valueBadgeColor = context.tokens.resolveValue(parameters.yColor || parameters.pointColor);
+        const axisBadge = Object.assign({}, badge, { backgroundColor: axisBadgeColor, textColor: Utils.getContrastColor(axisBadgeColor) });
+        const valueBadge = Object.assign({}, badge, { backgroundColor: valueBadgeColor, textColor: Utils.getContrastColor(valueBadgeColor) });
         const digits = Math.max(0, Math.min(6, Math.floor(Number(parameters.digits))));
         const valueText = Utils.formatNumber(nearestY, digits);
         const gapX = Number(badge.fontSize) * context.tokens.getNumber("axis.labelGapX", 1.8);
@@ -517,6 +521,7 @@ var BlockComponentHelpers = {
         parameters: plotParameters().concat([
             BlockComponentHelpers.parameter("ticksX", "Horizontal ticks", "number", 5, { minimum: 2, maximum: 41 }),
             BlockComponentHelpers.parameter("ticksY", "Vertical ticks", "number", 5, { minimum: 2, maximum: 41 }),
+            BlockComponentHelpers.parameter("showTicks", "Show ticks", "boolean", true, { description: "Draws the marks along both axes. Turned off the axis is a bare line, and it is still rescaled by pulling where its ticks stand." }),
             BlockComponentHelpers.parameter("showLabels", "Show labels", "boolean", true),
             BlockComponentHelpers.parameter("showBorder", "Close the box", "boolean", false, { description: "Draws the top and right sides as well, the way a chart frames its plot." }),
             BlockComponentHelpers.parameter("showZeroLines", "Show zero lines", "boolean", true, { description: "Marks where a value of zero falls when the range crosses it." }),
@@ -552,15 +557,19 @@ var BlockComponentHelpers = {
             if (parameters.showZeroLines === true && Number(parameters.minimumY) < 0 && Number(parameters.maximumY) > 0)
                 children.push(BlockComponentHelpers.strokeLine("zero-x", box.left, box.toY(0), box.right, box.toY(0), color, parameters.lineWidth));
             const ticks = BlockComponentHelpers.plotTicks(parameters, box);
+            // The ticks are worked out whether or not they are drawn: an axis whose marks are hidden is
+            // still rescaled by pulling where they stand.
+            const showTicks = parameters.showTicks !== false;
             const minorLength = context.tokens.getNumber("axis.minorTickLength", 2.5);
             const minorOpacity = context.tokens.getNumber("axis.minorOpacity", 0.45);
-            for (let index = 0; index < ticks.x.minor.length; index++)
+            for (let index = 0; showTicks && index < ticks.x.minor.length; index++)
                 children.push(BlockComponentHelpers.strokeLine(`x-minor-tick-${index}`, box.toX(ticks.x.minor[index]), box.bottom, box.toX(ticks.x.minor[index]), box.bottom + minorLength, color, 1, minorOpacity));
-            for (let index = 0; index < ticks.y.minor.length; index++)
+            for (let index = 0; showTicks && index < ticks.y.minor.length; index++)
                 children.push(BlockComponentHelpers.strokeLine(`y-minor-tick-${index}`, box.left - minorLength, box.toY(ticks.y.minor[index]), box.left, box.toY(ticks.y.minor[index]), color, 1, minorOpacity));
             for (let index = 0; index < ticks.x.major.length; index++) {
                 const position = box.toX(ticks.x.major[index]);
-                children.push(BlockComponentHelpers.strokeLine(`x-tick-${index}`, position, box.bottom, position, box.bottom + Number(parameters.tickLength), color, parameters.lineWidth));
+                if (showTicks)
+                    children.push(BlockComponentHelpers.strokeLine(`x-tick-${index}`, position, box.bottom, position, box.bottom + Number(parameters.tickLength), color, parameters.lineWidth));
                 if (parameters.showLabels !== true)
                     continue;
                 // The first and the last label lean inwards, so a scale reads to its own ends
@@ -593,7 +602,8 @@ var BlockComponentHelpers = {
             }
             for (let index = 0; index < ticks.y.major.length; index++) {
                 const position = box.toY(ticks.y.major[index]);
-                children.push(BlockComponentHelpers.strokeLine(`y-tick-${index}`, box.left - Number(parameters.tickLength), position, box.left, position, color, parameters.lineWidth));
+                if (showTicks)
+                    children.push(BlockComponentHelpers.strokeLine(`y-tick-${index}`, box.left - Number(parameters.tickLength), position, box.left, position, color, parameters.lineWidth));
                 if (parameters.showLabels !== true)
                     continue;
                 children.push({
@@ -631,6 +641,8 @@ var BlockComponentHelpers = {
             BlockComponentHelpers.parameter("digits", "Decimals", "number", 2, { minimum: 0, maximum: 6, description: "How the values are rounded. Bound to the model's own precision, a readout beside the drawing reads the way every other readout on the board does." }),
             BlockComponentHelpers.parameter("showBadges", "Show values", "boolean", true),
             BlockComponentHelpers.parameter("color", "Line colour", "colour", "token:stroke.default", { category: "style" }),
+            BlockComponentHelpers.parameter("xColor", "Horizontal value colour", "colour", "", { category: "style", description: "Colour of the line standing at the horizontal value and of the badge reading it. Left unset both keep the crosshair's own colours." }),
+            BlockComponentHelpers.parameter("yColor", "Vertical value colour", "colour", "", { category: "style", description: "Colour of the line standing at the vertical value and of the badge reading it." }),
             BlockComponentHelpers.parameter("pointColor", "Point colour", "colour", "token:stroke.accent", { category: "style" }),
             BlockComponentHelpers.parameter("axisBadgeColor", "Axis badge colour", "colour", "token:axis.labelColor", { category: "style" }),
             BlockComponentHelpers.parameter("badgeColor", "Badge colour", "colour", "token:text.secondary", { category: "style" }),
@@ -645,12 +657,16 @@ var BlockComponentHelpers = {
             if (!Number.isFinite(pointX) || !Number.isFinite(pointY) || pointX < box.left || pointX > box.right || pointY < box.top || pointY > box.bottom)
                 return { id: "plot-crosshair", type: "group", children: [] };
             const color = context.tokens.resolveValue(parameters.color);
+            // Each value may be given a colour of its own — the one the term it stands for is drawn
+            // in — and what is not given one keeps the colour the crosshair is drawn in.
+            const xColor = context.tokens.resolveValue(parameters.xColor || parameters.color);
+            const yColor = context.tokens.resolveValue(parameters.yColor || parameters.color);
             const opacity = context.tokens.getNumber("crosshair.opacity", 0.25);
             const lineWidth = context.tokens.getNumber("crosshair.strokeWidth", 1);
             const dash = context.tokens.get("crosshair.dash", "4 3");
             // Both lines cross the whole plot, so the pointer is placed against both scales at once.
-            const vertical = BlockComponentHelpers.strokeLine("vertical", pointX, box.top, pointX, box.bottom, color, lineWidth, opacity);
-            const horizontal = BlockComponentHelpers.strokeLine("horizontal", box.left, pointY, box.right, pointY, color, lineWidth, opacity);
+            const vertical = BlockComponentHelpers.strokeLine("vertical", pointX, box.top, pointX, box.bottom, xColor, lineWidth, opacity);
+            const horizontal = BlockComponentHelpers.strokeLine("horizontal", box.left, pointY, box.right, pointY, yColor, lineWidth, opacity);
             vertical.properties.strokeDash = dash;
             horizontal.properties.strokeDash = dash;
             const children = [vertical, horizontal];

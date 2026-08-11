@@ -190,18 +190,21 @@ var BlockMemoryComponents = {
             const originY = Number(parameters.originY);
             const scaleX = Number(parameters.scaleX);
             const scaleY = Number(parameters.scaleY);
-            const points = BlockMemory.toPoints(parameters.rows).map(point => ({
-                x: originX + point.x * scaleX,
-                y: originY + point.y * scaleY
-            }));
+            const toPixels = point => ({ x: originX + point.x * scaleX, y: originY + point.y * scaleY });
+            // A break in the rows is a break in the line: each run of samples is drawn on its own, so
+            // what was recorded in separate gestures is not joined across the gap between them.
+            const segments = BlockMemory.toSegments(parameters.rows).map(segment => segment.map(toPixels));
+            const points = segments.flat();
             const color = context.tokens.resolveValue(parameters.color);
             const children = [];
-            if (points.length > 1) {
+            for (let index = 0; index < segments.length; index++) {
+                if (segments[index].length < 2)
+                    continue;
                 children.push({
-                    id: "path",
+                    id: `path-${index}`,
                     type: "polyline",
                     properties: {
-                        points: points,
+                        points: segments[index],
                         fill: "none",
                         stroke: color,
                         strokeWidth: Number(parameters.lineWidth),

@@ -86,7 +86,8 @@ async function dragAcross(page, steps = 8) {
 test('the tracker compiles and draws both axes', async ({ page }) => {
     await setupBoard(page);
     await addModel(page);
-    await addTracker(page);
+    // A tracker starts as a plain white sheet: the ticks are asked for here so what they draw can be read.
+    await addTracker(page, { showTicks: true });
     const report = await page.evaluate(() => {
         const shape = shell.board.shapes.getByName('Tracker');
         const validation = shape.validateComponent();
@@ -197,15 +198,108 @@ test('a whole recording is one undo step', async ({ page }) => {
     expect((await tracker(page)).samples).toEqual([]);
 });
 
-test('a second drag replaces the recording instead of adding to it', async ({ page }) => {
+async function traces(page) {
+    return page.evaluate(() => Array.from(document.querySelectorAll('[data-source-component="memory-trace"] polyline'))
+        .map(node => node.getAttribute('points').split(' ').length));
+}
+
+test('a second drag adds to the recording instead of replacing it, on a line of its own', async ({ page }) => {
     await setupBoard(page);
     await addModel(page);
-    await addTracker(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
     await dragAcross(page, 6);
-    const first = (await tracker(page)).samples.length;
+    const first = (await tracker(page)).samples;
+    expect(await traces(page)).toEqual([first.length]);
     await dragAcross(page, 3);
-    const second = (await tracker(page)).samples.length;
-    expect(second).toBeLessThan(first + 3);
+    const both = (await tracker(page)).samples;
+    expect(both.length).toBeGreaterThan(first.length + 1);
+    // The first set is left exactly as it was recorded, with a break and the second one behind it.
+    expect(both.slice(0, first.length)).toEqual(first);
+    expect(both[first.length]).toEqual({ gap: 1 });
+    // Two lines, neither joined to the other, and the break itself draws nothing.
+    const drawn = await traces(page);
+    expect(drawn).toHaveLength(2);
+    expect(drawn[0]).toBe(first.length);
+    expect(drawn[0] + drawn[1]).toBe(both.length - 1);
+    // The break is one iteration the measurements have nothing to say at.
+    const model = await page.evaluate(count => {
+        const calculator = shell.board.calculator;
+        const read = iteration => {
+            calculator.setIteration(iteration);
+            return calculator.getByName('px', 1);
+        };
+        return { lastIteration: calculator.getLastIteration(), atBreak: read(count + 1), afterBreak: read(count + 2) };
+    }, first.length);
+    expect(model.lastIteration).toBe(both.length);
+    expect(Number.isFinite(model.atBreak)).toBe(false);
+    expect(Number.isFinite(model.afterBreak)).toBe(true);
+});
+
+// A break holds no point, so nothing on the drawing may answer with one: no marker stands on it and
+// no axis is fitted around it.
+test('the iteration a break falls on shows no marker, and a break is not fitted to the axes', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        shape.setProperty('samples', [{ x: 2, y: 4 }, { x: 3, y: 5 }, { gap: 1 }, { x: 6, y: 4.5 }]);
+        shape.refreshModelData();
+    });
+    await page.waitForTimeout(200);
+    // Four rows is a four-iteration run whichever of them holds a point.
+    expect(await page.evaluate(() => shell.board.calculator.getLastIteration())).toBe(4);
+    const markerAt = iteration => page.evaluate(iteration => {
+        shell.board.calculator.setIteration(iteration);
+        shell.board.shapes.getByName('Tracker').tick();
+        shell.board.draw();
+        return document.querySelector('[data-source-id="marker-dot"]') !== null;
+    }, iteration);
+    expect(await markerAt(2)).toBe(true);
+    expect(await markerAt(3)).toBe(false);
+    expect(await markerAt(4)).toBe(true);
+    const fitted = await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        shape.setProperty('autoScale', true);
+        shell.board.draw();
+        return { range: shape.getEffectiveAxisRange(), padded: BlockChartGeometry.padDomain(2, 6, 4, 5) };
+    });
+    // The same fit the three real points give, with the break making no difference to it.
+    expect(fitted.range).toEqual(fitted.padded);
+});
+
+// Only a gesture that travels is a recording. A click leaves everything as it was — the recording,
+// the model, and the undo stack, which must not be given a step that takes nothing back.
+test('a click records nothing, whether the recording is empty or not', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    const box = await plotBox(page);
+    const clickAt = async (fractionX, fractionY) => {
+        await page.mouse.move(box.x + box.width * fractionX, box.y + box.height * fractionY);
+        await page.mouse.down();
+        // Held down for long enough that the sampling clock would have taken several samples.
+        await page.waitForTimeout(200);
+        await page.mouse.up();
+        await page.waitForTimeout(150);
+    };
+    await clickAt(0.2, 0.8);
+    await clickAt(0.5, 0.5);
+    expect((await tracker(page)).samples).toEqual([]);
+    expect(await page.evaluate(() => shell.board.calculator.getLastIteration())).toBe(1);
+
+    // The same click over a recording leaves it alone: no point, and no break in front of one.
+    await dragAcross(page, 5);
+    const recorded = (await tracker(page)).samples;
+    expect(recorded.length).toBeGreaterThan(3);
+    await clickAt(0.5, 0.5);
+    expect((await tracker(page)).samples).toEqual(recorded);
+    expect(await traces(page)).toHaveLength(1);
+
+    // Nothing happened, so undo takes back the drag rather than a step the click left behind.
+    await page.evaluate(() => shell.board.invoker.undo());
+    await page.waitForTimeout(200);
+    expect((await tracker(page)).samples).toEqual([]);
 });
 
 test('the model player walks the recording and the marker follows the iteration on screen', async ({ page }) => {
@@ -377,8 +471,10 @@ test('the settings menu edits both ends of an axis on one row, the way the chart
     expect(rows).not.toContain('Minimum X');
     expect(rows).not.toContain('Maximum Y');
     // Nothing that was taken off the toolbar is still on it.
-    for (const gone of ['Sampling interval', 'Show crosshair', 'Show grid', 'Show trace', 'Show readout', 'Decimals', 'Marker size', 'Copy definition', 'Show samples', 'Samples kept'])
+    for (const gone of ['Sampling interval', 'Show crosshair', 'Show trace', 'Show readout', 'Decimals', 'Marker size', 'Copy definition', 'Show samples', 'Samples kept'])
         expect(rows, gone).not.toContain(gone);
+    // The two the plain sheet is drawn without are switched back on from here.
+    expect(rows).toEqual(expect.arrayContaining(['Show grid', 'Show ticks']));
     await page.evaluate(() => {
         const row = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item')).find(item => item.querySelector('.mdl-dropdown-list-label').textContent === 'Horizontal');
         const box = DevExpress.ui.dxNumberBox.getInstance(row.querySelectorAll('.dx-numberbox')[1]);
@@ -434,7 +530,7 @@ test('while the model plays the pointer has no say and the iteration does', asyn
     expect(Number(shown)).toBeCloseTo(recorded.samples[0].x ?? 0, 1);
 });
 
-test('the colour menu offers what the chart offers, under the same names', async ({ page }) => {
+test('the colour menu offers what the chart offers, under the same names, and the tracker\'s own after them', async ({ page }) => {
     await setupBoard(page);
     await addModel(page);
     await addTracker(page);
@@ -455,12 +551,192 @@ test('the colour menu offers what the chart offers, under the same names', async
     await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Tracker')));
     await page.waitForTimeout(300);
     const trackerRows = await readColorRows();
-    expect(trackerRows).toEqual(chartRows);
-    expect(trackerRows).toEqual(expect.arrayContaining(['Background', 'Data Area', 'Axis']));
+    // Everything the chart colours, the tracker colours under the same name and in the same order,
+    // and what the tracker has of its own is offered after them rather than among them.
+    const own = ['Value'];
+    expect(chartRows).toEqual(expect.arrayContaining(['Background', 'Data Area', 'Axis']));
+    expect(trackerRows.filter(row => !own.includes(row))).toEqual(chartRows);
+    expect(trackerRows.slice(trackerRows.indexOf('Axis') + 1, trackerRows.indexOf('Axis') + 1 + own.length)).toEqual(own);
+    // A variable's colour is chosen beside the variable, so it is not offered here as well.
+    expect(trackerRows).not.toContain('Horizontal');
+    expect(trackerRows).not.toContain('Vertical');
     // The colour reaches the drawing: the plot is painted with what "Data Area" holds.
     await page.evaluate(() => shell.board.shapes.getByName('Tracker').setProperty('dataAreaColor', '#ffe08a'));
     await page.waitForTimeout(300);
     expect(await page.evaluate(() => document.querySelector('[data-source-id="plot"]').getAttribute('fill'))).toBe('#ffe08a');
+});
+
+// Every colour the toolbar offers has to be the colour the object is drawn in before anyone has
+// touched one, or the swatches are telling a story the drawing does not.
+test('what each colour row holds is what the tracker is drawn in, untouched', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { showTicks: true });
+    await page.evaluate(() => shell.board.shapes.getByName('Tracker')
+        .setProperty('samples', Array.from({ length: 11 }, (value, index) => ({ x: index, y: index }))));
+    await page.waitForTimeout(200);
+    const box = await plotBox(page);
+    await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.4);
+    await page.waitForTimeout(250);
+    const rows = await page.evaluate(() => {
+        const attribute = (id, name) => document.querySelector(`[data-source-id="${id}"]`)?.getAttribute(name) ?? null;
+        const properties = shell.board.shapes.getByName('Tracker').properties;
+        return {
+            // The shape's own two, which the tracker used to draw from tokens and never read.
+            foreground: [properties.foregroundColor, attribute('x-label-1', 'fill')],
+            border: [properties.borderColor, attribute('body', 'stroke'), attribute('plot', 'stroke')],
+            background: [properties.backgroundColor, attribute('body', 'fill')],
+            dataArea: [properties.dataAreaColor, attribute('plot', 'fill')],
+            axis: [properties.axisColor, attribute('axis-x', 'stroke'), attribute('x-tick-1', 'stroke')],
+            value: [properties.valueColor, attribute('marker-dot', 'fill'), attribute('pointer-values-plate', 'fill')],
+            horizontal: [properties.xValueColor, attribute('vertical', 'stroke'), attribute('value-x-plate', 'fill')],
+            vertical: [properties.yValueColor, attribute('horizontal', 'stroke'), attribute('value-y-plate', 'fill')]
+        };
+    });
+    for (const [row, values] of Object.entries(rows)) {
+        expect(values[0], row).toMatch(/^#[0-9a-f]{6}$/i);
+        expect(values, row).toEqual(values.map(() => values[0]));
+    }
+    // The two the object never read are read now: what the row is set to is what is drawn.
+    const repainted = await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        shape.setProperty('foregroundColor', '#1c7c54');
+        shape.setProperty('borderColor', '#8a3ffc');
+        shell.board.draw();
+        const attribute = (id, name) => document.querySelector(`[data-source-id="${id}"]`)?.getAttribute(name) ?? null;
+        return { label: attribute('x-label-1', 'fill'), body: attribute('body', 'stroke'), plot: attribute('plot', 'stroke') };
+    });
+    expect(repainted).toEqual({ label: '#1c7c54', body: '#8a3ffc', plot: '#8a3ffc' });
+});
+
+// The two variables the tracker names are answered in colours of their own, and so is the sample it
+// is standing on — the one that was fixed red.
+test('each variable and the value at the point are painted in the colour they are given', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page);
+    await page.evaluate(() => shell.board.shapes.getByName('Tracker')
+        .setProperty('samples', Array.from({ length: 11 }, (value, index) => ({ x: index, y: index }))));
+    await page.waitForTimeout(200);
+    const box = await plotBox(page);
+    const readAt = async () => {
+        await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.4);
+        await page.waitForTimeout(250);
+        return page.evaluate(() => {
+            const attribute = (selector, name) => document.querySelector(selector)?.getAttribute(name) ?? null;
+            return {
+                verticalLine: attribute('[data-source-id="vertical"]', 'stroke'),
+                horizontalLine: attribute('[data-source-id="horizontal"]', 'stroke'),
+                xBadge: attribute('[data-source-id="value-x-plate"]', 'fill'),
+                yBadge: attribute('[data-source-id="value-y-plate"]', 'fill'),
+                marker: attribute('[data-source-id="marker-dot"]', 'fill'),
+                valueBadge: attribute('[data-source-id="pointer-values-plate"]', 'fill'),
+                warning: new BlockTokens('standard').get('stroke.warning')
+            };
+        });
+    };
+    // Out of the box the sample it stands on is the red it has always been drawn in.
+    const before = await readAt();
+    expect(before.marker).toBe(before.warning);
+    expect(before.valueBadge).toBe(before.marker);
+    await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        shape.setProperty('xValueColor', '#1c7c54');
+        shape.setProperty('yValueColor', '#8a3ffc');
+        shape.setProperty('valueColor', '#0f62fe');
+        shell.board.draw();
+    });
+    const painted = await readAt();
+    // The line standing at a value and the badge reading it belong to the same variable.
+    expect(painted.verticalLine).toBe('#1c7c54');
+    expect(painted.xBadge).toBe('#1c7c54');
+    expect(painted.horizontalLine).toBe('#8a3ffc');
+    expect(painted.yBadge).toBe('#8a3ffc');
+    expect(painted.marker).toBe('#0f62fe');
+    expect(painted.valueBadge).toBe('#0f62fe');
+});
+
+// A variable's colour belongs to the variable, so it is picked where the variable is picked — the
+// same row, the way the calculator's term keys carry theirs.
+test('each variable carries its colour on its own row in the model menu', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Tracker')));
+    await page.waitForTimeout(300);
+    await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+    await page.waitForTimeout(400);
+    const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item')).map(row => {
+        const swatch = row.querySelector('.mdl-dropdown-list-control .shape-term-color .mdl-color-picker-button-icon');
+        return {
+            text: row.querySelector('.mdl-dropdown-list-label').textContent,
+            hasColorSwatch: swatch !== null,
+            swatch: swatch ? Utils.toHexColor(getComputedStyle(swatch).color) : null
+        };
+    }));
+    // The colours are not rows of their own here either: they ride on the two variables, on rows
+    // named for the axis rather than for the word variable.
+    expect(rows.map(row => row.text)).toEqual(['Horizontal', 'Vertical']);
+    expect(rows.map(row => row.hasColorSwatch)).toEqual([true, true]);
+    // The swatch reads the colour the values are drawn in, not a fallback of the picker's own.
+    expect(rows.map(row => row.swatch)).toEqual([
+        await page.evaluate(() => document.querySelector('[data-source-id="axis-x"]').getAttribute('stroke')),
+        await page.evaluate(() => document.querySelector('[data-source-id="axis-x"]').getAttribute('stroke'))
+    ]);
+    // What the swatch writes is a property edit like any other, so undo takes it back.
+    const chosen = await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        const before = shape.properties.xValueColor;
+        shape.setPropertyCommand('xValueColor', '#1c7c54');
+        return { before: before, after: shape.properties.xValueColor };
+    });
+    expect(chosen.after).toBe('#1c7c54');
+    await page.evaluate(() => shell.board.invoker.undo());
+    await page.waitForTimeout(200);
+    expect(await page.evaluate(() => shell.board.shapes.getByName('Tracker').properties.xValueColor)).toBe(chosen.before);
+});
+
+// A tracker saved before a parameter existed carries no value for it. The drawing falls back to the
+// parameter's own default and looks right; a control reading the property would read nothing and
+// show a fallback of its own, which is how a swatch ends up black beside a grey drawing.
+test('a tracker saved without a parameter is given the value its drawing already uses', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page);
+    const reopened = await page.evaluate(async () => {
+        const model = JSON.parse(JSON.stringify(shell.serialize()));
+        // The model as it would have been saved before these were parameters at all.
+        const stripped = ['xValueColor', 'yValueColor', 'valueColor', 'foregroundColor', 'borderColor'];
+        const walk = node => {
+            if (Array.isArray(node))
+                return node.forEach(walk);
+            if (!node || typeof node !== 'object')
+                return;
+            if (node.definition && node.definition.type === 'mouse-tracker') {
+                for (const name of stripped) {
+                    delete node[name];
+                    delete node.definition.root?.parameters?.[name];
+                }
+                node.definition.parameters = (node.definition.parameters ?? []).filter(parameter => !stripped.includes(parameter.id));
+            }
+            Object.values(node).forEach(walk);
+        };
+        walk(model);
+        shell.openModel(JSON.stringify(model));
+        await new Promise(resolve => setTimeout(resolve, 600));
+        const shape = shell.board.shapes.getByName('Tracker');
+        const attribute = (id, name) => document.querySelector(`[data-source-id="${id}"]`)?.getAttribute(name) ?? null;
+        return {
+            properties: Object.fromEntries(stripped.map(name => [name, shape.properties[name]])),
+            body: attribute('body', 'stroke'),
+            marker: attribute('marker-dot', 'fill')
+        };
+    });
+    // Every one of them is filled in, and with the value the drawing was already using.
+    for (const [name, value] of Object.entries(reopened.properties))
+        expect(value, name).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(reopened.properties.borderColor).toBe(reopened.body);
+    expect(reopened.properties.xValueColor).toBe(reopened.properties.yValueColor);
 });
 
 test('the crosshair answers the pointer with the point recorded at its horizontal value', async ({ page }) => {
@@ -561,7 +837,7 @@ test('equal axis makes one unit across measure the same as one unit up', async (
 test('the axis, its ticks and the grid are drawn in the colours the chart draws its own', async ({ page }) => {
     await setupBoard(page);
     await addModel(page);
-    await addTracker(page);
+    await addTracker(page, { showGrid: true, showTicks: true });
     const drawn = await page.evaluate(() => {
         const attribute = (selector, name) => document.querySelector(selector)?.getAttribute(name) ?? null;
         return {
@@ -581,6 +857,45 @@ test('the axis, its ticks and the grid are drawn in the colours the chart draws 
     expect(drawn.label).toBe(drawn.chart.foregroundColor);
     expect(drawn.majorGrid).toBe(drawn.chart.gridColor);
     expect(drawn.minorGrid).toBe(drawn.chart.gridColor);
+});
+
+// A sheet to draw a gesture on: no rules, no marks, and the same white under the plot as around it.
+test('a tracker is a plain white sheet until the grid and the ticks are asked for', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page);
+    const plain = await page.evaluate(() => ({
+        grid: document.querySelectorAll('[data-source-component="plot-grid"] line').length,
+        majorTicks: document.querySelectorAll('[data-source-id^="x-tick-"]:not([data-source-id^="x-tick-handle-"])').length,
+        minorTicks: document.querySelectorAll('[data-source-id^="x-minor-tick-"]').length,
+        labels: document.querySelectorAll('[data-source-id^="x-label-"]').length,
+        axes: ['axis-x', 'axis-y'].map(id => document.querySelector(`[data-source-id="${id}"]`) !== null),
+        body: document.querySelector('[data-source-id="body"]').getAttribute('fill'),
+        plot: document.querySelector('[data-source-id="plot"]').getAttribute('fill')
+    }));
+    expect(plain.grid).toBe(0);
+    expect(plain.majorTicks).toBe(0);
+    expect(plain.minorTicks).toBe(0);
+    expect(plain.labels).toBe(0);
+    // The axes themselves stay: the plot is bounded even when nothing is marked along it.
+    expect(plain.axes).toEqual([true, true]);
+    expect(plain.body).toBe('#ffffff');
+    expect(plain.plot).toBe('#ffffff');
+
+    const asked = await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        shape.setProperty('showGrid', true);
+        shape.setProperty('showTicks', true);
+        shell.board.draw();
+        return {
+            grid: document.querySelectorAll('[data-source-component="plot-grid"] line').length,
+            minorTicks: document.querySelectorAll('[data-source-id^="x-minor-tick-"]').length,
+            labels: Array.from(document.querySelectorAll('[data-source-id^="x-label-"]')).map(node => node.textContent)
+        };
+    });
+    expect(asked.grid).toBeGreaterThan(0);
+    expect(asked.minorTicks).toBeGreaterThan(0);
+    expect(asked.labels).toEqual(['0', '2', '4', '6', '8', '10']);
 });
 
 test('an axis is rescaled by dragging one of its own ticks', async ({ page }) => {

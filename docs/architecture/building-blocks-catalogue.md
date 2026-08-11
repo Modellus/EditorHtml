@@ -523,7 +523,7 @@ Capabilities: `interaction`, `textual`
 
 ### `track-pointer` — Track pointer
 
-Records where the pointer is while it is dragged over the node, one sample every sampling interval, into one of the object's memories. The sample is written in the units the node is scaled in, so what is recorded is a pair of values rather than a pair of pixels — and when the memory names model terms, the run becomes the values those terms take, iteration by iteration.
+Records where the pointer is while it is dragged over the node, one sample every sampling interval, into one of the object's memories. The sample is written in the units the node is scaled in, so what is recorded is a pair of values rather than a pair of pixels — and when the memory names model terms, the run becomes the values those terms take, iteration by iteration. Nothing is recorded until the pointer travels: a click that never moves leaves the memory alone, and a drag opens its run at the point the pointer went down.
 
 Capabilities: `interaction`, `memory`, `writes-model`
 
@@ -533,6 +533,8 @@ Capabilities: `interaction`, `memory`, `writes-model`
 | `mode` | string | "replace" | replace \| append |
 | `limit` | number | 600 | min 1, max 2000 |
 | `sampleMs` | number | 33 | min 10, max 1000 |
+| `minimumMovePixels` | number | 0 | min 0, max 50 |
+| `breakOnDrag` | boolean | false |  |
 | `originX` | number | 0 |  |
 | `originY` | number | 0 |  |
 | `scaleX` | number | 1 |  |
@@ -751,7 +753,7 @@ Capabilities: `memory`, `linear`
 
 ### `mouse-tracker` — Mouse tracker
 
-Records where the pointer goes while it is dragged across the plot, against a horizontal and a vertical axis. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.
+Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.
 
 Capabilities: `interaction`, `memory`, `linear`, `writes-model`, `textual`
 
@@ -760,6 +762,8 @@ Capabilities: `interaction`, `memory`, `linear`, `writes-model`, `textual`
 | `samples` | memory | [] |  |
 | `xVariable` | variable | "" |  |
 | `yVariable` | variable | "" |  |
+| `xValueColor` | colour | "token:axis.color" |  |
+| `yValueColor` | colour | "token:axis.color" |  |
 | `characterKey` | character | "" |  |
 | `characterImage` | string | "" |  |
 | `characterPivotX` | number | 0.5 |  |
@@ -774,10 +778,15 @@ Capabilities: `interaction`, `memory`, `linear`, `writes-model`, `textual`
 | `maximumX` | number | 10 |  |
 | `minimumY` | number | 0 |  |
 | `maximumY` | number | 10 |  |
+| `showGrid` | boolean | false |  |
+| `showTicks` | boolean | false |  |
 | `ticks` | number | 5 | min 2, max 11 |
-| `backgroundColor` | colour | "token:surface.emphasis" |  |
+| `backgroundColor` | colour | "token:surface.default" |  |
 | `dataAreaColor` | colour | "token:surface.default" |  |
 | `axisColor` | colour | "token:axis.color" |  |
+| `valueColor` | colour | "token:stroke.warning" |  |
+| `foregroundColor` | colour | "token:axis.labelColor" |  |
+| `borderColor` | colour | "token:stroke.subtle" |  |
 
 ### `orbit-system` — Orbit system
 
@@ -816,6 +825,7 @@ Capabilities: `layout`, `textual`
 | `maximumY` | number | 10 |  |
 | `ticksX` | number | 5 | min 2, max 41 |
 | `ticksY` | number | 5 | min 2, max 41 |
+| `showTicks` | boolean | true |  |
 | `showLabels` | boolean | true |  |
 | `showBorder` | boolean | false |  |
 | `showZeroLines` | boolean | true |  |
@@ -852,6 +862,8 @@ Capabilities: `layout`, `textual`
 | `digits` | number | 2 | min 0, max 6 |
 | `showBadges` | boolean | true |  |
 | `color` | colour | "token:stroke.default" |  |
+| `xColor` | colour | "" |  |
+| `yColor` | colour | "" |  |
 | `pointColor` | colour | "token:stroke.accent" |  |
 | `axisBadgeColor` | colour | "token:axis.labelColor" |  |
 | `badgeColor` | colour | "token:text.secondary" |  |

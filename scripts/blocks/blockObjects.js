@@ -19,6 +19,19 @@ class BlockObjects {
         return defaults;
     }
 
+    // What an instance is missing of the defaults its type declares. A shape saved before a parameter
+    // existed carries no value for it: the drawing falls back to the parameter's own default and looks
+    // right, while every control reading the property reads nothing and shows its own fallback — a
+    // swatch in a colour the object is not drawn in. Filling the gaps in makes the two agree again.
+    static getMissingInstancePropertyDefaults(componentType, properties, presetName = "standard") {
+        const missing = {};
+        for (const [id, value] of Object.entries(BlockObjects.getInstancePropertyDefaults(componentType, presetName))) {
+            if ((properties ?? {})[id] === undefined)
+                missing[id] = value;
+        }
+        return missing;
+    }
+
     static buildInstanceParameterBindings(componentType) {
         const bindings = {};
         for (const parameter of BlockObjects.getComponentParameters(componentType))

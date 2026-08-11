@@ -3558,7 +3558,7 @@ BlockDefinitionLoader.registerAll([
         "type": "mouse-tracker",
         "category": "component",
         "displayName": "Mouse tracker",
-        "description": "Records where the pointer goes while it is dragged across the plot, against a horizontal and a vertical axis. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.",
+        "description": "Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.",
         "icon": "fa-light fa-arrow-pointer",
         "tags": [
             "object",
@@ -3709,23 +3709,43 @@ BlockDefinitionLoader.registerAll([
                     "x": "xVariable",
                     "y": "yVariable"
                 },
-                "description": "The positions the pointer was recorded at, oldest first. Named variables take these values iteration by iteration, the way measurements do."
+                "description": "The positions the pointer was recorded at, oldest first, however many drags put them there. Named variables take these values iteration by iteration, the way measurements do."
             },
             {
                 "id": "xVariable",
-                "label": "Horizontal variable",
+                "label": "Horizontal",
                 "valueType": "variable",
                 "defaultValue": "",
                 "category": "model",
+                "colorParameter": "xValueColor",
                 "description": "Model variable that takes the horizontal position of sample n at iteration n. Left empty the recording stays with the object."
             },
             {
                 "id": "yVariable",
-                "label": "Vertical variable",
+                "label": "Vertical",
                 "valueType": "variable",
                 "defaultValue": "",
                 "category": "model",
+                "colorParameter": "yValueColor",
                 "description": "Model variable that takes the vertical position of sample n at iteration n."
+            },
+            {
+                "id": "xValueColor",
+                "label": "Horizontal colour",
+                "valueType": "colour",
+                "defaultValue": "token:axis.color",
+                "category": "model",
+                "userEditable": false,
+                "description": "Colour the horizontal variable is answered in: the line standing at its value and the badge reading it off the horizontal axis. Chosen beside the variable itself, not on a colour menu of its own."
+            },
+            {
+                "id": "yValueColor",
+                "label": "Vertical colour",
+                "valueType": "colour",
+                "defaultValue": "token:axis.color",
+                "category": "model",
+                "userEditable": false,
+                "description": "Colour the vertical variable is answered in: the line standing at its value and the badge reading it off the vertical axis."
             },
             {
                 "id": "characterKey",
@@ -3843,6 +3863,22 @@ BlockDefinitionLoader.registerAll([
                 "category": "scale"
             },
             {
+                "id": "showGrid",
+                "label": "Show grid",
+                "valueType": "boolean",
+                "defaultValue": false,
+                "category": "display",
+                "description": "Rules the plot at every tick of both axes. A sheet to draw a gesture on starts plain."
+            },
+            {
+                "id": "showTicks",
+                "label": "Show ticks",
+                "valueType": "boolean",
+                "defaultValue": false,
+                "category": "display",
+                "description": "Marks and numbers both axes. Turned off the axes are bare lines, and each is still rescaled by pulling where its ticks stand."
+            },
+            {
                 "id": "ticks",
                 "label": "Axis ticks",
                 "valueType": "number",
@@ -3855,7 +3891,7 @@ BlockDefinitionLoader.registerAll([
                 "id": "backgroundColor",
                 "label": "Background",
                 "valueType": "colour",
-                "defaultValue": "token:surface.emphasis",
+                "defaultValue": "token:surface.default",
                 "category": "style"
             },
             {
@@ -3871,6 +3907,32 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "colour",
                 "defaultValue": "token:axis.color",
                 "category": "style"
+            },
+            {
+                "id": "valueColor",
+                "label": "Value",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.warning",
+                "category": "style",
+                "description": "Colour of the sample the object is standing on: the marker drawn at it and the pair of values read under it."
+            },
+            {
+                "id": "foregroundColor",
+                "label": "Foreground",
+                "valueType": "colour",
+                "defaultValue": "token:axis.labelColor",
+                "category": "style",
+                "userEditable": false,
+                "description": "The numbers written along both axes. It is the shape's own foreground, edited on the row every shape has for it, so the swatch there is the colour the object is actually written in."
+            },
+            {
+                "id": "borderColor",
+                "label": "Border",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.subtle",
+                "category": "style",
+                "userEditable": false,
+                "description": "The outline around the object and around its plot. It is the shape's own border, edited on the row every shape has for it."
             }
         ],
         "locals": [
@@ -4053,6 +4115,29 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "headGap",
+                "value": {
+                    "memory": "samples",
+                    "row": {
+                        "parameter": "head"
+                    },
+                    "field": "gap"
+                },
+                "fallback": 0
+            },
+            {
+                "id": "gapShown",
+                "value": {
+                    "choose": {
+                        "parameter": "following"
+                    },
+                    "then": 0,
+                    "otherwise": {
+                        "parameter": "headGap"
+                    }
+                }
+            },
+            {
                 "id": "marked",
                 "value": {
                     "choose": {
@@ -4065,6 +4150,10 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "markerShown",
+                "formula": "marked\\cdot\\left(1-gapShown\\right)"
+            },
+            {
                 "id": "precision",
                 "value": {
                     "parameter": "$precision"
@@ -4073,7 +4162,7 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "labelColor",
                 "value": {
-                    "token": "axis.labelColor"
+                    "parameter": "foregroundColor"
                 }
             },
             {
@@ -4091,13 +4180,7 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "markerColor",
                 "value": {
-                    "token": "stroke.warning"
-                }
-            },
-            {
-                "id": "borderColor",
-                "value": {
-                    "token": "stroke.subtle"
+                    "parameter": "valueColor"
                 }
             },
             {
@@ -4218,6 +4301,9 @@ BlockDefinitionLoader.registerAll([
                 {
                     "id": "grid",
                     "type": "plot-grid",
+                    "when": {
+                        "parameter": "showGrid"
+                    },
                     "parameters": {
                         "x": {
                             "parameter": "plotX"
@@ -4313,6 +4399,12 @@ BlockDefinitionLoader.registerAll([
                         "ticksY": {
                             "parameter": "ticks"
                         },
+                        "showTicks": {
+                            "parameter": "showTicks"
+                        },
+                        "showLabels": {
+                            "parameter": "showTicks"
+                        },
                         "fontSize": {
                             "parameter": "labelFont"
                         },
@@ -4356,13 +4448,7 @@ BlockDefinitionLoader.registerAll([
                     "id": "crosshair",
                     "type": "plot-crosshair",
                     "when": {
-                        "choose": {
-                            "parameter": "following"
-                        },
-                        "then": 1,
-                        "otherwise": {
-                            "parameter": "sampleCount"
-                        }
+                        "parameter": "markerShown"
                     },
                     "parameters": {
                         "x": {
@@ -4401,6 +4487,12 @@ BlockDefinitionLoader.registerAll([
                         "color": {
                             "parameter": "axisColor"
                         },
+                        "xColor": {
+                            "parameter": "xValueColor"
+                        },
+                        "yColor": {
+                            "parameter": "yValueColor"
+                        },
                         "badgeColor": {
                             "parameter": "markerColor"
                         },
@@ -4424,7 +4516,7 @@ BlockDefinitionLoader.registerAll([
                         },
                         "then": 0,
                         "otherwise": {
-                            "parameter": "marked"
+                            "parameter": "markerShown"
                         }
                     },
                     "bindings": {
@@ -4450,7 +4542,7 @@ BlockDefinitionLoader.registerAll([
                             "parameter": "characterImage"
                         },
                         "then": {
-                            "parameter": "marked"
+                            "parameter": "markerShown"
                         },
                         "otherwise": 0
                     },
@@ -4500,8 +4592,10 @@ BlockDefinitionLoader.registerAll([
                         {
                             "type": "track-pointer",
                             "memory": "samples",
-                            "mode": "replace",
+                            "mode": "append",
                             "limit": 600,
+                            "minimumMovePixels": 2,
+                            "breakOnDrag": true,
                             "originX": {
                                 "parameter": "originX"
                             },

@@ -87,6 +87,8 @@ class ComponentShape extends BaseShape {
         if (properties.definition)
             properties.definition = this.migrateDefinition(properties.definition);
         super.setProperties(properties);
+        if (properties.definition)
+            this.backfillComponentProperties();
         if (!properties.definition && Object.keys(properties).some(name => this.isComponentParameter(name)))
             BlockObjects.markEdited(this.properties.definition);
         if (Object.keys(properties).some(name => this.isMemoryDataProperty(name)))
@@ -101,6 +103,19 @@ class ComponentShape extends BaseShape {
         // through once, when the recording ends.
         if (this.isMemoryDataProperty(name))
             this.publishModelData();
+    }
+
+    // A shape saved before a parameter was added carries no value for it, and the definition it was
+    // saved with is backfilled with the binding that reads one. The value itself is filled in here, so
+    // the drawing and every control that offers the property read the same thing rather than each
+    // falling back to something of its own.
+    backfillComponentProperties() {
+        const componentType = this.getComponentType();
+        if (!componentType || !BlockRegistry.has(componentType))
+            return;
+        const missing = BlockObjects.getMissingInstancePropertyDefaults(componentType, this.properties, this.properties.preset ?? "standard");
+        if (Object.keys(missing).length > 0)
+            Object.assign(this.properties, missing);
     }
 
     migrateDefinition(definition) {
@@ -192,7 +207,8 @@ class ComponentShape extends BaseShape {
         const xValues = [];
         const yValues = [];
         for (const parameter of this.getMemoryParameters()) {
-            for (const row of this.readMemory(parameter.id)) {
+            // A break holds no point, so there is nothing in it to fit the axes around.
+            for (const row of this.readMemory(parameter.id).filter(entry => !BlockMemory.isGap(entry))) {
                 xValues.push(BlockMemory.readField(row, "x"));
                 yValues.push(BlockMemory.readField(row, "y"));
             }
@@ -454,8 +470,10 @@ class ComponentShape extends BaseShape {
         element.addEventListener("pointerdown", event => this.onTrackPointerStart(event, input, memory));
     }
 
-    // The whole drag is one recording: it opens with the pointer going down, samples on its own
-    // clock so a pause is recorded as a pause rather than as nothing, and closes as one edit.
+    // A recording is a gesture that travels: nothing is written while the pointer is merely down, so
+    // a click leaves the recording, the model and the undo stack exactly as they were. Once it does
+    // travel the run opens where the pointer went down, samples on its own clock so a pause inside it
+    // is recorded as a pause rather than as nothing, and closes as one edit.
     onTrackPointerStart(event, input, memory) {
         if (!this.isMemoryInteractionAllowed())
             return;
@@ -464,22 +482,58 @@ class ComponentShape extends BaseShape {
         this._trackInput = input;
         this._trackMemory = memory;
         this._trackPoint = this.getComponentLocalPoint(event);
-        this.dragStart();
-        if (input.mode === "replace")
-            this.setProperty(memory, []);
+        this._trackStartPoint = this._trackPoint;
+        this._trackLastPoint = null;
+        this._trackRecording = false;
+        this._trackHadRows = this.readMemory(memory).length > 0;
         this._trackMove = moveEvent => { this._trackPoint = this.getComponentLocalPoint(moveEvent); };
         this._trackEnd = () => this.onTrackPointerEnd();
         window.addEventListener("pointermove", this._trackMove);
         window.addEventListener("pointerup", this._trackEnd);
         window.addEventListener("pointercancel", this._trackEnd);
-        this.recordTrackedSample();
         this._trackTimer = setInterval(() => this.recordTrackedSample(), Math.max(10, Number(input.sampleMs)));
     }
 
     recordTrackedSample() {
         const input = this._trackInput;
-        const sample = this.getTrackedSample(input, this._trackPoint);
+        if (!this.hasTrackedPointerMoved(input))
+            return;
+        if (!this._trackRecording)
+            this.beginTrackedRun(input);
+        this.writeTrackedSample(input, this._trackPoint);
+    }
+
+    // The gesture has turned out to be a drag, which is the first thing that touches the object: the
+    // edit opens here so a click never records one, the run before it is closed off with a break, and
+    // the point the pointer went down at is the run's own first sample.
+    beginTrackedRun(input) {
+        this._trackRecording = true;
+        this.dragStart();
+        if (input.mode === "replace")
+            this.setProperty(this._trackMemory, []);
+        else if (input.breakOnDrag === true && this._trackHadRows)
+            this.appendMemoryRow(this._trackMemory, BlockMemory.createGapRow(), input.limit);
+        this.writeTrackedSample(input, this._trackStartPoint);
+    }
+
+    writeTrackedSample(input, point) {
+        const sample = this.getTrackedSample(input, point);
+        this._trackLastPoint = point;
         this.appendMemoryRow(this._trackMemory, BlockMemory.createRow("", sample.x, sample.y), input.limit);
+    }
+
+    // A pointer that has not travelled far enough since the last sample has nothing new to say: the
+    // clock skips it, so holding still adds nothing where it rests. Until the first sample the
+    // measure is taken from where the pointer went down, and any travel at all is too little, which
+    // is what keeps a click out of the recording.
+    hasTrackedPointerMoved(input) {
+        const minimum = Number(input.minimumMovePixels);
+        const threshold = Number.isFinite(minimum) && minimum > 0 ? minimum : 0;
+        const reference = this._trackLastPoint ?? this._trackStartPoint;
+        const travelled = Math.hypot(this._trackPoint.x - reference.x, this._trackPoint.y - reference.y);
+        if (!this._trackLastPoint)
+            return travelled > 0 && travelled >= threshold;
+        return threshold <= 0 || travelled >= threshold;
     }
 
     // What is recorded is a pair of values, not a pair of pixels: the node hands over the origin and
@@ -510,7 +564,15 @@ class ComponentShape extends BaseShape {
         this._trackTimer = null;
         this._trackMove = null;
         this._trackEnd = null;
+        this._trackLastPoint = null;
+        this._trackStartPoint = null;
+        this._trackHadRows = false;
         this.board.pointerLocked = false;
+        // A gesture that recorded nothing closes nothing: no edit was opened, so there is no edit to
+        // record, nothing for undo to take back and nothing new for the model to be worked through.
+        if (!this._trackRecording)
+            return;
+        this._trackRecording = false;
         this.dragEnd();
         this.refreshModelData();
     }

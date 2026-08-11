@@ -64,6 +64,18 @@ class BlockMemory {
         return row;
     }
 
+    // A break between two runs of samples, written as a row of its own so it is carried, saved and
+    // undone with the rest of the memory. It holds no point: NaN would be the honest value, but a
+    // memory is saved as JSON, where NaN is written as null and comes back as a zero — a point at
+    // the origin nobody put there. The row says it is a break, and NaN is what it is read back as.
+    static createGapRow() {
+        return { gap: 1 };
+    }
+
+    static isGap(row) {
+        return Number((row ?? {}).gap) === 1;
+    }
+
     static roundValue(value) {
         const numeric = Number(value);
         if (!Number.isFinite(numeric))
@@ -100,17 +112,38 @@ class BlockMemory {
         }
         if (names.length === 0)
             return { names: [], values: [] };
+        // A break is one iteration the measurements have nothing to say at, which is what a data
+        // table's empty cell already means to the model.
         return {
             names: names,
-            values: (Array.isArray(rows) ? rows : []).map(row => fields.map(field => BlockMemory.readField(row, field)))
+            values: (Array.isArray(rows) ? rows : []).map(row => fields.map(field => BlockMemory.isGap(row) ? NaN : BlockMemory.readField(row, field)))
         };
     }
 
     static toPoints(rows) {
-        return (Array.isArray(rows) ? rows : []).map(row => ({
+        return (Array.isArray(rows) ? rows : []).filter(row => !BlockMemory.isGap(row)).map(row => ({
             x: BlockMemory.readField(row, "x"),
             y: BlockMemory.readField(row, "y")
         }));
+    }
+
+    // The points a trace joins, in runs: a break ends the run it follows and the next point opens a
+    // new one, so what was recorded in separate gestures is drawn as separate lines.
+    static toSegments(rows) {
+        const segments = [];
+        let current = [];
+        for (const row of Array.isArray(rows) ? rows : []) {
+            if (BlockMemory.isGap(row)) {
+                if (current.length > 0)
+                    segments.push(current);
+                current = [];
+                continue;
+            }
+            current.push({ x: BlockMemory.readField(row, "x"), y: BlockMemory.readField(row, "y") });
+        }
+        if (current.length > 0)
+            segments.push(current);
+        return segments;
     }
 }
 
