@@ -1,5 +1,9 @@
 const EPHEMERAL_COLLAB_OP_TYPES = new Set(["cursor", "presence"]);
+// The operations that change what the model is, as opposed to who is looking at it and where it is
+// being played: after one of them the room's snapshot is out of date and is published again.
+const MODEL_COLLAB_OP_TYPES = new Set(["addShape", "removeShape", "setShapeProperties", "setModelProperties"]);
 const INITIAL_SNAPSHOT_WAIT_MS = 2500;
+const SNAPSHOT_PUBLISH_DELAY_MS = 2000;
 
 class CollabCoordinator {
     constructor(options) {
@@ -16,6 +20,7 @@ class CollabCoordinator {
         this._applyingRemote = false;
         this._pendingInitialSnapshot = true;
         this._initialSnapshotTimeoutId = null;
+        this._snapshotPublishTimeoutId = null;
         this.channel = null;
     }
 
@@ -36,8 +41,12 @@ class CollabCoordinator {
         this.channel.connect();
     }
 
+    // Joining is answered by the room's own snapshot or, when there is nobody to answer, by this
+    // client publishing its own; either way one goes out when the handshake closes, so a publication
+    // waiting from before it has nothing left to say and would race the answer.
     _handleChannelOpen() {
         this._pendingInitialSnapshot = true;
+        this._clearScheduledSnapshot();
         this._clearInitialSnapshotTimeout();
         this._initialSnapshotTimeoutId = setTimeout(() => this._publishSnapshotForEmptyRoom(), INITIAL_SNAPSHOT_WAIT_MS);
         this.onConnectionStateChange?.("live");
@@ -73,18 +82,48 @@ class CollabCoordinator {
         if (!EPHEMERAL_COLLAB_OP_TYPES.has(operation.type))
             this._snapshotVersion += 1;
         this.channel.sendOp(operation);
+        if (MODEL_COLLAB_OP_TYPES.has(operation.type))
+            this._scheduleSnapshot();
+    }
+
+    // An operation reaches whoever is in the room at the time; the snapshot is what the room hands
+    // to whoever joins next, including this same person after a reload. A change carried by an
+    // operation alone — everything a shape's own properties hold, a recording among them — would be
+    // taken back the next time the room is joined, so the snapshot is published again after it. Once
+    // for a burst of them: it is the whole model, and a drag commits one operation after another.
+    _scheduleSnapshot() {
+        if (this._snapshotPublishTimeoutId != null || this._pendingInitialSnapshot)
+            return;
+        this._snapshotPublishTimeoutId = setTimeout(() => {
+            this._snapshotPublishTimeoutId = null;
+            this.sendSnapshot(this.getSnapshot?.());
+        }, SNAPSHOT_PUBLISH_DELAY_MS);
+    }
+
+    _clearScheduledSnapshot() {
+        if (this._snapshotPublishTimeoutId == null)
+            return;
+        clearTimeout(this._snapshotPublishTimeoutId);
+        this._snapshotPublishTimeoutId = null;
     }
 
     sendSnapshot(model) {
         if (!this.channel || this._applyingRemote || !model)
             return;
+        this._clearScheduledSnapshot();
         this._snapshotVersion += 1;
         const removedShapeIds = this.getRemovedShapeIds?.() ?? [];
         this.channel.sendSnapshot({ ...model, collab: { version: this._snapshotVersion, clientId: this.clientId, removedShapeIds } });
     }
 
+    // Leaving with a publication still waiting — the tab closed, collaboration turned off — would
+    // leave the room holding the state from before the change, so it goes out now instead.
     destroy() {
         this._clearInitialSnapshotTimeout();
+        if (this._snapshotPublishTimeoutId != null) {
+            this._clearScheduledSnapshot();
+            this.sendSnapshot(this.getSnapshot?.());
+        }
         if (this.channel)
             this.channel.destroy();
         this.channel = null;
