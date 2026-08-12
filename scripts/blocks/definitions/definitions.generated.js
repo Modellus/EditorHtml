@@ -3863,6 +3863,14 @@ BlockDefinitionLoader.registerAll([
                 "category": "scale"
             },
             {
+                "id": "perStep",
+                "label": "Per step",
+                "valueType": "boolean",
+                "defaultValue": false,
+                "category": "display",
+                "description": "Hands the recording over to the player: the line is drawn as far as the iteration on screen and the marker, its lines out to both axes and the pair of values under it stand on the sample that iteration is, so playing it or pulling the player across walks the gesture. Off, the whole recording stands there and answers the pointer alone — the player moves through it without anything on the plot standing at where it has got to. On, the recording still stands there whole before the run starts, which is what a gesture being drawn and a recording waiting to be played both are."
+            },
+            {
                 "id": "showGrid",
                 "label": "Show grid",
                 "valueType": "boolean",
@@ -4065,6 +4073,34 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\max\\left(0,\\min\\left(sampleCount-1,shownIteration-1\\right)\\right)"
             },
             {
+                "id": "atStart",
+                "formula": "\\left(1-playing\\right)\\cdot\\max\\left(0,2-shownIteration\\right)"
+            },
+            {
+                "id": "revealedRows",
+                "value": {
+                    "choose": {
+                        "parameter": "atStart"
+                    },
+                    "then": 0,
+                    "otherwise": {
+                        "parameter": "shownIteration"
+                    }
+                }
+            },
+            {
+                "id": "tracedRows",
+                "value": {
+                    "choose": {
+                        "parameter": "perStep"
+                    },
+                    "then": {
+                        "parameter": "revealedRows"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
                 "id": "headX",
                 "value": {
                     "memory": "samples",
@@ -4138,6 +4174,18 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "steppedCount",
+                "value": {
+                    "choose": {
+                        "parameter": "perStep"
+                    },
+                    "then": {
+                        "parameter": "sampleCount"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
                 "id": "marked",
                 "value": {
                     "choose": {
@@ -4145,7 +4193,7 @@ BlockDefinitionLoader.registerAll([
                     },
                     "then": 1,
                     "otherwise": {
-                        "parameter": "sampleCount"
+                        "parameter": "steppedCount"
                     }
                 }
             },
@@ -4346,6 +4394,9 @@ BlockDefinitionLoader.registerAll([
                     "parameters": {
                         "rows": {
                             "memory": "samples"
+                        },
+                        "shownRows": {
+                            "parameter": "tracedRows"
                         },
                         "originX": {
                             "parameter": "originX"

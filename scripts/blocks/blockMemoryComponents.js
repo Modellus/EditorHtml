@@ -25,6 +25,17 @@ var BlockMemoryComponents = {
         return order === "oldest" ? list : list.reverse();
     },
 
+    // How much of a memory is read, counted from the oldest row. A memory is drawn whole unless it is
+    // asked for a count, which is what a trace played back against the model asks for: the row the
+    // model has reached, so the line arrives where it does rather than standing finished before it.
+    takeRows(rows, count) {
+        const list = Array.isArray(rows) ? rows : [];
+        const wanted = Math.floor(Number(count));
+        if (!Number.isFinite(wanted) || wanted <= 0)
+            return list;
+        return list.slice(0, wanted);
+    },
+
     buildRowBehaviours(row, rowActions) {
         const behaviours = [];
         for (const action of Array.isArray(rowActions) ? rowActions : []) {
@@ -182,6 +193,7 @@ var BlockMemoryComponents = {
             BlockMemoryComponents.parameter("color", "Colour", "colour", "token:stroke.accent", { category: "style" }),
             BlockMemoryComponents.parameter("lineWidth", "Line width", "number", 2, { category: "style", minimum: 0 }),
             BlockMemoryComponents.parameter("opacity", "Opacity", "number", 1, { category: "style", minimum: 0, maximum: 1 }),
+            BlockMemoryComponents.parameter("shownRows", "Rows drawn", "number", 0, { minimum: 0, description: "How many rows are drawn, counted from the oldest. Zero — the default — draws the whole memory; a count draws it up to that row, which is what following the model's own iteration comes to." }),
             BlockMemoryComponents.parameter("showPoints", "Show samples", "boolean", false),
             BlockMemoryComponents.parameter("pointRadius", "Sample radius", "number", 1.5, { category: "style", minimum: 0 })
         ],
@@ -193,7 +205,7 @@ var BlockMemoryComponents = {
             const toPixels = point => ({ x: originX + point.x * scaleX, y: originY + point.y * scaleY });
             // A break in the rows is a break in the line: each run of samples is drawn on its own, so
             // what was recorded in separate gestures is not joined across the gap between them.
-            const segments = BlockMemory.toSegments(parameters.rows).map(segment => segment.map(toPixels));
+            const segments = BlockMemory.toSegments(BlockMemoryComponents.takeRows(parameters.rows, parameters.shownRows)).map(segment => segment.map(toPixels));
             const points = segments.flat();
             const color = context.tokens.resolveValue(parameters.color);
             const children = [];

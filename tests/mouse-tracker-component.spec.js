@@ -240,7 +240,7 @@ test('a second drag adds to the recording instead of replacing it, on a line of 
 test('the iteration a break falls on shows no marker, and a break is not fitted to the axes', async ({ page }) => {
     await setupBoard(page);
     await addModel(page);
-    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    await addTracker(page, { xVariable: 'px', yVariable: 'py', perStep: true });
     await page.evaluate(() => {
         const shape = shell.board.shapes.getByName('Tracker');
         shape.setProperty('samples', [{ x: 2, y: 4 }, { x: 3, y: 5 }, { gap: 1 }, { x: 6, y: 4.5 }]);
@@ -305,7 +305,7 @@ test('a click records nothing, whether the recording is empty or not', async ({ 
 test('the model player walks the recording and the marker follows the iteration on screen', async ({ page }) => {
     await setupBoard(page);
     await addModel(page);
-    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    await addTracker(page, { xVariable: 'px', yVariable: 'py', perStep: true });
     await dragAcross(page, 6);
     const recorded = await tracker(page);
     const markerAt = iteration => page.evaluate(iteration => {
@@ -326,6 +326,96 @@ test('the model player walks the recording and the marker follows the iteration 
     const rounded = sample => [(sample.x ?? 0).toFixed(2), (sample.y ?? 0).toFixed(2)];
     expect(atStart.readout).toEqual(rounded(recorded.samples[0]));
     expect(atEnd.readout).toEqual(rounded(recorded.samples[recorded.samples.length - 1]));
+});
+
+// Writes a recording without making the gesture, so the pointer is nowhere near the plot and the
+// drawing answers the player alone.
+async function writeRecording(page, rows) {
+    await page.evaluate(rows => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        shape.setProperty('samples', rows);
+        shape.refreshModelData();
+    }, rows);
+    await page.waitForTimeout(200);
+}
+
+async function tracesAt(page, iteration) {
+    await page.evaluate(iteration => {
+        shell.board.calculator.setIteration(iteration);
+        shell.board.shapes.getByName('Tracker').tick();
+        shell.board.draw();
+    }, iteration);
+    return traces(page);
+}
+
+// What the drawing answers the player with, on both counts: the line drawn so far and the marker,
+// its lines out to the axes and the pair of values under it.
+async function shownAt(page, iteration) {
+    const drawn = await tracesAt(page, iteration);
+    return Object.assign({ traces: drawn }, await page.evaluate(() => ({
+        marker: document.querySelector('[data-source-id="marker-dot"]') !== null,
+        crosshair: document.querySelector('[data-source-component="plot-crosshair"] line') !== null,
+        values: document.querySelector('[data-source-id="pointer-values-text"]')?.textContent ?? null
+    })));
+}
+
+test('the recording stands there whole and says nothing about the iteration', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    // A recording that is not stepped through is what a tracker starts as.
+    expect(await page.evaluate(() => shell.board.shapes.getByName('Tracker').properties.perStep)).toBe(false);
+    await writeRecording(page, [{ x: 1, y: 1 }, { x: 2, y: 2 }, { x: 3, y: 3 }, { x: 4, y: 4 }]);
+    // Wherever the player is put — stopped at the start, pulled across, playing — the whole line is
+    // there and nothing stands at the iteration it has reached.
+    expect(await shownAt(page, 1)).toEqual({ traces: [4], marker: false, crosshair: false, values: null });
+    expect(await shownAt(page, 3)).toEqual({ traces: [4], marker: false, crosshair: false, values: null });
+    await page.evaluate(() => { shell.board.calculator.status = 0; });
+    expect(await shownAt(page, 4)).toEqual({ traces: [4], marker: false, crosshair: false, values: null });
+});
+
+test('per step stands the marker, its lines and its values on the sample the iteration is', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py', perStep: true });
+    await writeRecording(page, [{ x: 1, y: 1 }, { x: 2, y: 2 }, { x: 3, y: 3 }, { x: 4, y: 4 }]);
+    expect(await shownAt(page, 2)).toEqual({ traces: [2], marker: true, crosshair: true, values: '2.00, 2.00' });
+    expect(await shownAt(page, 4)).toEqual({ traces: [4], marker: true, crosshair: true, values: '4.00, 4.00' });
+});
+
+test('per step draws the recording up to the sample the iteration stands on', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py', perStep: true });
+    await writeRecording(page, [{ x: 1, y: 1 }, { x: 2, y: 2 }, { x: 3, y: 3 }, { gap: 1 }, { x: 6, y: 6 }, { x: 7, y: 7 }]);
+    // Before the run starts the recording is all there; from the first step it is drawn to where the
+    // player stands, a point per iteration.
+    expect(await tracesAt(page, 1)).toEqual([3, 2]);
+    expect(await tracesAt(page, 2)).toEqual([2]);
+    expect(await tracesAt(page, 3)).toEqual([3]);
+    // The break is passed and the run behind it has opened but has nothing to join yet.
+    expect(await tracesAt(page, 5)).toEqual([3]);
+    expect(await tracesAt(page, 6)).toEqual([3, 2]);
+    // Once the run is under way the first iteration is the first sample and nothing more: the
+    // recording standing there whole is what waiting to be played looks like, not what playing does.
+    await page.evaluate(() => { shell.board.calculator.status = 0; });
+    expect(await tracesAt(page, 1)).toEqual([]);
+    expect(await tracesAt(page, 3)).toEqual([3]);
+    // Switched back off the whole recording is there again, wherever the player stands.
+    await page.evaluate(() => shell.board.shapes.getByName('Tracker').setProperty('perStep', false));
+    expect(await tracesAt(page, 2)).toEqual([3, 2]);
+});
+
+// A recording is made with the model standing at the start of its run, so what has just been drawn
+// is on the screen whether or not the tracker is stepped through.
+test('a gesture is drawn as it is made even when the recording is stepped through', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py', perStep: true });
+    await dragAcross(page, 5);
+    const recorded = await tracker(page);
+    expect(recorded.samples.length).toBeGreaterThan(3);
+    expect(await traces(page)).toEqual([recorded.samples.length]);
 });
 
 test('clearing the recording takes it out of the model too', async ({ page }) => {
@@ -355,7 +445,7 @@ test('clearing the recording takes it out of the model too', async ({ page }) =>
 test('the marker is a dot until a character is chosen, and then it hangs from its pivot point', async ({ page }) => {
     await setupBoard(page);
     await addModel(page);
-    await addTracker(page, {});
+    await addTracker(page, { perStep: true });
     await dragAcross(page, 4);
     expect(await page.locator('[data-source-id="marker-dot"]').count()).toBe(1);
     expect(await page.locator('[data-source-id="marker-character"]').count()).toBe(0);
@@ -473,8 +563,9 @@ test('the settings menu edits both ends of an axis on one row, the way the chart
     // Nothing that was taken off the toolbar is still on it.
     for (const gone of ['Sampling interval', 'Show crosshair', 'Show trace', 'Show readout', 'Decimals', 'Marker size', 'Copy definition', 'Show samples', 'Samples kept'])
         expect(rows, gone).not.toContain(gone);
-    // The two the plain sheet is drawn without are switched back on from here.
-    expect(rows).toEqual(expect.arrayContaining(['Show grid', 'Show ticks']));
+    // The two the plain sheet is drawn without are switched back on from here, and so is the one that
+    // hands the recording over to the player.
+    expect(rows).toEqual(expect.arrayContaining(['Show grid', 'Show ticks', 'Per step']));
     await page.evaluate(() => {
         const row = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item')).find(item => item.querySelector('.mdl-dropdown-list-label').textContent === 'Horizontal');
         const box = DevExpress.ui.dxNumberBox.getInstance(row.querySelectorAll('.dx-numberbox')[1]);
@@ -516,7 +607,7 @@ test('while the model stands still the crosshair and the marker follow the point
 test('while the model plays the pointer has no say and the iteration does', async ({ page }) => {
     await setupBoard(page);
     await addModel(page);
-    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    await addTracker(page, { xVariable: 'px', yVariable: 'py', perStep: true });
     await dragAcross(page, 5);
     const recorded = await tracker(page);
     const box = await plotBox(page);
