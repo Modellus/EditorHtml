@@ -163,6 +163,42 @@ var BlockComponentHelpers = {
         ];
     },
 
+    // The direction one row points in: the angle it names, or the angle the pair it names forms —
+    // how far across and how far up, read as a vector, so a velocity points where it travels. A row
+    // naming nothing, naming a term the model no longer holds, or standing still points nowhere.
+    pointerAngle(row, context) {
+        if (String(row.term ?? "") === "")
+            return null;
+        const firstValue = context.resolveTermValue(row.term, NaN, row.case);
+        if (!Number.isFinite(firstValue))
+            return null;
+        if (String(row.secondTerm ?? "") === "")
+            return firstValue;
+        const secondValue = context.resolveTermValue(row.secondTerm, NaN, row.case);
+        if (!Number.isFinite(secondValue) || (firstValue === 0 && secondValue === 0))
+            return null;
+        return BlockGeometry.toDegrees(Math.atan2(firstValue, secondValue));
+    },
+
+    // The marker itself: a head standing in the band the ticks occupy, its tip on the rim and its
+    // base the length of the band inside it, turned to the direction it points in.
+    pointerMarkerPoints(parameters, angleDegrees) {
+        const drawnAngle = Number(parameters.startAngle) - angleDegrees;
+        const tip = BlockGeometry.polarPoint(parameters.centerX, parameters.centerY, Number(parameters.radius), drawnAngle);
+        const base = BlockGeometry.polarPoint(parameters.centerX, parameters.centerY, Number(parameters.radius) - Number(parameters.length), drawnAngle);
+        const halfWidth = Number(parameters.width) / 2;
+        return [tip, BlockGeometry.polarPoint(base.x, base.y, halfWidth, drawnAngle + 90), BlockGeometry.polarPoint(base.x, base.y, halfWidth, drawnAngle - 90)];
+    },
+
+    // A row that chose no colour is drawn in the colour its place in the list is drawn in, the way a
+    // chart colours a term it was given no colour for.
+    pointerColor(row, index, context) {
+        const color = String(row.color ?? "");
+        if (color === "")
+            return Utils.getColorByIndex(index);
+        return context.tokens.resolveValue(color);
+    },
+
     badgeWidth(text, options) {
         const fontSize = Number(options.fontSize);
         return String(text).length * fontSize * options.tokens.getNumber("badge.charWidth", 0.58) + options.tokens.getNumber("badge.paddingX", 4) * 2;
@@ -472,6 +508,43 @@ var BlockComponentHelpers = {
                 behaviours: behaviours,
                 children: [shapeNode]
             };
+        }
+    });
+
+    registry.register({
+        type: "pointer-ring",
+        category: "component",
+        displayName: "Pointer ring",
+        description: "Directions marked around a dial, one marker per row: a row names an angle, or a pair of values read as a vector — how far across and how far up. Each marker stands where the tick for its direction stands, so it is read against the same scale.",
+        tags: ["dial", "pointer", "marker", "direction", "compass"],
+        capabilities: ["radial", "angular", "reads-model"],
+        parameters: [
+            BlockComponentHelpers.parameter("centerX", "Centre X", "number", 0),
+            BlockComponentHelpers.parameter("centerY", "Centre Y", "number", 0),
+            BlockComponentHelpers.parameter("radius", "Radius", "number", 80, { minimum: 1, description: "Where the tip of a marker lands, which is the rim the ticks reach." }),
+            BlockComponentHelpers.parameter("length", "Marker length", "number", 14, { minimum: 0, description: "How far inwards a marker reaches from the rim, so it fills the band the ticks occupy." }),
+            BlockComponentHelpers.parameter("width", "Marker width", "number", 10, { minimum: 0 }),
+            BlockComponentHelpers.parameter("startAngle", "Zero direction", "number", 90, { unit: "deg", description: "Where a direction of zero points. Directions grow clockwise from it, the way a heading does." }),
+            BlockComponentHelpers.parameter("pointers", "Directions", "object", [], { description: "One row per marker: \"term\" is the angle, or the horizontal component when \"secondTerm\" names the vertical one; \"case\" is the case both are read in and \"color\" the colour the marker is drawn in." })
+        ],
+        create: (parameters, context) => {
+            const rows = Array.isArray(parameters.pointers) ? parameters.pointers : [];
+            const children = [];
+            for (let index = 0; index < rows.length; index++) {
+                const angle = BlockComponentHelpers.pointerAngle(rows[index], context);
+                if (angle === null)
+                    continue;
+                children.push({
+                    id: `pointer-${index}`,
+                    type: "polygon",
+                    properties: {
+                        points: BlockComponentHelpers.pointerMarkerPoints(parameters, angle),
+                        fill: BlockComponentHelpers.pointerColor(rows[index], index, context),
+                        stroke: "none"
+                    }
+                });
+            }
+            return { id: "pointer-ring", type: "group", children: children };
         }
     });
 

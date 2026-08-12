@@ -636,6 +636,7 @@ Capabilities: `radial`, `angular`, `reads-model`, `interaction`, `writes-model`
 | --- | --- | --- | --- |
 | `headingVariable` | variable | "0" |  |
 | `rotationVariable` | variable | "0" |  |
+| `pointers` | terms | [] |  |
 | `showDegrees` | boolean | false |  |
 | `faceColor` | colour | "token:surface.default" |  |
 | `borderColor` | colour | "token:stroke.default" |  |
@@ -748,6 +749,7 @@ Capabilities: `memory`, `linear`
 | `color` | colour | "token:stroke.accent" |  |
 | `lineWidth` | number | 2 | min 0 |
 | `opacity` | number | 1 | min 0, max 1 |
+| `shownRows` | number | 0 | min 0 |
 | `showPoints` | boolean | false |  |
 | `pointRadius` | number | 1.5 | min 0 |
 
@@ -778,6 +780,7 @@ Capabilities: `interaction`, `memory`, `linear`, `writes-model`, `textual`
 | `maximumX` | number | 10 |  |
 | `minimumY` | number | 0 |  |
 | `maximumY` | number | 10 |  |
+| `perStep` | boolean | false |  |
 | `showGrid` | boolean | false |  |
 | `showTicks` | boolean | false |  |
 | `ticks` | number | 5 | min 2, max 11 |
@@ -913,6 +916,22 @@ Capabilities: `angular`, `rotation`, `interaction`
 | `degreesPerUnit` | number | 6 |  |
 | `offsetDegrees` | number | 0 |  |
 | `wrapAt` | number | 0 | min 0 |
+
+### `pointer-ring` — Pointer ring
+
+Directions marked around a dial, one marker per row: a row names an angle, or a pair of values read as a vector — how far across and how far up. Each marker stands where the tick for its direction stands, so it is read against the same scale.
+
+Capabilities: `radial`, `angular`, `reads-model`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `centerX` | number | 0 |  |
+| `centerY` | number | 0 |  |
+| `radius` | number | 80 | min 1 |
+| `length` | number | 14 | min 0 |
+| `width` | number | 10 | min 0 |
+| `startAngle` | number | 90 |  |
+| `pointers` | object | [] |  |
 
 ### `rotating-vector` — Rotating vector
 

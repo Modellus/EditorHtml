@@ -702,6 +702,115 @@ test.describe('component variable inputs', () => {
     });
 });
 
+// The directions a compass marks are a list the reader builds, the way the terms a chart plots are:
+// a row per direction, with the term it reads, a second term when the row names a pair, and a colour.
+test.describe('compass pointers', () => {
+    async function addCompassWithPointers(page, pointers) {
+        await page.evaluate(pointers => {
+            const shape = shell.commands.addComponent('compass', 'Compass');
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200, headingVariable: 'heading', pointers: pointers });
+            shape.draw();
+            shell.board.selection.select(shape);
+        }, pointers);
+        await page.waitForTimeout(500);
+    }
+
+    async function openPointersMenu(page) {
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.waitForTimeout(500);
+    }
+
+    async function readPointerMarkers(page) {
+        return page.evaluate(() => Array.from(document.getElementById(shell.board.shapes.getByName('Compass').id).querySelectorAll('polygon[data-block-id*=":pointer-"]'))
+            .map(element => element.getAttribute('fill')));
+    }
+
+    test('draws a marker for every row and none for the empty one at the end', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120\\\\east=3\\\\north=4');
+        await addCompassWithPointers(page, [
+            { term: 'heading', case: 1, color: '', secondTerm: '' },
+            { term: 'east', case: 1, color: '#ff0000', secondTerm: 'north' },
+            { term: '', case: 1, color: '', secondTerm: '' }
+        ]);
+        const markers = await readPointerMarkers(page);
+        expect(markers).toHaveLength(2);
+        expect(markers[1]).toBe('#ff0000');
+    });
+
+    test('offers a row per pointer, with a second selector once the row names a term', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120\\\\east=3\\\\north=4');
+        await addCompassWithPointers(page, [{ term: 'heading', case: 1, color: '', secondTerm: '' }]);
+        await openPointersMenu(page);
+        const rows = page.locator('.mdl-shape-overlay-popup').last().locator('.component-terms-control .shape-term-row');
+        await expect(rows).toHaveCount(2);
+        await expect(rows.nth(0).locator('.shape-term-extra-term')).toHaveCount(1);
+        await expect(rows.nth(0).locator('.shape-term-color')).toHaveCount(1);
+        await expect(rows.nth(1).locator('.shape-term-extra-term')).toHaveCount(0);
+    });
+
+    // The menu is as wide as the list of pointers, so the two selectors above it are as wide as the
+    // list rather than sitting short of it with the space beside them empty.
+    test('gives the rows above the list the same width as the list', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120\\\\east=3\\\\north=4');
+        await addCompassWithPointers(page, [{ term: 'east', case: 1, color: '', secondTerm: 'north' }]);
+        await openPointersMenu(page);
+        const widths = await page.evaluate(() => {
+            const popups = document.querySelectorAll('.mdl-shape-overlay-popup');
+            const last = popups[popups.length - 1];
+            return Array.from(last.querySelectorAll('.mdl-dropdown-list-control')).map(element => Math.round(element.getBoundingClientRect().width));
+        });
+        expect(widths).toHaveLength(3);
+        expect(widths[0]).toBe(widths[2]);
+        expect(widths[1]).toBe(widths[2]);
+    });
+
+    async function readPointerDegrees(page) {
+        return page.evaluate(() => Array.from(document.getElementById(shell.board.shapes.getByName('Compass').id).querySelectorAll('polygon[data-block-id*=":pointer-"]'))
+            .map(element => {
+                const tip = element.getAttribute('points').split(' ')[0].split(',').map(Number);
+                return (Math.atan2(tip[0] - 100, 100 - tip[1]) * 180 / Math.PI + 360) % 360;
+            }));
+    }
+
+    test('reads a row naming a pair as a vector once the second term is chosen', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120\\\\east=3\\\\north=4');
+        await addCompassWithPointers(page, [{ term: 'east', case: 1, color: '', secondTerm: '' }]);
+        expect((await readPointerDegrees(page))[0]).toBeCloseTo(3, 3);
+        await openPointersMenu(page);
+        const popup = page.locator('.mdl-shape-overlay-popup').last();
+        await popup.locator('.component-terms-control .shape-term-row .shape-term-extra-term').first().click();
+        await page.waitForTimeout(400);
+        const customInput = page.locator('.mdl-nested-dropdown-popup .mdl-term-tree-custom-input input').last();
+        await customInput.fill('north');
+        await customInput.press('Enter');
+        await page.waitForTimeout(500);
+        const pointers = await page.evaluate(() => shell.board.shapes.getByName('Compass').properties.pointers);
+        expect(pointers[0].secondTerm).toBe('north');
+        expect((await readPointerDegrees(page))[0]).toBeCloseTo(Math.atan2(3, 4) * 180 / Math.PI, 3);
+    });
+
+    test('takes a term typed into the empty row and marks the direction it reads', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120\\\\east=3\\\\north=4');
+        await addCompassWithPointers(page, []);
+        await openPointersMenu(page);
+        const popup = page.locator('.mdl-shape-overlay-popup').last();
+        await popup.locator('.component-terms-control .shape-term-row .shape-term-term').first().click();
+        await page.waitForTimeout(400);
+        const customInput = page.locator('.mdl-nested-dropdown-popup .mdl-term-tree-custom-input input').last();
+        await customInput.fill('heading');
+        await customInput.press('Enter');
+        await page.waitForTimeout(500);
+        const pointers = await page.evaluate(() => shell.board.shapes.getByName('Compass').properties.pointers);
+        expect(pointers[0].term).toBe('heading');
+        expect(await readPointerMarkers(page)).toHaveLength(1);
+    });
+});
+
 test.describe('other components on the board', () => {
     test('compass, speedometer, gauge, vector and orbit system all insert and render', async ({ page }) => {
         await setupBoard(page);

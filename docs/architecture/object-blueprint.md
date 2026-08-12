@@ -233,6 +233,7 @@ Do not redraw what one of these already draws.
 | a dial background | `dial-face` |
 | ticks and numbers around a centre | `tick-ring`, `label-ring` |
 | a hand, needle or arrow | `pointer-hand` |
+| as many directions as the reader names, marked round a dial | `pointer-ring` |
 | a key with a label | `key-cap` |
 | **anything cartesian** | `plot-grid`, `plot-axes`, `plot-crosshair` |
 | a memory shown as a list or a path | `memory-list`, `memory-trace` |

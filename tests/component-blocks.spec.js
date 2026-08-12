@@ -394,6 +394,87 @@ test.describe('reusable blocks build several objects', () => {
         expect(result.turned.north.y).toBeCloseTo(100, 1);
     });
 
+    // A pointer stands where the tick for its direction stands, so it is read off the same scale the
+    // ticks are: measured from N, clockwise, with its tip on the rim at 94 and its base at 80, the
+    // depth of the major ticks. A direction is the angle a row names, or the angle the pair forms.
+    async function buildCompassPointers(page, pointers, rotationVariable = '0') {
+        return page.evaluate(([pointers, rotationVariable]) => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
+            const definition = BlockObjects.createComponentInstance('compass');
+            const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('compass'), {
+                headingVariable: 'heading',
+                rotationVariable: rotationVariable,
+                pointers: pointers
+            });
+            const compilation = compiler.compile(definition, { width: 200, height: 200, parameters: parameters, tokens: new BlockTokens('standard') });
+            return BlockRenderer.flatten(compilation.nodes)
+                .filter(node => node.tag === 'polygon' && node.id.includes(':pointer-'))
+                .map(node => {
+                    const points = node.attributes.points.split(' ').map(pair => pair.split(',').map(Number));
+                    const measure = point => ({
+                        degrees: (Math.atan2(point[0] - 100, 100 - point[1]) * 180 / Math.PI + 360) % 360,
+                        radius: Math.hypot(point[0] - 100, point[1] - 100)
+                    });
+                    const tip = measure(points[0]);
+                    return {
+                        id: node.id,
+                        degrees: tip.degrees,
+                        tipRadius: tip.radius,
+                        baseRadius: Math.hypot((points[1][0] + points[2][0]) / 2 - 100, (points[1][1] + points[2][1]) / 2 - 100),
+                        width: Math.hypot(points[1][0] - points[2][0], points[1][1] - points[2][1]),
+                        fill: node.attributes.fill
+                    };
+                });
+        }, [pointers, rotationVariable]);
+    }
+
+    test('a compass marks one pointer per row, at the angle the row names', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => modellus.shape.addExpression('Compass equations'));
+        await page.waitForTimeout(300);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Compass equations').properties.expression = 'heading=120\\\\turn=90\\\\east=3\\\\north=4';
+            shell.reset();
+        });
+        await page.waitForTimeout(400);
+        const palette = await page.evaluate(() => [Utils.getColorByIndex(0), Utils.getColorByIndex(2)]);
+        const markers = await buildCompassPointers(page, [
+            { term: 'heading', case: 1, color: '', secondTerm: '' },
+            { term: 'east', case: 1, color: '#ff0000', secondTerm: 'north' },
+            { term: '45', case: 1, color: '', secondTerm: '' },
+            { term: '', case: 1, color: '', secondTerm: '' }
+        ]);
+        expect(markers).toHaveLength(3);
+        expect(markers[0].degrees).toBeCloseTo(120, 3);
+        expect(markers[1].degrees).toBeCloseTo(Math.atan2(3, 4) * 180 / Math.PI, 3);
+        expect(markers[2].degrees).toBeCloseTo(45, 3);
+        expect(markers.map(marker => marker.fill)).toEqual([palette[0], '#ff0000', palette[1]]);
+        expect(markers[0].tipRadius).toBeCloseTo(94, 3);
+        expect(markers[0].baseRadius).toBeCloseTo(80, 3);
+        expect(markers[0].width).toBeCloseTo(11, 3);
+    });
+
+    test('a pointer is measured from N, so it turns with the rose, and points nowhere without a term to read', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => modellus.shape.addExpression('Compass equations'));
+        await page.waitForTimeout(300);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Compass equations').properties.expression = 'heading=120\\\\turn=90\\\\east=3\\\\north=4';
+            shell.reset();
+        });
+        await page.waitForTimeout(400);
+        const still = await buildCompassPointers(page, [{ term: 'heading', case: 1, color: '', secondTerm: '' }]);
+        const turned = await buildCompassPointers(page, [{ term: 'heading', case: 1, color: '', secondTerm: '' }], 'turn');
+        expect(still[0].degrees).toBeCloseTo(120, 3);
+        expect(turned[0].degrees).toBeCloseTo(210, 3);
+        const unread = await buildCompassPointers(page, [
+            { term: 'gone', case: 1, color: '', secondTerm: '' },
+            { term: 'east', case: 1, color: '', secondTerm: 'missing' },
+            { term: '0', case: 1, color: '', secondTerm: '0' }
+        ]);
+        expect(unread).toHaveLength(0);
+    });
+
     test('visual presets change styling without changing structure', async ({ page }) => {
         await setupBoard(page);
         const result = await page.evaluate(() => {

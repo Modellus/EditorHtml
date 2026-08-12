@@ -62,8 +62,10 @@ class BlockCompiler {
         context.resolve = (binding, fallbackValue = null) => this.bindings.resolve(binding, context, fallbackValue);
         context.resolveNumber = (binding, fallbackValue = 0) => this.bindings.resolveNumber(binding, context, fallbackValue);
         context.resolveText = (binding, fallbackValue = "") => this.bindings.resolveText(binding, context, fallbackValue);
-        context.resolveTermValue = (nameOrNumber, fallbackValue = 0) => {
-            const value = this.bindings.resolveTermValue(nameOrNumber, context.caseNumber);
+        // A case of its own may be asked for, so a component reading a list of terms reads each row
+        // in the case that row names rather than in the one the whole drawing stands in.
+        context.resolveTermValue = (nameOrNumber, fallbackValue = 0, caseNumber = context.caseNumber) => {
+            const value = this.bindings.resolveTermValue(nameOrNumber, caseNumber);
             return Number.isFinite(value) ? value : fallbackValue;
         };
         return context;

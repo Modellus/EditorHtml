@@ -3079,19 +3079,27 @@ BlockDefinitionLoader.registerAll([
         "parameters": [
             {
                 "id": "headingVariable",
-                "label": "Heading variable",
+                "label": "Heading",
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model"
             },
             {
                 "id": "rotationVariable",
-                "label": "Rose rotation variable",
+                "label": "Rose",
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model",
                 "unit": "deg",
                 "description": "Turns the rose, its ticks and its labels clockwise. The needle keeps its own heading."
+            },
+            {
+                "id": "pointers",
+                "label": "Pointers",
+                "valueType": "terms",
+                "defaultValue": [],
+                "category": "model",
+                "description": "Directions marked on the rim, one row each: a row points where its angle says, or where the pair it names points — how far east and how far north. An angle is measured from N and grows clockwise, so a marker stands where the tick for its direction stands and turns with the rose the way that tick does."
             },
             {
                 "id": "showDegrees",
@@ -3428,6 +3436,23 @@ BlockDefinitionLoader.registerAll([
                                 },
                                 "color": {
                                     "parameter": "labelColor"
+                                }
+                            }
+                        },
+                        {
+                            "id": "pointers",
+                            "type": "pointer-ring",
+                            "parameters": {
+                                "centerX": 100,
+                                "centerY": 100,
+                                "radius": 94,
+                                "length": 14,
+                                "width": 11,
+                                "startAngle": {
+                                    "parameter": "roseStart"
+                                },
+                                "pointers": {
+                                    "parameter": "pointers"
                                 }
                             }
                         },

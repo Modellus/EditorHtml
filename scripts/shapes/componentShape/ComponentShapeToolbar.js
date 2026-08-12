@@ -4,6 +4,7 @@ var ComponentShapeToolbarMixin = {
     createToolbar() {
         const items = resolveShapeToolbarBaseItems(this, ComponentShapeToolbarMixin.createToolbar);
         this._componentTermControls = {};
+        this._componentTermsControls = {};
         items.push(
             {
                 location: "center",
@@ -67,8 +68,10 @@ var ComponentShapeToolbarMixin = {
             this.setPropertyCommand(parameter.id, []);
         this.refreshModelData();
     },
+    // The key reads the model the object is bound to, which is the terms it names one by one. A list
+    // of terms is as long as the reader made it, so it is read in the menu rather than on the key.
     renderComponentModelButtonTemplate(element) {
-        const modelParameters = this.getParametersByCategory(["model"]);
+        const modelParameters = this.getParametersByCategory(["model"]).filter(parameter => parameter.valueType === "variable");
         if (modelParameters.length === 0) {
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Model</span></span>`;
             return;
@@ -171,6 +174,9 @@ var ComponentShapeToolbarMixin = {
             text: parameter.label,
             buildControl: $container => $container.append(this.createComponentParameterControl(parameter))
         }));
+        // A menu carrying a list of terms is as wide as that list, so every other row is widened to
+        // match rather than leaving its selector at the width it would have had on its own.
+        $(contentElement).toggleClass("mdl-component-terms-menu", parameters.some(parameter => parameter.valueType === "terms"));
         this.renderComponentMenuList(contentElement, items);
     },
     renderComponentMenuList(contentElement, items) {
@@ -185,6 +191,8 @@ var ComponentShapeToolbarMixin = {
     createComponentParameterControl(parameter) {
         if (parameter.valueType === "variable")
             return this.createComponentVariableControl(parameter);
+        if (parameter.valueType === "terms")
+            return this.createComponentTermsControl(parameter);
         if (parameter.valueType === "colour")
             return this.createColorPickerEditor(parameter.id);
         if (parameter.valueType === "boolean")
@@ -203,6 +211,42 @@ var ComponentShapeToolbarMixin = {
         const control = this.createTermControl(parameter.id, parameter.label, false, { allowTypedValue: true, colorProperty: parameter.colorParameter ?? "" });
         this._componentTermControls[parameter.id] = this.termFormControls[parameter.id];
         return control;
+    },
+    // A parameter that takes as many terms as the reader gives it is edited the way the chart edits
+    // the terms it plots: a row per term, dragged into the order they are drawn in, with a colour of
+    // its own. A row may name a second term as well, and the pair is read as a pair of values.
+    createComponentTermsControl(parameter) {
+        this.normalizeComponentTerms(parameter.id);
+        this._componentTermsControls[parameter.id] = TermControl.createShapeTermsCollectionControl(this, parameter.id, {
+            hostClassName: "shape-terms-control component-terms-control",
+            includeColor: true,
+            allowNumericTermReference: true,
+            termEditor: { acceptCustomValue: true },
+            extraTerm: { field: "secondTerm" },
+            colorSelection: {
+                getValue: (item, index) => this.getComponentTermColor(item, index)
+            },
+            normalizeItem: (sourceItem, normalizedItem) => this.normalizeComponentTermItem(sourceItem, normalizedItem),
+            lock: null
+        });
+        return this._componentTermsControls[parameter.id].createHost();
+    },
+    normalizeComponentTerms(parameterId) {
+        TermControl.normalizeShapeTermsCollection(this, parameterId, {
+            includeColor: true,
+            normalizeItem: (sourceItem, normalizedItem) => this.normalizeComponentTermItem(sourceItem, normalizedItem)
+        });
+    },
+    normalizeComponentTermItem(sourceItem, normalizedItem) {
+        normalizedItem.secondTerm = TermControl.normalizeTermValue(sourceItem?.secondTerm);
+    },
+    // A row that chose no colour is shown in the colour it is drawn in, which is the one its place in
+    // the list is given.
+    getComponentTermColor(item, index) {
+        const color = TermControl.normalizeColorValue(item?.color);
+        if (color !== "")
+            return color;
+        return Utils.getColorByIndex(index);
     },
     createComponentBooleanControl(parameter) {
         return $('<div>').dxSwitch({
@@ -270,6 +314,8 @@ var ComponentShapeToolbarMixin = {
             this.renderComponentModelButtonTemplate(buttonContentElement);
         for (const controls of Object.values(this._componentTermControls ?? {}))
             controls?.termControl?.refresh();
+        for (const control of Object.values(this._componentTermsControls ?? {}))
+            control.refresh();
         this._axisRangeControl?.refresh();
     },
     showContextToolbar() {

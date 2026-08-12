@@ -917,7 +917,10 @@ document.addEventListener("click", event => {
     const control = item.querySelector(".mdl-dropdown-list-control");
     if (!control)
         return;
-    const buttons = control.querySelectorAll(".dx-button");
+    // A row whose control is a single button is pressed by clicking anywhere along it. A row holding a
+    // list of its own is not: the buttons on its rows are theirs, and the one a list puts on each row
+    // to take it away would take a row away every time the row beside it was touched.
+    const buttons = Array.from(control.querySelectorAll(".dx-button")).filter(button => !button.closest(".dx-list-item"));
     if (buttons.length !== 1)
         return;
     if (buttons[0].contains(event.target))

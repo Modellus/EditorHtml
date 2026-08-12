@@ -17,7 +17,7 @@ Behaviours   selectable, draggable, resizable, rotatable, hoverable, tooltip, dr
              drag-rotate, drag-axis-tick, follow-pointer, clickable, remember, forget,
              track-pointer, …
 Bindings     constant | parameter | variable | expression | formula | token | format | memory
-Components   dial-face, tick-ring, label-ring, pointer-hand, plot-grid, plot-axes,
+Components   dial-face, tick-ring, label-ring, pointer-hand, pointer-ring, plot-grid, plot-axes,
              plot-crosshair, memory-list, memory-trace, analogue-clock, compass, speedometer,
              circular-gauge, rotating-vector, orbit-system, calculator, mouse-tracker,
              + custom components
@@ -245,16 +245,17 @@ values through the context helpers:
 * `parameters.$width`, `parameters.$height` — the object's box, so components scale on resize.
 
 Give a component the tag `object` if it should appear in the board's Components palette;
-low-level components (`dial-face`, `tick-ring`, `label-ring`, `pointer-hand`) deliberately
-do not have it.
+low-level components (`dial-face`, `tick-ring`, `label-ring`, `pointer-hand`, `pointer-ring`)
+deliberately do not have it.
 
 ### Components defined as JSON
 
 A component that only composes other blocks does not need a `create` function at all. It is a
 JSON document in `scripts/blocks/definitions/`, registered by `BlockDefinitionLoader`. Every
 component in the Components palette — analogue clock, compass, speedometer, circular gauge,
-rotating vector, orbit system — is defined this way. Only `dial-face`, `tick-ring`, `label-ring`
-and `pointer-hand` stay in code, because they generate geometry per index rather than compose.
+rotating vector, orbit system — is defined this way. Only `dial-face`, `tick-ring`, `label-ring`,
+`pointer-hand` and `pointer-ring` stay in code, because they generate geometry per index rather
+than compose.
 
 ```json
 {

@@ -696,6 +696,19 @@ class TermControl {
                 control: configuredColorSelection.control,
                 controlOptions: configuredColorSelection.controlOptions
             } : null,
+            // A row that names a pair rather than a single term carries the second one in a field of
+            // its own, edited by a selector beside the first and read in the same case.
+            extraTerm: options.extraTerm ? {
+                width: options.extraTerm.width,
+                show: options.extraTerm.show,
+                getValue: item => normalizeTermValue(item?.[options.extraTerm.field]),
+                getTermItems: item => TermControl.buildShapeTermsCollectionTermItems(shape, item?.[options.extraTerm.field], normalizeTermValue),
+                onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
+                    if (!items[index])
+                        items[index] = TermControl.createEmptyShapeTermsCollectionItem(includeColor, mutationOptions);
+                    items[index][options.extraTerm.field] = normalizeTermValue(value);
+                })
+            } : null,
             visibility: options.includeVisibility ? {
                 width: "24px",
                 getValue: item => item?.showLabel === true,
@@ -892,6 +905,36 @@ class TermControl {
         return this.shouldShowColorSelection(item, index);
     }
 
+    hasExtraTerm() {
+        return this.options.extraTerm != null;
+    }
+
+    // The second selector belongs to a row that already names something: the empty row at the end of
+    // the list offers one term, and the pair is offered once that term is chosen.
+    shouldShowExtraTermEditor(item, index) {
+        if (!this.hasExtraTerm())
+            return false;
+        const extraTerm = this.options.extraTerm;
+        if (extraTerm.show)
+            return extraTerm.show(item, index);
+        return this.normalizeTermValue(item?.term) !== "";
+    }
+
+    getExtraTermWidth() {
+        return this.options.extraTerm.width ?? "minmax(0, 1fr)";
+    }
+
+    getExtraTermValue(item, index) {
+        const value = this.normalizeTermValue(this.options.extraTerm.getValue(item, index));
+        if (value === "")
+            return null;
+        return value;
+    }
+
+    getExtraTermItems(item, index) {
+        return this.options.extraTerm.getTermItems(item, index);
+    }
+
     hasLock() {
         return this.options.lock != null;
     }
@@ -1019,14 +1062,16 @@ class TermControl {
         this.render();
     }
 
-    getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle = true, showTermEditor = true, showLock = false) {
+    getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle = true, showTermEditor = true, showLock = false, showExtraTerm = false) {
         if (this.options.getRowTemplateColumns)
-            return this.options.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor, showLock);
+            return this.options.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor, showLock, showExtraTerm);
         const columns = [];
         if (showDragHandle)
             columns.push("24px");
         if (showTermEditor)
             columns.push("minmax(0, 1fr)");
+        if (showExtraTerm)
+            columns.push(this.getExtraTermWidth());
         if (showSecondary)
             columns.push(this.getSecondaryWidth());
         if (showColor)
@@ -1045,9 +1090,10 @@ class TermControl {
         const showTermEditor = this.shouldShowTermEditor(item, index);
         const showVisibility = this.shouldShowVisibility(item, index);
         const showLock = this.shouldShowLockEditor(item, index);
+        const showExtraTerm = this.shouldShowExtraTermEditor(item, index);
         const row = $("<div>").addClass(this.getRowClassName()).css({
             display: "grid",
-            gridTemplateColumns: this.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor, showLock),
+            gridTemplateColumns: this.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor, showLock, showExtraTerm),
             gap: this.getRowGap(),
             marginBottom: this.getRowMarginBottom()
         });
@@ -1073,6 +1119,11 @@ class TermControl {
                 row.append(termHost);
                 termHost.dxDropDownBox(this.getTermEditorOptions(item, index));
             }
+        }
+        if (showExtraTerm) {
+            const extraTermHost = $("<div>").addClass("shape-term-term shape-term-extra-term");
+            row.append(extraTermHost);
+            extraTermHost.dxDropDownBox(this.getExtraTermEditorOptions(item, index));
         }
         if (showSecondary) {
             const secondaryHost = $("<div>").addClass("shape-term-secondary");
@@ -1190,7 +1241,7 @@ class TermControl {
         this.renderColorSecondaryEditor(host, item, index);
     }
 
-    renderTermDropdownContent(contentElement, item, index, treeItems, acceptCustomValue, currentTermValue, providedOptions, closeDropdown) {
+    renderTermDropdownContent(contentElement, item, index, treeItems, acceptCustomValue, currentTermValue, providedOptions, closeDropdown, onChanged) {
         if (acceptCustomValue) {
             const customInputHost = $('<div class="mdl-term-tree-custom-input">');
             $('<div>').dxTextBox({
@@ -1202,7 +1253,7 @@ class TermControl {
                     if (providedOptions.onCustomItemCreating)
                         providedOptions.onCustomItemCreating({ text: customValue, customItem: null, item: item, index: index });
                     else
-                        this.onTermChanged(index, customValue);
+                        onChanged(customValue);
                     closeDropdown?.();
                 }
             }).appendTo(customInputHost);
@@ -1223,7 +1274,7 @@ class TermControl {
             height: 220,
             onItemClick: e => {
                 if (e.itemData.term !== undefined) {
-                    this.onTermChanged(index, e.itemData.term);
+                    onChanged(e.itemData.term);
                     closeDropdown?.();
                 }
             },
@@ -1316,16 +1367,22 @@ class TermControl {
     }
 
     getTermEditorOptions(item, index) {
+        return this.buildTermEditorOptions(item, index, this.getTermValue(item, index), this.getTermItems(item, index), value => this.onTermChanged(index, value));
+    }
+
+    getExtraTermEditorOptions(item, index) {
+        return this.buildTermEditorOptions(item, index, this.getExtraTermValue(item, index), this.getExtraTermItems(item, index), value => this.onExtraTermChanged(index, value));
+    }
+
+    buildTermEditorOptions(item, index, termValue, flatItems, onChanged) {
         const providedOptions = this.options.termEditor ?? {};
         const acceptCustomValue = typeof providedOptions.acceptCustomValue === "function"
             ? providedOptions.acceptCustomValue(item, index) === true
             : providedOptions.acceptCustomValue === true;
-        const termValue = this.getTermValue(item, index);
         const calculator = this.getCalculator();
         const isMissingTerm = calculator ? TermControl.isMissingTermReference(calculator, termValue, this.options.allowNumericTermReference === true) : false;
         const board = this.options.getBoard?.();
         const system = this.getSystem();
-        const flatItems = this.getTermItems(item, index);
         const treeItems = TermControl.buildTermTreeItems(board, flatItems);
         let dropDownBoxInstance = null;
         const leafTerms = treeItems.filter(t => t.term !== undefined).map(t => ({ value: t.term, text: Utils.getDisplayedTerm(t.term, system) }));
@@ -1356,7 +1413,7 @@ class TermControl {
             },
             onContentReady: e => this.syncTermEditorMathField(e.component, termValue, system),
             onValueChanged: e => this.syncTermEditorMathField(e.component, termValue, system),
-            contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), item, index, treeItems, acceptCustomValue, termValue, providedOptions, () => dropDownBoxInstance?.close()),
+            contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), item, index, treeItems, acceptCustomValue, termValue, providedOptions, () => dropDownBoxInstance?.close(), onChanged),
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup")
@@ -1536,6 +1593,11 @@ class TermControl {
     onTermChanged(index, value) {
         if (this.options.onTermChanged)
             this.options.onTermChanged(index, value);
+        this.render();
+    }
+
+    onExtraTermChanged(index, value) {
+        this.options.extraTerm.onValueChanged(index, value);
         this.render();
     }
 

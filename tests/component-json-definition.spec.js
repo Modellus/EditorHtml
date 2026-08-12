@@ -9,8 +9,11 @@ const BOARD_URL = '/pages/board/index.html';
 // so only the invisible node and the behaviours it carries separate them from the captured ones.
 // They were re-recorded a second time, and stopped being captures at all, when the rose became
 // imported SVG art: the compass deliberately draws something the create() function never could,
-// so its five entries are the drawing as it stands rather than proof of the port. Every other
-// component here is still held to what its deleted create() drew.
+// so its five entries are the drawing as it stands rather than proof of the port. They were
+// re-recorded a third time when the compass gained its pointer ring: a compass that has been given
+// no direction to mark draws an empty group where the markers would stand, and the nodes after it
+// are numbered one place further along. Every other component here is still held to what its
+// deleted create() drew.
 // The font in them was rewritten once, when the text primitive stopped naming a family of its own
 // and took the board's from the design tokens; every coordinate is still the captured one.
 const BASELINES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'coded-component-baselines.json'), 'utf8'));
