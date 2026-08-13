@@ -40,22 +40,26 @@ class ComponentShape extends BaseShape {
 
     setDefaults() {
         super.setDefaults();
-        const componentType = this.constructor.defaultComponentType;
+        // Resetting a shape comes back through here, and a component that has already been given a
+        // definition is still that component afterwards: what it draws is what it is, so only a
+        // shape without one falls back to the default type.
+        const definition = this.properties.definition;
+        const componentType = BlockObjects.getComponentType(definition) ?? this.constructor.defaultComponentType;
         const registration = BlockRegistry.get(componentType);
-        this.properties.name = registration?.displayName ?? this.board.translations.get("Component Name");
+        this.properties.name = definition?.name ?? registration?.displayName ?? this.board.translations.get("Component Name");
         const center = this.board.getClientCenter();
         this.properties.width = 180;
         this.properties.height = 180;
         this.properties.x = center.x - this.properties.width / 2;
         this.properties.y = center.y - this.properties.height / 2;
-        this.properties.preset = "standard";
+        this.properties.preset = definition?.preset ?? "standard";
         // Every shape runs this from its constructor, and a component is almost always about to be
         // given the definition it was created for. The default type is a fallback for the one that
         // is not, so an editor that does not carry it still builds the shape and waits for
         // setProperties to say what it draws.
         if (!registration)
             return;
-        this.properties.definition = BlockObjects.createComponentInstance(componentType, { name: this.properties.name, source: "developer" });
+        this.properties.definition = definition ?? BlockObjects.createComponentInstance(componentType, { name: this.properties.name, source: "developer" });
         Object.assign(this.properties, BlockObjects.getInstancePropertyDefaults(componentType, this.properties.preset));
     }
 

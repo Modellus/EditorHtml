@@ -58,14 +58,18 @@ async function removeMenuItems(page, shapeName) {
 }
 
 // Remove, reset and clear all live under the bin: opening it and choosing one is what a person does.
-async function clearFromToolbar(page, shapeName) {
+async function chooseFromToolbar(page, shapeName, itemText) {
     await page.evaluate(name => shell.board.selection.select(shell.board.shapes.getByName(name)), shapeName);
     await page.waitForTimeout(300);
     await page.locator('.shape-context-toolbar.visible .mdl-remove-selector').click();
     await page.waitForTimeout(300);
-    await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item'))
-        .find(item => item.querySelector('.mdl-dropdown-list-label').textContent === 'Clear').click());
+    await page.evaluate(text => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item'))
+        .find(item => item.querySelector('.mdl-dropdown-list-label').textContent === text).click(), itemText);
     await page.waitForTimeout(300);
+}
+
+function clearFromToolbar(page, shapeName) {
+    return chooseFromToolbar(page, shapeName, 'Clear');
 }
 
 // Drags across the plot from left to right, holding still for long enough at each stop that the
@@ -440,6 +444,42 @@ test('clearing the recording takes it out of the model too', async ({ page }) =>
     await page.evaluate(() => shell.commands.addComponent('compass', 'Compass'));
     await page.waitForTimeout(300);
     expect(await removeMenuItems(page, 'Compass')).toEqual(['Remove', 'Reset']);
+});
+
+// Reset takes the settings back to what the object was given, and the object it is given back is
+// still the one that was there: a tracker resets into a tracker, not into whatever a component
+// drawn from nothing would be.
+test('resetting a tracker leaves it a tracker with its settings back as they came', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    const defaults = await page.evaluate(() => ({
+        axisColor: shell.board.shapes.getByName('Tracker').properties.axisColor,
+        showGrid: shell.board.shapes.getByName('Tracker').properties.showGrid
+    }));
+    await page.evaluate(() => shell.board.shapes.getByName('Tracker').setProperties({ axisColor: '#ff00ff', showGrid: !shell.board.shapes.getByName('Tracker').properties.showGrid }));
+    await dragAcross(page, 5);
+    await chooseFromToolbar(page, 'Tracker', 'Reset');
+    const reset = await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        return {
+            componentType: shape.getComponentType(),
+            axisColor: shape.properties.axisColor,
+            showGrid: shape.properties.showGrid,
+            samples: shape.properties.samples,
+            width: shape.properties.width,
+            height: shape.properties.height
+        };
+    });
+    expect(reset.componentType).toBe('mouse-tracker');
+    expect(reset.axisColor).toBe(defaults.axisColor);
+    expect(reset.showGrid).toBe(defaults.showGrid);
+    expect(reset.samples).toEqual([]);
+    // Where the object sits and how big it is are not settings, so reset leaves them alone.
+    expect(reset.width).toBe(340);
+    expect(reset.height).toBe(320);
+    // The plot is still drawn: an object reset into something else would take its blocks with it.
+    expect(await page.locator('[data-block-id$=":capture"]').count()).toBe(1);
 });
 
 test('the marker is a dot until a character is chosen, and then it hangs from its pivot point', async ({ page }) => {
