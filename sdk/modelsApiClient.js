@@ -916,7 +916,10 @@ export class ModelsApiClient {
       headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
       body: JSON.stringify(payload)
     });
-    if (!response.ok) throw new Error(`Update object failed (${response.status})`);
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => null);
+      throw new Error(`Update object failed (${response.status})${errorBody?.error ? ': ' + errorBody.error : ''}`);
+    }
     return await response.json();
   }
 

@@ -40,7 +40,10 @@ async function stubObjectsApi(page, state) {
             return route.fulfill({ json: { thumbnail_url: 'https://example.test/thumb.png' } });
         }
         if (/^\/objects\/[^/]+$/.test(path) && request.method() === 'PUT') {
-            state.updated.push({ path, body: request.postData() });
+            const body = request.postData();
+            if (state.failType && body.includes(`"type":"${state.failType}"`))
+                return route.fulfill({ status: 400, json: { error: '"pointer-ring" at root.children[0] is not a registered building block.' } });
+            state.updated.push({ path, body });
             return route.fulfill({ json: { id: 'updated' } });
         }
         return route.fulfill({ json: [] });
@@ -124,6 +127,22 @@ test.describe('seeding the bundled objects', () => {
         expect(compass.action).toBe('failed');
         expect(compass.error).toContain('that one is not allowed');
         expect(state.created).toHaveLength(8);
+    });
+
+    // A refused update says why: the catalogue answers with the reason it refused, and a seed run
+    // that swallowed it left a bare status code to work back from — which is how the compass sat in
+    // the catalogue for days with a definition older than the markers it had gained.
+    test('an update the catalogue refuses reports the reason it gave', async ({ page }) => {
+        const state = createState([{ id: 'obj-1', type: 'compass', title: 'Compass' }]);
+        state.failType = 'compass';
+        await stubObjectsApi(page, state);
+        await openHarness(page);
+        const seeding = await seed(page, readDefinitions(), { write: true, update: true });
+        const compass = seeding.results.find(result => result.type === 'compass');
+        expect(compass.action).toBe('failed');
+        expect(compass.error).toContain('400');
+        expect(compass.error).toContain('is not a registered building block');
+        expect(seeding.results.filter(result => result.action === 'create')).toHaveLength(8);
     });
 
     test('a catalogue that cannot be listed stops a write but not a dry run', async ({ page }) => {
