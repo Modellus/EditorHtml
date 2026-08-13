@@ -31,8 +31,8 @@ class ValueShape extends BaseShape {
         if (!this.canEditTermValue(term))
             return false;
         const caseNumber = this.getSelectedCaseNumber(term);
-        const currentValue = this.board.calculator.getByName(term, caseNumber);
-        if (!Number.isFinite(currentValue))
+        const currentValue = this.getModelValueForEditing(this.board.calculator.getByName(term, caseNumber), term);
+        if (currentValue == null)
             return false;
         this.beginValueEdit(term, caseNumber, currentValue);
         return true;

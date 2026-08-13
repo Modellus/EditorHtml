@@ -564,6 +564,32 @@ class Utils {
         return decPart !== undefined ? `${formattedInt}.${decPart}` : formattedInt;
     }
 
+    static normalizePrecision(precision) {
+        const numericPrecision = Number(precision);
+        if (!Number.isFinite(numericPrecision) || numericPrecision < 0)
+            return 0;
+        return Math.floor(numericPrecision);
+    }
+
+    // What is edited is what is read: a value handed to an editor is rounded to the same precision
+    // it is displayed with, so a reading of 1.23 is not silently edited as 1.2345678.
+    static roundValueForEditing(value, precision) {
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue))
+            return null;
+        const rounded = Utils.roundToPrecision(numericValue, Utils.normalizePrecision(precision));
+        return Object.is(rounded, -0) ? 0 : rounded;
+    }
+
+    // Unlike formatNumber, no thousands separators are inserted: the text has to parse back into a
+    // number when the edit is committed.
+    static formatValueForEditing(value, precision) {
+        const rounded = Utils.roundValueForEditing(value, precision);
+        if (rounded == null)
+            return "";
+        return rounded.toFixed(Utils.normalizePrecision(precision));
+    }
+
     static avatarPalette = ["#4C9AFF", "#F5515F", "#36B37E", "#FFAB00", "#8777D9", "#00B8D9", "#FF7452", "#57D9A3"];
 
     static getAvatarColor(name) {

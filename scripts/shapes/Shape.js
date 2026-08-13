@@ -2198,6 +2198,14 @@ class BaseShape {
         return this.getModelPrecision();
     }
 
+    getModelValueForEditing(value, termName) {
+        return Utils.roundValueForEditing(value, this.getTermModelPrecision(termName));
+    }
+
+    formatModelValueForEditing(value, termName) {
+        return Utils.formatValueForEditing(value, this.getTermModelPrecision(termName));
+    }
+
     formatTermForDisplay(term) {
         if (term == null || term === "")
             return "";

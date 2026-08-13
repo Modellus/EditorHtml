@@ -504,10 +504,10 @@ test.describe('Cases table', () => {
             };
         });
         expect(editorState.editingColumnKey).toBe('case1');
-        expect(editorState.editingText).toBe('0');
-        expect(editorState.overlayText).toEqual(['t = 0']);
+        expect(editorState.editingText).toBe('0.00');
+        expect(editorState.overlayText).toEqual(['t = 0.00']);
 
-        await page.keyboard.press('Backspace');
+        await page.keyboard.press('Delete');
         await page.keyboard.type('5');
         const afterTyping = await page.evaluate(() => {
             const table = shell.board.shapes.getByName('Inputs1').table;
@@ -782,6 +782,32 @@ test.describe('Cases table', () => {
 
         expect(result.displayText).toBe('');
         expect(result.editingText).toBe('');
+    });
+
+    test('a cell edit starts from the value at the model precision', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            const table = tableShape.table;
+            const row = table.rows.find(r => r.termName === 'v');
+            const column = table.options.columns.find(c => c.key === 'case1');
+            row.case1 = 1.23456789;
+            const displayText = table.getCellText(row, column);
+            const rowIndex = table.rows.indexOf(row);
+            const columnIndex = table.options.columns.indexOf(column);
+            table.startEditing(rowIndex, columnIndex, null);
+            return {
+                precision: shell.board.calculator.getPrecision(),
+                displayText: displayText,
+                editingText: table.editingCell?.text
+            };
+        });
+
+        expect(result.precision).toBe(2);
+        expect(result.displayText).toBe('1.23');
+        expect(result.editingText).toBe('1.23');
     });
 
     test('the independent row text uses a contrasting color against its background', async ({ page }) => {

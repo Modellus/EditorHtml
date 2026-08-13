@@ -1039,16 +1039,37 @@ class TableControl {
             return "-∞";
         if (!Number.isFinite(numericValue))
             return "";
-        const cellPrecision = row.cellPrecision && Number.isFinite(row.cellPrecision[column.key]) ? row.cellPrecision[column.key] : null;
-        const precision = cellPrecision != null ? cellPrecision : (Number.isFinite(column.precision) ? column.precision : this.options.precision);
-        return this.formatNumber(numericValue, precision);
+        return this.formatNumber(numericValue, this.getCellPrecision(row, column));
     }
 
     formatNumber(value, precision) {
-        const normalizedPrecision = Number.isFinite(precision) ? Math.max(0, Math.floor(precision)) : 0;
-        const roundedValue = Utils.roundToPrecision(value, normalizedPrecision);
-        const normalizedValue = Object.is(roundedValue, -0) ? 0 : roundedValue;
-        return Utils.formatNumber(normalizedValue, normalizedPrecision);
+        const normalizedPrecision = Utils.normalizePrecision(precision);
+        const roundedValue = Utils.roundValueForEditing(value, normalizedPrecision);
+        if (roundedValue == null)
+            return "";
+        return Utils.formatNumber(roundedValue, normalizedPrecision);
+    }
+
+    getCellPrecision(row, column) {
+        if (!column)
+            return Utils.normalizePrecision(this.options.precision);
+        const cellPrecision = row?.cellPrecision && Number.isFinite(row.cellPrecision[column.key]) ? row.cellPrecision[column.key] : null;
+        if (cellPrecision != null)
+            return Utils.normalizePrecision(cellPrecision);
+        return Utils.normalizePrecision(Number.isFinite(column.precision) ? column.precision : this.options.precision);
+    }
+
+    // The text an edit starts from is the value at the model's precision, matching what the cell
+    // shows, rather than the unrounded value behind it.
+    getCellEditText(row, column) {
+        if (!row || !column)
+            return "";
+        const rawValue = row[column.key];
+        if (rawValue == null || rawValue === "")
+            return "";
+        if (column.isText === true)
+            return String(rawValue);
+        return Utils.formatValueForEditing(rawValue, this.getCellPrecision(row, column));
     }
 
     renderResizeHandles(layout, geometry) {
@@ -2061,8 +2082,7 @@ class TableControl {
             return;
         const row = this.getRowByIndex(rowIndex);
         const column = this.getColumnByIndex(columnIndex);
-        const currentValue = row ? row[column.key] : "";
-        let text = (currentValue == null || Number.isNaN(currentValue)) ? "" : `${currentValue}`;
+        let text = this.getCellEditText(row, column);
         if (initialKey != null && this.isAcceptedEditKey(initialKey))
             text = this.normalizeEditCharacter(initialKey);
         this.editingCell = {
