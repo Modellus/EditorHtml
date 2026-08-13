@@ -6099,23 +6099,38 @@ BlockDefinitionLoader.registerAll([
         },
         "parameters": [
             {
+                "id": "turnedBy",
+                "label": "Turned by",
+                "valueType": "string",
+                "defaultValue": "angle",
+                "enumValues": [
+                    "angle",
+                    "orientation"
+                ],
+                "category": "model",
+                "userEditable": false,
+                "description": "Whether the row is read as an angle in degrees or as an orientation, which is a pair of values read as a direction. It is chosen from the buttons at the head of the row rather than a row of its own."
+            },
+            {
                 "id": "angleVariable",
-                "label": "Angle",
+                "label": "Turned by",
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model",
                 "unit": "deg",
+                "modeParameter": "turnedBy",
                 "pairedParameter": "angleUpVariable",
-                "description": "Turns the wheel clockwise: an angle in degrees on its own, or how far across when a second term names how far up. Dragging the wheel writes the angle it travelled back, unless it is being pointed by a pair."
+                "colorParameter": "markColor",
+                "description": "The angle the wheel is turned to, clockwise in degrees — or, as an orientation, how far across the pair reaches. Dragging the wheel writes back whichever it reads: the angle, or the pair, which keeps its length and takes the direction it was turned to."
             },
             {
                 "id": "angleUpVariable",
                 "label": "Up",
                 "valueType": "variable",
-                "defaultValue": "",
+                "defaultValue": "0",
                 "category": "model",
                 "userEditable": false,
-                "description": "The upward half of the pair the wheel is pointed by. Named, the wheel turns to where the pair points — how far across and how far up — the way a marker on a compass points along the pair it names."
+                "description": "How far up the orientation reaches, edited by the second selector on the row and read only while the wheel is turned by an orientation."
             },
             {
                 "id": "wheelType",
@@ -6162,8 +6177,9 @@ BlockDefinitionLoader.registerAll([
                 "label": "Mark colour",
                 "valueType": "colour",
                 "defaultValue": "token:stroke.warning",
-                "category": "style",
-                "description": "The mark at the top of the wheel, which is what shows how far it has been turned."
+                "category": "model",
+                "userEditable": false,
+                "description": "The mark at the top of the wheel, which is the part that shows the direction it is turned to. It is picked on the row that turns the wheel rather than on a colour menu that would name the same thing twice."
             }
         ],
         "locals": [
@@ -6204,17 +6220,18 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\frac{h}{2}"
             },
             {
-                "id": "pointedByPair",
+                "id": "pointedByOrientation",
                 "value": {
                     "choose": {
-                        "parameter": "angleUpVariable"
+                        "parameter": "turnedBy"
                     },
+                    "equals": "orientation",
                     "then": 1,
                     "otherwise": 0
                 }
             },
             {
-                "id": "pairAngle",
+                "id": "orientationAngle",
                 "value": {
                     "direction": {
                         "x": {
@@ -6239,10 +6256,10 @@ BlockDefinitionLoader.registerAll([
                 "id": "angle",
                 "value": {
                     "choose": {
-                        "parameter": "pointedByPair"
+                        "parameter": "pointedByOrientation"
                     },
                     "then": {
-                        "parameter": "pairAngle"
+                        "parameter": "orientationAngle"
                     },
                     "otherwise": {
                         "parameter": "plainAngle"
@@ -6253,7 +6270,7 @@ BlockDefinitionLoader.registerAll([
                 "id": "turnedByHand",
                 "value": {
                     "choose": {
-                        "parameter": "angleUpVariable"
+                        "parameter": "pointedByOrientation"
                     },
                     "then": 0,
                     "otherwise": 1
@@ -6720,9 +6737,6 @@ BlockDefinitionLoader.registerAll([
                 {
                     "id": "wheel-grab",
                     "type": "ring",
-                    "when": {
-                        "parameter": "turnedByHand"
-                    },
                     "bindings": {
                         "centerX": {
                             "parameter": "cx"
@@ -6744,10 +6758,38 @@ BlockDefinitionLoader.registerAll([
                     "behaviours": [
                         {
                             "type": "drag-rotate",
+                            "when": {
+                                "parameter": "turnedByHand"
+                            },
                             "variable": {
                                 "parameter": "angleVariable"
                             },
                             "property": "angleVariable",
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            },
+                            "degreesPerUnit": 1,
+                            "hoverFill": {
+                                "parameter": "grabColor"
+                            },
+                            "hoverOpacity": 0.18
+                        },
+                        {
+                            "type": "drag-rotate",
+                            "when": {
+                                "parameter": "pointedByOrientation"
+                            },
+                            "variable": {
+                                "parameter": "angleVariable"
+                            },
+                            "property": "angleVariable",
+                            "verticalVariable": {
+                                "parameter": "angleUpVariable"
+                            },
+                            "verticalProperty": "angleUpVariable",
                             "centerX": {
                                 "parameter": "cx"
                             },

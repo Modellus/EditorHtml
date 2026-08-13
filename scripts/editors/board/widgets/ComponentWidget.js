@@ -632,6 +632,15 @@ class ComponentShape extends BaseShape {
         this.board.calculator.refreshDataSources();
     }
 
+    // Pressing an object is what selects it and brings up its toolbar. A grab area answers the
+    // pointer before the board does and holds it for the whole drag, so an object with one would
+    // otherwise stay unselected while it is being turned.
+    selectFromGrab() {
+        if (this.board.selection.selectedShape === this)
+            return;
+        this.board.selection.select(this);
+    }
+
     attachDragAngleBehaviour(element, input, relative = false) {
         if (!this.isAngleDragAllowed(input)) {
             this.markWriteLocked(element, input);
@@ -672,6 +681,7 @@ class ComponentShape extends BaseShape {
             return;
         element.style.cursor = "not-allowed";
         element.setAttribute("pointer-events", "all");
+        element.addEventListener("pointerdown", () => this.selectFromGrab());
     }
 
     attachClickableBehaviour(element, input) {
@@ -721,14 +731,26 @@ class ComponentShape extends BaseShape {
     isAngleDragAllowed(input) {
         if (!this.isInteractable() || this.isLocked())
             return false;
-        const variable = String(input.variable ?? "");
+        if (!this.isDragHalfAllowed(input.variable, input.property))
+            return false;
+        if (!this.isOrientationDrag(input))
+            return true;
+        return this.isDragHalfAllowed(input.verticalVariable, input.verticalProperty);
+    }
+
+    isDragHalfAllowed(variableInput, propertyInput) {
+        const variable = String(variableInput ?? "");
         if (variable === "")
             return false;
         if (this.board.calculator.isTerm(variable))
             return this.board.calculator.isEditable(variable);
         // A property showing a plain number is edited on the shape itself, the way a gauge edits its
         // own value when it is not bound to a term.
-        return this.getBehaviourProperty(input) !== null;
+        return this.getBehaviourProperty({ property: propertyInput }) !== null;
+    }
+
+    isOrientationDrag(input) {
+        return String(input.verticalVariable ?? "") !== "";
     }
 
     getBehaviourProperty(input) {
@@ -750,6 +772,7 @@ class ComponentShape extends BaseShape {
         if (!this.isAngleDragAllowed(input))
             return;
         event.preventDefault();
+        this.selectFromGrab();
         this.board.pointerLocked = true;
         this._angleDragInput = input;
         this._angleDragTurn = relative ? this.startAngleDragTurn(event, input) : null;
@@ -829,17 +852,51 @@ class ComponentShape extends BaseShape {
     // A drag target reads and writes the same place: a model term when the property names one, and
     // the property itself when it holds a plain number.
     readAngleDragValue(input) {
-        const variable = String(input.variable ?? "");
+        if (this.isOrientationDrag(input))
+            return this.readOrientationAngle(input);
+        return this.readDragHalf(input.variable);
+    }
+
+    readDragHalf(variableInput) {
+        const variable = String(variableInput ?? "");
         const value = this.board.calculator.isTerm(variable)
             ? this.board.calculator.getByName(variable, this.getTermCaseNumber("caseNumber"))
             : Number(variable);
         return Number.isFinite(Number(value)) ? Number(value) : 0;
     }
 
+    readOrientationAngle(input) {
+        const across = this.readDragHalf(input.variable);
+        const up = this.readDragHalf(input.verticalVariable);
+        if (across === 0 && up === 0)
+            return 0;
+        return BlockGeometry.toDegrees(Math.atan2(across, up));
+    }
+
+    readOrientationLength(input) {
+        const length = Math.hypot(this.readDragHalf(input.variable), this.readDragHalf(input.verticalVariable));
+        return length === 0 ? 1 : length;
+    }
+
     writeAngleDragValue(input, value) {
-        const property = this.getBehaviourProperty(input);
-        if (this.board.calculator.isTerm(String(input.variable ?? "")) || property === null) {
-            this.writeModelValue(input.variable, value);
+        if (this.isOrientationDrag(input)) {
+            this.writeOrientationAngle(input, value);
+            return;
+        }
+        this.writeDragHalf(input.variable, input.property, value);
+    }
+
+    writeOrientationAngle(input, angleDegrees) {
+        const length = this.readOrientationLength(input);
+        const radians = BlockGeometry.toRadians(angleDegrees);
+        this.writeDragHalf(input.variable, input.property, length * Math.sin(radians));
+        this.writeDragHalf(input.verticalVariable, input.verticalProperty, length * Math.cos(radians));
+    }
+
+    writeDragHalf(variableInput, propertyInput, value) {
+        const property = this.getBehaviourProperty({ property: propertyInput });
+        if (this.board.calculator.isTerm(String(variableInput ?? "")) || property === null) {
+            this.writeModelValue(variableInput, value);
             return;
         }
         this.setProperty(property, Utils.roundToPrecision(value, this.board.calculator.getPrecision()));

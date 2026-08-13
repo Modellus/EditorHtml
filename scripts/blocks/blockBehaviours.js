@@ -96,6 +96,8 @@ var BlockBehaviours = {
             properties: {
                 variable: { valueType: "variable", defaultValue: "", label: "Variable", bindable: false },
                 property: { valueType: "string", defaultValue: "", label: "Component property", description: "Property written when the variable holds a plain number instead of naming a model term." },
+                verticalVariable: { valueType: "variable", defaultValue: "", label: "Vertical variable", bindable: false, description: "Names the upward half of a pair, and then the drag writes a direction rather than an angle: the pair keeps the length it had and takes the angle it was turned to. A pair holding nothing at all is laid down at length one, so a drag has something to turn." },
+                verticalProperty: { valueType: "string", defaultValue: "", label: "Vertical component property", description: "Property written for the upward half when that variable holds a plain number." },
                 centerX: { valueType: "number", defaultValue: 0, label: "Anchor X" },
                 centerY: { valueType: "number", defaultValue: 0, label: "Anchor Y" },
                 degreesPerUnit: { valueType: "number", defaultValue: 6, label: "Degrees per unit" },
@@ -118,6 +120,8 @@ var BlockBehaviours = {
             properties: {
                 variable: { valueType: "variable", defaultValue: "", label: "Variable", bindable: false },
                 property: { valueType: "string", defaultValue: "", label: "Component property", description: "Property written when the variable holds a plain number instead of naming a model term." },
+                verticalVariable: { valueType: "variable", defaultValue: "", label: "Vertical variable", bindable: false, description: "Names the upward half of a pair, and then the drag writes a direction rather than an angle: the pair keeps the length it had and takes the angle it was turned to. A pair holding nothing at all is laid down at length one, so a drag has something to turn." },
+                verticalProperty: { valueType: "string", defaultValue: "", label: "Vertical component property", description: "Property written for the upward half when that variable holds a plain number." },
                 centerX: { valueType: "number", defaultValue: 0, label: "Anchor X" },
                 centerY: { valueType: "number", defaultValue: 0, label: "Anchor Y" },
                 degreesPerUnit: { valueType: "number", defaultValue: 1, label: "Degrees per unit" },

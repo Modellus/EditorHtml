@@ -387,6 +387,9 @@ var BaseShapeToolbarMixin = {
             exactTypedValue: options.allowTypedValue === true,
             colorProperty: options.colorProperty ?? "",
             extraTermProperty: extraTermProperty,
+            modeProperty: options.modeProperty ?? "",
+            modeItems: options.modeItems ?? [],
+            modePairValue: options.modePairValue ?? "",
             includeLock: extraTermProperty === ""
         });
     },

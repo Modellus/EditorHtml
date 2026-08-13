@@ -16,6 +16,9 @@ const BOARD_URL = '/pages/board/index.html';
 // deleted create() drew.
 // The font in them was rewritten once, when the text primitive stopped naming a family of its own
 // and took the board's from the design tokens; every coordinate is still the captured one.
+// The six entries carrying a drag were re-recorded again when the drag behaviours gained the pair of
+// inputs that let one write a direction: the drawings are identical, and what changed is the two new
+// names standing empty in the behaviour the signature carries beside them.
 const BASELINES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'coded-component-baselines.json'), 'utf8'));
 
 const cases = [

@@ -594,22 +594,11 @@ class BottomToolbar {
     }
 
     _initPillButtonGroup(element) {
-        const pill = document.createElement("div");
-        pill.className = "mdl-pill";
-        element.style.position = "relative";
-        element.appendChild(pill);
-        this._movePill(element);
+        Utils.initPillButtonGroup(element);
     }
 
     _movePill(element) {
-        const pill = element.querySelector(".mdl-pill");
-        if (!pill)
-            return;
-        const selected = element.querySelector(".dx-item-selected .dx-button");
-        if (!selected)
-            return;
-        pill.style.left = selected.offsetLeft + "px";
-        pill.style.width = selected.offsetWidth + "px";
+        Utils.movePillButtonGroup(element);
     }
 
     updatePlayer() {

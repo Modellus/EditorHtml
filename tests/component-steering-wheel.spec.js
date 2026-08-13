@@ -15,7 +15,7 @@ async function addSteeringModel(page) {
     await page.evaluate(() => modellus.shape.addExpression('Steering equations'));
     await page.waitForTimeout(300);
     await page.evaluate(() => {
-        shell.board.shapes.getByName('Steering equations').properties.expression = '\\frac{dsteer}{dt}=0\\\\\\frac{dacross}{dt}=0\\\\\\frac{dup}{dt}=0';
+        shell.board.shapes.getByName('Steering equations').properties.expression = '\\frac{dsteer}{dt}=0\\\\\\frac{dacross}{dt}=0\\\\\\frac{dup}{dt}=0\\\\computed=45';
         shell.reset();
     });
     await page.waitForTimeout(400);
@@ -130,13 +130,14 @@ test.describe('steering wheel component', () => {
         }
     });
 
-    test('turns to where a pair of terms points, measured the way a compass marker is', async ({ page }) => {
+    test('turns to where an orientation points, measured the way a compass marker is', async ({ page }) => {
         await setupBoard(page);
         await addSteeringModel(page);
-        const pointed = await buildDrawing(page, { angleVariable: 'across', angleUpVariable: 'up', wheelType: 'car' });
-        const straightUp = await buildDrawing(page, { angleVariable: '0', angleUpVariable: '5', wheelType: 'car' });
-        const westward = await buildDrawing(page, { angleVariable: '-4', angleUpVariable: '0', wheelType: 'car' });
-        const nothingNamed = await buildDrawing(page, { angleVariable: '0', angleUpVariable: '0', wheelType: 'car' });
+        const orientation = overrides => Object.assign({ turnedBy: 'orientation', wheelType: 'car' }, overrides);
+        const pointed = await buildDrawing(page, orientation({ angleVariable: 'across', angleUpVariable: 'up' }));
+        const straightUp = await buildDrawing(page, orientation({ angleVariable: '0', angleUpVariable: '5' }));
+        const westward = await buildDrawing(page, orientation({ angleVariable: '-4', angleUpVariable: '0' }));
+        const nothingNamed = await buildDrawing(page, orientation({ angleVariable: '0', angleUpVariable: '0' }));
         expect(pointed.markup).toContain('rotate(45 100 100)');
         expect(pointed.diagnostics).toEqual([]);
         expect(straightUp.markup).toContain('rotate(0 100 100)');
@@ -144,17 +145,42 @@ test.describe('steering wheel component', () => {
         expect(nothingNamed.markup).toContain('rotate(0 100 100)');
     });
 
-    test('a wheel pointed by a pair is not turned by hand, so a drag cannot fight the model', async ({ page }) => {
+    test('the grab ring is there either way, carrying the drag that belongs to the way chosen', async ({ page }) => {
         await setupBoard(page);
         await addSteeringModel(page);
         const byAngle = await buildDrawing(page, { angleVariable: 'steer', wheelType: 'car' });
-        const byPair = await buildDrawing(page, { angleVariable: 'across', angleUpVariable: 'up', wheelType: 'car' });
+        const byOrientation = await buildDrawing(page, { turnedBy: 'orientation', angleVariable: 'across', angleUpVariable: 'up', wheelType: 'car' });
         expect(sourceIds(byAngle.markup)).toContain('wheel-grab');
-        expect(sourceIds(byPair.markup)).not.toContain('wheel-grab');
-        expect(byPair.errors).toEqual([]);
+        expect(sourceIds(byOrientation.markup)).toContain('wheel-grab');
+        expect(byOrientation.errors).toEqual([]);
+        const behaviours = await page.evaluate(() => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
+            const read = overrides => {
+                const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('steering-wheel'), overrides);
+                const compilation = compiler.compile(BlockObjects.createComponentInstance('steering-wheel'), { width: 200, height: 200, parameters: parameters, tokens: new BlockTokens('standard') });
+                const grab = BlockRenderer.flatten(compilation.nodes).find(node => node.sourceId === 'wheel-grab');
+                return (grab.behaviours ?? []).map(behaviour => ({ type: behaviour.type, variable: behaviour.input.variable, vertical: behaviour.input.verticalVariable ?? '' }));
+            };
+            return {
+                angle: read({ angleVariable: 'steer' }),
+                orientation: read({ turnedBy: 'orientation', angleVariable: 'across', angleUpVariable: 'up' })
+            };
+        });
+        expect(behaviours.angle).toEqual([{ type: 'drag-rotate', variable: 'steer', vertical: '' }]);
+        expect(behaviours.orientation).toEqual([{ type: 'drag-rotate', variable: 'across', vertical: 'up' }]);
     });
 
-    test('the angle row offers a second selector for the pair it can be pointed by', async ({ page }) => {
+    test('the row is read as degrees or as the across half, by the choice alone', async ({ page }) => {
+        await setupBoard(page);
+        await addSteeringModel(page);
+        const row = { angleVariable: 'across', angleUpVariable: 'up', wheelType: 'car' };
+        const byAngle = await buildDrawing(page, Object.assign({ turnedBy: 'angle' }, row));
+        const byOrientation = await buildDrawing(page, Object.assign({ turnedBy: 'orientation' }, row));
+        expect(byAngle.markup).toContain('rotate(3 100 100)');
+        expect(byOrientation.markup).toContain('rotate(45 100 100)');
+    });
+
+    test('one row carries the choice: the buttons pick it and the selectors follow', async ({ page }) => {
         await setupBoard(page);
         await addSteeringModel(page);
         await addSteeringWheel(page, 'car');
@@ -163,8 +189,78 @@ test.describe('steering wheel component', () => {
         await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
         await page.waitForTimeout(500);
         const popup = page.locator('.mdl-shape-overlay-popup').last();
-        await expect(popup.locator('.term-packed-control--pair')).toHaveCount(1);
-        await expect(popup.locator('.term-packed-control--pair .shape-term-extra-term')).toHaveCount(1);
+        const modeButtons = popup.locator('.shape-term-mode .dx-button');
+        await expect(modeButtons).toHaveCount(2);
+        const icons = await modeButtons.evaluateAll(elements => elements.map(element => element.querySelector('i')?.className ?? ''));
+        expect(icons[0]).toContain('fa-angle');
+        expect(icons[1]).toContain('fa-arrow-up-right');
+        await expect(popup.locator('.shape-term-extra-term')).toHaveCount(0);
+        await modeButtons.nth(1).click();
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Wheel').properties.turnedBy)).toBe('orientation');
+        await expect(page.locator('.mdl-shape-overlay-popup').last().locator('.shape-term-extra-term')).toHaveCount(1);
+        await page.locator('.mdl-shape-overlay-popup').last().locator('.shape-term-mode .dx-button').first().click();
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Wheel').properties.turnedBy)).toBe('angle');
+        await expect(page.locator('.mdl-shape-overlay-popup').last().locator('.shape-term-extra-term')).toHaveCount(0);
+    });
+
+    test('the choice is dressed exactly as the player dresses its angle unit, on a row that paints nothing', async ({ page }) => {
+        await setupBoard(page);
+        await addSteeringModel(page);
+        await addSteeringWheel(page, 'car');
+        const readGroup = () => page.evaluate(() => {
+            const groups = Array.from(document.querySelectorAll('.mdl-pill-group'));
+            const group = groups[groups.length - 1];
+            const icon = group.querySelector('.dx-icon');
+            return {
+                outlined: group.classList.contains('dx-buttongroup-mode-outlined'),
+                smallIcon: group.classList.contains('mdl-small-icon'),
+                background: getComputedStyle(group).backgroundColor,
+                iconSize: getComputedStyle(icon).fontSize,
+                iconWeight: getComputedStyle(icon).fontWeight,
+                pill: !!group.querySelector('.mdl-pill')
+            };
+        });
+        await page.click('#independentDropDown');
+        await page.waitForTimeout(700);
+        const player = await readGroup();
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wheel')));
+        await page.waitForTimeout(400);
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.waitForTimeout(500);
+        const wheel = await readGroup();
+        expect(wheel).toEqual(player);
+        expect(wheel.background).toBe('rgba(0, 0, 0, 0)');
+        const rowBackground = await page.evaluate(() => getComputedStyle(document.querySelector('.mdl-shape-overlay-popup .term-packed-control')).backgroundColor);
+        expect(rowBackground).toBe('rgba(0, 0, 0, 0)');
+    });
+
+    test('the row carries the colour of the mark, and every part of it sits on one line', async ({ page }) => {
+        await setupBoard(page);
+        await addSteeringModel(page);
+        await addSteeringWheel(page, 'car');
+        await page.evaluate(() => shell.board.shapes.getByName('Wheel').setProperties({ markColor: '#00a5ff' }));
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wheel')));
+        await page.waitForTimeout(400);
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.waitForTimeout(600);
+        const popup = page.locator('.mdl-shape-overlay-popup').last();
+        await expect(popup.locator('.shape-term-color')).toHaveCount(1);
+        const row = await page.evaluate(() => {
+            const parts = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .shape-term-row > *'));
+            const centres = parts.map(part => {
+                const rect = part.getBoundingClientRect();
+                return Math.round(rect.top + rect.height / 2);
+            });
+            const swatch = document.querySelector('.mdl-shape-overlay-popup .shape-term-color .mdl-color-picker-button-icon');
+            return { classes: parts.map(part => part.className.split(' ')[0]), centres: centres, swatchColour: getComputedStyle(swatch).color };
+        });
+        expect(row.classes).toEqual(['shape-term-mode', 'shape-term-term', 'shape-term-color']);
+        expect(Math.max(...row.centres) - Math.min(...row.centres)).toBeLessThanOrEqual(1);
+        expect(row.swatchColour).toBe('rgb(0, 165, 255)');
     });
 
     test('the type is chosen from a button group of icons, one at a time', async ({ page }) => {
@@ -191,6 +287,42 @@ test.describe('steering wheel component', () => {
         expect(drawnIds).not.toContain('car-rim');
     });
 
+    test('pressing the wheel brings up its toolbar, whether or not the grab can write', async ({ page }) => {
+        await setupBoard(page);
+        await addSteeringModel(page);
+        await page.evaluate(() => {
+            const writable = shell.commands.addComponent('steering-wheel', 'Writable');
+            writable.setProperties({ x: 120, y: 120, width: 200, height: 200, angleVariable: 'steer' });
+            writable.draw();
+            const readOnly = shell.commands.addComponent('steering-wheel', 'ReadOnly');
+            readOnly.setProperties({ x: 420, y: 120, width: 200, height: 200, angleVariable: 'computed' });
+            readOnly.draw();
+            shell.board.deselect();
+        });
+        await page.waitForTimeout(400);
+        for (const name of ['Writable', 'ReadOnly']) {
+            await page.evaluate(() => shell.board.deselect());
+            await page.waitForTimeout(200);
+            const point = await page.evaluate(name => {
+                const shape = shell.board.shapes.getByName(name);
+                const matrix = shell.board.svg.getScreenCTM();
+                const rim = new DOMPoint(shape.properties.x + shape.properties.width / 2, shape.properties.y + shape.properties.height / 2 - 80).matrixTransform(matrix);
+                return { x: rim.x, y: rim.y };
+            }, name);
+            await page.mouse.move(point.x, point.y);
+            await page.mouse.down();
+            await page.waitForTimeout(300);
+            const held = await page.evaluate(name => ({
+                selected: shell.board.selection.selectedShape?.properties?.name ?? null,
+                toolbar: !!shell.board.shapes.getByName(name).contextToolbar?.classList.contains('visible')
+            }), name);
+            await page.mouse.up();
+            await page.waitForTimeout(200);
+            expect(held.selected, name).toBe(name);
+            expect(held.toolbar, name).toBe(true);
+        }
+    });
+
     test('dragging the rim turns the wheel and writes the angle back', async ({ page }) => {
         await setupBoard(page);
         await addSteeringModel(page);
@@ -210,5 +342,42 @@ test.describe('steering wheel component', () => {
         await page.waitForTimeout(300);
         const steer = await page.evaluate(() => shell.board.calculator.getByName('steer', 1));
         expect(steer).toBeCloseTo(120, 0);
+    });
+
+    test('dragging a wheel pointed by an orientation turns the pair and keeps its length', async ({ page }) => {
+        await setupBoard(page);
+        await addSteeringModel(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('steering-wheel', 'Wheel');
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200, turnedBy: 'orientation', angleVariable: 'across', angleUpVariable: 'up' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        const before = await page.evaluate(() => ({
+            across: shell.board.calculator.getByName('across', 1),
+            up: shell.board.calculator.getByName('up', 1)
+        }));
+        expect(Math.hypot(before.across, before.up)).toBeCloseTo(Math.sqrt(18), 3);
+        const points = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wheel');
+            const matrix = shell.board.svg.getScreenCTM();
+            const centre = { x: shape.properties.x + shape.properties.width / 2, y: shape.properties.y + shape.properties.height / 2 };
+            const start = new DOMPoint(centre.x + 57, centre.y - 57).matrixTransform(matrix);
+            const target = new DOMPoint(centre.x + 80, centre.y).matrixTransform(matrix);
+            return { start: { x: start.x, y: start.y }, target: { x: target.x, y: target.y } };
+        });
+        await page.mouse.move(points.start.x, points.start.y);
+        await page.mouse.down();
+        await page.mouse.move(points.target.x, points.target.y, { steps: 8 });
+        await page.mouse.up();
+        await page.waitForTimeout(300);
+        const after = await page.evaluate(() => ({
+            across: shell.board.calculator.getByName('across', 1),
+            up: shell.board.calculator.getByName('up', 1)
+        }));
+        expect(Math.hypot(after.across, after.up)).toBeCloseTo(Math.hypot(before.across, before.up), 1);
+        expect(Math.atan2(after.across, after.up) * 180 / Math.PI).toBeCloseTo(90, 0);
+        expect(after.across).toBeCloseTo(Math.sqrt(18), 1);
+        expect(after.up).toBeCloseTo(0, 2);
     });
 });

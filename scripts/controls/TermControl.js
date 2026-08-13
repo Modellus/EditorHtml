@@ -1,4 +1,10 @@
 class TermControl {
+    static directionModes = [
+        { value: "angle", icon: "fa-light fa-angle", hint: "angle" },
+        { value: "orientation", icon: "fa-light fa-arrow-up-right", hint: "orientation" }
+    ];
+    static directionPairValue = "orientation";
+
     static getShapeOverlayWrapperAttr(extraClass = "") {
         const wrapperClassName = extraClass ? `mdl-shape-overlay-popup ${extraClass}` : "mdl-shape-overlay-popup";
         return { class: wrapperClassName };
@@ -7,6 +13,13 @@ class TermControl {
     static getShapeNestedOverlayWrapperAttr(extraClass = "") {
         const wrapperClassName = extraClass ? `mdl-shape-overlay-popup mdl-shape-overlay-popup-nested ${extraClass}` : "mdl-shape-overlay-popup mdl-shape-overlay-popup-nested";
         return { class: wrapperClassName };
+    }
+
+    static normalizeTermsCollectionMode(storedMode, storedExtraTerm, modeOptions) {
+        const values = modeOptions.items.map(item => item.value);
+        if (values.includes(String(storedMode)))
+            return String(storedMode);
+        return String(storedExtraTerm ?? "") === "" ? values[0] : modeOptions.pairValue;
     }
 
     static normalizeTermValue(value) {
@@ -267,7 +280,7 @@ class TermControl {
         return items;
     }
 
-    static getBaseShapeTermControlStateKey(baseShape, term, caseProperty, colorProperty = "", extraTermProperty = "") {
+    static getBaseShapeTermControlStateKey(baseShape, term, caseProperty, colorProperty = "", extraTermProperty = "", modeProperty = "") {
         const selectedTerm = TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]);
         const selectedCase = TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1);
         const lockedProperty = `${term}Locked`;
@@ -275,7 +288,8 @@ class TermControl {
         const terms = baseShape.board.calculator.getTermsNames();
         const color = colorProperty ? TermControl.normalizeColorValue(baseShape.properties[colorProperty]) : "";
         const extraTerm = extraTermProperty ? TermControl.normalizeBaseShapeTermValue(baseShape.properties[extraTermProperty]) : "";
-        return `${selectedTerm}|${selectedCase}|${locked}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}|${color}|${extraTerm}`;
+        const mode = modeProperty ? String(baseShape.properties[modeProperty] ?? "") : "";
+        return `${selectedTerm}|${selectedCase}|${locked}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}|${color}|${extraTerm}|${mode}`;
     }
 
     // A term selector can carry the colour of whatever the term drives, so the choice of what to
@@ -299,6 +313,21 @@ class TermControl {
     // A row may name a pair rather than a single term — how far across and how far up — and the
     // second one is a property of its own, written by a selector beside the first and read in the
     // case the row names.
+    static createBaseShapeModeSelection(baseShape, formInstance, modeProperty, modeItems, pairValue, synchronize) {
+        if (!modeProperty || modeItems.length === 0)
+            return null;
+        return {
+            items: modeItems,
+            pairValue: pairValue,
+            getValue: () => String(baseShape.properties[modeProperty] ?? modeItems[0].value),
+            onValueChanged: (_, value) => {
+                formInstance.updateData(modeProperty, value);
+                synchronize();
+                baseShape.board.markDirty(baseShape);
+            }
+        };
+    }
+
     static createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, synchronize) {
         if (!extraTermProperty)
             return null;
@@ -335,6 +364,7 @@ class TermControl {
         if (!baseShape.termDisplayEntries.some(entry => entry.term === term))
             baseShape.termDisplayEntries.push({ term: term, caseProperty: caseProperty });
         const extraTermProperty = options.extraTermProperty ?? "";
+        const modeProperty = options.modeProperty ?? "";
         const includeLock = options.includeLock !== false;
         const lockedProperty = `${term}Locked`;
         if (includeLock && baseShape.properties[lockedProperty] == null)
@@ -371,7 +401,8 @@ class TermControl {
             rowGap: "0",
             rowMarginBottom: "0",
             getItems: () => [{ term: TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1), locked: baseShape.properties[lockedProperty] === true }],
-            getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty, options.colorProperty ?? "", extraTermProperty),
+            getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty, options.colorProperty ?? "", extraTermProperty, modeProperty),
+            mode: TermControl.createBaseShapeModeSelection(baseShape, formInstance, modeProperty, options.modeItems ?? [], options.modePairValue ?? "", () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl)),
             colorSelection: TermControl.createBaseShapeTermColorSelection(baseShape, options.colorProperty ?? ""),
             extraTerm: TermControl.createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl)),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term, normalizeCustomValue),
@@ -725,6 +756,19 @@ class TermControl {
                 control: configuredColorSelection.control,
                 controlOptions: configuredColorSelection.controlOptions
             } : null,
+            mode: options.mode ? {
+                width: options.mode.width,
+                items: options.mode.items,
+                pairValue: options.mode.pairValue,
+                getValue: item => TermControl.normalizeTermsCollectionMode(item?.[options.mode.field], item?.[options.extraTerm.field], options.mode),
+                onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
+                    if (!items[index])
+                        items[index] = TermControl.createEmptyShapeTermsCollectionItem(includeColor, mutationOptions);
+                    items[index][options.mode.field] = value;
+                    if (value !== options.mode.pairValue)
+                        items[index][options.extraTerm.field] = "";
+                })
+            } : null,
             // A row that names a pair rather than a single term carries the second one in a field of
             // its own, edited by a selector beside the first and read in the same case.
             extraTerm: options.extraTerm ? {
@@ -934,6 +978,55 @@ class TermControl {
         return this.shouldShowColorSelection(item, index);
     }
 
+    hasMode() {
+        return this.options.mode != null;
+    }
+
+    shouldShowModeSelector(item, index) {
+        if (!this.hasMode())
+            return false;
+        const mode = this.options.mode;
+        if (mode.show)
+            return mode.show(item, index);
+        return true;
+    }
+
+    getModeWidth() {
+        return this.options.mode.width ?? "auto";
+    }
+
+    getModeValue(item, index) {
+        return String(this.options.mode.getValue(item, index) ?? this.options.mode.items[0].value);
+    }
+
+    isPairMode(item, index) {
+        if (!this.hasMode())
+            return false;
+        return this.getModeValue(item, index) === String(this.options.mode.pairValue ?? this.options.mode.items[1].value);
+    }
+
+    renderModeSelector(host, item, index) {
+        const mode = this.options.mode;
+        host.dxButtonGroup({
+            items: mode.items,
+            keyExpr: "value",
+            selectionMode: "single",
+            selectedItemKeys: [this.getModeValue(item, index)],
+            stylingMode: "outlined",
+            elementAttr: { class: "mdl-pill-group mdl-small-icon" },
+            buttonTemplate: (data, buttonContainer) => {
+                buttonContainer[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
+            },
+            onContentReady: event => Utils.initPillButtonGroup(event.element[0]),
+            onItemClick: event => this.onModeValueChanged(index, event.itemData.value)
+        });
+    }
+
+    onModeValueChanged(index, value) {
+        this.options.mode.onValueChanged(index, value);
+        this.render();
+    }
+
     hasExtraTerm() {
         return this.options.extraTerm != null;
     }
@@ -944,6 +1037,8 @@ class TermControl {
         if (!this.hasExtraTerm())
             return false;
         const extraTerm = this.options.extraTerm;
+        if (this.hasMode())
+            return this.isPairMode(item, index);
         if (extraTerm.show)
             return extraTerm.show(item, index);
         return this.normalizeTermValue(item?.term) !== "";
@@ -1097,6 +1192,8 @@ class TermControl {
         const columns = [];
         if (showDragHandle)
             columns.push("24px");
+        if (this.shouldShowModeSelector(item, index))
+            columns.push(this.getModeWidth());
         if (showTermEditor)
             columns.push("minmax(0, 1fr)");
         if (showExtraTerm)
@@ -1123,6 +1220,7 @@ class TermControl {
         const row = $("<div>").addClass(this.getRowClassName()).css({
             display: "grid",
             gridTemplateColumns: this.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor, showLock, showExtraTerm),
+            alignItems: "center",
             gap: this.getRowGap(),
             marginBottom: this.getRowMarginBottom()
         });
@@ -1130,6 +1228,12 @@ class TermControl {
             const dragHandleHost = $("<div>").addClass(this.getDragHandleClassName());
             $("<i>").addClass("dx-icon dx-icon-dragvertical").appendTo(dragHandleHost);
             row.append(dragHandleHost);
+        }
+        let modeHost = null;
+        if (this.shouldShowModeSelector(item, index)) {
+            modeHost = $("<div>").addClass("shape-term-mode");
+            row.append(modeHost);
+            this.renderModeSelector(modeHost, item, index);
         }
         if (showTermEditor) {
             if (showVisibility) {
@@ -1170,6 +1274,8 @@ class TermControl {
             this.renderLockEditor(lockHost, item, index);
         }
         element.append(row);
+        if (modeHost)
+            requestAnimationFrame(() => Utils.movePillButtonGroup(modeHost[0]));
     }
 
     renderSecondaryEditor(host, item, index) {

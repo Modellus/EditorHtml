@@ -45,6 +45,18 @@ var ComponentShapeToolbarMixin = {
     getParametersByCategory(categories) {
         return this.getEditableParameters().filter(parameter => categories.includes(parameter.category ?? "general"));
     },
+    getComponentParameter(parameterId) {
+        if (parameterId === "")
+            return null;
+        return BlockObjects.getComponentParameters(this.getComponentType()).find(parameter => parameter.id === parameterId) ?? null;
+    },
+    buildModeItems(parameter) {
+        if (!parameter)
+            return [];
+        if (!parameter.enumIcons)
+            return TermControl.directionModes;
+        return parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons[index], hint: value }));
+    },
     // An object that paints a background, a plot and an axis names them the way the chart does, and
     // is offered the same three colours under the same labels and icons. Anything else a definition
     // colours keeps its own label.
@@ -180,6 +192,8 @@ var ComponentShapeToolbarMixin = {
         this.renderComponentMenuList(contentElement, items);
     },
     renderComponentMenuList(contentElement, items) {
+        if ($(contentElement).data("dxScrollView"))
+            $(contentElement).dxScrollView("instance").dispose();
         $(contentElement).empty();
         $(contentElement).dxScrollView({ height: 320, width: "100%" });
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
@@ -208,10 +222,14 @@ var ComponentShapeToolbarMixin = {
     createComponentVariableControl(parameter) {
         // A component input takes a model variable or a plain number, so the selector accepts both.
         // A definition naming a colour parameter gets the swatch for it in the same row.
+        const modeParameter = this.getComponentParameter(parameter.modeParameter ?? "");
         const control = this.createTermControl(parameter.id, parameter.label, false, {
             allowTypedValue: true,
             colorProperty: parameter.colorParameter ?? "",
-            extraTermProperty: parameter.pairedParameter ?? ""
+            extraTermProperty: parameter.pairedParameter ?? "",
+            modeProperty: modeParameter ? modeParameter.id : "",
+            modeItems: this.buildModeItems(modeParameter),
+            modePairValue: modeParameter ? modeParameter.enumValues[1] : ""
         });
         this._componentTermControls[parameter.id] = this.termFormControls[parameter.id];
         return control;
@@ -227,6 +245,7 @@ var ComponentShapeToolbarMixin = {
             allowNumericTermReference: true,
             termEditor: { acceptCustomValue: true },
             extraTerm: { field: "secondTerm" },
+            mode: { field: "mode", items: TermControl.directionModes, pairValue: TermControl.directionPairValue },
             colorSelection: {
                 getValue: (item, index) => this.getComponentTermColor(item, index)
             },
@@ -243,6 +262,7 @@ var ComponentShapeToolbarMixin = {
     },
     normalizeComponentTermItem(sourceItem, normalizedItem) {
         normalizedItem.secondTerm = TermControl.normalizeTermValue(sourceItem?.secondTerm);
+        normalizedItem.mode = TermControl.normalizeTermsCollectionMode(sourceItem?.mode, normalizedItem.secondTerm, { items: TermControl.directionModes, pairValue: TermControl.directionPairValue });
     },
     // A row that chose no colour is shown in the colour it is drawn in, which is the one its place in
     // the list is given.
@@ -284,6 +304,7 @@ var ComponentShapeToolbarMixin = {
             value: this.properties[parameter.id],
             width: 130,
             stylingMode: "filled",
+            dropDownOptions: { container: document.body, wrapperAttr: this.getShapeNestedOverlayWrapperAttr() },
             onValueChanged: event => {
                 if (!event.event)
                     return;
@@ -299,6 +320,11 @@ var ComponentShapeToolbarMixin = {
             selectionMode: "single",
             selectedItemKeys: [this.properties[parameter.id]],
             stylingMode: "outlined",
+            elementAttr: { class: "mdl-pill-group mdl-small-icon" },
+            buttonTemplate: (data, buttonContainer) => {
+                buttonContainer[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
+            },
+            onContentReady: event => Utils.initPillButtonGroup(event.element[0]),
             onItemClick: event => this.setPropertyCommand(parameter.id, event.itemData.value)
         });
     },

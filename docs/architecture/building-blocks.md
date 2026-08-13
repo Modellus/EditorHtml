@@ -352,6 +352,13 @@ the shape's own box, so a node carrying `drag-angle`, `drag-rotate`, `track-poin
 `follow-pointer` has to be expressed there — outside the group that scales the art. The compass puts
 its two grab areas beside the art rather than inside it for exactly this reason.
 
+**A grab selects the object it belongs to.** A grab area answers the pointer before the board does
+and holds it for the whole drag, so pressing one would otherwise leave the object unselected and its
+toolbar hidden until the pointer came up — and an object whose face is nearly all grab area, as the
+steering wheel's is, would feel as though it could not be picked at all. `drag-angle` and
+`drag-rotate` select on the way in, and so does the grab that refuses to write, which is inert but
+still stands between the pointer and the board.
+
 **Import illustration, not measurement.** Art is authored at one size and has one layout: it cannot
 put ticks on round numbers, keep a label legible when the object is small, or move one part to make
 room for another. Those stay components — which is why the compass is imported art for its face, its

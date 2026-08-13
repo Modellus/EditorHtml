@@ -738,16 +738,39 @@ test.describe('compass pointers', () => {
         expect(markers[1]).toBe('#ff0000');
     });
 
-    test('offers a row per pointer, with a second selector once the row names a term', async ({ page }) => {
+    test('offers a row per pointer, each choosing between an angle and an orientation', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120\\\\east=3\\\\north=4');
+        await addCompassWithPointers(page, [
+            { term: 'heading', case: 1, color: '', secondTerm: '' },
+            { term: 'east', case: 1, color: '', secondTerm: 'north' }
+        ]);
+        await openPointersMenu(page);
+        const rows = page.locator('.mdl-shape-overlay-popup').last().locator('.component-terms-control .shape-term-row');
+        await expect(rows).toHaveCount(3);
+        await expect(rows.nth(0).locator('.shape-term-mode .dx-button')).toHaveCount(2);
+        await expect(rows.nth(0).locator('.shape-term-extra-term')).toHaveCount(0);
+        await expect(rows.nth(0).locator('.shape-term-color')).toHaveCount(1);
+        await expect(rows.nth(1).locator('.shape-term-extra-term')).toHaveCount(1);
+        await expect(rows.nth(2).locator('.shape-term-extra-term')).toHaveCount(0);
+    });
+
+    test('a row turns into an orientation from its own buttons, and back again', async ({ page }) => {
         await setupBoard(page);
         await addClockEquations(page, 'heading=120\\\\east=3\\\\north=4');
         await addCompassWithPointers(page, [{ term: 'heading', case: 1, color: '', secondTerm: '' }]);
         await openPointersMenu(page);
-        const rows = page.locator('.mdl-shape-overlay-popup').last().locator('.component-terms-control .shape-term-row');
-        await expect(rows).toHaveCount(2);
-        await expect(rows.nth(0).locator('.shape-term-extra-term')).toHaveCount(1);
-        await expect(rows.nth(0).locator('.shape-term-color')).toHaveCount(1);
-        await expect(rows.nth(1).locator('.shape-term-extra-term')).toHaveCount(0);
+        const firstRow = () => page.locator('.mdl-shape-overlay-popup').last().locator('.component-terms-control .shape-term-row').first();
+        await firstRow().locator('.shape-term-mode .dx-button').nth(1).click();
+        await page.waitForTimeout(500);
+        expect((await page.evaluate(() => shell.board.shapes.getByName('Compass').properties.pointers))[0].mode).toBe('orientation');
+        await expect(firstRow().locator('.shape-term-extra-term')).toHaveCount(1);
+        await firstRow().locator('.shape-term-mode .dx-button').nth(0).click();
+        await page.waitForTimeout(500);
+        const pointers = await page.evaluate(() => shell.board.shapes.getByName('Compass').properties.pointers);
+        expect(pointers[0].mode).toBe('angle');
+        expect(pointers[0].secondTerm).toBe('');
+        await expect(firstRow().locator('.shape-term-extra-term')).toHaveCount(0);
     });
 
     // The menu is as wide as the list of pointers, so the two selectors above it are as wide as the
@@ -782,7 +805,9 @@ test.describe('compass pointers', () => {
         expect((await readPointerDegrees(page))[0]).toBeCloseTo(3, 3);
         await openPointersMenu(page);
         const popup = page.locator('.mdl-shape-overlay-popup').last();
-        await popup.locator('.component-terms-control .shape-term-row .shape-term-extra-term').first().click();
+        await popup.locator('.component-terms-control .shape-term-row .shape-term-mode .dx-button').nth(1).click();
+        await page.waitForTimeout(500);
+        await page.locator('.mdl-shape-overlay-popup').last().locator('.component-terms-control .shape-term-row .shape-term-extra-term').first().click();
         await page.waitForTimeout(400);
         const customInput = page.locator('.mdl-nested-dropdown-popup .mdl-term-tree-custom-input input').last();
         await customInput.fill('north');

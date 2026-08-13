@@ -14,13 +14,14 @@
     },
     "preview": { "parameters": { "angleVariable": "-28" } },
     "parameters": [
-        { "id": "angleVariable", "label": "Angle", "valueType": "variable", "defaultValue": "0", "category": "model", "unit": "deg", "pairedParameter": "angleUpVariable", "description": "Turns the wheel clockwise: an angle in degrees on its own, or how far across when a second term names how far up. Dragging the wheel writes the angle it travelled back, unless it is being pointed by a pair." },
-        { "id": "angleUpVariable", "label": "Up", "valueType": "variable", "defaultValue": "", "category": "model", "userEditable": false, "description": "The upward half of the pair the wheel is pointed by. Named, the wheel turns to where the pair points — how far across and how far up — the way a marker on a compass points along the pair it names." },
+        { "id": "turnedBy", "label": "Turned by", "valueType": "string", "defaultValue": "angle", "enumValues": ["angle", "orientation"], "category": "model", "userEditable": false, "description": "Whether the row is read as an angle in degrees or as an orientation, which is a pair of values read as a direction. It is chosen from the buttons at the head of the row rather than a row of its own." },
+        { "id": "angleVariable", "label": "Turned by", "valueType": "variable", "defaultValue": "0", "category": "model", "unit": "deg", "modeParameter": "turnedBy", "pairedParameter": "angleUpVariable", "colorParameter": "markColor", "description": "The angle the wheel is turned to, clockwise in degrees — or, as an orientation, how far across the pair reaches. Dragging the wheel writes back whichever it reads: the angle, or the pair, which keeps its length and takes the direction it was turned to." },
+        { "id": "angleUpVariable", "label": "Up", "valueType": "variable", "defaultValue": "0", "category": "model", "userEditable": false, "description": "How far up the orientation reaches, edited by the second selector on the row and read only while the wheel is turned by an orientation." },
         { "id": "wheelType", "label": "Type", "valueType": "string", "defaultValue": "car", "enumValues": ["car", "motor bike", "boat"], "enumIcons": ["fa-light fa-car", "fa-light fa-motorcycle", "fa-light fa-sailboat"], "category": "display", "description": "Which wheel is drawn: a car's three-spoke wheel, a motorbike's handlebar or a boat's eight-handled helm." },
         { "id": "rimColor", "label": "Rim colour", "valueType": "colour", "defaultValue": "token:stroke.default", "category": "style" },
         { "id": "gripColor", "label": "Grip colour", "valueType": "colour", "defaultValue": "token:stroke.subtle", "category": "style", "description": "The parts the hands hold: the bike's grips and stem and the helm's handles." },
         { "id": "hubColor", "label": "Hub colour", "valueType": "colour", "defaultValue": "token:surface.muted", "category": "style" },
-        { "id": "markColor", "label": "Mark colour", "valueType": "colour", "defaultValue": "token:stroke.warning", "category": "style", "description": "The mark at the top of the wheel, which is what shows how far it has been turned." }
+        { "id": "markColor", "label": "Mark colour", "valueType": "colour", "defaultValue": "token:stroke.warning", "category": "model", "userEditable": false, "description": "The mark at the top of the wheel, which is the part that shows the direction it is turned to. It is picked on the row that turns the wheel rather than on a colour menu that would name the same thing twice." }
     ],
     "locals": [
         { "id": "w", "value": { "parameter": "$width" } },
@@ -31,11 +32,11 @@
         { "id": "dy", "formula": "\\frac{h-size}{2}" },
         { "id": "cx", "formula": "\\frac{w}{2}" },
         { "id": "cy", "formula": "\\frac{h}{2}" },
-        { "id": "pointedByPair", "value": { "choose": { "parameter": "angleUpVariable" }, "then": 1, "otherwise": 0 } },
-        { "id": "pairAngle", "value": { "direction": { "x": { "parameter": "angleVariable", "as": "number" }, "y": { "parameter": "angleUpVariable", "as": "number" } } } },
+        { "id": "pointedByOrientation", "value": { "choose": { "parameter": "turnedBy" }, "equals": "orientation", "then": 1, "otherwise": 0 } },
+        { "id": "orientationAngle", "value": { "direction": { "x": { "parameter": "angleVariable", "as": "number" }, "y": { "parameter": "angleUpVariable", "as": "number" } } } },
         { "id": "plainAngle", "value": { "parameter": "angleVariable", "as": "number" } },
-        { "id": "angle", "value": { "choose": { "parameter": "pointedByPair" }, "then": { "parameter": "pairAngle" }, "otherwise": { "parameter": "plainAngle" } } },
-        { "id": "turnedByHand", "value": { "choose": { "parameter": "angleUpVariable" }, "then": 0, "otherwise": 1 } },
+        { "id": "angle", "value": { "choose": { "parameter": "pointedByOrientation" }, "then": { "parameter": "orientationAngle" }, "otherwise": { "parameter": "plainAngle" } } },
+        { "id": "turnedByHand", "value": { "choose": { "parameter": "pointedByOrientation" }, "then": 0, "otherwise": 1 } },
         { "id": "isCar", "value": { "choose": { "parameter": "wheelType" }, "equals": "car", "then": 1, "otherwise": 0 } },
         { "id": "isMotorBike", "value": { "choose": { "parameter": "wheelType" }, "equals": "motor bike", "then": 1, "otherwise": 0 } },
         { "id": "isBoat", "value": { "choose": { "parameter": "wheelType" }, "equals": "boat", "then": 1, "otherwise": 0 } },
@@ -208,7 +209,6 @@
             {
                 "id": "wheel-grab",
                 "type": "ring",
-                "when": { "parameter": "turnedByHand" },
                 "bindings": {
                     "centerX": { "parameter": "cx" },
                     "centerY": { "parameter": "cy" },
@@ -219,8 +219,22 @@
                 "behaviours": [
                     {
                         "type": "drag-rotate",
+                        "when": { "parameter": "turnedByHand" },
                         "variable": { "parameter": "angleVariable" },
                         "property": "angleVariable",
+                        "centerX": { "parameter": "cx" },
+                        "centerY": { "parameter": "cy" },
+                        "degreesPerUnit": 1,
+                        "hoverFill": { "parameter": "grabColor" },
+                        "hoverOpacity": 0.18
+                    },
+                    {
+                        "type": "drag-rotate",
+                        "when": { "parameter": "pointedByOrientation" },
+                        "variable": { "parameter": "angleVariable" },
+                        "property": "angleVariable",
+                        "verticalVariable": { "parameter": "angleUpVariable" },
+                        "verticalProperty": "angleUpVariable",
                         "centerX": { "parameter": "cx" },
                         "centerY": { "parameter": "cy" },
                         "degreesPerUnit": 1,

@@ -385,6 +385,8 @@ Capabilities: `interaction`, `angular`, `writes-model`
 | --- | --- | --- | --- |
 | `variable` | variable | "" |  |
 | `property` | string | "" |  |
+| `verticalVariable` | variable | "" |  |
+| `verticalProperty` | string | "" |  |
 | `centerX` | number | 0 |  |
 | `centerY` | number | 0 |  |
 | `degreesPerUnit` | number | 6 |  |
@@ -418,6 +420,8 @@ Capabilities: `interaction`, `angular`, `writes-model`
 | --- | --- | --- | --- |
 | `variable` | variable | "" |  |
 | `property` | string | "" |  |
+| `verticalVariable` | variable | "" |  |
+| `verticalProperty` | string | "" |  |
 | `centerX` | number | 0 |  |
 | `centerY` | number | 0 |  |
 | `degreesPerUnit` | number | 1 |  |
@@ -981,8 +985,9 @@ Capabilities: `radial`, `angular`, `reads-model`, `interaction`, `writes-model`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
+| `turnedBy` | string | "angle" | angle \| orientation |
 | `angleVariable` | variable | "0" |  |
-| `angleUpVariable` | variable | "" |  |
+| `angleUpVariable` | variable | "0" |  |
 | `wheelType` | string | "car" | car \| motor bike \| boat |
 | `rimColor` | colour | "token:stroke.default" |  |
 | `gripColor` | colour | "token:stroke.subtle" |  |

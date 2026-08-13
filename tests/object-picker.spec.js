@@ -74,7 +74,7 @@ test.describe('object picker', () => {
         await page.fill('.mdl-char-picker-search-input', 'gauge');
         await page.waitForTimeout(200);
         expect((await readCards(page)).map(card => card.key)).toEqual(['circular-gauge', 'speedometer']);
-        await page.fill('.mdl-char-picker-search-input', 'nothing here');
+        await page.fill('.mdl-char-picker-search-input', 'zzqqxx');
         await page.waitForTimeout(200);
         expect(await readCards(page)).toEqual([]);
         expect(await page.textContent('.mdl-catalog-data-status')).toBe('No object matches that search.');

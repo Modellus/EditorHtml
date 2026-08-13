@@ -736,3 +736,11 @@ math-field {
     padding: 0;
     margin: 0;
 }
+
+/* A row in a shape's drop down holds controls; it is not a thing to select. Pressing a control in it
+   leaves the row pressed otherwise, because the control it was pressed on is redrawn under the
+   pointer and the state never lifts. */
+.mdl-shape-overlay-popup .dx-list-item.dx-state-active,
+.mdl-shape-overlay-popup .dx-list-item.dx-state-focused {
+    background-color: transparent !important;
+}

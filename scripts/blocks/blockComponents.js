@@ -172,12 +172,19 @@ var BlockComponentHelpers = {
         const firstValue = context.resolveTermValue(row.term, NaN, row.case);
         if (!Number.isFinite(firstValue))
             return null;
-        if (String(row.secondTerm ?? "") === "")
+        if (!BlockComponentHelpers.pointsAlongPair(row))
             return firstValue;
         const secondValue = context.resolveTermValue(row.secondTerm, NaN, row.case);
         if (!Number.isFinite(secondValue) || (firstValue === 0 && secondValue === 0))
             return null;
         return BlockGeometry.toDegrees(Math.atan2(firstValue, secondValue));
+    },
+
+    pointsAlongPair(row) {
+        const mode = String(row.mode ?? "");
+        if (mode !== "")
+            return mode === "orientation";
+        return String(row.secondTerm ?? "") !== "";
     },
 
     // The marker itself: a head standing in the band the ticks occupy, its tip on the rim and its
@@ -525,7 +532,7 @@ var BlockComponentHelpers = {
             BlockComponentHelpers.parameter("length", "Marker length", "number", 14, { minimum: 0, description: "How far inwards a marker reaches from the rim, so it fills the band the ticks occupy." }),
             BlockComponentHelpers.parameter("width", "Marker width", "number", 10, { minimum: 0 }),
             BlockComponentHelpers.parameter("startAngle", "Zero direction", "number", 90, { unit: "deg", description: "Where a direction of zero points. Directions grow clockwise from it, the way a heading does." }),
-            BlockComponentHelpers.parameter("pointers", "Directions", "object", [], { description: "One row per marker: \"term\" is the angle, or the horizontal component when \"secondTerm\" names the vertical one; \"case\" is the case both are read in and \"color\" the colour the marker is drawn in." })
+            BlockComponentHelpers.parameter("pointers", "Directions", "object", [], { description: "One row per marker: \"mode\" is \"angle\" or \"orientation\", \"term\" is the angle or the horizontal component, \"secondTerm\" the vertical one an orientation names, \"case\" the case both are read in and \"color\" the colour the marker is drawn in. A row with no \"mode\" is an orientation when it named a second term, which is how a row saved before the choice existed is still read the way it was drawn." })
         ],
         create: (parameters, context) => {
             const rows = Array.isArray(parameters.pointers) ? parameters.pointers : [];

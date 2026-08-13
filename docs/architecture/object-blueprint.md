@@ -103,7 +103,7 @@ zero, a phasor of length one); a clock does not need it.
 
 Each is `{ id, label, valueType, defaultValue, category }` plus any of `description`, `minimum`,
 `maximum`, `enumValues`, `enumIcons`, `unit`, `required`, `bindable`, `agentAccessible`,
-`userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`.
+`userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`, `modeParameter`.
 
 `valueType` is one of `number`, `string`, `boolean`, `colour`, `variable`, `expression`, `memory`,
 `character`, `object`.
@@ -122,13 +122,25 @@ shared `AxisRangeControl` rows instead of four number boxes, and adding `autoSca
 gets the chart's own two switches. Naming colours `backgroundColor`, `dataAreaColor` and `axisColor`
 gets the chart's colour menu.
 
-Three more are free controls. A `variable` naming `colorParameter` carries that colour's swatch on
+Four more are free controls. A `variable` naming `colorParameter` carries that colour's swatch on
 its own row. A `variable` naming `pairedParameter` gets a second selector beside the first, so the
 row names a pair — how far across and how far up — the way a marker on a compass names the pair it
 points along; read it with a `direction` binding and leave the paired parameter `userEditable: false`,
 since the row it belongs to already edits it. A parameter with `enumValues` and an `enumIcons` of the
 same length is chosen from a single-selection `dxButtonGroup` of those icons instead of a drop-down —
 what the steering wheel picks its three wheels with.
+
+The fourth is the direction control, and it is the same row the compass marks its pointers with. A
+`variable` naming both a `pairedParameter` and a `modeParameter` is edited as **an angle or an
+orientation**: the row opens with a two-button group, choosing the angle leaves one selector on the
+row and choosing the orientation puts a second beside it, and the colour, if the row carries one,
+comes after them. The mode parameter is an ordinary `string` parameter with
+`"enumValues": ["angle", "orientation"]`; mark it `userEditable: false`, since the buttons at the
+head of the row are what edit it, and read it with a `choose` carrying an `equals`. A row of terms —
+a `terms` parameter with a second field, like the compass's `pointers` — gets the same control per
+row, with the choice stored in the row's own `mode` field. A row that has never been given one is
+read as an orientation if it named a second term and as an angle otherwise, so a model saved before
+the choice existed still draws what it drew.
 
 **Parameter values live in `shape.properties`**, not in the document. That is what gives a new object
 undo/redo, copy/paste, collaboration and serialization with nothing written for the purpose.
@@ -224,7 +236,7 @@ why an ordinary object has no use for it.
 | --- | --- |
 | `clickable` | a click writes a model variable or one of the object's own parameters |
 | `drag-angle` | dragging a hand around a centre writes an angle back |
-| `drag-rotate` | dragging a rim or a bezel turns it by the angle travelled, not to the pointer |
+| `drag-rotate` | dragging a rim or a bezel turns it by the angle travelled, not to the pointer. Naming a `verticalVariable` as well writes a pair rather than a number: the pair keeps its length and takes the angle it was turned to, which is how an object driven by a direction stays draggable |
 | `drag-axis-tick` | an axis tick rescales the axis |
 | `follow-pointer` | the drawing shows what is under the cursor without keeping it |
 | `hoverable`, `tooltip` | cursor and native tooltip |

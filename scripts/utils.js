@@ -1,4 +1,23 @@
 class Utils {
+    static initPillButtonGroup(element) {
+        const pill = document.createElement("div");
+        pill.className = "mdl-pill";
+        element.style.position = "relative";
+        element.appendChild(pill);
+        Utils.movePillButtonGroup(element);
+    }
+
+    static movePillButtonGroup(element) {
+        const pill = element.querySelector(".mdl-pill");
+        if (!pill)
+            return;
+        const selected = element.querySelector(".dx-item-selected .dx-button");
+        if (!selected)
+            return;
+        pill.style.left = selected.offsetLeft + "px";
+        pill.style.width = selected.offsetWidth + "px";
+    }
+
     static designTokens = null;
 
     static mergeProperties(source, target) {
