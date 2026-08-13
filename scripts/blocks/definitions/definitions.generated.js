@@ -6063,5 +6063,706 @@ BlockDefinitionLoader.registerAll([
                 }
             ]
         }
+    },
+    {
+        "schemaVersion": "1.0.0",
+        "type": "steering-wheel",
+        "category": "component",
+        "displayName": "Steering wheel",
+        "description": "Steering wheel turned by a model variable, drawn as a car wheel, a motorbike handlebar or a ship's helm. Dragging it turns the wheel and writes the angle back.",
+        "icon": "fa-light fa-steering-wheel",
+        "tags": [
+            "object",
+            "steering",
+            "wheel",
+            "vehicle",
+            "helm",
+            "handlebar",
+            "rotation"
+        ],
+        "capabilities": [
+            "radial",
+            "angular",
+            "reads-model",
+            "interaction",
+            "writes-model"
+        ],
+        "art": {
+            "car": "art/steering-wheel-car.svg",
+            "motor bike": "art/steering-wheel-motorbike.svg",
+            "boat": "art/steering-wheel-boat.svg"
+        },
+        "preview": {
+            "parameters": {
+                "angleVariable": "-28"
+            }
+        },
+        "parameters": [
+            {
+                "id": "angleVariable",
+                "label": "Angle",
+                "valueType": "variable",
+                "defaultValue": "0",
+                "category": "model",
+                "unit": "deg",
+                "pairedParameter": "angleUpVariable",
+                "description": "Turns the wheel clockwise: an angle in degrees on its own, or how far across when a second term names how far up. Dragging the wheel writes the angle it travelled back, unless it is being pointed by a pair."
+            },
+            {
+                "id": "angleUpVariable",
+                "label": "Up",
+                "valueType": "variable",
+                "defaultValue": "",
+                "category": "model",
+                "userEditable": false,
+                "description": "The upward half of the pair the wheel is pointed by. Named, the wheel turns to where the pair points — how far across and how far up — the way a marker on a compass points along the pair it names."
+            },
+            {
+                "id": "wheelType",
+                "label": "Type",
+                "valueType": "string",
+                "defaultValue": "car",
+                "enumValues": [
+                    "car",
+                    "motor bike",
+                    "boat"
+                ],
+                "enumIcons": [
+                    "fa-light fa-car",
+                    "fa-light fa-motorcycle",
+                    "fa-light fa-sailboat"
+                ],
+                "category": "display",
+                "description": "Which wheel is drawn: a car's three-spoke wheel, a motorbike's handlebar or a boat's eight-handled helm."
+            },
+            {
+                "id": "rimColor",
+                "label": "Rim colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.default",
+                "category": "style"
+            },
+            {
+                "id": "gripColor",
+                "label": "Grip colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.subtle",
+                "category": "style",
+                "description": "The parts the hands hold: the bike's grips and stem and the helm's handles."
+            },
+            {
+                "id": "hubColor",
+                "label": "Hub colour",
+                "valueType": "colour",
+                "defaultValue": "token:surface.muted",
+                "category": "style"
+            },
+            {
+                "id": "markColor",
+                "label": "Mark colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.warning",
+                "category": "style",
+                "description": "The mark at the top of the wheel, which is what shows how far it has been turned."
+            }
+        ],
+        "locals": [
+            {
+                "id": "w",
+                "value": {
+                    "parameter": "$width"
+                }
+            },
+            {
+                "id": "h",
+                "value": {
+                    "parameter": "$height"
+                }
+            },
+            {
+                "id": "size",
+                "formula": "\\min\\left(w,h\\right)"
+            },
+            {
+                "id": "k",
+                "formula": "\\frac{\\max\\left(size,1\\right)}{200}"
+            },
+            {
+                "id": "dx",
+                "formula": "\\frac{w-size}{2}"
+            },
+            {
+                "id": "dy",
+                "formula": "\\frac{h-size}{2}"
+            },
+            {
+                "id": "cx",
+                "formula": "\\frac{w}{2}"
+            },
+            {
+                "id": "cy",
+                "formula": "\\frac{h}{2}"
+            },
+            {
+                "id": "pointedByPair",
+                "value": {
+                    "choose": {
+                        "parameter": "angleUpVariable"
+                    },
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "pairAngle",
+                "value": {
+                    "direction": {
+                        "x": {
+                            "parameter": "angleVariable",
+                            "as": "number"
+                        },
+                        "y": {
+                            "parameter": "angleUpVariable",
+                            "as": "number"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "plainAngle",
+                "value": {
+                    "parameter": "angleVariable",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "angle",
+                "value": {
+                    "choose": {
+                        "parameter": "pointedByPair"
+                    },
+                    "then": {
+                        "parameter": "pairAngle"
+                    },
+                    "otherwise": {
+                        "parameter": "plainAngle"
+                    }
+                }
+            },
+            {
+                "id": "turnedByHand",
+                "value": {
+                    "choose": {
+                        "parameter": "angleUpVariable"
+                    },
+                    "then": 0,
+                    "otherwise": 1
+                }
+            },
+            {
+                "id": "isCar",
+                "value": {
+                    "choose": {
+                        "parameter": "wheelType"
+                    },
+                    "equals": "car",
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "isMotorBike",
+                "value": {
+                    "choose": {
+                        "parameter": "wheelType"
+                    },
+                    "equals": "motor bike",
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "isBoat",
+                "value": {
+                    "choose": {
+                        "parameter": "wheelType"
+                    },
+                    "equals": "boat",
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "grabOuter",
+                "formula": "92\\cdot k"
+            },
+            {
+                "id": "grabInner",
+                "formula": "24\\cdot k"
+            },
+            {
+                "id": "spokeCount",
+                "value": 8
+            },
+            {
+                "id": "grabColor",
+                "value": {
+                    "token": "handle.stroke"
+                }
+            }
+        ],
+        "root": {
+            "id": "steering-wheel",
+            "type": "group",
+            "children": [
+                {
+                    "id": "art",
+                    "type": "group",
+                    "modifiers": [
+                        {
+                            "type": "translate",
+                            "dx": {
+                                "parameter": "dx"
+                            },
+                            "dy": {
+                                "parameter": "dy"
+                            }
+                        },
+                        {
+                            "type": "scale",
+                            "scaleX": {
+                                "parameter": "k"
+                            },
+                            "scaleY": {
+                                "parameter": "k"
+                            },
+                            "centerX": 0,
+                            "centerY": 0
+                        }
+                    ],
+                    "children": [
+                        {
+                            "id": "wheel",
+                            "type": "group",
+                            "modifiers": [
+                                {
+                                    "type": "rotate",
+                                    "angle": {
+                                        "parameter": "angle"
+                                    },
+                                    "centerX": 100,
+                                    "centerY": 100
+                                }
+                            ],
+                            "children": [
+                                {
+                                    "id": "car",
+                                    "type": "group",
+                                    "when": {
+                                        "parameter": "isCar"
+                                    },
+                                    "children": [
+                                        {
+                                            "id": "car-rim",
+                                            "type": "circle",
+                                            "properties": {
+                                                "centerX": 100,
+                                                "centerY": 100,
+                                                "radius": 84,
+                                                "fill": "none",
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 16
+                                            },
+                                            "bindings": {
+                                                "stroke": {
+                                                    "parameter": "rimColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "car-spoke-left",
+                                            "type": "line",
+                                            "properties": {
+                                                "x1": 80,
+                                                "y1": 100,
+                                                "x2": 30,
+                                                "y2": 100,
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 14,
+                                                "strokeLinecap": "round"
+                                            },
+                                            "bindings": {
+                                                "stroke": {
+                                                    "parameter": "rimColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "car-spoke-right",
+                                            "type": "line",
+                                            "properties": {
+                                                "x1": 120,
+                                                "y1": 100,
+                                                "x2": 170,
+                                                "y2": 100,
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 14,
+                                                "strokeLinecap": "round"
+                                            },
+                                            "bindings": {
+                                                "stroke": {
+                                                    "parameter": "rimColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "car-spoke-bottom",
+                                            "type": "line",
+                                            "properties": {
+                                                "x1": 100,
+                                                "y1": 120,
+                                                "x2": 100,
+                                                "y2": 170,
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 14,
+                                                "strokeLinecap": "round"
+                                            },
+                                            "bindings": {
+                                                "stroke": {
+                                                    "parameter": "rimColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "car-mark",
+                                            "type": "line",
+                                            "properties": {
+                                                "x1": 100,
+                                                "y1": 24,
+                                                "x2": 100,
+                                                "y2": 8,
+                                                "stroke": "token:stroke.warning",
+                                                "strokeWidth": 10,
+                                                "strokeLinecap": "butt"
+                                            },
+                                            "bindings": {
+                                                "stroke": {
+                                                    "parameter": "markColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "car-hub",
+                                            "type": "circle",
+                                            "properties": {
+                                                "centerX": 100,
+                                                "centerY": 100,
+                                                "radius": 26,
+                                                "fill": "token:surface.muted",
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 4
+                                            },
+                                            "bindings": {
+                                                "fill": {
+                                                    "parameter": "hubColor"
+                                                },
+                                                "stroke": {
+                                                    "parameter": "rimColor"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": "motor-bike",
+                                    "type": "group",
+                                    "when": {
+                                        "parameter": "isMotorBike"
+                                    },
+                                    "children": [
+                                        {
+                                            "id": "bike-stem",
+                                            "type": "line",
+                                            "properties": {
+                                                "x1": 100,
+                                                "y1": 100,
+                                                "x2": 100,
+                                                "y2": 50,
+                                                "stroke": "token:stroke.subtle",
+                                                "strokeWidth": 12,
+                                                "strokeLinecap": "round"
+                                            },
+                                            "bindings": {
+                                                "stroke": {
+                                                    "parameter": "gripColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "bike-mark",
+                                            "type": "path",
+                                            "properties": {
+                                                "d": "M100 24 L111 48 L89 48 Z",
+                                                "fill": "token:stroke.warning"
+                                            },
+                                            "bindings": {
+                                                "fill": {
+                                                    "parameter": "markColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "bike-bar",
+                                            "type": "line",
+                                            "properties": {
+                                                "x1": 40,
+                                                "y1": 100,
+                                                "x2": 160,
+                                                "y2": 100,
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 12,
+                                                "strokeLinecap": "round"
+                                            },
+                                            "bindings": {
+                                                "stroke": {
+                                                    "parameter": "rimColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "bike-grip-left",
+                                            "type": "rect",
+                                            "properties": {
+                                                "x": 24,
+                                                "y": 89,
+                                                "width": 48,
+                                                "height": 22,
+                                                "cornerRadius": 11,
+                                                "fill": "token:stroke.subtle"
+                                            },
+                                            "bindings": {
+                                                "fill": {
+                                                    "parameter": "gripColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "bike-grip-right",
+                                            "type": "rect",
+                                            "properties": {
+                                                "x": 128,
+                                                "y": 89,
+                                                "width": 48,
+                                                "height": 22,
+                                                "cornerRadius": 11,
+                                                "fill": "token:stroke.subtle"
+                                            },
+                                            "bindings": {
+                                                "fill": {
+                                                    "parameter": "gripColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "bike-clamp",
+                                            "type": "rect",
+                                            "properties": {
+                                                "x": 84,
+                                                "y": 84,
+                                                "width": 32,
+                                                "height": 32,
+                                                "cornerRadius": 8,
+                                                "fill": "token:surface.muted",
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 4
+                                            },
+                                            "bindings": {
+                                                "fill": {
+                                                    "parameter": "hubColor"
+                                                },
+                                                "stroke": {
+                                                    "parameter": "rimColor"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": "boat",
+                                    "type": "group",
+                                    "when": {
+                                        "parameter": "isBoat"
+                                    },
+                                    "children": [
+                                        {
+                                            "id": "boat-rim",
+                                            "type": "circle",
+                                            "properties": {
+                                                "centerX": 100,
+                                                "centerY": 100,
+                                                "radius": 64,
+                                                "fill": "none",
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 12
+                                            },
+                                            "bindings": {
+                                                "stroke": {
+                                                    "parameter": "rimColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "boat-spoke",
+                                            "type": "group",
+                                            "modifiers": [
+                                                {
+                                                    "type": "repeat",
+                                                    "count": {
+                                                        "parameter": "spokeCount"
+                                                    },
+                                                    "angleStep": 45,
+                                                    "centerX": 100,
+                                                    "centerY": 100
+                                                }
+                                            ],
+                                            "children": [
+                                                {
+                                                    "id": "boat-spoke-arm",
+                                                    "type": "line",
+                                                    "properties": {
+                                                        "x1": 100,
+                                                        "y1": 100,
+                                                        "x2": 100,
+                                                        "y2": 24,
+                                                        "stroke": "token:stroke.default",
+                                                        "strokeWidth": 9,
+                                                        "strokeLinecap": "round"
+                                                    },
+                                                    "bindings": {
+                                                        "stroke": {
+                                                            "parameter": "rimColor"
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    "id": "boat-spoke-knob",
+                                                    "type": "circle",
+                                                    "properties": {
+                                                        "centerX": 100,
+                                                        "centerY": 20,
+                                                        "radius": 9,
+                                                        "fill": "token:stroke.default"
+                                                    },
+                                                    "bindings": {
+                                                        "fill": {
+                                                            "parameter": "gripColor"
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "id": "boat-mark",
+                                            "type": "circle",
+                                            "properties": {
+                                                "centerX": 100,
+                                                "centerY": 20,
+                                                "radius": 9,
+                                                "fill": "token:stroke.warning"
+                                            },
+                                            "bindings": {
+                                                "fill": {
+                                                    "parameter": "markColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "boat-hub",
+                                            "type": "circle",
+                                            "properties": {
+                                                "centerX": 100,
+                                                "centerY": 100,
+                                                "radius": 20,
+                                                "fill": "token:surface.muted",
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 4
+                                            },
+                                            "bindings": {
+                                                "fill": {
+                                                    "parameter": "hubColor"
+                                                },
+                                                "stroke": {
+                                                    "parameter": "rimColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "boat-hub-pin",
+                                            "type": "circle",
+                                            "properties": {
+                                                "centerX": 100,
+                                                "centerY": 100,
+                                                "radius": 6,
+                                                "fill": "token:stroke.default"
+                                            },
+                                            "bindings": {
+                                                "fill": {
+                                                    "parameter": "rimColor"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "wheel-grab",
+                    "type": "ring",
+                    "when": {
+                        "parameter": "turnedByHand"
+                    },
+                    "bindings": {
+                        "centerX": {
+                            "parameter": "cx"
+                        },
+                        "centerY": {
+                            "parameter": "cy"
+                        },
+                        "innerRadius": {
+                            "parameter": "grabInner"
+                        },
+                        "outerRadius": {
+                            "parameter": "grabOuter"
+                        }
+                    },
+                    "properties": {
+                        "fill": "none",
+                        "stroke": "none"
+                    },
+                    "behaviours": [
+                        {
+                            "type": "drag-rotate",
+                            "variable": {
+                                "parameter": "angleVariable"
+                            },
+                            "property": "angleVariable",
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            },
+                            "degreesPerUnit": 1,
+                            "hoverFill": {
+                                "parameter": "grabColor"
+                            },
+                            "hoverOpacity": 0.18
+                        }
+                    ]
+                }
+            ]
+        }
     }
 ]);

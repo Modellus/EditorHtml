@@ -69,7 +69,7 @@ they only bind the person who happened to author the object.
 2. **The type.** `^[a-z][a-z0-9-]{2,48}$` and unique across the catalogue.
 
    The types the editor ships with — `analogue-clock`, `circular-gauge`, `compass`, `orbit-system`,
-   `rotating-vector`, `speedometer` — are **allowed**, because the seed publishes exactly those so
+   `rotating-vector`, `speedometer`, `steering-wheel` — are **allowed**, because the seed publishes exactly those so
    the catalogue lists everything rather than everything-except-the-built-ins. Placing such a card
    always draws the bundled object: `BlockObjectLibrary.registerDocument()` refuses to register a
    document under a built-in type, so the definition stored against it is never what draws. That

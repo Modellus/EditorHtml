@@ -21,8 +21,8 @@ async function addModel(page) {
     await page.waitForTimeout(400);
 }
 
-async function compileMarkup(page, componentType, preset, size) {
-    return page.evaluate(({ componentType, preset, size }) => {
+async function compileMarkup(page, componentType, preset, size, overrides = {}) {
+    return page.evaluate(({ componentType, preset, size, overrides }) => {
         const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
         const definition = BlockObjects.createComponentInstance(componentType, { preset: preset });
         const parameters = BlockObjects.getInstancePropertyDefaults(componentType, preset);
@@ -32,12 +32,13 @@ async function compileMarkup(page, componentType, preset, size) {
             speedometer: { valueVariable: 'speed', unit: 'km/h' },
             'circular-gauge': { valueVariable: 'speed', unit: '%' },
             'rotating-vector': { angleVariable: 'angle', lengthVariable: 'radius', lengthScale: 60, showProjections: true },
-            'orbit-system': { timeVariable: 'tempo' }
+            'orbit-system': { timeVariable: 'tempo' },
+            'steering-wheel': { angleVariable: 'angle' }
         };
-        Object.assign(parameters, modelParameters[componentType] ?? {});
+        Object.assign(parameters, modelParameters[componentType] ?? {}, overrides);
         const compilation = compiler.compile(definition, { width: size, height: size, parameters: parameters, tokens: new BlockTokens(preset) });
         return BlockRenderer.toStandaloneSvg(compilation.nodes, size, size, 'none');
-    }, { componentType, preset, size });
+    }, { componentType, preset, size, overrides });
 }
 
 test.describe('component visual snapshots', () => {
@@ -49,6 +50,15 @@ test.describe('component visual snapshots', () => {
             await addModel(page);
             const markup = await compileMarkup(page, componentType, 'standard', 200);
             expect(markup).toMatchSnapshot(`${componentType}-standard.svg`);
+        });
+    }
+
+    for (const wheelType of ['car', 'motor bike', 'boat']) {
+        test(`steering wheel drawn as a ${wheelType} renders identical markup for the same values`, async ({ page }) => {
+            await setupBoard(page);
+            await addModel(page);
+            const markup = await compileMarkup(page, 'steering-wheel', 'standard', 200, { wheelType: wheelType });
+            expect(markup).toMatchSnapshot(`steering-wheel-${wheelType.replace(' ', '-')}.svg`);
         });
     }
 

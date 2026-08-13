@@ -973,6 +973,22 @@ Capabilities: `radial`, `angular`, `reads-model`, `scale`
 | `needleColor` | colour | "token:stroke.warning" |  |
 | `labelColor` | colour | "token:text.primary" |  |
 
+### `steering-wheel` — Steering wheel
+
+Steering wheel turned by a model variable, drawn as a car wheel, a motorbike handlebar or a ship's helm. Dragging it turns the wheel and writes the angle back.
+
+Capabilities: `radial`, `angular`, `reads-model`, `interaction`, `writes-model`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `angleVariable` | variable | "0" |  |
+| `angleUpVariable` | variable | "" |  |
+| `wheelType` | string | "car" | car \| motor bike \| boat |
+| `rimColor` | colour | "token:stroke.default" |  |
+| `gripColor` | colour | "token:stroke.subtle" |  |
+| `hubColor` | colour | "token:surface.muted" |  |
+| `markColor` | colour | "token:stroke.warning" |  |
+
 ### `tick-ring` — Tick ring
 
 Evenly spaced radial tick marks around a centre, with optional longer major ticks.

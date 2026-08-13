@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+    <circle id="boat-rim" cx="100" cy="100" r="64" fill="none" stroke="#1e1e1e" stroke-width="12"/>
+    <g id="boat-spoke">
+        <line id="boat-spoke-arm" x1="100" y1="100" x2="100" y2="24" stroke="#1e1e1e" stroke-width="9" stroke-linecap="round"/>
+        <circle id="boat-spoke-knob" cx="100" cy="20" r="9" fill="#1e1e1e"/>
+    </g>
+    <circle id="boat-mark" cx="100" cy="20" r="9" fill="#e03130"/>
+    <circle id="boat-hub" cx="100" cy="100" r="20" fill="#eeeeee" stroke="#1e1e1e" stroke-width="4"/>
+    <circle id="boat-hub-pin" cx="100" cy="100" r="6" fill="#1e1e1e"/>
+</svg>

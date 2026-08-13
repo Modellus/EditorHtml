@@ -97,6 +97,58 @@ test.describe('bindings', () => {
         expect(resolved.dependencies.variables.sort()).toEqual(['hour', 'minute']);
     });
 
+    test('a choice reads truth on its own and equality when it names a value', async ({ page }) => {
+        await setupBoard(page);
+        const resolved = await page.evaluate(() => {
+            const bindings = new BlockBindings(shell.board.calculator);
+            const context = { parameters: { wheelType: 'motor bike', unit: '', span: 0, wanted: 'boat' }, tokens: new BlockTokens(), caseNumber: 1 };
+            const choose = (parameter, equals) => bindings.resolve({ choose: { parameter: parameter }, equals: equals, then: 1, otherwise: 0 }, context, -1);
+            return {
+                blankIsFalse: bindings.resolve({ choose: { parameter: 'unit' }, then: 1, otherwise: 0 }, context, -1),
+                zeroIsFalse: bindings.resolve({ choose: { parameter: 'span' }, then: 1, otherwise: 0 }, context, -1),
+                textIsTrue: bindings.resolve({ choose: { parameter: 'wheelType' }, then: 1, otherwise: 0 }, context, -1),
+                matches: choose('wheelType', 'motor bike'),
+                differs: choose('wheelType', 'car'),
+                comparedToABinding: bindings.resolve({ choose: { parameter: 'wheelType' }, equals: { parameter: 'wanted' }, then: 1, otherwise: 0 }, context, -1),
+                missingParameter: choose('nothing', 'car')
+            };
+        });
+        expect(resolved.blankIsFalse).toBe(0);
+        expect(resolved.zeroIsFalse).toBe(0);
+        expect(resolved.textIsTrue).toBe(1);
+        expect(resolved.matches).toBe(1);
+        expect(resolved.differs).toBe(0);
+        expect(resolved.comparedToABinding).toBe(0);
+        expect(resolved.missingParameter).toBe(0);
+    });
+
+    test('a direction reads a pair as the angle it points in, clockwise from straight up', async ({ page }) => {
+        await setupBoard(page);
+        const resolved = await page.evaluate(() => {
+            const bindings = new BlockBindings(shell.board.calculator);
+            const context = { parameters: { across: 3, up: 4, none: '' }, tokens: new BlockTokens(), caseNumber: 1 };
+            const direction = (x, y) => bindings.resolve({ direction: { x: x, y: y } }, context, null);
+            return {
+                north: direction(0, 5),
+                east: direction(5, 0),
+                south: direction(0, -5),
+                west: direction(-5, 0),
+                northEast: direction(2, 2),
+                fromParameters: direction({ parameter: 'across' }, { parameter: 'up' }),
+                nowhere: direction(0, 0),
+                unnamed: direction({ parameter: 'across' }, { parameter: 'none' })
+            };
+        });
+        expect(resolved.north).toBe(0);
+        expect(resolved.east).toBe(90);
+        expect(resolved.south).toBe(180);
+        expect(resolved.west).toBe(-90);
+        expect(resolved.northEast).toBe(45);
+        expect(resolved.fromParameters).toBeCloseTo(36.87, 2);
+        expect(resolved.nowhere).toBeNull();
+        expect(resolved.unnamed).toBeNull();
+    });
+
     test('rejects invalid expressions without evaluating code', async ({ page }) => {
         await setupBoard(page);
         const result = await page.evaluate(() => {

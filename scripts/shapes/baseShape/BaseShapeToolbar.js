@@ -382,7 +382,13 @@ var BaseShapeToolbarMixin = {
         if (!this.termDisplayEntries.some(entry => entry.term === termProperty))
             this.termDisplayEntries.push({ term: termProperty, caseProperty, title });
         const mockFormInstance = { updateData: (field, value) => this.setPropertyCommand(field, value) };
-        return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, options.allowTypedValue === true, displayModeProperty, showVisibilityToggle, { exactTypedValue: options.allowTypedValue === true, colorProperty: options.colorProperty ?? "" });
+        const extraTermProperty = options.extraTermProperty ?? "";
+        return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, options.allowTypedValue === true, displayModeProperty, showVisibilityToggle, {
+            exactTypedValue: options.allowTypedValue === true,
+            colorProperty: options.colorProperty ?? "",
+            extraTermProperty: extraTermProperty,
+            includeLock: extraTermProperty === ""
+        });
     },
     createColorPickerEditor(dataField, options = {}) {
         const onValueChanged = value => this.setPropertyCommand(dataField, value);

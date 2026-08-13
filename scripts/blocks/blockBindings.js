@@ -1,5 +1,5 @@
 class BlockBindings {
-    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "memory", "memoryCount"];
+    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount"];
 
     static isBinding(value) {
         if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -156,6 +156,8 @@ class BlockBindings {
             return this.resolveConcat(binding, context, fallbackValue);
         if (kind === "contrast")
             return this.resolveContrast(binding, context, fallbackValue);
+        if (kind === "direction")
+            return this.resolveDirection(binding, context, fallbackValue);
         if (kind === "memory")
             return this.resolveMemory(binding, context, fallbackValue);
         if (kind === "memoryCount")
@@ -210,12 +212,29 @@ class BlockBindings {
         }).join("");
     }
 
+    resolveDirection(binding, context, fallbackValue) {
+        const across = this.resolveNumber(binding.direction?.x, context, NaN);
+        const up = this.resolveNumber(binding.direction?.y, context, NaN);
+        if (!Number.isFinite(across) || !Number.isFinite(up) || (across === 0 && up === 0))
+            return fallbackValue;
+        return BlockGeometry.toDegrees(Math.atan2(across, up));
+    }
+
     resolveChoice(binding, context, fallbackValue) {
         const condition = this.resolve(binding.choose, context, false);
-        const branch = BlockBindings.isTruthy(condition) ? binding.then : binding.otherwise;
+        const branch = this.isChosen(binding, condition, context) ? binding.then : binding.otherwise;
         if (branch === undefined)
             return fallbackValue;
         return this.resolve(branch, context, fallbackValue);
+    }
+
+    isChosen(binding, condition, context) {
+        if (binding.equals === undefined)
+            return BlockBindings.isTruthy(condition);
+        const wanted = this.resolve(binding.equals, context, null);
+        if (condition === null || condition === undefined || wanted === null || wanted === undefined)
+            return false;
+        return String(condition) === String(wanted);
     }
 
     resolveParameter(binding, context, fallbackValue) {

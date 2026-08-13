@@ -176,7 +176,7 @@ var ComponentShapeToolbarMixin = {
         }));
         // A menu carrying a list of terms is as wide as that list, so every other row is widened to
         // match rather than leaving its selector at the width it would have had on its own.
-        $(contentElement).toggleClass("mdl-component-terms-menu", parameters.some(parameter => parameter.valueType === "terms"));
+        $(contentElement).toggleClass("mdl-component-terms-menu", parameters.some(parameter => parameter.valueType === "terms" || (parameter.pairedParameter ?? "") !== ""));
         this.renderComponentMenuList(contentElement, items);
     },
     renderComponentMenuList(contentElement, items) {
@@ -208,7 +208,11 @@ var ComponentShapeToolbarMixin = {
     createComponentVariableControl(parameter) {
         // A component input takes a model variable or a plain number, so the selector accepts both.
         // A definition naming a colour parameter gets the swatch for it in the same row.
-        const control = this.createTermControl(parameter.id, parameter.label, false, { allowTypedValue: true, colorProperty: parameter.colorParameter ?? "" });
+        const control = this.createTermControl(parameter.id, parameter.label, false, {
+            allowTypedValue: true,
+            colorProperty: parameter.colorParameter ?? "",
+            extraTermProperty: parameter.pairedParameter ?? ""
+        });
         this._componentTermControls[parameter.id] = this.termFormControls[parameter.id];
         return control;
     },
@@ -273,6 +277,8 @@ var ComponentShapeToolbarMixin = {
         return $('<div>').dxNumberBox(Object.assign({ showSpinButtons: true, stylingMode: "filled" }, editorOptions));
     },
     createComponentEnumControl(parameter) {
+        if (parameter.enumIcons)
+            return this.createComponentEnumButtonGroup(parameter);
         return $('<div>').dxSelectBox({
             items: parameter.enumValues,
             value: this.properties[parameter.id],
@@ -283,6 +289,17 @@ var ComponentShapeToolbarMixin = {
                     return;
                 this.setPropertyCommand(parameter.id, event.value);
             }
+        });
+    },
+    createComponentEnumButtonGroup(parameter) {
+        const items = parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons[index], hint: value }));
+        return $('<div class="mdl-component-enum-buttons">').dxButtonGroup({
+            items: items,
+            keyExpr: "value",
+            selectionMode: "single",
+            selectedItemKeys: [this.properties[parameter.id]],
+            stylingMode: "outlined",
+            onItemClick: event => this.setPropertyCommand(parameter.id, event.itemData.value)
         });
     },
     // The same catalogue of characters a body wears, offered to any component that says it draws

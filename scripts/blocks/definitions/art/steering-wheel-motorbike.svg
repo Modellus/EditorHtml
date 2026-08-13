@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+    <line id="bike-stem" x1="100" y1="100" x2="100" y2="50" stroke="#9a9a9a" stroke-width="12" stroke-linecap="round"/>
+    <path id="bike-mark" d="M100 24 L111 48 L89 48 Z" fill="#e03130"/>
+    <line id="bike-bar" x1="40" y1="100" x2="160" y2="100" stroke="#1e1e1e" stroke-width="12" stroke-linecap="round"/>
+    <rect id="bike-grip-left" x="24" y="89" width="48" height="22" rx="11" fill="#9a9a9a"/>
+    <rect id="bike-grip-right" x="128" y="89" width="48" height="22" rx="11" fill="#9a9a9a"/>
+    <rect id="bike-clamp" x="84" y="84" width="32" height="32" rx="8" fill="#eeeeee" stroke="#1e1e1e" stroke-width="4"/>
+</svg>

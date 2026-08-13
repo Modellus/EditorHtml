@@ -19,8 +19,8 @@ Behaviours   selectable, draggable, resizable, rotatable, hoverable, tooltip, dr
 Bindings     constant | parameter | variable | expression | formula | token | format | memory
 Components   dial-face, tick-ring, label-ring, pointer-hand, pointer-ring, plot-grid, plot-axes,
              plot-crosshair, memory-list, memory-trace, analogue-clock, compass, speedometer,
-             circular-gauge, rotating-vector, orbit-system, calculator, mouse-tracker,
-             + custom components
+             circular-gauge, rotating-vector, orbit-system, steering-wheel, calculator,
+             mouse-tracker, + custom components
 ```
 
 ### How a drawing is made
@@ -286,6 +286,9 @@ than compose.
 * **`choose`** is a binding kind for values that are not numbers: `{ "choose": …, "then": …,
   "otherwise": … }`, used for the clock's drag variables. A zero and a blank string are false,
   which is how the gauges guard a zero range and a missing unit without a comparison operator.
+  Adding **`equals`** turns the truth test into a comparison — `{ "choose": { "parameter":
+  "wheelType" }, "equals": "boat", … }` — which is what a parameter offering a set of named
+  alternatives needs; the steering wheel picks which of its three drawings is compiled that way.
 * **`concat`** joins resolved parts into one string, so the gauge readouts build
   `"64 km/h"` from a `format` binding and their own `unit` parameter. `format` resolves its
   `digits`, `prefix` and `suffix` as bindings too.
@@ -493,6 +496,8 @@ Bindings:
 | `{ formula: "…", inputs: { m: { variable: "minute" } } }` | an expression whose free names are supplied by other bindings |
 | `{ token: "stroke.default" }` | a design token |
 | `{ format: <binding>, digits: 1, prefix, suffix }` | a number rendered as text |
+| `{ choose: <binding>, equals: <binding>, then: …, otherwise: … }` | a conditional; without `equals` it tests the value for truth, with one it compares them |
+| `{ direction: { x: <binding>, y: <binding> } }` | the angle a pair points in — how far across and how far up — in degrees clockwise from straight up |
 | `{ memory: "history", row: <binding>, field: "x", from: "end" }` | a memory: the whole list, one row, or one field of it |
 | `{ memoryCount: "history" }` | how many rows a memory holds |
 

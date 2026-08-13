@@ -102,8 +102,8 @@ zero, a phasor of length one); a clock does not need it.
 ### Parameters — what the user edits
 
 Each is `{ id, label, valueType, defaultValue, category }` plus any of `description`, `minimum`,
-`maximum`, `enumValues`, `unit`, `required`, `bindable`, `agentAccessible`, `userEditable`,
-`structured`, `termParameters`.
+`maximum`, `enumValues`, `enumIcons`, `unit`, `required`, `bindable`, `agentAccessible`,
+`userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`.
 
 `valueType` is one of `number`, `string`, `boolean`, `colour`, `variable`, `expression`, `memory`,
 `character`, `object`.
@@ -121,6 +121,14 @@ Two sets of names are free behaviour: declaring `minimumX`/`maximumX`/`minimumY`
 shared `AxisRangeControl` rows instead of four number boxes, and adding `autoScale`/`equalScales`
 gets the chart's own two switches. Naming colours `backgroundColor`, `dataAreaColor` and `axisColor`
 gets the chart's colour menu.
+
+Three more are free controls. A `variable` naming `colorParameter` carries that colour's swatch on
+its own row. A `variable` naming `pairedParameter` gets a second selector beside the first, so the
+row names a pair — how far across and how far up — the way a marker on a compass names the pair it
+points along; read it with a `direction` binding and leave the paired parameter `userEditable: false`,
+since the row it belongs to already edits it. A parameter with `enumValues` and an `enumIcons` of the
+same length is chosen from a single-selection `dxButtonGroup` of those icons instead of a drop-down —
+what the steering wheel picks its three wheels with.
 
 **Parameter values live in `shape.properties`**, not in the document. That is what gives a new object
 undo/redo, copy/paste, collaboration and serialization with nothing written for the purpose.
@@ -237,7 +245,7 @@ Do not redraw what one of these already draws.
 | a key with a label | `key-cap` |
 | **anything cartesian** | `plot-grid`, `plot-axes`, `plot-crosshair` |
 | a memory shown as a list or a path | `memory-list`, `memory-trace` |
-| a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `calculator`, `mouse-tracker` |
+| a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `calculator`, `mouse-tracker` |
 
 An axis drawn as three lines and some text is the mistake the mouse tracker was built out of: the plot
 components carry the board's nice ticks, minor ticks, label gaps measured in tick fonts, and the drag
@@ -255,6 +263,8 @@ handles that rescale an axis.
 | `{ "token": "stroke.accent" }` | a design token |
 | `{ "format": <binding>, "digits": 1, "prefix": …, "suffix": … }` | a number as text |
 | `{ "choose": <binding>, "then": …, "otherwise": … }` | a conditional; `0` and `""` are false |
+| `{ "choose": <binding>, "equals": <binding>, "then": …, "otherwise": … }` | the same conditional comparing two values, which is how a parameter offering named alternatives picks one |
+| `{ "direction": { "x": <binding>, "y": <binding> } }` | the angle a pair points in, in degrees clockwise from straight up, the way a compass marker reads the pair it names |
 | `{ "concat": [ … ] }` | resolved parts joined into one string |
 | `{ "contrast": <colour binding> }` | black or white, whichever reads on that colour |
 | `{ "memory": "history", "row": …, "field": "x", "from": "end" }` | a memory, a row, or a field |
@@ -330,6 +340,7 @@ npx playwright test tests/object-picker.spec.js tests/component-blocks.spec.js
 | a hand or arrow driven by an angle | [`rotating-vector.json`](../../scripts/blocks/definitions/rotating-vector.json) |
 | interactive, writing values back | [`compass.json`](../../scripts/blocks/definitions/compass.json) — `drag-angle` and `drag-rotate` on invisible grab areas |
 | drawn rather than written | [`compass.json`](../../scripts/blocks/definitions/compass.json) again — its rose and needle are [imported SVG](../../scripts/blocks/definitions/art/), wired by id, with the labels left to `label-ring` |
+| one object drawn several ways | [`steering-wheel.json`](../../scripts/blocks/definitions/steering-wheel.json) — a drawing per type, each imported from its own SVG and carried by a `when` on a `choose` with an `equals` |
 | composed of several sub-objects | [`analogue-clock.json`](../../scripts/blocks/definitions/analogue-clock.json), [`orbit-system.json`](../../scripts/blocks/definitions/orbit-system.json) |
 | a keypad that keeps its working | [`calculator.json`](../../scripts/blocks/definitions/calculator.json) — `key-cap`, `remember`, `memory-list` |
 | a plot that records | [`mouse-tracker.json`](../../scripts/blocks/definitions/mouse-tracker.json) — the plot components over a `memory-trace` |
