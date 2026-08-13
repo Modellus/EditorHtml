@@ -9,6 +9,7 @@ var BodyShapeToolbarMixin = {
         const sizeDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "sizeTerm", "sizeTermCase", true, sizeDisplayMode, true);
         this.termFormControls["sizeTerm"] = { termControl: sizeDescriptor.termControl };
         this._sizeDescriptor = sizeDescriptor;
+        this._orientationDescriptor = this.createHorizontalVerticalTermFormControl(formAdapter, "orientationXTerm", "orientationYTerm", "orientationTermCase");
         items.push(
             {
                 location: "center",

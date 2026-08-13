@@ -406,6 +406,7 @@ class BodyShape extends ChildShape {
         }
         listItems.push(
             { text: "Size", buildControl: $p => $p.append(this._sizeDescriptor.control) },
+            { text: "Orientation", buildControl: $p => $p.append(this._orientationDescriptor.control) },
             {
                 text: "Physical body",
                 buildControl: $p => {
@@ -519,6 +520,7 @@ class BodyShape extends ChildShape {
             this.termFormControls["yTerm"]?.termControl?.refresh();
         }
         this.termFormControls["sizeTerm"]?.termControl?.refresh();
+        this.termFormControls["orientationXTerm"]?.termControl?.refresh();
         super.showContextToolbar();
     }
 
@@ -591,7 +593,7 @@ class BodyShape extends ChildShape {
         if (!character && !imageSource)
             return;
         if (!character) {
-            this._stroboscopyPositions = this._stroboscopyPositions.map(pos => ({ ...pos, href: imageSource }));
+            this._stroboscopyPositions = this._stroboscopyPositions.map(pos => ({ ...pos, href: imageSource, rotation: this.getOrientationAngleAtIteration(pos.iteration) }));
             return;
         }
         const animation = this.getCharacterAnimation(character);
@@ -600,7 +602,7 @@ class BodyShape extends ChildShape {
         this._stroboscopyPositions = this._stroboscopyPositions.map(pos => {
             const rawFrameIndex = this.getAnimationFrameIndex(animation, frameCount, pos.iteration, startIndex);
             const href = animation.frameUrls?.[Math.min(rawFrameIndex, (animation.frameUrls.length || 1) - 1)] || character.thumbnail_url || "";
-            const rotation = character.shouldRotate ? this.getCharacterMovementAngleAtIteration(pos.iteration, true) : null;
+            const rotation = this.getStroboscopyRotationAngleAtIteration(pos.iteration, character);
             return { ...pos, href, rotation };
         });
     }
@@ -643,7 +645,7 @@ class BodyShape extends ChildShape {
                 imageClone.setAttribute("height", diameter);
                 imageClone.setAttribute("preserveAspectRatio", "xMidYMid meet");
                 imageClone.setAttribute("opacity", this.properties.stroboscopyOpacity);
-                if (character?.shouldRotate && Number.isFinite(pos.rotation))
+                if (Number.isFinite(pos.rotation))
                     imageClone.setAttribute("transform", `rotate(${pos.rotation} ${pos.x} ${pos.y})`);
                 else
                     imageClone.removeAttribute("transform");
@@ -676,6 +678,9 @@ class BodyShape extends ChildShape {
         this.properties.angle = 0;
         const radius = metrics ? metrics.size / metrics.scaleX : 10;
         this.properties.sizeTerm = String(radius);
+        this.properties.orientationXTerm = "";
+        this.properties.orientationYTerm = "";
+        this.properties.orientationTermCase = 1;
         this.properties.width = radius * 2;
         this.properties.height = radius * 2;
         this.properties.radius = radius;
@@ -803,7 +808,7 @@ class BodyShape extends ChildShape {
         this.image.setAttribute("width", diameter);
         this.image.setAttribute("height", diameter);
         this.image.setAttribute("preserveAspectRatio", "xMidYMid slice");
-        this.applyImageFlipTransform(position, this.image.hasAttribute("href"));
+        this.applyImageFlipTransform(position, this.image.hasAttribute("href"), this.getOrientationAngle());
         this.drawCenterDot(position);
     }
 
@@ -895,8 +900,8 @@ class BodyShape extends ChildShape {
         this.image.setAttribute("width", diameter);
         this.image.setAttribute("height", diameter);
         this.image.setAttribute("preserveAspectRatio", "xMidYMid meet");
-        const movementAngle = character.shouldRotate ? this.characterMovementAngle : null;
-        this.applyImageFlipTransform(position, imageUrl !== "", movementAngle);
+        const rotationAngle = this.getCharacterRotationAngle(character);
+        this.applyImageFlipTransform(position, imageUrl !== "", rotationAngle);
         this.image.setAttribute("href", imageUrl);
     }
 
@@ -979,6 +984,79 @@ class BodyShape extends ChildShape {
         return null;
     }
 
+    // A body may be told which way it faces by a pair of terms — how far across and how far up —
+    // read as a vector. Told nothing, it faces the way it did before: the way it travels if the
+    // character it wears turns, and plainly forwards if it does not.
+    hasOrientationTerms() {
+        return TermControl.normalizeTermValue(this.properties.orientationXTerm) !== "" || TermControl.normalizeTermValue(this.properties.orientationYTerm) !== "";
+    }
+
+    getOrientationAngle() {
+        if (!this.hasOrientationTerms())
+            return null;
+        const caseNumber = this.properties.orientationTermCase ?? 1;
+        const horizontal = this.resolveOrientationComponent(this.properties.orientationXTerm, caseNumber);
+        const vertical = this.resolveOrientationComponent(this.properties.orientationYTerm, caseNumber);
+        return this.getOrientationAngleFromComponents(horizontal, vertical);
+    }
+
+    getOrientationAngleAtIteration(iteration) {
+        if (!this.hasOrientationTerms())
+            return null;
+        const caseNumber = this.properties.orientationTermCase ?? 1;
+        const horizontal = this.resolveOrientationComponentAtIteration(this.properties.orientationXTerm, caseNumber, iteration);
+        const vertical = this.resolveOrientationComponentAtIteration(this.properties.orientationYTerm, caseNumber, iteration);
+        return this.getOrientationAngleFromComponents(horizontal, vertical);
+    }
+
+    resolveOrientationComponent(term, caseNumber) {
+        const normalizedTerm = TermControl.normalizeTermValue(term);
+        if (normalizedTerm === "")
+            return 0;
+        return this.resolveTermNumeric(normalizedTerm, caseNumber);
+    }
+
+    resolveOrientationComponentAtIteration(term, caseNumber, iteration) {
+        const normalizedTerm = TermControl.normalizeTermValue(term);
+        if (normalizedTerm === "")
+            return 0;
+        return this.resolveTermNumericAtIteration(normalizedTerm, caseNumber, iteration);
+    }
+
+    // The pair is measured in the referential, so it is turned into a direction on screen the same
+    // way a position is: through the scale of the axes and whatever the referential is turned by.
+    getOrientationAngleFromComponents(horizontal, vertical) {
+        if (!Number.isFinite(horizontal) || !Number.isFinite(vertical))
+            return null;
+        if (horizontal === 0 && vertical === 0)
+            return null;
+        const scale = this.getScale();
+        const origin = this.getBoardPositionFromLocalPosition({ x: 0, y: 0 });
+        const target = this.getBoardPositionFromLocalPosition({
+            x: scale.x !== 0 ? horizontal / scale.x : 0,
+            y: scale.y !== 0 ? -vertical / scale.y : 0
+        });
+        return Math.atan2(target.y - origin.y, target.x - origin.x) * 180 / Math.PI;
+    }
+
+    getCharacterRotationAngle(character) {
+        const orientationAngle = this.getOrientationAngle();
+        if (orientationAngle !== null)
+            return orientationAngle;
+        if (character?.shouldRotate)
+            return this.characterMovementAngle;
+        return null;
+    }
+
+    getStroboscopyRotationAngleAtIteration(iteration, character) {
+        const orientationAngle = this.getOrientationAngleAtIteration(iteration);
+        if (orientationAngle !== null)
+            return orientationAngle;
+        if (character?.shouldRotate)
+            return this.getCharacterMovementAngleAtIteration(iteration, true);
+        return null;
+    }
+
     updateCharacterMovementAngle() {
         const angle = this.getCharacterMovementAngleAtIteration(this.board.calculator.getIteration());
         if (angle !== null)
@@ -989,6 +1067,14 @@ class BodyShape extends ChildShape {
         super.tick();
         const boardPosition = this.getBoardPosition();
         const character = this.getSelectedCharacter();
+        if (this.hasOrientationTerms()) {
+            // A body told which way it faces is turned by that alone: neither the direction it
+            // travels nor the automatic left/right flip may turn it as well.
+            this.characterMovementAngle = null;
+            this.flipImageHorizontally = false;
+            this.lastBoardHorizontalPosition = null;
+            return;
+        }
         if (character?.shouldRotate) {
             this.updateCharacterMovementAngle();
             // A rotating character already points where it travels, so the

@@ -125,9 +125,13 @@
             <tbody>
                 <tr><td>X position</td><td>Any numeric term (e.g., <code>x</code>)</td><td>Horizontal position in the referential</td></tr>
                 <tr><td>Y position</td><td>Any numeric term (e.g., <code>y</code>)</td><td>Vertical position in the referential</td></tr>
-                <tr><td>Rotation</td><td>Angle term (e.g., <code>θ</code>)</td><td>Character orientation in radians or degrees</td></tr>
+                <tr><td>Orientation</td><td>A pair of terms or values (e.g., <code>vx</code> and <code>vy</code>)</td><td>Direction the character faces, read as a vector: how far across and how far up</td></tr>
             </tbody>
         </table>
+
+        <h2>Orientation</h2>
+        <p>The <strong>Orientation</strong> row of the terms menu names a pair — a horizontal term or value and a vertical one — read together as a vector in the referential's own coordinates. The character is turned to point along it, so binding a velocity to the pair makes the character face the way it moves, and binding any other pair makes it face wherever that pair points. Both selectors are read in the case the row names, and either one may be left empty, which counts as zero.</p>
+        <p>Left empty, the body keeps to the way it behaved before: a character marked as rotating turns to the direction it travels, and any other body is mirrored left or right as it changes direction.</p>
 
         <h2>Animation States</h2>
         <p>Characters have multiple animation states that change based on movement:</p>
@@ -154,7 +158,7 @@
                 <tr><td>Character</td><td>Which animated sprite to use</td></tr>
                 <tr><td>X term</td><td>Term controlling horizontal position</td></tr>
                 <tr><td>Y term</td><td>Term controlling vertical position</td></tr>
-                <tr><td>Rotation term</td><td>Term controlling angle</td></tr>
+                <tr><td>Orientation terms</td><td>Pair of terms, horizontal and vertical, the character is turned to face along</td></tr>
                 <tr><td>Scale</td><td>Size multiplier for the character</td></tr>
                 <tr><td>Trail</td><td>Whether to leave a path trace behind the character</td></tr>
             </tbody>

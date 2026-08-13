@@ -267,14 +267,15 @@ class TermControl {
         return items;
     }
 
-    static getBaseShapeTermControlStateKey(baseShape, term, caseProperty, colorProperty = "") {
+    static getBaseShapeTermControlStateKey(baseShape, term, caseProperty, colorProperty = "", extraTermProperty = "") {
         const selectedTerm = TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]);
         const selectedCase = TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1);
         const lockedProperty = `${term}Locked`;
         const locked = baseShape.properties[lockedProperty] === true;
         const terms = baseShape.board.calculator.getTermsNames();
         const color = colorProperty ? TermControl.normalizeColorValue(baseShape.properties[colorProperty]) : "";
-        return `${selectedTerm}|${selectedCase}|${locked}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}|${color}`;
+        const extraTerm = extraTermProperty ? TermControl.normalizeBaseShapeTermValue(baseShape.properties[extraTermProperty]) : "";
+        return `${selectedTerm}|${selectedCase}|${locked}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}|${color}|${extraTerm}`;
     }
 
     // A term selector can carry the colour of whatever the term drives, so the choice of what to
@@ -295,6 +296,29 @@ class TermControl {
         };
     }
 
+    // A row may name a pair rather than a single term — how far across and how far up — and the
+    // second one is a property of its own, written by a selector beside the first and read in the
+    // case the row names.
+    static createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, synchronize) {
+        if (!extraTermProperty)
+            return null;
+        return {
+            show: () => true,
+            getValue: () => TermControl.normalizeBaseShapeTermValue(baseShape.properties[extraTermProperty]),
+            getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, extraTermProperty, normalizeCustomValue),
+            onValueChanged: (_, value) => {
+                formInstance.updateData(extraTermProperty, TermControl.normalizeBaseShapeTermValue(value));
+                synchronize();
+                baseShape.board.markDirty(baseShape);
+            },
+            onCustomItemCreating: event => {
+                formInstance.updateData(extraTermProperty, normalizeCustomValue(event.text));
+                synchronize();
+                baseShape.board.markDirty(baseShape);
+            }
+        };
+    }
+
     static syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl = null) {
         const caseValue = TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1);
         if (baseShape.properties[caseProperty] !== caseValue)
@@ -310,10 +334,14 @@ class TermControl {
             : value => TermControl.normalizeBaseShapeCustomTermValue(baseShape, value);
         if (!baseShape.termDisplayEntries.some(entry => entry.term === term))
             baseShape.termDisplayEntries.push({ term: term, caseProperty: caseProperty });
+        const extraTermProperty = options.extraTermProperty ?? "";
+        const includeLock = options.includeLock !== false;
         const lockedProperty = `${term}Locked`;
-        if (baseShape.properties[lockedProperty] == null)
+        if (includeLock && baseShape.properties[lockedProperty] == null)
             baseShape.properties[lockedProperty] = false;
         const control = $("<div>").addClass("term-packed-control");
+        if (extraTermProperty)
+            control.addClass("term-packed-control--pair");
         const selectHost = $("<div>").addClass("term-packed-control__select");
         const displayModeValue = baseShape.properties[displayModeProperty] ?? "none";
         const isVisible = displayModeValue !== false && displayModeValue !== "none";
@@ -343,8 +371,9 @@ class TermControl {
             rowGap: "0",
             rowMarginBottom: "0",
             getItems: () => [{ term: TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1), locked: baseShape.properties[lockedProperty] === true }],
-            getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty, options.colorProperty ?? ""),
+            getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty, options.colorProperty ?? "", extraTermProperty),
             colorSelection: TermControl.createBaseShapeTermColorSelection(baseShape, options.colorProperty ?? ""),
+            extraTerm: TermControl.createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl)),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term, normalizeCustomValue),
             getBoard: () => baseShape.board,
             getSystem: () => baseShape.board?.calculator?.system,
@@ -388,14 +417,14 @@ class TermControl {
                     baseShape.board.markDirty(baseShape);
                 }
             },
-            lock: {
+            lock: includeLock ? {
                 width: "28px",
                 getValue: item => item?.locked === true,
                 onValueChanged: (_, value) => {
                     formInstance.updateData(lockedProperty, value);
                     TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl);
                 }
-            }
+            } : null
         });
         const termControlHost = termControl.createHost();
         selectHost.append(termControlHost);
@@ -1241,7 +1270,7 @@ class TermControl {
         this.renderColorSecondaryEditor(host, item, index);
     }
 
-    renderTermDropdownContent(contentElement, item, index, treeItems, acceptCustomValue, currentTermValue, providedOptions, closeDropdown, onChanged) {
+    renderTermDropdownContent(contentElement, item, index, treeItems, acceptCustomValue, currentTermValue, closeDropdown, onChanged, onCustomItemCreating, editorInstance) {
         if (acceptCustomValue) {
             const customInputHost = $('<div class="mdl-term-tree-custom-input">');
             $('<div>').dxTextBox({
@@ -1250,8 +1279,8 @@ class TermControl {
                 stylingMode: "filled",
                 onEnterKey: e => {
                     const customValue = e.component.option("value");
-                    if (providedOptions.onCustomItemCreating)
-                        providedOptions.onCustomItemCreating({ text: customValue, customItem: null, item: item, index: index });
+                    if (onCustomItemCreating)
+                        onCustomItemCreating({ text: customValue, customItem: null, item: item, index: index, component: editorInstance });
                     else
                         onChanged(customValue);
                     closeDropdown?.();
@@ -1367,14 +1396,16 @@ class TermControl {
     }
 
     getTermEditorOptions(item, index) {
-        return this.buildTermEditorOptions(item, index, this.getTermValue(item, index), this.getTermItems(item, index), value => this.onTermChanged(index, value));
+        return this.buildTermEditorOptions(item, index, this.getTermValue(item, index), this.getTermItems(item, index), value => this.onTermChanged(index, value), this.options.termEditor?.onCustomItemCreating);
     }
 
+    // The typed value belongs to the selector it was typed into, so the second one writes the field
+    // it edits rather than the one the row is named by.
     getExtraTermEditorOptions(item, index) {
-        return this.buildTermEditorOptions(item, index, this.getExtraTermValue(item, index), this.getExtraTermItems(item, index), value => this.onExtraTermChanged(index, value));
+        return this.buildTermEditorOptions(item, index, this.getExtraTermValue(item, index), this.getExtraTermItems(item, index), value => this.onExtraTermChanged(index, value), this.options.extraTerm.onCustomItemCreating);
     }
 
-    buildTermEditorOptions(item, index, termValue, flatItems, onChanged) {
+    buildTermEditorOptions(item, index, termValue, flatItems, onChanged, onCustomItemCreating) {
         const providedOptions = this.options.termEditor ?? {};
         const acceptCustomValue = typeof providedOptions.acceptCustomValue === "function"
             ? providedOptions.acceptCustomValue(item, index) === true
@@ -1413,7 +1444,7 @@ class TermControl {
             },
             onContentReady: e => this.syncTermEditorMathField(e.component, termValue, system),
             onValueChanged: e => this.syncTermEditorMathField(e.component, termValue, system),
-            contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), item, index, treeItems, acceptCustomValue, termValue, providedOptions, () => dropDownBoxInstance?.close(), onChanged),
+            contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), item, index, treeItems, acceptCustomValue, termValue, () => dropDownBoxInstance?.close(), onChanged, onCustomItemCreating, dropDownBoxInstance),
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup")

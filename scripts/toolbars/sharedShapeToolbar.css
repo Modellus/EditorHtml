@@ -146,6 +146,19 @@ math-field {
     width: 212px;
 }
 
+.mdl-dropdown-list-control .term-packed-control--pair {
+    width: 320px;
+}
+
+.mdl-wide-terms-menu .mdl-dropdown-list-control {
+    width: 320px;
+    justify-content: flex-end;
+}
+
+.mdl-wide-terms-menu .mdl-dropdown-list-control .term-packed-control {
+    width: 100%;
+}
+
 .mdl-dropdown-list-control .component-terms-control {
     width: 320px;
 }

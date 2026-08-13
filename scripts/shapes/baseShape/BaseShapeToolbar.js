@@ -738,6 +738,9 @@ var BaseShapeToolbarMixin = {
         this.populateTermsMenuSections(listItems);
         if ($(contentElement).data("dxScrollView"))
             $(contentElement).dxScrollView("instance").dispose();
+        // A menu carrying a row that names a pair is as wide as that pair, so every other row is
+        // widened to match rather than leaving its control at the width it would have had alone.
+        $(contentElement).toggleClass("mdl-wide-terms-menu", this.hasTermPairMenuControl());
         $(contentElement).empty();
         $(contentElement).dxScrollView({ height: 300, width: "100%" });
         $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
@@ -754,6 +757,22 @@ var BaseShapeToolbarMixin = {
         const yDescriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, "yTerm", "yTermCase", true, yDisplayMode, true);
         this.termFormControls["yTerm"] = { termControl: yDescriptor.termControl };
         return { xDescriptor, yDescriptor };
+    },
+    hasTermPairMenuControl() {
+        return Object.values(this.termFormControls).some(controls => controls?.termControl?.hasExtraTerm() === true);
+    },
+    // A direction is named by a pair of terms — how far across and how far up — so the two selectors
+    // sit side by side on one row and are read in the case that row names, the way a pointer marked
+    // on a compass names the pair it points along.
+    createHorizontalVerticalTermFormControl(formAdapter, horizontalTerm, verticalTerm, caseProperty) {
+        const displayModeProperty = this.getTermDisplayModeProperty(horizontalTerm);
+        const descriptor = TermControl.createBaseShapeTermFormControl(this, formAdapter, horizontalTerm, caseProperty, true, displayModeProperty, false, {
+            extraTermProperty: verticalTerm,
+            includeLock: false,
+            exactTypedValue: true
+        });
+        this.termFormControls[horizontalTerm] = { termControl: descriptor.termControl };
+        return descriptor;
     }
 };
 if (typeof BaseShape !== "undefined") Object.assign(BaseShape.prototype, ShapeContextToolbarMixin, ShapeToolbarPresentationMixin, BaseShapeToolbarMixin);
