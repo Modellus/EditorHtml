@@ -130,17 +130,19 @@ since the row it belongs to already edits it. A parameter with `enumValues` and 
 same length is chosen from a single-selection `dxButtonGroup` of those icons instead of a drop-down —
 what the steering wheel picks its three wheels with.
 
-The fourth is the direction control, and it is the same row the compass marks its pointers with. A
-`variable` naming both a `pairedParameter` and a `modeParameter` is edited as **an angle or an
-orientation**: the row opens with a two-button group, choosing the angle leaves one selector on the
-row and choosing the orientation puts a second beside it, and the colour, if the row carries one,
-comes after them. The mode parameter is an ordinary `string` parameter with
-`"enumValues": ["angle", "orientation"]`; mark it `userEditable: false`, since the buttons at the
-head of the row are what edit it, and read it with a `choose` carrying an `equals`. A row of terms —
-a `terms` parameter with a second field, like the compass's `pointers` — gets the same control per
-row, with the choice stored in the row's own `mode` field. A row that has never been given one is
-read as an orientation if it named a second term and as an angle otherwise, so a model saved before
-the choice existed still draws what it drew.
+The fourth is the direction control. A `variable` naming both a `pairedParameter` and a
+`modeParameter` is read as **an angle or an orientation**, and that choice is made from a key of its
+own in the toolbar: the key wears the icon of the choice it is on and opens on the two. Choosing the
+angle leaves one selector on the row, and the toolbar key that reads the model shows that one value;
+choosing the orientation puts a second selector beside the first, and the key shows both. The
+colour, if the row carries one, comes after them. The mode parameter is an ordinary `string`
+parameter with `"enumValues": ["angle", "orientation"]`; mark it `userEditable: false`, since the key
+in the toolbar is what edits it, and read it with a `choose` carrying an `equals`. A row of terms —
+a `terms` parameter with a second field, like the compass's `pointers` — offers the same two choices
+under the same two icons, but on the row itself rather than in the toolbar: the reader names as many
+pointers as they like and each carries its own choice, stored in the row's own `mode` field. A row
+that has never been given one is read as an orientation if it named a second term and as an angle
+otherwise, so a model saved before the choice existed still draws what it drew.
 
 **Parameter values live in `shape.properties`**, not in the document. That is what gives a new object
 undo/redo, copy/paste, collaboration and serialization with nothing written for the purpose.

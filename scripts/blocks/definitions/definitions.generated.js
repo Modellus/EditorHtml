@@ -6109,7 +6109,7 @@ BlockDefinitionLoader.registerAll([
                 ],
                 "category": "model",
                 "userEditable": false,
-                "description": "Whether the row is read as an angle in degrees or as an orientation, which is a pair of values read as a direction. It is chosen from the buttons at the head of the row rather than a row of its own."
+                "description": "Whether the row is read as an angle in degrees or as an orientation, which is a pair of values read as a direction. It is chosen from a key of its own in the toolbar rather than from the row it governs."
             },
             {
                 "id": "angleVariable",

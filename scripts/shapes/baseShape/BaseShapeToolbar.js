@@ -390,6 +390,7 @@ var BaseShapeToolbarMixin = {
             modeProperty: options.modeProperty ?? "",
             modeItems: options.modeItems ?? [],
             modePairValue: options.modePairValue ?? "",
+            showExtraTerm: options.showExtraTerm ?? null,
             includeLock: extraTermProperty === ""
         });
     },

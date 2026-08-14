@@ -328,11 +328,13 @@ class TermControl {
         };
     }
 
-    static createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, synchronize) {
+    // A caller that decides elsewhere whether the pair is read — a choice made in the toolbar rather
+    // than on the row — says so with a test of its own; anyone else always offers the second selector.
+    static createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, synchronize, show = null) {
         if (!extraTermProperty)
             return null;
         return {
-            show: () => true,
+            show: show ?? (() => true),
             getValue: () => TermControl.normalizeBaseShapeTermValue(baseShape.properties[extraTermProperty]),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, extraTermProperty, normalizeCustomValue),
             onValueChanged: (_, value) => {
@@ -404,7 +406,7 @@ class TermControl {
             getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty, options.colorProperty ?? "", extraTermProperty, modeProperty),
             mode: TermControl.createBaseShapeModeSelection(baseShape, formInstance, modeProperty, options.modeItems ?? [], options.modePairValue ?? "", () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl)),
             colorSelection: TermControl.createBaseShapeTermColorSelection(baseShape, options.colorProperty ?? ""),
-            extraTerm: TermControl.createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl)),
+            extraTerm: TermControl.createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl), options.showExtraTerm ?? null),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term, normalizeCustomValue),
             getBoard: () => baseShape.board,
             getSystem: () => baseShape.board?.calculator?.system,

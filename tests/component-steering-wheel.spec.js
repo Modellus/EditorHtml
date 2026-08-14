@@ -180,7 +180,65 @@ test.describe('steering wheel component', () => {
         expect(byOrientation.markup).toContain('rotate(45 100 100)');
     });
 
-    test('one row carries the choice: the buttons pick it and the selectors follow', async ({ page }) => {
+    test('a key of its own carries the choice: it picks how the row is read and the selectors follow', async ({ page }) => {
+        await setupBoard(page);
+        await addSteeringModel(page);
+        await addSteeringWheel(page, 'car');
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wheel')));
+        await page.waitForTimeout(400);
+        const modeKey = page.locator('.shape-context-toolbar.visible .mdl-component-mode-selector');
+        await expect(modeKey).toHaveCount(1);
+        expect(await modeKey.locator('.dx-icon').first().getAttribute('class')).toContain('fa-angle');
+        await modeKey.click();
+        await page.waitForTimeout(500);
+        const choices = page.locator('.mdl-shape-overlay-popup').last().locator('.dx-list-item');
+        await expect(choices).toHaveCount(2);
+        const choiceIcons = await choices.evaluateAll(elements => elements.map(element => element.querySelector('i')?.className ?? ''));
+        expect(choiceIcons[0]).toContain('fa-angle');
+        expect(choiceIcons[1]).toContain('fa-arrow-up-right');
+        expect(await choices.evaluateAll(elements => elements.map(element => element.textContent.trim()))).toEqual(['angle', 'orientation']);
+        await choices.nth(1).click();
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Wheel').properties.turnedBy)).toBe('orientation');
+        expect(await modeKey.locator('.dx-icon').first().getAttribute('class')).toContain('fa-arrow-up-right');
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.waitForTimeout(500);
+        const popup = page.locator('.mdl-shape-overlay-popup').last();
+        await expect(popup.locator('.shape-term-mode')).toHaveCount(0);
+        await expect(popup.locator('.shape-term-extra-term')).toHaveCount(1);
+        await page.keyboard.press('Escape');
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wheel')));
+        await page.waitForTimeout(400);
+        await modeKey.click();
+        await page.waitForTimeout(500);
+        await page.locator('.mdl-shape-overlay-popup').last().locator('.dx-list-item').first().click();
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Wheel').properties.turnedBy)).toBe('angle');
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.waitForTimeout(500);
+        await expect(page.locator('.mdl-shape-overlay-popup').last().locator('.shape-term-extra-term')).toHaveCount(0);
+    });
+
+    test('the toolbar reads one value as an angle and both as an orientation', async ({ page }) => {
+        await setupBoard(page);
+        await addSteeringModel(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('steering-wheel', 'Wheel');
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200, angleVariable: 'across', angleUpVariable: 'up' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wheel')));
+        await page.waitForTimeout(400);
+        const readKey = () => page.evaluate(() => Array.from(document.querySelectorAll('.shape-context-toolbar.visible .mdl-component-model-selector .mdl-name-btn-term')).map(element => element.textContent.trim()));
+        expect(await readKey()).toEqual(['across']);
+        await page.evaluate(() => shell.board.shapes.getByName('Wheel').setPropertyCommand('turnedBy', 'orientation'));
+        await page.evaluate(() => shell.board.shapes.getByName('Wheel').refreshComponentToolbarControls());
+        await page.waitForTimeout(400);
+        expect(await readKey()).toEqual(['across', 'up']);
+    });
+
+    test('the choice is dressed exactly as the player dresses its angle unit, on a row that paints nothing', async ({ page }) => {
         await setupBoard(page);
         await addSteeringModel(page);
         await addSteeringWheel(page, 'car');
@@ -188,27 +246,13 @@ test.describe('steering wheel component', () => {
         await page.waitForTimeout(400);
         await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
         await page.waitForTimeout(500);
-        const popup = page.locator('.mdl-shape-overlay-popup').last();
-        const modeButtons = popup.locator('.shape-term-mode .dx-button');
-        await expect(modeButtons).toHaveCount(2);
-        const icons = await modeButtons.evaluateAll(elements => elements.map(element => element.querySelector('i')?.className ?? ''));
-        expect(icons[0]).toContain('fa-angle');
-        expect(icons[1]).toContain('fa-arrow-up-right');
-        await expect(popup.locator('.shape-term-extra-term')).toHaveCount(0);
-        await modeButtons.nth(1).click();
+        const rowBackground = await page.evaluate(() => getComputedStyle(document.querySelector('.mdl-shape-overlay-popup .term-packed-control')).backgroundColor);
+        expect(rowBackground).toBe('rgba(0, 0, 0, 0)');
+        await page.keyboard.press('Escape');
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wheel')));
+        await page.waitForTimeout(400);
+        await page.locator('.shape-context-toolbar.visible .mdl-component-settings-selector').click();
         await page.waitForTimeout(500);
-        expect(await page.evaluate(() => shell.board.shapes.getByName('Wheel').properties.turnedBy)).toBe('orientation');
-        await expect(page.locator('.mdl-shape-overlay-popup').last().locator('.shape-term-extra-term')).toHaveCount(1);
-        await page.locator('.mdl-shape-overlay-popup').last().locator('.shape-term-mode .dx-button').first().click();
-        await page.waitForTimeout(500);
-        expect(await page.evaluate(() => shell.board.shapes.getByName('Wheel').properties.turnedBy)).toBe('angle');
-        await expect(page.locator('.mdl-shape-overlay-popup').last().locator('.shape-term-extra-term')).toHaveCount(0);
-    });
-
-    test('the choice is dressed exactly as the player dresses its angle unit, on a row that paints nothing', async ({ page }) => {
-        await setupBoard(page);
-        await addSteeringModel(page);
-        await addSteeringWheel(page, 'car');
         const readGroup = () => page.evaluate(() => {
             const groups = Array.from(document.querySelectorAll('.mdl-pill-group'));
             const group = groups[groups.length - 1];
@@ -222,20 +266,14 @@ test.describe('steering wheel component', () => {
                 pill: !!group.querySelector('.mdl-pill')
             };
         });
+        const wheel = await readGroup();
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
         await page.click('#independentDropDown');
         await page.waitForTimeout(700);
         const player = await readGroup();
-        await page.keyboard.press('Escape');
-        await page.waitForTimeout(300);
-        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wheel')));
-        await page.waitForTimeout(400);
-        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
-        await page.waitForTimeout(500);
-        const wheel = await readGroup();
         expect(wheel).toEqual(player);
         expect(wheel.background).toBe('rgba(0, 0, 0, 0)');
-        const rowBackground = await page.evaluate(() => getComputedStyle(document.querySelector('.mdl-shape-overlay-popup .term-packed-control')).backgroundColor);
-        expect(rowBackground).toBe('rgba(0, 0, 0, 0)');
     });
 
     test('the row carries the colour of the mark, and every part of it sits on one line', async ({ page }) => {
@@ -258,7 +296,7 @@ test.describe('steering wheel component', () => {
             const swatch = document.querySelector('.mdl-shape-overlay-popup .shape-term-color .mdl-color-picker-button-icon');
             return { classes: parts.map(part => part.className.split(' ')[0]), centres: centres, swatchColour: getComputedStyle(swatch).color };
         });
-        expect(row.classes).toEqual(['shape-term-mode', 'shape-term-term', 'shape-term-color']);
+        expect(row.classes).toEqual(['shape-term-term', 'shape-term-color']);
         expect(Math.max(...row.centres) - Math.min(...row.centres)).toBeLessThanOrEqual(1);
         expect(row.swatchColour).toBe('rgb(0, 165, 255)');
     });

@@ -5,6 +5,7 @@ var ComponentShapeToolbarMixin = {
         const items = resolveShapeToolbarBaseItems(this, ComponentShapeToolbarMixin.createToolbar);
         this._componentTermControls = {};
         this._componentTermsControls = {};
+        this._componentModeDropdownElements = {};
         items.push(
             {
                 location: "center",
@@ -17,6 +18,16 @@ var ComponentShapeToolbarMixin = {
             {
                 location: "center",
                 template: () => $('<div class="toolbar-separator">|</div>')
+            },
+            // How a row is read stands beside the row rather than on it, so the row shows the terms it
+            // names and nothing else. The toolbar is built before the shape is told which object it
+            // draws, so the place is taken here and the keys are put in it once that is known.
+            {
+                location: "center",
+                template: () => {
+                    this._componentModeItemElement = $('<div class="mdl-component-mode-item"></div>');
+                    return this._componentModeItemElement;
+                }
             },
             {
                 location: "center",
@@ -57,6 +68,85 @@ var ComponentShapeToolbarMixin = {
             return TermControl.directionModes;
         return parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons[index], hint: value }));
     },
+    // A parameter another one names as the way it is read — an angle or an orientation — is chosen
+    // once, from a key of its own, however many rows are read that way.
+    getComponentModeParameters() {
+        const modeParameters = [];
+        for (const parameter of this.getParametersByCategory(["model", "orbits"])) {
+            const modeParameter = this.getComponentParameter(parameter.modeParameter ?? "");
+            if (modeParameter && modeParameter.enumValues && !modeParameters.some(entry => entry.id === modeParameter.id))
+                modeParameters.push(modeParameter);
+        }
+        return modeParameters;
+    },
+    getComponentModeValue(modeParameter) {
+        const items = this.buildModeItems(modeParameter);
+        const value = String(this.properties[modeParameter.id] ?? "");
+        return items.some(item => item.value === value) ? value : String(items[0].value);
+    },
+    getComponentModeIcon(modeParameter) {
+        const items = this.buildModeItems(modeParameter);
+        const value = this.getComponentModeValue(modeParameter);
+        return items.find(item => item.value === value)?.icon ?? items[0].icon;
+    },
+    // The second half of a pair is read, shown and edited only while the row is read as a pair.
+    isComponentPairMode(parameter) {
+        const modeParameter = this.getComponentParameter(parameter.modeParameter ?? "");
+        if (!modeParameter || (parameter.pairedParameter ?? "") === "")
+            return false;
+        return this.getComponentModeValue(modeParameter) === String(modeParameter.enumValues[1]);
+    },
+    refreshComponentModeDropDownButtons() {
+        if (!this._componentModeItemElement)
+            return;
+        for (const modeParameter of this.getComponentModeParameters()) {
+            if (!this._componentModeDropdownElements[modeParameter.id])
+                this.createComponentModeDropDownButton(this._componentModeItemElement, modeParameter);
+            this.getDropDownButtonInstance(this._componentModeDropdownElements[modeParameter.id])?.option("icon", this.getComponentModeIcon(modeParameter));
+        }
+    },
+    createComponentModeDropDownButton(itemElement, modeParameter) {
+        const element = $('<div class="mdl-component-mode-selector">');
+        element.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            icon: this.getComponentModeIcon(modeParameter),
+            onInitialized: event => Utils.createTranslatedTooltip(event, "Component Mode Tooltip", this.board.translations, 280),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: this.getShapeOverlayWrapperAttr(),
+                width: "auto",
+                contentTemplate: contentElement => this.buildComponentModeMenu(contentElement, modeParameter)
+            }
+        });
+        element.appendTo(itemElement);
+        this._componentModeDropdownElements[modeParameter.id] = element;
+    },
+    buildComponentModeMenu(contentElement, modeParameter) {
+        $(contentElement).empty();
+        $('<div>').appendTo(contentElement).dxList({
+            dataSource: this.buildModeItems(modeParameter),
+            keyExpr: "value",
+            scrollingEnabled: false,
+            selectionMode: "single",
+            selectedItemKeys: [this.getComponentModeValue(modeParameter)],
+            itemTemplate: (itemData, _, itemElement) => {
+                itemElement[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${itemData.icon}"></i><span class="mdl-dropdown-list-label">${Utils.escapeXmlText(this.board.translations.get(itemData.hint) ?? itemData.hint)}</span></div>`;
+            },
+            onItemClick: event => {
+                this.getDropDownButtonInstance(this._componentModeDropdownElements[modeParameter.id])?.close();
+                this.setComponentModeValue(modeParameter, event.itemData.value);
+            }
+        });
+    },
+    setComponentModeValue(modeParameter, value) {
+        if (this.getComponentModeValue(modeParameter) === String(value))
+            return;
+        this.setPropertyCommand(modeParameter.id, value);
+        this.board.markDirty(this);
+        this.refreshComponentToolbarControls();
+    },
     // An object that paints a background, a plot and an axis names them the way the chart does, and
     // is offered the same three colours under the same labels and icons. Anything else a definition
     // colours keeps its own label.
@@ -81,15 +171,25 @@ var ComponentShapeToolbarMixin = {
         this.refreshModelData();
     },
     // The key reads the model the object is bound to, which is the terms it names one by one. A list
-    // of terms is as long as the reader made it, so it is read in the menu rather than on the key.
+    // of terms is as long as the reader made it, so it is read in the menu rather than on the key. A
+    // row read as a pair names two, and shows both; read as a single value it shows the one.
+    getComponentModelButtonProperties() {
+        const properties = [];
+        for (const parameter of this.getParametersByCategory(["model"]).filter(entry => entry.valueType === "variable")) {
+            properties.push(parameter.id);
+            if (this.isComponentPairMode(parameter))
+                properties.push(parameter.pairedParameter);
+        }
+        return properties;
+    },
     renderComponentModelButtonTemplate(element) {
-        const modelParameters = this.getParametersByCategory(["model"]).filter(parameter => parameter.valueType === "variable");
-        if (modelParameters.length === 0) {
+        const modelProperties = this.getComponentModelButtonProperties();
+        if (modelProperties.length === 0) {
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Model</span></span>`;
             return;
         }
-        element.innerHTML = modelParameters
-            .map(parameter => this.createNameButtonTermMarkup(this.formatTermForDisplay(this.properties[parameter.id]), this.properties[parameter.id]))
+        element.innerHTML = modelProperties
+            .map(property => this.createNameButtonTermMarkup(this.formatTermForDisplay(this.properties[property]), this.properties[property]))
             .join(`<i class="fa-light fa-grip-lines-vertical mdl-name-btn-separator"></i>`);
     },
     createComponentModelDropDownButton(itemElement) {
@@ -221,15 +321,16 @@ var ComponentShapeToolbarMixin = {
     },
     createComponentVariableControl(parameter) {
         // A component input takes a model variable or a plain number, so the selector accepts both.
-        // A definition naming a colour parameter gets the swatch for it in the same row.
+        // A definition naming a colour parameter gets the swatch for it in the same row. The way the
+        // row is read is picked from the toolbar, so the row carries only the terms and the colour —
+        // it still watches the choice, since that is what says whether the pair is named.
         const modeParameter = this.getComponentParameter(parameter.modeParameter ?? "");
         const control = this.createTermControl(parameter.id, parameter.label, false, {
             allowTypedValue: true,
             colorProperty: parameter.colorParameter ?? "",
             extraTermProperty: parameter.pairedParameter ?? "",
             modeProperty: modeParameter ? modeParameter.id : "",
-            modeItems: this.buildModeItems(modeParameter),
-            modePairValue: modeParameter ? modeParameter.enumValues[1] : ""
+            showExtraTerm: () => this.isComponentPairMode(parameter)
         });
         this._componentTermControls[parameter.id] = this.termFormControls[parameter.id];
         return control;
@@ -352,6 +453,7 @@ var ComponentShapeToolbarMixin = {
     refreshComponentToolbarControls() {
         if (!this._componentModelDropdownElement)
             return;
+        this.refreshComponentModeDropDownButtons();
         const buttonContentElement = this._componentModelDropdownElement.find(".dx-button-content")[0];
         if (buttonContentElement)
             this.renderComponentModelButtonTemplate(buttonContentElement);
