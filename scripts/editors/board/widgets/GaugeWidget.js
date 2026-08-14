@@ -296,6 +296,7 @@ class GaugeShape extends BaseShape {
         if (!term || !this.board.calculator.isTerm(term)) {
             this.properties.value = value;
             this.board.markDirty(this);
+            this.refreshOpenContextToolbar();
             return;
         }
         const caseNumber = this.getTermCaseNumber("termCase");

@@ -477,6 +477,25 @@ Capabilities: `interaction`
 | --- | --- | --- | --- |
 | `cursor` | string | "pointer" |  |
 
+### `press-and-slide` — Press and slide
+
+A control the reader holds down: pressing keeps the value where it is, sliding the pointer up raises it and down lowers it, by however far it travelled, and letting go lets the value fall back to its resting value a step at a time. It is what a pedal or a throttle needs — nothing is written by pressing alone, and the whole gesture, the fall back included, is one edit.
+
+Capabilities: `interaction`, `linear`, `writes-model`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `variable` | variable | "" |  |
+| `property` | string | "" |  |
+| `unitsPerPixel` | number | 1 |  |
+| `restValue` | number | 0 |  |
+| `returnStep` | number | 0 | min 0 |
+| `intervalMs` | number | 100 | min 20, max 5000 |
+| `minimum` | number | null |  |
+| `maximum` | number | null |  |
+| `hoverFill` | colour | "none" |  |
+| `hoverOpacity` | number | 0.15 | min 0, max 1 |
+
 ### `remember` — Remember
 
 Appends a row to one of the object's memories when the node is clicked. A row carries a label and two numbers, all of them bindings, so a key records what the object held at the moment it was pressed.
@@ -549,6 +568,26 @@ Capabilities: `interaction`, `memory`, `writes-model`
 | `maximumY` | number | null |  |
 
 ## Components
+
+### `accelerator-brake` — Accelerator and brake
+
+The two controls a vehicle is driven with, each travelling with a model variable and each held down by hand: a car's pedals or a boat's pair of throttle levers. Sliding a pedal up presses it further, sliding it down eases off, and letting go lets it come back to rest.
+
+Capabilities: `linear`, `reads-model`, `scale`, `interaction`, `writes-model`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `acceleratorVariable` | variable | "0" |  |
+| `brakeVariable` | variable | "0" |  |
+| `minimum` | number | 0 |  |
+| `maximum` | number | 100 |  |
+| `vehicleType` | string | "car" | car \| boat |
+| `acceleratorReturnStep` | number | 10 | min 0 |
+| `brakeReturnStep` | number | 10 | min 0 |
+| `acceleratorColor` | colour | "token:stroke.accent" |  |
+| `brakeColor` | colour | "token:stroke.warning" |  |
+| `frameColor` | colour | "token:stroke.default" |  |
+| `surfaceColor` | colour | "token:surface.muted" |  |
 
 ### `analogue-clock` — Analogue clock
 

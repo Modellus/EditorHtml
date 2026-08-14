@@ -1359,7 +1359,35 @@ class BaseShape {
         this.properties[name] = value;
         this.tick();
         this.board.markDirty(this);
+        this.refreshOpenContextToolbar();
         this.dispatchEvent("shapeChanged", { property: name, value: value });
+    }
+
+    // A property written by an interaction — a pedal held down, a wheel turned by hand, an axis tick
+    // pulled — never goes through a command, and a command is where Canvas.setShapeProperties brings
+    // the selected shape's toolbar up to date. Without this the toolbar reads what the shape held
+    // before it was touched, which is what a row holding a plain number shows as a stubborn zero.
+    // A drag writes on every pointermove, so the refresh is coalesced to one a frame.
+    refreshOpenContextToolbar() {
+        if (!this.isContextToolbarOpen() || this._contextToolbarRefreshQueued)
+            return;
+        this._contextToolbarRefreshQueued = true;
+        requestAnimationFrame(() => {
+            this._contextToolbarRefreshQueued = false;
+            if (this.isContextToolbarOpen())
+                this.refreshContextToolbarControls();
+        });
+    }
+
+    isContextToolbarOpen() {
+        return this.contextToolbar?.classList.contains("visible") === true;
+    }
+
+    // What the toolbar shows of the shape's own properties, and nothing that only a person editing it
+    // can change: each family adds the controls it built to this.
+    refreshContextToolbarControls() {
+        this.refreshTermReferenceState();
+        this._axisRangeControl?.refresh();
     }
 
     setPropertyCommand(name, value) {

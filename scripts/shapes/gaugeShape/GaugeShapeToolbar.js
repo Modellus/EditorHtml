@@ -86,6 +86,10 @@ var GaugeShapeToolbarMixin = {
             return this.getGaugeRange();
         return { minimum: this.properties.minimum, maximum: this.properties.maximum };
     },
+    refreshContextToolbarControls() {
+        BaseShape.prototype.refreshContextToolbarControls.call(this);
+        this.refreshGaugeScaleControls();
+    },
     refreshGaugeScaleControls() {
         const range = this.getGaugeToolbarRange();
         const autoScale = this.properties.autoScale === true;

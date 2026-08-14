@@ -33,7 +33,8 @@ async function compileMarkup(page, componentType, preset, size, overrides = {}) 
             'circular-gauge': { valueVariable: 'speed', unit: '%' },
             'rotating-vector': { angleVariable: 'angle', lengthVariable: 'radius', lengthScale: 60, showProjections: true },
             'orbit-system': { timeVariable: 'tempo' },
-            'steering-wheel': { angleVariable: 'angle' }
+            'steering-wheel': { angleVariable: 'angle' },
+            'accelerator-brake': { acceleratorVariable: 'speed', brakeVariable: 'angle' }
         };
         Object.assign(parameters, modelParameters[componentType] ?? {}, overrides);
         const compilation = compiler.compile(definition, { width: size, height: size, parameters: parameters, tokens: new BlockTokens(preset) });
@@ -59,6 +60,15 @@ test.describe('component visual snapshots', () => {
             await addModel(page);
             const markup = await compileMarkup(page, 'steering-wheel', 'standard', 200, { wheelType: wheelType });
             expect(markup).toMatchSnapshot(`steering-wheel-${wheelType.replace(' ', '-')}.svg`);
+        });
+    }
+
+    for (const vehicleType of ['car', 'boat']) {
+        test(`the accelerator and brake of a ${vehicleType} renders identical markup for the same values`, async ({ page }) => {
+            await setupBoard(page);
+            await addModel(page);
+            const markup = await compileMarkup(page, 'accelerator-brake', 'standard', 200, { vehicleType: vehicleType });
+            expect(markup).toMatchSnapshot(`accelerator-brake-${vehicleType.replace(' ', '-')}.svg`);
         });
     }
 

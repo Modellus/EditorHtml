@@ -412,6 +412,99 @@ test.describe('reusable blocks build several objects', () => {
         }
     });
 
+    // The two controls a vehicle is driven with, each drawn the way that vehicle works it: only the
+    // parts the named vehicle owns are compiled, and each control travels with its own term alone.
+    test('the accelerator and the brake each travel with their own term, on whichever vehicle is named', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => modellus.shape.addExpression('Driving'));
+        await page.waitForTimeout(300);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Driving').properties.expression = 'throttle=70\\\\braking=40';
+            shell.reset();
+        });
+        await page.waitForTimeout(400);
+        const measured = await page.evaluate(() => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
+            const validator = new BlockValidator(BlockRegistry, compiler);
+            validator.setCalculator(shell.board.calculator);
+            const definition = BlockObjects.createComponentInstance('accelerator-brake');
+            const build = (vehicleType, accelerator, brake) => {
+                const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('accelerator-brake'), {
+                    vehicleType: vehicleType,
+                    acceleratorVariable: accelerator,
+                    brakeVariable: brake,
+                    unit: '%'
+                });
+                const context = { width: 200, height: 200, parameters: parameters, tokens: new BlockTokens('standard') };
+                const compilation = compiler.compile(definition, context);
+                const flattened = BlockRenderer.flatten(compilation.nodes);
+                const part = name => flattened.find(node => node.id.endsWith(`:${name}`)) ?? null;
+                return {
+                    errors: validator.validate(definition, context).errors.map(error => error.code),
+                    parts: flattened.map(node => node.id.split(':').pop()),
+                    brakePadY: Number(part('car-brake-pad')?.attributes.y),
+                    acceleratorPadY: Number(part('car-accelerator-pad')?.attributes.y),
+                    astern: ['cx', 'cy', 'r'].map(attribute => Number(part('astern-lever-knob')?.attributes[attribute])),
+                    ahead: ['cx', 'cy', 'r'].map(attribute => Number(part('ahead-lever-knob')?.attributes[attribute])),
+                    asternSlot: Number(part('astern-lever-arm')?.attributes.y1),
+                    aheadSlot: Number(part('ahead-lever-arm')?.attributes.y1),
+                    presses: flattened.filter(node => node.behaviours?.some(behaviour => behaviour.type === 'press-and-slide'))
+                        .map(node => ({
+                            id: node.id.split(':').pop(),
+                            input: node.behaviours[0].input,
+                            box: ['x', 'y', 'width', 'height'].map(attribute => Number(node.attributes[attribute]))
+                        }))
+                };
+            };
+            return {
+                carAtRest: build('car', '0', '0'),
+                carHalfway: build('car', '50', '50'),
+                carPastTheMaximum: build('car', '150', '0'),
+                carFromTheModel: build('car', 'throttle', 'braking'),
+                boatAtRest: build('boat', '0', '0'),
+                boat: build('boat', '50', '50')
+            };
+        });
+        for (const drawing of Object.values(measured))
+            expect(drawing.errors).toEqual([]);
+        expect(measured.carAtRest.brakePadY).toBe(108);
+        expect(measured.carAtRest.acceleratorPadY).toBe(96);
+        expect(measured.carHalfway.brakePadY).toBe(130);
+        expect(measured.carHalfway.acceleratorPadY).toBe(118);
+        expect(measured.carPastTheMaximum.brakePadY).toBe(108);
+        expect(measured.carPastTheMaximum.acceleratorPadY).toBe(140);
+        expect(measured.carFromTheModel.presses.map(press => press.id)).toEqual(['brake-press', 'accelerator-press']);
+        // A pixel of the 200px drawing is worth a two-hundredth of the 0…100 range, so a slide across
+        // the whole of it covers the whole range.
+        expect(measured.carFromTheModel.presses[0].input).toMatchObject({ variable: 'braking', property: 'brakeVariable', unitsPerPixel: 0.5, restValue: 0, returnStep: 10, intervalMs: 100, minimum: 0, maximum: 100 });
+        expect(measured.carFromTheModel.presses[1].input).toMatchObject({ variable: 'throttle', property: 'acceleratorVariable', unitsPerPixel: 0.5, returnStep: 10 });
+        expect(measured.carFromTheModel.parts).toContain('car-brake-pad');
+        expect(measured.carFromTheModel.parts).not.toContain('binnacle');
+        // Either vehicle is pressed on the half of the drawing the control it holds is drawn in: the
+        // brake on the left and the accelerator on the right.
+        expect(measured.carFromTheModel.presses.map(press => press.box)).toEqual([[0, 0, 100, 200], [100, 0, 100, 200]]);
+        expect(measured.boat.presses.map(press => press.box)).toEqual([[0, 0, 100, 200], [100, 0, 100, 200]]);
+        expect(measured.boat.parts).toEqual(expect.arrayContaining(['astern-lever-knob', 'ahead-lever-knob']));
+        expect(measured.boat.parts).not.toContain('car-brake-pad');
+        // The boat's levers swing towards and away from the reader rather than across the drawing, so
+        // at rest the pair stands alike, and neither knob ever leaves the column it is drawn in.
+        expect(measured.boatAtRest.astern).toEqual([66, ...measured.boatAtRest.ahead.slice(1)]);
+        expect(measured.boatAtRest.ahead[1]).toBeCloseTo(85.3, 1);
+        expect(measured.boatAtRest.ahead[2]).toBeCloseTo(12, 5);
+        expect(measured.boat.astern[0]).toBe(66);
+        expect(measured.boat.ahead[0]).toBe(134);
+        // Pushed ahead, the lever leans away: it reaches further up the drawing and is drawn smaller.
+        expect(measured.boat.ahead[1]).toBeCloseTo(74.1, 1);
+        expect(measured.boat.ahead[2]).toBeCloseTo(10.1, 1);
+        // Pulled astern, it comes towards the reader: lower down the drawing and drawn larger.
+        expect(measured.boat.astern[1]).toBeCloseTo(103.1, 1);
+        expect(measured.boat.astern[2]).toBeCloseTo(13.9, 1);
+        // The shaft moves along its slot as it leans, forwards for ahead and back for astern.
+        expect(measured.boat.asternSlot).toBeGreaterThan(158);
+        expect(measured.boat.aheadSlot).toBeLessThan(158);
+        expect(measured.boatAtRest.aheadSlot).toBeCloseTo(158, 5);
+    });
+
     test('the compass rose turns with its rotation variable while the needle keeps its heading', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => modellus.shape.addExpression('Compass equations'));

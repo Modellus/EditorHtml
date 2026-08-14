@@ -14,13 +14,13 @@ Five layers, one registry, no runtime code evaluation.
 Primitives   circle, rect, ellipse, line, polyline, polygon, arc, ring, path, text, image, group
 Modifiers    translate, rotate, scale, mirror, opacity, visibility, stroke, fill, z-order, repeat
 Behaviours   selectable, draggable, resizable, rotatable, hoverable, tooltip, drag-angle,
-             drag-rotate, drag-axis-tick, follow-pointer, clickable, remember, forget,
-             track-pointer, …
+             drag-rotate, drag-axis-tick, follow-pointer, clickable, press-and-slide,
+             remember, forget, track-pointer, …
 Bindings     constant | parameter | variable | expression | formula | token | format | memory
 Components   dial-face, tick-ring, label-ring, pointer-hand, pointer-ring, plot-grid, plot-axes,
              plot-crosshair, memory-list, memory-trace, analogue-clock, compass, speedometer,
-             circular-gauge, rotating-vector, orbit-system, steering-wheel, calculator,
-             mouse-tracker, + custom components
+             circular-gauge, rotating-vector, orbit-system, steering-wheel,
+             accelerator-brake, calculator, mouse-tracker, + custom components
 ```
 
 ### How a drawing is made
@@ -218,8 +218,9 @@ BlockRegistry.register({
 
 A behaviour with an `attach` function is applied by `BlockRenderer` right after the SVG is
 written. A behaviour without one is handled by the host shape
-(`ComponentShape.attachBlockBehaviour`) — that is where `drag-angle`, `drag-rotate` and
-`clickable` live, because they need the board, the calculator and the shape's coordinate system.
+(`ComponentShape.attachBlockBehaviour`) — that is where `drag-angle`, `drag-rotate`,
+`clickable` and `press-and-slide` live, because they need the board, the calculator and the shape's
+coordinate system.
 `selectable`, `draggable`, `resizable` and `rotatable` are registered for discovery only:
 every component gets them from `BaseShape`.
 
@@ -253,9 +254,9 @@ deliberately do not have it.
 A component that only composes other blocks does not need a `create` function at all. It is a
 JSON document in `scripts/blocks/definitions/`, registered by `BlockDefinitionLoader`. Every
 component in the Components palette — analogue clock, compass, speedometer, circular gauge,
-rotating vector, orbit system — is defined this way. Only `dial-face`, `tick-ring`, `label-ring`,
-`pointer-hand` and `pointer-ring` stay in code, because they generate geometry per index rather
-than compose.
+rotating vector, orbit system, steering wheel, accelerator and brake — is defined this way. Only
+`dial-face`, `tick-ring`, `label-ring`, `pointer-hand` and `pointer-ring` stay in code, because they
+generate geometry per index rather than compose.
 
 ```json
 {
@@ -410,6 +411,47 @@ both axes, its height on the left in the colour of the run it belongs to and its
 on the axis below. Every one of those readouts is rounded to `$precision`, the reserved parameter
 carrying the decimals the model is read to, so a value beside a drawing reads the way the same value
 reads everywhere else on the board.
+
+**A control the reader holds down is `press-and-slide`.** A pedal is not turned and not pointed at:
+it is held, and how far it is pressed is how far the foot has moved it from where it took hold.
+Pressing writes nothing — the value stays exactly where it was, for as long as the pointer is down —
+and sliding up raises it by `unitsPerPixel` for every pixel travelled, sliding down lowers it, both
+clamped between `minimum` and `maximum`. The pixels are the object's own, read through
+`getComponentLocalPoint`, so the definition sets the reach by naming what one of them is worth: the
+pedals pass `(maximum − minimum) / artSide`, which makes a slide across the whole drawing exactly the
+whole range, at any size the object is drawn.
+
+Letting go is the other half. Nothing holds a pedal down once the foot is off it, so the value walks
+back to `restValue` by `returnStep` every `intervalMs` — a tenth of a second for the pedals — and
+stops the moment it is there; a `returnStep` of zero leaves it where it was released, which is the
+control that stays put. Pressing again catches it wherever the fall has got to. It writes through the
+same pair of paths a drag does: a model term through the calculator, or the object's own parameter
+when the row holds a plain number, and the whole gesture — the press, the slide and the fall back —
+is a **single** undo entry, because the edit is not closed until the value has come to rest. What the
+control holds is read again on every step: a gesture writing a property cannot read it from the input
+it was started with, because that one was resolved when the drawing was written and the gesture has
+already moved past it.
+
+**An interaction refreshes the toolbar it is being watched from.** A value the reader writes by hand
+goes straight into the shape — `setProperty`, not a command — and the command path is the one place
+`Canvas.setShapeProperties` brings the selected shape's toolbar up to date. So `BaseShape.setProperty`
+asks the shape to refresh its own toolbar when one is open, coalesced to one refresh a frame because a
+drag writes on every pointermove; `refreshContextToolbarControls` is what each family adds its controls
+to, and a component adds the key that reads the model. It matters most here because an object built
+from blocks is the only shape whose toolbar shows a *value* rather than the name of the term holding
+one: a row naming no term holds the number itself, so a pedal pressed with the toolbar open would
+otherwise leave it reading the zero the pedal started at. The four shapes that write a property from a
+drag without going through `setProperty` — the gauge's needle, the slider's handle and tick, the
+referential's tick — call the same refresh where they write.
+
+**A value is read where its own control is drawn.** A `variable` parameter may declare a
+**`valueAnchor`** — a point in the object's box as a fraction of its width and height — and that
+gives its row in the toolbar the same eye every term on the board is shown with: turning it on draws
+`term = value` at that point, in the badge, the font and the case icon `TermDisplay` draws every other
+term label with, and in the colour the parameter's own `colorParameter` names. The object draws no
+readout of its own for it: the accelerator and brake declare one anchor per control, so each value
+stands over the pedal it belongs to and both are turned on and off where the terms are named. A
+parameter without an anchor has nowhere to put a label, so its row does not offer the eye.
 
 **What the pointer is over is not something the object keeps.** `follow-pointer` reports where the
 pointer is, in the units the node is scaled in, into parameters the definition names — and the host

@@ -151,6 +151,29 @@ var BlockBehaviours = {
     });
 
     registry.register({
+        type: "press-and-slide",
+        category: "behaviour",
+        displayName: "Press and slide",
+        description: "A control the reader holds down: pressing keeps the value where it is, sliding the pointer up raises it and down lowers it, by however far it travelled, and letting go lets the value fall back to its resting value a step at a time. It is what a pedal or a throttle needs — nothing is written by pressing alone, and the whole gesture, the fall back included, is one edit.",
+        tags: ["interaction", "press", "hold", "slide", "input", "pedal", "throttle"],
+        capabilities: ["interaction", "linear", "writes-model"],
+        inputSchema: {
+            properties: {
+                variable: { valueType: "variable", defaultValue: "", label: "Variable", bindable: false },
+                property: { valueType: "string", defaultValue: "", label: "Component property", description: "Property written when the variable holds a plain number instead of naming a model term." },
+                unitsPerPixel: { valueType: "number", defaultValue: 1, label: "Units per pixel", description: "How much the value changes for every pixel the pointer travels upwards, so the node itself says how far a drag across it reaches." },
+                restValue: { valueType: "number", defaultValue: 0, label: "Resting value", description: "What the control falls back to once it is let go." },
+                returnStep: { valueType: "number", defaultValue: 0, minimum: 0, label: "Return step", description: "How much of the way back is covered each interval after the pointer comes up. Left at zero the value stays where it was released." },
+                intervalMs: { valueType: "number", defaultValue: 100, minimum: 20, maximum: 5000, label: "Interval", unit: "ms" },
+                minimum: { valueType: "number", defaultValue: null, label: "Minimum" },
+                maximum: { valueType: "number", defaultValue: null, label: "Maximum" },
+                hoverFill: { valueType: "colour", defaultValue: "none", label: "Hover fill", description: "Colour the node takes while the pointer rests on it, so an otherwise invisible press area shows itself." },
+                hoverOpacity: { valueType: "number", defaultValue: 0.15, minimum: 0, maximum: 1, label: "Hover opacity" }
+            }
+        }
+    });
+
+    registry.register({
         type: "remember",
         category: "behaviour",
         displayName: "Remember",

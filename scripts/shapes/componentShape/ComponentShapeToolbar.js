@@ -56,11 +56,6 @@ var ComponentShapeToolbarMixin = {
     getParametersByCategory(categories) {
         return this.getEditableParameters().filter(parameter => categories.includes(parameter.category ?? "general"));
     },
-    getComponentParameter(parameterId) {
-        if (parameterId === "")
-            return null;
-        return BlockObjects.getComponentParameters(this.getComponentType()).find(parameter => parameter.id === parameterId) ?? null;
-    },
     buildModeItems(parameter) {
         if (!parameter)
             return [];
@@ -324,8 +319,10 @@ var ComponentShapeToolbarMixin = {
         // A definition naming a colour parameter gets the swatch for it in the same row. The way the
         // row is read is picked from the toolbar, so the row carries only the terms and the colour —
         // it still watches the choice, since that is what says whether the pair is named.
+        // A parameter saying where its value is read carries the eye that shows it, the way a body's
+        // terms do; one that does not has nowhere to draw the label, so the row does not offer it.
         const modeParameter = this.getComponentParameter(parameter.modeParameter ?? "");
-        const control = this.createTermControl(parameter.id, parameter.label, false, {
+        const control = this.createTermControl(parameter.id, parameter.label, !!parameter.valueAnchor, {
             allowTypedValue: true,
             colorProperty: parameter.colorParameter ?? "",
             extraTermProperty: parameter.pairedParameter ?? "",
@@ -462,6 +459,14 @@ var ComponentShapeToolbarMixin = {
         for (const control of Object.values(this._componentTermsControls ?? {}))
             control.refresh();
         this._axisRangeControl?.refresh();
+    },
+    // An object built from blocks is the one shape whose toolbar shows a value rather than only the
+    // name of the term holding it: a row naming no term holds the number itself, and an interaction
+    // writes that number. So the key that reads the model, and the row behind it, are refreshed
+    // whenever the object writes one of its own parameters.
+    refreshContextToolbarControls() {
+        BaseShape.prototype.refreshContextToolbarControls.call(this);
+        this.refreshComponentToolbarControls();
     },
     showContextToolbar() {
         this.refreshComponentToolbarControls();

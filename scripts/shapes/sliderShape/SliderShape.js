@@ -499,6 +499,7 @@ class SliderShape extends BaseShape {
             this.properties.value = adjustedValue;
             this.updateSliderState();
             this.board.markDirty(this);
+            this.refreshOpenContextToolbar();
             return;
         }
         const caseNumber = this.getCaseNumber();
@@ -773,6 +774,7 @@ class SliderShape extends BaseShape {
                     return;
                 this.properties.maximum = minimum + newRange;
                 this.board.markDirty(this);
+                this.refreshOpenContextToolbar();
             },
             onEnd: () => {
                 this._tickDragState = null;

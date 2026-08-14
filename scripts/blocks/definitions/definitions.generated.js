@@ -3,6 +3,846 @@
 BlockDefinitionLoader.registerAll([
     {
         "schemaVersion": "1.0.0",
+        "type": "accelerator-brake",
+        "category": "component",
+        "displayName": "Accelerator and brake",
+        "description": "The two controls a vehicle is driven with, each travelling with a model variable and each held down by hand: a car's pedals or a boat's pair of throttle levers. Sliding a pedal up presses it further, sliding it down eases off, and letting go lets it come back to rest.",
+        "icon": "fa-light fa-shoe-prints",
+        "tags": [
+            "object",
+            "accelerator",
+            "throttle",
+            "brake",
+            "pedal",
+            "vehicle",
+            "car",
+            "boat"
+        ],
+        "capabilities": [
+            "linear",
+            "reads-model",
+            "scale",
+            "interaction",
+            "writes-model"
+        ],
+        "preview": {
+            "parameters": {
+                "acceleratorVariable": "72",
+                "brakeVariable": "20"
+            }
+        },
+        "parameters": [
+            {
+                "id": "acceleratorVariable",
+                "label": "Accelerator",
+                "valueType": "variable",
+                "defaultValue": "0",
+                "category": "model",
+                "colorParameter": "acceleratorColor",
+                "valueAnchor": {
+                    "x": 0.75,
+                    "y": 0.07
+                },
+                "description": "The term the accelerator is pressed by, read against the minimum and the maximum: at the minimum the control is at rest, at the maximum it is fully applied. Holding the pedal and sliding up or down writes this term, and a drag across the whole drawing covers the whole range."
+            },
+            {
+                "id": "brakeVariable",
+                "label": "Brake",
+                "valueType": "variable",
+                "defaultValue": "0",
+                "category": "model",
+                "colorParameter": "brakeColor",
+                "valueAnchor": {
+                    "x": 0.25,
+                    "y": 0.07
+                },
+                "description": "The term the brake is pressed by, read against the same minimum and maximum as the accelerator, and written the same way: hold the brake and slide up or down."
+            },
+            {
+                "id": "minimum",
+                "label": "Minimum",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "scale",
+                "description": "The value both controls are at rest at."
+            },
+            {
+                "id": "maximum",
+                "label": "Maximum",
+                "valueType": "number",
+                "defaultValue": 100,
+                "category": "scale",
+                "description": "The value both controls are fully applied at."
+            },
+            {
+                "id": "vehicleType",
+                "label": "Vehicle",
+                "valueType": "string",
+                "defaultValue": "car",
+                "enumValues": [
+                    "car",
+                    "boat"
+                ],
+                "enumIcons": [
+                    "fa-light fa-car",
+                    "fa-light fa-sailboat"
+                ],
+                "category": "display",
+                "description": "Which pair of controls is drawn: a car's brake and accelerator pedals side by side, or a boat's pair of binnacle levers, each swinging in depth: pushed away to go ahead, pulled back towards you to come astern."
+            },
+            {
+                "id": "acceleratorReturnStep",
+                "label": "Accelerator return",
+                "valueType": "number",
+                "defaultValue": 10,
+                "category": "interaction",
+                "minimum": 0,
+                "description": "How much the accelerator comes back every tenth of a second once it is let go, until it is at the minimum again — the spring that lifts a pedal the foot is off. Zero leaves it wherever it was released."
+            },
+            {
+                "id": "brakeReturnStep",
+                "label": "Brake return",
+                "valueType": "number",
+                "defaultValue": 10,
+                "category": "interaction",
+                "minimum": 0,
+                "description": "How much the brake comes back every tenth of a second once it is let go, until it is at the minimum again. Zero leaves it wherever it was released."
+            },
+            {
+                "id": "acceleratorColor",
+                "label": "Accelerator colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.accent",
+                "category": "model",
+                "userEditable": false,
+                "description": "Colour of the accelerator itself, of the area that presses it and of the value read above it. It is picked on the row that names the term rather than on a colour menu that would name the same thing twice."
+            },
+            {
+                "id": "brakeColor",
+                "label": "Brake colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.warning",
+                "category": "model",
+                "userEditable": false,
+                "description": "Colour of the brake itself, of the area that presses it and of the value read above it, picked on the row that names the term."
+            },
+            {
+                "id": "frameColor",
+                "label": "Frame colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.default",
+                "category": "style",
+                "description": "The parts that do not move: the pedal box and the binnacle."
+            },
+            {
+                "id": "surfaceColor",
+                "label": "Surface colour",
+                "valueType": "colour",
+                "defaultValue": "token:surface.muted",
+                "category": "style",
+                "description": "The faces the moving parts are mounted on: the pedal hinges and the boat's housing."
+            }
+        ],
+        "locals": [
+            {
+                "id": "w",
+                "value": {
+                    "parameter": "$width"
+                }
+            },
+            {
+                "id": "h",
+                "value": {
+                    "parameter": "$height"
+                }
+            },
+            {
+                "id": "artSide",
+                "formula": "\\max\\left(1,\\min\\left(w,h\\right)\\right)"
+            },
+            {
+                "id": "k",
+                "formula": "\\frac{artSide}{200}"
+            },
+            {
+                "id": "dx",
+                "formula": "\\frac{w-artSide}{2}"
+            },
+            {
+                "id": "dy",
+                "formula": "\\frac{h-artSide}{2}"
+            },
+            {
+                "id": "halfSide",
+                "formula": "\\frac{artSide}{2}"
+            },
+            {
+                "id": "acceleratorValue",
+                "value": {
+                    "parameter": "acceleratorVariable",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "brakeValue",
+                "value": {
+                    "parameter": "brakeVariable",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "span",
+                "formula": "maximum-minimum"
+            },
+            {
+                "id": "unitsPerPixel",
+                "value": {
+                    "choose": {
+                        "parameter": "span"
+                    },
+                    "then": {
+                        "formula": "\\frac{span}{artSide}"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "acceleratorRatio",
+                "value": {
+                    "choose": {
+                        "parameter": "span"
+                    },
+                    "then": {
+                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{acceleratorValue-minimum}{maximum-minimum}\\right)\\right)"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "brakeRatio",
+                "value": {
+                    "choose": {
+                        "parameter": "span"
+                    },
+                    "then": {
+                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{brakeValue-minimum}{maximum-minimum}\\right)\\right)"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "isCar",
+                "value": {
+                    "choose": {
+                        "parameter": "vehicleType"
+                    },
+                    "equals": "car",
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "isBoat",
+                "value": {
+                    "choose": {
+                        "parameter": "vehicleType"
+                    },
+                    "equals": "boat",
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "acceleratorPressX",
+                "formula": "dx+halfSide"
+            },
+            {
+                "id": "carBrakePadY",
+                "formula": "108+brakeRatio\\cdot44"
+            },
+            {
+                "id": "carBrakeArmY",
+                "formula": "carBrakePadY+11"
+            },
+            {
+                "id": "carAcceleratorPadY",
+                "formula": "96+acceleratorRatio\\cdot44"
+            },
+            {
+                "id": "carAcceleratorArmY",
+                "formula": "carAcceleratorPadY+20"
+            },
+            {
+                "id": "aheadTilt",
+                "formula": "\\frac{acceleratorRatio\\cdot30\\cdot\\pi}{180}"
+            },
+            {
+                "id": "aheadSlotY",
+                "formula": "158-14\\cdot\\frac{\\sin\\left(aheadTilt\\right)}{\\cos\\left(aheadTilt\\right)}"
+            },
+            {
+                "id": "aheadKnobY",
+                "formula": "182.25-112\\cdot\\cos\\left(aheadTilt-\\frac{30\\cdot\\pi}{180}\\right)"
+            },
+            {
+                "id": "aheadNearness",
+                "formula": "1-0.62\\cdot\\sin\\left(aheadTilt\\right)"
+            },
+            {
+                "id": "aheadKnobRadius",
+                "formula": "12\\cdot aheadNearness"
+            },
+            {
+                "id": "aheadArmWidth",
+                "formula": "11\\cdot aheadNearness"
+            },
+            {
+                "id": "asternTilt",
+                "formula": "0-\\frac{brakeRatio\\cdot30\\cdot\\pi}{180}"
+            },
+            {
+                "id": "asternSlotY",
+                "formula": "158-14\\cdot\\frac{\\sin\\left(asternTilt\\right)}{\\cos\\left(asternTilt\\right)}"
+            },
+            {
+                "id": "asternKnobY",
+                "formula": "182.25-112\\cdot\\cos\\left(asternTilt-\\frac{30\\cdot\\pi}{180}\\right)"
+            },
+            {
+                "id": "asternNearness",
+                "formula": "1-0.62\\cdot\\sin\\left(asternTilt\\right)"
+            },
+            {
+                "id": "asternKnobRadius",
+                "formula": "12\\cdot asternNearness"
+            },
+            {
+                "id": "asternArmWidth",
+                "formula": "11\\cdot asternNearness"
+            }
+        ],
+        "root": {
+            "id": "accelerator-brake",
+            "type": "group",
+            "children": [
+                {
+                    "id": "art",
+                    "type": "group",
+                    "modifiers": [
+                        {
+                            "type": "translate",
+                            "dx": {
+                                "parameter": "dx"
+                            },
+                            "dy": {
+                                "parameter": "dy"
+                            }
+                        },
+                        {
+                            "type": "scale",
+                            "scaleX": {
+                                "parameter": "k"
+                            },
+                            "scaleY": {
+                                "parameter": "k"
+                            },
+                            "centerX": 0,
+                            "centerY": 0
+                        }
+                    ],
+                    "children": [
+                        {
+                            "id": "car",
+                            "type": "group",
+                            "when": {
+                                "parameter": "isCar"
+                            },
+                            "children": [
+                                {
+                                    "id": "car-bracket",
+                                    "type": "line",
+                                    "properties": {
+                                        "x1": 28,
+                                        "y1": 26,
+                                        "x2": 172,
+                                        "y2": 26,
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 5,
+                                        "strokeLinecap": "round"
+                                    },
+                                    "bindings": {
+                                        "stroke": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "car-floor",
+                                    "type": "line",
+                                    "properties": {
+                                        "x1": 10,
+                                        "y1": 186,
+                                        "x2": 190,
+                                        "y2": 186,
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 5,
+                                        "strokeLinecap": "round"
+                                    },
+                                    "bindings": {
+                                        "stroke": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "car-brake-arm",
+                                    "type": "line",
+                                    "properties": {
+                                        "x1": 52,
+                                        "y1": 26,
+                                        "x2": 52,
+                                        "y2": 119,
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 8,
+                                        "strokeLinecap": "round"
+                                    },
+                                    "bindings": {
+                                        "y2": {
+                                            "parameter": "carBrakeArmY"
+                                        },
+                                        "stroke": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "car-brake-pad",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 24,
+                                        "y": 108,
+                                        "width": 56,
+                                        "height": 22,
+                                        "cornerRadius": 5,
+                                        "fill": "token:stroke.warning",
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 3
+                                    },
+                                    "bindings": {
+                                        "y": {
+                                            "parameter": "carBrakePadY"
+                                        },
+                                        "fill": {
+                                            "parameter": "brakeColor"
+                                        },
+                                        "stroke": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "car-brake-hinge",
+                                    "type": "circle",
+                                    "properties": {
+                                        "centerX": 52,
+                                        "centerY": 26,
+                                        "radius": 7,
+                                        "fill": "token:surface.muted",
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 3
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "surfaceColor"
+                                        },
+                                        "stroke": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "car-accelerator-arm",
+                                    "type": "line",
+                                    "properties": {
+                                        "x1": 148,
+                                        "y1": 26,
+                                        "x2": 148,
+                                        "y2": 116,
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 7,
+                                        "strokeLinecap": "round"
+                                    },
+                                    "bindings": {
+                                        "y2": {
+                                            "parameter": "carAcceleratorArmY"
+                                        },
+                                        "stroke": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "car-accelerator-pad",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 134,
+                                        "y": 96,
+                                        "width": 28,
+                                        "height": 40,
+                                        "cornerRadius": 6,
+                                        "fill": "token:stroke.accent",
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 3
+                                    },
+                                    "bindings": {
+                                        "y": {
+                                            "parameter": "carAcceleratorPadY"
+                                        },
+                                        "fill": {
+                                            "parameter": "acceleratorColor"
+                                        },
+                                        "stroke": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "car-accelerator-hinge",
+                                    "type": "circle",
+                                    "properties": {
+                                        "centerX": 148,
+                                        "centerY": 26,
+                                        "radius": 7,
+                                        "fill": "token:surface.muted",
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 3
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "surfaceColor"
+                                        },
+                                        "stroke": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "boat",
+                            "type": "group",
+                            "when": {
+                                "parameter": "isBoat"
+                            },
+                            "children": [
+                                {
+                                    "id": "binnacle",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 14,
+                                        "y": 158,
+                                        "width": 172,
+                                        "height": 34,
+                                        "cornerRadius": 10,
+                                        "fill": "token:surface.muted",
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 4
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "surfaceColor"
+                                        },
+                                        "stroke": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "binnacle-top",
+                                    "type": "ellipse",
+                                    "properties": {
+                                        "centerX": 100,
+                                        "centerY": 158,
+                                        "radiusX": 86,
+                                        "radiusY": 17,
+                                        "fill": "token:surface.muted",
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 4
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "surfaceColor"
+                                        },
+                                        "stroke": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "astern-track",
+                                    "type": "ellipse",
+                                    "properties": {
+                                        "centerX": 66,
+                                        "centerY": 158,
+                                        "radiusX": 7,
+                                        "radiusY": 12,
+                                        "fill": "token:stroke.default",
+                                        "stroke": "none",
+                                        "opacity": 0.28
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "ahead-track",
+                                    "type": "ellipse",
+                                    "properties": {
+                                        "centerX": 134,
+                                        "centerY": 158,
+                                        "radiusX": 7,
+                                        "radiusY": 12,
+                                        "fill": "token:stroke.default",
+                                        "stroke": "none",
+                                        "opacity": 0.28
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "frameColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "astern-lever",
+                                    "type": "group",
+                                    "children": [
+                                        {
+                                            "id": "astern-lever-arm",
+                                            "type": "line",
+                                            "properties": {
+                                                "x1": 66,
+                                                "y1": 158,
+                                                "x2": 66,
+                                                "y2": 85,
+                                                "stroke": "token:stroke.warning",
+                                                "strokeWidth": 11,
+                                                "strokeLinecap": "round"
+                                            },
+                                            "bindings": {
+                                                "y1": {
+                                                    "parameter": "asternSlotY"
+                                                },
+                                                "y2": {
+                                                    "parameter": "asternKnobY"
+                                                },
+                                                "strokeWidth": {
+                                                    "parameter": "asternArmWidth"
+                                                },
+                                                "stroke": {
+                                                    "parameter": "brakeColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "astern-lever-knob",
+                                            "type": "circle",
+                                            "properties": {
+                                                "centerX": 66,
+                                                "centerY": 85,
+                                                "radius": 12,
+                                                "fill": "token:stroke.warning",
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 3
+                                            },
+                                            "bindings": {
+                                                "centerY": {
+                                                    "parameter": "asternKnobY"
+                                                },
+                                                "radius": {
+                                                    "parameter": "asternKnobRadius"
+                                                },
+                                                "fill": {
+                                                    "parameter": "brakeColor"
+                                                },
+                                                "stroke": {
+                                                    "parameter": "frameColor"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "id": "ahead-lever",
+                                    "type": "group",
+                                    "children": [
+                                        {
+                                            "id": "ahead-lever-arm",
+                                            "type": "line",
+                                            "properties": {
+                                                "x1": 134,
+                                                "y1": 158,
+                                                "x2": 134,
+                                                "y2": 85,
+                                                "stroke": "token:stroke.accent",
+                                                "strokeWidth": 11,
+                                                "strokeLinecap": "round"
+                                            },
+                                            "bindings": {
+                                                "y1": {
+                                                    "parameter": "aheadSlotY"
+                                                },
+                                                "y2": {
+                                                    "parameter": "aheadKnobY"
+                                                },
+                                                "strokeWidth": {
+                                                    "parameter": "aheadArmWidth"
+                                                },
+                                                "stroke": {
+                                                    "parameter": "acceleratorColor"
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "id": "ahead-lever-knob",
+                                            "type": "circle",
+                                            "properties": {
+                                                "centerX": 134,
+                                                "centerY": 85,
+                                                "radius": 12,
+                                                "fill": "token:stroke.accent",
+                                                "stroke": "token:stroke.default",
+                                                "strokeWidth": 3
+                                            },
+                                            "bindings": {
+                                                "centerY": {
+                                                    "parameter": "aheadKnobY"
+                                                },
+                                                "radius": {
+                                                    "parameter": "aheadKnobRadius"
+                                                },
+                                                "fill": {
+                                                    "parameter": "acceleratorColor"
+                                                },
+                                                "stroke": {
+                                                    "parameter": "frameColor"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "brake-press",
+                    "type": "rect",
+                    "properties": {
+                        "fill": "none",
+                        "stroke": "none"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "dx"
+                        },
+                        "y": {
+                            "parameter": "dy"
+                        },
+                        "width": {
+                            "parameter": "halfSide"
+                        },
+                        "height": {
+                            "parameter": "artSide"
+                        }
+                    },
+                    "behaviours": [
+                        {
+                            "type": "press-and-slide",
+                            "variable": {
+                                "parameter": "brakeVariable"
+                            },
+                            "property": "brakeVariable",
+                            "unitsPerPixel": {
+                                "parameter": "unitsPerPixel"
+                            },
+                            "restValue": {
+                                "parameter": "minimum"
+                            },
+                            "returnStep": {
+                                "parameter": "brakeReturnStep"
+                            },
+                            "intervalMs": 100,
+                            "minimum": {
+                                "parameter": "minimum"
+                            },
+                            "maximum": {
+                                "parameter": "maximum"
+                            },
+                            "hoverFill": {
+                                "parameter": "brakeColor"
+                            },
+                            "hoverOpacity": 0.12
+                        }
+                    ]
+                },
+                {
+                    "id": "accelerator-press",
+                    "type": "rect",
+                    "properties": {
+                        "fill": "none",
+                        "stroke": "none"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "acceleratorPressX"
+                        },
+                        "y": {
+                            "parameter": "dy"
+                        },
+                        "width": {
+                            "parameter": "halfSide"
+                        },
+                        "height": {
+                            "parameter": "artSide"
+                        }
+                    },
+                    "behaviours": [
+                        {
+                            "type": "press-and-slide",
+                            "variable": {
+                                "parameter": "acceleratorVariable"
+                            },
+                            "property": "acceleratorVariable",
+                            "unitsPerPixel": {
+                                "parameter": "unitsPerPixel"
+                            },
+                            "restValue": {
+                                "parameter": "minimum"
+                            },
+                            "returnStep": {
+                                "parameter": "acceleratorReturnStep"
+                            },
+                            "intervalMs": 100,
+                            "minimum": {
+                                "parameter": "minimum"
+                            },
+                            "maximum": {
+                                "parameter": "maximum"
+                            },
+                            "hoverFill": {
+                                "parameter": "acceleratorColor"
+                            },
+                            "hoverOpacity": 0.12
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "schemaVersion": "1.0.0",
         "type": "analogue-clock",
         "category": "component",
         "displayName": "Analogue clock",

@@ -563,6 +563,7 @@ class ReferentialShape extends BaseShape {
                 this.properties.autoScale = false;
                 this.tick();
                 this.board.markDirty(this);
+                this.refreshOpenContextToolbar();
             },
             onEnd: () => {
                 this._tickDragState = null;

@@ -133,6 +133,12 @@ class ComponentShape extends BaseShape {
         return BlockObjects.getComponentParameters(this.getComponentType()).some(parameter => parameter.id === name);
     }
 
+    getComponentParameter(parameterId) {
+        if (parameterId === "")
+            return null;
+        return BlockObjects.getComponentParameters(this.getComponentType()).find(parameter => parameter.id === parameterId) ?? null;
+    }
+
     getComponentType() {
         return BlockObjects.getComponentType(this.properties.definition);
     }
@@ -287,9 +293,58 @@ class ComponentShape extends BaseShape {
     }
 
     draw() {
+        this.registerComponentTermDisplayEntries();
         super.draw();
         this.applyComponentLayout();
         this.renderComponent();
+    }
+
+    // The labels are drawn over the object rather than under it, the way the chart draws the ones it
+    // stands on its own series.
+    initializeTermDisplayLayer() {
+        BaseShape.prototype.initializeTermDisplayLayer.call(this);
+        if (this.termDisplayLayer && this.element)
+            this.element.appendChild(this.termDisplayLayer);
+    }
+
+    // A parameter saying where its value is read is one the reader can show: the eye on its row in
+    // the toolbar turns the label on, and it is drawn at that point of the object's own box. The
+    // entries are registered here rather than by the toolbar, so a label survives a board where the
+    // object has never been selected.
+    registerComponentTermDisplayEntries() {
+        const componentType = this.getComponentType();
+        if (this._termDisplayComponentType === componentType)
+            return;
+        this._termDisplayComponentType = componentType;
+        for (const parameter of BlockObjects.getComponentParameters(componentType)) {
+            if (!parameter.valueAnchor)
+                continue;
+            const displayModeProperty = this.getTermDisplayModeProperty(parameter.id);
+            if (this.properties[displayModeProperty] == null)
+                this.properties[displayModeProperty] = "none";
+            if (!this.termDisplayEntries.some(entry => entry.term === parameter.id))
+                this.termDisplayEntries.push({ term: parameter.id, caseProperty: `${parameter.id}Case`, title: parameter.label });
+        }
+    }
+
+    getTermEntryLabelPosition(entry) {
+        const anchor = this.getComponentParameter(entry.term)?.valueAnchor;
+        if (!anchor)
+            return null;
+        return {
+            x: Number(this.properties.width) * Number(anchor.x),
+            y: Number(this.properties.height) * Number(anchor.y),
+            anchor: "middle"
+        };
+    }
+
+    // The value is read in the colour the thing it belongs to is drawn in, which is the colour that
+    // parameter's own row carries.
+    getTermEntryLabelColor(entry) {
+        const colorParameter = this.getComponentParameter(entry.term)?.colorParameter ?? "";
+        if (colorParameter === "")
+            return null;
+        return this.properties[colorParameter] ?? null;
     }
 
     applyComponentLayout() {
@@ -327,6 +382,8 @@ class ComponentShape extends BaseShape {
             this.attachDragAngleBehaviour(element, behaviour.input, true);
         if (behaviour.type === "clickable")
             this.attachClickableBehaviour(element, behaviour.input);
+        if (behaviour.type === "press-and-slide")
+            this.attachPressAndSlideBehaviour(element, behaviour.input);
         if (behaviour.type === "remember")
             this.attachRememberBehaviour(element, behaviour.input);
         if (behaviour.type === "forget")
@@ -695,6 +752,129 @@ class ComponentShape extends BaseShape {
             event.preventDefault();
             this.writeClickValue(input, Number(input.value));
         });
+    }
+
+    // A control the reader holds: pressing it writes nothing, sliding up and down moves the value by
+    // however far the pointer travelled from where it went down, and letting go lets the value fall
+    // back to its resting value a step at a time. The whole gesture — the fall back included — is one
+    // edit, so undo takes the pedal back to where it stood before it was touched.
+    attachPressAndSlideBehaviour(element, input) {
+        if (!this.isPressAndSlideAllowed(input)) {
+            this.markWriteLocked(element, input);
+            return;
+        }
+        element.style.cursor = "ns-resize";
+        element.setAttribute("pointer-events", "all");
+        element.addEventListener("pointerdown", event => this.onPressAndSlideStart(event, input));
+        this.attachAngleDragHover(element, input);
+    }
+
+    isPressAndSlideAllowed(input) {
+        if (!this.isInteractable() || this.isLocked())
+            return false;
+        return this.isDragHalfAllowed(input.variable, input.property);
+    }
+
+    onPressAndSlideStart(event, input) {
+        // Asked again here because the model can stop letting a variable be written between the
+        // moment the listener went on and the moment the pointer comes down.
+        if (!this.isPressAndSlideAllowed(input) || this._slideEnd)
+            return;
+        event.preventDefault();
+        this.selectFromGrab();
+        this.board.pointerLocked = true;
+        // Pressing a pedal that is still falling back catches it where it is, and the edit that fall
+        // belongs to is the one this press carries on with.
+        const wasReturning = this.stopPressAndSlideReturn();
+        this._slideStartValue = this.readPressAndSlideValue(input);
+        this._slideStartY = this.getComponentLocalPoint(event).y;
+        this._slideWritesProperty = this.isAngleDragPropertyWrite(input);
+        if (this._slideWritesProperty && !wasReturning)
+            this.dragStart();
+        this._slideMove = moveEvent => this.onPressAndSlideMove(moveEvent, input);
+        this._slideEnd = () => this.onPressAndSlideEnd(input);
+        window.addEventListener("pointermove", this._slideMove);
+        window.addEventListener("pointerup", this._slideEnd);
+        window.addEventListener("pointercancel", this._slideEnd);
+    }
+
+    onPressAndSlideMove(event, input) {
+        const unitsPerPixel = Number(input.unitsPerPixel);
+        if (!Number.isFinite(unitsPerPixel))
+            return;
+        const travelled = this._slideStartY - this.getComponentLocalPoint(event).y;
+        this.writePressAndSlideValue(input, this._slideStartValue + travelled * unitsPerPixel);
+    }
+
+    onPressAndSlideEnd(input) {
+        window.removeEventListener("pointermove", this._slideMove);
+        window.removeEventListener("pointerup", this._slideEnd);
+        window.removeEventListener("pointercancel", this._slideEnd);
+        this._slideMove = null;
+        this._slideEnd = null;
+        this.board.pointerLocked = false;
+        const returnStep = Math.abs(Number(input.returnStep));
+        if (!Number.isFinite(returnStep) || returnStep === 0) {
+            this.endPressAndSlideEdit();
+            return;
+        }
+        const interval = Number(input.intervalMs);
+        this._slideReturnTimer = setInterval(() => this.stepPressAndSlideReturn(input, returnStep), Number.isFinite(interval) && interval > 0 ? interval : 100);
+    }
+
+    // Nothing holds the pedal down any more, so it walks back to its resting value one step per
+    // interval and stops the moment it is there.
+    stepPressAndSlideReturn(input, returnStep) {
+        const restValue = Number(input.restValue);
+        const value = this.readPressAndSlideValue(input);
+        const remaining = (Number.isFinite(restValue) ? restValue : 0) - value;
+        if (Math.abs(remaining) <= returnStep) {
+            this.stopPressAndSlideReturn();
+            this.writePressAndSlideValue(input, Number.isFinite(restValue) ? restValue : 0);
+            this.endPressAndSlideEdit();
+            return;
+        }
+        this.writePressAndSlideValue(input, value + Math.sign(remaining) * returnStep);
+    }
+
+    stopPressAndSlideReturn() {
+        if (!this._slideReturnTimer)
+            return false;
+        clearInterval(this._slideReturnTimer);
+        this._slideReturnTimer = null;
+        return true;
+    }
+
+    endPressAndSlideEdit() {
+        if (!this._slideWritesProperty)
+            return;
+        this._slideWritesProperty = false;
+        this.dragEnd();
+    }
+
+    writePressAndSlideValue(input, value) {
+        this.writeDragHalf(input.variable, input.property, this.clampPressAndSlideValue(value, input));
+    }
+
+    // What the control holds now, read again every time it moves. A gesture that writes a property
+    // cannot read it from the behaviour it was started with: that input was resolved when the drawing
+    // was written, and what it says is the value the gesture has already moved on from.
+    readPressAndSlideValue(input) {
+        const property = this.getBehaviourProperty(input);
+        if (property === null || this.board.calculator.isTerm(String(input.variable ?? "")))
+            return this.readDragHalf(input.variable);
+        const value = Number(this.properties[property]);
+        return Number.isFinite(value) ? value : 0;
+    }
+
+    clampPressAndSlideValue(value, input) {
+        const minimum = Number(input.minimum);
+        const maximum = Number(input.maximum);
+        if (Number.isFinite(minimum) && value < minimum)
+            return minimum;
+        if (Number.isFinite(maximum) && value > maximum)
+            return maximum;
+        return value;
     }
 
     isClickAllowed(input) {
