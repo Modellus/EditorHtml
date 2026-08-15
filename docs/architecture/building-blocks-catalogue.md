@@ -1009,15 +1009,13 @@ Capabilities: `radial`, `angular`, `linear`, `reads-model`, `scale`, `interactio
 | `turnedBy` | string | "angle" | angle \| orientation |
 | `angleVariable` | variable | "0" |  |
 | `angleUpVariable` | variable | "0" |  |
-| `acceleratorVariable` | variable | "0" |  |
-| `brakeVariable` | variable | "0" |  |
+| `pedalVariable` | variable | "0" |  |
 | `wheelType` | string | "car" | car \| motor bike \| boat |
 | `showWheel` | boolean | true |  |
 | `showPedals` | boolean | false |  |
 | `minimum` | number | 0 |  |
 | `maximum` | number | 100 |  |
-| `acceleratorReturnStep` | number | 10 | min 0 |
-| `brakeReturnStep` | number | 10 | min 0 |
+| `pedalReturnStep` | number | 10 | min 0 |
 | `rimColor` | colour | "token:stroke.default" |  |
 | `gripColor` | colour | "token:stroke.subtle" |  |
 | `hubColor` | colour | "token:surface.muted" |  |

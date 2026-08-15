@@ -15,7 +15,7 @@ async function addDrivingModel(page) {
     await page.evaluate(() => modellus.shape.addExpression('Driving equations'));
     await page.waitForTimeout(300);
     await page.evaluate(() => {
-        shell.board.shapes.getByName('Driving equations').properties.expression = '\\frac{dthrottle}{dt}=0\\\\\\frac{dbraking}{dt}=0\\\\\\frac{dacross}{dt}=0\\\\\\frac{dup}{dt}=0\\\\computed=20';
+        shell.board.shapes.getByName('Driving equations').properties.expression = '\\frac{dthrottle}{dt}=0\\\\\\frac{dacross}{dt}=0\\\\\\frac{dup}{dt}=0\\\\computed=20';
         shell.reset();
     });
     await page.waitForTimeout(400);
@@ -40,8 +40,7 @@ async function addPedals(page, overrides = {}) {
             height: 240,
             showWheel: false,
             showPedals: true,
-            acceleratorVariable: 'throttle',
-            brakeVariable: 'braking'
+            pedalVariable: 'throttle'
         }, overrides));
         shape.draw();
     }, overrides);
@@ -86,7 +85,6 @@ async function release(page, settleMilliseconds = 1500) {
 function readTerms(page) {
     return page.evaluate(() => ({
         throttle: shell.board.calculator.getByName('throttle', 1),
-        braking: shell.board.calculator.getByName('braking', 1),
         across: shell.board.calculator.getByName('across', 1),
         up: shell.board.calculator.getByName('up', 1)
     }));
@@ -98,7 +96,7 @@ test.describe('the pedals of the steering wheel', () => {
     test('sliding up presses a pedal further and sliding down eases it off', async ({ page }) => {
         await setupBoard(page);
         await addDrivingModel(page);
-        await addPedals(page, { acceleratorReturnStep: 0 });
+        await addPedals(page, { pedalReturnStep: 0 });
         const points = await pressPoints(page);
         await slide(page, points.accelerator, 0, 400);
         expect((await readTerms(page)).throttle).toBe(0);
@@ -118,7 +116,7 @@ test.describe('the pedals of the steering wheel', () => {
     test('letting go lets the pedal come back to rest step by step, unless it was given no return', async ({ page }) => {
         await setupBoard(page);
         await addDrivingModel(page);
-        await addPedals(page, { acceleratorReturnStep: 10, brakeReturnStep: 0 });
+        await addPedals(page, { pedalReturnStep: 10 });
         const points = await pressPoints(page);
         await slide(page, points.accelerator, 240, 200);
         expect((await readTerms(page)).throttle).toBe(100);
@@ -129,24 +127,34 @@ test.describe('the pedals of the steering wheel', () => {
         expect(midway).toBeLessThan(100);
         await page.waitForTimeout(1400);
         expect((await readTerms(page)).throttle).toBe(0);
-        await slide(page, points.brake, 120, 100);
+        // The behaviour carries the return it was drawn with, so the drawing is written again before
+        // the pedal is pressed with the spring taken off it.
+        await page.evaluate(() => shell.board.shapes.getByName('Pedals').setPropertyCommand('pedalReturnStep', 0));
+        await page.waitForTimeout(300);
+        await slide(page, points.accelerator, 120, 100);
         await release(page);
-        expect((await readTerms(page)).braking).toBeCloseTo(50, 0);
+        expect((await readTerms(page)).throttle).toBeCloseTo(50, 0);
     });
 
-    test('each pedal writes its own term, and neither goes past its ends', async ({ page }) => {
+    // One term, two ways of pressing it: the accelerator raises it and the brake lowers it, and
+    // neither takes it past the ends it is read against.
+    test('the two pedals press one term, up and down, and neither goes past its ends', async ({ page }) => {
         await setupBoard(page);
         await addDrivingModel(page);
-        await addPedals(page, { brakeReturnStep: 0 });
+        await addPedals(page, { pedalReturnStep: 0 });
         const points = await pressPoints(page);
+        await slide(page, points.accelerator, 144, 100);
+        expect((await readTerms(page)).throttle).toBeCloseTo(60, 0);
+        await release(page, 300);
+        await slide(page, points.brake, 48, 100);
+        expect((await readTerms(page)).throttle).toBeCloseTo(40, 0);
+        await release(page, 300);
+        await slide(page, points.accelerator, 400, 100);
+        expect((await readTerms(page)).throttle).toBe(100);
+        await release(page, 300);
         await slide(page, points.brake, 400, 100);
-        const held = await readTerms(page);
-        expect(held.braking).toBe(100);
-        expect(held.throttle).toBe(0);
-        await page.mouse.move(points.brake.x, points.brake.y + 400, { steps: 5 });
-        await page.waitForTimeout(150);
-        expect((await readTerms(page)).braking).toBe(0);
-        await release(page);
+        expect((await readTerms(page)).throttle).toBe(0);
+        await release(page, 300);
     });
 
     // A pedal naming a plain number writes the object's own parameter instead, the way a gauge edits
@@ -155,14 +163,14 @@ test.describe('the pedals of the steering wheel', () => {
     test('a pedal reading a plain number writes the property, and the whole gesture is one undo step', async ({ page }) => {
         await setupBoard(page);
         await addDrivingModel(page);
-        await addPedals(page, { acceleratorVariable: '0', brakeVariable: '0', acceleratorReturnStep: 0 });
+        await addPedals(page, { pedalVariable: '0', pedalReturnStep: 0 });
         const points = await pressPoints(page);
         await slide(page, points.accelerator, 72, 100);
         await release(page, 300);
-        expect(await page.evaluate(() => Number(shell.board.shapes.getByName('Pedals').properties.acceleratorVariable))).toBeCloseTo(30, 0);
+        expect(await page.evaluate(() => Number(shell.board.shapes.getByName('Pedals').properties.pedalVariable))).toBeCloseTo(30, 0);
         await page.evaluate(() => shell.commands.undo());
         await page.waitForTimeout(300);
-        expect(await page.evaluate(() => Number(shell.board.shapes.getByName('Pedals').properties.acceleratorVariable))).toBe(0);
+        expect(await page.evaluate(() => Number(shell.board.shapes.getByName('Pedals').properties.pedalVariable))).toBe(0);
     });
 
     // A term the model works out for itself can never be written, so the pedal says so with the
@@ -170,7 +178,7 @@ test.describe('the pedals of the steering wheel', () => {
     test('a pedal bound to a computed term refuses the gesture', async ({ page }) => {
         await setupBoard(page);
         await addDrivingModel(page);
-        await addPedals(page, { acceleratorVariable: 'computed' });
+        await addPedals(page, { pedalVariable: 'computed' });
         const points = await pressPoints(page);
         await slide(page, points.accelerator, 100, 100);
         await release(page, 300);
@@ -178,16 +186,16 @@ test.describe('the pedals of the steering wheel', () => {
         expect(await page.evaluate(() => shell.board.shapes.getByName('Pedals').element.querySelector('[data-source-id="accelerator-press"]').style.cursor)).toBe('not-allowed');
     });
 
-    // The eye on each row shows what that control is holding, over the control itself, written the
-    // way every other term on the board is written and coloured the way that control is drawn.
-    test('the eye on a row reads its term over its own control', async ({ page }) => {
+    // The eye on the row shows what the pedals are holding, over the pedal that shows it, written the
+    // way every other term on the board is written and coloured the way that pedal is drawn.
+    test('the eye on the row reads the term over the pedal that carries it', async ({ page }) => {
         await setupBoard(page);
         await addDrivingModel(page);
         await addPedals(page);
         expect(await page.evaluate(() => shell.board.shapes.getByName('Pedals').element.querySelectorAll('.shape-term-label').length)).toBe(0);
         await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Pedals');
-            shape.setProperties({ acceleratorVariableDisplayMode: 'nameValue', brakeVariableDisplayMode: 'nameValue' });
+            shape.setProperties({ pedalVariableDisplayMode: 'nameValue' });
             shell.board.calculator.setTermValue('throttle', 40, 1, 1);
             shell.board.calculator.calculate();
             shell.board.forceRefresh();
@@ -198,36 +206,32 @@ test.describe('the pedals of the steering wheel', () => {
             x: Number(label.getAttribute('x')),
             background: label.parentNode.querySelector('.shape-term-label-bg').getAttribute('fill')
         })));
-        expect(labels).toHaveLength(2);
-        // The rows are drawn in the order the definition declares them: the accelerator first, and
-        // each label stands over the half of the box its own control is pressed in.
+        expect(labels).toHaveLength(1);
+        // The accelerator is the pedal the value is read on, so the label stands over its half.
         expect(labels[0].text).toBe('throttle = 40.00');
         expect(labels[0].x).toBeCloseTo(180, 0);
         expect(labels[0].background).toBe('#1871c2');
-        expect(labels[1].text).toBe('braking = 0.00');
-        expect(labels[1].x).toBeCloseTo(60, 0);
-        expect(labels[1].background).toBe('#e03130');
     });
 
-    // A row naming no term holds the number itself, and pressing the pedal writes that number. The
-    // key in the toolbar reads it, so it has to follow the press: an interaction writes the property
+    // A row naming no term holds the number itself, and pressing a pedal writes that number. The key
+    // in the toolbar reads it, so it has to follow the press: an interaction writes the property
     // straight rather than through a command, which is the path that otherwise refreshes a toolbar.
     test('the toolbar follows a pedal that is moved while it is open', async ({ page }) => {
         await setupBoard(page);
         await addDrivingModel(page);
-        await addPedals(page, { acceleratorVariable: '0', brakeVariable: '0', acceleratorReturnStep: 0, brakeReturnStep: 0 });
+        await addPedals(page, { pedalVariable: '0', pedalReturnStep: 0 });
         await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Pedals')));
         await page.waitForTimeout(400);
         const readToolbar = () => page.evaluate(() => Array.from(document.querySelectorAll('.shape-context-toolbar.visible .mdl-component-model-selector .mdl-name-btn-term-text')).map(term => term.textContent.trim()));
-        // The wheel's own row comes first, and it is left where it was: only the two pedals move.
-        expect((await readToolbar()).map(Number)).toEqual([0, 0, 0]);
+        // The wheel's own row comes first, and it is left where it was: only the pedals move.
+        expect((await readToolbar()).map(Number)).toEqual([0, 0]);
         const points = await pressPoints(page);
         await slide(page, points.accelerator, 120, 200);
-        expect((await readToolbar()).map(Number)).toEqual([0, 50, 0]);
+        expect((await readToolbar()).map(Number)).toEqual([0, 50]);
         await release(page, 300);
-        expect((await readToolbar()).map(Number)).toEqual([0, 50, 0]);
+        expect((await readToolbar()).map(Number)).toEqual([0, 50]);
         await slide(page, points.brake, 48, 200);
-        expect((await readToolbar()).map(Number)).toEqual([0, 50, 20]);
+        expect((await readToolbar()).map(Number)).toEqual([0, 30]);
         await release(page, 300);
     });
 
@@ -300,9 +304,42 @@ test.describe('the pedals of the steering wheel', () => {
         });
         expect(parts.car).toEqual(expect.arrayContaining(['car-rim', 'car-brake-pad', 'car-accelerator-pad']));
         expect(parts.bike).toEqual(expect.arrayContaining(['bike-bar', 'brake-lever-arm', 'accelerator-lever-arm']));
+        expect(parts.bike).not.toContain('car-accelerator-pad');
         expect(parts.bike).not.toContain('car-brake-pad');
         expect(parts.boat).toEqual(expect.arrayContaining(['boat-rim', 'astern-lever-knob', 'ahead-lever-knob']));
         expect(parts.boat).not.toContain('car-brake-pad');
+    });
+
+    // There is one value, so there is one pedal reading it: the accelerator stands where that value
+    // stands between the two ends, and the brake rests, being a control to press rather than a
+    // reading. It is the same pedal that carries the length of a pair.
+    test('the accelerator carries the value and the brake stays at rest', async ({ page }) => {
+        await setupBoard(page);
+        await addDrivingModel(page);
+        const measured = await page.evaluate(() => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
+            const definition = BlockObjects.createComponentInstance('steering-wheel');
+            const build = overrides => {
+                const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('steering-wheel'), { angleVariable: '0', showWheel: false, showPedals: true }, overrides);
+                const flattened = BlockRenderer.flatten(compiler.compile(definition, { width: 200, height: 200, parameters: parameters, tokens: new BlockTokens('standard') }).nodes);
+                const part = name => flattened.find(node => node.sourceId === name);
+                return {
+                    accelerator: Number(part('car-accelerator-pad').attributes.y),
+                    brake: Number(part('car-brake-pad').attributes.y)
+                };
+            };
+            return {
+                atRest: build({ pedalVariable: '0' }),
+                halfway: build({ pedalVariable: '50' }),
+                pastTheMaximum: build({ pedalVariable: '150' }),
+                byLength: build({ turnedBy: 'orientation', angleVariable: '30', angleUpVariable: '40' })
+            };
+        });
+        expect(measured.atRest).toEqual({ accelerator: 96, brake: 108 });
+        expect(measured.halfway).toEqual({ accelerator: 118, brake: 108 });
+        expect(measured.pastTheMaximum).toEqual({ accelerator: 140, brake: 108 });
+        // A pair 50 long against ends of 0 and 100 stands the accelerator exactly halfway.
+        expect(measured.byLength).toEqual({ accelerator: 118, brake: 108 });
     });
 
     // A wheel turned by an orientation is pointed by a pair, and the pedals press that pair's length:
@@ -334,10 +371,10 @@ test.describe('the pedals of the steering wheel', () => {
         await addPedals(page, { turnedBy: 'orientation', angleVariable: 'across', angleUpVariable: 'up' });
         const points = await pressPoints(page);
         await slide(page, points.brake, 72, 200);
-        const braking = await readTerms(page);
-        expect(Math.hypot(braking.across, braking.up)).toBeCloseTo(20, 1);
-        expect(braking.across).toBeCloseTo(12, 1);
-        expect(braking.up).toBeCloseTo(16, 1);
+        const braked = await readTerms(page);
+        expect(Math.hypot(braked.across, braked.up)).toBeCloseTo(20, 1);
+        expect(braked.across).toBeCloseTo(12, 1);
+        expect(braked.up).toBeCloseTo(16, 1);
         // Braking past a standstill leaves the pair at the minimum rather than turning it round.
         await page.mouse.move(points.brake.x, points.brake.y - 400, { steps: 5 });
         await page.waitForTimeout(150);
@@ -377,7 +414,7 @@ test.describe('the pedals of the steering wheel', () => {
         await addDrivingModel(page);
         await page.evaluate(() => {
             const shape = shell.commands.addComponent('steering-wheel', 'Wheel');
-            shape.setProperties({ x: 240, y: 160, width: 240, height: 240, angleVariable: 'across', acceleratorVariable: 'throttle', brakeVariable: 'braking' });
+            shape.setProperties({ x: 240, y: 160, width: 240, height: 240, angleVariable: 'across', pedalVariable: 'throttle' });
             shape.draw();
         });
         await page.waitForTimeout(300);
@@ -393,9 +430,9 @@ test.describe('the pedals of the steering wheel', () => {
         await page.evaluate(() => shell.board.shapes.getByName('Wheel').setPropertyCommand('showPedals', true));
         await page.waitForTimeout(300);
         const withPedals = await rows();
-        expect(withPedals.model).toEqual(['angleVariable', 'acceleratorVariable', 'brakeVariable']);
-        expect(withPedals.settings).toEqual(['wheelType', 'showWheel', 'showPedals', 'minimum', 'maximum', 'acceleratorReturnStep', 'brakeReturnStep']);
-        expect(withPedals.style).toEqual(['rimColor', 'gripColor', 'hubColor', 'frameColor', 'surfaceColor']);
+        expect(withPedals.model).toEqual(['angleVariable', 'pedalVariable']);
+        expect(withPedals.settings).toEqual(['wheelType', 'showWheel', 'showPedals', 'minimum', 'maximum', 'pedalReturnStep']);
+        expect(withPedals.style).toEqual(['rimColor', 'gripColor', 'hubColor', 'brakeColor', 'frameColor', 'surfaceColor']);
         // Turned by an orientation the pedals press the wheel's own pair, so they name no terms of
         // their own and have no spring to set.
         await page.evaluate(() => shell.board.shapes.getByName('Wheel').setPropertyCommand('turnedBy', 'orientation'));
@@ -405,7 +442,7 @@ test.describe('the pedals of the steering wheel', () => {
         expect(byOrientation.settings).toEqual(['wheelType', 'showWheel', 'showPedals', 'minimum', 'maximum']);
         await page.evaluate(() => shell.board.shapes.getByName('Wheel').setPropertyCommand('showWheel', false));
         await page.waitForTimeout(300);
-        expect((await rows()).style).toEqual(['frameColor', 'surfaceColor']);
+        expect((await rows()).style).toEqual(['brakeColor', 'frameColor', 'surfaceColor']);
     });
 
     test('the two parts are switched on and off from the settings menu', async ({ page }) => {

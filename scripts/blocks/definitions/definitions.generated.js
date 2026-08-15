@@ -6117,7 +6117,7 @@ BlockDefinitionLoader.registerAll([
                 ],
                 "category": "model",
                 "userEditable": false,
-                "description": "Whether the row is read as an angle in degrees or as an orientation, which is a pair of values read as a direction. It is chosen from a key of its own in the toolbar rather than from the row it governs, and it says what the pedals do as well: read as an angle they travel with terms of their own, read as an orientation they lengthen and shorten the pair the wheel points along."
+                "description": "Whether the row is read as an angle in degrees or as an orientation, which is a pair of values read as a direction. It is chosen from a key of its own in the toolbar rather than from the row it governs, and it says what the pedals press as well: read as an angle they press a term of their own, read as an orientation they lengthen and shorten the pair the wheel points along."
             },
             {
                 "id": "angleVariable",
@@ -6141,8 +6141,8 @@ BlockDefinitionLoader.registerAll([
                 "description": "How far up the orientation reaches, edited by the second selector on the row and read only while the wheel is turned by an orientation."
             },
             {
-                "id": "acceleratorVariable",
-                "label": "Accelerator",
+                "id": "pedalVariable",
+                "label": "Pressed by",
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model",
@@ -6161,30 +6161,7 @@ BlockDefinitionLoader.registerAll([
                         "equals": "angle"
                     }
                 ],
-                "description": "The term the accelerator is pressed by, read against the minimum and the maximum: at the minimum the control is at rest, at the maximum it is fully applied. Holding the pedal and sliding up or down writes this term, and a drag across the whole drawing covers the whole range. A wheel turned by an orientation reads nothing here: the pedals move the pair instead."
-            },
-            {
-                "id": "brakeVariable",
-                "label": "Brake",
-                "valueType": "variable",
-                "defaultValue": "0",
-                "category": "model",
-                "colorParameter": "brakeColor",
-                "valueAnchor": {
-                    "node": "brake-press",
-                    "x": 0.5,
-                    "y": 0.06
-                },
-                "visibleWhen": [
-                    {
-                        "parameter": "showPedals"
-                    },
-                    {
-                        "parameter": "turnedBy",
-                        "equals": "angle"
-                    }
-                ],
-                "description": "The term the brake is pressed by, read against the same minimum and maximum as the accelerator, and written the same way: hold the brake and slide up or down."
+                "description": "The one term the two pedals press, read against the minimum and the maximum: at the minimum they are at rest, at the maximum fully applied. Holding the accelerator and sliding up raises it, holding the brake and sliding up lowers it, and a slide across the whole drawing covers the whole range. A wheel turned by an orientation reads nothing here: the pedals press the length of the pair instead."
             },
             {
                 "id": "wheelType",
@@ -6229,7 +6206,7 @@ BlockDefinitionLoader.registerAll([
                 "visibleWhen": {
                     "parameter": "showPedals"
                 },
-                "description": "The value both controls are at rest at — or, on a wheel turned by an orientation, the shortest the pair can be pressed down to."
+                "description": "The value the pedals are at rest at, which is as far down as the brake takes it — or, on a wheel turned by an orientation, the shortest the pair can be pressed down to."
             },
             {
                 "id": "maximum",
@@ -6240,11 +6217,11 @@ BlockDefinitionLoader.registerAll([
                 "visibleWhen": {
                     "parameter": "showPedals"
                 },
-                "description": "The value both controls are fully applied at — or, on a wheel turned by an orientation, the longest the pair can be pressed up to."
+                "description": "The value the pedals are fully applied at, which is as far up as the accelerator takes it — or, on a wheel turned by an orientation, the longest the pair can be pressed up to."
             },
             {
-                "id": "acceleratorReturnStep",
-                "label": "Accelerator return",
+                "id": "pedalReturnStep",
+                "label": "Pedal return",
                 "valueType": "number",
                 "defaultValue": 10,
                 "category": "interaction",
@@ -6258,25 +6235,7 @@ BlockDefinitionLoader.registerAll([
                         "equals": "angle"
                     }
                 ],
-                "description": "How much the accelerator comes back every tenth of a second once it is let go, until it is at the minimum again — the spring that lifts a pedal the foot is off. Zero leaves it wherever it was released."
-            },
-            {
-                "id": "brakeReturnStep",
-                "label": "Brake return",
-                "valueType": "number",
-                "defaultValue": 10,
-                "category": "interaction",
-                "minimum": 0,
-                "visibleWhen": [
-                    {
-                        "parameter": "showPedals"
-                    },
-                    {
-                        "parameter": "turnedBy",
-                        "equals": "angle"
-                    }
-                ],
-                "description": "How much the brake comes back every tenth of a second once it is let go, until it is at the minimum again. Zero leaves it wherever it was released."
+                "description": "How much the term comes back every tenth of a second once both pedals are let go, until it is at the minimum again — the spring that lifts a pedal the foot is off. Zero leaves it wherever it was released."
             },
             {
                 "id": "rimColor",
@@ -6325,16 +6284,18 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": "token:stroke.accent",
                 "category": "model",
                 "userEditable": false,
-                "description": "Colour of the accelerator itself, of the area that presses it and of the value read above it. It is picked on the row that names the term rather than on a colour menu that would name the same thing twice."
+                "description": "Colour of the accelerator, of the area that presses it and of the value read above it. The accelerator is the pedal that carries the reading, so its colour is picked on the row that names the term rather than on a colour menu that would name the same thing twice."
             },
             {
                 "id": "brakeColor",
                 "label": "Brake colour",
                 "valueType": "colour",
                 "defaultValue": "token:stroke.warning",
-                "category": "model",
-                "userEditable": false,
-                "description": "Colour of the brake itself, of the area that presses it and of the value read above it, picked on the row that names the term."
+                "category": "style",
+                "visibleWhen": {
+                    "parameter": "showPedals"
+                },
+                "description": "Colour of the brake and of the area that presses it. The brake reads nothing back — it is a control to press — so its colour is a colour like any other."
             },
             {
                 "id": "frameColor",
@@ -6563,16 +6524,9 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\sqrt{across^{2}+up^{2}}"
             },
             {
-                "id": "acceleratorValue",
+                "id": "pedalValue",
                 "value": {
-                    "parameter": "acceleratorVariable",
-                    "as": "number"
-                }
-            },
-            {
-                "id": "brakeValue",
-                "value": {
-                    "parameter": "brakeVariable",
+                    "parameter": "pedalVariable",
                     "as": "number"
                 }
             },
@@ -6597,118 +6551,58 @@ BlockDefinitionLoader.registerAll([
                 "formula": "0-unitsPerPixel"
             },
             {
-                "id": "pedalAcceleratorRatio",
-                "value": {
-                    "choose": {
-                        "parameter": "span"
-                    },
-                    "then": {
-                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{acceleratorValue-minimum}{maximum-minimum}\\right)\\right)"
-                    },
-                    "otherwise": 0
-                }
-            },
-            {
-                "id": "pedalBrakeRatio",
-                "value": {
-                    "choose": {
-                        "parameter": "span"
-                    },
-                    "then": {
-                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{brakeValue-minimum}{maximum-minimum}\\right)\\right)"
-                    },
-                    "otherwise": 0
-                }
-            },
-            {
-                "id": "lengthRatio",
-                "value": {
-                    "choose": {
-                        "parameter": "span"
-                    },
-                    "then": {
-                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{orientationLength-minimum}{maximum-minimum}\\right)\\right)"
-                    },
-                    "otherwise": 0
-                }
-            },
-            {
-                "id": "acceleratorRatio",
+                "id": "pressedValue",
                 "value": {
                     "choose": {
                         "parameter": "pointedByOrientation"
                     },
                     "then": {
-                        "parameter": "lengthRatio"
+                        "parameter": "orientationLength"
                     },
                     "otherwise": {
-                        "parameter": "pedalAcceleratorRatio"
+                        "parameter": "pedalValue"
                     }
                 }
             },
             {
-                "id": "brakeRatio",
+                "id": "pressedRatio",
+                "value": {
+                    "choose": {
+                        "parameter": "span"
+                    },
+                    "then": {
+                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{pressedValue-minimum}{maximum-minimum}\\right)\\right)"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "pedalReturn",
                 "value": {
                     "choose": {
                         "parameter": "pointedByOrientation"
                     },
                     "then": 0,
                     "otherwise": {
-                        "parameter": "pedalBrakeRatio"
+                        "parameter": "pedalReturnStep"
                     }
                 }
-            },
-            {
-                "id": "acceleratorReturn",
-                "value": {
-                    "choose": {
-                        "parameter": "pointedByOrientation"
-                    },
-                    "then": 0,
-                    "otherwise": {
-                        "parameter": "acceleratorReturnStep"
-                    }
-                }
-            },
-            {
-                "id": "brakeReturn",
-                "value": {
-                    "choose": {
-                        "parameter": "pointedByOrientation"
-                    },
-                    "then": 0,
-                    "otherwise": {
-                        "parameter": "brakeReturnStep"
-                    }
-                }
-            },
-            {
-                "id": "carBrakePadY",
-                "formula": "108+brakeRatio\\cdot44"
-            },
-            {
-                "id": "carBrakeArmY",
-                "formula": "carBrakePadY+11"
             },
             {
                 "id": "carAcceleratorPadY",
-                "formula": "96+acceleratorRatio\\cdot44"
+                "formula": "96+pressedRatio\\cdot44"
             },
             {
                 "id": "carAcceleratorArmY",
                 "formula": "carAcceleratorPadY+20"
             },
             {
-                "id": "bikeBrakeTilt",
-                "formula": "brakeRatio\\cdot25"
-            },
-            {
                 "id": "bikeAcceleratorTilt",
-                "formula": "0-acceleratorRatio\\cdot25"
+                "formula": "0-pressedRatio\\cdot25"
             },
             {
                 "id": "aheadTilt",
-                "formula": "\\frac{acceleratorRatio\\cdot30\\cdot\\pi}{180}"
+                "formula": "\\frac{pressedRatio\\cdot30\\cdot\\pi}{180}"
             },
             {
                 "id": "aheadSlotY",
@@ -6729,30 +6623,6 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "aheadArmWidth",
                 "formula": "11\\cdot aheadNearness"
-            },
-            {
-                "id": "asternTilt",
-                "formula": "0-\\frac{brakeRatio\\cdot30\\cdot\\pi}{180}"
-            },
-            {
-                "id": "asternSlotY",
-                "formula": "158-14\\cdot\\frac{\\sin\\left(asternTilt\\right)}{\\cos\\left(asternTilt\\right)}"
-            },
-            {
-                "id": "asternKnobY",
-                "formula": "182.25-112\\cdot\\cos\\left(asternTilt-\\frac{30\\cdot\\pi}{180}\\right)"
-            },
-            {
-                "id": "asternNearness",
-                "formula": "1-0.62\\cdot\\sin\\left(asternTilt\\right)"
-            },
-            {
-                "id": "asternKnobRadius",
-                "formula": "12\\cdot asternNearness"
-            },
-            {
-                "id": "asternArmWidth",
-                "formula": "11\\cdot asternNearness"
             }
         ],
         "root": {
@@ -7249,9 +7119,6 @@ BlockDefinitionLoader.registerAll([
                                         "strokeLinecap": "round"
                                     },
                                     "bindings": {
-                                        "y2": {
-                                            "parameter": "carBrakeArmY"
-                                        },
                                         "stroke": {
                                             "parameter": "frameColor"
                                         }
@@ -7271,9 +7138,6 @@ BlockDefinitionLoader.registerAll([
                                         "strokeWidth": 3
                                     },
                                     "bindings": {
-                                        "y": {
-                                            "parameter": "carBrakePadY"
-                                        },
                                         "fill": {
                                             "parameter": "brakeColor"
                                         },
@@ -7430,38 +7294,22 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 {
-                                    "id": "brake-lever",
-                                    "type": "group",
-                                    "modifiers": [
-                                        {
-                                            "type": "rotate",
-                                            "angle": {
-                                                "parameter": "bikeBrakeTilt"
-                                            },
-                                            "centerX": 68,
-                                            "centerY": 128
+                                    "id": "brake-lever-arm",
+                                    "type": "line",
+                                    "properties": {
+                                        "x1": 68,
+                                        "y1": 128,
+                                        "x2": 20,
+                                        "y2": 150,
+                                        "stroke": "token:stroke.warning",
+                                        "strokeWidth": 10,
+                                        "strokeLinecap": "round"
+                                    },
+                                    "bindings": {
+                                        "stroke": {
+                                            "parameter": "brakeColor"
                                         }
-                                    ],
-                                    "children": [
-                                        {
-                                            "id": "brake-lever-arm",
-                                            "type": "line",
-                                            "properties": {
-                                                "x1": 68,
-                                                "y1": 128,
-                                                "x2": 20,
-                                                "y2": 150,
-                                                "stroke": "token:stroke.warning",
-                                                "strokeWidth": 10,
-                                                "strokeLinecap": "round"
-                                            },
-                                            "bindings": {
-                                                "stroke": {
-                                                    "parameter": "brakeColor"
-                                                }
-                                            }
-                                        }
-                                    ]
+                                    }
                                 },
                                 {
                                     "id": "accelerator-lever",
@@ -7642,15 +7490,6 @@ BlockDefinitionLoader.registerAll([
                                                 "strokeLinecap": "round"
                                             },
                                             "bindings": {
-                                                "y1": {
-                                                    "parameter": "asternSlotY"
-                                                },
-                                                "y2": {
-                                                    "parameter": "asternKnobY"
-                                                },
-                                                "strokeWidth": {
-                                                    "parameter": "asternArmWidth"
-                                                },
                                                 "stroke": {
                                                     "parameter": "brakeColor"
                                                 }
@@ -7668,12 +7507,6 @@ BlockDefinitionLoader.registerAll([
                                                 "strokeWidth": 3
                                             },
                                             "bindings": {
-                                                "centerY": {
-                                                    "parameter": "asternKnobY"
-                                                },
-                                                "radius": {
-                                                    "parameter": "asternKnobRadius"
-                                                },
                                                 "fill": {
                                                     "parameter": "brakeColor"
                                                 },
@@ -7851,17 +7684,17 @@ BlockDefinitionLoader.registerAll([
                                 "parameter": "turnedByHand"
                             },
                             "variable": {
-                                "parameter": "brakeVariable"
+                                "parameter": "pedalVariable"
                             },
-                            "property": "brakeVariable",
+                            "property": "pedalVariable",
                             "unitsPerPixel": {
-                                "parameter": "unitsPerPixel"
+                                "parameter": "brakeUnitsPerPixel"
                             },
                             "restValue": {
                                 "parameter": "minimum"
                             },
                             "returnStep": {
-                                "parameter": "brakeReturn"
+                                "parameter": "pedalReturn"
                             },
                             "intervalMs": 100,
                             "minimum": {
@@ -7940,9 +7773,9 @@ BlockDefinitionLoader.registerAll([
                                 "parameter": "turnedByHand"
                             },
                             "variable": {
-                                "parameter": "acceleratorVariable"
+                                "parameter": "pedalVariable"
                             },
-                            "property": "acceleratorVariable",
+                            "property": "pedalVariable",
                             "unitsPerPixel": {
                                 "parameter": "unitsPerPixel"
                             },
@@ -7950,7 +7783,7 @@ BlockDefinitionLoader.registerAll([
                                 "parameter": "minimum"
                             },
                             "returnStep": {
-                                "parameter": "acceleratorReturn"
+                                "parameter": "pedalReturn"
                             },
                             "intervalMs": 100,
                             "minimum": {

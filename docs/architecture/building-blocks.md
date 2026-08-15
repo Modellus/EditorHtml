@@ -422,11 +422,12 @@ steering wheel's pedals pass `(maximum − minimum) / side`, which makes a slide
 drawing exactly the whole range, at any size the object is drawn. Naming a `verticalVariable` as well
 presses a **pair** rather than a number: what is read is the length of that pair, and what is written
 is that pair laid down again at the length the slide moved it to, along the direction it already
-pointed in — which is how the same pedal that moves a term drives the speed of a velocity the wheel
-above it is steering, without touching which way it points.
+pointed in — which is how the same pair of pedals that press one term press the speed of a velocity
+the wheel above them is steering, without touching which way it points.
 
 Letting go is the other half. Nothing holds a pedal down once the foot is off it, so the value walks
-back to `restValue` by `returnStep` every `intervalMs` — a tenth of a second for the pedals — and
+back to `restValue` by `returnStep` every `intervalMs` — a tenth of a second for the pedals, whichever
+of the two was last pressed — and
 stops the moment it is there; a `returnStep` of zero leaves it where it was released, which is the
 control that stays put. Pressing again catches it wherever the fall has got to. It writes through the
 same pair of paths a drag does: a model term through the calculator, or the object's own parameter
@@ -454,16 +455,16 @@ one named node's box — and that gives its row in the toolbar the same eye ever
 shown with: turning it on draws `term = value` at that point, in the badge, the font and the case
 icon `TermDisplay` draws every other term label with, and in the colour the parameter's own
 `colorParameter` names. The object draws no readout of its own for it: the steering wheel's pedals
-anchor each value to the area that presses it, so each stands over the pedal it belongs to wherever
-the layout has put it — the whole box with the wheel switched off, the lower half with it on. A
+anchor their one value to the area that presses it, so it stands over the accelerator wherever the
+layout has put it — the whole box with the wheel switched off, the lower half with it on. A
 parameter without an anchor has nowhere to put a label, so its row does not offer the eye.
 
 **A row that governs nothing is not offered.** A parameter may declare a **`visibleWhen`** — one
 condition, or a list of them that all have to hold, each naming a parameter and optionally the value
 it must equal — and the toolbar leaves its row out while that does not hold. It is what lets one
-object carry two parts the reader switches on and off: the steering wheel's pedals take their terms,
-their ends and their springs out of the menus with them, and the terms the pedals travel with go too
-when the wheel is turned by an orientation, because then the pedals press that pair instead.
+object carry two parts the reader switches on and off: the steering wheel's pedals take their term,
+their ends and their spring out of the menus with them, and the term goes on its own when the wheel
+is turned by an orientation, because then the pedals press that pair instead.
 
 **What the pointer is over is not something the object keeps.** `follow-pointer` reports where the
 pointer is, in the units the node is scaled in, into parameters the definition names — and the host
