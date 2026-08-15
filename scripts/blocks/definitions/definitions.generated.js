@@ -6069,7 +6069,7 @@ BlockDefinitionLoader.registerAll([
         "type": "steering-wheel",
         "category": "component",
         "displayName": "Steering wheel",
-        "description": "The controls a vehicle is driven with: a wheel turned by a model variable, drawn as a car wheel, a motorbike handlebar or a ship's helm, and the accelerator and brake of that same vehicle under it. Either can be left out. Dragging the wheel turns it and writes back what it reads; pressing a pedal writes what it is pressed by.",
+        "description": "The controls a vehicle is driven with: a wheel turned by a model variable, drawn as a car wheel, a motorbike handlebar or a ship's helm, and the accelerator and brake of that same vehicle under it. The wheel, the pedals, and the brake among the pedals, can each be left out. Dragging the wheel turns it and writes back what it reads; the accelerator presses a value of its own up from zero and the brake presses one of its own down below it, each read the way the wheel is — a term, or a pair laid down along the bearing the wheel is turned to.",
         "icon": "fa-light fa-steering-wheel",
         "tags": [
             "object",
@@ -6117,7 +6117,7 @@ BlockDefinitionLoader.registerAll([
                 ],
                 "category": "model",
                 "userEditable": false,
-                "description": "Whether the row is read as an angle in degrees or as an orientation, which is a pair of values read as a direction. It is chosen from a key of its own in the toolbar rather than from the row it governs, and it says what the pedals press as well: read as an angle they press a term of their own, up from zero and down below it, read as an orientation they lengthen and shorten the pair the wheel points along."
+                "description": "Whether the row is read as an angle in degrees or as an orientation, which is a pair of values read as a direction. It is chosen from a key of its own in the toolbar rather than from the row it governs, and it says how the pedals are read as well, since they press what they press the same way the wheel is turned: read as an angle each presses a term of its own, the accelerator up from zero and the brake down below it, read as an orientation each presses a pair of its own, laid down along the bearing the wheel is turned to — forwards for the accelerator and back the other way for the brake."
             },
             {
                 "id": "angleVariable",
@@ -6146,10 +6146,40 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model",
+                "modeParameter": "turnedBy",
+                "pairedParameter": "accelerationUpVariable",
                 "colorParameter": "acceleratorColor",
                 "valueAnchor": {
                     "node": "accelerator-press",
-                    "x": 0,
+                    "x": 0.5,
+                    "y": 0.06
+                },
+                "visibleWhen": {
+                    "parameter": "showPedals"
+                },
+                "description": "What the accelerator presses, resting at zero and pressed up as far as the maximum. It never goes below the rest it starts from — the accelerator is one way only — and a slide across the whole of the area that presses it covers the whole of that range. It is read the way the wheel above it is read: as an angle it is one term, and as an orientation a second selector appears beside it and the pair is pressed along the bearing the wheel is turned to, which is how far across and how far up the vehicle is being pushed."
+            },
+            {
+                "id": "accelerationUpVariable",
+                "label": "Up",
+                "valueType": "variable",
+                "defaultValue": "0",
+                "category": "model",
+                "userEditable": false,
+                "description": "How far up the accelerator's pair reaches, edited by the second selector on its row and read only while the wheel is turned by an orientation."
+            },
+            {
+                "id": "brakingVariable",
+                "label": "Braked on",
+                "valueType": "variable",
+                "defaultValue": "0",
+                "category": "model",
+                "modeParameter": "turnedBy",
+                "pairedParameter": "brakingUpVariable",
+                "colorParameter": "brakeColor",
+                "valueAnchor": {
+                    "node": "brake-press",
+                    "x": 0.5,
                     "y": 0.06
                 },
                 "visibleWhen": [
@@ -6157,11 +6187,19 @@ BlockDefinitionLoader.registerAll([
                         "parameter": "showPedals"
                     },
                     {
-                        "parameter": "turnedBy",
-                        "equals": "angle"
+                        "parameter": "showBrake"
                     }
                 ],
-                "description": "The one term the two pedals press, resting at zero: the accelerator presses it up, as far as the maximum, and the brake presses it down, as far as the minimum, which is below zero. Neither crosses into the other's half — a pedal pressed while the term is on the far side starts from zero — and a slide across the whole drawing covers the whole of that pedal's own half. A wheel turned by an orientation reads nothing here: the pedals press the length of the pair instead."
+                "description": "What the brake presses, resting at zero and pressed down as far as the minimum, which is below zero: braking is a negative acceleration, so what the brake writes is the accelerator's own kind of value on the other side of rest. It is its own — name the same thing on both rows and the two pedals share a single acceleration between them, name two and the brake is kept apart from the throttle. Read as an orientation it is a pair like the accelerator's, pressed along the same bearing but the other way, so a braking model is pushed back against the course it is going on."
+            },
+            {
+                "id": "brakingUpVariable",
+                "label": "Up",
+                "valueType": "variable",
+                "defaultValue": "0",
+                "category": "model",
+                "userEditable": false,
+                "description": "How far up the brake's pair reaches, edited by the second selector on its row and read only while the wheel is turned by an orientation."
             },
             {
                 "id": "wheelType",
@@ -6198,6 +6236,17 @@ BlockDefinitionLoader.registerAll([
                 "description": "Whether the accelerator and the brake are drawn under the wheel. With both shown the box is split in two, the wheel above and the pedals below."
             },
             {
+                "id": "showBrake",
+                "label": "Brake",
+                "valueType": "boolean",
+                "defaultValue": true,
+                "category": "display",
+                "visibleWhen": {
+                    "parameter": "showPedals"
+                },
+                "description": "Whether the brake is drawn beside the accelerator. Switched off, the accelerator is the whole of the pedals and is pressed anywhere in them, and the brake takes its term, its minimum and its colour away with it — which is the vehicle a model drives on one control alone."
+            },
+            {
                 "id": "minimum",
                 "label": "Minimum",
                 "valueType": "number",
@@ -6209,11 +6258,10 @@ BlockDefinitionLoader.registerAll([
                         "parameter": "showPedals"
                     },
                     {
-                        "parameter": "turnedBy",
-                        "equals": "angle"
+                        "parameter": "showBrake"
                     }
                 ],
-                "description": "As far down as the brake presses the term, which is a value below zero — full braking. A wheel turned by an orientation has none: a pair is never pressed past a standstill, since a length below zero would turn it round."
+                "description": "As far down as the brake presses what it holds, which is a value below zero — full braking. Read as an orientation it is how far back along the bearing the pair may be pushed, which is the same end measured the other way."
             },
             {
                 "id": "maximum",
@@ -6224,7 +6272,7 @@ BlockDefinitionLoader.registerAll([
                 "visibleWhen": {
                     "parameter": "showPedals"
                 },
-                "description": "As far up as the accelerator presses the term, above zero — or, on a wheel turned by an orientation, the longest the pair can be pressed to."
+                "description": "As far up as the accelerator presses what it holds, above zero — or, read as an orientation, how far forward along the bearing its pair may be pushed."
             },
             {
                 "id": "pedalReturnStep",
@@ -6233,16 +6281,10 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": 10,
                 "category": "interaction",
                 "minimum": 0,
-                "visibleWhen": [
-                    {
-                        "parameter": "showPedals"
-                    },
-                    {
-                        "parameter": "turnedBy",
-                        "equals": "angle"
-                    }
-                ],
-                "description": "How much the term comes back towards zero every tenth of a second once the pedal is let go, until it is at rest again — the spring that lifts a pedal the foot is off. Zero leaves it wherever it was released."
+                "visibleWhen": {
+                    "parameter": "showPedals"
+                },
+                "description": "How much a pressed value comes back towards zero every tenth of a second once the pedal is let go, until it is at rest again — the spring that lifts a pedal the foot is off. It is the one spring, so the accelerator and the brake are let go alike, and a pair comes back along its own bearing to a standstill. Zero leaves what was pressed wherever it was released."
             },
             {
                 "id": "rimColor",
@@ -6283,7 +6325,7 @@ BlockDefinitionLoader.registerAll([
                 "category": "state",
                 "userEditable": false,
                 "agentAccessible": false,
-                "description": "The way the pair was last pointed, kept by the object while the pair stands at nothing. A standstill has no direction of its own, so this is what the wheel goes on facing and what the accelerator sets the pair going along when it is pressed back up. The object works it out for itself and never writes it down."
+                "description": "The way the pair was last pointed, kept by the object while the pair stands at nothing. A standstill has no direction of its own, so this is what the wheel goes on facing and the bearing the pedals go on pressing along, which is how a stopped vehicle is accelerated back the way it was heading rather than due north. The object works it out for itself and never writes it down."
             },
             {
                 "id": "markColor",
@@ -6301,18 +6343,16 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": "token:stroke.accent",
                 "category": "model",
                 "userEditable": false,
-                "description": "Colour of the accelerator, of the area that presses it and of the value read between the two pedals. It is picked on the row that names the term rather than on a colour menu that would name the same thing twice."
+                "description": "Colour of the accelerator, of the area that presses it and of the value read over it. It is picked on the row that names the term rather than on a colour menu that would name the same thing twice."
             },
             {
                 "id": "brakeColor",
                 "label": "Brake colour",
                 "valueType": "colour",
                 "defaultValue": "token:stroke.warning",
-                "category": "style",
-                "visibleWhen": {
-                    "parameter": "showPedals"
-                },
-                "description": "Colour of the brake and of the area that presses it, which is what the term is drawn on while it is below zero."
+                "category": "model",
+                "userEditable": false,
+                "description": "Colour of the brake, of the area that presses it and of the value read over it. It is picked the accelerator's way, on the row that names the term the brake presses, rather than on a colour menu that would name the same thing twice."
             },
             {
                 "id": "frameColor",
@@ -6371,6 +6411,20 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "brakeShown",
+                "value": {
+                    "choose": {
+                        "parameter": "showBrake"
+                    },
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "brakePressShown",
+                "formula": "pedalsShown\\cdot brakeShown"
+            },
+            {
                 "id": "bothShown",
                 "formula": "wheelShown\\cdot pedalsShown"
             },
@@ -6412,7 +6466,11 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "acceleratorPressX",
-                "formula": "dx+halfSide"
+                "formula": "dx+brakeShown\\cdot halfSide"
+            },
+            {
+                "id": "acceleratorPressWidth",
+                "formula": "side-brakeShown\\cdot halfSide"
             },
             {
                 "id": "pointedByOrientation",
@@ -6553,6 +6611,10 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "bearingRadians",
+                "formula": "\\frac{pointedAngle\\cdot\\pi}{180}"
+            },
+            {
                 "id": "accelerationValue",
                 "value": {
                     "parameter": "accelerationVariable",
@@ -6560,13 +6622,42 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
-                "id": "pressedValue",
+                "id": "accelerationUpValue",
+                "value": {
+                    "parameter": "accelerationUpVariable",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "brakingValue",
+                "value": {
+                    "parameter": "brakingVariable",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "brakingUpValue",
+                "value": {
+                    "parameter": "brakingUpVariable",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "accelerationAlong",
+                "formula": "accelerationValue\\cdot\\sin\\left(bearingRadians\\right)+accelerationUpValue\\cdot\\cos\\left(bearingRadians\\right)"
+            },
+            {
+                "id": "brakingAlong",
+                "formula": "brakingValue\\cdot\\sin\\left(bearingRadians\\right)+brakingUpValue\\cdot\\cos\\left(bearingRadians\\right)"
+            },
+            {
+                "id": "acceleratorPressed",
                 "value": {
                     "choose": {
                         "parameter": "pointedByOrientation"
                     },
                     "then": {
-                        "parameter": "orientationLength"
+                        "parameter": "accelerationAlong"
                     },
                     "otherwise": {
                         "parameter": "accelerationValue"
@@ -6574,27 +6665,17 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
-                "id": "brakeFloor",
-                "value": {
-                    "choose": {
-                        "parameter": "pointedByOrientation"
-                    },
-                    "then": 0,
-                    "otherwise": {
-                        "parameter": "minimum"
-                    }
-                }
-            },
-            {
-                "id": "brakeCeiling",
+                "id": "brakePressed",
                 "value": {
                     "choose": {
                         "parameter": "pointedByOrientation"
                     },
                     "then": {
-                        "parameter": "maximum"
+                        "parameter": "brakingAlong"
                     },
-                    "otherwise": 0
+                    "otherwise": {
+                        "parameter": "brakingValue"
+                    }
                 }
             },
             {
@@ -6603,17 +6684,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "brakeUnitsPerPixel",
-                "value": {
-                    "choose": {
-                        "parameter": "pointedByOrientation"
-                    },
-                    "then": {
-                        "formula": "0-\\frac{maximum}{side}"
-                    },
-                    "otherwise": {
-                        "formula": "\\frac{minimum}{side}"
-                    }
-                }
+                "formula": "\\frac{minimum}{side}"
             },
             {
                 "id": "acceleratorRatio",
@@ -6622,7 +6693,7 @@ BlockDefinitionLoader.registerAll([
                         "parameter": "maximum"
                     },
                     "then": {
-                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{pressedValue}{maximum}\\right)\\right)"
+                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{acceleratorPressed}{maximum}\\right)\\right)"
                     },
                     "otherwise": 0
                 }
@@ -6631,10 +6702,10 @@ BlockDefinitionLoader.registerAll([
                 "id": "brakeRatio",
                 "value": {
                     "choose": {
-                        "parameter": "brakeFloor"
+                        "parameter": "minimum"
                     },
                     "then": {
-                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{pressedValue}{brakeFloor}\\right)\\right)"
+                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{brakePressed}{minimum}\\right)\\right)"
                     },
                     "otherwise": 0
                 }
@@ -6642,13 +6713,7 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "pedalReturn",
                 "value": {
-                    "choose": {
-                        "parameter": "pointedByOrientation"
-                    },
-                    "then": 0,
-                    "otherwise": {
-                        "parameter": "pedalReturnStep"
-                    }
+                    "parameter": "pedalReturnStep"
                 }
             },
             {
@@ -7208,6 +7273,9 @@ BlockDefinitionLoader.registerAll([
                                 {
                                     "id": "car-brake-arm",
                                     "type": "line",
+                                    "when": {
+                                        "parameter": "showBrake"
+                                    },
                                     "properties": {
                                         "x1": 52,
                                         "y1": 26,
@@ -7229,6 +7297,9 @@ BlockDefinitionLoader.registerAll([
                                 {
                                     "id": "car-brake-pad",
                                     "type": "rect",
+                                    "when": {
+                                        "parameter": "showBrake"
+                                    },
                                     "properties": {
                                         "x": 24,
                                         "y": 108,
@@ -7254,6 +7325,9 @@ BlockDefinitionLoader.registerAll([
                                 {
                                     "id": "car-brake-hinge",
                                     "type": "circle",
+                                    "when": {
+                                        "parameter": "showBrake"
+                                    },
                                     "properties": {
                                         "centerX": 52,
                                         "centerY": 26,
@@ -7401,6 +7475,9 @@ BlockDefinitionLoader.registerAll([
                                 {
                                     "id": "brake-lever",
                                     "type": "group",
+                                    "when": {
+                                        "parameter": "showBrake"
+                                    },
                                     "modifiers": [
                                         {
                                             "type": "rotate",
@@ -7469,6 +7546,9 @@ BlockDefinitionLoader.registerAll([
                                 {
                                     "id": "brake-lever-pivot",
                                     "type": "circle",
+                                    "when": {
+                                        "parameter": "showBrake"
+                                    },
                                     "properties": {
                                         "centerX": 68,
                                         "centerY": 128,
@@ -7561,6 +7641,9 @@ BlockDefinitionLoader.registerAll([
                                 {
                                     "id": "astern-track",
                                     "type": "ellipse",
+                                    "when": {
+                                        "parameter": "showBrake"
+                                    },
                                     "properties": {
                                         "centerX": 66,
                                         "centerY": 158,
@@ -7597,6 +7680,9 @@ BlockDefinitionLoader.registerAll([
                                 {
                                     "id": "astern-lever",
                                     "type": "group",
+                                    "when": {
+                                        "parameter": "showBrake"
+                                    },
                                     "children": [
                                         {
                                             "id": "astern-lever-arm",
@@ -7793,7 +7879,7 @@ BlockDefinitionLoader.registerAll([
                     "id": "brake-press",
                     "type": "rect",
                     "when": {
-                        "parameter": "showPedals"
+                        "parameter": "brakePressShown"
                     },
                     "properties": {
                         "fill": "none",
@@ -7820,9 +7906,9 @@ BlockDefinitionLoader.registerAll([
                                 "parameter": "turnedByHand"
                             },
                             "variable": {
-                                "parameter": "accelerationVariable"
+                                "parameter": "brakingVariable"
                             },
-                            "property": "accelerationVariable",
+                            "property": "brakingVariable",
                             "unitsPerPixel": {
                                 "parameter": "brakeUnitsPerPixel"
                             },
@@ -7832,11 +7918,9 @@ BlockDefinitionLoader.registerAll([
                             },
                             "intervalMs": 100,
                             "minimum": {
-                                "parameter": "brakeFloor"
+                                "parameter": "minimum"
                             },
-                            "maximum": {
-                                "parameter": "brakeCeiling"
-                            },
+                            "maximum": 0,
                             "hoverFill": {
                                 "parameter": "brakeColor"
                             },
@@ -7848,23 +7932,28 @@ BlockDefinitionLoader.registerAll([
                                 "parameter": "pointedByOrientation"
                             },
                             "variable": {
-                                "parameter": "angleVariable"
+                                "parameter": "brakingVariable"
                             },
-                            "property": "angleVariable",
+                            "property": "brakingVariable",
                             "verticalVariable": {
-                                "parameter": "angleUpVariable"
+                                "parameter": "brakingUpVariable"
                             },
-                            "verticalProperty": "angleUpVariable",
+                            "verticalProperty": "brakingUpVariable",
+                            "bearing": {
+                                "parameter": "pointedAngle"
+                            },
                             "unitsPerPixel": {
                                 "parameter": "brakeUnitsPerPixel"
                             },
                             "restValue": 0,
-                            "returnStep": 0,
-                            "intervalMs": 100,
-                            "minimum": 0,
-                            "maximum": {
-                                "parameter": "maximum"
+                            "returnStep": {
+                                "parameter": "pedalReturn"
                             },
+                            "intervalMs": 100,
+                            "minimum": {
+                                "parameter": "minimum"
+                            },
+                            "maximum": 0,
                             "hoverFill": {
                                 "parameter": "brakeColor"
                             },
@@ -7890,7 +7979,7 @@ BlockDefinitionLoader.registerAll([
                             "parameter": "pedalsDy"
                         },
                         "width": {
-                            "parameter": "halfSide"
+                            "parameter": "acceleratorPressWidth"
                         },
                         "height": {
                             "parameter": "side"
@@ -7929,18 +8018,23 @@ BlockDefinitionLoader.registerAll([
                                 "parameter": "pointedByOrientation"
                             },
                             "variable": {
-                                "parameter": "angleVariable"
+                                "parameter": "accelerationVariable"
                             },
-                            "property": "angleVariable",
+                            "property": "accelerationVariable",
                             "verticalVariable": {
-                                "parameter": "angleUpVariable"
+                                "parameter": "accelerationUpVariable"
                             },
-                            "verticalProperty": "angleUpVariable",
+                            "verticalProperty": "accelerationUpVariable",
+                            "bearing": {
+                                "parameter": "pointedAngle"
+                            },
                             "unitsPerPixel": {
                                 "parameter": "acceleratorUnitsPerPixel"
                             },
                             "restValue": 0,
-                            "returnStep": 0,
+                            "returnStep": {
+                                "parameter": "pedalReturn"
+                            },
                             "intervalMs": 100,
                             "minimum": 0,
                             "maximum": {

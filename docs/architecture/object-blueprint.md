@@ -149,8 +149,8 @@ A fifth says where a value is read. A `variable` naming a **`valueAnchor`** — 
 a point in the object's box as a fraction of its width and height — carries the eye every term on the
 board is shown with, and turning it on draws `term = value` at that point, in the badge and the font
 `TermDisplay` draws every other term label with and in the colour the row's `colorParameter` names.
-An object anchoring its value needs no readout of its own: the steering wheel's pedals stand the term
-they press between the two of them. Add a **`node`** — `{ "node": "accelerator-press", "x": 0.5,
+An object anchoring its value needs no readout of its own: the steering wheel's pedals each stand the
+term they press over the pedal that presses it. Add a **`node`** — `{ "node": "accelerator-press", "x": 0.5,
 "y": 0.06 }` — and the fractions are read in that node's own box instead, so the label follows the
 part wherever the drawing puts it rather than where the box it was first drawn in happened to be; a
 node the object is not drawing places nothing. A row without an anchor has nowhere to draw a label,
@@ -375,7 +375,7 @@ npx playwright test tests/object-picker.spec.js tests/component-blocks.spec.js
 | interactive, writing values back | [`compass.json`](../../scripts/blocks/definitions/compass.json) — `drag-angle` and `drag-rotate` on invisible grab areas |
 | drawn rather than written | [`compass.json`](../../scripts/blocks/definitions/compass.json) again — its rose and needle are [imported SVG](../../scripts/blocks/definitions/art/), wired by id, with the labels left to `label-ring` |
 | one object drawn several ways | [`steering-wheel.json`](../../scripts/blocks/definitions/steering-wheel.json) — a drawing per type, each imported from its own SVG and carried by a `when` on a `choose` with an `equals` |
-| an object with parts the reader switches on and off | [`steering-wheel.json`](../../scripts/blocks/definitions/steering-wheel.json) again — a wheel and a pair of pedals, each drawn in a 200×200 art box scaled into a lane of its own, the lanes worked out from which parts are shown, the rows of a hidden part taken out of the menus by `visibleWhen`, and a `press-and-slide` area over each pedal — the two pressing one term between them, each clamped to its own half of it |
+| an object with parts the reader switches on and off | [`steering-wheel.json`](../../scripts/blocks/definitions/steering-wheel.json) again — a wheel and a pair of pedals, each drawn in a 200×200 art box scaled into a lane of its own, the lanes worked out from which parts are shown, the rows of a hidden part taken out of the menus by `visibleWhen`, and a `press-and-slide` area over each pedal — with a part nested inside a part, the brake switched off on its own, taking its term and its end with it and leaving the accelerator the whole of the lane |
 | composed of several sub-objects | [`analogue-clock.json`](../../scripts/blocks/definitions/analogue-clock.json), [`orbit-system.json`](../../scripts/blocks/definitions/orbit-system.json) |
 | a keypad that keeps its working | [`calculator.json`](../../scripts/blocks/definitions/calculator.json) — `key-cap`, `remember`, `memory-list` |
 | a plot that records | [`mouse-tracker.json`](../../scripts/blocks/definitions/mouse-tracker.json) — the plot components over a `memory-trace` |

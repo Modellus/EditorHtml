@@ -418,15 +418,24 @@ Pressing writes nothing — the value stays exactly where it was, for as long as
 and sliding up raises it by `unitsPerPixel` for every pixel travelled, sliding down lowers it, both
 clamped between `minimum` and `maximum`. The pixels are the object's own, read through
 `getComponentLocalPoint`, so the definition sets the reach by naming what one of them is worth: the
-steering wheel's pedals pass their own half of the range over the drawing's side, which makes a slide
-across the whole drawing exactly that half — the accelerator's above zero, the brake's below — at any
-size the object is drawn. A gesture also starts from the value clamped into the control's own range,
-so a pedal that finds the term on its neighbour's half begins at the zero they share rather than
+steering wheel's pedals pass their own range over the drawing's side, which makes a slide across the
+whole drawing exactly that range — the accelerator's above zero, the brake's below — at any size the
+object is drawn. A gesture also starts from the value clamped into the control's own range, so a
+pedal that finds its term on the far side of rest begins at the zero it presses from rather than
 spending its travel getting back to it. Naming a `verticalVariable` as well
-presses a **pair** rather than a number: what is read is the length of that pair, and what is written
-is that pair laid down again at the length the slide moved it to, along the direction it already
-pointed in — which is how the same pair of pedals that press one term press the speed of a velocity
-the wheel above them is steering, without touching which way it points.
+presses a **pair** rather than a number: what is read is how far that pair reaches, and what is written
+is that pair laid down again at the distance the slide moved it to, along the direction it already
+pointed in.
+
+Naming a **`bearing`** as well says which way it is laid down, and then the pair is read back along
+that same course rather than measured as a length. That reading carries a sign — forwards above zero,
+backwards below it — which is what a value below zero means for a pair, and what lets one control
+press a pair down through a standstill and out the other side. It is how the steering wheel's pedals
+press an acceleration the wheel above them is steering: the wheel says which way the push goes and
+each pedal says how hard, the accelerator along the bearing and the brake back against it, on the same
+`minimum` and `maximum` the pair of them press a term between. Without it a length has no sign, so a
+control could never press a pair past rest, and the pair would keep whatever way it was last left
+pointing rather than following the course the object is on.
 
 Letting go is the other half. Nothing holds a pedal down once the foot is off it, so the value walks
 back to `restValue` by `returnStep` every `intervalMs` — a tenth of a second for the pedals, back to
@@ -458,17 +467,21 @@ one named node's box — and that gives its row in the toolbar the same eye ever
 shown with: turning it on draws `term = value` at that point, in the badge, the font and the case
 icon `TermDisplay` draws every other term label with, and in the colour the parameter's own
 `colorParameter` names. The object draws no readout of its own for it: the steering wheel's pedals
-anchor their one value to the edge the two press areas share, so it stands between the pedals
-wherever the layout has put them — the whole box with the wheel switched off, the lower half with it
-on. A
+anchor each value to the middle of the area that presses it, so it stands over the pedal it belongs
+to wherever the layout has put it — the whole box with the wheel switched off, the lower half with it
+on, and a half of that again once the two pedals are sharing it. A
 parameter without an anchor has nowhere to put a label, so its row does not offer the eye.
 
 **A row that governs nothing is not offered.** A parameter may declare a **`visibleWhen`** — one
 condition, or a list of them that all have to hold, each naming a parameter and optionally the value
 it must equal — and the toolbar leaves its row out while that does not hold. It is what lets one
-object carry two parts the reader switches on and off: the steering wheel's pedals take their term,
-their ends and their spring out of the menus with them, and the term goes on its own when the wheel
-is turned by an orientation, because then the pedals press that pair instead.
+object carry parts the reader switches on and off: the steering wheel's pedals take their rows, their
+ends and their spring out of the menus with them, and the brake among them takes its own row, its
+minimum and its colour when it is switched off on its own. A condition may name another switch, so
+the brake's rows are offered only while the pedals are drawn *and* the brake is one of them. What a
+row is *read as* is a separate question from whether it is offered at all: the pedals' rows stand
+whichever way the wheel is turned, and `modeParameter` grows each of them a second selector when the
+wheel is read as an orientation, because then each pedal presses a pair rather than a term.
 
 **What an object works out about itself is handed to the drawing, not written into it.** The values
 `getCompilationParameters` merges over the shape's own — the character's image and pivot, the fitted

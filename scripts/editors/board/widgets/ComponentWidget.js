@@ -328,8 +328,14 @@ class ComponentShape extends BaseShape {
         return this.getComponentValidator().validate(this.properties.definition, this.getCompilationContext());
     }
 
+    // A value anchored to a node is placed over the box that node has in the drawing, so the drawing
+    // has to be worked out before the labels are laid over it. It is compiled here rather than in the
+    // render, and the labels and the markup are written from that one compilation: a part that has
+    // just moved — the accelerator taking the whole of the pedals as the brake is switched off — would
+    // otherwise be labelled where it stood the time before.
     draw() {
         this.registerComponentTermDisplayEntries();
+        this.lastCompilation = this.compileComponent();
         super.draw();
         this.applyComponentLayout();
         this.renderComponent();
@@ -431,7 +437,6 @@ class ComponentShape extends BaseShape {
     }
 
     renderComponent() {
-        this.lastCompilation = this.compileComponent();
         // Behaviours are attached while the markup is written, and the markup is only rewritten when
         // the drawing changes. Locking a shape or taking interaction away from it changes neither,
         // so the render has to be forced or the listeners from before it was locked live on.
@@ -934,9 +939,10 @@ class ComponentShape extends BaseShape {
             this.writeDragHalf(input.variable, input.property, pressed);
             return;
         }
-        // A control pressing a pair presses its length: the pair keeps the direction it points in and
-        // is laid down again at the length the slide moved it to, so a pedal changes how fast the
-        // model is going without touching which way. A pair holding nothing points straight up.
+        // A control pressing a pair presses how far along it reaches: the pair takes the course it is
+        // laid down on — the bearing it was handed, or the direction it already points in — and is
+        // laid down again at the distance the slide moved it to, so a pedal changes how hard the
+        // model is being pushed without touching which way. A pair holding nothing points straight up.
         const radians = BlockGeometry.toRadians(this.readPressAndSlideAngle(input));
         this.writeDragHalf(input.variable, input.property, pressed * Math.sin(radians));
         this.writeDragHalf(input.verticalVariable, input.verticalProperty, pressed * Math.cos(radians));
@@ -947,13 +953,26 @@ class ComponentShape extends BaseShape {
     readPressAndSlideValue(input) {
         if (!this.isOrientationDrag(input))
             return this.readPressAndSlideHalf(input.variable, input.property);
-        return Math.hypot(
-            this.readPressAndSlideHalf(input.variable, input.property),
-            this.readPressAndSlideHalf(input.verticalVariable, input.verticalProperty)
-        );
+        const across = this.readPressAndSlideHalf(input.variable, input.property);
+        const up = this.readPressAndSlideHalf(input.verticalVariable, input.verticalProperty);
+        // A pair laid down along a bearing is read back along it as well, and how far along is a value
+        // with a sign: a length on its own is never below zero, so a brake would read the pair it had
+        // pressed backwards as travel forwards and spend the rest of its own half undoing itself.
+        const bearing = Number(input.bearing);
+        if (Number.isFinite(bearing)) {
+            const radians = BlockGeometry.toRadians(bearing);
+            return across * Math.sin(radians) + up * Math.cos(radians);
+        }
+        return Math.hypot(across, up);
     }
 
     readPressAndSlideAngle(input) {
+        // A control handed a bearing lays its pair down along that course, whatever way the pair is
+        // pointing now: a pedal presses the way the vehicle is going, and one pressing below zero
+        // lays its pair down the other way, which is what a value below zero is for a pair.
+        const bearing = Number(input.bearing);
+        if (Number.isFinite(bearing))
+            return bearing;
         const across = this.readPressAndSlideHalf(input.variable, input.property);
         const up = this.readPressAndSlideHalf(input.verticalVariable, input.verticalProperty);
         // A pair braked to a standstill kept no direction of its own, so the one it was last pointed
