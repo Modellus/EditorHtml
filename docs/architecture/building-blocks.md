@@ -20,7 +20,7 @@ Bindings     constant | parameter | variable | expression | formula | token | fo
 Components   dial-face, tick-ring, label-ring, pointer-hand, pointer-ring, plot-grid, plot-axes,
              plot-crosshair, memory-list, memory-trace, analogue-clock, compass, speedometer,
              circular-gauge, rotating-vector, orbit-system, steering-wheel,
-             accelerator-brake, calculator, mouse-tracker, + custom components
+             calculator, mouse-tracker, + custom components
 ```
 
 ### How a drawing is made
@@ -254,7 +254,7 @@ deliberately do not have it.
 A component that only composes other blocks does not need a `create` function at all. It is a
 JSON document in `scripts/blocks/definitions/`, registered by `BlockDefinitionLoader`. Every
 component in the Components palette — analogue clock, compass, speedometer, circular gauge,
-rotating vector, orbit system, steering wheel, accelerator and brake — is defined this way. Only
+rotating vector, orbit system, steering wheel — is defined this way. Only
 `dial-face`, `tick-ring`, `label-ring`, `pointer-hand` and `pointer-ring` stay in code, because they
 generate geometry per index rather than compose.
 
@@ -418,8 +418,12 @@ Pressing writes nothing — the value stays exactly where it was, for as long as
 and sliding up raises it by `unitsPerPixel` for every pixel travelled, sliding down lowers it, both
 clamped between `minimum` and `maximum`. The pixels are the object's own, read through
 `getComponentLocalPoint`, so the definition sets the reach by naming what one of them is worth: the
-pedals pass `(maximum − minimum) / artSide`, which makes a slide across the whole drawing exactly the
-whole range, at any size the object is drawn.
+steering wheel's pedals pass `(maximum − minimum) / side`, which makes a slide across the whole
+drawing exactly the whole range, at any size the object is drawn. Naming a `verticalVariable` as well
+presses a **pair** rather than a number: what is read is the length of that pair, and what is written
+is that pair laid down again at the length the slide moved it to, along the direction it already
+pointed in — which is how the same pedal that moves a term drives the speed of a velocity the wheel
+above it is steering, without touching which way it points.
 
 Letting go is the other half. Nothing holds a pedal down once the foot is off it, so the value walks
 back to `restValue` by `returnStep` every `intervalMs` — a tenth of a second for the pedals — and
@@ -445,13 +449,21 @@ drag without going through `setProperty` — the gauge's needle, the slider's ha
 referential's tick — call the same refresh where they write.
 
 **A value is read where its own control is drawn.** A `variable` parameter may declare a
-**`valueAnchor`** — a point in the object's box as a fraction of its width and height — and that
-gives its row in the toolbar the same eye every term on the board is shown with: turning it on draws
-`term = value` at that point, in the badge, the font and the case icon `TermDisplay` draws every other
-term label with, and in the colour the parameter's own `colorParameter` names. The object draws no
-readout of its own for it: the accelerator and brake declare one anchor per control, so each value
-stands over the pedal it belongs to and both are turned on and off where the terms are named. A
+**`valueAnchor`** — a point in the object's box as a fraction of its width and height, or a point in
+one named node's box — and that gives its row in the toolbar the same eye every term on the board is
+shown with: turning it on draws `term = value` at that point, in the badge, the font and the case
+icon `TermDisplay` draws every other term label with, and in the colour the parameter's own
+`colorParameter` names. The object draws no readout of its own for it: the steering wheel's pedals
+anchor each value to the area that presses it, so each stands over the pedal it belongs to wherever
+the layout has put it — the whole box with the wheel switched off, the lower half with it on. A
 parameter without an anchor has nowhere to put a label, so its row does not offer the eye.
+
+**A row that governs nothing is not offered.** A parameter may declare a **`visibleWhen`** — one
+condition, or a list of them that all have to hold, each naming a parameter and optionally the value
+it must equal — and the toolbar leaves its row out while that does not hold. It is what lets one
+object carry two parts the reader switches on and off: the steering wheel's pedals take their terms,
+their ends and their springs out of the menus with them, and the terms the pedals travel with go too
+when the wheel is turned by an orientation, because then the pedals press that pair instead.
 
 **What the pointer is over is not something the object keeps.** `follow-pointer` reports where the
 pointer is, in the units the node is scaled in, into parameters the definition names — and the host

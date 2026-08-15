@@ -427,13 +427,15 @@ test.describe('reusable blocks build several objects', () => {
             const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
             const validator = new BlockValidator(BlockRegistry, compiler);
             validator.setCalculator(shell.board.calculator);
-            const definition = BlockObjects.createComponentInstance('accelerator-brake');
+            const definition = BlockObjects.createComponentInstance('steering-wheel');
             const build = (vehicleType, accelerator, brake) => {
-                const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('accelerator-brake'), {
-                    vehicleType: vehicleType,
+                const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('steering-wheel'), {
+                    wheelType: vehicleType,
+                    showWheel: false,
+                    showPedals: true,
+                    angleVariable: '0',
                     acceleratorVariable: accelerator,
-                    brakeVariable: brake,
-                    unit: '%'
+                    brakeVariable: brake
                 });
                 const context = { width: 200, height: 200, parameters: parameters, tokens: new BlockTokens('standard') };
                 const compilation = compiler.compile(definition, context);

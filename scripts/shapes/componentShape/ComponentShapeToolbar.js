@@ -54,7 +54,24 @@ var ComponentShapeToolbarMixin = {
         return items;
     },
     getParametersByCategory(categories) {
-        return this.getEditableParameters().filter(parameter => categories.includes(parameter.category ?? "general"));
+        return this.getEditableParameters()
+            .filter(parameter => categories.includes(parameter.category ?? "general"))
+            .filter(parameter => this.isComponentParameterOffered(parameter));
+    },
+    // A parameter belonging to a part the reader has switched off, or to a way of reading the model
+    // that is not the one chosen, governs nothing: its row is left out of the menu rather than shown
+    // standing for something the object is not doing. A definition says so with `visibleWhen`, which
+    // is one condition or a list of them, all of which have to hold.
+    isComponentParameterOffered(parameter) {
+        if (parameter.visibleWhen === undefined)
+            return true;
+        return [].concat(parameter.visibleWhen).every(condition => this.isComponentConditionMet(condition));
+    },
+    isComponentConditionMet(condition) {
+        const value = this.properties[condition.parameter];
+        if (condition.equals === undefined)
+            return BlockBindings.isTruthy(value);
+        return String(value ?? "") === String(condition.equals);
     },
     buildModeItems(parameter) {
         if (!parameter)
@@ -141,6 +158,7 @@ var ComponentShapeToolbarMixin = {
         this.setPropertyCommand(modeParameter.id, value);
         this.board.markDirty(this);
         this.refreshComponentToolbarControls();
+        this.refreshComponentSettingsMenu();
     },
     // An object that paints a background, a plot and an axis names them the way the chart does, and
     // is offered the same three colours under the same labels and icons. Anything else a definition
@@ -222,6 +240,7 @@ var ComponentShapeToolbarMixin = {
         this._componentSettingsDropdownElement.appendTo(itemElement);
     },
     buildComponentSettingsMenu(contentElement) {
+        this._componentSettingsContentElement = contentElement;
         const rangeParameters = this.getAxisRangeParameters();
         const items = [];
         // Auto scale and equal axis stand above the ends they govern, in the chart's own order.
@@ -377,8 +396,29 @@ var ComponentShapeToolbarMixin = {
                 if (!event.event)
                     return;
                 this.setPropertyCommand(parameter.id, event.value);
+                // A switch that turns a part of the object off takes that part's rows with it, so the
+                // menu it was thrown in is written again rather than left listing them. It is done
+                // once the switch has finished with itself, since the list it stands in is rebuilt.
+                if (this.getComponentParametersGovernedBy(parameter.id).length === 0)
+                    return;
+                this.refreshComponentToolbarControls();
+                queueMicrotask(() => this.refreshComponentSettingsMenu());
             }
         });
+    },
+    // Which rows a parameter decides the fate of: the ones naming it in what they are shown for.
+    getComponentParametersGovernedBy(parameterId) {
+        return this.getEditableParameters()
+            .filter(parameter => [].concat(parameter.visibleWhen ?? []).some(condition => condition.parameter === parameterId));
+    },
+    // The settings menu is built when it is opened, so a choice made elsewhere in the toolbar — or on
+    // one of its own switches — leaves it listing rows the object no longer offers. It is written
+    // again where it stands, and only while it is standing.
+    refreshComponentSettingsMenu() {
+        const contentElement = this._componentSettingsContentElement;
+        if (!contentElement || !document.body.contains($(contentElement)[0]))
+            return;
+        this.buildComponentSettingsMenu(contentElement);
     },
     createComponentNumberControl(parameter) {
         const editorOptions = {

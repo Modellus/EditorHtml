@@ -103,7 +103,8 @@ zero, a phasor of length one); a clock does not need it.
 
 Each is `{ id, label, valueType, defaultValue, category }` plus any of `description`, `minimum`,
 `maximum`, `enumValues`, `enumIcons`, `unit`, `required`, `bindable`, `agentAccessible`,
-`userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`, `modeParameter`.
+`userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`, `modeParameter`,
+`valueAnchor`, `visibleWhen`.
 
 `valueType` is one of `number`, `string`, `boolean`, `colour`, `variable`, `expression`, `memory`,
 `character`, `object`.
@@ -148,9 +149,19 @@ A fifth says where a value is read. A `variable` naming a **`valueAnchor`** — 
 a point in the object's box as a fraction of its width and height — carries the eye every term on the
 board is shown with, and turning it on draws `term = value` at that point, in the badge and the font
 `TermDisplay` draws every other term label with and in the colour the row's `colorParameter` names.
-An object with an anchor per control needs no readout of its own: the accelerator and brake stand each
-value over the pedal it belongs to. A row without an anchor has nowhere to draw a label, so it is not
-offered the eye.
+An object with an anchor per control needs no readout of its own: the steering wheel's pedals stand
+each value over the pedal it belongs to. Add a **`node`** — `{ "node": "accelerator-press", "x": 0.5,
+"y": 0.06 }` — and the fractions are read in that node's own box instead, so the label follows the
+part wherever the drawing puts it rather than where the box it was first drawn in happened to be; a
+node the object is not drawing places nothing. A row without an anchor has nowhere to draw a label,
+so it is not offered the eye.
+
+A sixth takes a row away again. A parameter naming a **`visibleWhen`** — `{ "parameter": "showPedals" }`,
+or `{ "parameter": "turnedBy", "equals": "angle" }`, or a list of conditions all of which have to
+hold — is offered in the toolbar only while that is true, in whichever menu its category puts it. It
+is what an object with an optional part needs: the part's own rows, ends and colours go with it when
+it is switched off, instead of standing in the menu governing nothing. It is about the menus alone —
+the drawing decides what it draws with `when`, and the value is still there for a binding to read.
 
 **Parameter values live in `shape.properties`**, not in the document. That is what gives a new object
 undo/redo, copy/paste, collaboration and serialization with nothing written for the purpose.
@@ -245,7 +256,7 @@ why an ordinary object has no use for it.
 | Behaviour | Reach for it when |
 | --- | --- |
 | `clickable` | a click writes a model variable or one of the object's own parameters |
-| `press-and-slide` | the reader holds the node: pressing keeps the value where it is, sliding up raises it by `unitsPerPixel` a pixel and down lowers it, and letting go walks it back to `restValue` by `returnStep` every `intervalMs` (zero leaves it where it was released). What a pedal or a throttle needs — and the press, the slide and the fall back are one undo entry |
+| `press-and-slide` | the reader holds the node: pressing keeps the value where it is, sliding up raises it by `unitsPerPixel` a pixel and down lowers it, and letting go walks it back to `restValue` by `returnStep` every `intervalMs` (zero leaves it where it was released). What a pedal or a throttle needs — and the press, the slide and the fall back are one undo entry. Naming a `verticalVariable` as well presses a pair rather than a number: what it reads is the length of that pair, and what it writes is that pair laid down again at the length it was pressed to, along the direction it already pointed in |
 | `drag-angle` | dragging a hand around a centre writes an angle back |
 | `drag-rotate` | dragging a rim or a bezel turns it by the angle travelled, not to the pointer. Naming a `verticalVariable` as well writes a pair rather than a number: the pair keeps its length and takes the angle it was turned to, which is how an object driven by a direction stays draggable |
 | `drag-axis-tick` | an axis tick rescales the axis |
@@ -268,7 +279,7 @@ Do not redraw what one of these already draws.
 | a key with a label | `key-cap` |
 | **anything cartesian** | `plot-grid`, `plot-axes`, `plot-crosshair` |
 | a memory shown as a list or a path | `memory-list`, `memory-trace` |
-| a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `accelerator-brake`, `calculator`, `mouse-tracker` |
+| a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `calculator`, `mouse-tracker` |
 
 An axis drawn as three lines and some text is the mistake the mouse tracker was built out of: the plot
 components carry the board's nice ticks, minor ticks, label gaps measured in tick fonts, and the drag
@@ -364,7 +375,7 @@ npx playwright test tests/object-picker.spec.js tests/component-blocks.spec.js
 | interactive, writing values back | [`compass.json`](../../scripts/blocks/definitions/compass.json) — `drag-angle` and `drag-rotate` on invisible grab areas |
 | drawn rather than written | [`compass.json`](../../scripts/blocks/definitions/compass.json) again — its rose and needle are [imported SVG](../../scripts/blocks/definitions/art/), wired by id, with the labels left to `label-ring` |
 | one object drawn several ways | [`steering-wheel.json`](../../scripts/blocks/definitions/steering-wheel.json) — a drawing per type, each imported from its own SVG and carried by a `when` on a `choose` with an `equals` |
-| two controls, each moved by a term of its own | [`accelerator-brake.json`](../../scripts/blocks/definitions/accelerator-brake.json) — one drawing per vehicle in a 200×200 art box scaled to the shape, the part they share carried by a `when` on a local that ors two of them together, and a `press-and-slide` area over each control |
+| an object with parts the reader switches on and off | [`steering-wheel.json`](../../scripts/blocks/definitions/steering-wheel.json) again — a wheel and a pair of pedals, each drawn in a 200×200 art box scaled into a lane of its own, the lanes worked out from which parts are shown, the rows of a hidden part taken out of the menus by `visibleWhen`, and a `press-and-slide` area over each pedal |
 | composed of several sub-objects | [`analogue-clock.json`](../../scripts/blocks/definitions/analogue-clock.json), [`orbit-system.json`](../../scripts/blocks/definitions/orbit-system.json) |
 | a keypad that keeps its working | [`calculator.json`](../../scripts/blocks/definitions/calculator.json) — `key-cap`, `remember`, `memory-list` |
 | a plot that records | [`mouse-tracker.json`](../../scripts/blocks/definitions/mouse-tracker.json) — the plot components over a `memory-trace` |

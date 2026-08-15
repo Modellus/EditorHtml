@@ -161,6 +161,8 @@ var BlockBehaviours = {
             properties: {
                 variable: { valueType: "variable", defaultValue: "", label: "Variable", bindable: false },
                 property: { valueType: "string", defaultValue: "", label: "Component property", description: "Property written when the variable holds a plain number instead of naming a model term." },
+                verticalVariable: { valueType: "variable", defaultValue: "", label: "Vertical variable", bindable: false, description: "Names the upward half of a pair, and then the control presses the length of that pair rather than a number of its own: the pair keeps the direction it points in and is laid down again at the length the slide moved it to. A pair holding nothing at all is laid down straight up, so a press has something to lengthen." },
+                verticalProperty: { valueType: "string", defaultValue: "", label: "Vertical component property", description: "Property written for the upward half when that variable holds a plain number." },
                 unitsPerPixel: { valueType: "number", defaultValue: 1, label: "Units per pixel", description: "How much the value changes for every pixel the pointer travels upwards, so the node itself says how far a drag across it reaches." },
                 restValue: { valueType: "number", defaultValue: 0, label: "Resting value", description: "What the control falls back to once it is let go." },
                 returnStep: { valueType: "number", defaultValue: 0, minimum: 0, label: "Return step", description: "How much of the way back is covered each interval after the pointer comes up. Left at zero the value stays where it was released." },

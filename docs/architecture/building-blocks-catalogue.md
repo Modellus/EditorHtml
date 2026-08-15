@@ -487,6 +487,8 @@ Capabilities: `interaction`, `linear`, `writes-model`
 | --- | --- | --- | --- |
 | `variable` | variable | "" |  |
 | `property` | string | "" |  |
+| `verticalVariable` | variable | "" |  |
+| `verticalProperty` | string | "" |  |
 | `unitsPerPixel` | number | 1 |  |
 | `restValue` | number | 0 |  |
 | `returnStep` | number | 0 | min 0 |
@@ -568,26 +570,6 @@ Capabilities: `interaction`, `memory`, `writes-model`
 | `maximumY` | number | null |  |
 
 ## Components
-
-### `accelerator-brake` — Accelerator and brake
-
-The two controls a vehicle is driven with, each travelling with a model variable and each held down by hand: a car's pedals or a boat's pair of throttle levers. Sliding a pedal up presses it further, sliding it down eases off, and letting go lets it come back to rest.
-
-Capabilities: `linear`, `reads-model`, `scale`, `interaction`, `writes-model`
-
-| Parameter | Type | Default | Range |
-| --- | --- | --- | --- |
-| `acceleratorVariable` | variable | "0" |  |
-| `brakeVariable` | variable | "0" |  |
-| `minimum` | number | 0 |  |
-| `maximum` | number | 100 |  |
-| `vehicleType` | string | "car" | car \| boat |
-| `acceleratorReturnStep` | number | 10 | min 0 |
-| `brakeReturnStep` | number | 10 | min 0 |
-| `acceleratorColor` | colour | "token:stroke.accent" |  |
-| `brakeColor` | colour | "token:stroke.warning" |  |
-| `frameColor` | colour | "token:stroke.default" |  |
-| `surfaceColor` | colour | "token:surface.muted" |  |
 
 ### `analogue-clock` — Analogue clock
 
@@ -1018,20 +1000,32 @@ Capabilities: `radial`, `angular`, `reads-model`, `scale`
 
 ### `steering-wheel` — Steering wheel
 
-Steering wheel turned by a model variable, drawn as a car wheel, a motorbike handlebar or a ship's helm. Dragging it turns the wheel and writes the angle back.
+The controls a vehicle is driven with: a wheel turned by a model variable, drawn as a car wheel, a motorbike handlebar or a ship's helm, and the accelerator and brake of that same vehicle under it. Either can be left out. Dragging the wheel turns it and writes back what it reads; pressing a pedal writes what it is pressed by.
 
-Capabilities: `radial`, `angular`, `reads-model`, `interaction`, `writes-model`
+Capabilities: `radial`, `angular`, `linear`, `reads-model`, `scale`, `interaction`, `writes-model`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
 | `turnedBy` | string | "angle" | angle \| orientation |
 | `angleVariable` | variable | "0" |  |
 | `angleUpVariable` | variable | "0" |  |
+| `acceleratorVariable` | variable | "0" |  |
+| `brakeVariable` | variable | "0" |  |
 | `wheelType` | string | "car" | car \| motor bike \| boat |
+| `showWheel` | boolean | true |  |
+| `showPedals` | boolean | false |  |
+| `minimum` | number | 0 |  |
+| `maximum` | number | 100 |  |
+| `acceleratorReturnStep` | number | 10 | min 0 |
+| `brakeReturnStep` | number | 10 | min 0 |
 | `rimColor` | colour | "token:stroke.default" |  |
 | `gripColor` | colour | "token:stroke.subtle" |  |
 | `hubColor` | colour | "token:surface.muted" |  |
 | `markColor` | colour | "token:stroke.warning" |  |
+| `acceleratorColor` | colour | "token:stroke.accent" |  |
+| `brakeColor` | colour | "token:stroke.warning" |  |
+| `frameColor` | colour | "token:stroke.default" |  |
+| `surfaceColor` | colour | "token:surface.muted" |  |
 
 ### `tick-ring` — Tick ring
 

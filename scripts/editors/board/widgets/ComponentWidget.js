@@ -331,10 +331,31 @@ class ComponentShape extends BaseShape {
         const anchor = this.getComponentParameter(entry.term)?.valueAnchor;
         if (!anchor)
             return null;
+        const box = this.getComponentAnchorBox(anchor);
+        if (!box)
+            return null;
         return {
-            x: Number(this.properties.width) * Number(anchor.x),
-            y: Number(this.properties.height) * Number(anchor.y),
+            x: box.x + box.width * Number(anchor.x),
+            y: box.y + box.height * Number(anchor.y),
             anchor: "middle"
+        };
+    }
+
+    // An anchor is a point in the object's own box — or, when it names a node, a point in that node's
+    // box, so a value stands over the part it belongs to wherever the drawing has put it rather than
+    // where the box it was first drawn in happened to be. A named node the object is not drawing has
+    // nothing to stand over, so nothing is placed there.
+    getComponentAnchorBox(anchor) {
+        if (String(anchor.node ?? "") === "")
+            return { x: 0, y: 0, width: Number(this.properties.width), height: Number(this.properties.height) };
+        const node = BlockRenderer.flatten(this.lastCompilation?.nodes ?? []).find(entry => entry.sourceId === anchor.node);
+        if (!node)
+            return null;
+        return {
+            x: Number(node.attributes.x),
+            y: Number(node.attributes.y),
+            width: Number(node.attributes.width),
+            height: Number(node.attributes.height)
         };
     }
 
@@ -772,7 +793,7 @@ class ComponentShape extends BaseShape {
     isPressAndSlideAllowed(input) {
         if (!this.isInteractable() || this.isLocked())
             return false;
-        return this.isDragHalfAllowed(input.variable, input.property);
+        return this.isPairWriteAllowed(input);
     }
 
     onPressAndSlideStart(event, input) {
@@ -853,16 +874,45 @@ class ComponentShape extends BaseShape {
     }
 
     writePressAndSlideValue(input, value) {
-        this.writeDragHalf(input.variable, input.property, this.clampPressAndSlideValue(value, input));
+        const pressed = this.clampPressAndSlideValue(value, input);
+        if (!this.isOrientationDrag(input)) {
+            this.writeDragHalf(input.variable, input.property, pressed);
+            return;
+        }
+        // A control pressing a pair presses its length: the pair keeps the direction it points in and
+        // is laid down again at the length the slide moved it to, so a pedal changes how fast the
+        // model is going without touching which way. A pair holding nothing points straight up.
+        const radians = BlockGeometry.toRadians(this.readPressAndSlideAngle(input));
+        this.writeDragHalf(input.variable, input.property, pressed * Math.sin(radians));
+        this.writeDragHalf(input.verticalVariable, input.verticalProperty, pressed * Math.cos(radians));
     }
 
-    // What the control holds now, read again every time it moves. A gesture that writes a property
-    // cannot read it from the behaviour it was started with: that input was resolved when the drawing
-    // was written, and what it says is the value the gesture has already moved on from.
+    // What the control holds now, read again every time it moves — the length of the pair when it
+    // presses one, and the value itself otherwise.
     readPressAndSlideValue(input) {
-        const property = this.getBehaviourProperty(input);
-        if (property === null || this.board.calculator.isTerm(String(input.variable ?? "")))
-            return this.readDragHalf(input.variable);
+        if (!this.isOrientationDrag(input))
+            return this.readPressAndSlideHalf(input.variable, input.property);
+        return Math.hypot(
+            this.readPressAndSlideHalf(input.variable, input.property),
+            this.readPressAndSlideHalf(input.verticalVariable, input.verticalProperty)
+        );
+    }
+
+    readPressAndSlideAngle(input) {
+        const across = this.readPressAndSlideHalf(input.variable, input.property);
+        const up = this.readPressAndSlideHalf(input.verticalVariable, input.verticalProperty);
+        if (across === 0 && up === 0)
+            return 0;
+        return BlockGeometry.toDegrees(Math.atan2(across, up));
+    }
+
+    // A gesture that writes a property cannot read it from the behaviour it was started with: that
+    // input was resolved when the drawing was written, and what it says is the value the gesture has
+    // already moved on from.
+    readPressAndSlideHalf(variableInput, propertyInput) {
+        const property = this.getBehaviourProperty({ property: propertyInput });
+        if (property === null || this.board.calculator.isTerm(String(variableInput ?? "")))
+            return this.readDragHalf(variableInput);
         const value = Number(this.properties[property]);
         return Number.isFinite(value) ? value : 0;
     }
@@ -911,6 +961,12 @@ class ComponentShape extends BaseShape {
     isAngleDragAllowed(input) {
         if (!this.isInteractable() || this.isLocked())
             return false;
+        return this.isPairWriteAllowed(input);
+    }
+
+    // A gesture that moves a pair has to be able to write both halves of it: one half the model works
+    // out for itself would leave the pair pointing somewhere it never went.
+    isPairWriteAllowed(input) {
         if (!this.isDragHalfAllowed(input.variable, input.property))
             return false;
         if (!this.isOrientationDrag(input))
