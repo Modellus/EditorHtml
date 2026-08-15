@@ -312,19 +312,35 @@ class ComponentShape extends BaseShape {
     // entries are registered here rather than by the toolbar, so a label survives a board where the
     // object has never been selected.
     registerComponentTermDisplayEntries() {
-        const componentType = this.getComponentType();
-        if (this._termDisplayComponentType === componentType)
-            return;
-        this._termDisplayComponentType = componentType;
-        for (const parameter of BlockObjects.getComponentParameters(componentType)) {
-            if (!parameter.valueAnchor)
-                continue;
+        const parameters = BlockObjects.getComponentParameters(this.getComponentType()).filter(parameter => parameter.valueAnchor);
+        for (const parameter of parameters) {
             const displayModeProperty = this.getTermDisplayModeProperty(parameter.id);
             if (this.properties[displayModeProperty] == null)
                 this.properties[displayModeProperty] = "none";
-            if (!this.termDisplayEntries.some(entry => entry.term === parameter.id))
-                this.termDisplayEntries.push({ term: parameter.id, caseProperty: `${parameter.id}Case`, title: parameter.label });
         }
+        // A row the object is not offering is a row nothing reads, so the eye turned on for it goes
+        // quiet with it rather than labelling the drawing with a term it has stopped using. Turning
+        // the row back on brings the label back, since the choice itself was never written over.
+        this.termDisplayEntries = parameters
+            .filter(parameter => this.isComponentParameterOffered(parameter))
+            .map(parameter => ({ term: parameter.id, caseProperty: `${parameter.id}Case`, title: parameter.label }));
+    }
+
+    // A parameter belonging to a part the reader has switched off, or to a way of reading the model
+    // that is not the one chosen, governs nothing: it is left out of the toolbar and off the drawing
+    // rather than standing for something the object is not doing. A definition says so with
+    // `visibleWhen`, which is one condition or a list of them, all of which have to hold.
+    isComponentParameterOffered(parameter) {
+        if (parameter.visibleWhen === undefined)
+            return true;
+        return [].concat(parameter.visibleWhen).every(condition => this.isComponentConditionMet(condition));
+    }
+
+    isComponentConditionMet(condition) {
+        const value = this.properties[condition.parameter];
+        if (condition.equals === undefined)
+            return BlockBindings.isTruthy(value);
+        return String(value ?? "") === String(condition.equals);
     }
 
     getTermEntryLabelPosition(entry) {

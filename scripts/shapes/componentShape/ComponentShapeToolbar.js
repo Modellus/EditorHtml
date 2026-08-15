@@ -58,21 +58,6 @@ var ComponentShapeToolbarMixin = {
             .filter(parameter => categories.includes(parameter.category ?? "general"))
             .filter(parameter => this.isComponentParameterOffered(parameter));
     },
-    // A parameter belonging to a part the reader has switched off, or to a way of reading the model
-    // that is not the one chosen, governs nothing: its row is left out of the menu rather than shown
-    // standing for something the object is not doing. A definition says so with `visibleWhen`, which
-    // is one condition or a list of them, all of which have to hold.
-    isComponentParameterOffered(parameter) {
-        if (parameter.visibleWhen === undefined)
-            return true;
-        return [].concat(parameter.visibleWhen).every(condition => this.isComponentConditionMet(condition));
-    },
-    isComponentConditionMet(condition) {
-        const value = this.properties[condition.parameter];
-        if (condition.equals === undefined)
-            return BlockBindings.isTruthy(value);
-        return String(value ?? "") === String(condition.equals);
-    },
     buildModeItems(parameter) {
         if (!parameter)
             return [];

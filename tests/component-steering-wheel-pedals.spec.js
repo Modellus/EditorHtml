@@ -219,6 +219,29 @@ test.describe('the pedals of the steering wheel', () => {
         expect(labels[0].background).toBe('#1871c2');
     });
 
+    // A wheel turned by an orientation presses the pair the wheel points along, so the pedals name no
+    // term of their own — and the eye that was turned on for that term goes quiet with the row rather
+    // than labelling the drawing with something nothing reads.
+    test('the eye goes quiet with the row when the pedals stop naming a term', async ({ page }) => {
+        await setupBoard(page);
+        await addDrivingModel(page);
+        await addPedals(page);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Pedals').setProperties({ accelerationVariableDisplayMode: 'nameValue' });
+            shell.board.forceRefresh();
+        });
+        await page.waitForTimeout(400);
+        const labels = () => page.evaluate(() => Array.from(shell.board.shapes.getByName('Pedals').element.querySelectorAll('.shape-term-label')).map(label => label.textContent));
+        expect(await labels()).toEqual(['throttle = 0.00']);
+        await page.evaluate(() => shell.board.shapes.getByName('Pedals').setPropertyCommand('turnedBy', 'orientation'));
+        await page.waitForTimeout(400);
+        expect(await labels()).toEqual([]);
+        // The choice was never written over, so turning the row back on brings the label back with it.
+        await page.evaluate(() => shell.board.shapes.getByName('Pedals').setPropertyCommand('turnedBy', 'angle'));
+        await page.waitForTimeout(400);
+        expect(await labels()).toEqual(['throttle = 0.00']);
+    });
+
     // A row naming no term holds the number itself, and pressing a pedal writes that number. The key
     // in the toolbar reads it, so it has to follow the press: an interaction writes the property
     // straight rather than through a command, which is the path that otherwise refreshes a toolbar.
