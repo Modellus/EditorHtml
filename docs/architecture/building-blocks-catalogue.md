@@ -1019,6 +1019,7 @@ Capabilities: `radial`, `angular`, `linear`, `reads-model`, `scale`, `interactio
 | `rimColor` | colour | "token:stroke.default" |  |
 | `gripColor` | colour | "token:stroke.subtle" |  |
 | `hubColor` | colour | "token:surface.muted" |  |
+| `restingAngle` | number | 0 |  |
 | `markColor` | colour | "token:stroke.warning" |  |
 | `acceleratorColor` | colour | "token:stroke.accent" |  |
 | `brakeColor` | colour | "token:stroke.warning" |  |

@@ -416,6 +416,42 @@ test.describe('the pedals of the steering wheel', () => {
         await release(page, 300);
     });
 
+    // A standstill has no direction of its own. The object keeps the one it was last pointed in, so
+    // the wheel goes on facing that way while the pair stands at nothing and pressing the accelerator
+    // sets it going the same way again rather than jumping to straight up.
+    test('a pair braked to a standstill keeps the direction it was going', async ({ page }) => {
+        await setupBoard(page);
+        await addDrivingModel(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('steering-wheel', 'Wheel');
+            shape.setProperties({ x: 240, y: 160, width: 240, height: 240, turnedBy: 'orientation', angleVariable: 'across', angleUpVariable: 'up', showPedals: true });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        const heading = () => page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wheel');
+            const wheel = shape.element.querySelector('[data-source-id="wheel"]');
+            return { transform: wheel.getAttribute('transform'), across: shell.board.calculator.getByName('across', 1), up: shell.board.calculator.getByName('up', 1) };
+        });
+        // Across 30 and up 40 is a bearing of about 37 degrees, and the wheel is turned to it.
+        const going = await heading();
+        expect(going.transform).toContain('rotate(36.8');
+        const points = await pressPoints(page, 'Wheel');
+        await slide(page, points.brake, 400, 200);
+        await release(page, 300);
+        const stopped = await heading();
+        expect([stopped.across, stopped.up]).toEqual([0, 0]);
+        // Standing still, the wheel is still turned the way it was going rather than back to north.
+        expect(stopped.transform).toContain('rotate(36.8');
+        await slide(page, points.accelerator, 48, 200);
+        await release(page, 300);
+        // The wheel is shown as well, so the pedals have half the box and a pixel is worth more:
+        // 48 of them press the pair to 40, along the bearing it was braked on.
+        const again = await heading();
+        expect(Math.hypot(again.across, again.up)).toBeCloseTo(40, 1);
+        expect(again.across / again.up).toBeCloseTo(30 / 40, 2);
+    });
+
     // A pair holding plain numbers is pressed on the object itself, and the direction has to be read
     // back from what the gesture has already written rather than from the drawing it started with.
     test('a pedal pressing a pair of plain numbers writes both of them, as one undo step', async ({ page }) => {

@@ -6276,6 +6276,16 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "restingAngle",
+                "label": "Resting angle",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false,
+                "description": "The way the pair was last pointed, kept by the object while the pair stands at nothing. A standstill has no direction of its own, so this is what the wheel goes on facing and what the accelerator sets the pair going along when it is pressed back up. The object works it out for itself and never writes it down."
+            },
+            {
                 "id": "markColor",
                 "label": "Mark colour",
                 "valueType": "colour",
@@ -6416,17 +6426,47 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "across",
+                "value": {
+                    "parameter": "angleVariable",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "up",
+                "value": {
+                    "parameter": "angleUpVariable",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "orientationLength",
+                "formula": "\\sqrt{across^{2}+up^{2}}"
+            },
+            {
                 "id": "orientationAngle",
                 "value": {
                     "direction": {
                         "x": {
-                            "parameter": "angleVariable",
-                            "as": "number"
+                            "parameter": "across"
                         },
                         "y": {
-                            "parameter": "angleUpVariable",
-                            "as": "number"
+                            "parameter": "up"
                         }
+                    }
+                }
+            },
+            {
+                "id": "pointedAngle",
+                "value": {
+                    "choose": {
+                        "parameter": "orientationLength"
+                    },
+                    "then": {
+                        "parameter": "orientationAngle"
+                    },
+                    "otherwise": {
+                        "parameter": "restingAngle"
                     }
                 }
             },
@@ -6444,7 +6484,7 @@ BlockDefinitionLoader.registerAll([
                         "parameter": "pointedByOrientation"
                     },
                     "then": {
-                        "parameter": "orientationAngle"
+                        "parameter": "pointedAngle"
                     },
                     "otherwise": {
                         "parameter": "plainAngle"
@@ -6511,24 +6551,6 @@ BlockDefinitionLoader.registerAll([
                 "value": {
                     "token": "handle.stroke"
                 }
-            },
-            {
-                "id": "across",
-                "value": {
-                    "parameter": "angleVariable",
-                    "as": "number"
-                }
-            },
-            {
-                "id": "up",
-                "value": {
-                    "parameter": "angleUpVariable",
-                    "as": "number"
-                }
-            },
-            {
-                "id": "orientationLength",
-                "formula": "\\sqrt{across^{2}+up^{2}}"
             },
             {
                 "id": "accelerationValue",

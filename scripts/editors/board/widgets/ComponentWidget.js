@@ -179,9 +179,45 @@ class ComponentShape extends BaseShape {
     getCompilationParameters() {
         const character = this.getComponentCharacterValues();
         const range = this.getAxisRangeValues();
-        if (!character && !this._pointerValues && !range)
+        const resting = this.getOrientationRestingValues();
+        if (!character && !this._pointerValues && !range && !resting)
             return this.properties;
-        return Object.assign({}, this.properties, character, this._pointerValues, range);
+        return Object.assign({}, this.properties, character, this._pointerValues, range, resting);
+    }
+
+    // A pair at rest points nowhere: both halves are zero, and the angle worked out from them is
+    // straight up rather than the way the object was last going. So the last direction it was pointed
+    // in is kept while it stands still — the drawing goes on facing that way, and a pedal pressed from
+    // a standstill sets the pair going that way again instead of jumping north. It is remembered
+    // rather than written down: nothing in the model says which way a stopped vehicle was facing, and
+    // a value written on every tick would fill the file and the undo history with it.
+    getOrientationRestingValues() {
+        const pair = this.getOrientationPairParameters();
+        if (!pair)
+            return null;
+        return { restingAngle: this.readOrientationRestingAngle(pair) };
+    }
+
+    readOrientationRestingAngle(pair) {
+        const across = this.readDragHalf(this.properties[pair.across]);
+        const up = this.readDragHalf(this.properties[pair.up]);
+        if (across !== 0 || up !== 0)
+            this._restingAngle = BlockGeometry.toDegrees(Math.atan2(across, up));
+        return this._restingAngle ?? 0;
+    }
+
+    // The row the object is pointed by, while it is being read as a pair: the one naming a second half
+    // and a way of reading it that is on the second of its two choices, which is the orientation.
+    getOrientationPairParameters() {
+        for (const parameter of BlockObjects.getComponentParameters(this.getComponentType())) {
+            const paired = String(parameter.pairedParameter ?? "");
+            const mode = this.getComponentParameter(parameter.modeParameter ?? "");
+            if (paired === "" || !mode?.enumValues)
+                continue;
+            if (String(this.properties[mode.id] ?? "") === String(mode.enumValues[1]))
+                return { across: parameter.id, up: paired };
+        }
+        return null;
     }
 
     // Auto scale and equal axis are the chart's two, and an object gets them by declaring them: the
@@ -920,8 +956,10 @@ class ComponentShape extends BaseShape {
     readPressAndSlideAngle(input) {
         const across = this.readPressAndSlideHalf(input.variable, input.property);
         const up = this.readPressAndSlideHalf(input.verticalVariable, input.verticalProperty);
+        // A pair braked to a standstill kept no direction of its own, so the one it was last pointed
+        // in is what pressing it back up sets it going along.
         if (across === 0 && up === 0)
-            return 0;
+            return this._restingAngle ?? 0;
         return BlockGeometry.toDegrees(Math.atan2(across, up));
     }
 

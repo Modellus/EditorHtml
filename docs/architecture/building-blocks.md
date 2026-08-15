@@ -470,6 +470,14 @@ object carry two parts the reader switches on and off: the steering wheel's peda
 their ends and their spring out of the menus with them, and the term goes on its own when the wheel
 is turned by an orientation, because then the pedals press that pair instead.
 
+**What an object works out about itself is handed to the drawing, not written into it.** The values
+`getCompilationParameters` merges over the shape's own — the character's image and pivot, the fitted
+axis ends, what the pointer is over, and the bearing a pair was last pointed on — are parameters the
+definition reads like any other, and none of them is a property the file, the undo history or a
+collaborator ever sees. The bearing is the reason a vehicle braked to a standstill keeps its heading:
+a pair of zeros points nowhere, so the last angle it had is what the drawing goes on facing and what
+the accelerator sets it going along again.
+
 **What the pointer is over is not something the object keeps.** `follow-pointer` reports where the
 pointer is, in the units the node is scaled in, into parameters the definition names — and the host
 hands those values to the next compilation rather than writing them to the shape, so hovering leaves
