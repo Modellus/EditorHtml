@@ -418,16 +418,19 @@ Pressing writes nothing — the value stays exactly where it was, for as long as
 and sliding up raises it by `unitsPerPixel` for every pixel travelled, sliding down lowers it, both
 clamped between `minimum` and `maximum`. The pixels are the object's own, read through
 `getComponentLocalPoint`, so the definition sets the reach by naming what one of them is worth: the
-steering wheel's pedals pass `(maximum − minimum) / side`, which makes a slide across the whole
-drawing exactly the whole range, at any size the object is drawn. Naming a `verticalVariable` as well
+steering wheel's pedals pass their own half of the range over the drawing's side, which makes a slide
+across the whole drawing exactly that half — the accelerator's above zero, the brake's below — at any
+size the object is drawn. A gesture also starts from the value clamped into the control's own range,
+so a pedal that finds the term on its neighbour's half begins at the zero they share rather than
+spending its travel getting back to it. Naming a `verticalVariable` as well
 presses a **pair** rather than a number: what is read is the length of that pair, and what is written
 is that pair laid down again at the length the slide moved it to, along the direction it already
 pointed in — which is how the same pair of pedals that press one term press the speed of a velocity
 the wheel above them is steering, without touching which way it points.
 
 Letting go is the other half. Nothing holds a pedal down once the foot is off it, so the value walks
-back to `restValue` by `returnStep` every `intervalMs` — a tenth of a second for the pedals, whichever
-of the two was last pressed — and
+back to `restValue` by `returnStep` every `intervalMs` — a tenth of a second for the pedals, back to
+the zero both of them rest at — and
 stops the moment it is there; a `returnStep` of zero leaves it where it was released, which is the
 control that stays put. Pressing again catches it wherever the fall has got to. It writes through the
 same pair of paths a drag does: a model term through the calculator, or the object's own parameter
@@ -455,8 +458,9 @@ one named node's box — and that gives its row in the toolbar the same eye ever
 shown with: turning it on draws `term = value` at that point, in the badge, the font and the case
 icon `TermDisplay` draws every other term label with, and in the colour the parameter's own
 `colorParameter` names. The object draws no readout of its own for it: the steering wheel's pedals
-anchor their one value to the area that presses it, so it stands over the accelerator wherever the
-layout has put it — the whole box with the wheel switched off, the lower half with it on. A
+anchor their one value to the edge the two press areas share, so it stands between the pedals
+wherever the layout has put them — the whole box with the wheel switched off, the lower half with it
+on. A
 parameter without an anchor has nowhere to put a label, so its row does not offer the eye.
 
 **A row that governs nothing is not offered.** A parameter may declare a **`visibleWhen`** — one

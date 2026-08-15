@@ -414,7 +414,7 @@ test.describe('reusable blocks build several objects', () => {
 
     // The two controls a vehicle is driven with, drawn the way that vehicle works them: only the
     // parts the named vehicle owns are compiled, and the two press one term between them — the
-    // accelerator up, the brake down — so the pedal that shows it is the accelerator alone.
+    // accelerator up from zero, the brake down below it — each showing its own half of it.
     test('the two pedals press one term between them, on whichever vehicle is named', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => modellus.shape.addExpression('Driving'));
@@ -429,13 +429,13 @@ test.describe('reusable blocks build several objects', () => {
             const validator = new BlockValidator(BlockRegistry, compiler);
             validator.setCalculator(shell.board.calculator);
             const definition = BlockObjects.createComponentInstance('steering-wheel');
-            const build = (vehicleType, pedal) => {
+            const build = (vehicleType, acceleration) => {
                 const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('steering-wheel'), {
                     wheelType: vehicleType,
                     showWheel: false,
                     showPedals: true,
                     angleVariable: '0',
-                    pedalVariable: pedal
+                    accelerationVariable: acceleration
                 });
                 const context = { width: 200, height: 200, parameters: parameters, tokens: new BlockTokens('standard') };
                 const compilation = compiler.compile(definition, context);
@@ -460,48 +460,55 @@ test.describe('reusable blocks build several objects', () => {
             };
             return {
                 carAtRest: build('car', '0'),
-                carHalfway: build('car', '50'),
-                carPastTheMaximum: build('car', '150'),
+                carAccelerating: build('car', '50'),
+                carBraking: build('car', '-50'),
+                carPastTheEnds: build('car', '150'),
                 carFromTheModel: build('car', 'throttle'),
                 boatAtRest: build('boat', '0'),
-                boat: build('boat', '50')
+                boatAhead: build('boat', '50'),
+                boatAstern: build('boat', '-50')
             };
         });
         for (const drawing of Object.values(measured))
             expect(drawing.errors).toEqual([]);
-        // The accelerator stands where the value stands between the two ends; the brake is a control
-        // to press rather than a reading, so it never leaves its rest.
-        expect(measured.carAtRest.acceleratorPadY).toBe(96);
-        expect(measured.carHalfway.acceleratorPadY).toBe(118);
-        expect(measured.carPastTheMaximum.acceleratorPadY).toBe(140);
-        expect([measured.carAtRest.brakePadY, measured.carHalfway.brakePadY, measured.carPastTheMaximum.brakePadY]).toEqual([108, 108, 108]);
+        // The accelerator carries the term above zero and the brake carries it below, so only one of
+        // the two ever travels and each rests while the other is pressed.
+        expect(measured.carAtRest).toMatchObject({ acceleratorPadY: 96, brakePadY: 108 });
+        expect(measured.carAccelerating).toMatchObject({ acceleratorPadY: 118, brakePadY: 108 });
+        expect(measured.carBraking).toMatchObject({ acceleratorPadY: 96, brakePadY: 130 });
+        expect(measured.carPastTheEnds).toMatchObject({ acceleratorPadY: 140, brakePadY: 108 });
         expect(measured.carFromTheModel.presses.map(press => press.id)).toEqual(['brake-press', 'accelerator-press']);
-        // A pixel of the 200px drawing is worth a two-hundredth of the 0…100 range, so a slide across
-        // the whole of it covers the whole range — upwards on the accelerator, downwards on the brake.
-        expect(measured.carFromTheModel.presses[0].input).toMatchObject({ variable: 'throttle', property: 'pedalVariable', unitsPerPixel: -0.5, restValue: 0, returnStep: 10, intervalMs: 100, minimum: 0, maximum: 100 });
-        expect(measured.carFromTheModel.presses[1].input).toMatchObject({ variable: 'throttle', property: 'pedalVariable', unitsPerPixel: 0.5, returnStep: 10 });
+        // A pixel of the 200px drawing is worth a two-hundredth of each pedal's own half, so a slide
+        // across the whole of it covers that half — the brake's downwards, to a minimum below zero.
+        expect(measured.carFromTheModel.presses[0].input).toMatchObject({ variable: 'throttle', property: 'accelerationVariable', unitsPerPixel: -0.5, restValue: 0, returnStep: 10, intervalMs: 100, minimum: -100, maximum: 0 });
+        expect(measured.carFromTheModel.presses[1].input).toMatchObject({ variable: 'throttle', property: 'accelerationVariable', unitsPerPixel: 0.5, restValue: 0, returnStep: 10, minimum: 0, maximum: 100 });
         expect(measured.carFromTheModel.parts).toContain('car-brake-pad');
         expect(measured.carFromTheModel.parts).not.toContain('binnacle');
         // Either vehicle is pressed on the half of the drawing the control it holds is drawn in: the
         // brake on the left and the accelerator on the right.
         expect(measured.carFromTheModel.presses.map(press => press.box)).toEqual([[0, 0, 100, 200], [100, 0, 100, 200]]);
-        expect(measured.boat.presses.map(press => press.box)).toEqual([[0, 0, 100, 200], [100, 0, 100, 200]]);
-        expect(measured.boat.parts).toEqual(expect.arrayContaining(['astern-lever-knob', 'ahead-lever-knob']));
-        expect(measured.boat.parts).not.toContain('car-brake-pad');
-        // The boat's ahead lever swings towards and away from the reader rather than across the
-        // drawing, and the astern lever stands where it rests, so neither leaves its own column.
-        expect(measured.boatAtRest.astern).toEqual([66, 85, 12]);
+        expect(measured.boatAhead.presses.map(press => press.box)).toEqual([[0, 0, 100, 200], [100, 0, 100, 200]]);
+        expect(measured.boatAhead.parts).toEqual(expect.arrayContaining(['astern-lever-knob', 'ahead-lever-knob']));
+        expect(measured.boatAhead.parts).not.toContain('car-brake-pad');
+        // The boat's levers swing towards and away from the reader rather than across the drawing, so
+        // at rest the pair stands alike, and neither knob ever leaves the column it is drawn in.
+        expect(measured.boatAtRest.astern).toEqual([66, ...measured.boatAtRest.ahead.slice(1)]);
         expect(measured.boatAtRest.ahead[1]).toBeCloseTo(85.3, 1);
         expect(measured.boatAtRest.ahead[2]).toBeCloseTo(12, 5);
-        expect(measured.boat.astern).toEqual(measured.boatAtRest.astern);
-        expect(measured.boat.ahead[0]).toBe(134);
+        expect(measured.boatAhead.astern[0]).toBe(66);
+        expect(measured.boatAhead.ahead[0]).toBe(134);
         // Pushed ahead, the lever leans away: it reaches further up the drawing and is drawn smaller.
-        expect(measured.boat.ahead[1]).toBeCloseTo(74.1, 1);
-        expect(measured.boat.ahead[2]).toBeCloseTo(10.1, 1);
-        // The shaft moves along its slot as it leans, forwards as it goes away from the reader.
-        expect(measured.boat.aheadSlot).toBeLessThan(158);
+        expect(measured.boatAhead.ahead[1]).toBeCloseTo(74.1, 1);
+        expect(measured.boatAhead.ahead[2]).toBeCloseTo(10.1, 1);
+        // Pulled astern — the term below zero — it comes towards the reader instead: lower down the
+        // drawing and drawn larger, while the ahead lever stands at rest.
+        expect(measured.boatAstern.astern[1]).toBeCloseTo(103.1, 1);
+        expect(measured.boatAstern.astern[2]).toBeCloseTo(13.9, 1);
+        expect(measured.boatAstern.ahead).toEqual(measured.boatAtRest.ahead);
+        // The shaft moves along its slot as it leans, forwards for ahead and back for astern.
+        expect(measured.boatAstern.asternSlot).toBeGreaterThan(158);
+        expect(measured.boatAhead.aheadSlot).toBeLessThan(158);
         expect(measured.boatAtRest.aheadSlot).toBeCloseTo(158, 5);
-        expect(measured.boat.asternSlot).toBe(158);
     });
 
     test('the compass rose turns with its rotation variable while the needle keeps its heading', async ({ page }) => {

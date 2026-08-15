@@ -33,7 +33,7 @@ async function compileMarkup(page, componentType, preset, size, overrides = {}) 
             'circular-gauge': { valueVariable: 'speed', unit: '%' },
             'rotating-vector': { angleVariable: 'angle', lengthVariable: 'radius', lengthScale: 60, showProjections: true },
             'orbit-system': { timeVariable: 'tempo' },
-            'steering-wheel': { angleVariable: 'angle', pedalVariable: 'speed' }
+            'steering-wheel': { angleVariable: 'angle', accelerationVariable: 'speed' }
         };
         Object.assign(parameters, modelParameters[componentType] ?? {}, overrides);
         const compilation = compiler.compile(definition, { width: size, height: size, parameters: parameters, tokens: new BlockTokens(preset) });

@@ -807,7 +807,10 @@ class ComponentShape extends BaseShape {
         // Pressing a pedal that is still falling back catches it where it is, and the edit that fall
         // belongs to is the one this press carries on with.
         const wasReturning = this.stopPressAndSlideReturn();
-        this._slideStartValue = this.readPressAndSlideValue(input);
+        // The gesture starts where this control can hold the value rather than where the value is: a
+        // pedal that only presses one half of a term, and finds it on the other half, starts from the
+        // end it shares with its neighbour instead of spending its travel getting back to it.
+        this._slideStartValue = this.clampPressAndSlideValue(this.readPressAndSlideValue(input), input);
         this._slideStartY = this.getComponentLocalPoint(event).y;
         this._slideWritesProperty = this.isAngleDragPropertyWrite(input);
         if (this._slideWritesProperty && !wasReturning)
