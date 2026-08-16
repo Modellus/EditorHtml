@@ -12,10 +12,10 @@
         "motor bike": "art/steering-wheel-motorbike.svg",
         "boat": "art/steering-wheel-boat.svg"
     },
-    "preview": { "parameters": { "angleVariable": "-28" } },
+    "preview": { "parameters": { "angleVariable": "28" } },
     "parameters": [
         { "id": "turnedBy", "label": "Turned by", "valueType": "string", "defaultValue": "angle", "enumValues": ["angle", "orientation"], "category": "model", "userEditable": false, "description": "Whether the row is read as an angle in degrees or as an orientation, which is a pair of values read as a direction. It is chosen from a key of its own in the toolbar rather than from the row it governs, and it says how the pedals are read as well, since they press what they press the same way the wheel is turned: read as an angle each presses a term of its own, the accelerator up from zero and the brake down below it, read as an orientation each presses a pair of its own, laid down along the bearing the wheel is turned to — forwards for the accelerator and back the other way for the brake." },
-        { "id": "angleVariable", "label": "Turned by", "valueType": "variable", "defaultValue": "0", "category": "model", "unit": "deg", "modeParameter": "turnedBy", "pairedParameter": "angleUpVariable", "colorParameter": "markColor", "description": "The angle the wheel is turned to, clockwise in degrees — or, as an orientation, how far across the pair reaches. Dragging the wheel writes back whichever it reads: the angle, or the pair, which keeps its length and takes the direction it was turned to." },
+        { "id": "angleVariable", "label": "Turned by", "valueType": "variable", "defaultValue": "0", "category": "model", "unit": "deg", "modeParameter": "turnedBy", "pairedParameter": "angleUpVariable", "colorParameter": "markColor", "description": "The angle the wheel is turned to, anticlockwise in degrees, the way an angle is measured everywhere else in the model: turning left raises it and turning right lowers it, so a wheel held to the right reads a value below zero — or, as an orientation, how far across the pair reaches, which is a bearing and turns the other way, clockwise from straight up, the way a compass reads. Dragging the wheel writes back whichever it reads: the angle, or the pair, which keeps its length and takes the direction it was turned to." },
         { "id": "angleUpVariable", "label": "Up", "valueType": "variable", "defaultValue": "0", "category": "model", "userEditable": false, "description": "How far up the orientation reaches, edited by the second selector on the row and read only while the wheel is turned by an orientation." },
         { "id": "accelerationVariable", "label": "Accelerated on", "valueType": "variable", "defaultValue": "0", "category": "model", "modeParameter": "turnedBy", "pairedParameter": "accelerationUpVariable", "colorParameter": "acceleratorColor", "valueAnchor": { "node": "accelerator-press", "x": 0.5, "y": 0.06 }, "visibleWhen": { "parameter": "showPedals" }, "description": "What the accelerator presses, resting at zero and pressed up as far as the maximum. It never goes below the rest it starts from — the accelerator is one way only — and a slide across the whole of the area that presses it covers the whole of that range. It is read the way the wheel above it is read: as an angle it is one term, and as an orientation a second selector appears beside it and the pair is pressed along the bearing the wheel is turned to, which is how far across and how far up the vehicle is being pushed." },
         { "id": "accelerationUpVariable", "label": "Up", "valueType": "variable", "defaultValue": "0", "category": "model", "userEditable": false, "description": "How far up the accelerator's pair reaches, edited by the second selector on its row and read only while the wheel is turned by an orientation." },
@@ -63,7 +63,8 @@
         { "id": "orientationLength", "formula": "\\sqrt{across^{2}+up^{2}}" },
         { "id": "orientationAngle", "value": { "direction": { "x": { "parameter": "across" }, "y": { "parameter": "up" } } } },
         { "id": "pointedAngle", "value": { "choose": { "parameter": "orientationLength" }, "then": { "parameter": "orientationAngle" }, "otherwise": { "parameter": "restingAngle" } } },
-        { "id": "plainAngle", "value": { "parameter": "angleVariable", "as": "number" } },
+        { "id": "angleTurnedTo", "value": { "parameter": "angleVariable", "as": "number" } },
+        { "id": "plainAngle", "formula": "0-angleTurnedTo" },
         { "id": "angle", "value": { "choose": { "parameter": "pointedByOrientation" }, "then": { "parameter": "pointedAngle" }, "otherwise": { "parameter": "plainAngle" } } },
         { "id": "turnedByHand", "value": { "choose": { "parameter": "pointedByOrientation" }, "then": 0, "otherwise": 1 } },
         { "id": "isCar", "value": { "choose": { "parameter": "wheelType" }, "equals": "car", "then": 1, "otherwise": 0 } },
@@ -494,7 +495,7 @@
                         "property": "angleVariable",
                         "centerX": { "parameter": "cx" },
                         "centerY": { "parameter": "cy" },
-                        "degreesPerUnit": 1,
+                        "degreesPerUnit": -1,
                         "hoverFill": { "parameter": "grabColor" },
                         "hoverOpacity": 0.18
                     },

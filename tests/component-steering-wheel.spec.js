@@ -86,8 +86,10 @@ test.describe('steering wheel component', () => {
         const turned = await buildDrawing(page, { angleVariable: 'steer', wheelType: 'car' });
         const straight = await buildDrawing(page, { angleVariable: '0', wheelType: 'car' });
         const small = await buildDrawing(page, { angleVariable: 'steer', wheelType: 'car' }, 100);
-        expect(turned.markup).toContain('rotate(30 100 100)');
-        expect(straight.markup).not.toContain('rotate(30 100 100)');
+        // An angle is measured the way the model measures one, anticlockwise, so a wheel reading 30
+        // is drawn turned 30 to the left — which is a rotation of -30 the way SVG counts them.
+        expect(turned.markup).toContain('rotate(-30 100 100)');
+        expect(straight.markup).not.toContain('rotate(-30 100 100)');
         expect(small.markup).toContain('scale(0.5 0.5)');
         expect(small.diagnostics).toEqual([]);
     });
@@ -176,7 +178,10 @@ test.describe('steering wheel component', () => {
         const row = { angleVariable: 'across', angleUpVariable: 'up', wheelType: 'car' };
         const byAngle = await buildDrawing(page, Object.assign({ turnedBy: 'angle' }, row));
         const byOrientation = await buildDrawing(page, Object.assign({ turnedBy: 'orientation' }, row));
-        expect(byAngle.markup).toContain('rotate(3 100 100)');
+        // The same row read two ways, and the two are measured the other way round from each other:
+        // 3 as an angle is 3 to the left, while the pair 3 across and 3 up is a bearing of 45 to the
+        // right of straight up.
+        expect(byAngle.markup).toContain('rotate(-3 100 100)');
         expect(byOrientation.markup).toContain('rotate(45 100 100)');
     });
 
@@ -361,6 +366,8 @@ test.describe('steering wheel component', () => {
         }
     });
 
+    // Turning right lowers the angle and turning left raises it, so a wheel dragged a quarter turn
+    // clockwise from where it stood writes back ninety degrees less than it was reading.
     test('dragging the rim turns the wheel and writes the angle back', async ({ page }) => {
         await setupBoard(page);
         await addSteeringModel(page);
@@ -379,7 +386,27 @@ test.describe('steering wheel component', () => {
         await page.mouse.up();
         await page.waitForTimeout(300);
         const steer = await page.evaluate(() => shell.board.calculator.getByName('steer', 1));
-        expect(steer).toBeCloseTo(120, 0);
+        expect(steer).toBeCloseTo(-60, 0);
+    });
+
+    test('turning the wheel the other way raises the angle again', async ({ page }) => {
+        await setupBoard(page);
+        await addSteeringModel(page);
+        await addSteeringWheel(page, 'car');
+        const points = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wheel');
+            const matrix = shell.board.svg.getScreenCTM();
+            const centre = { x: shape.properties.x + shape.properties.width / 2, y: shape.properties.y + shape.properties.height / 2 };
+            const start = new DOMPoint(centre.x, centre.y - 80).matrixTransform(matrix);
+            const target = new DOMPoint(centre.x - 80, centre.y).matrixTransform(matrix);
+            return { start: { x: start.x, y: start.y }, target: { x: target.x, y: target.y } };
+        });
+        await page.mouse.move(points.start.x, points.start.y);
+        await page.mouse.down();
+        await page.mouse.move(points.target.x, points.target.y, { steps: 8 });
+        await page.mouse.up();
+        await page.waitForTimeout(300);
+        expect(await page.evaluate(() => shell.board.calculator.getByName('steer', 1))).toBeCloseTo(120, 0);
     });
 
     test('dragging a wheel pointed by an orientation turns the pair and keeps its length', async ({ page }) => {

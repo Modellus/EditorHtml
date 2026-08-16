@@ -6102,7 +6102,7 @@ BlockDefinitionLoader.registerAll([
         },
         "preview": {
             "parameters": {
-                "angleVariable": "-28"
+                "angleVariable": "28"
             }
         },
         "parameters": [
@@ -6129,7 +6129,7 @@ BlockDefinitionLoader.registerAll([
                 "modeParameter": "turnedBy",
                 "pairedParameter": "angleUpVariable",
                 "colorParameter": "markColor",
-                "description": "The angle the wheel is turned to, clockwise in degrees — or, as an orientation, how far across the pair reaches. Dragging the wheel writes back whichever it reads: the angle, or the pair, which keeps its length and takes the direction it was turned to."
+                "description": "The angle the wheel is turned to, anticlockwise in degrees, the way an angle is measured everywhere else in the model: turning left raises it and turning right lowers it, so a wheel held to the right reads a value below zero — or, as an orientation, how far across the pair reaches, which is a bearing and turns the other way, clockwise from straight up, the way a compass reads. Dragging the wheel writes back whichever it reads: the angle, or the pair, which keeps its length and takes the direction it was turned to."
             },
             {
                 "id": "angleUpVariable",
@@ -6529,11 +6529,15 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
-                "id": "plainAngle",
+                "id": "angleTurnedTo",
                 "value": {
                     "parameter": "angleVariable",
                     "as": "number"
                 }
+            },
+            {
+                "id": "plainAngle",
+                "formula": "0-angleTurnedTo"
             },
             {
                 "id": "angle",
@@ -7842,7 +7846,7 @@ BlockDefinitionLoader.registerAll([
                             "centerY": {
                                 "parameter": "cy"
                             },
-                            "degreesPerUnit": 1,
+                            "degreesPerUnit": -1,
                             "hoverFill": {
                                 "parameter": "grabColor"
                             },
