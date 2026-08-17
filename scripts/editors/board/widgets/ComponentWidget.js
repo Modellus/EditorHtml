@@ -1135,9 +1135,14 @@ class ComponentShape extends BaseShape {
         if (rotationDegrees === null)
             return;
         const degreesPerUnit = Number(input.degreesPerUnit) || 6;
+        // How far the pointer stands from the zero direction. Read the long way round the circle it
+        // runs from nothing up to a whole turn, which is what a bearing is; read the short way round
+        // it takes a sign instead, so a wheel held to one side of straight up reads below zero
+        // rather than as very nearly a full turn back to it.
+        const fromZero = rotationDegrees - (Number(input.offsetDegrees) || 0);
         let value = this._angleDragTurn
             ? this._angleDragTurn.startValue + this.advanceAngleDragTurn(rotationDegrees) / degreesPerUnit
-            : (rotationDegrees - (Number(input.offsetDegrees) || 0)) / degreesPerUnit;
+            : (input.signed ? BlockGeometry.normalizeSignedDegrees(fromZero) : fromZero) / degreesPerUnit;
         const wrapAt = Number(input.wrapAt);
         if (Number.isFinite(wrapAt) && wrapAt > 0)
             value = ((value % wrapAt) + wrapAt) % wrapAt;
@@ -1206,6 +1211,10 @@ class ComponentShape extends BaseShape {
     }
 
     writeDragHalf(variableInput, propertyInput, value) {
+        // A half laid down along a course that points away from the axis it is measured on comes out
+        // as a negative nothing, which is nothing at all: the model is handed the plain zero.
+        if (value === 0)
+            value = 0;
         const property = this.getBehaviourProperty({ property: propertyInput });
         if (this.board.calculator.isTerm(String(variableInput ?? "")) || property === null) {
             this.writeModelValue(variableInput, value);

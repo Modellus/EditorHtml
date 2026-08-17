@@ -391,9 +391,12 @@ Capabilities: `interaction`, `angular`, `writes-model`
 | `centerY` | number | 0 |  |
 | `degreesPerUnit` | number | 6 |  |
 | `offsetDegrees` | number | 0 |  |
+| `signed` | boolean | false |  |
 | `minimum` | number | null |  |
 | `maximum` | number | null |  |
 | `wrapAt` | number | null |  |
+| `hoverFill` | colour | "none" |  |
+| `hoverOpacity` | number | 0.15 | min 0, max 1 |
 
 ### `drag-axis-tick` — Drag axis tick
 
@@ -1001,7 +1004,7 @@ Capabilities: `radial`, `angular`, `reads-model`, `scale`
 
 ### `steering-wheel` — Steering wheel
 
-The controls a vehicle is driven with: a wheel turned by a model variable, drawn as a car wheel, a motorbike handlebar or a ship's helm, and the accelerator and brake of that same vehicle under it. The wheel, the pedals, and the brake among the pedals, can each be left out. Dragging the wheel turns it and writes back what it reads; the accelerator presses a value of its own up from zero and the brake presses one of its own down below it, each read the way the wheel is — a term, or a pair laid down along the bearing the wheel is turned to.
+The controls a vehicle is driven with: a wheel turned by a model variable, drawn as a car wheel, a motorbike handlebar or a ship's helm, and the accelerator and brake of that same vehicle under it. The wheel, the pedals, and the brake among the pedals, can each be left out. Dragging the wheel turns it and writes back what it reads; the accelerator and the brake each press a value of its own up from zero, both above zero and both pressed the same way, each read the way the wheel is — a term, or a pair laid down along the bearing the wheel is turned to, forwards for the accelerator and back the other way for the brake.
 
 Capabilities: `radial`, `angular`, `linear`, `reads-model`, `scale`, `interaction`, `writes-model`
 
@@ -1018,7 +1021,7 @@ Capabilities: `radial`, `angular`, `linear`, `reads-model`, `scale`, `interactio
 | `showWheel` | boolean | true |  |
 | `showPedals` | boolean | false |  |
 | `showBrake` | boolean | true |  |
-| `minimum` | number | -100 | max 0 |
+| `brakeMaximum` | number | 100 | min 0 |
 | `maximum` | number | 100 |  |
 | `pedalReturnStep` | number | 10 | min 0 |
 | `rimColor` | colour | "token:stroke.default" |  |

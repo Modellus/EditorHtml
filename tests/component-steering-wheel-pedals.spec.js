@@ -154,9 +154,10 @@ test.describe('the pedals of the steering wheel', () => {
         expect((await readTerms(page)).throttle).toBeCloseTo(50, 0);
     });
 
-    // A term each, and the direction is what tells them apart: the accelerator presses its own up from
-    // zero as far as the maximum, the brake presses its own down from zero as far as the minimum.
-    test('the accelerator presses its term up from zero and the brake presses its own below it', async ({ page }) => {
+    // A term each, and each is pressed the same way: up from zero as far as that pedal's own end. What
+    // the brake holds is how hard it is stood on, above zero like the throttle, and the two ends are
+    // its own — so a pedal never writes below the rest it presses from.
+    test('each pedal presses its own term up from zero, as far as its own end', async ({ page }) => {
         await setupBoard(page);
         await addDrivingModel(page);
         await addPedals(page, { pedalReturnStep: 0 });
@@ -167,14 +168,14 @@ test.describe('the pedals of the steering wheel', () => {
         // The brake presses a term of its own, so the sixty the accelerator left is untouched by it.
         await slide(page, points.brake, 48, 100);
         const braked = await readTerms(page);
-        expect(braked.braking).toBeCloseTo(-20, 0);
+        expect(braked.braking).toBeCloseTo(20, 0);
         expect(braked.throttle).toBeCloseTo(60, 0);
         await release(page, 300);
         await slide(page, points.accelerator, 400, 100);
         expect((await readTerms(page)).throttle).toBe(100);
         await release(page, 300);
         await slide(page, points.brake, 400, 100);
-        expect((await readTerms(page)).braking).toBe(-100);
+        expect((await readTerms(page)).braking).toBe(100);
         await release(page, 300);
         // Sliding the wrong way on a pedal eases it off and stops at zero: neither crosses the rest it
         // presses from.
@@ -226,7 +227,7 @@ test.describe('the pedals of the steering wheel', () => {
             const shape = shell.board.shapes.getByName('Pedals');
             shape.setProperties({ accelerationVariableDisplayMode: 'nameValue', brakingVariableDisplayMode: 'nameValue' });
             shell.board.calculator.setTermValue('throttle', 40, 1, 1);
-            shell.board.calculator.setTermValue('braking', -25, 1, 1);
+            shell.board.calculator.setTermValue('braking', 25, 1, 1);
             shell.board.calculator.calculate();
             shell.board.forceRefresh();
         });
@@ -240,7 +241,7 @@ test.describe('the pedals of the steering wheel', () => {
         // A term each, so each label stands over the half of the drawing its own pedal is pressed in.
         expect(labels[0]).toMatchObject({ text: 'throttle = 40.00', background: '#1871c2' });
         expect(labels[0].x).toBeCloseTo(180, 0);
-        expect(labels[1]).toMatchObject({ text: 'braking = -25.00', background: '#e03130' });
+        expect(labels[1]).toMatchObject({ text: 'braking = 25.00', background: '#e03130' });
         expect(labels[1].x).toBeCloseTo(60, 0);
         // Switched off, the brake takes its label with it and the accelerator, now pressed anywhere in
         // the drawing, is read over the middle of it.
@@ -304,7 +305,7 @@ test.describe('the pedals of the steering wheel', () => {
         await release(page, 300);
         expect((await readToolbar()).map(Number)).toEqual([0, 50, 0]);
         await slide(page, points.brake, 48, 200);
-        expect((await readToolbar()).map(Number)).toEqual([0, 50, -20]);
+        expect((await readToolbar()).map(Number)).toEqual([0, 50, 20]);
         await release(page, 300);
     });
 
@@ -406,10 +407,9 @@ test.describe('the pedals of the steering wheel', () => {
         expect(parts.boatAlone.filter(part => part.startsWith('astern'))).toEqual([]);
     });
 
-    // Each pedal stands where its own term stands: the accelerator where its term stands above zero
-    // and the brake where its own stands below, so a braked model presses the brake and an accelerated
-    // one the accelerator — and a model doing both presses both. A pair has no half below zero, so its
-    // length is the accelerator's alone.
+    // Each pedal stands where its own term stands, and both terms stand above zero: a braked model
+    // presses the brake and an accelerated one the accelerator — and a model doing both presses both.
+    // A pair is read along its own pedal's course, forwards for the accelerator and back for the brake.
     test('each pedal stands where its own term stands', async ({ page }) => {
         await setupBoard(page);
         await addDrivingModel(page);
@@ -431,9 +431,9 @@ test.describe('the pedals of the steering wheel', () => {
             return {
                 atRest: build({ accelerationVariable: '0', brakingVariable: '0' }),
                 accelerating: build({ accelerationVariable: '50', brakingVariable: '0' }),
-                braking: build({ accelerationVariable: '0', brakingVariable: '-50' }),
-                both: build({ accelerationVariable: '50', brakingVariable: '-50' }),
-                pastTheEnds: build({ accelerationVariable: '150', brakingVariable: '-150' }),
+                braking: build({ accelerationVariable: '0', brakingVariable: '50' }),
+                both: build({ accelerationVariable: '50', brakingVariable: '50' }),
+                pastTheEnds: build({ accelerationVariable: '150', brakingVariable: '150' }),
                 byPairs: build(Object.assign({}, alongTheBearing, {
                     accelerationVariable: '30', accelerationUpVariable: '40',
                     brakingVariable: '-30', brakingUpVariable: '-40'
@@ -487,13 +487,13 @@ test.describe('the pedals of the steering wheel', () => {
         await addDrivingModel(page);
         await addPedals(page, Object.assign({ pedalReturnStep: 0 }, ORIENTATION_PEDALS));
         const points = await pressPoints(page);
-        // 72 pixels press 30 down the brake's own half, which is 30 backwards along the bearing.
+        // 72 pixels up press the brake to 30, which lays its pair 30 backwards along the bearing.
         await slide(page, points.brake, 72, 200);
         const braked = await readTerms(page);
         expect(Math.hypot(braked.bx, braked.by)).toBeCloseTo(30, 1);
         expect(braked.bx).toBeCloseTo(-18, 1);
         expect(braked.by).toBeCloseTo(-24, 1);
-        // Pressed past the minimum it stops there rather than going further back.
+        // Pressed past its own maximum it stops there rather than going further back.
         await page.mouse.move(points.brake.x, points.brake.y - 400, { steps: 5 });
         await page.waitForTimeout(150);
         const full = await readTerms(page);
@@ -626,7 +626,7 @@ test.describe('the pedals of the steering wheel', () => {
         // A term each, and each colour is picked at the end of its own row rather than on the colour
         // menu, so neither pedal's colour is a style row.
         expect(withPedals.model).toEqual(['angleVariable', 'accelerationVariable', 'brakingVariable']);
-        expect(withPedals.settings).toEqual(['wheelType', 'showWheel', 'showPedals', 'showBrake', 'minimum', 'maximum', 'pedalReturnStep']);
+        expect(withPedals.settings).toEqual(['wheelType', 'showWheel', 'showPedals', 'showBrake', 'brakeMaximum', 'maximum', 'pedalReturnStep']);
         expect(withPedals.style).toEqual(['rimColor', 'gripColor', 'hubColor', 'frameColor', 'surfaceColor']);
         // The brake switched off takes its term and its own end away with it, and leaves the rest of
         // the pedals where they were.
@@ -643,10 +643,65 @@ test.describe('the pedals of the steering wheel', () => {
         await page.waitForTimeout(300);
         const byOrientation = await rows();
         expect(byOrientation.model).toEqual(['angleVariable', 'accelerationVariable', 'brakingVariable']);
-        expect(byOrientation.settings).toEqual(['wheelType', 'showWheel', 'showPedals', 'showBrake', 'minimum', 'maximum', 'pedalReturnStep']);
+        expect(byOrientation.settings).toEqual(['wheelType', 'showWheel', 'showPedals', 'showBrake', 'brakeMaximum', 'maximum', 'pedalReturnStep']);
         await page.evaluate(() => shell.board.shapes.getByName('Wheel').setPropertyCommand('showWheel', false));
         await page.waitForTimeout(300);
         expect((await rows()).style).toEqual(['frameColor', 'surfaceColor']);
+    });
+
+    // The menu that names the terms is built the first time it is opened and then kept, so a part
+    // switched on since — or a row grown a second selector by the key that says how it is read —
+    // would leave it offering the rows the object had when it was first opened. Both are asked for
+    // through the toolbar itself, the way a reader sets an object up: switch the pedals on, then open
+    // the menu that was there before them.
+    test('the rows a part brings with it are offered the moment that part is switched on', async ({ page }) => {
+        await setupBoard(page);
+        await addDrivingModel(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('steering-wheel', 'Wheel');
+            shape.setProperties({ x: 240, y: 160, width: 240, height: 240, angleVariable: 'across' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wheel')));
+        await page.waitForTimeout(400);
+        const openModelMenu = async () => {
+            await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+            await page.waitForTimeout(600);
+            return page.locator('.mdl-shape-overlay-popup').last();
+        };
+        const closeMenu = async () => {
+            await page.keyboard.press('Escape');
+            await page.waitForTimeout(300);
+            await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wheel')));
+            await page.waitForTimeout(400);
+        };
+        // A wheel on its own names one term, so the menu holds the one row.
+        await expect((await openModelMenu()).locator('.shape-term-row')).toHaveCount(1);
+        await closeMenu();
+        // The pedals switched on bring a row each, and the menu opened again offers all three.
+        await page.locator('.shape-context-toolbar.visible .mdl-component-settings-selector').click();
+        await page.waitForTimeout(500);
+        await page.locator('.mdl-shape-overlay-popup').last().locator('.dx-switch').nth(1).click();
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Wheel').properties.showPedals)).toBe(true);
+        await closeMenu();
+        const withPedals = await openModelMenu();
+        await expect(withPedals.locator('.shape-term-row')).toHaveCount(3);
+        await expect(withPedals.locator('.shape-term-extra-term')).toHaveCount(0);
+        await closeMenu();
+        // Read as an orientation every one of the three names a pair, so each row grows a second
+        // selector — the pedals' rows as much as the wheel's.
+        const modeKey = page.locator('.shape-context-toolbar.visible .mdl-component-mode-selector');
+        await modeKey.click();
+        await page.waitForTimeout(500);
+        await page.locator('.mdl-shape-overlay-popup').last().locator('.dx-list-item').nth(1).click();
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Wheel').properties.turnedBy)).toBe('orientation');
+        await closeMenu();
+        const byOrientation = await openModelMenu();
+        await expect(byOrientation.locator('.shape-term-row')).toHaveCount(3);
+        await expect(byOrientation.locator('.shape-term-extra-term')).toHaveCount(3);
     });
 
     test('the three parts are switched on and off from the settings menu', async ({ page }) => {
@@ -663,7 +718,7 @@ test.describe('the pedals of the steering wheel', () => {
         // The wheel, the pedals and the brake among them: three switches, the brake's offered because
         // the pedals are on.
         await expect(switches).toHaveCount(3);
-        await expect(menu.locator('.dx-list-item', { hasText: 'Minimum' })).toHaveCount(1);
+        await expect(menu.locator('.dx-list-item', { hasText: 'Brake maximum' })).toHaveCount(1);
         await switches.nth(2).click();
         await page.waitForTimeout(500);
         expect(await page.evaluate(() => shell.board.shapes.getByName('Pedals').properties.showBrake)).toBe(false);
@@ -673,7 +728,7 @@ test.describe('the pedals of the steering wheel', () => {
         expect(withoutBrake).not.toContain('brake-press');
         // The brake's own end goes with it the moment it is switched off, without the menu having to be
         // closed and opened again; the accelerator's stays, because the accelerator is still there.
-        await expect(menu.locator('.dx-list-item', { hasText: 'Minimum' })).toHaveCount(0);
+        await expect(menu.locator('.dx-list-item', { hasText: 'Brake maximum' })).toHaveCount(0);
         await expect(menu.locator('.dx-list-item', { hasText: 'Maximum' })).toHaveCount(1);
         await switches.nth(1).click();
         await page.waitForTimeout(500);

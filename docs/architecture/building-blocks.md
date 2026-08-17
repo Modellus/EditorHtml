@@ -419,8 +419,8 @@ and sliding up raises it by `unitsPerPixel` for every pixel travelled, sliding d
 clamped between `minimum` and `maximum`. The pixels are the object's own, read through
 `getComponentLocalPoint`, so the definition sets the reach by naming what one of them is worth: the
 steering wheel's pedals pass their own range over the drawing's side, which makes a slide across the
-whole drawing exactly that range — the accelerator's above zero, the brake's below — at any size the
-object is drawn. A gesture also starts from the value clamped into the control's own range, so a
+whole drawing exactly that range — a range of its own for each of them, both above zero — at any size
+the object is drawn. A gesture also starts from the value clamped into the control's own range, so a
 pedal that finds its term on the far side of rest begins at the zero it presses from rather than
 spending its travel getting back to it. Naming a `verticalVariable` as well
 presses a **pair** rather than a number: what is read is how far that pair reaches, and what is written
@@ -432,10 +432,11 @@ that same course rather than measured as a length. That reading carries a sign �
 backwards below it — which is what a value below zero means for a pair, and what lets one control
 press a pair down through a standstill and out the other side. It is how the steering wheel's pedals
 press an acceleration the wheel above them is steering: the wheel says which way the push goes and
-each pedal says how hard, the accelerator along the bearing and the brake back against it, on the same
-`minimum` and `maximum` the pair of them press a term between. Without it a length has no sign, so a
-control could never press a pair past rest, and the pair would keep whatever way it was last left
-pointing rather than following the course the object is on.
+each pedal says how hard: the accelerator is handed the bearing itself and the brake the reverse of
+it, so both press upwards from rest while the brake's pair still comes out pointing back against the
+course the model is on. Without it a length has no sign, so a control could never press a pair past
+rest, and the pair would keep whatever way it was last left pointing rather than following the course
+the object is on.
 
 Letting go is the other half. Nothing holds a pedal down once the foot is off it, so the value walks
 back to `restValue` by `returnStep` every `intervalMs` — a tenth of a second for the pedals, back to
@@ -476,8 +477,8 @@ parameter without an anchor has nowhere to put a label, so its row does not offe
 condition, or a list of them that all have to hold, each naming a parameter and optionally the value
 it must equal — and the toolbar leaves its row out while that does not hold. It is what lets one
 object carry parts the reader switches on and off: the steering wheel's pedals take their rows, their
-ends and their spring out of the menus with them, and the brake among them takes its own row, its
-minimum and its colour when it is switched off on its own. A condition may name another switch, so
+ends and their spring out of the menus with them, and the brake among them takes its own row, its own
+maximum and its colour when it is switched off on its own. A condition may name another switch, so
 the brake's rows are offered only while the pedals are drawn *and* the brake is one of them. What a
 row is *read as* is a separate question from whether it is offered at all: the pedals' rows stand
 whichever way the wheel is turned, and `modeParameter` grows each of them a second selector when the

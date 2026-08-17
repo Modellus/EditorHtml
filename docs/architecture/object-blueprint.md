@@ -257,7 +257,7 @@ why an ordinary object has no use for it.
 | --- | --- |
 | `clickable` | a click writes a model variable or one of the object's own parameters |
 | `press-and-slide` | the reader holds the node: pressing keeps the value where it is, sliding up raises it by `unitsPerPixel` a pixel and down lowers it, and letting go walks it back to `restValue` by `returnStep` every `intervalMs` (zero leaves it where it was released). What a pedal or a throttle needs — and the press, the slide and the fall back are one undo entry. Naming a `verticalVariable` as well presses a pair rather than a number: what it reads is the length of that pair, and what it writes is that pair laid down again at the length it was pressed to, along the direction it already pointed in |
-| `drag-angle` | dragging a hand around a centre writes an angle back |
+| `drag-angle` | dragging a hand around a centre points it at the pointer and writes the angle back, measured from `offsetDegrees` — zero straight up when that is left at nothing. `signed` reads that angle the short way round so one side of zero comes out below it, which is what a wheel wants; left off it runs from nothing to a whole turn, which is what a bearing wants. Naming a `verticalVariable` as well writes a pair: it keeps the length it had and takes the direction it was pointed at |
 | `drag-rotate` | dragging a rim or a bezel turns it by the angle travelled, not to the pointer. Naming a `verticalVariable` as well writes a pair rather than a number: the pair keeps its length and takes the angle it was turned to, which is how an object driven by a direction stays draggable |
 | `drag-axis-tick` | an axis tick rescales the axis |
 | `follow-pointer` | the drawing shows what is under the cursor without keeping it |

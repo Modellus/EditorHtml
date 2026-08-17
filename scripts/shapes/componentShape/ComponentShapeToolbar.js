@@ -144,6 +144,7 @@ var ComponentShapeToolbarMixin = {
         this.board.markDirty(this);
         this.refreshComponentToolbarControls();
         this.refreshComponentSettingsMenu();
+        this.refreshComponentModelMenu();
     },
     // An object that paints a background, a plot and an axis names them the way the chart does, and
     // is offered the same three colours under the same labels and icons. Anything else a definition
@@ -202,10 +203,26 @@ var ComponentShapeToolbarMixin = {
                 container: document.body,
                 wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
-                contentTemplate: contentElement => this.buildComponentParameterMenu(contentElement, this.getParametersByCategory(["model", "orbits"]))
+                // The menu is built once and then kept, so it is written again on the way up: a part
+                // switched on since it was last opened, or a row grown a second selector by the key
+                // that says how it is read, is offered straight away rather than only once the object
+                // has been picked afresh.
+                onShowing: () => this.refreshComponentModelMenu(),
+                contentTemplate: contentElement => this.buildComponentModelMenu(contentElement)
             }
         });
         this._componentModelDropdownElement.appendTo(itemElement);
+    },
+    buildComponentModelMenu(contentElement) {
+        this._componentModelContentElement = contentElement;
+        this.buildComponentParameterMenu(contentElement, this.getParametersByCategory(["model", "orbits"]));
+    },
+    // Written again where it stands, and only while it is standing — the settings menu's own rule.
+    refreshComponentModelMenu() {
+        const contentElement = this._componentModelContentElement;
+        if (!contentElement || !document.body.contains($(contentElement)[0]))
+            return;
+        this.buildComponentModelMenu(contentElement);
     },
     createComponentSettingsDropDownButton(itemElement) {
         this._componentSettingsDropdownElement = $('<div class="mdl-component-settings-selector">');
@@ -387,6 +404,7 @@ var ComponentShapeToolbarMixin = {
                 if (this.getComponentParametersGovernedBy(parameter.id).length === 0)
                     return;
                 this.refreshComponentToolbarControls();
+                this.refreshComponentModelMenu();
                 queueMicrotask(() => this.refreshComponentSettingsMenu());
             }
         });

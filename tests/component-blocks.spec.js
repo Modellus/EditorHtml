@@ -413,14 +413,14 @@ test.describe('reusable blocks build several objects', () => {
     });
 
     // The two controls a vehicle is driven with, drawn the way that vehicle works them: only the
-    // parts the named vehicle owns are compiled, and each pedal presses a term of its own — the
-    // accelerator its own up from zero, the brake its own down below it.
+    // parts the named vehicle owns are compiled, and each pedal presses a term of its own, both of
+    // them up from zero as far as an end of that pedal's own.
     test('each pedal presses a term of its own, on whichever vehicle is named', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => modellus.shape.addExpression('Driving'));
         await page.waitForTimeout(300);
         await page.evaluate(() => {
-            shell.board.shapes.getByName('Driving').properties.expression = 'throttle=70\\\\braking=-40';
+            shell.board.shapes.getByName('Driving').properties.expression = 'throttle=70\\\\braking=40';
             shell.reset();
         });
         await page.waitForTimeout(400);
@@ -462,12 +462,12 @@ test.describe('reusable blocks build several objects', () => {
             return {
                 carAtRest: build('car', '0'),
                 carAccelerating: build('car', '50'),
-                carBraking: build('car', '0', '-50'),
-                carPastTheEnds: build('car', '150', '-150'),
+                carBraking: build('car', '0', '50'),
+                carPastTheEnds: build('car', '150', '150'),
                 carFromTheModel: build('car', 'throttle', 'braking'),
                 boatAtRest: build('boat', '0'),
                 boatAhead: build('boat', '50'),
-                boatAstern: build('boat', '0', '-50')
+                boatAstern: build('boat', '0', '50')
             };
         });
         for (const drawing of Object.values(measured))
@@ -480,8 +480,9 @@ test.describe('reusable blocks build several objects', () => {
         expect(measured.carPastTheEnds).toMatchObject({ acceleratorPadY: 140, brakePadY: 152 });
         expect(measured.carFromTheModel.presses.map(press => press.id)).toEqual(['brake-press', 'accelerator-press']);
         // A pixel of the 200px drawing is worth a two-hundredth of each pedal's own range, so a slide
-        // across the whole of it covers that range — the brake's downwards, to a minimum below zero.
-        expect(measured.carFromTheModel.presses[0].input).toMatchObject({ variable: 'braking', property: 'brakingVariable', unitsPerPixel: -0.5, restValue: 0, returnStep: 10, intervalMs: 100, minimum: -100, maximum: 0 });
+        // across the whole of it covers that range — and the two are pressed alike, the same pixel
+        // worth the same with the same sign, each from zero up to an end of its own above it.
+        expect(measured.carFromTheModel.presses[0].input).toMatchObject({ variable: 'braking', property: 'brakingVariable', unitsPerPixel: 0.5, restValue: 0, returnStep: 10, intervalMs: 100, minimum: 0, maximum: 100 });
         expect(measured.carFromTheModel.presses[1].input).toMatchObject({ variable: 'throttle', property: 'accelerationVariable', unitsPerPixel: 0.5, restValue: 0, returnStep: 10, minimum: 0, maximum: 100 });
         expect(measured.carFromTheModel.parts).toContain('car-brake-pad');
         expect(measured.carFromTheModel.parts).not.toContain('binnacle');

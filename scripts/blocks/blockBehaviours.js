@@ -102,9 +102,12 @@ var BlockBehaviours = {
                 centerY: { valueType: "number", defaultValue: 0, label: "Anchor Y" },
                 degreesPerUnit: { valueType: "number", defaultValue: 6, label: "Degrees per unit" },
                 offsetDegrees: { valueType: "number", defaultValue: 0, label: "Zero offset", unit: "deg" },
+                signed: { valueType: "boolean", defaultValue: false, label: "Read the short way round", description: "Whether the angle from the zero direction is read the short way round, which gives it a sign: a node held to one side of zero reads below it rather than just under a whole turn. Left off, the angle is read the long way round the circle, from zero up to a full turn, which is what a bearing needs." },
                 minimum: { valueType: "number", defaultValue: null, label: "Minimum" },
                 maximum: { valueType: "number", defaultValue: null, label: "Maximum" },
-                wrapAt: { valueType: "number", defaultValue: null, label: "Wrap at" }
+                wrapAt: { valueType: "number", defaultValue: null, label: "Wrap at" },
+                hoverFill: { valueType: "colour", defaultValue: "none", label: "Hover fill", description: "Colour the node takes while the pointer rests on it, so an otherwise invisible grab area shows itself." },
+                hoverOpacity: { valueType: "number", defaultValue: 0.15, minimum: 0, maximum: 1, label: "Hover opacity" }
             }
         }
     });

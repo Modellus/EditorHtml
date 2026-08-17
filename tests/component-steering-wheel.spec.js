@@ -168,8 +168,83 @@ test.describe('steering wheel component', () => {
                 orientation: read({ turnedBy: 'orientation', angleVariable: 'across', angleUpVariable: 'up' })
             };
         });
-        expect(behaviours.angle).toEqual([{ type: 'drag-rotate', variable: 'steer', vertical: '' }]);
-        expect(behaviours.orientation).toEqual([{ type: 'drag-rotate', variable: 'across', vertical: 'up' }]);
+        expect(behaviours.angle).toEqual([{ type: 'drag-angle', variable: 'steer', vertical: '' }]);
+        expect(behaviours.orientation).toEqual([{ type: 'drag-angle', variable: 'across', vertical: 'up' }]);
+    });
+
+    // The wheel is pointed at the pointer rather than turned by however far the pointer travelled, and
+    // the angle it writes is measured from straight up: zero is at twelve o'clock, and it is read the
+    // short way round from there, so the left of the top is above zero and the right of it below.
+    test('the wheel points where it is dragged, measured from twelve o\'clock', async ({ page }) => {
+        await setupBoard(page);
+        await addSteeringModel(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('steering-wheel', 'Wheel');
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200, wheelType: 'car', angleVariable: '0' });
+            shape.draw();
+        });
+        await page.waitForTimeout(400);
+        const centre = await page.evaluate(() => {
+            const box = shell.board.shapes.getByName('Wheel').element.querySelector('[data-source-id="wheel-grab"]').getBoundingClientRect();
+            return { x: box.x + box.width / 2, y: box.y + box.height / 2, reach: box.width * 0.375 };
+        });
+        const read = () => page.evaluate(() => ({
+            transform: shell.board.shapes.getByName('Wheel').element.querySelector('[data-source-id="wheel"]').getAttribute('transform'),
+            value: Number(shell.board.shapes.getByName('Wheel').properties.angleVariable)
+        }));
+        const pointAt = async degreesFromTheTop => {
+            const radians = degreesFromTheTop * Math.PI / 180;
+            await page.mouse.move(centre.x + Math.sin(radians) * centre.reach, centre.y - Math.cos(radians) * centre.reach, { steps: 5 });
+            await page.waitForTimeout(150);
+            return read();
+        };
+        // Zero is straight up, and it stays there while nothing has been dragged.
+        expect(await read()).toEqual({ transform: 'rotate(0 100 100)', value: 0 });
+        // The grab itself points the wheel: pressing at three o'clock takes it there at once, which is
+        // a quarter turn to the right and so a quarter below zero.
+        await page.mouse.move(centre.x + centre.reach, centre.y);
+        await page.mouse.down();
+        await page.waitForTimeout(150);
+        expect(await read()).toEqual({ transform: 'rotate(90 100 100)', value: -90 });
+        // Either side of the top is read the short way round, so neither is nearly a whole turn away.
+        expect(await pointAt(-10)).toEqual({ transform: 'rotate(-10 100 100)', value: 10 });
+        expect(await pointAt(10)).toEqual({ transform: 'rotate(10 100 100)', value: -10 });
+        expect(await pointAt(0)).toEqual({ transform: 'rotate(0 100 100)', value: 0 });
+        expect(await pointAt(-90)).toEqual({ transform: 'rotate(-90 100 100)', value: 90 });
+        await page.mouse.up();
+        await page.waitForTimeout(200);
+        expect(await read()).toEqual({ transform: 'rotate(-90 100 100)', value: 90 });
+    });
+
+    // Pointed by a pair the drag measures from twelve o'clock just the same, and what it writes is the
+    // pair laid down again along the way the wheel was pointed, keeping the length it already had.
+    test('a wheel pointed by a pair lays it down where it is dragged, from twelve o\'clock', async ({ page }) => {
+        await setupBoard(page);
+        await addSteeringModel(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('steering-wheel', 'Wheel');
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200, wheelType: 'car', turnedBy: 'orientation', angleVariable: '3', angleUpVariable: '4' });
+            shape.draw();
+        });
+        await page.waitForTimeout(400);
+        const centre = await page.evaluate(() => {
+            const box = shell.board.shapes.getByName('Wheel').element.querySelector('[data-source-id="wheel-grab"]').getBoundingClientRect();
+            return { x: box.x + box.width / 2, y: box.y + box.height / 2, reach: box.width * 0.375 };
+        });
+        const pair = () => page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wheel');
+            return [Number(shape.properties.angleVariable), Number(shape.properties.angleUpVariable)];
+        });
+        await page.mouse.move(centre.x, centre.y - centre.reach);
+        await page.mouse.down();
+        await page.waitForTimeout(150);
+        // Three across and four up is a pair five long: pointed straight up it is all up and nothing
+        // across, and pointed at three o'clock it is all across.
+        expect(await pair()).toEqual([0, 5]);
+        await page.mouse.move(centre.x + centre.reach, centre.y, { steps: 5 });
+        await page.waitForTimeout(150);
+        expect(await pair()).toEqual([5, 0]);
+        await page.mouse.up();
     });
 
     test('the row is read as degrees or as the across half, by the choice alone', async ({ page }) => {
@@ -366,9 +441,11 @@ test.describe('steering wheel component', () => {
         }
     });
 
-    // Turning right lowers the angle and turning left raises it, so a wheel dragged a quarter turn
-    // clockwise from where it stood writes back ninety degrees less than it was reading.
-    test('dragging the rim turns the wheel and writes the angle back', async ({ page }) => {
+    // The wheel is pointed at the pointer, and the angle is measured from straight up: where the drag
+    // ends is what gets written back, whatever the wheel happened to be reading before. Turning right
+    // lowers the angle, so a wheel left pointing at three o'clock reads a quarter turn below zero even
+    // though it stood at thirty when it was grabbed.
+    test('dragging the rim points the wheel at the pointer and writes that angle back', async ({ page }) => {
         await setupBoard(page);
         await addSteeringModel(page);
         await addSteeringWheel(page, 'car');
@@ -386,9 +463,11 @@ test.describe('steering wheel component', () => {
         await page.mouse.up();
         await page.waitForTimeout(300);
         const steer = await page.evaluate(() => shell.board.calculator.getByName('steer', 1));
-        expect(steer).toBeCloseTo(-60, 0);
+        expect(steer).toBeCloseTo(-90, 0);
     });
 
+    // Left pointing at nine o'clock the same wheel reads a quarter turn above zero, which is the same
+    // measurement taken the other way round the top.
     test('turning the wheel the other way raises the angle again', async ({ page }) => {
         await setupBoard(page);
         await addSteeringModel(page);
@@ -406,7 +485,7 @@ test.describe('steering wheel component', () => {
         await page.mouse.move(points.target.x, points.target.y, { steps: 8 });
         await page.mouse.up();
         await page.waitForTimeout(300);
-        expect(await page.evaluate(() => shell.board.calculator.getByName('steer', 1))).toBeCloseTo(120, 0);
+        expect(await page.evaluate(() => shell.board.calculator.getByName('steer', 1))).toBeCloseTo(90, 0);
     });
 
     test('dragging a wheel pointed by an orientation turns the pair and keeps its length', async ({ page }) => {
