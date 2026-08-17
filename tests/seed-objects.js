@@ -4,6 +4,7 @@
 //   node tests/seed-objects.js                     dry run: says what it would do
 //   node tests/seed-objects.js --write --token=…   creates the objects that are missing
 //   node tests/seed-objects.js --write --update    also rewrites the ones already there
+//   node tests/seed-objects.js --only=steering-wheel   works on the named objects and no others
 //
 // The definitions stay bundled either way: the editor registers them at load, and a catalogue entry
 // may never replace an object the editor ships with. Seeding is what puts them in the catalogue's
@@ -25,7 +26,8 @@ function readArguments(argv) {
         baseUrl: DEFAULT_BASE_URL,
         apiBase: DEFAULT_API_BASE,
         token: process.env.MODELLUS_TOKEN || '',
-        outputDirectory: ''
+        outputDirectory: '',
+        only: []
     };
     for (const argument of argv) {
         if (argument.startsWith('--base-url='))
@@ -36,16 +38,21 @@ function readArguments(argv) {
             options.token = argument.substring('--token='.length);
         if (argument.startsWith('--out='))
             options.outputDirectory = argument.substring('--out='.length);
+        // Rewriting one object should not rewrite the rest: --update on its own reaches every entry
+        // already in the catalogue, so a run that means to publish a single definition names it.
+        if (argument.startsWith('--only='))
+            options.only = argument.substring('--only='.length).split(',').map(type => type.trim()).filter(Boolean);
     }
     return options;
 }
 
-function readDefinitions() {
+function readDefinitions(only = []) {
     return fs.readdirSync(DEFINITIONS_DIRECTORY)
         .filter(name => name.endsWith('.json'))
         .sort()
         .map(name => JSON.parse(fs.readFileSync(path.join(DEFINITIONS_DIRECTORY, name), 'utf8')))
-        .filter(document => ObjectSeeder.isCatalogueObject(document));
+        .filter(document => ObjectSeeder.isCatalogueObject(document))
+        .filter(document => only.length === 0 || only.includes(document.type));
 }
 
 function reportLine(result, isDryRun) {
@@ -66,7 +73,12 @@ function writeDrawings(results, outputDirectory) {
 
 (async () => {
     const options = readArguments(process.argv.slice(2));
-    const definitions = readDefinitions();
+    const definitions = readDefinitions(options.only);
+    if (definitions.length === 0) {
+        console.error(options.only.length ? `No bundled object is named by --only=${options.only.join(',')}.` : 'No bundled objects to seed.');
+        process.exitCode = 1;
+        return;
+    }
     console.log(`\nSeeding ${definitions.length} bundled objects into ${options.apiBase}`);
     console.log(options.write ? 'Writing.\n' : 'Dry run: nothing will be written. Pass --write to publish.\n');
     if (options.write && !options.token) {
