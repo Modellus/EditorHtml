@@ -66,15 +66,22 @@ var ComponentShapeToolbarMixin = {
         return parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons[index], hint: value }));
     },
     // A parameter another one names as the way it is read — an angle or an orientation — is chosen
-    // once, from a key of its own, however many rows are read that way.
+    // once, from a key of its own, however many rows are read that way. A parameter can also ask for
+    // that key itself: a choice that decides which of the other rows are worth offering belongs
+    // beside them rather than among them.
     getComponentModeParameters() {
         const modeParameters = [];
-        for (const parameter of this.getParametersByCategory(["model", "orbits"])) {
-            const modeParameter = this.getComponentParameter(parameter.modeParameter ?? "");
-            if (modeParameter && modeParameter.enumValues && !modeParameters.some(entry => entry.id === modeParameter.id))
-                modeParameters.push(modeParameter);
+        for (const parameter of BlockObjects.getComponentParameters(this.getComponentType())) {
+            if (parameter.toolbarKey === true && this.isComponentParameterOffered(parameter))
+                this.pushComponentModeParameter(modeParameters, parameter);
         }
+        for (const parameter of this.getParametersByCategory(["model", "orbits"]))
+            this.pushComponentModeParameter(modeParameters, this.getComponentParameter(parameter.modeParameter ?? ""));
         return modeParameters;
+    },
+    pushComponentModeParameter(modeParameters, parameter) {
+        if (parameter?.enumValues && !modeParameters.some(entry => entry.id === parameter.id))
+            modeParameters.push(parameter);
     },
     getComponentModeValue(modeParameter) {
         const items = this.buildModeItems(modeParameter);
@@ -109,7 +116,7 @@ var ComponentShapeToolbarMixin = {
             stylingMode: "text",
             useSelectMode: false,
             icon: this.getComponentModeIcon(modeParameter),
-            onInitialized: event => Utils.createTranslatedTooltip(event, "Component Mode Tooltip", this.board.translations, 280),
+            onInitialized: event => Utils.createTranslatedTooltip(event, modeParameter.toolbarTooltip ?? "Component Mode Tooltip", this.board.translations, 280),
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: this.getShapeOverlayWrapperAttr(),

@@ -206,6 +206,87 @@ var BlockComponentHelpers = {
         return context.tokens.resolveValue(color);
     },
 
+    // The seven bars every character on a seven-segment display is made of, named the way the parts
+    // of one have always been named — a across the top, b and c down the right, d along the bottom,
+    // e and f up the left, g across the middle. A character the display cannot spell lights nothing.
+    sevenSegmentGlyphs: {
+        "0": ["a", "b", "c", "d", "e", "f"],
+        "1": ["b", "c"],
+        "2": ["a", "b", "g", "e", "d"],
+        "3": ["a", "b", "g", "c", "d"],
+        "4": ["f", "g", "b", "c"],
+        "5": ["a", "f", "g", "c", "d"],
+        "6": ["a", "f", "g", "e", "c", "d"],
+        "7": ["a", "b", "c"],
+        "8": ["a", "b", "c", "d", "e", "f", "g"],
+        "9": ["a", "b", "c", "d", "f", "g"],
+        "-": ["g"]
+    },
+
+    // A colon and a point are not digits and are not as wide as one, so they carry their own share of
+    // the line the display is laid out along.
+    sevenSegmentWidths: { ":": 0.45, ".": 0.45, " ": 0.45 },
+
+    sevenSegmentWidthFactor(character) {
+        return BlockComponentHelpers.sevenSegmentWidths[character] ?? 1;
+    },
+
+    // Every bar is the same chamfered hexagon the real thing is etched as: a rectangle whose ends are
+    // cut back to a point, so two bars meeting at a corner leave the diagonal notch between them.
+    sevenSegmentBarPoints(x1, y1, x2, y2, half, slantTangent, baseline) {
+        const along = x1 === x2
+            ? [{ x: x1, y: y1 }, { x: x1 + half, y: y1 + half }, { x: x1 + half, y: y2 - half }, { x: x1, y: y2 }, { x: x1 - half, y: y2 - half }, { x: x1 - half, y: y1 + half }]
+            : [{ x: x1, y: y1 }, { x: x1 + half, y: y1 - half }, { x: x2 - half, y: y1 - half }, { x: x2, y: y1 }, { x: x2 - half, y: y1 + half }, { x: x1 + half, y: y1 + half }];
+        return along.map(point => ({ x: point.x + (baseline - point.y) * slantTangent, y: point.y }));
+    },
+
+    // Where each of the seven bars of one character stands, in a cell of its own.
+    sevenSegmentBars(left, top, width, height, thickness, slantTangent) {
+        const half = thickness / 2;
+        const gap = thickness * 0.18;
+        const leftEdge = left + half;
+        const rightEdge = left + width - half;
+        const topEdge = top + half;
+        const middle = top + height / 2;
+        const bottomEdge = top + height - half;
+        const baseline = top + height;
+        return {
+            a: BlockComponentHelpers.sevenSegmentBarPoints(leftEdge + gap, topEdge, rightEdge - gap, topEdge, half, slantTangent, baseline),
+            b: BlockComponentHelpers.sevenSegmentBarPoints(rightEdge, topEdge + gap, rightEdge, middle - gap, half, slantTangent, baseline),
+            c: BlockComponentHelpers.sevenSegmentBarPoints(rightEdge, middle + gap, rightEdge, bottomEdge - gap, half, slantTangent, baseline),
+            d: BlockComponentHelpers.sevenSegmentBarPoints(leftEdge + gap, bottomEdge, rightEdge - gap, bottomEdge, half, slantTangent, baseline),
+            e: BlockComponentHelpers.sevenSegmentBarPoints(leftEdge, middle + gap, leftEdge, bottomEdge - gap, half, slantTangent, baseline),
+            f: BlockComponentHelpers.sevenSegmentBarPoints(leftEdge, topEdge + gap, leftEdge, middle - gap, half, slantTangent, baseline),
+            g: BlockComponentHelpers.sevenSegmentBarPoints(leftEdge + gap, middle, rightEdge - gap, middle, half, slantTangent, baseline)
+        };
+    },
+
+    sevenSegmentLampPoints(centerX, centerY, thickness, slantTangent, baseline) {
+        const half = thickness / 2;
+        return [
+            { x: centerX - half, y: centerY - half },
+            { x: centerX + half, y: centerY - half },
+            { x: centerX + half, y: centerY + half },
+            { x: centerX - half, y: centerY + half }
+        ].map(point => ({ x: point.x + (baseline - point.y) * slantTangent, y: point.y }));
+    },
+
+    // The colon and the point are square lamps rather than bars, standing where the divider between
+    // two pairs of digits stands and where a decimal point does.
+    sevenSegmentLamps(character, left, top, width, height, thickness, slantTangent) {
+        const centerX = left + width / 2;
+        const baseline = top + height;
+        if (character === ":") {
+            return {
+                upper: BlockComponentHelpers.sevenSegmentLampPoints(centerX, top + height / 3, thickness, slantTangent, baseline),
+                lower: BlockComponentHelpers.sevenSegmentLampPoints(centerX, top + height * 2 / 3, thickness, slantTangent, baseline)
+            };
+        }
+        if (character === ".")
+            return { point: BlockComponentHelpers.sevenSegmentLampPoints(centerX, top + height - thickness / 2, thickness, slantTangent, baseline) };
+        return {};
+    },
+
     badgeWidth(text, options) {
         const fontSize = Number(options.fontSize);
         return String(text).length * fontSize * options.tokens.getNumber("badge.charWidth", 0.58) + options.tokens.getNumber("badge.paddingX", 4) * 2;
@@ -832,6 +913,75 @@ var BlockComponentHelpers = {
                     }
                 ]
             };
+        }
+    });
+
+    // A part, not an object: the lamps a reading is spelled out in, laid out and sized to fill the box
+    // it is given. It is drawn rather than typeset because a seven-segment face is geometry, not
+    // letters — a font of one would have to be shipped, would not be there on a machine that never
+    // loaded it, and could not be asked to show its unlit bars.
+    registry.register({
+        type: "seven-segment-display",
+        category: "component",
+        displayName: "Seven-segment display",
+        description: "A reading spelled out in seven-segment lamps, the way a digital clock, a meter or a stopwatch shows one. Digits, the colon, the point and the minus sign are drawn as bars; the bars a character does not light are left showing faintly, the way the unlit ones on a real panel are. The text is fitted to the box it is given, so it is placed by handing it a box rather than a font size.",
+        icon: "fa-light fa-input-numeric",
+        tags: ["digital", "readout", "segment", "clock", "number", "lcd"],
+        capabilities: ["sizable", "textual"],
+        parameters: [
+            BlockComponentHelpers.parameter("x", "X", "number", 0, { category: "layout" }),
+            BlockComponentHelpers.parameter("y", "Y", "number", 0, { category: "layout" }),
+            BlockComponentHelpers.parameter("width", "Width", "number", 120, { category: "layout", minimum: 0 }),
+            BlockComponentHelpers.parameter("height", "Height", "number", 40, { category: "layout", minimum: 0 }),
+            BlockComponentHelpers.parameter("text", "Text", "string", "", { category: "display", description: "What is shown. Digits, \":\", \".\" and \"-\" are what the panel can spell; a space, or anything else, lights none of its bars and stands there unlit, the way an empty place on a real one does." }),
+            BlockComponentHelpers.parameter("color", "Lamp colour", "colour", "token:text.primary", { category: "style" }),
+            BlockComponentHelpers.parameter("ghostOpacity", "Unlit opacity", "number", 0.12, { category: "style", minimum: 0, maximum: 1, description: "How far the bars a character does not light are still shown. Zero leaves the panel blank around the reading, the way a lit display reads; a little of it is what an old liquid crystal one looks like." }),
+            BlockComponentHelpers.parameter("thickness", "Bar thickness", "number", 0.16, { category: "style", minimum: 0.02, maximum: 0.4, description: "How thick a bar is, as a fraction of the height of a digit." }),
+            BlockComponentHelpers.parameter("digitWidth", "Digit width", "number", 0.56, { category: "style", minimum: 0.2, maximum: 1.5, description: "How wide a digit is, as a fraction of its height." }),
+            BlockComponentHelpers.parameter("spacing", "Spacing", "number", 0.14, { category: "style", minimum: 0, maximum: 1, description: "The gap between one character and the next, as a fraction of the height of a digit." }),
+            BlockComponentHelpers.parameter("slant", "Slant", "number", 0, { category: "style", minimum: -30, maximum: 30, unit: "deg", description: "How far the characters lean to the right, the way the ones on a watch do." })
+        ],
+        create: (parameters, context) => {
+            const characters = Array.from(String(parameters.text ?? ""));
+            if (characters.length === 0)
+                return { id: "seven-segment-display", type: "group", children: [] };
+            const color = context.tokens.resolveValue(parameters.color);
+            const digitWidth = Number(parameters.digitWidth);
+            const spacing = Number(parameters.spacing);
+            const widthFactors = characters.map(character => BlockComponentHelpers.sevenSegmentWidthFactor(character));
+            const slantTangent = Math.tan(Number(parameters.slant) * Math.PI / 180);
+            // The reading is as tall as the box lets it be and no wider than the box either, so the
+            // same display serves a wide panel and a small square one without being told a size. A
+            // lean carries the top of every character sideways, which is width the fit has to allow
+            // for or the last one would hang over the edge.
+            const spanPerHeight = digitWidth * widthFactors.reduce((total, factor) => total + factor, 0) + spacing * (characters.length - 1);
+            const height = Math.max(0, Math.min(Number(parameters.height), Number(parameters.width) / (spanPerHeight + Math.abs(slantTangent))));
+            const thickness = height * Number(parameters.thickness);
+            const top = Number(parameters.y) + (Number(parameters.height) - height) / 2;
+            const ghostOpacity = Number(parameters.ghostOpacity);
+            const children = [];
+            const leanLeft = Math.max(0, -slantTangent) * height;
+            let left = Number(parameters.x) + (Number(parameters.width) - height * (spanPerHeight + Math.abs(slantTangent))) / 2 + leanLeft;
+            for (let index = 0; index < characters.length; index++) {
+                const character = characters[index];
+                const cellWidth = digitWidth * widthFactors[index] * height;
+                const lamps = BlockComponentHelpers.sevenSegmentLamps(character, left, top, cellWidth, height, thickness, slantTangent);
+                const spelledWithLamps = Object.keys(lamps).length > 0;
+                const shapes = spelledWithLamps ? lamps : BlockComponentHelpers.sevenSegmentBars(left, top, cellWidth, height, thickness, slantTangent);
+                const lit = spelledWithLamps ? Object.keys(lamps) : (BlockComponentHelpers.sevenSegmentGlyphs[character] ?? []);
+                for (const [name, points] of Object.entries(shapes)) {
+                    const isLit = lit.includes(name);
+                    if (!isLit && ghostOpacity <= 0)
+                        continue;
+                    children.push({
+                        id: `character-${index}-${name}`,
+                        type: "polygon",
+                        properties: { points: points, fill: color, stroke: "none", opacity: isLit ? 1 : ghostOpacity }
+                    });
+                }
+                left += cellWidth + spacing * height;
+            }
+            return { id: "seven-segment-display", type: "group", children: children };
         }
     });
 

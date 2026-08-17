@@ -15,7 +15,7 @@ async function addModel(page) {
     await page.evaluate(() => modellus.shape.addExpression('Values'));
     await page.waitForTimeout(300);
     await page.evaluate(() => {
-        shell.board.shapes.getByName('Values').properties.expression = 'hour=10\\\\minute=8\\\\second=42\\\\heading=120\\\\speed=64\\\\angle=35\\\\radius=1\\\\tempo=3\\\\temperature=62';
+        shell.board.shapes.getByName('Values').properties.expression = 'hour=10\\\\minute=8\\\\second=42\\\\milli=456\\\\heading=120\\\\speed=64\\\\angle=35\\\\radius=1\\\\tempo=3\\\\temperature=62';
         shell.reset();
     });
     await page.waitForTimeout(400);
@@ -27,7 +27,7 @@ async function compileMarkup(page, componentType, preset, size, overrides = {}) 
         const definition = BlockObjects.createComponentInstance(componentType, { preset: preset });
         const parameters = BlockObjects.getInstancePropertyDefaults(componentType, preset);
         const modelParameters = {
-            'analogue-clock': { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second' },
+            'analogue-clock': { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', millisecondVariable: 'milli' },
             compass: { headingVariable: 'heading' },
             speedometer: { valueVariable: 'speed', unit: 'km/h' },
             'circular-gauge': { valueVariable: 'speed', unit: '%' },
@@ -88,6 +88,15 @@ test.describe('component visual snapshots', () => {
             const markup = await compileMarkup(page, 'analogue-clock', 'standard', size);
             expect(markup).toMatchSnapshot(`analogue-clock-${size}.svg`);
         }
+    });
+
+    test('clock markup is stable with the millisecond hand and as a digital readout', async ({ page }) => {
+        await setupBoard(page);
+        await addModel(page);
+        const withMilliseconds = await compileMarkup(page, 'analogue-clock', 'standard', 200, { showMillisecondHand: true });
+        expect(withMilliseconds).toMatchSnapshot('analogue-clock-milliseconds.svg');
+        const digital = await compileMarkup(page, 'analogue-clock', 'standard', 200, { shownAs: 'digital', showMillisecondHand: true });
+        expect(digital).toMatchSnapshot('analogue-clock-digital.svg');
     });
 
     test('clock on the board looks the same plain, selected and zoomed', async ({ page }) => {

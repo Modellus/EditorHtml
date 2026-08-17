@@ -180,6 +180,30 @@ var BlockBehaviours = {
     });
 
     registry.register({
+        type: "keep-time",
+        category: "behaviour",
+        displayName: "Keep time",
+        description: "A transport key for a reading of the clock: play sets it counting real time from wherever it stands, pause holds it there, and stop ends the run and clears it. What is counted is written into the four parts of the reading — the hours, the minutes, the seconds and the thousandths — each into the term that part names, or into the object's own property when it names a plain number instead. The whole run is one edit.",
+        tags: ["interaction", "click", "time", "clock", "stopwatch", "timer", "writes-model"],
+        capabilities: ["interaction", "writes-model"],
+        inputSchema: {
+            properties: {
+                action: { valueType: "string", defaultValue: "play", enumValues: ["play", "pause", "stop"], label: "Action", bindable: false, description: "What this key does: start counting, hold where it is, or end the run and clear the reading." },
+                hourVariable: { valueType: "variable", defaultValue: "", label: "Hour variable", bindable: false },
+                hourProperty: { valueType: "string", defaultValue: "", label: "Hour property", description: "Property written when the hour names a plain number instead of a model term." },
+                minuteVariable: { valueType: "variable", defaultValue: "", label: "Minute variable", bindable: false },
+                minuteProperty: { valueType: "string", defaultValue: "", label: "Minute property" },
+                secondVariable: { valueType: "variable", defaultValue: "", label: "Second variable", bindable: false },
+                secondProperty: { valueType: "string", defaultValue: "", label: "Second property" },
+                millisecondVariable: { valueType: "variable", defaultValue: "", label: "Millisecond variable", bindable: false },
+                millisecondProperty: { valueType: "string", defaultValue: "", label: "Millisecond property" },
+                runningParameter: { valueType: "string", defaultValue: "", label: "Running parameter", bindable: false, description: "Parameter that reads 1 while the clock is counting, so the drawing can show which key it is on. It is handed to the next drawing rather than written down: a file remembers no clock left running." },
+                intervalMs: { valueType: "number", defaultValue: 33, minimum: 10, maximum: 1000, label: "Interval", unit: "ms", description: "How often the reading is written while it counts." }
+            }
+        }
+    });
+
+    registry.register({
         type: "remember",
         category: "behaviour",
         displayName: "Remember",

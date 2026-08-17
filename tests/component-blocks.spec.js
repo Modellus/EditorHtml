@@ -774,6 +774,58 @@ test.describe('reusable blocks build several objects', () => {
         expect(unread).toHaveLength(0);
     });
 
+    // The seven-segment panel is geometry rather than a font, so what it spells has to be read back
+    // off the drawing: the bars each character lights, and the faint ones left standing behind them.
+    async function buildSegmentDisplay(page, text, box = { x: 0, y: 0, width: 240, height: 60 }) {
+        return page.evaluate(({ text, box }) => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(null));
+            const definition = {
+                schemaVersion: '1.0.0', id: 'segment-drawing', type: 'group', name: 'Segment drawing', preset: 'standard',
+                root: { id: 'root', type: 'group', children: [{ id: 'display', type: 'seven-segment-display', parameters: Object.assign({ text: text, color: '#111111' }, box) }] }
+            };
+            const compilation = compiler.compile(definition, { width: box.width, height: box.height, parameters: {}, tokens: new BlockTokens('standard') });
+            const cells = {};
+            let left = Number.POSITIVE_INFINITY;
+            let right = Number.NEGATIVE_INFINITY;
+            for (const node of BlockRenderer.flatten(compilation.nodes).filter(entry => String(entry.sourceId).startsWith('character-'))) {
+                const parts = node.sourceId.split('-');
+                cells[parts[1]] ??= { lit: [], unlit: [] };
+                cells[parts[1]][node.attributes.opacity === undefined ? 'lit' : 'unlit'].push(parts[2]);
+                for (const point of String(node.attributes.points).split(' ')) {
+                    left = Math.min(left, Number(point.split(',')[0]));
+                    right = Math.max(right, Number(point.split(',')[0]));
+                }
+            }
+            return {
+                cells: Object.keys(cells).sort((first, second) => Number(first) - Number(second)).map(index => ({ lit: cells[index].lit.sort().join(''), unlit: cells[index].unlit.sort().join('') })),
+                left: left,
+                right: right
+            };
+        }, { text, box });
+    }
+
+    test('a seven-segment panel spells its reading in bars, and leaves the unlit ones showing', async ({ page }) => {
+        await setupBoard(page);
+        const display = await buildSegmentDisplay(page, '10:38.5');
+        expect(display.cells.map(cell => cell.lit)).toEqual(['bc', 'abcdef', 'lowerupper', 'abcdg', 'abcdefg', 'point', 'acdfg']);
+        expect(display.cells[0].unlit).toBe('adefg');
+        expect(display.cells[1].unlit).toBe('g');
+        expect(display.cells[2].unlit).toBe('');
+        expect(display.cells[4].unlit).toBe('');
+    });
+
+    test('a seven-segment panel is fitted to the box it is given rather than to a font size', async ({ page }) => {
+        await setupBoard(page);
+        const wide = await buildSegmentDisplay(page, '12:34', { x: 0, y: 0, width: 300, height: 60 });
+        const narrow = await buildSegmentDisplay(page, '12:34', { x: 0, y: 0, width: 120, height: 60 });
+        const longer = await buildSegmentDisplay(page, '12:34:56', { x: 0, y: 0, width: 300, height: 60 });
+        expect(wide.left).toBeGreaterThanOrEqual(0);
+        expect(wide.right).toBeLessThanOrEqual(300);
+        expect(narrow.right - narrow.left).toBeLessThanOrEqual(120);
+        expect(longer.right - longer.left).toBeGreaterThan(wide.right - wide.left);
+        expect(longer.right).toBeLessThanOrEqual(300);
+    });
+
     test('visual presets change styling without changing structure', async ({ page }) => {
         await setupBoard(page);
         const result = await page.evaluate(() => {

@@ -194,7 +194,7 @@ test('the model menu labels the key rows without the word term and offers a colo
             hasColorSwatch: control.querySelector('.shape-term-color') !== null
         };
     }));
-    expect(rows.map(row => row.text)).toEqual(['Key 1', 'Key 2', 'Key 3', 'Key 4', 'Result variable']);
+    expect(rows.map(row => row.text)).toEqual(['Key 1', 'Key 2', 'Key 3', 'Key 4', 'Result']);
     expect(rows.every(row => row.labelLeftOfControl && row.sameRow)).toBe(true);
     expect(rows.map(row => row.hasColorSwatch)).toEqual([true, true, true, true, false]);
 });

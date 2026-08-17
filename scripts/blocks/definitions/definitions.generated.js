@@ -6,25 +6,28 @@ BlockDefinitionLoader.registerAll([
         "type": "analogue-clock",
         "category": "component",
         "displayName": "Analogue clock",
-        "description": "Clock face with hour, minute and optional second hands whose angles come from model variables or expressions.",
+        "description": "Clock reading the hour, minute, second and millisecond a model gives it, shown either as a face with a hand for each or as a digital readout of the same time. The seconds and the milliseconds can each be left out, and what is left out goes from the face and from the readout alike.",
         "icon": "fa-light fa-clock",
         "tags": [
             "object",
             "clock",
             "time",
             "dial",
-            "hands"
+            "hands",
+            "digital",
+            "readout"
         ],
         "capabilities": [
             "radial",
             "angular",
             "reads-model",
+            "textual",
             "interaction"
         ],
         "parameters": [
             {
                 "id": "hourVariable",
-                "label": "Hour variable",
+                "label": "Hour",
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model",
@@ -32,7 +35,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "minuteVariable",
-                "label": "Minute variable",
+                "label": "Minute",
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model",
@@ -40,39 +43,95 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "secondVariable",
-                "label": "Second variable",
+                "label": "Second",
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model",
                 "description": "Model variable or number giving the second."
             },
             {
+                "id": "millisecondVariable",
+                "label": "Millisecond",
+                "valueType": "variable",
+                "defaultValue": "0",
+                "category": "model",
+                "visibleWhen": {
+                    "parameter": "showMillisecondHand"
+                },
+                "description": "Model variable or number giving the thousandth of a second. A thousand of them is one turn of the millisecond hand, and the three digits after the seconds in the readout."
+            },
+            {
+                "id": "shownAs",
+                "label": "Shown as",
+                "valueType": "string",
+                "defaultValue": "analogue",
+                "enumValues": [
+                    "analogue",
+                    "digital"
+                ],
+                "enumIcons": [
+                    "fa-light fa-clock",
+                    "fa-light fa-input-numeric"
+                ],
+                "category": "display",
+                "userEditable": false,
+                "toolbarKey": true,
+                "toolbarTooltip": "Clock Display Tooltip",
+                "description": "Whether the time is shown as a face with hands or as digits on a panel. It is chosen from a key of its own in the toolbar rather than from a row in the settings, since it decides which of the settings are worth offering at all: the face keeps the numbers, the ticks and the dragging, and the readout keeps none of them. Both read the same variables and both leave out whatever the seconds and the milliseconds are switched off for."
+            },
+            {
                 "id": "showSecondHand",
-                "label": "Show second hand",
+                "label": "Show seconds",
                 "valueType": "boolean",
                 "defaultValue": true,
-                "category": "display"
+                "category": "display",
+                "description": "Whether the clock reads seconds at all: the sweeping hand on the face, and the field after the minutes in the readout."
+            },
+            {
+                "id": "showMillisecondHand",
+                "label": "Show milliseconds",
+                "valueType": "boolean",
+                "defaultValue": false,
+                "category": "display",
+                "description": "Whether the thousandths are read as well: a hand of their own on the face, round once a second, and three more digits after the seconds in the readout. The face carries no marks for them — the hand is read against the same ring the second hand is."
+            },
+            {
+                "id": "showControls",
+                "label": "Buttons",
+                "valueType": "boolean",
+                "defaultValue": false,
+                "category": "display",
+                "description": "Whether the clock carries the three keys that run it, in a strip of its own under the face or the panel: play sets it counting real time from wherever it stands, pause holds it there, and stop ends the run and clears the reading. What it counts goes into the terms the four rows name — or into the numbers they hold, for a clock bound to nothing."
             },
             {
                 "id": "showNumbers",
                 "label": "Show numbers",
                 "valueType": "boolean",
                 "defaultValue": true,
-                "category": "display"
+                "category": "display",
+                "visibleWhen": {
+                    "parameter": "shownAs",
+                    "equals": "analogue"
+                }
             },
             {
                 "id": "showMinuteTicks",
                 "label": "Show minute ticks",
                 "valueType": "boolean",
                 "defaultValue": true,
-                "category": "display"
+                "category": "display",
+                "visibleWhen": {
+                    "parameter": "shownAs",
+                    "equals": "analogue"
+                }
             },
             {
                 "id": "faceColor",
                 "label": "Face colour",
                 "valueType": "colour",
                 "defaultValue": "token:surface.default",
-                "category": "style"
+                "category": "style",
+                "description": "The face the hands turn over, and the panel the digits are read on."
             },
             {
                 "id": "borderColor",
@@ -86,28 +145,83 @@ BlockDefinitionLoader.registerAll([
                 "label": "Hand colour",
                 "valueType": "colour",
                 "defaultValue": "token:stroke.strong",
-                "category": "style"
+                "category": "style",
+                "visibleWhen": {
+                    "parameter": "shownAs",
+                    "equals": "analogue"
+                }
             },
             {
                 "id": "secondHandColor",
                 "label": "Second hand colour",
                 "valueType": "colour",
                 "defaultValue": "token:stroke.warning",
-                "category": "style"
+                "category": "style",
+                "visibleWhen": [
+                    {
+                        "parameter": "shownAs",
+                        "equals": "analogue"
+                    },
+                    {
+                        "parameter": "showSecondHand"
+                    }
+                ]
+            },
+            {
+                "id": "millisecondHandColor",
+                "label": "Millisecond hand colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.accent",
+                "category": "style",
+                "visibleWhen": [
+                    {
+                        "parameter": "shownAs",
+                        "equals": "analogue"
+                    },
+                    {
+                        "parameter": "showMillisecondHand"
+                    }
+                ]
             },
             {
                 "id": "numberColor",
                 "label": "Number colour",
                 "valueType": "colour",
                 "defaultValue": "token:text.primary",
-                "category": "style"
+                "category": "style",
+                "description": "The numbers around the face, and the digits of the readout."
+            },
+            {
+                "id": "buttonColor",
+                "label": "Button colour",
+                "valueType": "colour",
+                "defaultValue": "token:surface.muted",
+                "category": "style",
+                "visibleWhen": {
+                    "parameter": "showControls"
+                },
+                "description": "The faces of the three keys. Their marks are drawn in the border colour, and the key the clock is on is drawn the other way about — mark for face — so the reader can see it counting."
             },
             {
                 "id": "interactive",
                 "label": "Hands can be dragged",
                 "valueType": "boolean",
                 "defaultValue": false,
-                "category": "interaction"
+                "category": "interaction",
+                "visibleWhen": {
+                    "parameter": "shownAs",
+                    "equals": "analogue"
+                }
+            },
+            {
+                "id": "running",
+                "label": "Running",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false,
+                "description": "Whether the clock is counting, kept by the object while the board is open. It is what draws the play key pressed, and it is never written down: a file remembers no clock left running, and a model opened again opens standing still."
             }
         ],
         "locals": [
@@ -124,16 +238,34 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "controlsRead",
+                "value": {
+                    "choose": {
+                        "parameter": "showControls"
+                    },
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "controlStrip",
+                "formula": "controlsRead\\cdot\\min\\left(0.26\\cdot h,0.22\\cdot w\\right)"
+            },
+            {
+                "id": "faceHeight",
+                "formula": "h-controlStrip"
+            },
+            {
                 "id": "cx",
                 "formula": "\\frac{w}{2}"
             },
             {
                 "id": "cy",
-                "formula": "\\frac{h}{2}"
+                "formula": "\\frac{faceHeight}{2}"
             },
             {
                 "id": "r",
-                "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-6\\right)"
+                "formula": "\\max\\left(4,\\frac{\\min\\left(w,faceHeight\\right)}{2}-6\\right)"
             },
             {
                 "id": "hours",
@@ -157,6 +289,84 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "milliseconds",
+                "value": {
+                    "parameter": "millisecondVariable",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "shownAsFace",
+                "value": {
+                    "choose": {
+                        "parameter": "shownAs"
+                    },
+                    "equals": "analogue",
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "shownAsDigits",
+                "formula": "1-shownAsFace"
+            },
+            {
+                "id": "secondsRead",
+                "value": {
+                    "choose": {
+                        "parameter": "showSecondHand"
+                    },
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "millisecondsRead",
+                "value": {
+                    "choose": {
+                        "parameter": "showMillisecondHand"
+                    },
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "numbersRead",
+                "value": {
+                    "choose": {
+                        "parameter": "showNumbers"
+                    },
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "minuteTicksRead",
+                "value": {
+                    "choose": {
+                        "parameter": "showMinuteTicks"
+                    },
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "faceNumbersShown",
+                "formula": "shownAsFace\\cdot numbersRead"
+            },
+            {
+                "id": "faceTicksShown",
+                "formula": "shownAsFace\\cdot minuteTicksRead"
+            },
+            {
+                "id": "secondHandShown",
+                "formula": "shownAsFace\\cdot secondsRead"
+            },
+            {
+                "id": "millisecondHandShown",
+                "formula": "shownAsFace\\cdot millisecondsRead"
+            },
+            {
                 "id": "hourAngle",
                 "formula": "\\left(\\mod\\left(hours,12\\right)+\\frac{minutes}{60}\\right)\\cdot30"
             },
@@ -167,6 +377,10 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "secondAngle",
                 "formula": "\\mod\\left(seconds,60\\right)\\cdot6"
+            },
+            {
+                "id": "millisecondAngle",
+                "formula": "\\mod\\left(milliseconds,1000\\right)\\cdot0.36"
             },
             {
                 "id": "markerRadius",
@@ -225,6 +439,18 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\max\\left(1,r\\cdot0.02\\right)"
             },
             {
+                "id": "millisecondHandLength",
+                "formula": "r\\cdot0.88"
+            },
+            {
+                "id": "millisecondHandTail",
+                "formula": "r\\cdot0.24"
+            },
+            {
+                "id": "millisecondHandWidth",
+                "formula": "\\max\\left(0.75,r\\cdot0.014\\right)"
+            },
+            {
                 "id": "capRadius",
                 "formula": "\\max\\left(2,r\\cdot0.045\\right)"
             },
@@ -281,6 +507,307 @@ BlockDefinitionLoader.registerAll([
                     },
                     "otherwise": ""
                 }
+            },
+            {
+                "id": "millisecondDrag",
+                "value": {
+                    "choose": {
+                        "parameter": "interactive"
+                    },
+                    "then": {
+                        "parameter": "millisecondVariable"
+                    },
+                    "otherwise": ""
+                }
+            },
+            {
+                "id": "hourNumber",
+                "formula": "\\mod\\left(\\mod\\left(\\lfloor hours\\rfloor,24\\right)+24,24\\right)"
+            },
+            {
+                "id": "minuteNumber",
+                "formula": "\\mod\\left(\\mod\\left(\\lfloor minutes\\rfloor,60\\right)+60,60\\right)"
+            },
+            {
+                "id": "secondNumber",
+                "formula": "\\mod\\left(\\mod\\left(\\lfloor seconds\\rfloor,60\\right)+60,60\\right)"
+            },
+            {
+                "id": "millisecondNumber",
+                "formula": "\\mod\\left(\\mod\\left(\\lfloor milliseconds\\rfloor,1000\\right)+1000,1000\\right)"
+            },
+            {
+                "id": "hourPad",
+                "formula": "1-\\min\\left(1,\\lfloor\\frac{hourNumber}{10}\\rfloor\\right)"
+            },
+            {
+                "id": "minutePad",
+                "formula": "1-\\min\\left(1,\\lfloor\\frac{minuteNumber}{10}\\rfloor\\right)"
+            },
+            {
+                "id": "secondPad",
+                "formula": "1-\\min\\left(1,\\lfloor\\frac{secondNumber}{10}\\rfloor\\right)"
+            },
+            {
+                "id": "millisecondHundredsPad",
+                "formula": "1-\\min\\left(1,\\lfloor\\frac{millisecondNumber}{100}\\rfloor\\right)"
+            },
+            {
+                "id": "millisecondTensPad",
+                "formula": "1-\\min\\left(1,\\lfloor\\frac{millisecondNumber}{10}\\rfloor\\right)"
+            },
+            {
+                "id": "hourText",
+                "value": {
+                    "concat": [
+                        {
+                            "choose": {
+                                "parameter": "hourPad"
+                            },
+                            "then": "0",
+                            "otherwise": ""
+                        },
+                        {
+                            "format": {
+                                "parameter": "hourNumber"
+                            },
+                            "digits": 0
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "minuteText",
+                "value": {
+                    "concat": [
+                        {
+                            "choose": {
+                                "parameter": "minutePad"
+                            },
+                            "then": "0",
+                            "otherwise": ""
+                        },
+                        {
+                            "format": {
+                                "parameter": "minuteNumber"
+                            },
+                            "digits": 0
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "secondText",
+                "value": {
+                    "concat": [
+                        {
+                            "choose": {
+                                "parameter": "secondPad"
+                            },
+                            "then": "0",
+                            "otherwise": ""
+                        },
+                        {
+                            "format": {
+                                "parameter": "secondNumber"
+                            },
+                            "digits": 0
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "millisecondText",
+                "value": {
+                    "concat": [
+                        {
+                            "choose": {
+                                "parameter": "millisecondHundredsPad"
+                            },
+                            "then": "0",
+                            "otherwise": ""
+                        },
+                        {
+                            "choose": {
+                                "parameter": "millisecondTensPad"
+                            },
+                            "then": "0",
+                            "otherwise": ""
+                        },
+                        {
+                            "format": {
+                                "parameter": "millisecondNumber"
+                            },
+                            "digits": 0
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "readoutText",
+                "value": {
+                    "concat": [
+                        {
+                            "parameter": "hourText"
+                        },
+                        ":",
+                        {
+                            "parameter": "minuteText"
+                        },
+                        {
+                            "choose": {
+                                "parameter": "secondsRead"
+                            },
+                            "then": {
+                                "concat": [
+                                    ":",
+                                    {
+                                        "parameter": "secondText"
+                                    }
+                                ]
+                            },
+                            "otherwise": ""
+                        },
+                        {
+                            "choose": {
+                                "parameter": "millisecondsRead"
+                            },
+                            "then": {
+                                "concat": [
+                                    ".",
+                                    {
+                                        "parameter": "millisecondText"
+                                    }
+                                ]
+                            },
+                            "otherwise": ""
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "digitCount",
+                "formula": "5+3\\cdot secondsRead+4\\cdot millisecondsRead"
+            },
+            {
+                "id": "digitFactor",
+                "formula": "4.45+2.45\\cdot secondsRead+3.45\\cdot millisecondsRead"
+            },
+            {
+                "id": "digitSpan",
+                "formula": "0.56\\cdot digitFactor+0.14\\cdot\\left(digitCount-1\\right)"
+            },
+            {
+                "id": "panelInset",
+                "formula": "\\max\\left(2,\\frac{\\min\\left(w,faceHeight\\right)}{25}\\right)"
+            },
+            {
+                "id": "panelWidth",
+                "formula": "w-2\\cdot panelInset"
+            },
+            {
+                "id": "readoutX",
+                "formula": "2.5\\cdot panelInset"
+            },
+            {
+                "id": "readoutWidth",
+                "formula": "w-5\\cdot panelInset"
+            },
+            {
+                "id": "digitHeight",
+                "formula": "\\min\\left(\\left(faceHeight-2\\cdot panelInset\\right)\\cdot0.62,\\frac{readoutWidth}{digitSpan}\\right)"
+            },
+            {
+                "id": "readoutY",
+                "formula": "\\frac{faceHeight-digitHeight}{2}"
+            },
+            {
+                "id": "panelHeight",
+                "formula": "\\min\\left(faceHeight-2\\cdot panelInset,digitHeight\\cdot1.7\\right)"
+            },
+            {
+                "id": "panelY",
+                "formula": "\\frac{faceHeight-panelHeight}{2}"
+            },
+            {
+                "id": "panelRadius",
+                "value": {
+                    "token": "radius.large"
+                }
+            },
+            {
+                "id": "buttonSize",
+                "formula": "\\min\\left(0.7\\cdot controlStrip,\\frac{w}{4.2}\\right)"
+            },
+            {
+                "id": "buttonScale",
+                "formula": "\\frac{buttonSize}{100}"
+            },
+            {
+                "id": "buttonGap",
+                "formula": "0.3\\cdot buttonSize"
+            },
+            {
+                "id": "buttonRun",
+                "formula": "3\\cdot buttonSize+2\\cdot buttonGap"
+            },
+            {
+                "id": "buttonY",
+                "formula": "faceHeight+\\frac{controlStrip-buttonSize}{2}"
+            },
+            {
+                "id": "buttonX1",
+                "formula": "\\frac{w-buttonRun}{2}"
+            },
+            {
+                "id": "buttonX2",
+                "formula": "buttonX1+buttonSize+buttonGap"
+            },
+            {
+                "id": "buttonX3",
+                "formula": "buttonX2+buttonSize+buttonGap"
+            },
+            {
+                "id": "buttonEdge",
+                "value": {
+                    "token": "strokeWidth.default"
+                }
+            },
+            {
+                "id": "buttonEdgeArt",
+                "formula": "\\frac{100\\cdot buttonEdge}{\\max\\left(1,buttonSize\\right)}"
+            },
+            {
+                "id": "playFace",
+                "value": {
+                    "choose": {
+                        "parameter": "running"
+                    },
+                    "then": {
+                        "parameter": "borderColor"
+                    },
+                    "otherwise": {
+                        "parameter": "buttonColor"
+                    }
+                }
+            },
+            {
+                "id": "playMark",
+                "value": {
+                    "choose": {
+                        "parameter": "running"
+                    },
+                    "then": {
+                        "parameter": "buttonColor"
+                    },
+                    "otherwise": {
+                        "parameter": "borderColor"
+                    }
+                }
+            },
+            {
+                "id": "runInterval",
+                "formula": "33\\cdot millisecondsRead+100\\cdot\\left(1-millisecondsRead\\right)"
             }
         ],
         "root": {
@@ -290,6 +817,9 @@ BlockDefinitionLoader.registerAll([
                 {
                     "id": "face",
                     "type": "dial-face",
+                    "when": {
+                        "parameter": "shownAsFace"
+                    },
                     "parameters": {
                         "centerX": {
                             "parameter": "cx"
@@ -314,6 +844,9 @@ BlockDefinitionLoader.registerAll([
                 {
                     "id": "hour-markers",
                     "type": "tick-ring",
+                    "when": {
+                        "parameter": "shownAsFace"
+                    },
                     "parameters": {
                         "centerX": {
                             "parameter": "cx"
@@ -342,7 +875,7 @@ BlockDefinitionLoader.registerAll([
                     "id": "minute-markers",
                     "type": "tick-ring",
                     "when": {
-                        "parameter": "showMinuteTicks"
+                        "parameter": "faceTicksShown"
                     },
                     "parameters": {
                         "centerX": {
@@ -372,7 +905,7 @@ BlockDefinitionLoader.registerAll([
                     "id": "numbers",
                     "type": "label-ring",
                     "when": {
-                        "parameter": "showNumbers"
+                        "parameter": "faceNumbersShown"
                     },
                     "parameters": {
                         "centerX": {
@@ -404,6 +937,9 @@ BlockDefinitionLoader.registerAll([
                 {
                     "id": "hour-hand",
                     "type": "pointer-hand",
+                    "when": {
+                        "parameter": "shownAsFace"
+                    },
                     "parameters": {
                         "centerX": {
                             "parameter": "cx"
@@ -438,6 +974,9 @@ BlockDefinitionLoader.registerAll([
                 {
                     "id": "minute-hand",
                     "type": "pointer-hand",
+                    "when": {
+                        "parameter": "shownAsFace"
+                    },
                     "parameters": {
                         "centerX": {
                             "parameter": "cx"
@@ -473,7 +1012,7 @@ BlockDefinitionLoader.registerAll([
                     "id": "second-hand",
                     "type": "pointer-hand",
                     "when": {
-                        "parameter": "showSecondHand"
+                        "parameter": "secondHandShown"
                     },
                     "parameters": {
                         "centerX": {
@@ -507,8 +1046,48 @@ BlockDefinitionLoader.registerAll([
                     }
                 },
                 {
+                    "id": "millisecond-hand",
+                    "type": "pointer-hand",
+                    "when": {
+                        "parameter": "millisecondHandShown"
+                    },
+                    "parameters": {
+                        "centerX": {
+                            "parameter": "cx"
+                        },
+                        "centerY": {
+                            "parameter": "cy"
+                        },
+                        "angle": {
+                            "parameter": "millisecondAngle"
+                        },
+                        "length": {
+                            "parameter": "millisecondHandLength"
+                        },
+                        "tailLength": {
+                            "parameter": "millisecondHandTail"
+                        },
+                        "width": {
+                            "parameter": "millisecondHandWidth"
+                        },
+                        "color": {
+                            "parameter": "millisecondHandColor"
+                        },
+                        "style": "line",
+                        "dragVariable": {
+                            "parameter": "millisecondDrag"
+                        },
+                        "dragProperty": "millisecondVariable",
+                        "degreesPerUnit": 0.36,
+                        "wrapAt": 1000
+                    }
+                },
+                {
                     "id": "centre-cap",
                     "type": "circle",
+                    "when": {
+                        "parameter": "shownAsFace"
+                    },
                     "bindings": {
                         "centerX": {
                             "parameter": "cx"
@@ -526,6 +1105,442 @@ BlockDefinitionLoader.registerAll([
                     "properties": {
                         "stroke": "none"
                     }
+                },
+                {
+                    "id": "digital",
+                    "type": "group",
+                    "when": {
+                        "parameter": "shownAsDigits"
+                    },
+                    "children": [
+                        {
+                            "id": "panel",
+                            "type": "rect",
+                            "properties": {
+                                "x": 0,
+                                "y": 0,
+                                "width": 100,
+                                "height": 40,
+                                "cornerRadius": 8,
+                                "fill": "token:surface.default",
+                                "stroke": "token:stroke.default",
+                                "strokeWidth": 2
+                            },
+                            "bindings": {
+                                "x": {
+                                    "parameter": "panelInset"
+                                },
+                                "y": {
+                                    "parameter": "panelY"
+                                },
+                                "width": {
+                                    "parameter": "panelWidth"
+                                },
+                                "height": {
+                                    "parameter": "panelHeight"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "panelRadius"
+                                },
+                                "fill": {
+                                    "parameter": "faceColor"
+                                },
+                                "stroke": {
+                                    "parameter": "borderColor"
+                                },
+                                "strokeWidth": {
+                                    "parameter": "strokeStrong"
+                                }
+                            }
+                        },
+                        {
+                            "id": "readout",
+                            "type": "seven-segment-display",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "readoutX"
+                                },
+                                "y": {
+                                    "parameter": "readoutY"
+                                },
+                                "width": {
+                                    "parameter": "readoutWidth"
+                                },
+                                "height": {
+                                    "parameter": "digitHeight"
+                                },
+                                "text": {
+                                    "parameter": "readoutText"
+                                },
+                                "color": {
+                                    "parameter": "numberColor"
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "controls",
+                    "type": "group",
+                    "when": {
+                        "parameter": "showControls"
+                    },
+                    "children": [
+                        {
+                            "id": "play-key",
+                            "type": "group",
+                            "modifiers": [
+                                {
+                                    "type": "translate",
+                                    "dx": {
+                                        "parameter": "buttonX1"
+                                    },
+                                    "dy": {
+                                        "parameter": "buttonY"
+                                    }
+                                },
+                                {
+                                    "type": "scale",
+                                    "scaleX": {
+                                        "parameter": "buttonScale"
+                                    },
+                                    "scaleY": {
+                                        "parameter": "buttonScale"
+                                    },
+                                    "centerX": 0,
+                                    "centerY": 0
+                                }
+                            ],
+                            "children": [
+                                {
+                                    "id": "play-cap",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 0,
+                                        "y": 0,
+                                        "width": 100,
+                                        "height": 100,
+                                        "cornerRadius": 22,
+                                        "fill": "token:surface.muted",
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 1
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "playFace"
+                                        },
+                                        "stroke": {
+                                            "parameter": "borderColor"
+                                        },
+                                        "strokeWidth": {
+                                            "parameter": "buttonEdgeArt"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "play-mark",
+                                    "type": "polygon",
+                                    "properties": {
+                                        "points": [
+                                            {
+                                                "x": 34,
+                                                "y": 24
+                                            },
+                                            {
+                                                "x": 78,
+                                                "y": 50
+                                            },
+                                            {
+                                                "x": 34,
+                                                "y": 76
+                                            }
+                                        ],
+                                        "fill": "token:stroke.default",
+                                        "stroke": "none"
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "playMark"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "play-press",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 0,
+                                        "y": 0,
+                                        "width": 100,
+                                        "height": 100,
+                                        "fill": "none",
+                                        "stroke": "none"
+                                    },
+                                    "behaviours": [
+                                        {
+                                            "type": "keep-time",
+                                            "action": "play",
+                                            "hourVariable": {
+                                                "parameter": "hourVariable"
+                                            },
+                                            "hourProperty": "hourVariable",
+                                            "minuteVariable": {
+                                                "parameter": "minuteVariable"
+                                            },
+                                            "minuteProperty": "minuteVariable",
+                                            "secondVariable": {
+                                                "parameter": "secondVariable"
+                                            },
+                                            "secondProperty": "secondVariable",
+                                            "millisecondVariable": {
+                                                "parameter": "millisecondVariable"
+                                            },
+                                            "millisecondProperty": "millisecondVariable",
+                                            "runningParameter": "running",
+                                            "intervalMs": {
+                                                "parameter": "runInterval"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "id": "pause-key",
+                            "type": "group",
+                            "modifiers": [
+                                {
+                                    "type": "translate",
+                                    "dx": {
+                                        "parameter": "buttonX2"
+                                    },
+                                    "dy": {
+                                        "parameter": "buttonY"
+                                    }
+                                },
+                                {
+                                    "type": "scale",
+                                    "scaleX": {
+                                        "parameter": "buttonScale"
+                                    },
+                                    "scaleY": {
+                                        "parameter": "buttonScale"
+                                    },
+                                    "centerX": 0,
+                                    "centerY": 0
+                                }
+                            ],
+                            "children": [
+                                {
+                                    "id": "pause-cap",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 0,
+                                        "y": 0,
+                                        "width": 100,
+                                        "height": 100,
+                                        "cornerRadius": 22,
+                                        "fill": "token:surface.muted",
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 1
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "buttonColor"
+                                        },
+                                        "stroke": {
+                                            "parameter": "borderColor"
+                                        },
+                                        "strokeWidth": {
+                                            "parameter": "buttonEdgeArt"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "pause-mark-left",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 32,
+                                        "y": 26,
+                                        "width": 13,
+                                        "height": 48,
+                                        "cornerRadius": 2,
+                                        "fill": "token:stroke.default",
+                                        "stroke": "none"
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "borderColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "pause-mark-right",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 55,
+                                        "y": 26,
+                                        "width": 13,
+                                        "height": 48,
+                                        "cornerRadius": 2,
+                                        "fill": "token:stroke.default",
+                                        "stroke": "none"
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "borderColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "pause-press",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 0,
+                                        "y": 0,
+                                        "width": 100,
+                                        "height": 100,
+                                        "fill": "none",
+                                        "stroke": "none"
+                                    },
+                                    "behaviours": [
+                                        {
+                                            "type": "keep-time",
+                                            "action": "pause",
+                                            "hourVariable": {
+                                                "parameter": "hourVariable"
+                                            },
+                                            "hourProperty": "hourVariable",
+                                            "minuteVariable": {
+                                                "parameter": "minuteVariable"
+                                            },
+                                            "minuteProperty": "minuteVariable",
+                                            "secondVariable": {
+                                                "parameter": "secondVariable"
+                                            },
+                                            "secondProperty": "secondVariable",
+                                            "millisecondVariable": {
+                                                "parameter": "millisecondVariable"
+                                            },
+                                            "millisecondProperty": "millisecondVariable",
+                                            "runningParameter": "running",
+                                            "intervalMs": {
+                                                "parameter": "runInterval"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "id": "stop-key",
+                            "type": "group",
+                            "modifiers": [
+                                {
+                                    "type": "translate",
+                                    "dx": {
+                                        "parameter": "buttonX3"
+                                    },
+                                    "dy": {
+                                        "parameter": "buttonY"
+                                    }
+                                },
+                                {
+                                    "type": "scale",
+                                    "scaleX": {
+                                        "parameter": "buttonScale"
+                                    },
+                                    "scaleY": {
+                                        "parameter": "buttonScale"
+                                    },
+                                    "centerX": 0,
+                                    "centerY": 0
+                                }
+                            ],
+                            "children": [
+                                {
+                                    "id": "stop-cap",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 0,
+                                        "y": 0,
+                                        "width": 100,
+                                        "height": 100,
+                                        "cornerRadius": 22,
+                                        "fill": "token:surface.muted",
+                                        "stroke": "token:stroke.default",
+                                        "strokeWidth": 1
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "buttonColor"
+                                        },
+                                        "stroke": {
+                                            "parameter": "borderColor"
+                                        },
+                                        "strokeWidth": {
+                                            "parameter": "buttonEdgeArt"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "stop-mark",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 30,
+                                        "y": 30,
+                                        "width": 40,
+                                        "height": 40,
+                                        "cornerRadius": 4,
+                                        "fill": "token:stroke.default",
+                                        "stroke": "none"
+                                    },
+                                    "bindings": {
+                                        "fill": {
+                                            "parameter": "borderColor"
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "stop-press",
+                                    "type": "rect",
+                                    "properties": {
+                                        "x": 0,
+                                        "y": 0,
+                                        "width": 100,
+                                        "height": 100,
+                                        "fill": "none",
+                                        "stroke": "none"
+                                    },
+                                    "behaviours": [
+                                        {
+                                            "type": "keep-time",
+                                            "action": "stop",
+                                            "hourVariable": {
+                                                "parameter": "hourVariable"
+                                            },
+                                            "hourProperty": "hourVariable",
+                                            "minuteVariable": {
+                                                "parameter": "minuteVariable"
+                                            },
+                                            "minuteProperty": "minuteVariable",
+                                            "secondVariable": {
+                                                "parameter": "secondVariable"
+                                            },
+                                            "secondProperty": "secondVariable",
+                                            "millisecondVariable": {
+                                                "parameter": "millisecondVariable"
+                                            },
+                                            "millisecondProperty": "millisecondVariable",
+                                            "runningParameter": "running",
+                                            "intervalMs": {
+                                                "parameter": "runInterval"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
                 }
             ]
         }
@@ -714,7 +1729,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "resultVariable",
-                "label": "Result variable",
+                "label": "Result",
                 "valueType": "variable",
                 "defaultValue": "",
                 "category": "model",
@@ -2749,7 +3764,7 @@ BlockDefinitionLoader.registerAll([
         "parameters": [
             {
                 "id": "valueVariable",
-                "label": "Value variable",
+                "label": "Value",
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model"
@@ -4755,7 +5770,7 @@ BlockDefinitionLoader.registerAll([
         "parameters": [
             {
                 "id": "timeVariable",
-                "label": "Time variable",
+                "label": "Time",
                 "valueType": "variable",
                 "defaultValue": "t",
                 "category": "model"
@@ -5244,7 +6259,7 @@ BlockDefinitionLoader.registerAll([
         "parameters": [
             {
                 "id": "angleVariable",
-                "label": "Angle variable",
+                "label": "Angle",
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model",
@@ -5252,7 +6267,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "lengthVariable",
-                "label": "Length variable",
+                "label": "Length",
                 "valueType": "variable",
                 "defaultValue": "1",
                 "category": "model"
@@ -5542,7 +6557,7 @@ BlockDefinitionLoader.registerAll([
         "parameters": [
             {
                 "id": "valueVariable",
-                "label": "Value variable",
+                "label": "Value",
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model"

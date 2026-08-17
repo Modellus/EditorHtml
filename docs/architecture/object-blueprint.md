@@ -36,7 +36,7 @@ that directory: it would become a component in the palette.
     "preview": { "parameters": { "valueVariable": "64", "unit": "km/h" } },
 
     "parameters": [
-        { "id": "valueVariable", "label": "Value variable", "valueType": "variable", "defaultValue": "0", "category": "model" },
+        { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model" },
         { "id": "maximum", "label": "Maximum", "valueType": "number", "defaultValue": 100, "category": "scale", "minimum": 0 },
         { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "", "category": "display" },
         { "id": "showReadout", "label": "Show readout", "valueType": "boolean", "defaultValue": true, "category": "display" },
@@ -104,10 +104,14 @@ zero, a phasor of length one); a clock does not need it.
 Each is `{ id, label, valueType, defaultValue, category }` plus any of `description`, `minimum`,
 `maximum`, `enumValues`, `enumIcons`, `unit`, `required`, `bindable`, `agentAccessible`,
 `userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`, `modeParameter`,
-`valueAnchor`, `visibleWhen`.
+`toolbarKey`, `toolbarTooltip`, `valueAnchor`, `visibleWhen`.
 
 `valueType` is one of `number`, `string`, `boolean`, `colour`, `variable`, `expression`, `memory`,
 `character`, `object`.
+
+**A label names the thing, not the kind of thing.** A `variable` row stands in the variables menu, in
+a term selector, under a key that says so — so call it *Hour*, *Value*, *Time*, never *Hour variable*.
+The word is the one part of the row the reader already knows.
 
 `category` decides where the editor puts the row:
 
@@ -156,7 +160,17 @@ part wherever the drawing puts it rather than where the box it was first drawn i
 node the object is not drawing places nothing. A row without an anchor has nowhere to draw a label,
 so it is not offered the eye.
 
-A sixth takes a row away again. A parameter naming a **`visibleWhen`** — `{ "parameter": "showPedals" }`,
+A sixth is a key of its own in the toolbar. A `string` parameter with `enumValues` and `enumIcons` may
+declare **`"toolbarKey": true`**, and it is chosen from the same key the angle-or-orientation choice
+is made from — icon of the choice it is on, opening on the list of them — instead of a row in a menu.
+Use it for a choice the other rows hang off rather than for an ordinary setting: the clock's `shownAs`
+decides whether it is drawn as a face or as a digital readout, and the numbers, the ticks, the
+dragging and three of the colours name it in a `visibleWhen` because they belong to the face alone.
+Mark it `userEditable: false`, since the key is what edits it, and read it with a `choose` carrying an
+`equals`. A **`toolbarTooltip`** names the translation key the tooltip is read from; without one the
+key wears the angle-or-orientation tooltip.
+
+A seventh takes a row away again. A parameter naming a **`visibleWhen`** — `{ "parameter": "showPedals" }`,
 or `{ "parameter": "turnedBy", "equals": "angle" }`, or a list of conditions all of which have to
 hold — is offered in the toolbar only while that is true, in whichever menu its category puts it. It
 is what an object with an optional part needs: the part's own rows, ends and colours go with it when
@@ -259,6 +273,7 @@ why an ordinary object has no use for it.
 | `press-and-slide` | the reader holds the node: pressing keeps the value where it is, sliding up raises it by `unitsPerPixel` a pixel and down lowers it, and letting go walks it back to `restValue` by `returnStep` every `intervalMs` (zero leaves it where it was released). What a pedal or a throttle needs — and the press, the slide and the fall back are one undo entry. Naming a `verticalVariable` as well presses a pair rather than a number: what it reads is the length of that pair, and what it writes is that pair laid down again at the length it was pressed to, along the direction it already pointed in |
 | `drag-angle` | dragging a hand around a centre points it at the pointer and writes the angle back, measured from `offsetDegrees` — zero straight up when that is left at nothing. `signed` reads that angle the short way round so one side of zero comes out below it, which is what a wheel wants; left off it runs from nothing to a whole turn, which is what a bearing wants. Naming a `verticalVariable` as well writes a pair: it keeps the length it had and takes the direction it was pointed at |
 | `drag-rotate` | dragging a rim or a bezel turns it by the angle travelled, not to the pointer. Naming a `verticalVariable` as well writes a pair rather than a number: the pair keeps its length and takes the angle it was turned to, which is how an object driven by a direction stays draggable |
+| `keep-time` | a key runs a clock: `play` sets it counting real time from wherever it stands, `pause` holds it, and `stop` ends the run and clears it. The four parts of the reading — hours, minutes, seconds, thousandths — are named a variable and a property each, so a clock bound to nothing counts in its own numbers, and the whole run is one undo entry. It counts on a clock of its own, so it goes on counting while the player stands still; name a `runningParameter` and the drawing can show which key it is on |
 | `drag-axis-tick` | an axis tick rescales the axis |
 | `follow-pointer` | the drawing shows what is under the cursor without keeping it |
 | `hoverable`, `tooltip` | cursor and native tooltip |
@@ -277,6 +292,7 @@ Do not redraw what one of these already draws.
 | a hand, needle or arrow | `pointer-hand` |
 | as many directions as the reader names, marked round a dial | `pointer-ring` |
 | a key with a label | `key-cap` |
+| a reading spelled out in lamps, the way a digital clock shows one | `seven-segment-display` |
 | **anything cartesian** | `plot-grid`, `plot-axes`, `plot-crosshair` |
 | a memory shown as a list or a path | `memory-list`, `memory-trace` |
 | a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `calculator`, `mouse-tracker`, `thermometer` |

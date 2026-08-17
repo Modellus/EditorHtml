@@ -180,9 +180,9 @@ class ComponentShape extends BaseShape {
         const character = this.getComponentCharacterValues();
         const range = this.getAxisRangeValues();
         const resting = this.getOrientationRestingValues();
-        if (!character && !this._pointerValues && !range && !resting)
+        if (!character && !this._pointerValues && !this._keptTimeValues && !range && !resting)
             return this.properties;
-        return Object.assign({}, this.properties, character, this._pointerValues, range, resting);
+        return Object.assign({}, this.properties, character, this._pointerValues, this._keptTimeValues, range, resting);
     }
 
     // A pair at rest points nowhere: both halves are zero, and the angle worked out from them is
@@ -472,6 +472,159 @@ class ComponentShape extends BaseShape {
             this.attachAxisTickDragBehaviour(element, behaviour.input);
         if (behaviour.type === "follow-pointer")
             this.attachFollowPointerBehaviour(element, behaviour.input);
+        if (behaviour.type === "keep-time")
+            this.attachKeepTimeBehaviour(element, behaviour.input);
+    }
+
+    // The parts of a clock reading, in the order they are carried, so the four are read, written and
+    // checked in one place rather than four times over.
+    static keptTimeParts = [
+        { variable: "hourVariable", property: "hourProperty", millisecondsEach: 3600000, wrapAt: 24 },
+        { variable: "minuteVariable", property: "minuteProperty", millisecondsEach: 60000, wrapAt: 60 },
+        { variable: "secondVariable", property: "secondProperty", millisecondsEach: 1000, wrapAt: 60 },
+        { variable: "millisecondVariable", property: "millisecondProperty", millisecondsEach: 1, wrapAt: 1000 }
+    ];
+
+    // A transport key: the clock counts real time rather than the model's, so it runs on a clock of
+    // its own and goes on counting while the player stands still. What it counts is the reading the
+    // object already carries, moved on — so play picks the run up wherever it was left.
+    attachKeepTimeBehaviour(element, input) {
+        if (!this.isKeepTimeAllowed(input)) {
+            this.markKeepTimeLocked(element, input);
+            return;
+        }
+        element.style.cursor = "pointer";
+        element.setAttribute("pointer-events", "all");
+        element.addEventListener("pointerdown", event => {
+            event.preventDefault();
+            this.runKeepTimeAction(input);
+        });
+    }
+
+    // A key is offered while at least one part of the reading can be written: a clock whose every row
+    // names something the model works out for itself has nothing to count into.
+    isKeepTimeAllowed(input) {
+        if (!this.isInteractable() || this.isLocked())
+            return false;
+        return this.getKeptTimeParts(input).length > 0;
+    }
+
+    getKeptTimeParts(input) {
+        return ComponentShape.keptTimeParts.filter(part => this.isDragHalfAllowed(input[part.variable], input[part.property]));
+    }
+
+    markKeepTimeLocked(element, input) {
+        if (!this.isInteractable() || this.isLocked())
+            return;
+        if (ComponentShape.keptTimeParts.every(part => !this.board.calculator.isTerm(String(input[part.variable] ?? ""))))
+            return;
+        element.style.cursor = "not-allowed";
+        element.setAttribute("pointer-events", "all");
+    }
+
+    runKeepTimeAction(input) {
+        if (!this.isKeepTimeAllowed(input))
+            return;
+        if (input.action === "play")
+            this.startKeepingTime(input);
+        if (input.action === "pause")
+            this.stopKeepingTime();
+        // Clearing is written while the run's own edit is still open, so a run and the stop that ends
+        // it are one thing to undo rather than two. A clock stopped where it already stands opens an
+        // edit of its own, since there is none to write inside.
+        if (input.action === "stop") {
+            if (!this._keptTimeTimer && this.keptTimeWritesProperty(input))
+                this.beginClickEdit();
+            this.writeKeptTime(input, 0);
+            this.stopKeepingTime();
+        }
+    }
+
+    startKeepingTime(input) {
+        if (this._keptTimeTimer)
+            return;
+        this.openKeptTimeEdit(input);
+        this._keptTimeFrom = this.readKeptTime(input);
+        this._keptTimeSince = performance.now();
+        const interval = Number(input.intervalMs);
+        this._keptTimeTimer = setInterval(() => this.stepKeptTime(input), Number.isFinite(interval) && interval > 0 ? interval : 33);
+        this.reportKeptTimeRunning(input, 1);
+    }
+
+    stopKeepingTime() {
+        if (!this._keptTimeTimer)
+            return;
+        clearInterval(this._keptTimeTimer);
+        this._keptTimeTimer = null;
+        this.closeKeptTimeEdit();
+        this.reportKeptTimeRunning(this._keptTimeInput, 0);
+    }
+
+    stepKeptTime(input) {
+        this.writeKeptTime(input, this._keptTimeFrom + performance.now() - this._keptTimeSince);
+    }
+
+    // A run that writes the object's own numbers is one edit from the key that started it to the key
+    // that ended it, so undo takes the clock back to the reading it was set going from rather than to
+    // every hundredth it passed through. A run writing model terms is the model's own business.
+    openKeptTimeEdit(input) {
+        this._keptTimeInput = input;
+        this._keptTimeWritesProperty = this.keptTimeWritesProperty(input);
+        if (this._keptTimeWritesProperty)
+            this.dragStart();
+    }
+
+    keptTimeWritesProperty(input) {
+        return this.getKeptTimeParts(input).some(part => !this.board.calculator.isTerm(String(input[part.variable] ?? "")));
+    }
+
+    closeKeptTimeEdit() {
+        if (!this._keptTimeWritesProperty)
+            return;
+        this._keptTimeWritesProperty = false;
+        this.dragEnd();
+    }
+
+    reportKeptTimeRunning(input, running) {
+        const parameter = String(input?.runningParameter ?? "");
+        if (parameter === "")
+            return;
+        this._keptTimeValues = { [parameter]: running };
+        this.board.markDirty(this);
+    }
+
+    // What the clock reads now, in milliseconds: the four parts put back together, so a run picks up
+    // where the hands and the digits stand rather than where it was last set going from.
+    readKeptTime(input) {
+        let milliseconds = 0;
+        for (const part of ComponentShape.keptTimeParts)
+            milliseconds += this.readPressAndSlideHalf(input[part.variable], input[part.property]) * part.millisecondsEach;
+        return Math.max(0, milliseconds);
+    }
+
+    // The four parts are written together and the model is worked through once, rather than once per
+    // part: a clock counting thousandths writes thirty times a second, and a model run four times
+    // over on each of them would be the whole cost of the object.
+    writeKeptTime(input, milliseconds) {
+        const total = Math.max(0, milliseconds);
+        const calculator = this.board.calculator;
+        const iteration = calculator.getIteration();
+        const caseNumber = this.getTermCaseNumber("caseNumber");
+        for (const part of this.getKeptTimeParts(input)) {
+            const value = Math.floor(total / part.millisecondsEach) % part.wrapAt;
+            const variable = String(input[part.variable] ?? "");
+            if (calculator.isTerm(variable))
+                calculator.setTermValue(variable, value, iteration, caseNumber);
+            else
+                this.setProperty(this.getBehaviourProperty({ property: input[part.property] }), value);
+        }
+        calculator.calculate();
+        this.board.markDirty(this);
+    }
+
+    onRemoved() {
+        super.onRemoved();
+        this.stopKeepingTime();
     }
 
     // Where the pointer is, in the units the drawing is scaled in. It is answered while the model is

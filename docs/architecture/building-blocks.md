@@ -15,10 +15,11 @@ Primitives   circle, rect, ellipse, line, polyline, polygon, arc, ring, path, te
 Modifiers    translate, rotate, scale, mirror, opacity, visibility, stroke, fill, z-order, repeat
 Behaviours   selectable, draggable, resizable, rotatable, hoverable, tooltip, drag-angle,
              drag-rotate, drag-axis-tick, follow-pointer, clickable, press-and-slide,
-             remember, forget, track-pointer, …
+             keep-time, remember, forget, track-pointer, …
 Bindings     constant | parameter | variable | expression | formula | token | format | memory
-Components   dial-face, tick-ring, label-ring, pointer-hand, pointer-ring, plot-grid, plot-axes,
-             plot-crosshair, memory-list, memory-trace, analogue-clock, compass, speedometer,
+Components   dial-face, tick-ring, label-ring, pointer-hand, pointer-ring, seven-segment-display,
+             plot-grid, plot-axes, plot-crosshair, memory-list, memory-trace,
+             analogue-clock, compass, speedometer,
              circular-gauge, rotating-vector, orbit-system, steering-wheel,
              thermometer, calculator, mouse-tracker, + custom components
 ```
@@ -232,7 +233,7 @@ BlockRegistry.register({
     category: "component",
     icon: "fa-light fa-clock",
     tags: ["object", "clock"],
-    parameters: [ BlockComponentHelpers.parameter("hourVariable", "Hour variable", "variable", "0", { category: "model" }), … ],
+    parameters: [ BlockComponentHelpers.parameter("hourVariable", "Hour", "variable", "0", { category: "model" }), … ],
     create: (parameters, context) => ({ id: "analogue-clock", type: "group", children: [ … ] })
 });
 ```
@@ -246,7 +247,8 @@ values through the context helpers:
 * `parameters.$width`, `parameters.$height` — the object's box, so components scale on resize.
 
 Give a component the tag `object` if it should appear in the board's Components palette;
-low-level components (`dial-face`, `tick-ring`, `label-ring`, `pointer-hand`, `pointer-ring`)
+low-level components (`dial-face`, `tick-ring`, `label-ring`, `pointer-hand`, `pointer-ring`,
+`seven-segment-display`)
 deliberately do not have it.
 
 ### Components defined as JSON
@@ -255,8 +257,8 @@ A component that only composes other blocks does not need a `create` function at
 JSON document in `scripts/blocks/definitions/`, registered by `BlockDefinitionLoader`. Every
 component in the Components palette — analogue clock, compass, speedometer, circular gauge,
 rotating vector, orbit system, steering wheel — is defined this way. Only
-`dial-face`, `tick-ring`, `label-ring`, `pointer-hand` and `pointer-ring` stay in code, because they
-generate geometry per index rather than compose.
+`dial-face`, `tick-ring`, `label-ring`, `pointer-hand`, `pointer-ring` and `seven-segment-display`
+stay in code, because they generate geometry per index or per character rather than compose.
 
 ```json
 {
@@ -483,6 +485,16 @@ the brake's rows are offered only while the pedals are drawn *and* the brake is 
 row is *read as* is a separate question from whether it is offered at all: the pedals' rows stand
 whichever way the wheel is turned, and `modeParameter` grows each of them a second selector when the
 wheel is read as an orientation, because then each pedal presses a pair rather than a term.
+
+**A choice that decides which rows are worth offering stands beside them, not among them.** A `string`
+parameter with `enumValues` and `enumIcons` may declare **`toolbarKey`**, and it is then given a key of
+its own in the toolbar — the same key the angle-or-orientation choice is made from, wearing the icon of
+the choice it is on and opening on the list of them — instead of a row in a menu. It is for a choice
+the other rows hang off: the clock's `shownAs` decides whether it is drawn as a face or as a digital
+readout, and the numbers, the ticks, the dragging and three of the colours are only worth offering for
+the face, so each of them names it in a `visibleWhen`. A parameter reached this way is marked
+`userEditable: false`, since the key is what edits it, and it may name a **`toolbarTooltip`** —
+a translation key — for the tooltip that key wears.
 
 **What an object works out about itself is handed to the drawing, not written into it.** The values
 `getCompilationParameters` merges over the shape's own — the character's image and pivot, the fitted
@@ -947,9 +959,12 @@ What happens:
 
 1. `ComponentShape.setDefaults()` builds the instance definition and copies the parameter defaults into `properties`.
 2. `draw()` calls `compileComponent()`; the compiler resolves the root component's parameters from `properties`.
-3. The clock's JSON definition works out its locals — the three hand angles go through the
-   expression engine — and yields a group of `dial-face`, two `tick-ring`s, a `label-ring`,
-   three `pointer-hand`s and a centre cap, minus any part whose `when` is false.
+3. The clock's JSON definition works out its locals — the four hand angles and the padded fields of
+   the readout go through the expression engine — and yields a group of `dial-face`, two
+   `tick-ring`s, a `label-ring`, four `pointer-hand`s, a centre cap, and the panel its
+   `seven-segment-display` is read on, minus any part whose `when` is false. Shown as a face it drops
+   the panel; shown as digits it drops everything else, so the two clocks are one object rather than
+   two.
 4. Each sub-component is compiled recursively down to primitives; the hand's `rotate` modifier
    carries the angle.
 5. `BlockRenderer` writes the SVG once per changed frame and attaches behaviours.

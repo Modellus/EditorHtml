@@ -9,7 +9,7 @@
     "capabilities": ["radial", "angular", "reads-model"],
     "preview": { "parameters": { "valueVariable": "68", "unit": "%" } },
     "parameters": [
-        { "id": "valueVariable", "label": "Value variable", "valueType": "variable", "defaultValue": "0", "category": "model" },
+        { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model" },
         { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": 0, "category": "scale" },
         { "id": "maximum", "label": "Maximum", "valueType": "number", "defaultValue": 100, "category": "scale" },
         { "id": "startAngle", "label": "Start angle", "valueType": "number", "defaultValue": 90, "category": "scale", "unit": "deg" },

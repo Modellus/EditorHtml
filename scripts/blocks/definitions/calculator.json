@@ -182,7 +182,7 @@
         },
         {
             "id": "resultVariable",
-            "label": "Result variable",
+            "label": "Result",
             "valueType": "variable",
             "defaultValue": "",
             "category": "model",

@@ -117,7 +117,7 @@
         <table class="docs-table">
             <thead><tr><th>Component</th><th>What it shows</th></tr></thead>
             <tbody>
-                <tr><td>Analogue clock</td><td>A clock face whose hour, minute and second hands follow model variables</td></tr>
+                <tr><td>Analogue clock</td><td>A clock reading an hour, a minute, a second and a millisecond variable, shown either as a face with a hand for each or as a digital readout of the same time</td></tr>
                 <tr><td>Compass</td><td>A compass rose whose needle follows a heading variable, and whose rose can be turned by a second variable</td></tr>
                 <tr><td>Speedometer</td><td>A swept dial with a scale, a needle and a numeric readout</td></tr>
                 <tr><td>Circular gauge</td><td>A ring that fills in proportion to a variable</td></tr>
@@ -129,15 +129,21 @@
         </table>
 
         <h2>Binding a component to the model</h2>
-        <p>Every component exposes a small set of inputs in the variables menu of its toolbar. An input takes either a model variable or a plain number, exactly like the terms of a body or a point. The clock, for example, reads an hour, a minute and a second variable, and turns them into hand angles using the Modellus expression language:</p>
+        <p>Every component exposes a small set of inputs in the variables menu of its toolbar. An input takes either a model variable or a plain number, exactly like the terms of a body or a point. The clock, for example, reads an hour, a minute, a second and a millisecond variable, and turns them into hand angles using the Modellus expression language:</p>
         <table class="docs-table">
             <thead><tr><th>Hand</th><th>Angle</th></tr></thead>
             <tbody>
                 <tr><td>Hour</td><td>((hour mod 12) + minute / 60) × 30</td></tr>
                 <tr><td>Minute</td><td>(minute mod 60) × 6</td></tr>
                 <tr><td>Second</td><td>(second mod 60) × 6</td></tr>
+                <tr><td>Millisecond</td><td>(millisecond mod 1000) × 0.36</td></tr>
             </tbody>
         </table>
+        <p><strong>The clock is shown as a face or as digits, and a key of its own in the toolbar says which.</strong> The key wears the choice it is on and opens on the two: <em>analogue</em> <i class="fa-light fa-clock"></i> draws the face, its hands and its numbers, and <em>digital</em> <i class="fa-light fa-input-numeric"></i> draws the same time as digits on a panel — <em>hh:mm:ss</em>, each field padded to its own width. Both read the same four variables, so switching between them changes nothing about what the clock is bound to. The numbers, the minute ticks, the dragging and the hand colours belong to the face alone, so they leave the menus while the digits are what is shown.</p>
+        <p>The digits are the bars of an old digital clock rather than writing: each character is spelled out in seven lamps, and the ones it does not light are left showing faintly behind it, the way the unlit segments of a liquid crystal panel are. They are drawn rather than typed, so they stay square at every size and need no font to have been loaded. <em>Face colour</em> is the panel they are read on and <em>Number colour</em> the lamps themselves, so a dark panel with pale lamps is two colours away.</p>
+        <p><em>Show seconds</em> and <em>Show milliseconds</em> say how finely the clock reads the time, and they say it for both: seconds are a sweeping hand on the face and the field after the minutes in the readout, milliseconds a hand of their own going round once a second and three more digits after the seconds. Milliseconds are off to begin with, and the millisecond variable is offered only once they are asked for. The face carries no marks for them — the millisecond hand is read against the same ring the second hand is.</p>
+        <p><strong>The clock can run itself.</strong> Switch <em>Buttons</em> on in the settings menu and three keys appear in a strip of their own under the face or the panel, which makes room for them: <em>play</em> sets the clock counting real time from wherever it stands, <em>pause</em> holds it there, and <em>stop</em> ends the run and clears the reading back to nothing. The key it is on is drawn the other way about, mark for face, so a running clock says so.</p>
+        <p>What it counts goes where the four rows point: each part of the reading is written into the term that row names, so <em>hour</em>, <em>minute</em>, <em>second</em> and <em>millisecond</em> move in the model and everything else reading them moves with them. A row holding a plain number instead of a term is written itself, so a clock straight from the palette runs with nothing bound to it. A row naming a term the model works out for itself cannot be written, and a clock whose every row is like that says so with the cursor a locked handle uses. It counts on a clock of its own rather than the model's, so it goes on counting whether the player is running or standing still, and the whole run — from play to stop — is one step to undo.</p>
         <p>The compass reads two variables. <em>Heading</em> turns the needle clockwise from north, and <em>Rose</em> turns the rose — its ticks, its cardinal letters and its degree labels — clockwise underneath it. Leaving the rose at 0 gives a plotting compass with north fixed at the top. Binding it to a term equal to minus the heading, and leaving the heading at 0, gives an aviation card compass: the needle stays pointing up as a lubber line while the card turns, so the current heading is always the value under the needle.</p>
         <p>The compass also marks <em>Pointers</em>: as many directions as you name, listed in its variables menu the way a chart lists the terms it plots. Each row chooses from its own two buttons whether it is an angle in degrees or an orientation, a pair of terms read as a vector — how far east and how far north — and points where that vector points. An angle is measured from N and grows clockwise, so each marker stands where the tick for its direction stands and turns with the rose the way that tick does. Each row is given a colour. Drag a row by its handle to reorder it, and press the bin to take it away.</p>
         <p>Turn on <em>Hands can be dragged</em> in the settings menu to let the reader drag a hand and write the value back into the model, in the same way a gauge needle can be dragged. Hands bound to a computed value stay read-only.</p>
@@ -166,6 +172,7 @@
             <tbody>
                 <tr><td>Name and colours</td><td>The object name and every colour the component draws with</td></tr>
                 <tr><td>How it is read <i class="fa-light fa-angle"></i></td><td>Only on a component that reads a direction: whether it is read as an angle or as an orientation. The key wears the choice it is on</td></tr>
+                <tr><td>How it is shown <i class="fa-light fa-clock"></i></td><td>Only on a component drawn in more than one way: the clock's choice between a face and a digital readout. The key wears the choice it is on</td></tr>
                 <tr><td>Variables</td><td>The model inputs of the component</td></tr>
                 <tr><td>Settings <i class="fa-light fa-sliders"></i></td><td>Display options, scale and interaction</td></tr>
             </tbody>

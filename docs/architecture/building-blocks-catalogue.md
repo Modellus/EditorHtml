@@ -480,6 +480,26 @@ Capabilities: `interaction`
 | --- | --- | --- | --- |
 | `cursor` | string | "pointer" |  |
 
+### `keep-time` — Keep time
+
+A transport key for a reading of the clock: play sets it counting real time from wherever it stands, pause holds it there, and stop ends the run and clears it. What is counted is written into the four parts of the reading — the hours, the minutes, the seconds and the thousandths — each into the term that part names, or into the object's own property when it names a plain number instead. The whole run is one edit.
+
+Capabilities: `interaction`, `writes-model`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `action` | string | "play" | play \| pause \| stop |
+| `hourVariable` | variable | "" |  |
+| `hourProperty` | string | "" |  |
+| `minuteVariable` | variable | "" |  |
+| `minuteProperty` | string | "" |  |
+| `secondVariable` | variable | "" |  |
+| `secondProperty` | string | "" |  |
+| `millisecondVariable` | variable | "" |  |
+| `millisecondProperty` | string | "" |  |
+| `runningParameter` | string | "" |  |
+| `intervalMs` | number | 33 | min 10, max 1000 |
+
 ### `press-and-slide` — Press and slide
 
 A control the reader holds down: pressing keeps the value where it is, sliding the pointer up raises it and down lowers it, by however far it travelled, and letting go lets the value fall back to its resting value a step at a time. It is what a pedal or a throttle needs — nothing is written by pressing alone, and the whole gesture, the fall back included, is one edit.
@@ -577,24 +597,31 @@ Capabilities: `interaction`, `memory`, `writes-model`
 
 ### `analogue-clock` — Analogue clock
 
-Clock face with hour, minute and optional second hands whose angles come from model variables or expressions.
+Clock reading the hour, minute, second and millisecond a model gives it, shown either as a face with a hand for each or as a digital readout of the same time. The seconds and the milliseconds can each be left out, and what is left out goes from the face and from the readout alike.
 
-Capabilities: `radial`, `angular`, `reads-model`, `interaction`
+Capabilities: `radial`, `angular`, `reads-model`, `textual`, `interaction`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
 | `hourVariable` | variable | "0" |  |
 | `minuteVariable` | variable | "0" |  |
 | `secondVariable` | variable | "0" |  |
+| `millisecondVariable` | variable | "0" |  |
+| `shownAs` | string | "analogue" | analogue \| digital |
 | `showSecondHand` | boolean | true |  |
+| `showMillisecondHand` | boolean | false |  |
+| `showControls` | boolean | false |  |
 | `showNumbers` | boolean | true |  |
 | `showMinuteTicks` | boolean | true |  |
 | `faceColor` | colour | "token:surface.default" |  |
 | `borderColor` | colour | "token:stroke.default" |  |
 | `handColor` | colour | "token:stroke.strong" |  |
 | `secondHandColor` | colour | "token:stroke.warning" |  |
+| `millisecondHandColor` | colour | "token:stroke.accent" |  |
 | `numberColor` | colour | "token:text.primary" |  |
+| `buttonColor` | colour | "token:surface.muted" |  |
 | `interactive` | boolean | false |  |
+| `running` | number | 0 |  |
 
 ### `calculator` — Calculator
 
@@ -978,6 +1005,26 @@ Capabilities: `angular`, `reads-model`, `vector`
 | `vectorColor` | colour | "token:stroke.accent" |  |
 | `circleColor` | colour | "token:stroke.subtle" |  |
 | `projectionColor` | colour | "token:stroke.subtle" |  |
+
+### `seven-segment-display` — Seven-segment display
+
+A reading spelled out in seven-segment lamps, the way a digital clock, a meter or a stopwatch shows one. Digits, the colon, the point and the minus sign are drawn as bars; the bars a character does not light are left showing faintly, the way the unlit ones on a real panel are. The text is fitted to the box it is given, so it is placed by handing it a box rather than a font size.
+
+Capabilities: `sizable`, `textual`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `x` | number | 0 |  |
+| `y` | number | 0 |  |
+| `width` | number | 120 | min 0 |
+| `height` | number | 40 | min 0 |
+| `text` | string | "" |  |
+| `color` | colour | "token:text.primary" |  |
+| `ghostOpacity` | number | 0.12 | min 0, max 1 |
+| `thickness` | number | 0.16 | min 0.02, max 0.4 |
+| `digitWidth` | number | 0.56 | min 0.2, max 1.5 |
+| `spacing` | number | 0.14 | min 0, max 1 |
+| `slant` | number | 0 | min -30, max 30 |
 
 ### `speedometer` — Speedometer
 
