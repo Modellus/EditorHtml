@@ -8053,5 +8053,997 @@ BlockDefinitionLoader.registerAll([
                 }
             ]
         }
+    },
+    {
+        "schemaVersion": "1.0.0",
+        "type": "thermometer",
+        "category": "component",
+        "displayName": "Thermometer",
+        "description": "A temperature read as the height of a column: a bulb, a stem the liquid rises up, and a scale beside it marked every so many degrees. A dashed line carries the top of the column across to the scale, so the reading is placed against the marks the way a chart places a point against its axes. The column can be dragged to write the temperature back, and the marks and their numbers are the sizes the board's own axes are drawn to, so the scale stretches as the object is resized rather than the writing on it.",
+        "icon": "fa-light fa-temperature-half",
+        "tags": [
+            "object",
+            "thermometer",
+            "temperature",
+            "column",
+            "scale",
+            "meter"
+        ],
+        "capabilities": [
+            "linear",
+            "scale",
+            "reads-model",
+            "interaction",
+            "writes-model"
+        ],
+        "preview": {
+            "parameters": {
+                "valueVariable": "62",
+                "minimum": -50,
+                "maximum": 150,
+                "tickStep": 50
+            }
+        },
+        "parameters": [
+            {
+                "id": "valueVariable",
+                "label": "Temperature",
+                "valueType": "variable",
+                "defaultValue": "0",
+                "category": "model",
+                "colorParameter": "columnColor",
+                "valueAnchor": {
+                    "node": "reading-anchor",
+                    "x": 0.5,
+                    "y": 0.5
+                },
+                "description": "The term the column stands at. Turning on the eye beside the row stands the term and its value out past the scale, level with the top of the column, in the badge and the figures every other term on the board is read in. Dragging the column writes it back, so a thermometer reading a term the model lets you set is also how that temperature is given — and one reading a computed term is read-only, as every other drawing of a computed term is."
+            },
+            {
+                "id": "minimum",
+                "label": "Minimum",
+                "valueType": "number",
+                "defaultValue": -20,
+                "category": "scale",
+                "description": "The temperature the bottom of the scale stands for, at the top of the bulb. A column at or below it shows a full bulb and an empty stem."
+            },
+            {
+                "id": "maximum",
+                "label": "Maximum",
+                "valueType": "number",
+                "defaultValue": 120,
+                "category": "scale"
+            },
+            {
+                "id": "tickStep",
+                "label": "Step",
+                "valueType": "number",
+                "defaultValue": 20,
+                "category": "scale",
+                "minimum": 0,
+                "bindable": false,
+                "description": "How many degrees there are between one numbered mark and the next, counted up from the minimum — the whole of the scale's marking, as the step is the whole of a slider's. A step the range does not divide evenly leaves the last part of the scale unmarked, the way an axis does. Between the numbered marks the scale is divided into five by smaller marks of its own. A step so fine that it would ask for more than thirty numbered marks is read as the finest that fits, and so is a step of nothing at all — which is how to let the object mark the scale itself."
+            },
+            {
+                "id": "digits",
+                "label": "Decimals",
+                "valueType": "number",
+                "defaultValue": 1,
+                "category": "display",
+                "minimum": 0,
+                "maximum": 6,
+                "description": "Decimals the reading is written to. The numbers along the scale follow it only when the step needs them: a step in whole degrees is marked in whole degrees however finely the reading is given."
+            },
+            {
+                "id": "unit",
+                "label": "Unit",
+                "valueType": "string",
+                "defaultValue": "°C",
+                "enumValues": [
+                    "°C",
+                    "°F"
+                ],
+                "enumIcons": [
+                    "fa-light fa-c",
+                    "fa-light fa-f"
+                ],
+                "category": "display",
+                "description": "Which temperature scale the reading is named in. It names the scale rather than converting it: the numbers themselves are the minimum and the maximum, so a thermometer switched to Fahrenheit is one whose model measures in Fahrenheit and whose ends are set to match."
+            },
+            {
+                "id": "showReadout",
+                "label": "Show readout",
+                "valueType": "boolean",
+                "defaultValue": true,
+                "category": "display",
+                "description": "The reading in figures above the stem. The column says how hot at a glance; this says how hot exactly."
+            },
+            {
+                "id": "columnColor",
+                "label": "Column colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.warning",
+                "category": "style"
+            },
+            {
+                "id": "glassColor",
+                "label": "Glass colour",
+                "valueType": "colour",
+                "defaultValue": "token:surface.default",
+                "category": "style"
+            },
+            {
+                "id": "borderColor",
+                "label": "Border colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.default",
+                "category": "style"
+            },
+            {
+                "id": "scaleColor",
+                "label": "Scale colour",
+                "valueType": "colour",
+                "defaultValue": "token:axis.color",
+                "category": "style",
+                "description": "The marks along the scale. They are drawn to the measurements the board's own axes are drawn to, so a thermometer beside a chart is read the same way."
+            },
+            {
+                "id": "scaleLabelColor",
+                "label": "Scale label colour",
+                "valueType": "colour",
+                "defaultValue": "token:axis.labelColor",
+                "category": "style"
+            },
+            {
+                "id": "readoutColor",
+                "label": "Reading colour",
+                "valueType": "colour",
+                "defaultValue": "token:text.primary",
+                "category": "style"
+            }
+        ],
+        "locals": [
+            {
+                "id": "w",
+                "value": {
+                    "parameter": "$width"
+                }
+            },
+            {
+                "id": "h",
+                "value": {
+                    "parameter": "$height"
+                }
+            },
+            {
+                "id": "shortSide",
+                "formula": "\\min\\left(w,h\\right)"
+            },
+            {
+                "id": "pad",
+                "formula": "\\max\\left(3,shortSide\\cdot0.04\\right)"
+            },
+            {
+                "id": "strokeStrong",
+                "value": {
+                    "token": "strokeWidth.strong"
+                }
+            },
+            {
+                "id": "strokeDefault",
+                "value": {
+                    "token": "strokeWidth.default"
+                }
+            },
+            {
+                "id": "axisStroke",
+                "value": {
+                    "token": "axis.strokeWidth"
+                }
+            },
+            {
+                "id": "minorOpacity",
+                "value": {
+                    "token": "axis.minorOpacity"
+                }
+            },
+            {
+                "id": "readoutWeight",
+                "value": {
+                    "token": "font.weight.strong"
+                }
+            },
+            {
+                "id": "crosshairDash",
+                "value": {
+                    "token": "crosshair.dash"
+                }
+            },
+            {
+                "id": "crosshairOpacity",
+                "value": {
+                    "token": "opacity.ghost"
+                }
+            },
+            {
+                "id": "crosshairWidth",
+                "value": {
+                    "token": "crosshair.strokeWidth"
+                }
+            },
+            {
+                "id": "labelFontSize",
+                "value": {
+                    "token": "font.size.tick"
+                }
+            },
+            {
+                "id": "labelGapRatio",
+                "value": {
+                    "token": "axis.labelGapY"
+                }
+            },
+            {
+                "id": "labelRiseRatio",
+                "value": {
+                    "token": "axis.labelRise"
+                }
+            },
+            {
+                "id": "readoutFontSize",
+                "value": {
+                    "token": "font.size.large"
+                }
+            },
+            {
+                "id": "readoutBand",
+                "value": {
+                    "choose": {
+                        "parameter": "showReadout"
+                    },
+                    "then": {
+                        "formula": "readoutFontSize\\cdot1.5"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "bulbRadius",
+                "formula": "\\max\\left(4,\\min\\left(w\\cdot0.1,h\\cdot0.1\\right)\\right)"
+            },
+            {
+                "id": "stemWidth",
+                "formula": "bulbRadius\\cdot0.95"
+            },
+            {
+                "id": "stemCorner",
+                "formula": "\\frac{stemWidth}{2}"
+            },
+            {
+                "id": "columnWidth",
+                "formula": "stemWidth\\cdot0.46"
+            },
+            {
+                "id": "columnCorner",
+                "formula": "\\frac{columnWidth}{2}"
+            },
+            {
+                "id": "majorTickLength",
+                "value": {
+                    "token": "axis.tickLength"
+                }
+            },
+            {
+                "id": "minorTickLength",
+                "value": {
+                    "token": "axis.minorTickLength"
+                }
+            },
+            {
+                "id": "tickGap",
+                "formula": "strokeStrong"
+            },
+            {
+                "id": "labelGap",
+                "formula": "labelFontSize\\cdot labelGapRatio"
+            },
+            {
+                "id": "labelRise",
+                "formula": "labelFontSize\\cdot labelRiseRatio"
+            },
+            {
+                "id": "labelWidth",
+                "formula": "labelFontSize\\cdot2.4"
+            },
+            {
+                "id": "rightExtent",
+                "formula": "\\max\\left(bulbRadius,stemCorner+tickGap+majorTickLength+labelGap+labelWidth\\right)"
+            },
+            {
+                "id": "glassCenterX",
+                "formula": "\\max\\left(pad+bulbRadius,\\frac{w+bulbRadius-rightExtent}{2}\\right)"
+            },
+            {
+                "id": "stemLeft",
+                "formula": "glassCenterX-stemCorner"
+            },
+            {
+                "id": "stemRight",
+                "formula": "glassCenterX+stemCorner"
+            },
+            {
+                "id": "glassTop",
+                "formula": "pad+readoutBand"
+            },
+            {
+                "id": "bulbCenterY",
+                "formula": "h-pad-bulbRadius"
+            },
+            {
+                "id": "bulbTop",
+                "formula": "bulbCenterY-bulbRadius"
+            },
+            {
+                "id": "bulbLiquidRadius",
+                "formula": "\\max\\left(1,bulbRadius-strokeStrong\\right)"
+            },
+            {
+                "id": "stemHeight",
+                "formula": "\\max\\left(1,bulbCenterY-glassTop\\right)"
+            },
+            {
+                "id": "neckTop",
+                "formula": "bulbTop-strokeStrong"
+            },
+            {
+                "id": "neckHeight",
+                "formula": "bulbRadius+strokeStrong\\cdot2"
+            },
+            {
+                "id": "neckMeetY",
+                "formula": "bulbCenterY-\\sqrt{\\max\\left(0,bulbRadius\\cdot bulbRadius-stemCorner\\cdot stemCorner\\right)}"
+            },
+            {
+                "id": "scaleBottom",
+                "formula": "bulbTop-\\max\\left(1,stemWidth\\cdot0.1\\right)"
+            },
+            {
+                "id": "scaleTop",
+                "formula": "glassTop+stemWidth\\cdot0.65"
+            },
+            {
+                "id": "scaleSpan",
+                "formula": "\\max\\left(1,scaleBottom-scaleTop\\right)"
+            },
+            {
+                "id": "span",
+                "formula": "maximum-minimum"
+            },
+            {
+                "id": "pixelsPerValue",
+                "value": {
+                    "choose": {
+                        "parameter": "span"
+                    },
+                    "then": {
+                        "formula": "\\frac{scaleSpan}{span}"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "value",
+                "value": {
+                    "parameter": "valueVariable",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "ratio",
+                "value": {
+                    "choose": {
+                        "parameter": "span"
+                    },
+                    "then": {
+                        "formula": "\\max\\left(0,\\min\\left(1,\\frac{value-minimum}{span}\\right)\\right)"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "columnTop",
+                "formula": "scaleBottom-ratio\\cdot scaleSpan"
+            },
+            {
+                "id": "columnHeight",
+                "formula": "\\max\\left(0,bulbCenterY-columnTop\\right)"
+            },
+            {
+                "id": "columnX",
+                "formula": "glassCenterX-columnCorner"
+            },
+            {
+                "id": "spanUpwards",
+                "formula": "\\max\\left(0,span\\right)"
+            },
+            {
+                "id": "markPixels",
+                "formula": "labelFontSize\\cdot2.2"
+            },
+            {
+                "id": "coarsestNeeded",
+                "formula": "\\frac{spanUpwards\\cdot markPixels}{scaleSpan}"
+            },
+            {
+                "id": "wholeNeeded",
+                "formula": "coarsestNeeded-\\mod\\left(coarsestNeeded,1\\right)+1"
+            },
+            {
+                "id": "fallbackStep",
+                "value": {
+                    "choose": {
+                        "formula": "\\max\\left(0,coarsestNeeded-1\\right)"
+                    },
+                    "then": {
+                        "parameter": "wholeNeeded"
+                    },
+                    "otherwise": {
+                        "parameter": "coarsestNeeded"
+                    }
+                }
+            },
+            {
+                "id": "stepsIfHonoured",
+                "formula": "\\frac{spanUpwards}{\\max\\left(0.000001,tickStep\\right)}"
+            },
+            {
+                "id": "tooManySteps",
+                "formula": "\\max\\left(0,stepsIfHonoured-30\\right)"
+            },
+            {
+                "id": "step",
+                "value": {
+                    "choose": {
+                        "parameter": "tooManySteps"
+                    },
+                    "then": {
+                        "parameter": "fallbackStep"
+                    },
+                    "otherwise": {
+                        "parameter": "tickStep"
+                    }
+                }
+            },
+            {
+                "id": "stepsAcross",
+                "formula": "\\frac{span}{\\max\\left(0.000001,step\\right)}"
+            },
+            {
+                "id": "stepCount",
+                "formula": "\\max\\left(1,\\min\\left(30,stepsAcross-\\mod\\left(stepsAcross,1\\right)\\right)\\right)"
+            },
+            {
+                "id": "majorCount",
+                "formula": "stepCount+1"
+            },
+            {
+                "id": "pixelsPerStep",
+                "formula": "pixelsPerValue\\cdot step"
+            },
+            {
+                "id": "majorSpacing",
+                "formula": "-pixelsPerStep"
+            },
+            {
+                "id": "minorSpacing",
+                "formula": "-\\frac{pixelsPerStep}{5}"
+            },
+            {
+                "id": "minorCount",
+                "formula": "stepCount\\cdot5+1"
+            },
+            {
+                "id": "tickDigits",
+                "value": {
+                    "choose": {
+                        "formula": "\\mod\\left(step,1\\right)"
+                    },
+                    "then": {
+                        "parameter": "digits"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "tickStartX",
+                "formula": "stemRight+tickGap"
+            },
+            {
+                "id": "majorTickEndX",
+                "formula": "tickStartX+majorTickLength"
+            },
+            {
+                "id": "minorTickEndX",
+                "formula": "tickStartX+minorTickLength"
+            },
+            {
+                "id": "labelX",
+                "formula": "majorTickEndX+labelGap"
+            },
+            {
+                "id": "labelBaseY",
+                "formula": "scaleBottom+labelRise"
+            },
+            {
+                "id": "anchorX",
+                "formula": "labelX+labelWidth+labelGap"
+            },
+            {
+                "id": "anchorY",
+                "formula": "columnTop-\\frac{labelFontSize}{2}"
+            },
+            {
+                "id": "readoutX",
+                "formula": "\\frac{w}{2}"
+            },
+            {
+                "id": "readoutY",
+                "formula": "pad+readoutFontSize\\cdot0.7"
+            },
+            {
+                "id": "unitsPerPixel",
+                "formula": "\\frac{span}{scaleSpan}"
+            },
+            {
+                "id": "readoutText",
+                "value": {
+                    "concat": [
+                        {
+                            "format": {
+                                "parameter": "value"
+                            },
+                            "digits": {
+                                "parameter": "digits"
+                            }
+                        },
+                        " ",
+                        {
+                            "parameter": "unit"
+                        }
+                    ]
+                }
+            }
+        ],
+        "root": {
+            "id": "thermometer",
+            "type": "group",
+            "children": [
+                {
+                    "id": "bulb-glass",
+                    "type": "circle",
+                    "bindings": {
+                        "centerX": {
+                            "parameter": "glassCenterX"
+                        },
+                        "centerY": {
+                            "parameter": "bulbCenterY"
+                        },
+                        "radius": {
+                            "parameter": "bulbRadius"
+                        },
+                        "fill": {
+                            "parameter": "glassColor"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeStrong"
+                        }
+                    }
+                },
+                {
+                    "id": "stem-glass",
+                    "type": "rect",
+                    "bindings": {
+                        "x": {
+                            "parameter": "stemLeft"
+                        },
+                        "y": {
+                            "parameter": "glassTop"
+                        },
+                        "width": {
+                            "parameter": "stemWidth"
+                        },
+                        "height": {
+                            "parameter": "stemHeight"
+                        },
+                        "cornerRadius": {
+                            "parameter": "stemCorner"
+                        },
+                        "fill": {
+                            "parameter": "glassColor"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeStrong"
+                        }
+                    }
+                },
+                {
+                    "id": "neck-patch",
+                    "type": "rect",
+                    "bindings": {
+                        "x": {
+                            "parameter": "stemLeft"
+                        },
+                        "y": {
+                            "parameter": "neckTop"
+                        },
+                        "width": {
+                            "parameter": "stemWidth"
+                        },
+                        "height": {
+                            "parameter": "neckHeight"
+                        },
+                        "fill": {
+                            "parameter": "glassColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none"
+                    }
+                },
+                {
+                    "id": "neck-left",
+                    "type": "line",
+                    "bindings": {
+                        "x1": {
+                            "parameter": "stemLeft"
+                        },
+                        "y1": {
+                            "parameter": "neckTop"
+                        },
+                        "x2": {
+                            "parameter": "stemLeft"
+                        },
+                        "y2": {
+                            "parameter": "neckMeetY"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeStrong"
+                        }
+                    }
+                },
+                {
+                    "id": "neck-right",
+                    "type": "line",
+                    "bindings": {
+                        "x1": {
+                            "parameter": "stemRight"
+                        },
+                        "y1": {
+                            "parameter": "neckTop"
+                        },
+                        "x2": {
+                            "parameter": "stemRight"
+                        },
+                        "y2": {
+                            "parameter": "neckMeetY"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeStrong"
+                        }
+                    }
+                },
+                {
+                    "id": "bulb-liquid",
+                    "type": "circle",
+                    "bindings": {
+                        "centerX": {
+                            "parameter": "glassCenterX"
+                        },
+                        "centerY": {
+                            "parameter": "bulbCenterY"
+                        },
+                        "radius": {
+                            "parameter": "bulbLiquidRadius"
+                        },
+                        "fill": {
+                            "parameter": "columnColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none"
+                    }
+                },
+                {
+                    "id": "column",
+                    "type": "rect",
+                    "bindings": {
+                        "x": {
+                            "parameter": "columnX"
+                        },
+                        "y": {
+                            "parameter": "columnTop"
+                        },
+                        "width": {
+                            "parameter": "columnWidth"
+                        },
+                        "height": {
+                            "parameter": "columnHeight"
+                        },
+                        "cornerRadius": {
+                            "parameter": "columnCorner"
+                        },
+                        "fill": {
+                            "parameter": "columnColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none"
+                    }
+                },
+                {
+                    "id": "reading-crosshair",
+                    "type": "line",
+                    "bindings": {
+                        "x1": {
+                            "parameter": "stemLeft"
+                        },
+                        "y1": {
+                            "parameter": "columnTop"
+                        },
+                        "x2": {
+                            "parameter": "majorTickEndX"
+                        },
+                        "y2": {
+                            "parameter": "columnTop"
+                        },
+                        "stroke": {
+                            "parameter": "columnColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "crosshairWidth"
+                        },
+                        "strokeDash": {
+                            "parameter": "crosshairDash"
+                        },
+                        "opacity": {
+                            "parameter": "crosshairOpacity"
+                        }
+                    }
+                },
+                {
+                    "id": "reading-anchor",
+                    "type": "rect",
+                    "bindings": {
+                        "x": {
+                            "parameter": "anchorX"
+                        },
+                        "y": {
+                            "parameter": "anchorY"
+                        },
+                        "width": {
+                            "parameter": "labelWidth"
+                        },
+                        "height": {
+                            "parameter": "labelFontSize"
+                        }
+                    },
+                    "properties": {
+                        "fill": "none",
+                        "stroke": "none"
+                    }
+                },
+                {
+                    "id": "minor-tick",
+                    "type": "line",
+                    "bindings": {
+                        "x1": {
+                            "parameter": "tickStartX"
+                        },
+                        "y1": {
+                            "parameter": "scaleBottom"
+                        },
+                        "x2": {
+                            "parameter": "minorTickEndX"
+                        },
+                        "y2": {
+                            "parameter": "scaleBottom"
+                        },
+                        "stroke": {
+                            "parameter": "scaleColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeDefault"
+                        },
+                        "opacity": {
+                            "parameter": "minorOpacity"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "minorCount"
+                            },
+                            "dy": {
+                                "parameter": "minorSpacing"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "major-tick",
+                    "type": "line",
+                    "bindings": {
+                        "x1": {
+                            "parameter": "tickStartX"
+                        },
+                        "y1": {
+                            "parameter": "scaleBottom"
+                        },
+                        "x2": {
+                            "parameter": "majorTickEndX"
+                        },
+                        "y2": {
+                            "parameter": "scaleBottom"
+                        },
+                        "stroke": {
+                            "parameter": "scaleColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "axisStroke"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "majorCount"
+                            },
+                            "dy": {
+                                "parameter": "majorSpacing"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "tick-label",
+                    "type": "text",
+                    "bindings": {
+                        "x": {
+                            "parameter": "labelX"
+                        },
+                        "y": {
+                            "parameter": "labelBaseY"
+                        },
+                        "text": {
+                            "format": {
+                                "formula": "minimum+step\\cdot i",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "digits": {
+                                "parameter": "tickDigits"
+                            }
+                        },
+                        "fontSize": {
+                            "parameter": "labelFontSize"
+                        },
+                        "fill": {
+                            "parameter": "scaleLabelColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none",
+                        "textAnchor": "start",
+                        "baseline": "auto"
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "majorCount"
+                            },
+                            "dy": {
+                                "parameter": "majorSpacing"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "readout",
+                    "type": "text",
+                    "when": {
+                        "parameter": "showReadout"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "readoutX"
+                        },
+                        "y": {
+                            "parameter": "readoutY"
+                        },
+                        "text": {
+                            "parameter": "readoutText"
+                        },
+                        "fontSize": {
+                            "parameter": "readoutFontSize"
+                        },
+                        "fontWeight": {
+                            "parameter": "readoutWeight"
+                        },
+                        "fill": {
+                            "parameter": "readoutColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none"
+                    }
+                },
+                {
+                    "id": "column-grab",
+                    "type": "rect",
+                    "bindings": {
+                        "x": {
+                            "parameter": "stemLeft"
+                        },
+                        "y": {
+                            "parameter": "glassTop"
+                        },
+                        "width": {
+                            "parameter": "stemWidth"
+                        },
+                        "height": {
+                            "parameter": "stemHeight"
+                        }
+                    },
+                    "properties": {
+                        "fill": "none",
+                        "stroke": "none"
+                    },
+                    "behaviours": [
+                        {
+                            "type": "press-and-slide",
+                            "variable": {
+                                "parameter": "valueVariable"
+                            },
+                            "property": "valueVariable",
+                            "unitsPerPixel": {
+                                "parameter": "unitsPerPixel"
+                            },
+                            "restValue": {
+                                "parameter": "minimum"
+                            },
+                            "returnStep": 0,
+                            "intervalMs": 100,
+                            "minimum": {
+                                "parameter": "minimum"
+                            },
+                            "maximum": {
+                                "parameter": "maximum"
+                            },
+                            "hoverFill": {
+                                "parameter": "columnColor"
+                            },
+                            "hoverOpacity": 0.12
+                        }
+                    ]
+                }
+            ]
+        }
     }
 ]);

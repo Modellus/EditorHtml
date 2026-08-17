@@ -279,7 +279,7 @@ Do not redraw what one of these already draws.
 | a key with a label | `key-cap` |
 | **anything cartesian** | `plot-grid`, `plot-axes`, `plot-crosshair` |
 | a memory shown as a list or a path | `memory-list`, `memory-trace` |
-| a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `calculator`, `mouse-tracker` |
+| a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `calculator`, `mouse-tracker`, `thermometer` |
 
 An axis drawn as three lines and some text is the mistake the mouse tracker was built out of: the plot
 components carry the board's nice ticks, minor ticks, label gaps measured in tick fonts, and the drag
@@ -371,6 +371,7 @@ npx playwright test tests/object-picker.spec.js tests/component-blocks.spec.js
 | --- | --- |
 | a dial, gauge or meter | [`circular-gauge.json`](../../scripts/blocks/definitions/circular-gauge.json) — 104 lines, the smallest complete object |
 | a scale with a needle | [`speedometer.json`](../../scripts/blocks/definitions/speedometer.json) |
+| a quantity read as a length, up a scale of its own | [`thermometer.json`](../../scripts/blocks/definitions/thermometer.json) — the marks and their numbers are one `line` and one `text` under a `repeat` that steps down the scale, the numbers read from `$index`, and the value and the scale are worked out from the one ratio so they cannot disagree. It is also where to see **what scales with the box and what does not**: the glass is worked out from `$width`/`$height`, while the writing and the marks are the sizes `font.size.tick`, `font.size.large`, `axis.tickLength` and `axis.minorTickLength` hold, with the gaps around a label the same multiples of the tick font the chart's own axis uses — so resizing stretches the scale rather than the labels on it |
 | a hand or arrow driven by an angle | [`rotating-vector.json`](../../scripts/blocks/definitions/rotating-vector.json) |
 | interactive, writing values back | [`compass.json`](../../scripts/blocks/definitions/compass.json) — `drag-angle` and `drag-rotate` on invisible grab areas |
 | drawn rather than written | [`compass.json`](../../scripts/blocks/definitions/compass.json) again — its rose and needle are [imported SVG](../../scripts/blocks/definitions/art/), wired by id, with the labels left to `label-ring` |

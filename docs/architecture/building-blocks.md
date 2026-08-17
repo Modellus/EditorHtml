@@ -20,7 +20,7 @@ Bindings     constant | parameter | variable | expression | formula | token | fo
 Components   dial-face, tick-ring, label-ring, pointer-hand, pointer-ring, plot-grid, plot-axes,
              plot-crosshair, memory-list, memory-trace, analogue-clock, compass, speedometer,
              circular-gauge, rotating-vector, orbit-system, steering-wheel,
-             calculator, mouse-tracker, + custom components
+             thermometer, calculator, mouse-tracker, + custom components
 ```
 
 ### How a drawing is made

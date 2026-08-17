@@ -1031,6 +1031,28 @@ Capabilities: `radial`, `angular`, `linear`, `reads-model`, `scale`, `interactio
 | `frameColor` | colour | "token:stroke.default" |  |
 | `surfaceColor` | colour | "token:surface.muted" |  |
 
+### `thermometer` — Thermometer
+
+A temperature read as the height of a column: a bulb, a stem the liquid rises up, and a scale beside it marked every so many degrees. A dashed line carries the top of the column across to the scale, so the reading is placed against the marks the way a chart places a point against its axes. The column can be dragged to write the temperature back, and the marks and their numbers are the sizes the board's own axes are drawn to, so the scale stretches as the object is resized rather than the writing on it.
+
+Capabilities: `linear`, `scale`, `reads-model`, `interaction`, `writes-model`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `valueVariable` | variable | "0" |  |
+| `minimum` | number | -20 |  |
+| `maximum` | number | 120 |  |
+| `tickStep` | number | 20 | min 0 |
+| `digits` | number | 1 | min 0, max 6 |
+| `unit` | string | "°C" | °C \| °F |
+| `showReadout` | boolean | true |  |
+| `columnColor` | colour | "token:stroke.warning" |  |
+| `glassColor` | colour | "token:surface.default" |  |
+| `borderColor` | colour | "token:stroke.default" |  |
+| `scaleColor` | colour | "token:axis.color" |  |
+| `scaleLabelColor` | colour | "token:axis.labelColor" |  |
+| `readoutColor` | colour | "token:text.primary" |  |
+
 ### `tick-ring` — Tick ring
 
 Evenly spaced radial tick marks around a centre, with optional longer major ticks.

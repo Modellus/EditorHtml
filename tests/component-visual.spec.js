@@ -15,7 +15,7 @@ async function addModel(page) {
     await page.evaluate(() => modellus.shape.addExpression('Values'));
     await page.waitForTimeout(300);
     await page.evaluate(() => {
-        shell.board.shapes.getByName('Values').properties.expression = 'hour=10\\\\minute=8\\\\second=42\\\\heading=120\\\\speed=64\\\\angle=35\\\\radius=1\\\\tempo=3';
+        shell.board.shapes.getByName('Values').properties.expression = 'hour=10\\\\minute=8\\\\second=42\\\\heading=120\\\\speed=64\\\\angle=35\\\\radius=1\\\\tempo=3\\\\temperature=62';
         shell.reset();
     });
     await page.waitForTimeout(400);
@@ -33,7 +33,8 @@ async function compileMarkup(page, componentType, preset, size, overrides = {}) 
             'circular-gauge': { valueVariable: 'speed', unit: '%' },
             'rotating-vector': { angleVariable: 'angle', lengthVariable: 'radius', lengthScale: 60, showProjections: true },
             'orbit-system': { timeVariable: 'tempo' },
-            'steering-wheel': { angleVariable: 'angle', accelerationVariable: 'speed' }
+            'steering-wheel': { angleVariable: 'angle', accelerationVariable: 'speed' },
+            thermometer: { valueVariable: 'temperature' }
         };
         Object.assign(parameters, modelParameters[componentType] ?? {}, overrides);
         const compilation = compiler.compile(definition, { width: size, height: size, parameters: parameters, tokens: new BlockTokens(preset) });
@@ -42,7 +43,7 @@ async function compileMarkup(page, componentType, preset, size, overrides = {}) 
 }
 
 test.describe('component visual snapshots', () => {
-    const components = ['analogue-clock', 'compass', 'speedometer', 'circular-gauge', 'rotating-vector', 'orbit-system'];
+    const components = ['analogue-clock', 'compass', 'speedometer', 'circular-gauge', 'rotating-vector', 'orbit-system', 'thermometer'];
 
     for (const componentType of components) {
         test(`${componentType} renders identical markup for the same values`, async ({ page }) => {

@@ -512,6 +512,152 @@ test.describe('reusable blocks build several objects', () => {
         expect(measured.boatAtRest.aheadSlot).toBeCloseTo(158, 5);
     });
 
+    // A temperature read as a height: the column stands where the scale beside it says it stands, so
+    // the two are one measurement drawn twice and never disagree. The step is the whole of the scale's
+    // marking, as it is a slider's — marks every so many degrees, counted up from the minimum.
+    test('the thermometer column stands where its own scale says, marked every step of it', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => modellus.shape.addExpression('Heating'));
+        await page.waitForTimeout(300);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Heating').properties.expression = 'temperature=62';
+            shell.reset();
+        });
+        await page.waitForTimeout(400);
+        const measured = await page.evaluate(() => {
+            const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
+            const validator = new BlockValidator(BlockRegistry, compiler);
+            validator.setCalculator(shell.board.calculator);
+            const definition = BlockObjects.createComponentInstance('thermometer');
+            const build = (overrides, size = 200) => {
+                const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('thermometer'), overrides);
+                const context = { width: size, height: size, parameters: parameters, tokens: new BlockTokens('standard') };
+                const compilation = compiler.compile(definition, context);
+                const flattened = BlockRenderer.flatten(compilation.nodes);
+                const part = name => flattened.find(node => node.id.split(':').pop() === name) ?? null;
+                const box = name => ['x', 'y', 'width', 'height'].map(attribute => Number(part(name)?.attributes[attribute]));
+                const labels = flattened.filter(node => node.id.split(':').pop().startsWith('tick-label'));
+                const ticks = flattened.filter(node => node.id.split(':').pop().startsWith('major-tick'));
+                return {
+                    errors: validator.validate(definition, context).errors.map(error => error.code),
+                    parts: flattened.map(node => node.id.split(':').pop()),
+                    column: box('column'),
+                    bulbCenterY: Number(part('bulb-glass')?.attributes.cy),
+                    // Each mark is where its line is drawn and what the number beside it reads.
+                    marks: ticks.map((node, index) => ({
+                        text: labels[index]?.text,
+                        y: Number(node.attributes.y1) + Number(/translate\(\s*[-\d.]+\s+([-\d.]+)\s*\)/.exec(node.transform ?? '')?.[1] ?? 0)
+                    })),
+                    labelTexts: labels.map(node => node.text),
+                    labelFontSize: Number(labels[0]?.attributes['font-size']),
+                    readoutFontSize: Number(part('readout')?.attributes['font-size']),
+                    tickLength: Number(ticks[0]?.attributes.x2) - Number(ticks[0]?.attributes.x1),
+                    readout: part('readout')?.text ?? null,
+                    crosshair: ['x1', 'y1', 'x2', 'y2'].map(name => Number(part('reading-crosshair')?.attributes[name])),
+                    crosshairDash: part('reading-crosshair')?.attributes['stroke-dasharray'] ?? null,
+                    press: part('column-grab')?.behaviours?.[0] ?? null,
+                    grab: box('column-grab')
+                };
+            };
+            return {
+                atRest: build({ valueVariable: '-20' }),
+                halfWay: build({ valueVariable: '50' }),
+                atAMark: build({ valueVariable: '60' }),
+                atTheTop: build({ valueVariable: '120' }),
+                pastTheEnds: build({ valueVariable: '400' }),
+                belowTheEnds: build({ valueVariable: '-400' }),
+                fromTheModel: build({ valueVariable: 'temperature' }),
+                inFahrenheit: build({ valueVariable: 'temperature', unit: '°F', digits: 0 }),
+                coarseStep: build({ valueVariable: 'temperature', tickStep: 70 }),
+                unevenStep: build({ valueVariable: 'temperature', minimum: 0, maximum: 100, tickStep: 30 }),
+                fineStep: build({ valueVariable: 'temperature', minimum: 0, maximum: 1, tickStep: 0.1 }),
+                absurdStep: build({ valueVariable: 'temperature', tickStep: 0.01 }),
+                noStep: build({ valueVariable: 'temperature', tickStep: 0 }),
+                flatScale: build({ valueVariable: 'temperature', minimum: 50, maximum: 50 }),
+                small: build({ valueVariable: 'temperature' }, 120),
+                large: build({ valueVariable: 'temperature' }, 480)
+            };
+        });
+        for (const drawing of Object.values(measured))
+            expect(drawing.errors).toEqual([]);
+        // The bulb is always full: whatever the temperature, the column is the same piece of liquid
+        // reaching up out of it, so its foot never leaves the bulb's centre.
+        for (const drawing of Object.values(measured))
+            expect(drawing.column[1] + drawing.column[3]).toBeCloseTo(drawing.bulbCenterY, 5);
+        // At the minimum the column stands at the bottom of the scale, at the maximum at the top, and
+        // halfway along the range exactly halfway between the two.
+        const bottom = measured.atRest.column[1];
+        const top = measured.atTheTop.column[1];
+        expect(top).toBeLessThan(bottom);
+        expect(measured.halfWay.column[1]).toBeCloseTo((bottom + top) / 2, 5);
+        // Neither end can be overrun: a term the model takes past the scale reads as the end of it.
+        expect(measured.pastTheEnds.column[1]).toBeCloseTo(top, 5);
+        expect(measured.belowTheEnds.column[1]).toBeCloseTo(bottom, 5);
+        // A scale with no range left to it stands at its bottom rather than dividing by nothing.
+        expect(measured.flatScale.column[1]).toBeCloseTo(bottom, 5);
+        // The marks are numbered in the model's own units, one every step up from the minimum.
+        expect(measured.fromTheModel.labelTexts).toEqual(['-20', '0', '20', '40', '60', '80', '100', '120']);
+        expect(measured.coarseStep.labelTexts).toEqual(['-20', '50', '120']);
+        // A step the range does not divide evenly leaves the last part of the scale unmarked, rather
+        // than putting a mark on a number nothing else in the model is counted in.
+        expect(measured.unevenStep.labelTexts).toEqual(['0', '30', '60', '90']);
+        // The numbers follow the reading's decimals only where the step needs them: a step in whole
+        // degrees is marked in whole degrees however finely the reading itself is given.
+        expect(measured.fineStep.labelTexts).toEqual(['0.0', '0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0']);
+        // A step too fine to mark, and no step at all, both fall back to the finest the scale has room
+        // for — whole numbers that still cover the whole of it, rather than a grey band of writing.
+        for (const drawing of [measured.absurdStep, measured.noStep]) {
+            expect(drawing.labelTexts[0]).toBe('-20');
+            expect(drawing.labelTexts.every(text => /^-?\d+$/.test(text))).toBe(true);
+            expect(drawing.labelTexts.length).toBeLessThan(12);
+            expect(drawing.labelTexts.length).toBeGreaterThan(2);
+            expect(drawing.marks[0].y).toBeCloseTo(bottom, 5);
+        }
+        // Resizing the object stretches the scale, not the writing on it: the numbers, the reading and
+        // the marks are the sizes the tokens hold, so a thermometer pulled to four times the size is
+        // read at the same distance as the chart beside it rather than shouting its own labels.
+        for (const drawing of [measured.small, measured.fromTheModel, measured.large]) {
+            expect(drawing.labelFontSize).toBe(10);
+            expect(drawing.readoutFontSize).toBe(14);
+            expect(drawing.tickLength).toBe(4);
+        }
+        // And the marks measure what the column measures: at sixty degrees the top of the column is
+        // level with the mark that reads sixty, which is the whole point of drawing a scale beside it.
+        expect(measured.atAMark.column[1]).toBeCloseTo(measured.atAMark.marks.find(mark => mark.text === '60').y, 5);
+        expect(measured.atRest.marks[0].y).toBeCloseTo(bottom, 5);
+        expect(measured.atRest.marks[7].y).toBeCloseTo(top, 5);
+        expect(measured.fromTheModel.parts.filter(part => part.startsWith('major-tick'))).toHaveLength(8);
+        // Between the numbered marks the scale is divided into five by smaller marks of its own, drawn
+        // at every size: seven steps of twenty across the range, so thirty-five smaller marks and the
+        // one that shares the bottom of the scale with the first number.
+        for (const drawing of [measured.small, measured.fromTheModel, measured.large])
+            expect(drawing.parts.filter(part => part.startsWith('minor-tick'))).toHaveLength(36);
+        expect(measured.coarseStep.parts.filter(part => part.startsWith('minor-tick'))).toHaveLength(11);
+        // The reading is the term in figures, to the decimals asked for, named in whichever temperature
+        // scale is chosen — the choice names the scale, it does not convert what the model holds.
+        expect(measured.fromTheModel.readout).toBe('62.0 °C');
+        expect(measured.inFahrenheit.readout).toBe('62 °F');
+        const scaleSpan = bottom - top;
+        // A dashed line carries the top of the column across to the scale, so what the column stands at
+        // is placed against the marks: it stands at the reading and reaches from the stem to the ends
+        // of the marks, which is where a chart's crosshair stops as well — at the axis it reads off.
+        for (const name of ['atRest', 'halfWay', 'atTheTop', 'fromTheModel']) {
+            const drawing = measured[name];
+            expect(drawing.crosshair[1], name).toBeCloseTo(drawing.column[1], 5);
+            expect(drawing.crosshair[3], name).toBeCloseTo(drawing.column[1], 5);
+            expect(drawing.crosshair[0], name).toBeLessThan(drawing.column[0]);
+            expect(drawing.crosshair[2], name).toBeGreaterThan(drawing.column[0] + drawing.column[2]);
+        }
+        expect(measured.fromTheModel.crosshairDash).toBe('4 3');
+        // The stem is what is pressed, and a pixel of it is worth the range over the scale's length, so
+        // a slide up the whole of the scale covers the whole of the range and stops at its ends.
+        expect(measured.fromTheModel.grab[2]).toBeGreaterThan(0);
+        expect(measured.fromTheModel.grab[3]).toBeGreaterThan(0);
+        expect(measured.fromTheModel.press).toMatchObject({ type: 'press-and-slide' });
+        expect(measured.fromTheModel.press.input).toMatchObject({ variable: 'temperature', property: 'valueVariable', returnStep: 0, minimum: -20, maximum: 120 });
+        expect(measured.fromTheModel.press.input.unitsPerPixel).toBeCloseTo(140 / scaleSpan, 5);
+    });
+
     test('the compass rose turns with its rotation variable while the needle keeps its heading', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => modellus.shape.addExpression('Compass equations'));
