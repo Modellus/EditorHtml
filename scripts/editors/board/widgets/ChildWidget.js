@@ -560,26 +560,26 @@ class ChildShape extends BaseShape {
                 wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: "auto",
                 contentTemplate: contentElement => {
-                    $(contentElement).empty();
-                    $(contentElement).dxScrollView({ height: 300, width: "100%" });
-                    $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxTreeView({
-                        items: treeItems(),
-                        dataStructure: "tree",
-                        keyExpr: "id",
-                        displayExpr: "text",
-                        selectionMode: "single",
-                        selectByClick: true,
-                        itemTemplate: (data, _, el) => {
-                            el[0].innerHTML = BaseShape.renderShapeTreeItemHtml(data);
-                        },
-                        onItemClick: e => {
-                            const targetShape = this.board.shapes.getById(e.itemData.id);
-                            if (this.wouldCreateCycle(targetShape))
-                                return;
-                            this.setPropertyCommand("parentId", e.itemData.id);
-                            this._parentDropdownElement.dxDropDownButton("instance").close();
-                            this.refreshParentToolbarControl();
-                        }
+                    Utils.renderDropdownMenuScroll(contentElement, 300, scrollContent => {
+                        $('<div>').appendTo(scrollContent).dxTreeView({
+                            items: treeItems(),
+                            dataStructure: "tree",
+                            keyExpr: "id",
+                            displayExpr: "text",
+                            selectionMode: "single",
+                            selectByClick: true,
+                            itemTemplate: (data, _, el) => {
+                                el[0].innerHTML = BaseShape.renderShapeTreeItemHtml(data);
+                            },
+                            onItemClick: e => {
+                                const targetShape = this.board.shapes.getById(e.itemData.id);
+                                if (this.wouldCreateCycle(targetShape))
+                                    return;
+                                this.setPropertyCommand("parentId", e.itemData.id);
+                                this._parentDropdownElement.dxDropDownButton("instance").close();
+                                this.refreshParentToolbarControl();
+                            }
+                        });
                     });
                 }
             }
@@ -627,12 +627,12 @@ class ChildShape extends BaseShape {
                     ];
                     this.populateMotionMenuSections(sections);
                     const listItems = sections.flatMap(section => section.items);
-                    $(contentElement).empty();
-                    $(contentElement).dxScrollView({ height: 300, width: "100%" });
-                    $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
-                        dataSource: listItems,
-                        scrollingEnabled: false,
-                        itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
+                    Utils.renderDropdownMenuScroll(contentElement, 300, scrollContent => {
+                        $('<div>').appendTo(scrollContent).dxList({
+                            dataSource: listItems,
+                            scrollingEnabled: false,
+                            itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
+                        });
                     });
                 }
             }

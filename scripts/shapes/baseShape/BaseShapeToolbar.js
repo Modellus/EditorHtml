@@ -569,12 +569,12 @@ var BaseShapeToolbarMixin = {
         this.populateShapeColorMenuSections(sections);
         sections[0].items.push(this.createOpacityMenuItem());
         const listItems = sections.flatMap(section => section.items);
-        $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 300, width: "100%" });
-        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
-            dataSource: listItems,
-            scrollingEnabled: false,
-            itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
+        Utils.renderDropdownMenuScroll(contentElement, 300, scrollContent => {
+            $('<div>').appendTo(scrollContent).dxList({
+                dataSource: listItems,
+                scrollingEnabled: false,
+                itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
+            });
         });
     },
     createRemoveToolbarItem() {
@@ -746,17 +746,15 @@ var BaseShapeToolbarMixin = {
         this._termsMenuContentElement = contentElement;
         const listItems = [];
         this.populateTermsMenuSections(listItems);
-        if ($(contentElement).data("dxScrollView"))
-            $(contentElement).dxScrollView("instance").dispose();
         // A menu carrying a row that names a pair is as wide as that pair, so every other row is
         // widened to match rather than leaving its control at the width it would have had alone.
         $(contentElement).toggleClass("mdl-wide-terms-menu", this.hasTermPairMenuControl());
-        $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 300, width: "100%" });
-        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
-            dataSource: listItems,
-            scrollingEnabled: false,
-            itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
+        Utils.renderDropdownMenuScroll(contentElement, 300, scrollContent => {
+            $('<div>').appendTo(scrollContent).dxList({
+                dataSource: listItems,
+                scrollingEnabled: false,
+                itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
+            });
         });
     },
     createTermPairFormControls(formAdapter) {

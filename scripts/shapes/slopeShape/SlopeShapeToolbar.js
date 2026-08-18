@@ -90,12 +90,12 @@ var SlopeShapeToolbarMixin = {
             this.createSlopeNumberListItem("Vertical maximum", "verticalMaximum"),
             this.createSlopeTicksListItem("Vertical ticks", "verticalMajorTicks")
         ];
-        $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 320, width: "100%" });
-        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
-            dataSource: listItems,
-            scrollingEnabled: false,
-            itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)
+        Utils.renderDropdownMenuScroll(contentElement, 320, scrollContent => {
+            $('<div>').appendTo(scrollContent).dxList({
+                dataSource: listItems,
+                scrollingEnabled: false,
+                itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)
+            });
         });
     },
     createSlopeNumberListItem(text, property) {

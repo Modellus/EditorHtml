@@ -67,9 +67,6 @@ var ReferentialShapeToolbarMixin = {
                 wrapperAttr: this.getShapeOverlayWrapperAttr(),
                 width: 280,
                 contentTemplate: contentElement => {
-                    $(contentElement).empty();
-                    $(contentElement).dxScrollView({ height: 450, width: "100%" });
-                    const scrollContent = $(contentElement).dxScrollView("instance").content();
                     const listItems = [
                         {
                             text: "Display",
@@ -182,23 +179,25 @@ var ReferentialShapeToolbarMixin = {
                             }
                         }
                     ];
-                    const grid = $('<div class="mdl-dropdown-grid">');
-                    for (const item of listItems) {
-                        if (item.fullWidth) {
-                            const label = $(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
-                            label.css("grid-column", "1 / -1");
-                            grid.append(label);
-                            const fullWidthControl = $('<div class="mdl-dropdown-grid-full">');
-                            item.buildControl(fullWidthControl);
-                            grid.append(fullWidthControl);
-                        } else {
-                            grid.append(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
-                            const control = $('<div class="mdl-dropdown-grid-control">');
-                            item.buildControl(control);
-                            grid.append(control);
+                    Utils.renderDropdownMenuScroll(contentElement, 450, scrollContent => {
+                        const grid = $('<div class="mdl-dropdown-grid">');
+                        for (const item of listItems) {
+                            if (item.fullWidth) {
+                                const label = $(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
+                                label.css("grid-column", "1 / -1");
+                                grid.append(label);
+                                const fullWidthControl = $('<div class="mdl-dropdown-grid-full">');
+                                item.buildControl(fullWidthControl);
+                                grid.append(fullWidthControl);
+                            } else {
+                                grid.append(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
+                                const control = $('<div class="mdl-dropdown-grid-control">');
+                                item.buildControl(control);
+                                grid.append(control);
+                            }
                         }
-                    }
-                    grid.appendTo(scrollContent);
+                        grid.appendTo(scrollContent);
+                    });
                 }
             }
         });

@@ -315,14 +315,12 @@ var ComponentShapeToolbarMixin = {
         this.renderComponentMenuList(contentElement, items);
     },
     renderComponentMenuList(contentElement, items) {
-        if ($(contentElement).data("dxScrollView"))
-            $(contentElement).dxScrollView("instance").dispose();
-        $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 320, width: "100%" });
-        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
-            dataSource: items,
-            scrollingEnabled: false,
-            itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)
+        Utils.renderDropdownMenuScroll(contentElement, 320, scrollContent => {
+            $('<div>').appendTo(scrollContent).dxList({
+                dataSource: items,
+                scrollingEnabled: false,
+                itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)
+            });
         });
     },
     createComponentParameterControl(parameter) {

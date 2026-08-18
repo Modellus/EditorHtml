@@ -950,6 +950,60 @@ class Utils {
         data.buildControl($(host).find(".mdl-dropdown-list-control"));
     }
 
+    // A menu stands as tall as the rows it holds and no taller than the height it is given here. The
+    // scroll they are put in is a box of its own inside the menu rather than the menu itself: the
+    // popup writes the height of its own content as it opens, so a scroll standing there is left at
+    // whatever the popup measured — and, once the menu is written again where it stands, as a switch
+    // that takes rows away or brings them back has it written, at the whole of its cap with the rows
+    // stopping short of the bottom. A box inside is the menu's own, and is measured on every writing.
+    static renderDropdownMenuScroll(contentElement, maximumHeight, buildContent) {
+        const host = $(contentElement);
+        Utils.disposeDropdownMenuScroll(host);
+        host.empty();
+        const scrollElement = $('<div class="mdl-dropdown-menu-scroll">').appendTo(host);
+        scrollElement.dxScrollView({ width: "100%", height: maximumHeight });
+        const scrollView = scrollElement.dxScrollView("instance");
+        buildContent($(scrollView.content()));
+        Utils.watchDropdownMenuScrollHeight(scrollElement, scrollView, maximumHeight);
+    }
+
+    static disposeDropdownMenuScroll(host) {
+        host.find(".mdl-dropdown-menu-scroll").each((_, element) => {
+            $(element).data("mdlMenuScrollObserver")?.disconnect();
+            if ($(element).data("dxScrollView"))
+                $(element).dxScrollView("instance").dispose();
+        });
+    }
+
+    // The rows are measured once they are built and again whenever they change, so a menu that grows
+    // a row while it stands open — a range completed, a term named — grows with it up to its cap, and
+    // one that loses a row comes back down. A menu built before it is laid out measures nothing, and
+    // is left at its cap until the first measuring the observer brings.
+    static watchDropdownMenuScrollHeight(scrollElement, scrollView, maximumHeight) {
+        const contentNode = $(scrollView.content())[0];
+        let appliedHeight = maximumHeight;
+        const applyHeight = () => {
+            const measured = Math.ceil(contentNode.getBoundingClientRect().height);
+            const height = measured > 0 ? Math.min(measured, maximumHeight) : maximumHeight;
+            if (height === appliedHeight)
+                return;
+            appliedHeight = height;
+            scrollView.option("height", height);
+        };
+        applyHeight();
+        if (typeof ResizeObserver !== "function")
+            return;
+        const observer = new ResizeObserver(() => {
+            if (!contentNode.isConnected) {
+                observer.disconnect();
+                return;
+            }
+            applyHeight();
+        });
+        observer.observe(contentNode);
+        scrollElement.data("mdlMenuScrollObserver", observer);
+    }
+
 }
 
 if (typeof module !== "undefined" && module.exports)

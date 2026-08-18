@@ -259,16 +259,16 @@ var ChartShapeToolbarMixin = {
         this._axisRangeControl = this.createAxisRangeControl();
         listItems.push({ text: "Horizontal", buildControl: $container => this._axisRangeControl.createRow("x").appendTo($container) });
         listItems.push({ text: "Vertical", buildControl: $container => this._axisRangeControl.createRow("y").appendTo($container) });
-        $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 400, width: "100%" });
-        const grid = $('<div class="mdl-dropdown-grid">');
-        for (const item of listItems) {
-            grid.append(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
-            const control = $('<div class="mdl-dropdown-grid-control">');
-            item.buildControl(control);
-            grid.append(control);
-        }
-        grid.appendTo($(contentElement).dxScrollView("instance").content());
+        Utils.renderDropdownMenuScroll(contentElement, 400, scrollContent => {
+            const grid = $('<div class="mdl-dropdown-grid">');
+            for (const item of listItems) {
+                grid.append(`<span class="mdl-dropdown-grid-label">${item.text}</span>`);
+                const control = $('<div class="mdl-dropdown-grid-control">');
+                item.buildControl(control);
+                grid.append(control);
+            }
+            grid.appendTo(scrollContent);
+        });
     },
     // The chart's ends live in its domain override, and are only its own to set while it is not
     // scaling itself; the axis type sits on the same row.

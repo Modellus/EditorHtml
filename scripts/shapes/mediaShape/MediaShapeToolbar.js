@@ -90,13 +90,12 @@ var MediaShapeToolbarMixin = {
                 }
             }
         ];
-        $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 350, width: "100%" });
-        const scrollContent = $(contentElement).dxScrollView("instance").content();
-        $('<div>').appendTo(scrollContent).dxList({
-            dataSource: listItems,
-            scrollingEnabled: false,
-            itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
+        Utils.renderDropdownMenuScroll(contentElement, 350, scrollContent => {
+            $('<div>').appendTo(scrollContent).dxList({
+                dataSource: listItems,
+                scrollingEnabled: false,
+                itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
+            });
         });
     }
 };

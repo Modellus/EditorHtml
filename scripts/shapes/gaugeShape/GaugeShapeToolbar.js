@@ -270,12 +270,12 @@ var GaugeShapeToolbarMixin = {
                 }
             }
         ];
-        $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 360, width: "100%" });
-        $('<div>').appendTo($(contentElement).dxScrollView("instance").content()).dxList({
-            dataSource: listItems,
-            scrollingEnabled: false,
-            itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)
+        Utils.renderDropdownMenuScroll(contentElement, 360, scrollContent => {
+            $('<div>').appendTo(scrollContent).dxList({
+                dataSource: listItems,
+                scrollingEnabled: false,
+                itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)
+            });
         });
         this.refreshGaugeScaleControls();
     }

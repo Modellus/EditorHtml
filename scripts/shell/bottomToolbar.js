@@ -498,13 +498,12 @@ class BottomToolbar {
                 }
             }
         ];
-        $(contentElement).empty();
-        $(contentElement).dxScrollView({ height: 300, width: "100%" });
-        const scrollContent = $(contentElement).dxScrollView("instance").content();
-        $('<div>').appendTo(scrollContent).dxList({
-            dataSource: listItems,
-            scrollingEnabled: false,
-            itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
+        Utils.renderDropdownMenuScroll(contentElement, 300, scrollContent => {
+            $('<div>').appendTo(scrollContent).dxList({
+                dataSource: listItems,
+                scrollingEnabled: false,
+                itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
+            });
         });
     }
 
