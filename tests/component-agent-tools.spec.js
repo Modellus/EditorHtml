@@ -46,15 +46,15 @@ test.describe('agent tool surface', () => {
         await setupBoard(page);
         const result = await page.evaluate(() => ({
             components: modellus.blocks.execute('list_building_blocks', { category: 'component' }),
-            schema: modellus.blocks.execute('get_building_block_schema', { type: 'analogue-clock' }),
+            schema: modellus.blocks.execute('get_building_block_schema', { type: 'clock' }),
             search: modellus.blocks.execute('search_building_blocks', { query: 'clock hands' }),
             badCategory: modellus.blocks.execute('list_building_blocks', { category: 'widget' }),
             unknownTool: modellus.blocks.execute('run_javascript', { code: 'alert(1)' })
         }));
         expect(result.components.ok).toBe(true);
-        expect(result.components.blocks.map(block => block.type)).toContain('analogue-clock');
+        expect(result.components.blocks.map(block => block.type)).toContain('clock');
         expect(result.schema.ok).toBe(true);
-        expect(result.schema.block.parameters.map(parameter => parameter.id)).toEqual(expect.arrayContaining(['hourVariable', 'minuteVariable', 'secondVariable', 'showNumbers']));
+        expect(result.schema.block.parameters.map(parameter => parameter.id)).toEqual(expect.arrayContaining(['hourVariable', 'minuteVariable', 'secondVariable', 'showControls']));
         expect(result.search.blocks[0].type).toBeTruthy();
         expect(result.badCategory.ok).toBe(false);
         expect(result.badCategory.errors[0].code).toBe('INVALID_CATEGORY');
@@ -76,14 +76,14 @@ test.describe('agent tool surface', () => {
         await setupBoard(page);
         await addClockModel(page);
         const result = await page.evaluate(() => {
-            const draft = modellus.blocks.execute('create_object_draft', { name: 'Agent clock', componentType: 'analogue-clock', request: 'Create an analogue clock driven by model variables' });
+            const draft = modellus.blocks.execute('create_object_draft', { name: 'Agent clock', componentType: 'clock', request: 'Create an analogue clock driven by model variables' });
             const draftId = draft.draftId;
             const bindings = [
                 modellus.blocks.execute('bind_variable', { draftId: draftId, nodeId: 'root', property: 'hourVariable', variable: 'hour' }),
                 modellus.blocks.execute('bind_variable', { draftId: draftId, nodeId: 'root', property: 'minuteVariable', variable: 'minute' }),
                 modellus.blocks.execute('bind_variable', { draftId: draftId, nodeId: 'root', property: 'secondVariable', variable: 'second' })
             ];
-            const parameter = modellus.blocks.execute('set_parameter', { draftId: draftId, nodeId: 'root', parameter: 'showNumbers', value: true });
+            const parameter = modellus.blocks.execute('set_parameter', { draftId: draftId, nodeId: 'root', parameter: 'showControls', value: true });
             const validation = modellus.blocks.execute('validate_object', { draftId: draftId });
             const preview = modellus.blocks.execute('render_object_preview', { draftId: draftId, width: 200, height: 200 });
             const inserted = modellus.blocks.execute('insert_object', { draftId: draftId });
@@ -114,7 +114,7 @@ test.describe('agent tool surface', () => {
         expect(result.previewNodes).toBeGreaterThan(50);
         expect(result.inserted.ok).toBe(true);
         expect(result.shapeType).toBe('ComponentShape');
-        expect(result.componentType).toBe('analogue-clock');
+        expect(result.componentType).toBe('clock');
         expect(result.metadata.source).toBe('agent');
         expect(result.metadata.request).toBe('Create an analogue clock driven by model variables');
         expect(result.handRotations[0]).toBeCloseTo(105, 3);
@@ -152,9 +152,9 @@ test.describe('agent tool surface', () => {
         await setupBoard(page);
         await addClockModel(page);
         const result = await page.evaluate(() => {
-            const draftId = modellus.blocks.execute('create_object_draft', { name: 'Broken clock', componentType: 'analogue-clock' }).draftId;
+            const draftId = modellus.blocks.execute('create_object_draft', { name: 'Broken clock', componentType: 'clock' }).draftId;
             const badVariable = modellus.blocks.execute('bind_variable', { draftId: draftId, nodeId: 'root', property: 'minuteVariable', variable: 'minutes' });
-            const badParameter = modellus.blocks.execute('set_parameter', { draftId: draftId, nodeId: 'root', parameter: 'showSecondsHand', value: true });
+            const badParameter = modellus.blocks.execute('set_parameter', { draftId: draftId, nodeId: 'root', parameter: 'showControl', value: true });
             const badExpression = modellus.blocks.execute('bind_expression', { draftId: draftId, nodeId: 'root', property: 'hourVariable', expression: '\\mod\\left(h,12' , inputs: { h: 'hour' } });
             const corrected = modellus.blocks.execute('bind_variable', { draftId: draftId, nodeId: 'root', property: 'minuteVariable', variable: 'minute' });
             const validation = modellus.blocks.execute('validate_object', { draftId: draftId });
@@ -171,7 +171,7 @@ test.describe('agent tool surface', () => {
         expect(result.badVariable.errors[0].suggestion).toBe('minute');
         expect(result.badParameter.ok).toBe(false);
         expect(result.badParameter.errors[0].code).toBe('UNKNOWN_PARAMETER');
-        expect(result.badParameter.errors[0].suggestion).toBe('showSecondHand');
+        expect(result.badParameter.errors[0].suggestion).toBe('showControls');
         expect(result.badExpression.ok).toBe(false);
         expect(result.badExpression.errors[0].code).toBe('INVALID_EXPRESSION');
         expect(result.correctedOk).toBe(true);

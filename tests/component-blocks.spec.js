@@ -41,7 +41,7 @@ test.describe('building block registry', () => {
         expect(counts.primitives).toEqual(expect.arrayContaining(['circle', 'line', 'polygon', 'arc', 'text', 'group', 'rect', 'path', 'image']));
         expect(counts.modifiers).toEqual(expect.arrayContaining(['rotate', 'translate', 'scale', 'opacity', 'repeat', 'mirror']));
         expect(counts.behaviours).toEqual(expect.arrayContaining(['drag-angle', 'tooltip', 'selectable']));
-        expect(counts.components).toEqual(expect.arrayContaining(['analogue-clock', 'compass', 'speedometer', 'rotating-vector', 'orbit-system', 'pointer-hand', 'tick-ring']));
+        expect(counts.components).toEqual(expect.arrayContaining(['clock', 'compass', 'speedometer', 'rotating-vector', 'orbit-system', 'pointer-hand', 'tick-ring']));
     });
 
     test('search finds blocks by capability and keyword', async ({ page }) => {
@@ -171,8 +171,8 @@ test.describe('compiler', () => {
         await addClockModel(page);
         const result = await page.evaluate(() => {
             const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
-            const definition = BlockObjects.createComponentInstance('analogue-clock');
-            const parameters = BlockObjects.getInstancePropertyDefaults('analogue-clock');
+            const definition = BlockObjects.createComponentInstance('clock');
+            const parameters = BlockObjects.getInstancePropertyDefaults('clock');
             parameters.hourVariable = 'hour';
             parameters.minuteVariable = 'minute';
             parameters.secondVariable = 'second';
@@ -189,7 +189,7 @@ test.describe('compiler', () => {
         });
         expect(result.diagnostics).toEqual([]);
         expect(result.nodeCount).toBeGreaterThan(50);
-        expect(result.blocksUsed).toEqual(expect.arrayContaining(['analogue-clock', 'pointer-hand', 'tick-ring', 'label-ring', 'circle', 'line', 'text']));
+        expect(result.blocksUsed).toEqual(expect.arrayContaining(['clock', 'pointer-hand', 'tick-ring', 'label-ring', 'circle', 'line', 'text']));
         expect(result.sameMarkup).toBe(true);
         expect(result.tags.sort()).toEqual(['circle', 'g', 'line', 'polygon', 'text']);
     });
@@ -199,8 +199,8 @@ test.describe('compiler', () => {
         await addClockModel(page);
         const rotations = await page.evaluate(() => {
             const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
-            const definition = BlockObjects.createComponentInstance('analogue-clock');
-            const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('analogue-clock'), {
+            const definition = BlockObjects.createComponentInstance('clock');
+            const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('clock'), {
                 hourVariable: 'hour',
                 minuteVariable: 'minute',
                 secondVariable: 'second'
@@ -288,8 +288,8 @@ test.describe('validator', () => {
         const validation = await page.evaluate(() => {
             const validator = new BlockValidator(BlockRegistry, new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator)));
             validator.setCalculator(shell.board.calculator);
-            const definition = BlockObjects.createComponentInstance('analogue-clock');
-            const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('analogue-clock'), { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second' });
+            const definition = BlockObjects.createComponentInstance('clock');
+            const parameters = Object.assign(BlockObjects.getInstancePropertyDefaults('clock'), { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second' });
             return validator.validate(definition, { width: 180, height: 180, parameters: parameters });
         });
         expect(validation.errors).toEqual([]);
@@ -856,7 +856,7 @@ test.describe('one look for the whole board', () => {
             const compiler = new BlockCompiler(BlockRegistry, new BlockBindings(shell.board.calculator));
             const fontsOf = preset => {
                 const fonts = new Set();
-                for (const type of ['analogue-clock', 'compass', 'speedometer', 'circular-gauge', 'calculator', 'mouse-tracker']) {
+                for (const type of ['clock', 'compass', 'speedometer', 'circular-gauge', 'calculator', 'mouse-tracker']) {
                     const definition = BlockObjects.createComponentInstance(type, { preset: preset });
                     const parameters = BlockObjects.getInstancePropertyDefaults(type, preset);
                     const compilation = compiler.compile(definition, { width: 280, height: 280, parameters: parameters, tokens: new BlockTokens(preset) });

@@ -1,5 +1,5 @@
 class BlockBindings {
-    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount"];
+    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "opaque"];
 
     static isBinding(value) {
         if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -21,6 +21,27 @@ class BlockBindings {
 
     static variable(termName, caseNumber = 1) {
         return { variable: termName, case: caseNumber };
+    }
+
+    // The model's own clock, whatever the reader has called it. A drawing asking for it by name would
+    // be wrong for every model that named it something else, so it is asked for by what it is: "value"
+    // is how far the run has got, "name" is the term that holds it.
+    static independent(field = "value") {
+        return { independent: field };
+    }
+
+    // Whether a colour paints anything at all. A part of a drawing is left out by being given no
+    // colour rather than by a switch of its own, so what decides it is the colour itself: nothing,
+    // "none", "transparent" and a fully clear colour all read as 0, and every real colour as 1.
+    static opaque(binding) {
+        return { opaque: binding };
+    }
+
+    static isOpaqueColour(value) {
+        const colour = String(value ?? "").trim().toLowerCase();
+        if (colour === "" || colour === "none" || colour === "transparent")
+            return false;
+        return !/^#[0-9a-f]{6}00$/.test(colour) && !/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*0?\.?0+\s*\)$/.test(colour);
     }
 
     static expression(latex) {
@@ -144,6 +165,10 @@ class BlockBindings {
             return this.resolveParameter(binding, context, fallbackValue);
         if (kind === "variable")
             return this.resolveVariable(binding, context, fallbackValue);
+        if (kind === "independent")
+            return this.resolveIndependent(binding, fallbackValue);
+        if (kind === "opaque")
+            return BlockBindings.isOpaqueColour(this.resolve(binding.opaque, context, "")) ? 1 : 0;
         if (kind === "expression")
             return this.resolveExpression(binding, context, fallbackValue);
         if (kind === "formula")
@@ -252,6 +277,14 @@ class BlockBindings {
         if (!Number.isFinite(value))
             return fallbackValue;
         return value;
+    }
+
+    resolveIndependent(binding, fallbackValue) {
+        const name = String(this.calculator?.properties?.independent?.name ?? "");
+        if (binding.independent === "name")
+            return name;
+        const value = Number(this.calculator?.getIndependentValue?.());
+        return Number.isFinite(value) ? value : fallbackValue;
     }
 
     resolveExpression(binding, context, fallbackValue) {
@@ -368,6 +401,10 @@ class BlockBindings {
             return { variables: [], parameters: [binding.memory] };
         if (kind === "memoryCount")
             return { variables: [], parameters: [binding.memoryCount] };
+        if (kind === "independent")
+            return { variables: [String(this.calculator?.properties?.independent?.name ?? "")].filter(name => name !== ""), parameters: [] };
+        if (kind === "opaque")
+            return this.getBindingDependencies(binding.opaque);
         return { variables: [], parameters: [] };
     }
 }

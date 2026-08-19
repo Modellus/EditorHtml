@@ -41,6 +41,7 @@ class BlockDefinitionLoader {
             icon: document.icon,
             tags: document.tags ?? [],
             capabilities: document.capabilities ?? [],
+            aliases: document.aliases ?? [],
             parameters: (document.parameters ?? []).map(parameter => BlockDefinitionLoader.normalizeParameter(parameter)),
             agentAccessible: document.agentAccessible !== false,
             create: (parameters, context) => {

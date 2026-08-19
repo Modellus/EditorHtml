@@ -86,12 +86,12 @@
         "definition": {
           "schemaVersion": "1.0.0",
           "id": "1314133a-dc70-4ba2-a149-55f44ff40478",
-          "type": "analogue-clock",
+          "type": "clock",
           "name": "Clock",
           "preset": "standard",
           "root": {
             "id": "root",
-            "type": "analogue-clock",
+            "type": "clock",
             "parameters": {
               "hourVariable": {
                 "parameter": "hourVariable"

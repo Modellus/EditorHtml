@@ -276,7 +276,7 @@ test.describe('steering wheel component', () => {
         const choiceIcons = await choices.evaluateAll(elements => elements.map(element => element.querySelector('i')?.className ?? ''));
         expect(choiceIcons[0]).toContain('fa-angle');
         expect(choiceIcons[1]).toContain('fa-arrow-up-right');
-        expect(await choices.evaluateAll(elements => elements.map(element => element.textContent.trim()))).toEqual(['angle', 'orientation']);
+        expect(await choices.evaluateAll(elements => elements.map(element => element.textContent.trim()))).toEqual(['Angle', 'Orientation']);
         await choices.nth(1).click();
         await page.waitForTimeout(500);
         expect(await page.evaluate(() => shell.board.shapes.getByName('Wheel').properties.turnedBy)).toBe('orientation');

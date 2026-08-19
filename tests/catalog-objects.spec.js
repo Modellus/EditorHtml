@@ -97,7 +97,7 @@ async function openCatalog(page) {
         localStorage.setItem('mp.user', JSON.stringify({ id: 'user-1', name: 'Tester', role: 'teacher', country: 'PT', preferredLanguage: 'en-US' }));
     });
     await page.goto(CATALOG_URL);
-    await page.waitForFunction(() => typeof BlockRegistry !== 'undefined' && BlockRegistry.has('analogue-clock'), null, { timeout: 15000 });
+    await page.waitForFunction(() => typeof BlockRegistry !== 'undefined' && BlockRegistry.has('clock'), null, { timeout: 15000 });
     await page.waitForSelector('.dx-treeview-item');
 }
 
@@ -193,7 +193,7 @@ test.describe('catalogue objects', () => {
         await stubCatalogApi(page, createState());
         await openCatalog(page);
         await openObjectEditor(page);
-        const definition = Object.assign({}, VALID_DEFINITION, { type: 'analogue-clock' });
+        const definition = Object.assign({}, VALID_DEFINITION, { type: 'clock' });
         await typeDefinition(page, JSON.stringify(definition));
         expect(await page.textContent('.object-preview-problems')).toContain('the editor ships with');
     });

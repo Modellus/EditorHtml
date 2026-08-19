@@ -41,9 +41,9 @@ function renderCatalogue(blocks) {
                 lines.push('Accepts children.', '');
         }
     }
-    lines.push('## Example: analogue clock bound to model variables', '');
+    lines.push('## Example: clock bound to model variables', '');
     lines.push('```js');
-    lines.push("const draft = modellus.blocks.execute('create_object_draft', { name: 'Clock', componentType: 'analogue-clock' });");
+    lines.push("const draft = modellus.blocks.execute('create_object_draft', { name: 'Clock', componentType: 'clock' });");
     lines.push("modellus.blocks.execute('bind_variable', { draftId: draft.draftId, nodeId: 'root', property: 'hourVariable', variable: 'hour' });");
     lines.push("modellus.blocks.execute('bind_variable', { draftId: draft.draftId, nodeId: 'root', property: 'minuteVariable', variable: 'minute' });");
     lines.push("modellus.blocks.execute('validate_object', { draftId: draft.draftId });");

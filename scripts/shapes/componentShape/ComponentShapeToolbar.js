@@ -1,4 +1,11 @@
 var ComponentShapeToolbarMixin = {
+    // What a choice is called on screen. The value itself is the name the definition gave it, and it
+    // stays that way in the file and in every comparison; what a reader is shown opens with a capital,
+    // the way every other label in the toolbars does.
+    formatChoiceLabel(value) {
+        const text = String(value ?? "");
+        return text === "" ? text : text.charAt(0).toUpperCase() + text.slice(1);
+    },
     // The two switches that decide the ends of an axis instead of a person setting them.
     axisRangeSwitches: ["autoScale", "equalScales"],
     createToolbar() {
@@ -53,6 +60,11 @@ var ComponentShapeToolbarMixin = {
         );
         return items;
     },
+    // "Face colour" on a row whose control is a colour swatch reads the word twice over, so the
+    // label keeps the thing and the swatch says what is being set.
+    trimColourWord(label) {
+        return String(label ?? "").replace(/\s+(colours?|colors?|cor(?:es)?)$/i, "");
+    },
     getParametersByCategory(categories) {
         return this.getEditableParameters()
             .filter(parameter => categories.includes(parameter.category ?? "general"))
@@ -63,7 +75,7 @@ var ComponentShapeToolbarMixin = {
             return [];
         if (!parameter.enumIcons)
             return TermControl.directionModes;
-        return parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons[index], hint: value }));
+        return parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons[index], hint: ComponentShapeToolbarMixin.formatChoiceLabel(value) }));
     },
     // A parameter another one names as the way it is read — an angle or an orientation — is chosen
     // once, from a key of its own, however many rows are read that way. A parameter can also ask for
@@ -156,10 +168,22 @@ var ComponentShapeToolbarMixin = {
     // An object that paints a background, a plot and an axis names them the way the chart does, and
     // is offered the same three colours under the same labels and icons. Anything else a definition
     // colours keeps its own label.
+    //
+    // Two things are left out. A colour the shape menu already carries in its own right — the
+    // foreground and the border every shape has — would otherwise be offered twice over, two controls
+    // writing the one property. And a colour a row names as its own is chosen on that row, beside the
+    // term it paints, so listing it here as well would be the same choice in two places.
     populateShapeColorMenuSections(sections) {
+        const claimed = new Set(["foregroundColor", "borderColor"]);
+        for (const parameter of BlockObjects.getComponentParameters(this.getComponentType())) {
+            if (parameter.colorParameter)
+                claimed.add(parameter.colorParameter);
+        }
         for (const parameter of this.getParametersByCategory(["style"])) {
+            if (claimed.has(parameter.id))
+                continue;
             const known = BaseShapeToolbarMixin.plotColorMenuItems[parameter.id];
-            this.pushColorMenuItem(sections, parameter.id, known?.label ?? parameter.label, known?.icon ?? "fa-droplet");
+            this.pushColorMenuItem(sections, parameter.id, known?.label ?? ComponentShapeToolbarMixin.trimColourWord(parameter.label), known?.icon ?? "fa-droplet");
         }
     },
     // Emptying what the object is holding is one of the ways it can be taken back, so it sits with
@@ -194,9 +218,42 @@ var ComponentShapeToolbarMixin = {
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Model</span></span>`;
             return;
         }
-        element.innerHTML = modelProperties
-            .map(property => this.createNameButtonTermMarkup(this.formatTermForDisplay(this.properties[property]), this.properties[property]))
+        element.innerHTML = this.getComponentButtonTermValues(modelProperties)
+            .map(value => this.createNameButtonTermMarkup(this.formatTermForDisplay(value), value))
+            .filter(markup => markup !== "")
             .join(`<i class="fa-light fa-grip-lines-vertical mdl-name-btn-separator"></i>`);
+    },
+    // Rows that have all been handed the same term by something other than themselves are reading
+    // one thing between them, so the key names it once. Rows that each chose their own are listed
+    // one by one, even where two of them landed on the same term, because that is a choice repeated
+    // rather than a single reading shared.
+    getComponentButtonTermValues(modelProperties) {
+        const values = [];
+        const shared = new Set();
+        for (const property of modelProperties) {
+            const parameter = this.getComponentParameter(property);
+            const isShared = parameter != null && this.isComponentParameterDisabled(parameter);
+            const value = this.getComponentButtonTermValue(property);
+            if (isShared) {
+                if (shared.has(String(value)))
+                    continue;
+                shared.add(String(value));
+            }
+            values.push(value);
+        }
+        return values;
+    },
+    getComponentButtonTermValue(property) {
+        const parameter = this.getComponentParameter(property);
+        if (parameter && this.isComponentParameterDisabled(parameter))
+            return this.getComponentDisabledTerm(parameter);
+        return this.properties[property];
+    },
+    getComponentDisabledTerm(parameter) {
+        const source = String(parameter?.disabledTerm ?? "");
+        if (source !== "$independent")
+            return source;
+        return String(this.board.calculator?.properties?.independent?.name ?? "");
     },
     createComponentModelDropDownButton(itemElement) {
         this._componentModelDropdownElement = $('<div class="mdl-component-model-selector">');
@@ -350,6 +407,8 @@ var ComponentShapeToolbarMixin = {
         const modeParameter = this.getComponentParameter(parameter.modeParameter ?? "");
         const control = this.createTermControl(parameter.id, parameter.label, !!parameter.valueAnchor, {
             allowTypedValue: true,
+            disabled: this.isComponentParameterDisabled(parameter),
+            blank: this.isComponentParameterDisabled(parameter),
             colorProperty: parameter.colorParameter ?? "",
             extraTermProperty: parameter.pairedParameter ?? "",
             modeProperty: modeParameter ? modeParameter.id : "",
@@ -417,7 +476,7 @@ var ComponentShapeToolbarMixin = {
     // Which rows a parameter decides the fate of: the ones naming it in what they are shown for.
     getComponentParametersGovernedBy(parameterId) {
         return this.getEditableParameters()
-            .filter(parameter => [].concat(parameter.visibleWhen ?? []).some(condition => condition.parameter === parameterId));
+            .filter(parameter => [].concat(parameter.visibleWhen ?? []).concat(parameter.disabledWhen ?? []).some(condition => condition.parameter === parameterId));
     },
     // The settings menu is built when it is opened, so a choice made elsewhere in the toolbar — or on
     // one of its own switches — leaves it listing rows the object no longer offers. It is written
@@ -446,7 +505,9 @@ var ComponentShapeToolbarMixin = {
         if (parameter.enumIcons)
             return this.createComponentEnumButtonGroup(parameter);
         return $('<div>').dxSelectBox({
-            items: parameter.enumValues,
+            items: parameter.enumValues.map(value => ({ value: value, text: ComponentShapeToolbarMixin.formatChoiceLabel(value) })),
+            valueExpr: "value",
+            displayExpr: "text",
             value: this.properties[parameter.id],
             width: 130,
             stylingMode: "filled",
@@ -459,7 +520,7 @@ var ComponentShapeToolbarMixin = {
         });
     },
     createComponentEnumButtonGroup(parameter) {
-        const items = parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons[index], hint: value }));
+        const items = parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons[index], hint: ComponentShapeToolbarMixin.formatChoiceLabel(value) }));
         return $('<div class="mdl-component-enum-buttons">').dxButtonGroup({
             items: items,
             keyExpr: "value",
@@ -471,7 +532,14 @@ var ComponentShapeToolbarMixin = {
                 buttonContainer[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
             },
             onContentReady: event => Utils.initPillButtonGroup(event.element[0]),
-            onItemClick: event => this.setPropertyCommand(parameter.id, event.itemData.value)
+            onItemClick: event => {
+                this.setPropertyCommand(parameter.id, event.itemData.value);
+                if (this.getComponentParametersGovernedBy(parameter.id).length === 0)
+                    return;
+                this.refreshComponentToolbarControls();
+                this.refreshComponentModelMenu();
+                queueMicrotask(() => this.refreshComponentSettingsMenu());
+            }
         });
     },
     // The same catalogue of characters a body wears, offered to any component that says it draws

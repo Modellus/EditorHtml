@@ -378,6 +378,15 @@ class ComponentShape extends BaseShape {
         return [].concat(parameter.visibleWhen).every(condition => this.isComponentConditionMet(condition));
     }
 
+    // A row the object is still drawing but no longer choosing: it keeps its place and its colour,
+    // and only the selector goes quiet. A row is left out with `visibleWhen` and quietened with
+    // `disabledWhen`, and both are read the same way.
+    isComponentParameterDisabled(parameter) {
+        if (parameter.disabledWhen === undefined)
+            return false;
+        return [].concat(parameter.disabledWhen).every(condition => this.isComponentConditionMet(condition));
+    }
+
     isComponentConditionMet(condition) {
         const value = this.properties[condition.parameter];
         if (condition.equals === undefined)
@@ -525,14 +534,17 @@ class ComponentShape extends BaseShape {
     runKeepTimeAction(input) {
         if (!this.isKeepTimeAllowed(input))
             return;
-        if (input.action === "play")
+        // One key that both starts and holds reads the run it is looking at rather than a setting of
+        // its own, so a clock set going by any other means is still held by the key the reader presses.
+        const action = input.action === "toggle" ? (this._keptTimeTimer ? "pause" : "play") : input.action;
+        if (action === "play")
             this.startKeepingTime(input);
-        if (input.action === "pause")
+        if (action === "pause")
             this.stopKeepingTime();
         // Clearing is written while the run's own edit is still open, so a run and the stop that ends
         // it are one thing to undo rather than two. A clock stopped where it already stands opens an
         // edit of its own, since there is none to write inside.
-        if (input.action === "stop") {
+        if (action === "stop") {
             if (!this._keptTimeTimer && this.keptTimeWritesProperty(input))
                 this.beginClickEdit();
             this.writeKeptTime(input, 0);

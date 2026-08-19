@@ -1,7 +1,7 @@
 class TermControl {
     static directionModes = [
-        { value: "angle", icon: "fa-light fa-angle", hint: "angle" },
-        { value: "orientation", icon: "fa-light fa-arrow-up-right", hint: "orientation" }
+        { value: "angle", icon: "fa-light fa-angle", hint: "Angle" },
+        { value: "orientation", icon: "fa-light fa-arrow-up-right", hint: "Orientation" }
     ];
     static directionPairValue = "orientation";
 
@@ -402,7 +402,7 @@ class TermControl {
             showDragHandle: false,
             rowGap: "0",
             rowMarginBottom: "0",
-            getItems: () => [{ term: TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1), locked: baseShape.properties[lockedProperty] === true }],
+            getItems: () => [{ term: options.blank === true ? "" : TermControl.normalizeBaseShapeTermValue(baseShape.properties[term]), case: TermControl.getBaseShapeCaseNumber(baseShape, baseShape.properties[term], baseShape.properties[caseProperty] ?? 1), locked: baseShape.properties[lockedProperty] === true }],
             getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty, options.colorProperty ?? "", extraTermProperty, modeProperty),
             mode: TermControl.createBaseShapeModeSelection(baseShape, formInstance, modeProperty, options.modeItems ?? [], options.modePairValue ?? "", () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl)),
             colorSelection: TermControl.createBaseShapeTermColorSelection(baseShape, options.colorProperty ?? ""),
@@ -421,6 +421,7 @@ class TermControl {
             },
             termEditor: {
                 acceptCustomValue: isEditable,
+                disabled: options.disabled === true,
                 onOpened: _ => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl),
                 onCustomItemCreating: event => {
                     const customValue = normalizeCustomValue(event.text);
@@ -1518,6 +1519,12 @@ class TermControl {
         const acceptCustomValue = typeof providedOptions.acceptCustomValue === "function"
             ? providedOptions.acceptCustomValue(item, index) === true
             : providedOptions.acceptCustomValue === true;
+        // A row whose term is no longer the object's to choose keeps its place and its colour, and
+        // only the selector goes quiet: the reader can still see what it was reading and still say
+        // what it is drawn in.
+        const disabled = typeof providedOptions.disabled === "function"
+            ? providedOptions.disabled(item, index) === true
+            : providedOptions.disabled === true;
         const calculator = this.getCalculator();
         const isMissingTerm = calculator ? TermControl.isMissingTermReference(calculator, termValue, this.options.allowNumericTermReference === true) : false;
         const board = this.options.getBoard?.();
@@ -1527,6 +1534,7 @@ class TermControl {
         const leafTerms = treeItems.filter(t => t.term !== undefined).map(t => ({ value: t.term, text: Utils.getDisplayedTerm(t.term, system) }));
         return {
             value: termValue || null,
+            disabled: disabled,
             dataSource: leafTerms,
             valueExpr: "value",
             displayExpr: data => this.resolveTermEditorDisplayedText(data, termValue, system),

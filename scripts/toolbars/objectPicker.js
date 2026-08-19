@@ -152,8 +152,11 @@ class ObjectPicker {
         return objectItems.concat(this.getShapeItems());
     }
 
+    // A catalogue object naming a type the editor ships with under another name is that same object
+    // under its old name: placing it draws the block the editor already offers, so listing it as well
+    // would put the one object in the palette twice, once with a stale picture of itself.
     getCatalogueItems() {
-        return BlockObjectCatalogue.getEntries().map(entry => ({
+        return BlockObjectCatalogue.getEntries().filter(entry => !BlockRegistry.isAlias(entry.type)).map(entry => ({
             key: entry.type,
             componentType: entry.type,
             catalogueId: entry.id,

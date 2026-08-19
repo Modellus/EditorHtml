@@ -73,7 +73,7 @@ test.describe('seeding the bundled objects', () => {
         await openHarness(page);
         const seeding = await seed(page, readDefinitions(), { write: false });
         expect(seeding.results.map(result => result.type)).toEqual([
-            'analogue-clock', 'calculator', 'circular-gauge', 'compass', 'mouse-tracker', 'orbit-system', 'rotating-vector', 'speedometer', 'steering-wheel', 'thermometer'
+            'calculator', 'circular-gauge', 'clock', 'compass', 'mouse-tracker', 'orbit-system', 'rotating-vector', 'speedometer', 'steering-wheel', 'thermometer'
         ]);
         expect(seeding.results.every(result => result.action === 'create')).toBe(true);
         expect(state.created).toHaveLength(0);
@@ -86,10 +86,10 @@ test.describe('seeding the bundled objects', () => {
         const seeding = await seed(page, readDefinitions(), { write: true });
         expect(state.created).toHaveLength(10);
         expect(seeding.results.map(result => result.id)).toEqual(['id-1', 'id-2', 'id-3', 'id-4', 'id-5', 'id-6', 'id-7', 'id-8', 'id-9', 'id-10']);
-        const clockBody = state.created[seeding.results.findIndex(result => result.type === 'analogue-clock')].body;
+        const clockBody = state.created[seeding.results.findIndex(result => result.type === 'clock')].body;
         expect(clockBody).toContain('name="title"');
-        expect(clockBody).toContain('Analogue clock');
-        expect(clockBody).toContain('"type":"analogue-clock"');
+        expect(clockBody).toContain('Clock');
+        expect(clockBody).toContain('"type":"clock"');
         expect(clockBody).toContain('filename="object.png"');
     });
 

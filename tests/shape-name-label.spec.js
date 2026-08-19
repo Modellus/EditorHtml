@@ -121,7 +121,7 @@ test.describe('shape name label styling', () => {
     test('styles the name of a block component shape', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => {
-            const shape = shell.commands.addComponent('analogue-clock', 'Clock');
+            const shape = shell.commands.addComponent('clock', 'Clock');
             shape.setPropertyCommand('showName', true);
             shape.setPropertyCommand('nameFontSize', 18);
             shape.setPropertyCommand('nameColor', '#0000FF');

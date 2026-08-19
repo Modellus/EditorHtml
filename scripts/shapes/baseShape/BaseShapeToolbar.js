@@ -260,7 +260,7 @@ var ShapeToolbarPresentationMixin = {
         return `<i class="${weight} ${iconName} mdl-menu-icon"></i>`;
     },
     populateShapeColorMenuSections(sections) {
-        this.pushColorMenuItem(sections, "backgroundColor", "Background Color", "fa-fill");
+        this.pushColorMenuItem(sections, "backgroundColor", "Background", "fa-fill");
     },
     refreshShapeColorToolbarControl() {
         if (!this._shapeColorDropdownElement)
@@ -385,6 +385,8 @@ var BaseShapeToolbarMixin = {
         const extraTermProperty = options.extraTermProperty ?? "";
         return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, options.allowTypedValue === true, displayModeProperty, showVisibilityToggle, {
             exactTypedValue: options.allowTypedValue === true,
+            disabled: options.disabled === true,
+            blank: options.blank === true,
             colorProperty: options.colorProperty ?? "",
             extraTermProperty: extraTermProperty,
             modeProperty: options.modeProperty ?? "",

@@ -82,7 +82,7 @@ test.describe('model objects', () => {
         await setupBoard(page);
         await registerObjects(page, [TEST_OBJECT]);
         await addComponent(page, 'test-dial', 'Dial');
-        await addComponent(page, 'analogue-clock', 'Clock');
+        await addComponent(page, 'clock', 'Clock');
         const model = await page.evaluate(() => shell.serialize());
         expect(model.objects.map(document => document.type)).toEqual(['test-dial']);
         expect(model.objects[0].root.properties.radius).toBe(40);
@@ -90,7 +90,7 @@ test.describe('model objects', () => {
 
     test('a model using only built-in objects carries no objects section', async ({ page }) => {
         await setupBoard(page);
-        await addComponent(page, 'analogue-clock', 'Clock');
+        await addComponent(page, 'clock', 'Clock');
         const model = await page.evaluate(() => shell.serialize());
         expect(model.objects).toBeUndefined();
     });
@@ -134,15 +134,15 @@ test.describe('model objects', () => {
         const displayName = await page.evaluate(() => {
             BlockObjectLibrary.registerAll([{
                 schemaVersion: '1.0.0',
-                type: 'analogue-clock',
+                type: 'clock',
                 category: 'component',
                 displayName: 'Impostor clock',
                 parameters: [],
                 root: { id: 'root', type: 'circle', properties: { centerX: 10, centerY: 10, radius: 5 } }
             }]);
-            return BlockRegistry.get('analogue-clock').displayName;
+            return BlockRegistry.get('clock').displayName;
         });
-        expect(displayName).toBe('Analogue clock');
+        expect(displayName).toBe('Clock');
     });
 
     test('an unusable object does not stop the rest of the model from opening', async ({ page }) => {

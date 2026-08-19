@@ -183,12 +183,12 @@ var BlockBehaviours = {
         type: "keep-time",
         category: "behaviour",
         displayName: "Keep time",
-        description: "A transport key for a reading of the clock: play sets it counting real time from wherever it stands, pause holds it there, and stop ends the run and clears it. What is counted is written into the four parts of the reading — the hours, the minutes, the seconds and the thousandths — each into the term that part names, or into the object's own property when it names a plain number instead. The whole run is one edit.",
+        description: "A transport key for a reading of the clock: play sets it counting real time from wherever it stands, pause holds it there, and stop ends the run and clears it. A key set to toggle is both — it starts a clock standing still and holds a clock that is counting, so one key does the work of two. What is counted is written into the four parts of the reading — the hours, the minutes, the seconds and the thousandths — each into the term that part names, or into the object's own property when it names a plain number instead. The whole run is one edit.",
         tags: ["interaction", "click", "time", "clock", "stopwatch", "timer", "writes-model"],
         capabilities: ["interaction", "writes-model"],
         inputSchema: {
             properties: {
-                action: { valueType: "string", defaultValue: "play", enumValues: ["play", "pause", "stop"], label: "Action", bindable: false, description: "What this key does: start counting, hold where it is, or end the run and clear the reading." },
+                action: { valueType: "string", defaultValue: "play", enumValues: ["play", "pause", "stop", "toggle"], label: "Action", bindable: false, description: "What this key does: start counting, hold where it is, end the run and clear the reading, or toggle between counting and holding on the one key." },
                 hourVariable: { valueType: "variable", defaultValue: "", label: "Hour variable", bindable: false },
                 hourProperty: { valueType: "string", defaultValue: "", label: "Hour property", description: "Property written when the hour names a plain number instead of a model term." },
                 minuteVariable: { valueType: "variable", defaultValue: "", label: "Minute variable", bindable: false },

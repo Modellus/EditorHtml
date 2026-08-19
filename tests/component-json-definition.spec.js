@@ -27,10 +27,10 @@ const cases = [
     { key: 'compass/unbound', componentType: 'compass', overrides: {}, size: 200 },
     { key: 'compass/small', componentType: 'compass', overrides: { headingVariable: 'heading', rotationVariable: 'turn', showDegrees: true }, size: 120 },
     { key: 'compass/large', componentType: 'compass', overrides: { headingVariable: 'heading', rotationVariable: 'turn', showDegrees: true }, size: 320 },
-    { key: 'analogue-clock/all-on', componentType: 'analogue-clock', overrides: { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second' }, size: 200 },
-    { key: 'analogue-clock/bare', componentType: 'analogue-clock', overrides: { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', showSecondHand: false, showNumbers: false, showMinuteTicks: false }, size: 200 },
-    { key: 'analogue-clock/interactive', componentType: 'analogue-clock', overrides: { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', interactive: true }, size: 200 },
-    { key: 'analogue-clock/numbers-only', componentType: 'analogue-clock', overrides: { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', showSecondHand: false, showMinuteTicks: false }, size: 200 },
+    { key: 'clock/all-on', componentType: 'clock', overrides: { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second' }, size: 200 },
+    { key: 'clock/bare', componentType: 'clock', overrides: { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', secondColor: 'transparent', numberColor: 'transparent' }, size: 200 },
+    { key: 'clock/interactive', componentType: 'clock', overrides: { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second' }, size: 200 },
+    { key: 'clock/numbers-only', componentType: 'clock', overrides: { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', secondColor: 'transparent' }, size: 200 },
     { key: 'speedometer/default', componentType: 'speedometer', overrides: { valueVariable: 'speed', unit: 'km/h' }, size: 200 },
     { key: 'speedometer/no-readout', componentType: 'speedometer', overrides: { valueVariable: 'speed', showReadout: false }, size: 200 },
     { key: 'speedometer/no-unit-decimals', componentType: 'speedometer', overrides: { valueVariable: 'speed', digits: 2 }, size: 200 },
@@ -103,7 +103,7 @@ test.describe('components built from JSON definitions', () => {
 
     test('are registered by the page itself, with no coded fallback left', async ({ page }) => {
         await setupBoard(page);
-        const registrations = await page.evaluate(() => ['compass', 'analogue-clock', 'speedometer', 'circular-gauge', 'rotating-vector', 'orbit-system'].map(type => {
+        const registrations = await page.evaluate(() => ['compass', 'clock', 'speedometer', 'circular-gauge', 'rotating-vector', 'orbit-system'].map(type => {
             const registration = BlockRegistry.get(type);
             return {
                 type: type,
@@ -116,8 +116,8 @@ test.describe('components built from JSON definitions', () => {
         expect(registrations[0].category).toBe('component');
         expect(registrations[0].displayName).toBe('Compass');
         expect(registrations[0].parameterIds).toContain('rotationVariable');
-        expect(registrations[1].displayName).toBe('Analogue clock');
-        expect(registrations[1].parameterIds).toContain('interactive');
+        expect(registrations[1].displayName).toBe('Clock');
+        expect(registrations[1].parameterIds).toContain('showControls');
         expect(registrations[3].displayName).toBe('Circular gauge');
         expect(registrations[5].parameterIds).toContain('period4');
         for (const registration of registrations)

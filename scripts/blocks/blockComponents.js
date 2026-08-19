@@ -935,6 +935,7 @@ var BlockComponentHelpers = {
             BlockComponentHelpers.parameter("height", "Height", "number", 40, { category: "layout", minimum: 0 }),
             BlockComponentHelpers.parameter("text", "Text", "string", "", { category: "display", description: "What is shown. Digits, \":\", \".\" and \"-\" are what the panel can spell; a space, or anything else, lights none of its bars and stands there unlit, the way an empty place on a real one does." }),
             BlockComponentHelpers.parameter("color", "Lamp colour", "colour", "token:text.primary", { category: "style" }),
+            BlockComponentHelpers.parameter("colors", "Lamp colours", "string", "", { category: "style", description: "A colour for each character in turn, separated by spaces, so a reading made of several fields can be painted a field at a time. A character the list does not reach is lit in the lamp colour, which is what the whole reading uses when the list is empty." }),
             BlockComponentHelpers.parameter("ghostOpacity", "Unlit opacity", "number", 0.12, { category: "style", minimum: 0, maximum: 1, description: "How far the bars a character does not light are still shown. Zero leaves the panel blank around the reading, the way a lit display reads; a little of it is what an old liquid crystal one looks like." }),
             BlockComponentHelpers.parameter("thickness", "Bar thickness", "number", 0.16, { category: "style", minimum: 0.02, maximum: 0.4, description: "How thick a bar is, as a fraction of the height of a digit." }),
             BlockComponentHelpers.parameter("digitWidth", "Digit width", "number", 0.56, { category: "style", minimum: 0.2, maximum: 1.5, description: "How wide a digit is, as a fraction of its height." }),
@@ -946,6 +947,11 @@ var BlockComponentHelpers = {
             if (characters.length === 0)
                 return { id: "seven-segment-display", type: "group", children: [] };
             const color = context.tokens.resolveValue(parameters.color);
+            // A reading made of several fields is one display rather than several, so that the whole
+            // of it is fitted to the box together and the fields keep their places; the colours are
+            // what tell them apart, one per character in the order they are spelled.
+            const colors = String(parameters.colors ?? "").split(/\s+/).filter(entry => entry !== "")
+                .map(entry => context.tokens.resolveValue(entry));
             const digitWidth = Number(parameters.digitWidth);
             const spacing = Number(parameters.spacing);
             const widthFactors = characters.map(character => BlockComponentHelpers.sevenSegmentWidthFactor(character));
@@ -969,6 +975,7 @@ var BlockComponentHelpers = {
                 const spelledWithLamps = Object.keys(lamps).length > 0;
                 const shapes = spelledWithLamps ? lamps : BlockComponentHelpers.sevenSegmentBars(left, top, cellWidth, height, thickness, slantTangent);
                 const lit = spelledWithLamps ? Object.keys(lamps) : (BlockComponentHelpers.sevenSegmentGlyphs[character] ?? []);
+                const characterColor = colors[index] ?? color;
                 for (const [name, points] of Object.entries(shapes)) {
                     const isLit = lit.includes(name);
                     if (!isLit && ghostOpacity <= 0)
@@ -976,7 +983,7 @@ var BlockComponentHelpers = {
                     children.push({
                         id: `character-${index}-${name}`,
                         type: "polygon",
-                        properties: { points: points, fill: color, stroke: "none", opacity: isLit ? 1 : ghostOpacity }
+                        properties: { points: points, fill: characterColor, stroke: "none", opacity: isLit ? 1 : ghostOpacity }
                     });
                 }
                 left += cellWidth + spacing * height;

@@ -4,12 +4,31 @@ class BuildingBlockRegistry {
     constructor() {
         this.registrations = new Map();
         this.customComponentTypes = new Set();
+        this.aliases = new Map();
     }
 
+    // A block that has been renamed answers to the name it used to have as well, because the files
+    // already saved carry the old one and a model is not reopened to be told its clock no longer
+    // exists. The alias only finds the block; everything the registry lists is the current name.
     register(registration) {
         const normalized = this.normalizeRegistration(registration);
         this.registrations.set(normalized.type, normalized);
+        for (const alias of registration.aliases ?? [])
+            this.aliases.set(alias, normalized.type);
         return normalized;
+    }
+
+    resolveType(type) {
+        if (this.registrations.has(type))
+            return type;
+        return this.aliases.get(type) ?? type;
+    }
+
+    // A name a block used to be called, rather than the one it goes by now. What answers to it is the
+    // same block under its current name, so a list that has already offered that block has nothing to
+    // add by offering the old name beside it.
+    isAlias(type) {
+        return !this.registrations.has(type) && this.aliases.has(type);
     }
 
     registerCustomComponent(registration) {
@@ -38,6 +57,7 @@ class BuildingBlockRegistry {
             supportedBindings: registration.supportedBindings ?? null,
             supportedBehaviours: registration.supportedBehaviours ?? null,
             capabilities: registration.capabilities ?? [],
+            aliases: registration.aliases ?? [],
             agentAccessible: registration.agentAccessible !== false,
             deprecated: registration.deprecated === true,
             replacedBy: registration.replacedBy ?? null,
@@ -75,11 +95,11 @@ class BuildingBlockRegistry {
     }
 
     has(type) {
-        return this.registrations.has(type);
+        return this.registrations.has(this.resolveType(type));
     }
 
     get(type) {
-        return this.registrations.get(type) ?? null;
+        return this.registrations.get(this.resolveType(type)) ?? null;
     }
 
     isCustomComponent(type) {

@@ -482,13 +482,13 @@ Capabilities: `interaction`
 
 ### `keep-time` — Keep time
 
-A transport key for a reading of the clock: play sets it counting real time from wherever it stands, pause holds it there, and stop ends the run and clears it. What is counted is written into the four parts of the reading — the hours, the minutes, the seconds and the thousandths — each into the term that part names, or into the object's own property when it names a plain number instead. The whole run is one edit.
+A transport key for a reading of the clock: play sets it counting real time from wherever it stands, pause holds it there, and stop ends the run and clears it. A key set to toggle is both — it starts a clock standing still and holds a clock that is counting, so one key does the work of two. What is counted is written into the four parts of the reading — the hours, the minutes, the seconds and the thousandths — each into the term that part names, or into the object's own property when it names a plain number instead. The whole run is one edit.
 
 Capabilities: `interaction`, `writes-model`
 
 | Property | Type | Default | Range |
 | --- | --- | --- | --- |
-| `action` | string | "play" | play \| pause \| stop |
+| `action` | string | "play" | play \| pause \| stop \| toggle |
 | `hourVariable` | variable | "" |  |
 | `hourProperty` | string | "" |  |
 | `minuteVariable` | variable | "" |  |
@@ -595,34 +595,6 @@ Capabilities: `interaction`, `memory`, `writes-model`
 
 ## Components
 
-### `analogue-clock` — Analogue clock
-
-Clock reading the hour, minute, second and millisecond a model gives it, shown either as a face with a hand for each or as a digital readout of the same time. The seconds and the milliseconds can each be left out, and what is left out goes from the face and from the readout alike.
-
-Capabilities: `radial`, `angular`, `reads-model`, `textual`, `interaction`
-
-| Parameter | Type | Default | Range |
-| --- | --- | --- | --- |
-| `hourVariable` | variable | "0" |  |
-| `minuteVariable` | variable | "0" |  |
-| `secondVariable` | variable | "0" |  |
-| `millisecondVariable` | variable | "0" |  |
-| `shownAs` | string | "analogue" | analogue \| digital |
-| `showSecondHand` | boolean | true |  |
-| `showMillisecondHand` | boolean | false |  |
-| `showControls` | boolean | false |  |
-| `showNumbers` | boolean | true |  |
-| `showMinuteTicks` | boolean | true |  |
-| `faceColor` | colour | "token:surface.default" |  |
-| `borderColor` | colour | "token:stroke.default" |  |
-| `handColor` | colour | "token:stroke.strong" |  |
-| `secondHandColor` | colour | "token:stroke.warning" |  |
-| `millisecondHandColor` | colour | "token:stroke.accent" |  |
-| `numberColor` | colour | "token:text.primary" |  |
-| `buttonColor` | colour | "token:surface.muted" |  |
-| `interactive` | boolean | false |  |
-| `running` | number | 0 |  |
-
 ### `calculator` — Calculator
 
 Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.
@@ -681,6 +653,33 @@ Capabilities: `radial`, `angular`, `reads-model`
 | `digits` | number | 0 | min 0, max 6 |
 | `unit` | string | "" |  |
 | `showReadout` | boolean | true |  |
+
+### `clock` — Clock
+
+Clock reading the hour, minute, second and millisecond a model gives it, or reading the model's own time as a count of seconds, shown either as a face with a hand for each or as a digital readout of the same time. The seconds and the milliseconds can each be left out, and what is left out goes from the face and from the readout alike. Run by its own keys it is a stopwatch: one key starts and holds it, one takes a lap, and one ends the run — and the laps it has taken are kept in a list of their own under the face.
+
+Capabilities: `radial`, `angular`, `reads-model`, `textual`, `interaction`, `memory`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `syncedWithPlayer` | boolean | false |  |
+| `hourVariable` | variable | "0" |  |
+| `minuteVariable` | variable | "0" |  |
+| `secondVariable` | variable | "0" |  |
+| `millisecondVariable` | variable | "0" |  |
+| `shownAs` | string | "analogue" | analogue \| digital |
+| `showControls` | boolean | false |  |
+| `showLaps` | boolean | false |  |
+| `faceColor` | colour | "token:surface.default" |  |
+| `borderColor` | colour | "token:stroke.default" |  |
+| `hourColor` | colour | "token:stroke.strong" |  |
+| `minuteColor` | colour | "token:stroke.strong" |  |
+| `secondColor` | colour | "token:stroke.warning" |  |
+| `millisecondColor` | colour | "#00000000" |  |
+| `numberColor` | colour | "token:text.primary" |  |
+| `buttonColor` | colour | "token:surface.muted" |  |
+| `running` | number | 0 |  |
+| `laps` | memory | [] |  |
 
 ### `compass` — Compass
 
@@ -1020,6 +1019,7 @@ Capabilities: `sizable`, `textual`
 | `height` | number | 40 | min 0 |
 | `text` | string | "" |  |
 | `color` | colour | "token:text.primary" |  |
+| `colors` | string | "" |  |
 | `ghostOpacity` | number | 0.12 | min 0, max 1 |
 | `thickness` | number | 0.16 | min 0.02, max 0.4 |
 | `digitWidth` | number | 0.56 | min 0.2, max 1.5 |
@@ -1125,10 +1125,10 @@ Capabilities: `radial`, `angular`, `scale`
 | `majorLength` | number | 12 | min 0 |
 | `majorWidth` | number | 2 | min 0 |
 
-## Example: analogue clock bound to model variables
+## Example: clock bound to model variables
 
 ```js
-const draft = modellus.blocks.execute('create_object_draft', { name: 'Clock', componentType: 'analogue-clock' });
+const draft = modellus.blocks.execute('create_object_draft', { name: 'Clock', componentType: 'clock' });
 modellus.blocks.execute('bind_variable', { draftId: draft.draftId, nodeId: 'root', property: 'hourVariable', variable: 'hour' });
 modellus.blocks.execute('bind_variable', { draftId: draft.draftId, nodeId: 'root', property: 'minuteVariable', variable: 'minute' });
 modellus.blocks.execute('validate_object', { draftId: draft.draftId });

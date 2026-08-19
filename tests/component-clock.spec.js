@@ -23,7 +23,7 @@ async function addClockEquations(page, expression = 'hour=3\\\\minute=30\\\\seco
 
 async function addClock(page) {
     await page.evaluate(() => {
-        const shape = shell.commands.addComponent('analogue-clock', 'Clock');
+        const shape = shell.commands.addComponent('clock', 'Clock');
         shape.setProperties({ x: 240, y: 160, width: 200, height: 200, hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', millisecondVariable: 'milli' });
         shape.draw();
     });
@@ -67,8 +67,8 @@ async function addRunnableClockEquations(page) {
 
 async function addRunnableClock(page) {
     await page.evaluate(() => {
-        const shape = shell.commands.addComponent('analogue-clock', 'Clock');
-        shape.setProperties({ x: 240, y: 140, width: 240, height: 280, showControls: true, showMillisecondHand: true, hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', millisecondVariable: 'milli' });
+        const shape = shell.commands.addComponent('clock', 'Clock');
+        shape.setProperties({ x: 240, y: 140, width: 240, height: 280, showControls: true, millisecondColor: '#1871c2', hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', millisecondVariable: 'milli' });
         shape.draw();
     });
     await page.waitForTimeout(300);
@@ -105,7 +105,7 @@ function readRotation(transform) {
     return Number(String(transform).match(/rotate\(([-0-9.]+)/)[1]);
 }
 
-test.describe('analogue clock component', () => {
+test.describe('clock component', () => {
     test('renders on the board without a clock specific shape class', async ({ page }) => {
         await setupBoard(page);
         await addClockEquations(page);
@@ -124,7 +124,7 @@ test.describe('analogue clock component', () => {
             };
         });
         expect(rendered.shapeClass).toBe('ComponentShape');
-        expect(rendered.componentType).toBe('analogue-clock');
+        expect(rendered.componentType).toBe('clock');
         expect(rendered.registeredTypes).toEqual([]);
         expect(rendered.circles).toBeGreaterThanOrEqual(2);
         expect(rendered.ticks).toBeGreaterThan(60);
@@ -147,9 +147,13 @@ test.describe('analogue clock component', () => {
         await page.waitForTimeout(300);
         const labels = await page.$$eval('.mdl-shape-overlay-popup .mdl-dropdown-list-label',
             elements => elements.map(element => element.textContent.trim()));
-        expect(labels).toContain('Show seconds');
-        expect(labels).toContain('Show milliseconds');
-        expect(labels).toContain('Hands can be dragged');
+        expect(labels).toEqual(['Buttons']);
+        // A hand is dragged whenever its term can be written, so nothing here switches that on.
+        expect(labels.join('|')).not.toContain('dragged');
+        // A part is left out by being unpainted, so nothing here switches a hand or a value on.
+        expect(labels.join('|')).not.toContain('Show seconds');
+        expect(labels.join('|')).not.toContain('Show milliseconds');
+        expect(labels.join('|')).not.toContain('Show numbers');
         expect(labels.join('|').toLowerCase()).not.toContain('preset');
     });
 
@@ -168,29 +172,59 @@ test.describe('analogue clock component', () => {
             return { switches: last.querySelectorAll('.dx-switch').length, checkboxes: last.querySelectorAll('.dx-checkbox').length };
         });
         expect(counts.checkboxes).toBe(0);
-        expect(counts.switches).toBe(6);
+        expect(counts.switches).toBe(1);
 
-        await popup.locator('.dx-switch').first().click();
+        await popup.locator('.dx-switch').last().click();
         await page.waitForTimeout(400);
-        const toggled = await page.evaluate(() => {
-            const shape = shell.board.shapes.getByName('Clock');
-            const hands = shape.getInspectionReport().nodes.filter(node => node.sourceComponent === 'pointer-hand' && node.transform.startsWith('rotate('));
-            return { showSecondHand: shape.properties.showSecondHand, handCount: hands.length };
-        });
-        expect(toggled.showSecondHand).toBe(false);
-        expect(toggled.handCount).toBe(2);
+        const toggled = await page.evaluate(() => shell.board.shapes.getByName('Clock').properties.showControls);
+        expect(toggled).toBe(true);
 
         await page.evaluate(() => shell.commands.undo());
         await page.waitForTimeout(400);
-        const undone = await page.evaluate(() => shell.board.shapes.getByName('Clock').properties.showSecondHand);
-        expect(undone).toBe(true);
+        const undone = await page.evaluate(() => shell.board.shapes.getByName('Clock').properties.showControls);
+        expect(undone).toBe(false);
+    });
+
+    // Clearing the colour a part is read in takes that part off the clock: no switch says so, and
+    // giving it a colour again brings it back.
+    test('a part is left off the clock by clearing the colour it is read in', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page);
+        await addClock(page);
+        const readClock = () => page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            const element = document.getElementById(shape.id);
+            return {
+                hands: shape.getInspectionReport().nodes.filter(node => node.sourceComponent === 'pointer-hand' && node.transform.startsWith('rotate(')).length,
+                numbers: element.querySelectorAll('text').length
+            };
+        });
+        // Seconds are painted and the thousandths are not, so a clock straight from the palette
+        // reads three hands.
+        expect(await readClock()).toEqual({ hands: 3, numbers: 12 });
+
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            shape.setProperties({ millisecondColor: '#1871c2' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        expect((await readClock()).hands).toBe(4);
+
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            shape.setProperties({ secondColor: 'transparent', millisecondColor: '#00000000', numberColor: 'transparent' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        expect(await readClock()).toEqual({ hands: 2, numbers: 0 });
     });
 
     test('is placed from the components palette by drawing on the board', async ({ page }) => {
         await setupBoard(page);
         await page.click('#components-button');
         await page.waitForTimeout(300);
-        await page.click('.mdl-object-picker-card:has-text("Analogue clock")');
+        await page.click('.mdl-object-picker-card[data-object-key="clock"]');
         await page.waitForTimeout(200);
         const armed = await page.evaluate(() => shell.shapeDrawController.isArmed());
         expect(armed).toBe(true);
@@ -216,8 +250,8 @@ test.describe('analogue clock component', () => {
                 selected: shell.board.selection.selectedShape === shape
             };
         });
-        expect(placed.name).toBe('Analogue clock');
-        expect(placed.componentType).toBe('analogue-clock');
+        expect(placed.name).toBe('Clock');
+        expect(placed.componentType).toBe('clock');
         expect(placed.width).toBe(160);
         expect(placed.height).toBe(160);
         expect(placed.circles).toBeGreaterThanOrEqual(2);
@@ -235,7 +269,7 @@ test.describe('analogue clock component', () => {
         });
         expect(readRotation(before[0])).toBeCloseTo(105, 3);
         expect(readRotation(before[1])).toBeCloseTo(180, 3);
-        expect(readRotation(before[2])).toBeCloseTo(90, 3);
+        expect(readRotation(before[2])).toBeCloseTo(91.5, 3);
 
         await page.evaluate(() => {
             shell.board.shapes.getByName('Clock equations').properties.expression = 'hour=9\\\\minute=15\\\\second=45';
@@ -260,7 +294,7 @@ test.describe('analogue clock component', () => {
             const shape = shell.board.shapes.getByName('Clock');
             const countTexts = () => document.getElementById(shape.id).querySelectorAll('text').length;
             const initial = countTexts();
-            shape.setPropertyCommand('showNumbers', false);
+            shape.setPropertyCommand('numberColor', 'transparent');
             shell.board.forceRefresh();
             await new Promise(resolve => setTimeout(resolve, 150));
             const hidden = countTexts();
@@ -287,6 +321,9 @@ test.describe('analogue clock component', () => {
         const roundTrip = await page.evaluate(async () => {
             const shape = shell.board.shapes.getByName('Clock');
             shape.setPropertyCommand('faceColor', '#ffec99');
+            // The laps a run took are the object's own memory, so the file has to carry them the way
+            // it carries any other value — unlike the run itself, which a saved clock never remembers.
+            shape.setPropertyCommand('laps', [{ text: '00:00:01.500', x: 1.5 }, { text: '00:00:03.250', x: 3.25 }]);
             const model = JSON.stringify(shell.serialize());
             const serializedShape = JSON.parse(model).board.find(entry => entry.type === 'ComponentShape');
             shell.openModel(model);
@@ -303,19 +340,23 @@ test.describe('analogue clock component', () => {
                 reloadedFaceColor: reloaded.properties.faceColor,
                 reloadedFaceFill: document.getElementById(reloaded.id).querySelector('circle').getAttribute('fill'),
                 reloadedHandRotation: reloaded.getInspectionReport().nodes.filter(node => node.sourceComponent === 'pointer-hand' && node.transform.startsWith('rotate('))[0].transform,
+                serializedLaps: serializedShape.properties.laps,
+                reloadedLaps: reloaded.properties.laps,
                 duplicateCount: duplicated.length,
                 duplicateComponent: duplicated[1].getComponentType()
             };
         });
         expect(roundTrip.serializedType).toBe('ComponentShape');
         expect(roundTrip.serializedSchemaVersion).toBe('1.0.0');
-        expect(roundTrip.serializedComponent).toBe('analogue-clock');
+        expect(roundTrip.serializedComponent).toBe('clock');
         expect(roundTrip.serializedFaceColor).toBe('#ffec99');
         expect(roundTrip.reloadedFaceColor).toBe('#ffec99');
         expect(roundTrip.reloadedFaceFill).toBe('#ffec99');
         expect(readRotation(roundTrip.reloadedHandRotation)).toBeCloseTo(105, 3);
+        expect(roundTrip.serializedLaps).toEqual([{ text: '00:00:01.500', x: 1.5 }, { text: '00:00:03.250', x: 3.25 }]);
+        expect(roundTrip.reloadedLaps).toEqual([{ text: '00:00:01.500', x: 1.5 }, { text: '00:00:03.250', x: 3.25 }]);
         expect(roundTrip.duplicateCount).toBe(2);
-        expect(roundTrip.duplicateComponent).toBe('analogue-clock');
+        expect(roundTrip.duplicateComponent).toBe('clock');
     });
 
     test('supports selection, move and resize like any other shape', async ({ page }) => {
@@ -340,13 +381,13 @@ test.describe('analogue clock component', () => {
         expect(result.faceRadius).toBeCloseTo(54, 3);
     });
 
-    test('drags a hand to write back into the model when interactive', async ({ page }) => {
+    test('drags a hand to write back into the model', async ({ page }) => {
         await setupBoard(page);
         await addEditableClockEquations(page);
         await addClock(page);
         const beforeMinute = await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Clock');
-            shape.setProperties({ interactive: true, showSecondHand: false });
+            shape.setProperties({ secondColor: 'transparent' });
             shape.draw();
             return shell.board.calculator.getByName('minute', 1);
         });
@@ -374,7 +415,7 @@ test.describe('analogue clock component', () => {
         await addClock(page);
         const points = await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Clock');
-            shape.setProperties({ interactive: true, showSecondHand: false, interactableForUsers: false });
+            shape.setProperties({ secondColor: 'transparent', interactableForUsers: false });
             shape.draw();
             const matrix = shell.board.svg.getScreenCTM();
             const centre = { x: shape.properties.x + shape.properties.width / 2, y: shape.properties.y + shape.properties.height / 2 };
@@ -400,7 +441,7 @@ test.describe('analogue clock component', () => {
         expect(await readClockHands(page)).toHaveLength(3);
         await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Clock');
-            shape.setProperties({ showMillisecondHand: true });
+            shape.setProperties({ millisecondColor: '#1871c2' });
             shape.draw();
         });
         await page.waitForTimeout(300);
@@ -432,14 +473,14 @@ test.describe('analogue clock component', () => {
         expect(await readClockHands(page)).toHaveLength(0);
         await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Clock');
-            shape.setProperties({ showMillisecondHand: true });
+            shape.setProperties({ millisecondColor: '#1871c2' });
             shape.draw();
         });
         await page.waitForTimeout(300);
         expect(await readClockDigits(page)).toBe('03:30:15.250');
         await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Clock');
-            shape.setProperties({ showSecondHand: false, showMillisecondHand: false });
+            shape.setProperties({ secondColor: 'transparent', millisecondColor: 'transparent' });
             shape.draw();
         });
         await page.waitForTimeout(300);
@@ -452,7 +493,7 @@ test.describe('analogue clock component', () => {
         await addClock(page);
         await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Clock');
-            shape.setProperties({ shownAs: 'digital', showMillisecondHand: true });
+            shape.setProperties({ shownAs: 'digital', millisecondColor: '#1871c2' });
             shape.draw();
         });
         await page.waitForTimeout(300);
@@ -467,7 +508,7 @@ test.describe('analogue clock component', () => {
         await addClock(page);
         await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Clock');
-            shape.setProperties({ shownAs: 'digital', showMillisecondHand: true });
+            shape.setProperties({ shownAs: 'digital', millisecondColor: '#1871c2' });
             shape.draw();
         });
         await page.waitForTimeout(300);
@@ -486,7 +527,7 @@ test.describe('analogue clock component', () => {
         await key.click();
         await page.waitForTimeout(400);
         const menu = page.locator('.mdl-shape-overlay-popup').last();
-        expect(await menu.locator('.mdl-dropdown-list-label').allTextContents()).toEqual(['analogue', 'digital']);
+        expect(await menu.locator('.mdl-dropdown-list-label').allTextContents()).toEqual(['Analogue', 'Digital']);
         await menu.locator('.dx-list-item').nth(1).click();
         await page.waitForTimeout(500);
         expect(await page.evaluate(() => shell.board.shapes.getByName('Clock').properties.shownAs)).toBe('digital');
@@ -509,7 +550,7 @@ test.describe('analogue clock component', () => {
         await page.waitForTimeout(400);
         const labels = await page.$$eval('.mdl-shape-overlay-popup .mdl-dropdown-list-label',
             elements => elements.map(element => element.textContent.trim()));
-        expect(labels).toEqual(['Show seconds', 'Show milliseconds', 'Buttons']);
+        expect(labels).toEqual(['Buttons']);
     });
 
     test('the keys are drawn once they are asked for, and the face makes room for them', async ({ page }) => {
@@ -544,7 +585,7 @@ test.describe('analogue clock component', () => {
         await page.waitForTimeout(1200);
         const counted = await readClockTerms(page);
         expect(counted.second).toBeGreaterThanOrEqual(1);
-        await pressClockKey(page, 'pause');
+        await pressClockKey(page, 'play');
         await page.waitForTimeout(500);
         const held = await readClockTerms(page);
         await page.waitForTimeout(700);
@@ -563,8 +604,8 @@ test.describe('analogue clock component', () => {
         await setupBoard(page);
         await addRunnableClockEquations(page);
         await page.evaluate(() => {
-            const shape = shell.commands.addComponent('analogue-clock', 'Clock');
-            shape.setProperties({ x: 240, y: 140, width: 240, height: 280, showControls: true, showMillisecondHand: true });
+            const shape = shell.commands.addComponent('clock', 'Clock');
+            shape.setProperties({ x: 240, y: 140, width: 240, height: 280, showControls: true, millisecondColor: '#1871c2' });
             shape.draw();
         });
         await page.waitForTimeout(300);
@@ -572,13 +613,369 @@ test.describe('analogue clock component', () => {
         await pressClockKey(page, 'play');
         await page.waitForTimeout(1200);
         expect(await readOwn()).toBeGreaterThanOrEqual(1);
-        await pressClockKey(page, 'pause');
+        await pressClockKey(page, 'play');
         await page.waitForTimeout(400);
         const held = await readOwn();
         expect(held).toBeGreaterThanOrEqual(1);
         await pressClockKey(page, 'stop');
         await page.waitForTimeout(300);
         expect(await readOwn()).toBe(0);
+    });
+
+    // A thousandth is a sixtieth of a degree on the second hand, so the hand that counts seconds
+    // carries the thousandths it is standing in rather than waiting for the next whole one.
+    test('the second hand sweeps through the thousandths rather than stepping whole seconds', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'hour=3\\\\minute=30\\\\second=15\\\\milli=0');
+        await addClock(page);
+        expect(readRotation((await readClockHands(page))[2])).toBeCloseTo(90, 3);
+        for (const [milli, degrees] of [[250, 91.5], [500, 93], [999, 95.994]]) {
+            await page.evaluate(milli => {
+                shell.board.shapes.getByName('Clock equations').properties.expression = `hour=3\\\\minute=30\\\\second=15\\\\milli=${milli}`;
+                shell.reset();
+                shell.board.forceRefresh();
+            }, milli);
+            await page.waitForTimeout(400);
+            expect(readRotation((await readClockHands(page))[2])).toBeCloseTo(degrees, 3);
+        }
+    });
+
+    // A clock whose millisecond row names nothing the model holds has no thousandths to carry, so
+    // its second hand steps a whole mark at a time exactly as it did before it could sweep.
+    test('the second hand steps whole marks when there are no thousandths to read', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'hour=3\\\\minute=30\\\\second=15');
+        await addClock(page);
+        expect(readRotation((await readClockHands(page))[2])).toBeCloseTo(90, 3);
+    });
+
+    // The whole clock can be read off the model's own time instead of four rows of its own: the
+    // parts are worked out from it, so a model that never mentions an hour still keeps one.
+    test('reads the independent variable as a count of seconds when it is asked to', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, '\\frac{dx}{dt}=0');
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('clock', 'Clock');
+            shape.setProperties({ x: 240, y: 160, width: 220, height: 220, syncedWithPlayer: true, shownAs: 'digital', millisecondColor: '#1871c2' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        expect(await readClockDigits(page)).toBe('00:00:00.000');
+        // t = 3725.5 s is one hour, two minutes, five seconds and a half.
+        await page.evaluate(() => {
+            shell.board.calculator.properties.independent.start = 3725.5;
+            shell.reset();
+            shell.board.forceRefresh();
+        });
+        await page.waitForTimeout(400);
+        expect(await readClockDigits(page)).toBe('01:02:05.500');
+    });
+
+    // The rows are the other way of reading the time, so they are not worth offering while the model
+    // is what the clock is reading.
+    // The rows stay whichever way the clock is reading the time. A clock the model moves still has
+    // four hands, and the colour each is drawn in is chosen on its own row, so taking the rows away
+    // would take the colours with them. The switch is named after the term it hands the clock to.
+    test('the rows stay when the clock is handed to the model', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page);
+        await addClock(page);
+        const readRows = () => page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            return BlockObjects.getEditableParameters(shape.properties.definition)
+                .filter(parameter => (parameter.category ?? 'general') === 'model')
+                .filter(parameter => shape.isComponentParameterOffered(parameter))
+                .map(parameter => parameter.label);
+        });
+        const rows = ['Use independent', 'Hour', 'Minute', 'Second', 'Millisecond'];
+        expect(await readRows()).toEqual(rows);
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            shape.setProperties({ syncedWithPlayer: true });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        expect(await readRows()).toEqual(rows);
+    });
+
+    // One key does the work of two: it wears the mark for what pressing it would do next, so a clock
+    // standing still offers play and a clock counting offers pause.
+    test('the first key both starts the run and holds it, and wears the mark for what it would do', async ({ page }) => {
+        await setupBoard(page);
+        await addRunnableClockEquations(page);
+        await addRunnableClock(page);
+        const readMarks = () => page.evaluate(() => Array.from(
+            document.getElementById(shell.board.shapes.getByName('Clock').id).querySelectorAll('[data-block-id$=":play-mark"], [data-block-id$=":pause-mark"]'))
+            .map(node => node.getAttribute('data-block-id').split(':').pop()));
+        expect(await readMarks()).toContain('play-mark');
+        expect(await readMarks()).not.toContain('pause-mark');
+        await pressClockKey(page, 'play');
+        await page.waitForTimeout(400);
+        expect(await readMarks()).toContain('pause-mark');
+        expect(await readMarks()).not.toContain('play-mark');
+        const counted = await readClockTerms(page);
+        await pressClockKey(page, 'play');
+        await page.waitForTimeout(500);
+        expect(await readMarks()).toContain('play-mark');
+        const held = await readClockTerms(page);
+        expect(held.second).toBeGreaterThanOrEqual(counted.second);
+        await page.waitForTimeout(600);
+        expect(await readClockTerms(page)).toEqual(held);
+    });
+
+    // The lap key keeps the reading as it stands, and the stop key forgets every lap along with the
+    // run that made them.
+    test('the lap key keeps the reading, the list shows it and stop forgets them', async ({ page }) => {
+        await setupBoard(page);
+        await addRunnableClockEquations(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('clock', 'Clock');
+            shape.setProperties({ x: 240, y: 120, width: 240, height: 360, showControls: true, showLaps: true, millisecondColor: '#1871c2', hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', millisecondVariable: 'milli' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        const readLaps = () => page.evaluate(() => shell.board.shapes.getByName('Clock').properties.laps ?? []);
+        const readListLabels = () => page.evaluate(() => Array.from(
+            document.getElementById(shell.board.shapes.getByName('Clock').id).querySelectorAll('[data-block-id*="lap-list"][data-block-id$=":label"]'))
+            .map(node => node.textContent));
+        expect(await readLaps()).toEqual([]);
+        await pressClockKey(page, 'play');
+        await page.waitForTimeout(900);
+        await pressClockKey(page, 'lap');
+        await page.waitForTimeout(300);
+        await page.waitForTimeout(700);
+        await pressClockKey(page, 'lap');
+        await page.waitForTimeout(300);
+        const laps = await readLaps();
+        expect(laps).toHaveLength(2);
+        expect(laps[1].x).toBeGreaterThan(laps[0].x);
+        expect(await readListLabels()).toHaveLength(2);
+        await pressClockKey(page, 'stop');
+        await page.waitForTimeout(400);
+        expect(await readLaps()).toEqual([]);
+        expect(await readListLabels()).toHaveLength(0);
+    });
+
+    // A clock the model moves is not counted by the keys, so neither the one that would count it nor
+    // the one that would clear it is offered; the lap key is, because taking a reading is still
+    // something the reader does. The laps such a clock takes are emptied from the bin.
+    test('only the lap key is offered while the model is what moves the clock', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, '\\frac{dx}{dt}=0');
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('clock', 'Clock');
+            shape.setProperties({ x: 240, y: 120, width: 240, height: 360, showControls: true, showLaps: true, syncedWithPlayer: true });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        const readKeys = () => page.evaluate(() => Array.from(
+            document.getElementById(shell.board.shapes.getByName('Clock').id).querySelectorAll('[data-block-id$="-press"]'))
+            .map(node => node.getAttribute('data-block-id').split(':').pop()));
+        expect(await readKeys()).toEqual(['lap-press']);
+        await pressClockKey(page, 'lap');
+        await page.waitForTimeout(300);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Clock').properties.laps)).toHaveLength(1);
+    });
+
+    // What a part of the reading is drawn in is chosen beside the term that names it, so the colour
+    // and the reading it paints are named together — the hand on the face, and that field's own
+    // digits on the panel.
+    test('every row carries the colour its part is read in, on the face and on the digits alike', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page);
+        await addClock(page);
+        const rowColours = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            shape.setProperties({ millisecondColor: '#1871c2' });
+            shape.draw();
+            return BlockObjects.getEditableParameters(shape.properties.definition)
+                .filter(parameter => parameter.valueType === 'variable')
+                .map(parameter => [parameter.label, parameter.colorParameter]);
+        });
+        expect(rowColours).toEqual([['Hour', 'hourColor'], ['Minute', 'minuteColor'], ['Second', 'secondColor'], ['Millisecond', 'millisecondColor']]);
+
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            shape.setProperties({ hourColor: '#111111', minuteColor: '#222222', secondColor: '#333333', millisecondColor: '#444444' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        const hands = await page.evaluate(() => ['hour-hand', 'minute-hand', 'second-hand', 'millisecond-hand'].map(name => {
+            const element = document.getElementById(shell.board.shapes.getByName('Clock').id)
+                .querySelector(`[data-block-id*="${name}"] polygon, [data-block-id*="${name}"] line, polygon[data-block-id*="${name}"], line[data-block-id*="${name}"]`);
+            const stroke = element.getAttribute('stroke');
+            return stroke && stroke !== 'none' ? stroke : element.getAttribute('fill');
+        }));
+        expect(hands).toEqual(['#111111', '#222222', '#333333', '#444444']);
+
+        // The panel spells the same reading in the same four colours, a field at a time, with the
+        // marks between them left in the number colour.
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            shape.setProperties({ shownAs: 'digital', numberColor: '#555555' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        const lampsByCharacter = await page.evaluate(() => {
+            const element = document.getElementById(shell.board.shapes.getByName('Clock').id);
+            const found = {};
+            for (const node of element.querySelectorAll('polygon[data-block-id*=":character-"]')) {
+                const index = Number(node.getAttribute('data-block-id').split(':').pop().split('-')[1]);
+                found[index] = node.getAttribute('fill');
+            }
+            return Object.keys(found).sort((first, second) => Number(first) - Number(second)).map(index => found[index]);
+        });
+        expect(lampsByCharacter).toEqual([
+            '#111111', '#111111', '#555555', '#222222', '#222222', '#555555',
+            '#333333', '#333333', '#555555', '#444444', '#444444', '#444444'
+        ]);
+    });
+
+    // A colour a row already names is chosen on that row, and the border every shape has is the one
+    // the shape menu already carries, so neither is offered a second time in the colour list.
+    test('the colour list leaves out what a row names and what the shape menu already has', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page);
+        await addClock(page);
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            shape.setProperties({ millisecondColor: '#1871c2' });
+            shape.draw();
+            shell.board.selection.select(shape);
+        });
+        await page.waitForTimeout(400);
+        await page.locator('.shape-context-toolbar.visible .mdl-shape-color-selector').click();
+        await page.waitForTimeout(400);
+        const labels = await page.$$eval('.mdl-shape-overlay-popup .dx-list-item-content',
+            elements => elements.map(element => element.textContent.trim().split('\n')[0]));
+        expect(labels.filter(label => label === 'Border')).toHaveLength(1);
+        for (const gone of ['Hour', 'Minute', 'Second', 'Millisecond'])
+            expect(labels).not.toContain(gone);
+        // What is left keeps its name without the word the swatch itself already says.
+        expect(labels).toEqual(expect.arrayContaining(['Face', 'Number']));
+        expect(labels.join('|').toLowerCase()).not.toContain('colour');
+    });
+
+    // A hand is dragged whenever the term it names is one the model lets you set, so there is no
+    // switch to turn dragging on: what decides it is the term, the way it decides every other
+    // drawing of a value the reader can change.
+    test('hands are dragged without a switch saying they may be', async ({ page }) => {
+        await setupBoard(page);
+        await addEditableClockEquations(page);
+        await addClock(page);
+        const offered = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            return BlockObjects.getEditableParameters(shape.properties.definition).map(parameter => parameter.id);
+        });
+        expect(offered).not.toContain('interactive');
+        const points = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Clock');
+            const matrix = shell.board.svg.getScreenCTM();
+            const centre = { x: shape.properties.x + shape.properties.width / 2, y: shape.properties.y + shape.properties.height / 2 };
+            const start = new DOMPoint(centre.x, centre.y + 60).matrixTransform(matrix);
+            const target = new DOMPoint(centre.x + 60, centre.y).matrixTransform(matrix);
+            return { start: { x: start.x, y: start.y }, target: { x: target.x, y: target.y } };
+        });
+        await page.mouse.move(points.start.x, points.start.y);
+        await page.mouse.down();
+        await page.mouse.move(points.target.x, points.target.y, { steps: 10 });
+        await page.mouse.up();
+        await page.waitForTimeout(400);
+        expect(await page.evaluate(() => shell.board.calculator.getByName('minute', 1))).toBeCloseTo(15, 1);
+    });
+
+    // A clock the model moves is not the reader's to point: the rows stay, so the colours can still
+    // be chosen, but the selectors go quiet and only the lap key is worth offering.
+    test('the rows go quiet and only the lap key is left when the model drives the clock', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('clock', 'Clock');
+            shape.setProperties({ x: 240, y: 140, width: 240, height: 300, showControls: true, hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second' });
+            shape.draw();
+            shell.board.selection.select(shape);
+        });
+        await page.waitForTimeout(500);
+        const readKeys = () => page.evaluate(() => Array.from(
+            document.getElementById(shell.board.shapes.getByName('Clock').id).querySelectorAll('[data-block-id$="-press"]'))
+            .map(node => node.getAttribute('data-block-id').split(':').pop()));
+        expect(await readKeys()).toEqual(['play-press', 'lap-press', 'stop-press']);
+
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.waitForTimeout(500);
+        const readMenu = () => page.evaluate(() => {
+            const popups = document.querySelectorAll('.mdl-shape-overlay-popup');
+            const last = popups[popups.length - 1];
+            return {
+                selectors: last.querySelectorAll('.dx-dropdownbox').length,
+                quiet: last.querySelectorAll('.dx-dropdownbox.dx-state-disabled').length,
+                swatches: last.querySelectorAll('.dx-colorbox').length
+            };
+        });
+        const before = await readMenu();
+        expect(before.quiet).toBe(0);
+
+        // The source is picked from the switch on the row above the terms.
+        const sourceSwitch = page.locator('.mdl-shape-overlay-popup .dx-switch').first();
+        await expect(sourceSwitch).toHaveCount(1);
+        await sourceSwitch.click();
+        await page.waitForTimeout(600);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Clock').properties.syncedWithPlayer)).toBe(true);
+
+        const after = await readMenu();
+        expect(after.selectors).toBe(before.selectors);
+        expect(after.quiet).toBe(after.selectors);
+        expect(after.swatches).toBe(before.swatches);
+        expect(await readKeys()).toEqual(['lap-press']);
+
+        // A row no longer choosing its term shows nothing, and the key above says what every hand is
+        // reading instead: the model's own clock, under whatever name the model gave it.
+        const reading = await page.evaluate(() => {
+            const popups = document.querySelectorAll('.mdl-shape-overlay-popup');
+            const last = popups[popups.length - 1];
+            const button = document.querySelector('.shape-context-toolbar.visible .mdl-component-model-selector');
+            return {
+                selectors: Array.from(last.querySelectorAll('.dx-dropdownbox')).map(node => node.textContent.trim()),
+                keyTerms: Array.from(button.querySelectorAll('.mdl-name-btn-term-text')).map(node => node.textContent.trim()),
+                stored: shell.board.shapes.getByName('Clock').properties.hourVariable
+            };
+        });
+        expect(reading.selectors).toEqual(['', '', '', '']);
+        // One reading shared by every hand is named once, not once per hand.
+        expect(reading.keyTerms).toEqual(['t']);
+        // The terms are still on the object, so switching back finds them where they were left.
+        expect(reading.stored).toBe('hour');
+    });
+
+    // The clock was called "analogue-clock" before it was called "clock", and the files already saved
+    // carry the old name. It still finds the block, so a model is never reopened to be told its clock
+    // no longer exists — but it is the new name alone that the editor lists and offers.
+    test('a clock saved under its old type still registers, draws and reads its parameters', async ({ page }) => {
+        await setupBoard(page);
+        const result = await page.evaluate(() => {
+            const shape = shell.commands.addComponent('clock', 'Clock');
+            const definition = shape.properties.definition;
+            definition.root.type = 'analogue-clock';
+            definition.type = 'analogue-clock';
+            shape.setProperties({ x: 240, y: 160, width: 200, height: 200, definition: definition });
+            shape.draw();
+            return {
+                found: BlockRegistry.has('analogue-clock'),
+                resolvesTo: BlockRegistry.get('analogue-clock').type,
+                isComponent: BlockObjects.isComponentInstance(definition),
+                parameterCount: BlockObjects.getComponentParameters('analogue-clock').length,
+                circles: document.getElementById(shape.id).querySelectorAll('circle').length,
+                hands: document.getElementById(shape.id).querySelectorAll('polygon').length,
+                listed: BlockRegistry.list('component').map(entry => entry.type).filter(type => type.includes('clock'))
+            };
+        });
+        expect(result.found).toBe(true);
+        expect(result.resolvesTo).toBe('clock');
+        expect(result.isComponent).toBe(true);
+        expect(result.parameterCount).toBeGreaterThan(10);
+        expect(result.circles).toBeGreaterThanOrEqual(2);
+        expect(result.hands).toBeGreaterThanOrEqual(2);
+        expect(result.listed).toEqual(['clock']);
     });
 
     test('the keys are locked when the model works the reading out for itself', async ({ page }) => {

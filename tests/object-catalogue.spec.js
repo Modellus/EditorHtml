@@ -127,7 +127,7 @@ test.describe('object catalogue', () => {
         await openPicker(page);
         await page.waitForTimeout(500);
         const keys = await readKeys(page);
-        expect(keys).toContain('analogue-clock');
+        expect(keys).toContain('clock');
         expect(keys).not.toContain('pendulum-swing');
     });
 
@@ -157,15 +157,15 @@ test.describe('object catalogue', () => {
 
     test('a catalogue object may not replace one the editor ships with', async ({ page }) => {
         await stubCatalogue(page, {
-            items: [Object.assign({}, CATALOGUE_ENTRY, { id: 'obj-2', type: 'analogue-clock', title: 'Impostor clock' })],
-            definition: Object.assign({}, CATALOGUE_DEFINITION, { type: 'analogue-clock', displayName: 'Impostor clock' })
+            items: [Object.assign({}, CATALOGUE_ENTRY, { id: 'obj-2', type: 'clock', title: 'Impostor clock' })],
+            definition: Object.assign({}, CATALOGUE_DEFINITION, { type: 'clock', displayName: 'Impostor clock' })
         });
         await setupBoard(page);
         await openPicker(page);
-        await page.waitForSelector('[data-object-key="analogue-clock"]');
-        await page.click('[data-object-key="analogue-clock"]');
+        await page.waitForSelector('[data-object-key="clock"]');
+        await page.click('[data-object-key="clock"]');
         await page.waitForTimeout(400);
-        expect(await page.evaluate(() => BlockRegistry.get('analogue-clock').displayName)).toBe('Analogue clock');
-        expect(await page.evaluate(() => BlockObjects.getComponentType(shell.shapeDrawController.pendingShapeProperties.definition))).toBe('analogue-clock');
+        expect(await page.evaluate(() => BlockRegistry.get('clock').displayName)).toBe('Clock');
+        expect(await page.evaluate(() => BlockObjects.getComponentType(shell.shapeDrawController.pendingShapeProperties.definition))).toBe('clock');
     });
 });

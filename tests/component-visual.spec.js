@@ -27,7 +27,7 @@ async function compileMarkup(page, componentType, preset, size, overrides = {}) 
         const definition = BlockObjects.createComponentInstance(componentType, { preset: preset });
         const parameters = BlockObjects.getInstancePropertyDefaults(componentType, preset);
         const modelParameters = {
-            'analogue-clock': { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', millisecondVariable: 'milli' },
+            'clock': { hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second', millisecondVariable: 'milli' },
             compass: { headingVariable: 'heading' },
             speedometer: { valueVariable: 'speed', unit: 'km/h' },
             'circular-gauge': { valueVariable: 'speed', unit: '%' },
@@ -43,7 +43,7 @@ async function compileMarkup(page, componentType, preset, size, overrides = {}) 
 }
 
 test.describe('component visual snapshots', () => {
-    const components = ['analogue-clock', 'compass', 'speedometer', 'circular-gauge', 'rotating-vector', 'orbit-system', 'thermometer'];
+    const components = ['clock', 'compass', 'speedometer', 'circular-gauge', 'rotating-vector', 'orbit-system', 'thermometer'];
 
     for (const componentType of components) {
         test(`${componentType} renders identical markup for the same values`, async ({ page }) => {
@@ -85,18 +85,18 @@ test.describe('component visual snapshots', () => {
         await setupBoard(page);
         await addModel(page);
         for (const size of [120, 200, 320]) {
-            const markup = await compileMarkup(page, 'analogue-clock', 'standard', size);
-            expect(markup).toMatchSnapshot(`analogue-clock-${size}.svg`);
+            const markup = await compileMarkup(page, 'clock', 'standard', size);
+            expect(markup).toMatchSnapshot(`clock-${size}.svg`);
         }
     });
 
     test('clock markup is stable with the millisecond hand and as a digital readout', async ({ page }) => {
         await setupBoard(page);
         await addModel(page);
-        const withMilliseconds = await compileMarkup(page, 'analogue-clock', 'standard', 200, { showMillisecondHand: true });
-        expect(withMilliseconds).toMatchSnapshot('analogue-clock-milliseconds.svg');
-        const digital = await compileMarkup(page, 'analogue-clock', 'standard', 200, { shownAs: 'digital', showMillisecondHand: true });
-        expect(digital).toMatchSnapshot('analogue-clock-digital.svg');
+        const withMilliseconds = await compileMarkup(page, 'clock', 'standard', 200, { millisecondColor: '#1871c2' });
+        expect(withMilliseconds).toMatchSnapshot('clock-milliseconds.svg');
+        const digital = await compileMarkup(page, 'clock', 'standard', 200, { shownAs: 'digital', millisecondColor: '#1871c2' });
+        expect(digital).toMatchSnapshot('clock-digital.svg');
     });
 
     test('clock on the board looks the same plain, selected and zoomed', async ({ page }) => {
@@ -104,7 +104,7 @@ test.describe('component visual snapshots', () => {
         await addModel(page);
         await page.evaluate(() => {
             document.querySelectorAll('svg .shape-context-toolbar').forEach(node => node.remove());
-            const shape = shell.commands.addComponent('analogue-clock', 'Clock');
+            const shape = shell.commands.addComponent('clock', 'Clock');
             shape.setProperties({ x: 60, y: 60, width: 200, height: 200, hourVariable: 'hour', minuteVariable: 'minute', secondVariable: 'second' });
             shape.draw();
             shell.board.deselect();
