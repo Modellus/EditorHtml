@@ -15,6 +15,7 @@ if (typeof BlocksRegistry !== "undefined") {
                 multiline: true,
                 useScrollView: true,
                 value: this.block.content || "\\displaylines{}",
+                getSemanticMetadata: () => this.getSemanticMetadata(),
                 onInput: () => this.onInput()
             });
             this.expressionControl.create(expressionContainer);
@@ -23,6 +24,7 @@ if (typeof BlocksRegistry !== "undefined") {
 
         onInput() {
             this.block.content = this.expressionControl.getValue();
+            this.expressionControl.scheduleSemanticColoring();
             this.markChanged();
             this.notebookEditor._reparseExpressions();
         }
@@ -43,6 +45,11 @@ if (typeof BlocksRegistry !== "undefined") {
 
         insert(text) {
             this.insertShortcut(text);
+        }
+
+        getSemanticMetadata() {
+            const functionNames = this.expressionControl.getExpressionFunctionShortcuts().map(shortcut => shortcut.shortcutText);
+            return MathSemanticMetadata.fromCalculator(this.notebookEditor.calculator, this.expressionControl.getCanonicalValue(), functionNames, "Unknown term");
         }
 
         getTemplateShortcuts() {

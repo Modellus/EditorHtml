@@ -53,7 +53,7 @@ class MathliveController {
     getTextRange(startPosition, endPosition) {
         if (endPosition <= startPosition)
             return "";
-        return this.mathfield.getValue(startPosition, endPosition);
+        return this.mathfield.getValue([startPosition, endPosition], "latex-unstyled");
     }
 
     handleBackspaceKeydown(keydownEvent) {
@@ -89,7 +89,7 @@ class MathliveController {
     }
 
     applyDifferentialFractionNormalization() {
-        const expressionLatex = this.mathfield.getValue();
+        const expressionLatex = this.mathfield.getValue("latex-unstyled");
         const differentialFractionPattern = /\\frac\{d\s*([A-Za-z][A-Za-z0-9]*)\}\{d\s*([A-Za-z][A-Za-z0-9]*)\}/g;
         const savedCaretPosition = this.mathfield.position;
         const normalizedExpressionLatex = expressionLatex.replace(differentialFractionPattern, (matchedLatex, numeratorVariableName, denominatorVariableName, matchOffset) => {

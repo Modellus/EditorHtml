@@ -45,6 +45,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
             useScrollView: true,
             value: this.flattenNestedDisplaylines(this.properties.expression ?? "\\displaylines{}"),
             getTemplateShortcuts: () => this.getTemplateShortcuts(),
+            getSemanticMetadata: () => this.getSemanticMetadata(),
             onOpenShortcuts: () => this.openShortcutsPalette(),
             onInput: _ => {
                 this.mathfield = this.expressionControl.mathfield;
@@ -77,6 +78,11 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
 
     syncHandwrittenStyle() {
         this.expressionControl?.syncHandwrittenStyle();
+    }
+
+    getSemanticMetadata() {
+        const functionNames = this.expressionControl.getExpressionFunctionShortcuts().map(shortcut => shortcut.shortcutText);
+        return MathSemanticMetadata.fromCalculator(this.board.calculator, this.expressionControl.getCanonicalValue(), functionNames, this.board.translations.get("Unknown Term"));
     }
 
     getTemplateShortcuts() {
@@ -128,7 +134,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     }
 
     fixContentOutsideDisplaylines() {
-        const value = this.mathfield.getValue();
+        const value = this.mathfield.getValue("latex-unstyled");
         const prefix = '\\displaylines{';
         if (!value.startsWith(prefix))
             return;
@@ -152,6 +158,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         const savedPosition = this.mathfield.position;
         this.mathfield.value = `${prefix}${inside}${leaked}}`;
         this.mathfield.position = Math.min(savedPosition, this.mathfield.lastOffset);
+        this.expressionControl.scheduleSemanticColoring();
         this.syncExpressionFromMathfield();
     }
 
@@ -161,7 +168,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
             const flattened = this.flattenNestedDisplaylines(properties.expression);
             const wrapped = flattened?.startsWith("\\displaylines{") ? flattened : `\\displaylines{${flattened ?? ""}}`;
             const ensured = Utils.writeTermNames(wrapped);
-            this.mathfield.value = ensured;
+            this.expressionControl.setValue(ensured);
             this.properties.expression = ensured;
             this._committedExpression = ensured;
         }
@@ -174,9 +181,11 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     }
 
     syncExpressionFromMathfield() {
-        const rawExpression = this.mathfield.getValue();
+        const rawExpression = this.expressionControl.getCanonicalValue();
         const expression = rawExpression.startsWith("\\displaylines{") ? rawExpression : `\\displaylines{${rawExpression}}`;
         if (expression === this.properties.expression)
+            return;
+        if (this.isClearedByAnUnfocusedMathfield(expression))
             return;
         if (this._committedExpression === undefined)
             this._committedExpression = this.properties.expression;
@@ -194,6 +203,18 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
                 this.board.invoker.record(command);
             }
         }, 300);
+    }
+
+    isClearedByAnUnfocusedMathfield(expression) {
+        if (!ExpressionShape.isEmptyExpression(expression))
+            return false;
+        if (ExpressionShape.isEmptyExpression(this.properties.expression))
+            return false;
+        return !this.mathfield.hasFocus();
+    }
+
+    static isEmptyExpression(expression) {
+        return String(expression ?? "").replace(/\\displaylines\{|\}|\s/g, "") === "";
     }
 
     onChange() {
@@ -247,6 +268,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     }
 
     update() {
+        this.expressionControl?.scheduleSemanticColoring();
         this.foreignObject.style.backgroundColor = this.properties.backgroundColor;
         this.applyBorderStyle(this.container, 1);
         this.mathfield.style.color = this.properties.foregroundColor;

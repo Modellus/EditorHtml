@@ -25,7 +25,7 @@ async function focusExpression(page, name) {
 }
 
 async function getExpressionValue(page, name) {
-    return page.evaluate(n => shell.board.shapes.getByName(n).mathfield.getValue(), name);
+    return page.evaluate(n => shell.board.shapes.getByName(n).mathfield.getValue('latex-unstyled'), name);
 }
 
 test.describe('Named term parts', () => {
@@ -115,7 +115,7 @@ test.describe('Named term parts', () => {
             shape.setProperties({ expression: '\\displaylines{v.x=3\\\\a=v.x \\cdot 2}' });
             shell.reset();
             return {
-                mathfieldValue: shape.mathfield.getValue(),
+                mathfieldValue: shape.mathfield.getValue('latex-unstyled'),
                 expression: shape.properties.expression,
                 terms: shell.board.calculator.getTermsNames()
             };

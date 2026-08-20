@@ -19,7 +19,7 @@ async function addExpression(page, name) {
 async function getExpressionValue(page, name) {
     return page.evaluate(n => {
         const shape = shell.board.shapes.getByName(n);
-        return shape.mathfield.getValue();
+        return shape.mathfield.getValue('latex-unstyled');
     }, name);
 }
 
@@ -164,7 +164,7 @@ test.describe('Differential expansion caret placement', () => {
             return {
                 currentPosition: shape.mathfield.position,
                 groupEndPosition,
-                value: shape.mathfield.getValue()
+                value: shape.mathfield.getValue('latex-unstyled')
             };
         });
         expect(positionCheck.value).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}');
@@ -275,7 +275,7 @@ test.describe('Keyboard shortcuts', () => {
         expect(indexShortcut.insertText).toBe('\\placeholder{}_{\\placeholder{}}');
         await focusExpression(page, 'Expr1');
         await page.keyboard.press('Control+.');
-        const renderedIndex = await page.locator('.mdl-shortcuts-palette-tile').nth(3).locator('math-field').evaluate(mathfield => mathfield.getValue());
+        const renderedIndex = await page.locator('.mdl-shortcuts-palette-tile').nth(3).locator('math-field').evaluate(mathfield => mathfield.getValue('latex-unstyled'));
         expect(renderedIndex).not.toContain('\\_');
         expect(renderedIndex).toMatch(/^x_\{?i\}?$/);
     });

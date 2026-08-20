@@ -108,6 +108,22 @@
             <span>Use multiple small Expression shapes grouped by theme (parameters, equations, derived quantities) to keep your model organized and readable.</span>
         </div>
 
+        <h2>Reading an Expression</h2>
+        <p>When a shape holds two or more equations, they are shown as one block sharing a single equals-sign column: the left-hand sides are right-aligned against the equals sign, the right-hand sides are left-aligned after it, and the block is centred in the card. Only the primary equals sign of each line is aligned — an equals sign inside a condition, a fraction or brackets is left where it is. A shape holding a single equation is shown as before. Alignment is presentation only: the model still stores one plain line per equation.</p>
+        <img src="/docs/screenshots/expression-semantics-light.png" alt="Three expression shapes showing aligned equations with semantic colours" class="screenshot">
+        <p>Every part of an expression is coloured by what it means:</p>
+        <ul>
+            <li><strong>Variables</strong> — dark blue</li>
+            <li><strong>Numbers</strong> — orange</li>
+            <li><strong>Operators, relations and brackets</strong> — neutral grey</li>
+            <li><strong>Functions</strong> such as <code>sin</code>, <code>ln</code> or <code>sqrt</code> — green</li>
+            <li><strong>Derivatives</strong> — the <code>d</code> of <code>dx/dt</code>, partial signs, primes and dot derivatives — magenta</li>
+            <li><strong>Qualifying subscripts</strong> such as the <code>c</code> of <code>K_c</code> — light blue</li>
+            <li><strong>Iteration indices</strong> such as the <code>n</code> of <code>x_n</code> — purple</li>
+            <li><strong>Warnings and errors</strong> — amber and red, with a badge in the corner of the card naming what is wrong</li>
+        </ul>
+        <p>The colours name a family, not a fixed shade. Each one is read from the <code>--math-*</code> theme tokens and then adjusted to the card it is painted on: the hue stays, the lightness moves until the text stands clear of the background, and the colour is deepened at the same time. A card painted white gets deep, saturated colours; a card painted black or dark grey gets bright ones; changing the card colour repaints the expression at once. Every colour keeps at least the contrast the accessibility guidelines ask for, and the operators are held one step quieter than the variables. The caret and the selection highlight follow the same rule, and so does the text colour of the card, which is what draws the brackets, the fraction bars and the root signs: it is left exactly as you chose it and only lifted when the card would otherwise swallow it. None of this reaches the model: an expression saved or copied out never carries a colour.</p>
+
         <h2>Toolbar</h2>
         <img src="/docs/screenshots/expression-toolbar.png" alt="Expression shape toolbar showing color picker, shortcuts picker, and delete button" class="screenshot">
         <p>The toolbar appears when you select an Expression shape. It provides:</p>

@@ -4,11 +4,15 @@ class ExpressionControl {
         this.containerElement = null;
         this.mathfield = null;
         this.mathliveController = null;
+        this.semanticDecorator = null;
+        this.diagnosticsElement = null;
+        this.colorSchemeQuery = null;
+        this.onColorSchemeChange = () => this.refreshSemanticColoring();
     }
 
     create(containerElement) {
         this.containerElement = containerElement;
-        $(this.containerElement).css({ width: "100%", height: "100%", "background-color": "transparent" });
+        $(this.containerElement).css({ width: "100%", height: "100%", "background-color": "transparent", position: "relative" });
         this.mathfield = new MathfieldElement();
         this.mathfield.style.setProperty("--contains-highlight-background-color", "transparent");
         this.mathfield.smartMode = false;
@@ -25,10 +29,12 @@ class ExpressionControl {
             };
             applyMathfieldUiPolicies();
             requestAnimationFrame(() => applyMathfieldUiPolicies());
+            this._installAlignedLayoutStyle();
             this._removeExpressionInlineShortcuts();
             this._installExpressionKeybindings();
             this.mathliveController = new MathliveController(this.mathfield);
             this.mathfield.addEventListener("keydown", keydownEvent => this._onKeyDown(keydownEvent), true);
+            this._createSemanticDecorator();
         });
         this.mathfield.addEventListener("input", inputEvent => this._onInput(inputEvent));
         if (this.options.onInput)
@@ -62,6 +68,127 @@ class ExpressionControl {
         const shortcutApplied = this._applyExpressionFunctionShortcuts();
         if (!shortcutApplied && this._shouldDeferRelationalShortcut(inputEvent))
             this._deferRelationalShortcutHandling();
+        this._scheduleAlignmentNormalization(inputEvent);
+        this.scheduleSemanticColoring();
+    }
+
+    _createSemanticDecorator() {
+        if (this.options.semanticColoring === false)
+            return;
+        this.semanticDecorator = new MathSemanticDecorator(this.mathfield, () => this.options.getSemanticMetadata?.() ?? null);
+        this.colorSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        this.colorSchemeQuery.addEventListener("change", this.onColorSchemeChange);
+        this.scheduleSemanticColoring();
+    }
+
+    scheduleSemanticColoring() {
+        if (!this.semanticDecorator)
+            return;
+        cancelAnimationFrame(this._semanticColoringFrame);
+        this._semanticColoringFrame = requestAnimationFrame(() => {
+            this._semanticColoringFrame = null;
+            this.refreshSemanticColoring();
+        });
+    }
+
+    refreshSemanticColoring() {
+        if (!this.semanticDecorator || !this.mathfield)
+            return;
+        this.semanticDecorator.refresh();
+        this._renderDiagnostics(this.semanticDecorator.getDiagnostics());
+    }
+
+    _renderDiagnostics(diagnostics) {
+        if (diagnostics.length === 0) {
+            this.diagnosticsElement?.remove();
+            this.diagnosticsElement = null;
+            this.mathfield.removeAttribute("aria-description");
+            return;
+        }
+        const hasError = diagnostics.some(diagnostic => diagnostic.role === MathSymbolRole.ERROR);
+        const messages = diagnostics.map(diagnostic => diagnostic.message).join("; ");
+        const iconClass = hasError ? "fa-light fa-circle-exclamation" : "fa-light fa-triangle-exclamation";
+        const severityClass = hasError ? "mdl-expression-diagnostics-error" : "mdl-expression-diagnostics-warning";
+        if (!this.diagnosticsElement) {
+            this.containerElement.insertAdjacentHTML("beforeend", `<div class="mdl-expression-diagnostics" role="status" aria-live="polite"></div>`);
+            this.diagnosticsElement = this.containerElement.querySelector(".mdl-expression-diagnostics");
+        }
+        this.diagnosticsElement.className = `mdl-expression-diagnostics ${severityClass}`;
+        this.diagnosticsElement.title = messages;
+        this.diagnosticsElement.innerHTML = `<i class="${iconClass}" aria-hidden="true"></i><span class="mdl-expression-diagnostics-count" aria-hidden="true">${diagnostics.length}</span><span class="mdl-expression-diagnostics-text">${messages}</span>`;
+        this.mathfield.setAttribute("aria-description", messages);
+    }
+
+    _scheduleAlignmentNormalization(inputEvent) {
+        if (this.options.alignEquations === false)
+            return;
+        const inputType = inputEvent?.inputType ?? "";
+        if (inputType === "historyUndo" || inputType === "historyRedo")
+            return;
+        cancelAnimationFrame(this._alignmentFrame);
+        this._alignmentFrame = requestAnimationFrame(() => {
+            this._alignmentFrame = null;
+            this.normalizeAlignment();
+        });
+    }
+
+    buildPresentedLatex(canonicalLatex) {
+        if (this.options.alignEquations === false)
+            return canonicalLatex;
+        const presentedLatex = ExpressionAlignment.toPresentation(canonicalLatex);
+        if (ExpressionAlignment.keepsContent(presentedLatex, canonicalLatex))
+            return presentedLatex;
+        return canonicalLatex;
+    }
+
+    readPresentedLatex() {
+        const unstyledLatex = this.mathfield.getValue("latex-unstyled");
+        if (unstyledLatex !== "")
+            return unstyledLatex;
+        return this.mathfield.getValue();
+    }
+
+    normalizeAlignment() {
+        if (this.options.alignEquations === false || !this.mathfield)
+            return false;
+        const presentedLatex = this.readPresentedLatex();
+        if (!ExpressionAlignment.needsNormalization(presentedLatex)) {
+            this.syncAlignedLayoutClass();
+            return false;
+        }
+        const normalizedLatex = this.buildPresentedLatex(presentedLatex);
+        if (normalizedLatex === presentedLatex)
+            return false;
+        const savedSelection = this._readSelectionLeafCounts();
+        this.mathfield.value = normalizedLatex;
+        this._restoreSelectionLeafCounts(savedSelection);
+        this.semanticDecorator?.invalidate();
+        this.scheduleSemanticColoring();
+        this.syncAlignedLayoutClass();
+        return true;
+    }
+
+    syncAlignedLayoutClass() {
+        this.mathfield.classList.toggle("mdl-expression-aligned", ExpressionAlignment.isAligned(this.readPresentedLatex()));
+    }
+
+    _readSelectionLeafCounts() {
+        const selectionRange = this.mathfield.selection?.ranges?.[0] ?? [this.mathfield.position, this.mathfield.position];
+        return {
+            start: MathSemanticDecorator.countLeavesBeforeOffset(this.mathfield, selectionRange[0]),
+            end: MathSemanticDecorator.countLeavesBeforeOffset(this.mathfield, selectionRange[1]),
+            direction: this.mathfield.selection?.direction ?? "none"
+        };
+    }
+
+    _restoreSelectionLeafCounts(savedSelection) {
+        const startOffset = MathSemanticDecorator.findOffsetForLeafCount(this.mathfield, savedSelection.start);
+        const endOffset = MathSemanticDecorator.findOffsetForLeafCount(this.mathfield, savedSelection.end);
+        if (startOffset === endOffset) {
+            this.mathfield.position = startOffset;
+            return;
+        }
+        this.mathfield.selection = { ranges: [[startOffset, endOffset]], direction: savedSelection.direction };
     }
 
     _shouldDeferRelationalShortcut(inputEvent) {
@@ -150,6 +277,16 @@ class ExpressionControl {
                 pointer-events: none !important;
             }
         `;
+    }
+
+    _installAlignedLayoutStyle() {
+        const shadowRoot = this.mathfield.shadowRoot;
+        if (!shadowRoot || shadowRoot.querySelector("#mdl-expression-aligned-layout"))
+            return;
+        const styleElement = document.createElement("style");
+        styleElement.id = "mdl-expression-aligned-layout";
+        styleElement.textContent = `:host(.mdl-expression-aligned) .ML__content { justify-content: center; } :host(.mdl-expression-aligned) .ML__latex { text-align: center; }`;
+        shadowRoot.appendChild(styleElement);
     }
 
     _getDeadKeyAction(keydownEvent) {
@@ -548,21 +685,38 @@ class ExpressionControl {
 
     _getRowAwareLatex(start, end) {
         const rowRanges = this._getRowRanges();
-        const rowLatexParts = [];
+        const selectedParts = [];
         for (let rowIndex = 0; rowIndex < rowRanges.length; rowIndex++) {
             const [rowStart, rowEnd] = rowRanges[rowIndex];
             if (rowStart === rowEnd) {
                 if (rowStart >= start && rowEnd <= end)
-                    rowLatexParts.push("");
+                    selectedParts.push({ index: rowIndex, latex: "" });
                 continue;
             }
             const partStart = Math.max(start, rowStart);
             const partEnd = Math.min(end, rowEnd);
             if (partEnd <= partStart)
                 continue;
-            rowLatexParts.push(this.mathfield.getValue([partStart, partEnd], "latex"));
+            selectedParts.push({ index: rowIndex, latex: this.mathfield.getValue([partStart, partEnd], "latex-unstyled") });
         }
-        return rowLatexParts.join("\\\\");
+        return this._joinCopiedParts(selectedParts);
+    }
+
+    _joinCopiedParts(selectedParts) {
+        const isAligned = ExpressionAlignment.isAligned(this.readPresentedLatex());
+        const rowsLatex = [];
+        let currentRowIndex = null;
+        for (let partIndex = 0; partIndex < selectedParts.length; partIndex++) {
+            const selectedPart = selectedParts[partIndex];
+            const rowIndex = isAligned ? Math.floor(selectedPart.index / 2) : selectedPart.index;
+            if (rowIndex === currentRowIndex)
+                rowsLatex[rowsLatex.length - 1] += selectedPart.latex;
+            else {
+                rowsLatex.push(selectedPart.latex);
+                currentRowIndex = rowIndex;
+            }
+        }
+        return rowsLatex.join("\\\\");
     }
 
     _splitTopLevelRows(latex) {
@@ -608,7 +762,7 @@ class ExpressionControl {
     copyToClipboardUsingMathlive() {
         let latex;
         if (this.mathfield.selectionIsCollapsed)
-            latex = this.mathfield.getValue("latex");
+            latex = this.getCanonicalValue();
         else {
             const [start, end] = this._getSelectionRange();
             latex = this._getRowAwareLatex(start, end);
@@ -630,6 +784,8 @@ class ExpressionControl {
                 if (expressionRows[rowIndex])
                     this.mathfield.executeCommand("insert", expressionRows[rowIndex]);
             }
+            this.normalizeAlignment();
+            this.scheduleSemanticColoring();
         } catch (_) {
         }
     }
@@ -644,11 +800,24 @@ class ExpressionControl {
     // Names written with a dot, as they come from the parser or from a saved model, are written back as
     // named subscripts so a name always reads the same way, whoever wrote it.
     setValue(value) {
-        this.mathfield.value = Utils.writeTermNames(value);
+        const canonicalLatex = Utils.writeTermNames(value);
+        this.mathfield.value = this.buildPresentedLatex(canonicalLatex);
+        this.semanticDecorator?.invalidate();
+        this.scheduleSemanticColoring();
+        this.syncAlignedLayoutClass();
     }
 
     getValue(format) {
-        return this.mathfield.getValue(format);
+        if (format !== undefined)
+            return this.mathfield.getValue(format);
+        return this.getCanonicalValue();
+    }
+
+    getCanonicalValue() {
+        const presentedLatex = this.readPresentedLatex();
+        if (this.options.alignEquations === false)
+            return presentedLatex;
+        return ExpressionAlignment.toCanonical(presentedLatex);
     }
 
     focus() {
@@ -673,6 +842,12 @@ class ExpressionControl {
     }
 
     dispose() {
+        cancelAnimationFrame(this._semanticColoringFrame);
+        cancelAnimationFrame(this._alignmentFrame);
+        this.colorSchemeQuery?.removeEventListener("change", this.onColorSchemeChange);
+        this.colorSchemeQuery = null;
+        this.semanticDecorator = null;
+        this.diagnosticsElement = null;
         if (this.containerElement) {
             const scrollViewInstance = DevExpress.ui.dxScrollView.getInstance(this.containerElement);
             if (scrollViewInstance)
