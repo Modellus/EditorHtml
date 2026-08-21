@@ -166,8 +166,9 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     }
 
     setProperties(properties) {
+        const carriesExpression = properties.expression != undefined;
         super.setProperties(properties);
-        if (properties.expression != undefined) {
+        if (carriesExpression) {
             const flattened = this.flattenNestedDisplaylines(properties.expression);
             const wrapped = flattened?.startsWith("\\displaylines{") ? flattened : `\\displaylines{${flattened ?? ""}}`;
             const ensured = Utils.writeTermNames(wrapped);
@@ -176,6 +177,10 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
             this._committedExpression = ensured;
         }
         this.onChange();
+        // An expression that arrives written - a model being opened, an undo, a paste - has never been
+        // through a blur, so this is where a row the engine cannot read gets marked.
+        if (carriesExpression)
+            this.refreshFailingRows();
     }
 
     syncExpression() {
@@ -243,7 +248,9 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     // The engine reports a parse failure while the whole model is being rebuilt, with nothing left to say
     // which row broke. Checking the rows once the user steps out marks the offending one where they wrote it.
     refreshFailingRows() {
-        const rows = ExpressionAlignment.readRows(this.expressionControl.getCanonicalValue());
+        // Read from the stored expression rather than the field: a shape restored with the model is
+        // checked before its mathfield has mounted, and an unmounted field reads back empty.
+        const rows = ExpressionAlignment.readRows(this.properties.expression ?? "");
         const rowErrors = this.board.calculator.findRowParseErrors(rows.map(row => row.cells.join("")));
         const failingRowIndexes = [];
         for (let rowIndex = 0; rowIndex < rowErrors.length; rowIndex++) {
@@ -260,6 +267,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         this.expressionControl.semanticDecorator?.invalidate();
         this.expressionControl.scheduleSemanticColoring();
         this.update();
+        this.board.shell?.updatePlayer?.();
     }
 
     hasFailingRows() {

@@ -625,10 +625,15 @@ class BottomToolbar {
         const iteration = this.shell.calculator.getIteration();
         const icon = this.playPause.option("icon");
         const isRunning = this.shell.calculator.status == STATUS.PLAYING || this.shell.calculator.status == STATUS.REPLAYING;
-        if (isRunning && icon != "fa-light fa-pause" || !isRunning && icon != "fa-light fa-play") {
-            this.shell.updatePlayerIcon(isRunning ? "fa-light fa-pause" : "fa-light fa-play");
+        // A model with an expression the engine cannot read still plays, and what it plays is wrong: the
+        // button that starts it is filled in and turns red, so the state is read before anything is run.
+        const hasExpressionErrors = this.shell.hasExpressionErrors?.() === true;
+        const playPauseIcon = `${hasExpressionErrors ? "fa-solid" : "fa-light"} ${isRunning ? "fa-pause" : "fa-play"}`;
+        if (icon != playPauseIcon) {
+            this.shell.updatePlayerIcon(playPauseIcon);
             this.playPause.repaint();
         }
+        $(this.playPause.element()).toggleClass("mdl-player-error", hasExpressionErrors);
         this.stop.option("disabled", isRunning);
         this.replay.option("disabled", isRunning);
         this.stepBackward.option("disabled", isRunning || iteration == 1);

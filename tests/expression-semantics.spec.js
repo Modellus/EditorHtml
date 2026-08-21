@@ -763,6 +763,75 @@ test.describe('rows the engine cannot parse', () => {
         expect((await highlightColor(page, 'Broken')).resolved).toBe('#00807f');
     });
 
+    function playButton(page) {
+        return page.evaluate(() => ({
+            icon: $('#playPauseButton').dxButton('instance').option('icon'),
+            marked: $('#playPauseButton').hasClass('mdl-player-error'),
+            color: getComputedStyle(document.querySelector('#playPauseButton .dx-icon')).color
+        }));
+    }
+
+    test('the play button is solid red while the model carries a failing row', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await focusExpression(page, 'Broken');
+        await blurExpression(page, 'Broken');
+        expect(await page.evaluate(() => shell.hasExpressionErrors())).toBe(true);
+        const button = await playButton(page);
+        expect(button.icon).toBe('fa-solid fa-play');
+        expect(button.marked).toBe(true);
+        expect(button.color).toBe('rgb(211, 47, 47)');
+    });
+
+    test('the play button goes back to normal once the row is written again', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await focusExpression(page, 'Broken');
+        await blurExpression(page, 'Broken');
+        expect((await playButton(page)).icon).toBe('fa-solid fa-play');
+        await focusExpression(page, 'Broken');
+        await page.keyboard.type('7');
+        await page.waitForTimeout(400);
+        expect(await page.evaluate(() => shell.hasExpressionErrors())).toBe(false);
+        const button = await playButton(page);
+        expect(button.icon).toBe('fa-light fa-play');
+        expect(button.marked).toBe(false);
+    });
+
+    test('a sound model leaves the play button alone', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Sound', '\\displaylines{a=1\\\\b=2}');
+        await focusExpression(page, 'Sound');
+        await blurExpression(page, 'Sound');
+        expect(await page.evaluate(() => shell.hasExpressionErrors())).toBe(false);
+        expect((await playButton(page)).icon).toBe('fa-light fa-play');
+    });
+
+    test('a model that is opened shows the rows the engine cannot read', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        const model = await page.evaluate(() => JSON.stringify(shell.serialize()));
+        await page.evaluate(savedModel => shell.openModel(savedModel), model);
+        await page.waitForTimeout(1200);
+        expect(await failingRows(page, 'Broken')).toEqual([1]);
+        expect(await cardBorder(page, 'Broken')).toBe('1px solid rgb(211, 47, 47)');
+        expect((await playButton(page)).icon).toBe('fa-solid fa-play');
+        await setCardBackground(page, 'Broken', '#ffffff');
+        const rendered = await renderedColors(page, 'Broken');
+        expect(colorOf(rendered, 'b')).toBe(adaptedColor('#d32f2f', '#ffffff', 7));
+        expect(colorOf(rendered, 'a')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+    });
+
+    test('a model whose rows all parse opens unmarked', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Sound', '\\displaylines{a=1\\\\b=2}');
+        const model = await page.evaluate(() => JSON.stringify(shell.serialize()));
+        await page.evaluate(savedModel => shell.openModel(savedModel), model);
+        await page.waitForTimeout(1200);
+        expect(await failingRows(page, 'Sound')).toEqual([]);
+        expect(await cardBorder(page, 'Sound')).toBe('1px solid rgb(0, 0, 0)');
+    });
+
     test('rows the engine reads are left alone', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Sound', '\\displaylines{a=1\\\\b=2}');

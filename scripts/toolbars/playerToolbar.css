@@ -35,6 +35,13 @@
     pointer-events: none;
 }
 
+/* The play button of a model carrying an expression the engine cannot read. */
+.dx-button.mdl-player-error .dx-icon,
+.dx-button.mdl-player-error.dx-state-hover .dx-icon,
+.dx-button.mdl-player-error.dx-state-focused .dx-icon {
+    color: var(--math-error, #d32f2f);
+}
+
 @media (max-width: 900px) {
     #bottom-toolbar .dx-toolbar.mdl-player-toolbar .slider {
         min-width: 140px;

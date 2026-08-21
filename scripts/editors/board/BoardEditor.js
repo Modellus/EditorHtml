@@ -317,6 +317,10 @@ class BoardEditor extends Workspace {
         this.topToolbar.update();
     }
 
+    hasExpressionErrors() {
+        return this.board.shapes.shapes.some(shape => shape.hasFailingRows?.() === true);
+    }
+
     updatePlayer() {
         this.bottomToolbar.updatePlayer();
     }
