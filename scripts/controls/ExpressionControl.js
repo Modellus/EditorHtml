@@ -468,10 +468,7 @@ class ExpressionControl {
             return false;
         keydownEvent.preventDefault();
         keydownEvent.stopImmediatePropagation();
-        const savedPosition = this.mathfield.position;
         this.mathfield.executeCommand("moveAfterParent");
-        if (this.mathfield.position === savedPosition)
-            this.mathfield.executeCommand("insert", "\\quad\\textcolor{gray}{\\mathrm{#0}}");
         return true;
     }
 

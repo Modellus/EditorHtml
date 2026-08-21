@@ -244,6 +244,8 @@ declare class System {
     }[];
     getTerm(name: string): Term | undefined;
     isTerm(name: string): boolean;
+    setTermUnits(name: string, unitsText: string | null): void;
+    getTermUnits(name: string): string | null;
     renameRegressionTerm(currentName: string, newName: string): void;
     setInitialByTerm(term: Term, value: number, iteration?: number, caseNumber?: number): void;
     setInitialByName(name: string, value: number, iteration?: number, caseNumber?: number): void;
@@ -549,16 +551,6 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitConditionOperator?: (ctx: ConditionOperatorContext) => void;
-    /**
-     * Enter a parse tree produced by `LatexMathParser.units`.
-     * @param ctx the parse tree
-     */
-    enterUnits?: (ctx: UnitsContext) => void;
-    /**
-     * Exit a parse tree produced by `LatexMathParser.units`.
-     * @param ctx the parse tree
-     */
-    exitUnits?: (ctx: UnitsContext) => void;
     /**
      * Enter a parse tree produced by the `FractionDigits`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1414,7 +1406,6 @@ declare class DifferentialContext extends antlr.ParserRuleContext {
     name(): NameContext[];
     name(i: number): NameContext | null;
     expression(): ExpressionContext;
-    units(): UnitsContext | null;
     ID(): antlr.TerminalNode[];
     ID(i: number): antlr.TerminalNode | null;
     get ruleIndex(): number;
@@ -1432,7 +1423,6 @@ declare class FunctionConditionalContext extends AssignmentContext {
     name(): NameContext;
     caseRow(): CaseRowContext[];
     caseRow(i: number): CaseRowContext | null;
-    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1441,7 +1431,6 @@ declare class FunctionContext extends AssignmentContext {
     constructor(ctx: AssignmentContext);
     name(): NameContext;
     expression(): ExpressionContext;
-    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1451,7 +1440,6 @@ declare class DerivativePrimeContext extends AssignmentContext {
     name(): NameContext[];
     name(i: number): NameContext | null;
     expression(): ExpressionContext;
-    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1461,7 +1449,6 @@ declare class FunctionIndependentContext extends AssignmentContext {
     name(): NameContext;
     expression(): ExpressionContext[];
     expression(i: number): ExpressionContext | null;
-    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1471,7 +1458,6 @@ declare class FunctionSubscriptDigitContext extends AssignmentContext {
     name(): NameContext;
     DIGIT(): antlr.TerminalNode;
     expression(): ExpressionContext;
-    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1482,7 +1468,6 @@ declare class FunctionSubscriptDigitConditionalContext extends AssignmentContext
     DIGIT(): antlr.TerminalNode;
     caseRow(): CaseRowContext[];
     caseRow(i: number): CaseRowContext | null;
-    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1493,7 +1478,6 @@ declare class FunctionSubscriptConditionalContext extends AssignmentContext {
     expression(): ExpressionContext;
     caseRow(): CaseRowContext[];
     caseRow(i: number): CaseRowContext | null;
-    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1503,7 +1487,6 @@ declare class FunctionSubscriptContext extends AssignmentContext {
     name(): NameContext;
     expression(): ExpressionContext[];
     expression(i: number): ExpressionContext | null;
-    units(): UnitsContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1585,15 +1568,6 @@ declare class ConditionParenthesisContext extends ConditionContext {
 }
 declare class ConditionOperatorContext extends antlr.ParserRuleContext {
     constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
-    get ruleIndex(): number;
-    enterRule(listener: LatexMathListener): void;
-    exitRule(listener: LatexMathListener): void;
-    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
-}
-declare class UnitsContext extends antlr.ParserRuleContext {
-    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
-    name(): NameContext;
-    expression(): ExpressionContext;
     get ruleIndex(): number;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
@@ -2318,12 +2292,6 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitConditionOperator?: (ctx: ConditionOperatorContext) => Result;
-    /**
-     * Visit a parse tree produced by `LatexMathParser.units`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitUnits?: (ctx: UnitsContext) => Result;
     /**
      * Visit a parse tree produced by the `FractionDigits`
      * labeled alternative in `LatexMathParser.expression`.
@@ -3100,10 +3068,14 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     private readonly system;
     private isParsingUnits;
     constructor(system: System);
+    /**
+     * Visits an expression as a units expression: unit symbols such as m or s are turned
+     * into a tree but are never registered as terms of the system.
+     */
+    visitUnitsExpression: (context: ExpressionContext) => Branch | null;
     visitStatement: (context: StatementContext) => Branch;
     private getConditionEvaluator;
     private buildConditionTree;
-    private extractUnits;
     visitFractionDigits: (context: FractionDigitsContext) => Branch;
     visitFraction: (context: FractionContext) => Branch;
     visitFractionDNumerator: (context: FractionDNumeratorContext) => Branch;

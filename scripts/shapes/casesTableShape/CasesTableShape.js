@@ -346,7 +346,8 @@ class CasesTableShape extends BaseTableShape {
                 rowBackgroundColor: this.getGroupColor(iteration),
                 hideColumnDividers: true,
                 spanColumnKey: momentColumnKey,
-                spanLabel: independentName
+                spanLabel: independentName,
+                spanUnit: calculator.getTermUnit(this.getMomentTermName())
             });
             const groupTerms = this.getTermNamesForIteration(iteration, columns);
             for (let index = 0; index < groupTerms.length; index++) {
@@ -355,6 +356,7 @@ class CasesTableShape extends BaseTableShape {
                     key: `${term}|${iteration}`,
                     termName: term,
                     term: this.formatTermSymbol(term),
+                    unit: Utils.getUnitsPlainText(calculator.getTermUnit(term)),
                     iteration: iteration,
                     textIndent: 14,
                     separatorAbove: index > 0 && this.isIntegratedTerm(groupTerms[index - 1]) && !this.isIntegratedTerm(term)

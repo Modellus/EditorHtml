@@ -61,6 +61,17 @@ async function clickTableCell(page, shapeName, rowIndex, columnIndex) {
     await page.mouse.click(point.x, point.y);
 }
 
+async function getMomentColumnIndex(page, shapeName) {
+    return page.evaluate(({ shapeName }) => {
+        const tableShape = shell.board.shapes.getByName(shapeName);
+        return tableShape.table.options.columns.findIndex(column => column.key === tableShape.getMomentColumnKey());
+    }, { shapeName });
+}
+
+async function clickMomentCell(page, shapeName, rowIndex) {
+    await clickTableCell(page, shapeName, rowIndex, await getMomentColumnIndex(page, shapeName));
+}
+
 async function getTableRowPoint(page, shapeName, rowIndex, localX) {
     const point = await page.evaluate(({ shapeName, rowIndex, localX }) => {
         const table = shell.board.shapes.getByName(shapeName)?.table;
@@ -135,6 +146,7 @@ test.describe('Cases table', () => {
                     isIndependentRow: row.isIndependentRow === true,
                     termName: row.termName,
                     term: row.term,
+                    unit: row.unit,
                     iteration: row.iteration,
                     case1: row.case1,
                     case2: row.case2,
@@ -159,9 +171,9 @@ test.describe('Cases table', () => {
             { key: 'case3', isText: false, editable: true, showCase: true, useHeaderFontSize: false }
         ]);
         expect(state.rows).toEqual([
-            { key: 'independent|1', isIndependentRow: true, termName: undefined, term: 't', iteration: 1, case1: 0, case2: undefined, rowBackgroundColor: state.groupColor, textIndent: undefined, spanColumnKey: 'case1', spanLabel: 't' },
-            { key: 'x|1', isIndependentRow: false, termName: 'x', term: 'x', iteration: 1, case1: 0, case2: 0, rowBackgroundColor: undefined, textIndent: 14, spanColumnKey: undefined, spanLabel: undefined },
-            { key: 'v|1', isIndependentRow: false, termName: 'v', term: 'v', iteration: 1, case1: 0, case2: 0, rowBackgroundColor: undefined, textIndent: 14, spanColumnKey: undefined, spanLabel: undefined }
+            { key: 'independent|1', isIndependentRow: true, termName: undefined, term: 't', unit: undefined, iteration: 1, case1: 0, case2: undefined, rowBackgroundColor: state.groupColor, textIndent: undefined, spanColumnKey: 'case1', spanLabel: 't' },
+            { key: 'x|1', isIndependentRow: false, termName: 'x', term: 'x', unit: '', iteration: 1, case1: 0, case2: 0, rowBackgroundColor: undefined, textIndent: 14, spanColumnKey: undefined, spanLabel: undefined },
+            { key: 'v|1', isIndependentRow: false, termName: 'v', term: 'v', unit: '', iteration: 1, case1: 0, case2: 0, rowBackgroundColor: undefined, textIndent: 14, spanColumnKey: undefined, spanLabel: undefined }
         ]);
         expect(state.independentRowCase1Editable).toBeTruthy();
         expect(state.independentRowTermEditable).toBeFalsy();
@@ -208,7 +220,7 @@ test.describe('Cases table', () => {
             const table = tableShape.table;
             const baseRow = table.rows.find(row => row.isIndependentRow && row.iteration === 1);
             const column = table.options.columns.find(c => c.key === 'case1');
-            const canEdit = table.canEditCell(0, 1);
+            const canEdit = table.canEditCell(0, table.options.columns.indexOf(column));
             const accepted = tableShape.onTableCellValueChanged({ row: baseRow, column: column, value: 5 });
             tableShape.refreshTableRows();
             return {
@@ -432,12 +444,12 @@ test.describe('Cases table', () => {
             tableShape.refreshTableRows();
         });
 
-        await clickTableCell(page, 'Inputs1', 0, 1);
+        await clickMomentCell(page, 'Inputs1', 0);
         await page.waitForTimeout(300);
         const baseRowDeleteVisible = await page.evaluate(() => shell.board.shapes.getByName('Inputs1')._focusedDeleteButtonElement?.dxButton('instance').option('visible'));
         expect(baseRowDeleteVisible).toBe(true);
 
-        await clickTableCell(page, 'Inputs1', 3, 1);
+        await clickMomentCell(page, 'Inputs1', 3);
         await page.waitForTimeout(300);
         const newGroupRowDeleteVisible = await page.evaluate(() => shell.board.shapes.getByName('Inputs1')._focusedDeleteButtonElement?.dxButton('instance').option('visible'));
         expect(newGroupRowDeleteVisible).toBe(true);
@@ -574,7 +586,7 @@ test.describe('Cases table', () => {
             tableShape.refreshTableRows();
         });
 
-        await clickTableCell(page, 'Inputs1', 0, 1);
+        await clickMomentCell(page, 'Inputs1', 0);
         await page.waitForTimeout(300);
         const baseRowColorPickerPresent = await page.evaluate(() => !!shell.board.shapes.getByName('Inputs1')._focusedColorSlotElement?.find('.mdl-color-picker').length);
         expect(baseRowColorPickerPresent).toBe(true);
@@ -706,7 +718,7 @@ test.describe('Cases table', () => {
         await setupEditor(page);
         await setupModelWithCasesTable(page, 1);
 
-        await clickTableCell(page, 'Inputs1', 0, 1);
+        await clickMomentCell(page, 'Inputs1', 0);
         await page.waitForTimeout(300);
         const focusedBefore = await page.evaluate(() => shell.board.shapes.getByName('Inputs1').table.hasFocusedCells());
         expect(focusedBefore).toBe(true);
@@ -733,7 +745,8 @@ test.describe('Cases table', () => {
 
         await page.evaluate(() => {
             const tableShape = shell.board.shapes.getByName('Inputs1');
-            tableShape.table.startEditing(0, 1, null);
+            const table = tableShape.table;
+            table.startEditing(0, table.options.columns.findIndex(column => column.key === tableShape.getMomentColumnKey()), null);
         });
         const editingBefore = await page.evaluate(() => !!shell.board.shapes.getByName('Inputs1').table.editingCell);
         expect(editingBefore).toBe(true);
@@ -749,7 +762,7 @@ test.describe('Cases table', () => {
         await setupEditor(page);
         await setupModelWithCasesTable(page, 1);
 
-        const point = await getTableCellPoint(page, 'Inputs1', 0, 1);
+        const point = await getTableCellPoint(page, 'Inputs1', 0, await getMomentColumnIndex(page, 'Inputs1'));
         await page.mouse.dblclick(point.x, point.y);
         await page.waitForTimeout(300);
         const editingBefore = await page.evaluate(() => !!shell.board.shapes.getByName('Inputs1').table.editingCell);
@@ -836,7 +849,7 @@ test.describe('Cases table', () => {
         await setupEditor(page);
         await setupModelWithCasesTable(page, 1);
 
-        await clickTableCell(page, 'Inputs1', 0, 1);
+        await clickMomentCell(page, 'Inputs1', 0);
         await page.waitForTimeout(300);
 
         const result = await page.evaluate(() => {
@@ -1375,7 +1388,7 @@ test.describe('Cases table', () => {
         });
         await page.waitForTimeout(200);
 
-        await clickTableCell(page, 'Inputs1', 3, 1);
+        await clickMomentCell(page, 'Inputs1', 3);
         await page.waitForTimeout(300);
 
         const beforeAdd = await page.evaluate(() => {

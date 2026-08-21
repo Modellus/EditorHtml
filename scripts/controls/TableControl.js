@@ -459,7 +459,23 @@ class TableControl {
         if (column?.showCase === true)
             caseIconWidth = Utils.getCaseIconSize(column.caseNumber, Number(this.options.headerFontSize) || 16).width + Utils.caseIconGap;
         const paddingWidth = 18;
-        return Math.max(this.getMinColumnWidth(), Math.ceil(titleWidth + caseIconWidth + paddingWidth));
+        return Math.max(this.getMinColumnWidth(), Math.ceil(titleWidth + caseIconWidth + paddingWidth), this.getTermColumnContentWidth(column));
+    }
+
+    // A term column carries no title, so what it has to fit is what its rows say: the term, the unit
+    // written after it, and whatever the row is indented by.
+    getTermColumnContentWidth(column) {
+        if (!this.isTermTextColumn(column))
+            return 0;
+        const fontSize = Number(column.useHeaderFontSize === true ? this.options.headerFontSize : this.options.fontSize) || 16;
+        let contentWidth = 0;
+        for (const row of this.rows) {
+            const unitText = Utils.getUnitsPlainText(row.unit ?? "");
+            const indent = Number.isFinite(row.textIndent) ? row.textIndent : 0;
+            const unitWidth = unitText === "" ? 0 : this.estimateTextWidth(` (${unitText})`, fontSize);
+            contentWidth = Math.max(contentWidth, indent + Utils.estimateMathTermWidth(String(row[column.key] ?? ""), fontSize) + unitWidth);
+        }
+        return Math.ceil(contentWidth + 18);
     }
 
     getMinColumnWidth() {
@@ -773,7 +789,7 @@ class TableControl {
         text.setAttribute("text-anchor", "start");
         text.setAttribute("font-size", `${this.options.headerFontSize}`);
         text.setAttribute("fill", this.getRowTextColor(row));
-        Utils.setTermValueTextContent(text, row.spanLabel ?? "", valueText);
+        Utils.setTermValueTextContent(text, row.spanLabel ?? "", valueText, row.spanUnit ?? "");
         layerElement.appendChild(text);
         return text;
     }
@@ -1006,19 +1022,23 @@ class TableControl {
         this.rowsLayer.appendChild(line);
     }
 
+    isTermTextColumn(column) {
+        return column?.isText === true;
+    }
+
     renderCellText(cellGeometry, y, rowHeight, textValue, columnIndex, column = null, row = null) {
-        const isText = column?.isText === true;
-        const indent = isText && Number.isFinite(row?.textIndent) ? row.textIndent : 0;
+        const isTermText = this.isTermTextColumn(column);
+        const indent = isTermText && Number.isFinite(row?.textIndent) ? row.textIndent : 0;
         const text = this.createSvgElement("text");
-        text.setAttribute("x", isText ? `${cellGeometry.x + 6 + indent}` : `${cellGeometry.x + cellGeometry.width - 6}`);
+        text.setAttribute("x", isTermText ? `${cellGeometry.x + 6 + indent}` : `${cellGeometry.x + cellGeometry.width - 6}`);
         text.setAttribute("y", `${y + rowHeight / 2 + 4}`);
-        text.setAttribute("text-anchor", isText ? "start" : "end");
-        text.setAttribute("font-family", isText ? this.options.termFontFamily : this.options.numberFontFamily);
+        text.setAttribute("text-anchor", isTermText ? "start" : "end");
+        text.setAttribute("font-family", isTermText ? this.options.termFontFamily : this.options.numberFontFamily);
         text.setAttribute("font-size", `${column?.useHeaderFontSize === true ? this.options.headerFontSize : this.options.fontSize}`);
         text.setAttribute("fill", this.getRowTextColor(row));
         text.setAttribute("clip-path", `url(#${this.rowsClipId}-col-${columnIndex})`);
-        if (isText)
-            Utils.setTermTextContent(text, textValue);
+        if (isTermText)
+            Utils.setTermWithUnitsTextContent(text, textValue, row?.unit ?? "");
         else
             text.textContent = textValue;
         this.rowsLayer.appendChild(text);
@@ -1030,7 +1050,7 @@ class TableControl {
         const rawValue = row[column.key];
         if (rawValue == null || rawValue === "")
             return "";
-        if (column.isText === true)
+        if (this.isTermTextColumn(column))
             return String(rawValue);
         const numericValue = Number(rawValue);
         if (numericValue === Infinity)
@@ -1067,7 +1087,7 @@ class TableControl {
         const rawValue = row[column.key];
         if (rawValue == null || rawValue === "")
             return "";
-        if (column.isText === true)
+        if (this.isTermTextColumn(column))
             return String(rawValue);
         return Utils.formatValueForEditing(rawValue, this.getCellPrecision(row, column));
     }
@@ -1447,6 +1467,7 @@ class TableControl {
         if (!this.selectedCell && !this.editingCell)
             return;
         const key = event.key;
+        const hasCommandModifier = event.ctrlKey || event.metaKey || event.altKey;
         if (this.editingCell) {
             if (key === "Enter") {
                 event.preventDefault();
@@ -1472,7 +1493,7 @@ class TableControl {
                 this.render();
                 return;
             }
-            if (this.isAcceptedEditKey(key)) {
+            if (!hasCommandModifier && this.isAcceptedEditKey(key)) {
                 event.preventDefault();
                 this.appendEditingCharacter(key);
                 this.render();
@@ -1498,7 +1519,7 @@ class TableControl {
                 return;
             }
         }
-        if (this.isAcceptedEditKey(key) && this.canEditCell(this.selectedCell.rowIndex, this.selectedCell.columnIndex)) {
+        if (!hasCommandModifier && this.isAcceptedEditKey(key) && this.canEditCell(this.selectedCell.rowIndex, this.selectedCell.columnIndex)) {
             event.preventDefault();
             this.startEditing(this.selectedCell.rowIndex, this.selectedCell.columnIndex, key);
             this.render();

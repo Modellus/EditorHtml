@@ -289,7 +289,8 @@ class TermControl {
         const color = colorProperty ? TermControl.normalizeColorValue(baseShape.properties[colorProperty]) : "";
         const extraTerm = extraTermProperty ? TermControl.normalizeBaseShapeTermValue(baseShape.properties[extraTermProperty]) : "";
         const mode = modeProperty ? String(baseShape.properties[modeProperty] ?? "") : "";
-        return `${selectedTerm}|${selectedCase}|${locked}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}|${color}|${extraTerm}|${mode}`;
+        const unit = baseShape.board.calculator.getTermUnit(selectedTerm);
+        return `${selectedTerm}|${selectedCase}|${locked}|${baseShape.getCasesCount()}|${terms.join(",")}|${caseProperty}|${color}|${extraTerm}|${mode}|${unit}`;
     }
 
     // A term selector can carry the colour of whatever the term drives, so the choice of what to
@@ -307,6 +308,18 @@ class TermControl {
                 baseShape.setPropertyCommand(colorProperty, TermControl.normalizeColorValue(value));
                 baseShape.board.markDirty(baseShape);
             }
+        };
+    }
+
+    // Units belong to the term, not to the shape reading it, so the selector that names a term is
+    // also where its unit is chosen: whoever picks x picks metres in the same place, and every
+    // toolbar that borrows this control gets the choice without asking for it.
+    static createTermUnitsSelection(board) {
+        return {
+            width: "58px",
+            getValue: termName => board.calculator.getTermUnit(termName),
+            isTerm: termName => board.calculator.isTerm(termName),
+            onValueChanged: (termName, unitText) => board.shell.setTermUnitCommand(termName, unitText)
         };
     }
 
@@ -406,6 +419,7 @@ class TermControl {
             getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty, options.colorProperty ?? "", extraTermProperty, modeProperty),
             mode: TermControl.createBaseShapeModeSelection(baseShape, formInstance, modeProperty, options.modeItems ?? [], options.modePairValue ?? "", () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl)),
             colorSelection: TermControl.createBaseShapeTermColorSelection(baseShape, options.colorProperty ?? ""),
+            units: TermControl.createTermUnitsSelection(baseShape.board),
             extraTerm: TermControl.createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl), options.showExtraTerm ?? null),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term, normalizeCustomValue),
             getBoard: () => baseShape.board,
@@ -621,7 +635,8 @@ class TermControl {
 
     static getShapeTermsCollectionStateKey(shape, propertyName) {
         const terms = shape.board.calculator.getTermsNames();
-        return `${shape.getCasesCount()}|${JSON.stringify(shape.properties[propertyName] ?? [])}|${terms.join(",")}`;
+        const units = terms.map(termName => shape.board.calculator.getTermUnit(termName)).join(",");
+        return `${shape.getCasesCount()}|${JSON.stringify(shape.properties[propertyName] ?? [])}|${terms.join(",")}|${units}`;
     }
 
     static buildShapeTermsCollectionTermItems(shape, selectedTerm, normalizeTermValue = value => TermControl.normalizeTermValue(value)) {
@@ -794,7 +809,8 @@ class TermControl {
                     items[index].showLabel = value;
                 })
             } : null,
-            lock: lockOptions
+            lock: lockOptions,
+            units: TermControl.createTermUnitsSelection(shape.board)
         });
     }
 
@@ -1201,6 +1217,8 @@ class TermControl {
             columns.push("minmax(0, 1fr)");
         if (showExtraTerm)
             columns.push(this.getExtraTermWidth());
+        if (this.shouldShowUnitsEditor(item, index))
+            columns.push(this.getUnitsWidth());
         if (showSecondary)
             columns.push(this.getSecondaryWidth());
         if (showColor)
@@ -1260,6 +1278,11 @@ class TermControl {
             const extraTermHost = $("<div>").addClass("shape-term-term shape-term-extra-term");
             row.append(extraTermHost);
             extraTermHost.dxDropDownBox(this.getExtraTermEditorOptions(item, index));
+        }
+        if (this.shouldShowUnitsEditor(item, index)) {
+            const unitsHost = $("<div>").addClass("shape-term-units");
+            row.append(unitsHost);
+            this.renderUnitsEditor(unitsHost, item, index);
         }
         if (showSecondary) {
             const secondaryHost = $("<div>").addClass("shape-term-secondary");
@@ -1371,6 +1394,43 @@ class TermControl {
         if (itemData && typeof itemData === "object" && Object.prototype.hasOwnProperty.call(itemData, "value"))
             return itemData.value;
         return itemData;
+    }
+
+    hasUnits() {
+        return this.options.units != null;
+    }
+
+    // Only a term the model knows carries a unit: a row still being named, or one naming a plain
+    // number, has nothing to give units to.
+    shouldShowUnitsEditor(item, index) {
+        if (!this.hasUnits())
+            return false;
+        if (!this.shouldShowTermEditor(item, index))
+            return false;
+        const termName = this.normalizeTermValue(this.getTermValue(item, index));
+        if (termName === "")
+            return false;
+        return this.options.units.isTerm(termName) === true;
+    }
+
+    getUnitsWidth() {
+        return this.options.units.width ?? "58px";
+    }
+
+    getUnitsValue(item, index) {
+        return this.options.units.getValue(this.normalizeTermValue(this.getTermValue(item, index)));
+    }
+
+    renderUnitsEditor(host, item, index) {
+        UnitsControl.createEditor(host, {
+            value: this.getUnitsValue(item, index),
+            nested: true,
+            onValueChanged: unitText => this.onUnitsValueChanged(item, index, unitText)
+        });
+    }
+
+    onUnitsValueChanged(item, index, unitText) {
+        this.options.units.onValueChanged(this.normalizeTermValue(this.getTermValue(item, index)), unitText);
     }
 
     renderColorEditor(host, item, index) {

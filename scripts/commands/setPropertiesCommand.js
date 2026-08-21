@@ -7,10 +7,10 @@ class SetPropertiesCommand extends Command {
 
     execute() {
         this.previousProperties = Utils.cloneProperties(this.shell.properties);
-        this.shell.setProperties(this.properties);
+        this.shell.setPropertiesAndReset(this.properties);
     }
     
     undo() {
-        this.shell.setProperties(this.previousProperties);
+        this.shell.setPropertiesAndReset(this.previousProperties);
     }
 }

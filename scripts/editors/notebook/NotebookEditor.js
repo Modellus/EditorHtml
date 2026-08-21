@@ -559,6 +559,7 @@ class NotebookEditor extends Workspace {
             if (block.type === "expression" && block.content)
                 this.calculator.parse(block.content);
         }
+        this.calculator.applyTermUnits();
         this.updatePlayerSliderRange(this.getIterationCount());
         this.updatePlayerSliderValue(1);
         this._updateIndependentNameLabel();

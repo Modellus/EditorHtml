@@ -538,12 +538,31 @@ class BottomToolbar {
             value: key === "independent" ? properties.independent.name : properties.iterationTerm,
             width: "100%",
             stylingMode: "filled",
-            elementAttr: { class: "mdl-math-input" },
+            elementAttr: { class: "mdl-math-input mdl-variable-selector" },
+            inputAttr: { class: "mdl-variable-selector" },
             onValueChanged: e => this.shell.setPropertyCommand(key === "independent" ? "independent.name" : "iterationTerm", e.value)
         });
+        this.createPlayerTermUnitsEditor(control, key);
         if (key === "iteration")
             this.createIterationDomainButtonGroup(control);
         control.appendTo($container);
+    }
+
+    // The two terms the player names are terms like any other, so the unit is chosen where the name
+    // is written, from the same picker every other term selector opens.
+    createPlayerTermUnitsEditor(control, key) {
+        const unitsHost = $("<div>").addClass("term-packed-control__units");
+        control.append(unitsHost);
+        UnitsControl.createEditor(unitsHost, {
+            value: this.shell.calculator.getTermUnit(this.getPlayerTermNameFor(key)),
+            nested: true,
+            onValueChanged: unitText => this.shell.setTermUnitCommand(this.getPlayerTermNameFor(key), unitText)
+        });
+    }
+
+    getPlayerTermNameFor(key) {
+        const properties = this.shell.calculator.properties;
+        return key === "independent" ? properties.independent.name : properties.iterationTerm;
     }
 
     createIterationDomainButtonGroup(control) {

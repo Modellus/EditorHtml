@@ -907,8 +907,8 @@ test.describe('clock component', () => {
             const popups = document.querySelectorAll('.mdl-shape-overlay-popup');
             const last = popups[popups.length - 1];
             return {
-                selectors: last.querySelectorAll('.dx-dropdownbox').length,
-                quiet: last.querySelectorAll('.dx-dropdownbox.dx-state-disabled').length,
+                selectors: last.querySelectorAll('.dx-dropdownbox:not(.mdl-units-editor)').length,
+                quiet: last.querySelectorAll('.dx-dropdownbox:not(.mdl-units-editor).dx-state-disabled').length,
                 swatches: last.querySelectorAll('.dx-colorbox').length
             };
         });

@@ -265,3 +265,118 @@ math-field {
 math-field.mdl-expression-aligned {
     text-align: center;
 }
+
+#units-grid .mdl-units-name-cell {
+    font-size: 16px;
+}
+
+#units-grid .mdl-units-name-cell .form-math-field {
+    vertical-align: middle;
+}
+
+#units-grid .mdl-units-unit-cell {
+    font-size: 15px;
+}
+
+.mdl-units-item .form-math-field {
+    font-size: 15px;
+    padding: 0;
+    line-height: 1;
+}
+
+.mdl-units-item .form-math-field::part(container) {
+    padding: 0;
+    min-height: 0;
+}
+
+.mdl-units-item .form-math-field::part(menu-toggle) {
+    display: none;
+}
+
+.mdl-units-warm-host {
+    position: absolute;
+    left: -10000px;
+    top: 0;
+    width: 200px;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.mdl-units-dropdown .dx-overlay-content {
+    padding: 0;
+}
+
+.mdl-units-dropdown .dx-popup-content {
+    padding: 0;
+    height: 100%;
+}
+
+.mdl-units-dropdown-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+math-field.mdl-units-input {
+    font-size: 15px;
+    height: 34px;
+    padding: 0 8px;
+    border: none;
+    border-bottom: 1px solid #e0e0e0;
+    background: transparent;
+    flex: 0 0 auto;
+}
+
+math-field.mdl-units-input::part(container) {
+    padding: 0;
+    min-height: 0;
+}
+
+math-field.mdl-units-input::part(menu-toggle) {
+    display: none;
+}
+
+.mdl-units-list-host {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.mdl-units-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.mdl-units-item {
+    display: flex;
+    align-items: center;
+    line-height: 1;
+    padding: 5px 8px;
+    cursor: pointer;
+}
+
+.mdl-units-item:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.mdl-units-item--hidden {
+    display: none;
+}
+
+.mdl-units-editor .mdl-units-editor-math-field {
+    font-size: 15px;
+    align-self: center;
+}
+
+.mdl-units-editor .mdl-units-editor-math-field::part(container) {
+    padding: 0;
+    min-height: 0;
+}
+
+.mdl-units-editor .mdl-units-editor-math-field::part(menu-toggle) {
+    display: none;
+}
+
+.mdl-units-editor .mdl-units-editor-input {
+    color: transparent;
+    caret-color: transparent;
+}

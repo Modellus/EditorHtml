@@ -124,10 +124,12 @@
             };
         }
         const displayedTermText = this.formatTermForDisplay(termName);
+        const unitText = this.shape.getTermUnitText(termName);
         return {
             termText: displayedTermText,
             valueText: valueText,
-            text: `${displayedTermText} = ${valueText}`
+            unitText: unitText,
+            text: unitText === "" ? `${displayedTermText} = ${valueText}` : `${displayedTermText} = ${valueText} ${unitText}`
         };
     }
 
@@ -151,6 +153,7 @@
             text: labelData?.text ?? "",
             termText: labelData?.termText ?? "",
             valueText: labelData?.valueText ?? "",
+            unitText: labelData?.unitText ?? "",
             x: x,
             y: y,
             anchor: anchor,
@@ -237,7 +240,7 @@
     }
 
     setLabelText(labelText, label) {
-        Utils.setTermValueTextContent(labelText, label?.termText ?? "", label?.valueText ?? label?.text ?? "");
+        Utils.setTermValueTextContent(labelText, label?.termText ?? "", label?.valueText ?? label?.text ?? "", label?.unitText ?? "");
     }
 
     getLabelAnchor() {

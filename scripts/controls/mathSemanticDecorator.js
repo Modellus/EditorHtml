@@ -37,8 +37,6 @@ class MathSemanticDecorator {
 
     static caretContrastTarget = 4.5;
 
-    static structureContrastTarget = 4.5;
-
     static selectionAlpha = 0.26;
 
     static maximumResyncLookahead = 8;
@@ -53,9 +51,6 @@ class MathSemanticDecorator {
         this.enabled = true;
         this.backgroundColor = "#ffffff";
         this.mathfieldStyle = null;
-        this.structureBaseColor = null;
-        this.structureBaseInlineColor = "";
-        this.appliedStructureColor = null;
     }
 
     setMetadataProvider(metadataProvider) {
@@ -74,7 +69,6 @@ class MathSemanticDecorator {
         if (latex !== "" && this.mathfield.lastOffset === 0)
             return false;
         this.backgroundColor = this.readBackgroundColor();
-        this.applyStructureColor();
         this.applyCaretColors();
         const metadata = this.metadataProvider?.() ?? null;
         const signature = `${latex}::${metadata?.signature ?? ""}::${this.readColorSignature()}`;
@@ -120,21 +114,6 @@ class MathSemanticDecorator {
             element = MathSemanticDecorator.readParentElement(element);
         }
         return MathColorScheme.format(MathColorScheme.flatten(layers));
-    }
-
-    readStructureBaseColor() {
-        const inlineColor = this.mathfield.style.color;
-        if (inlineColor !== this.appliedStructureColor) {
-            this.structureBaseInlineColor = inlineColor;
-            this.structureBaseColor = inlineColor !== "" ? inlineColor : this.readMathfieldStyle().color;
-        }
-        return this.structureBaseColor;
-    }
-
-    applyStructureColor() {
-        const structureColor = MathSemanticDecorator.adaptColor(this.readStructureBaseColor(), this.backgroundColor, MathSemanticDecorator.structureContrastTarget);
-        this.mathfield.style.color = structureColor;
-        this.appliedStructureColor = this.mathfield.style.color;
     }
 
     applyCaretColors() {
@@ -203,9 +182,6 @@ class MathSemanticDecorator {
             this.mathfield.applyStyle({ color: "none" }, { range: [0, this.mathfield.lastOffset], silenceNotifications: true });
         if (savedSelection)
             this.mathfield.selection = savedSelection;
-        if (this.appliedStructureColor !== null)
-            this.mathfield.style.color = this.structureBaseInlineColor;
-        this.appliedStructureColor = null;
         this.decoratedLatex = null;
         this.diagnostics = [];
     }

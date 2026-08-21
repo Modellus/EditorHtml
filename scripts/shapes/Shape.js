@@ -2252,6 +2252,16 @@ class BaseShape {
         return this.formatModelValue(numeric);
     }
 
+    getTermUnitText(term) {
+        if (term == null || term === "")
+            return "";
+        const termName = String(term);
+        const calculator = this.board?.calculator;
+        if (!calculator?.isTerm(termName))
+            return "";
+        return calculator.getTermUnit(termName);
+    }
+
     getTermLabelAnchor() {
         const position = this.getBoardPosition?.();
         if (!position)

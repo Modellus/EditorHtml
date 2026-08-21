@@ -22,7 +22,7 @@ class Calculator extends EventTarget {
     }
 
     createDefaultProperties() {
-        return { precision: 2, angleUnit: "radians", independent: { name: "t", start: 0, end: 10, step: 0.1, noLimit: false }, iterationTerm: "n", iterationTermStart: 1, casesCount: 1, initialValuesByCase: {}, iterationDuration: null };
+        return { precision: 2, angleUnit: "radians", independent: { name: "t", start: 0, end: 10, step: 0.1, noLimit: false }, iterationTerm: "n", iterationTermStart: 1, casesCount: 1, initialValuesByCase: {}, iterationDuration: null, termUnits: {} };
     }
 
     setDefaults() {
@@ -48,7 +48,23 @@ class Calculator extends EventTarget {
     setProperties(properties = this.createDefaultProperties()) {
         Utils.mergeProperties(properties, this.properties);
         this.properties.casesCount = this.normalizeCasesCount(this.properties.casesCount);
+        if (properties?.termUnits)
+            this.properties.termUnits = Utils.normalizeTermUnits(properties.termUnits);
         this.reset();
+    }
+
+    setTermUnits(termUnits) {
+        this.properties.termUnits = Utils.normalizeTermUnits(termUnits);
+        this.applyTermUnits();
+    }
+
+    applyTermUnits() {
+        for (const termName of this.getTermsNames())
+            this.system.setTermUnits(termName, this.properties.termUnits[termName] ?? null);
+    }
+
+    getTermUnit(termName) {
+        return this.system.getTermUnits(termName) ?? "";
     }
 
     setProperty(name = "", value = 0) {

@@ -18,6 +18,7 @@ class BoardEditor extends Workspace {
         this.board.svg.addEventListener("zoom", e => this.onZoom(e));
         this.miniMap = new MiniMap(this.board, document.getElementById("MinimapImage"), document.getElementById("MinimapViewport"));
         this.settingsController = new SettingsController(this);
+        this.unitsController = new UnitsController(this);
         this.backgroundToolbar = new BackgroundToolbar(this);
         this.board.svg.addEventListener("backgroundClicked", e => this.backgroundToolbar.toggle(e.detail));
         this.contextMenuController = new ContextMenuController(this);
@@ -89,6 +90,7 @@ class BoardEditor extends Workspace {
         window.addEventListener("popstate", e => this.onPopState(e));
         history.pushState(null, "");
         this.reparseAndCalculateWorkspace(() => this.reset());
+        setTimeout(() => UnitsControl.warm(), 1000);
         this.startAutoSave();
         this.startAutoPlayIfEnabled();
     }
@@ -218,9 +220,16 @@ class BoardEditor extends Workspace {
         this.backgroundToolbar?.refresh();
     }
     
+    setPropertiesAndReset(properties) {
+        this.setProperties(properties);
+        this.reset();
+    }
+
     setProperty(name, value) {
         if (name === "casesCount")
             value = this.calculator.normalizeCasesCount(value);
+        if (name === "termUnits")
+            value = Utils.normalizeTermUnits(value);
         const previousAngleUnit = this.properties.angleUnit;
         const keys = name.split('.');
         let current = this.properties;
@@ -237,6 +246,8 @@ class BoardEditor extends Workspace {
             this.applyGrid();
         if (name === "backgroundId")
             this.applyBackground();
+        if (name === "termUnits")
+            this.calculator.setTermUnits(value);
         if (name === "gridSize" || name === "snapToGrid")
             this.bottomToolbar?.updateSnapToGridButton();
         if (name === "name")
@@ -262,8 +273,8 @@ class BoardEditor extends Workspace {
         this.setProperty(name, value);
         const newProperties = Utils.cloneProperties(this.properties);
         const command = {
-            execute: () => this.setProperties(newProperties),
-            undo: () => this.setProperties(previousProperties)
+            execute: () => this.setPropertiesAndReset(newProperties),
+            undo: () => this.setPropertiesAndReset(previousProperties)
         };
         this.commands.invoker.record(command);
     }
@@ -407,6 +418,23 @@ class BoardEditor extends Workspace {
         this.settingsController.open();
     }
 
+    openUnits() {
+        this.unitsController.open();
+    }
+
+    setTermUnitCommand(termName, unitText) {
+        if (!termName)
+            return false;
+        const termUnits = Object.assign({}, this.properties.termUnits);
+        const normalizedUnit = String(unitText ?? "").trim();
+        if (normalizedUnit === "")
+            delete termUnits[termName];
+        else
+            termUnits[termName] = normalizedUnit;
+        this.setPropertyCommand("termUnits", termUnits);
+        return true;
+    }
+
     clear() {
         this.setDefaults();
         this.backgroundToolbar?.hide();
@@ -472,6 +500,7 @@ class BoardEditor extends Workspace {
         this.calculator.applyPreloadedRegressionTerms();
         this.calculator.applyInitialValuesByCase(initialValuesByCase);
         this.calculator.applyUserInputsByCase(userInputsByCase);
+        this.calculator.applyTermUnits();
         this.properties.initialValuesByCase = this.calculator.getInitialValuesByCase();
         this.board.shapes.shapes.forEach(shape => {
             shape.refreshTermReferenceState();
@@ -480,6 +509,7 @@ class BoardEditor extends Workspace {
         this.forceRefreshWorkspaceSurface();
         this.bottomToolbar.updatePlayer();
         this.topToolbar.update();
+        this.unitsController.refreshUnits();
         if (this.properties.instructions)
             this.generateAndInstallHooks();
     }

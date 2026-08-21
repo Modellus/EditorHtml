@@ -28,6 +28,7 @@ class ModelSession {
         this.properties.snapToGrid = false;
         this.properties.backgroundId = "";
         this.properties.autoPlay = false;
+        this.properties.termUnits = {};
     }
 
     setProperties(properties) {
@@ -36,6 +37,8 @@ class ModelSession {
         else
             Utils.mergeProperties(properties, this.properties);
         this.properties.casesCount = this.calculator.normalizeCasesCount(this.properties.casesCount);
+        if (properties.termUnits)
+            this.properties.termUnits = Utils.normalizeTermUnits(properties.termUnits);
         this.calculator.setProperties(this.properties);
     }
 

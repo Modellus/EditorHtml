@@ -176,7 +176,7 @@ class BaseTableShape extends BaseShape {
         if (normalizedTermName === "")
             return "";
         const displayedTerm = Utils.getDisplayedTerm(normalizedTermName, this.board.calculator.system);
-        return Utils.formatMathTermName(displayedTerm);
+        return Utils.buildTermWithUnitsLatex(Utils.formatMathTermName(displayedTerm), this.getTermUnitText(normalizedTermName));
     }
 
     _canEditTerm(term) {

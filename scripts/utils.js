@@ -48,6 +48,104 @@ class Utils {
         const valueString = value.toString();
         return valueString.includes('.') ? valueString.split('.')[1].length : 0;
     }
+
+    static isoUnits = [
+        "m", "km", "cm", "mm", "\u00b5m", "nm", "m\u00b2", "m\u00b3", "L", "mL",
+        "s", "ms", "\u00b5s", "min", "h", "d",
+        "kg", "g", "mg", "t", "mol", "kg/m\u00b3",
+        "m/s", "km/h", "m/s\u00b2", "rad", "\u00b0", "rad/s", "rad/s\u00b2", "Hz", "rpm",
+        "N", "N\u00b7m", "N/m", "kg\u00b7m/s", "Pa", "kPa", "bar", "atm",
+        "J", "kJ", "eV", "cal", "W", "kW", "kWh",
+        "K", "\u00b0C", "\u00b0F", "J/K", "J/(kg\u00b7K)",
+        "A", "V", "mV", "\u03a9", "k\u03a9", "C", "F", "\u00b5F", "H", "T", "Wb", "S",
+        "cd", "lm", "lx", "Bq", "Gy", "Sv", "kat",
+        "%", "dB"
+    ];
+
+    static unitsSuperscripts = { "\u00b2": "2", "\u00b3": "3", "\u00b9": "1", "\u2070": "0", "\u2074": "4", "\u2075": "5", "\u2076": "6", "\u2077": "7", "\u2078": "8", "\u2079": "9", "\u207b": "-" };
+
+    static getUnitsLatex(unitText) {
+        const normalizedUnit = String(unitText ?? "").trim();
+        if (normalizedUnit === "")
+            return "";
+        let latex = "";
+        let pendingSuperscript = "";
+        for (const character of normalizedUnit) {
+            const superscript = Utils.unitsSuperscripts[character];
+            if (superscript !== undefined) {
+                pendingSuperscript += superscript;
+                continue;
+            }
+            if (pendingSuperscript !== "") {
+                latex += `^{${pendingSuperscript}}`;
+                pendingSuperscript = "";
+            }
+            latex += character === "\u00b7" ? "\\cdot " : character;
+        }
+        if (pendingSuperscript !== "")
+            latex += `^{${pendingSuperscript}}`;
+        return `\\mathrm{${latex}}`;
+    }
+
+    static getUnitsPlainText(unitText) {
+        const normalizedUnit = String(unitText ?? "").trim();
+        if (normalizedUnit === "")
+            return "";
+        return Utils.unwrapUprightMath(normalizedUnit
+            .replace(/\\cdot\s*/g, "\u00b7")
+            .replace(/\^\{?(-?[0-9]+)\}?/g, (matchedText, exponent) => Utils.getSuperscriptText(exponent))
+            .replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, "$1/$2"));
+    }
+
+    // Mathlive writes a name of more than one letter as an operator, and an operator written upright
+    // nests one wrapper inside another, so the wrappers come off one layer at a time.
+    static uprightMathPattern = /\\(?:mathrm|operatorname|text)\s*\{([^{}]*)\}/;
+
+    static unwrapUprightMath(text) {
+        let unwrappedText = String(text);
+        while (Utils.uprightMathPattern.test(unwrappedText))
+            unwrappedText = unwrappedText.replace(new RegExp(Utils.uprightMathPattern, "g"), "$1");
+        return unwrappedText;
+    }
+
+    static getSuperscriptText(exponent) {
+        const superscriptByDigit = { "0": "\u2070", "1": "\u00b9", "2": "\u00b2", "3": "\u00b3", "4": "\u2074", "5": "\u2075", "6": "\u2076", "7": "\u2077", "8": "\u2078", "9": "\u2079", "-": "\u207b" };
+        let superscriptText = "";
+        for (const character of String(exponent)) {
+            if (superscriptByDigit[character] === undefined)
+                return `^${exponent}`;
+            superscriptText += superscriptByDigit[character];
+        }
+        return superscriptText;
+    }
+
+    static buildTermWithUnitsLatex(termLatex, unitText) {
+        const normalizedTermLatex = String(termLatex ?? "");
+        const unitsLatex = Utils.getUnitsLatex(unitText);
+        if (unitsLatex === "" || normalizedTermLatex === "")
+            return normalizedTermLatex;
+        return `${normalizedTermLatex}\\;(${unitsLatex})`;
+    }
+
+    static buildUnitsMathFieldMarkup(unitText, styleText = "") {
+        const unitsLatex = Utils.getUnitsLatex(unitText);
+        if (unitsLatex === "")
+            return "";
+        return Utils.buildReadOnlyMathFieldMarkup(unitsLatex, styleText);
+    }
+
+    static unitsDropDownHeight = 240;
+    static unitsDropDownWidth = 150;
+
+    static normalizeTermUnits(termUnits) {
+        const normalizedTermUnits = {};
+        for (const termName in termUnits ?? {}) {
+            const unitText = String(termUnits[termName] ?? "").trim();
+            if (unitText !== "")
+                normalizedTermUnits[termName] = unitText;
+        }
+        return normalizedTermUnits;
+    }
      
     static greekLetters = {
         "\\alpha": "α", "\\beta": "β", "\\gamma": "γ", "\\delta": "δ",
@@ -325,6 +423,9 @@ class Utils {
     }
 
     static estimateMathTermWidth(latexValue, fontSize) {
+        const unitsMatch = String(latexValue ?? "").match(/^([\s\S]*?)\\;\((\\mathrm\{[\s\S]*\})\)$/);
+        if (unitsMatch)
+            return Utils.estimateMathTermWidth(unitsMatch[1], fontSize) + (Utils.getUnitsPlainText(unitsMatch[2]).length + 3) * fontSize * 0.5;
         const parsed = Utils.parseMathTermLatex(latexValue);
         const baseWidth = String(parsed.base).length * fontSize * 0.58;
         if (parsed.subscript === null && parsed.superscript === null)
@@ -367,17 +468,37 @@ class Utils {
         textElement.innerHTML = Utils.buildTermTextHtml(termLatex, false);
     }
 
-    static buildTermValueTextHtml(termLatex, valueText) {
+    static buildTermUnitTextHtml(unitText) {
+        const plainUnit = Utils.getUnitsPlainText(unitText);
+        if (plainUnit === "")
+            return "";
+        return `<tspan font-family="Katex_Main" dominant-baseline="central"> ${Utils.escapeXmlText(plainUnit)}</tspan>`;
+    }
+
+    static buildTermWithUnitsTextHtml(termLatex, unitText) {
+        const plainUnit = Utils.getUnitsPlainText(unitText);
+        const termHtml = Utils.buildTermTextHtml(termLatex, false);
+        if (plainUnit === "")
+            return termHtml;
+        return `${termHtml}<tspan font-family="Katex_Main"> (${Utils.escapeXmlText(plainUnit)})</tspan>`;
+    }
+
+    static setTermWithUnitsTextContent(textElement, termLatex, unitText) {
+        textElement.innerHTML = Utils.buildTermWithUnitsTextHtml(termLatex, unitText);
+    }
+
+    static buildTermValueTextHtml(termLatex, valueText, unitText = "") {
+        const unitHtml = Utils.buildTermUnitTextHtml(unitText);
         if (!termLatex)
-            return `<tspan font-family="Katex_Main" dominant-baseline="central">${Utils.escapeXmlText(valueText)}</tspan>`;
+            return `<tspan font-family="Katex_Main" dominant-baseline="central">${Utils.escapeXmlText(valueText)}</tspan>${unitHtml}`;
         const segments = Utils.splitTermNameSegments(termLatex);
         const pendingShift = segments.length > 0 && segments[segments.length - 1].isNamedIndex ? 0.25 : 0;
         const valueShiftAttribute = pendingShift === 0 ? "" : ` dy="${-pendingShift}em"`;
-        return `${Utils.buildTermTextHtml(termLatex)}<tspan font-family="Katex_Main"${valueShiftAttribute} dominant-baseline="central"> = ${Utils.escapeXmlText(valueText)}</tspan>`;
+        return `${Utils.buildTermTextHtml(termLatex)}<tspan font-family="Katex_Main"${valueShiftAttribute} dominant-baseline="central"> = ${Utils.escapeXmlText(valueText)}</tspan>${unitHtml}`;
     }
 
-    static setTermValueTextContent(textElement, termLatex, valueText) {
-        textElement.innerHTML = Utils.buildTermValueTextHtml(termLatex, valueText);
+    static setTermValueTextContent(textElement, termLatex, valueText, unitText = "") {
+        textElement.innerHTML = Utils.buildTermValueTextHtml(termLatex, valueText, unitText);
     }
 
     static buildIconValueTextHtml(iconGlyph, iconFontFamily, valueText) {

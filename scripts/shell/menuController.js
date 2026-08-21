@@ -111,6 +111,14 @@ class MenuController {
                 ]
             },
             {
+                text: this._t("Units"),
+                icon: "fa-light fa-ruler-horizontal",
+                shortcut: "",
+                beginGroup: true,
+                name: "Units",
+                action: () => this.controller.openUnits()
+            },
+            {
                 text: this._t("More Models"),
                 icon: "fa-light fa-chevrons-left",
                 shortcut: "",

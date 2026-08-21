@@ -376,7 +376,7 @@ test.describe('steering wheel component', () => {
             const swatch = document.querySelector('.mdl-shape-overlay-popup .shape-term-color .mdl-color-picker-button-icon');
             return { classes: parts.map(part => part.className.split(' ')[0]), centres: centres, swatchColour: getComputedStyle(swatch).color };
         });
-        expect(row.classes).toEqual(['shape-term-term', 'shape-term-color']);
+        expect(row.classes).toEqual(['shape-term-term', 'shape-term-units', 'shape-term-color']);
         expect(Math.max(...row.centres) - Math.min(...row.centres)).toBeLessThanOrEqual(1);
         expect(row.swatchColour).toBe('rgb(0, 165, 255)');
     });

@@ -1418,6 +1418,12 @@ svg:active.pan-available {
     padding: 0;
 }
 
+.term-packed-control__units {
+    flex: 0 0 58px;
+    width: 58px;
+    margin-left: 4px;
+}
+
 .term-packed-checkbox {
     margin: 0;
     padding: 0;
