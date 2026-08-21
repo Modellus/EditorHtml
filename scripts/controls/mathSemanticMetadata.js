@@ -5,16 +5,18 @@ class MathSemanticMetadata {
         this.functionNames = options.functionNames ?? [];
         this.iterationTermName = options.iterationTermName ?? "n";
         this.independentTermName = options.independentTermName ?? "t";
-        this.signature = `${this.termNames.join(",")}::${this.definedTermNames.join(",")}::${this.iterationTermName}::${this.independentTermName}`;
+        this.failingRowIndexes = options.failingRowIndexes ?? [];
+        this.signature = `${this.termNames.join(",")}::${this.definedTermNames.join(",")}::${this.iterationTermName}::${this.independentTermName}::${this.failingRowIndexes.join(",")}`;
     }
 
-    static fromCalculator(calculator, canonicalLatex, functionNames) {
+    static fromCalculator(calculator, canonicalLatex, functionNames, failingRowIndexes = []) {
         return new MathSemanticMetadata({
             termNames: calculator.getTermsNames(),
             definedTermNames: MathSemanticMetadata.readDefinedTermNames(canonicalLatex),
             functionNames,
             iterationTermName: calculator.properties?.iterationTerm ?? "n",
-            independentTermName: calculator.properties?.independent?.name ?? "t"
+            independentTermName: calculator.properties?.independent?.name ?? "t",
+            failingRowIndexes
         });
     }
 
@@ -51,6 +53,10 @@ class MathSemanticMetadata {
 
     isFunction(name) {
         return this.functionNames.includes(name);
+    }
+
+    isFailingRow(rowIndex) {
+        return this.failingRowIndexes.includes(rowIndex);
     }
 
     // `a_n` and `a_{n+1}` are the same `a` at two steps of the same iteration, so the iteration term is read

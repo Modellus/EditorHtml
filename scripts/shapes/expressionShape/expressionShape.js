@@ -1,9 +1,12 @@
 var ExpressionShape;
 if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape extends BaseShape {
+    static failingBorderColor = "#d32f2f";
+
     constructor(board, parent, id) {
         super(board, null, id);
         this.focusDispatchFrame = null;
         this.shortcutsHintShown = false;
+        this.failingRowIndexes = [];
         this.toolbarAdapter = {
             pasteFromClipboard: shape => shape.pasteTextFromClipboard()
         };
@@ -82,7 +85,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
 
     getSemanticMetadata() {
         const functionNames = this.expressionControl.getExpressionFunctionShortcuts().map(shortcut => shortcut.shortcutText);
-        return MathSemanticMetadata.fromCalculator(this.board.calculator, this.expressionControl.getCanonicalValue(), functionNames);
+        return MathSemanticMetadata.fromCalculator(this.board.calculator, this.expressionControl.getCanonicalValue(), functionNames, this.failingRowIndexes);
     }
 
     getTemplateShortcuts() {
@@ -187,6 +190,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
             return;
         if (this.isClearedByAnUnfocusedMathfield(expression))
             return;
+        this.setFailingRowIndexes([]);
         if (this._committedExpression === undefined)
             this._committedExpression = this.properties.expression;
         this.properties.expression = expression;
@@ -233,6 +237,42 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
 
     onBlur() {
         this.hideShortcutsHint();
+        this.refreshFailingRows();
+    }
+
+    // The engine reports a parse failure while the whole model is being rebuilt, with nothing left to say
+    // which row broke. Checking the rows once the user steps out marks the offending one where they wrote it.
+    refreshFailingRows() {
+        const rows = ExpressionAlignment.readRows(this.expressionControl.getCanonicalValue());
+        const rowErrors = this.board.calculator.findRowParseErrors(rows.map(row => row.cells.join("")));
+        const failingRowIndexes = [];
+        for (let rowIndex = 0; rowIndex < rowErrors.length; rowIndex++) {
+            if (rowErrors[rowIndex] !== null)
+                failingRowIndexes.push(rowIndex);
+        }
+        this.setFailingRowIndexes(failingRowIndexes);
+    }
+
+    setFailingRowIndexes(failingRowIndexes) {
+        if (failingRowIndexes.join(",") === this.failingRowIndexes.join(","))
+            return;
+        this.failingRowIndexes = failingRowIndexes;
+        this.expressionControl.semanticDecorator?.invalidate();
+        this.expressionControl.scheduleSemanticColoring();
+        this.update();
+    }
+
+    hasFailingRows() {
+        return this.failingRowIndexes?.length > 0;
+    }
+
+    // The card is bordered in the colour its failing rows are written in: a card with a row the engine
+    // rejected has to be recognisable across the board, before anyone reads the expression itself.
+    getBorderColor() {
+        if (!this.hasFailingRows())
+            return super.getBorderColor();
+        const themeColor = getComputedStyle(this.container ?? document.documentElement).getPropertyValue("--math-error").trim();
+        return themeColor !== "" ? themeColor : ExpressionShape.failingBorderColor;
     }
 
     showShortcutsHint() {

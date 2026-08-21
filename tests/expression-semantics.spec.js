@@ -661,6 +661,141 @@ test.describe('semantic colouring', () => {
     });
 });
 
+test.describe('rows the engine cannot parse', () => {
+    const BROKEN_GROUP = '\\displaylines{a=1\\\\b=\\\\c=3}';
+
+    async function blurExpression(page, name) {
+        await page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).mathfield.blur(), name);
+        await page.waitForTimeout(400);
+    }
+
+    function failingRows(page, name) {
+        return page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).failingRowIndexes, name);
+    }
+
+    test('the offending row is marked when the expression loses focus', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await setCardBackground(page, 'Broken', '#ffffff');
+        expect(colorOf(await renderedColors(page, 'Broken'), 'b')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+        await focusExpression(page, 'Broken');
+        await blurExpression(page, 'Broken');
+        expect(await failingRows(page, 'Broken')).toEqual([1]);
+        const rendered = await renderedColors(page, 'Broken');
+        expect(colorOf(rendered, 'b')).toBe(adaptedColor('#d32f2f', '#ffffff', 7));
+        expect(colorOf(rendered, 'a')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+        expect(colorOf(rendered, 'c')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+    });
+
+    function cardBorder(page, name) {
+        return page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).container.style.border, name);
+    }
+
+    test('the card is bordered in the error colour while a row is failing', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        expect(await cardBorder(page, 'Broken')).toBe('1px solid rgb(0, 0, 0)');
+        await focusExpression(page, 'Broken');
+        await blurExpression(page, 'Broken');
+        expect(await cardBorder(page, 'Broken')).toBe('1px solid rgb(211, 47, 47)');
+    });
+
+    test('the card keeps its own border when every row parses', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Sound', '\\displaylines{a=1\\\\b=2}');
+        await focusExpression(page, 'Sound');
+        await blurExpression(page, 'Sound');
+        expect(await cardBorder(page, 'Sound')).toBe('1px solid rgb(0, 0, 0)');
+    });
+
+    test('the border goes back to the one the user chose once the row is written again', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Broken');
+            shape.properties.borderColor = '#00807f';
+            shape.update();
+        });
+        await focusExpression(page, 'Broken');
+        await blurExpression(page, 'Broken');
+        expect(await cardBorder(page, 'Broken')).toBe('1px solid rgb(211, 47, 47)');
+        await focusExpression(page, 'Broken');
+        await page.keyboard.type('7');
+        await page.waitForTimeout(400);
+        expect(await cardBorder(page, 'Broken')).toBe('1px solid rgb(0, 128, 127)');
+    });
+
+    function highlightColor(page, name) {
+        return page.evaluate(shapeName => {
+            const shape = shell.board.shapes.getByName(shapeName);
+            shell.board.selection.applyHighlight(shape);
+            return {
+                resolved: shell.board.selection.resolveHighlightColor(shape),
+                painted: shape._highlightProxy?.querySelector('rect:last-of-type')?.getAttribute('stroke') ?? null
+            };
+        }, name);
+    }
+
+    test('the hover and selection highlight is red while a row is failing', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await focusExpression(page, 'Broken');
+        await blurExpression(page, 'Broken');
+        const highlight = await highlightColor(page, 'Broken');
+        expect(highlight.resolved).toBe('#d32f2f');
+        expect(highlight.painted).toBe('#d32f2f');
+    });
+
+    test('the highlight goes back to the border of the shape once the row is written again', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Broken');
+            shape.properties.borderColor = '#00807f';
+            shape.update();
+        });
+        await focusExpression(page, 'Broken');
+        await blurExpression(page, 'Broken');
+        expect((await highlightColor(page, 'Broken')).resolved).toBe('#d32f2f');
+        await focusExpression(page, 'Broken');
+        await page.keyboard.type('7');
+        await page.waitForTimeout(400);
+        expect((await highlightColor(page, 'Broken')).resolved).toBe('#00807f');
+    });
+
+    test('rows the engine reads are left alone', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Sound', '\\displaylines{a=1\\\\b=2}');
+        await setCardBackground(page, 'Sound', '#ffffff');
+        await focusExpression(page, 'Sound');
+        await blurExpression(page, 'Sound');
+        expect(await failingRows(page, 'Sound')).toEqual([]);
+        expect(colorOf(await renderedColors(page, 'Sound'), 'b')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+    });
+
+    test('the mark is dropped as soon as the row is written again', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await setCardBackground(page, 'Broken', '#ffffff');
+        await focusExpression(page, 'Broken');
+        await blurExpression(page, 'Broken');
+        expect(await failingRows(page, 'Broken')).toEqual([1]);
+        await focusExpression(page, 'Broken');
+        await page.keyboard.type('7');
+        await page.waitForTimeout(400);
+        expect(await failingRows(page, 'Broken')).toEqual([]);
+        expect(colorOf(await renderedColors(page, 'Broken'), 'b')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+    });
+
+    test('checking the rows leaves no term behind in the model', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', '\\displaylines{zz=\\\\a=1}');
+        await focusExpression(page, 'Broken');
+        await blurExpression(page, 'Broken');
+        expect(await page.evaluate(() => shell.calculator.getTermsNames())).not.toContain('zz');
+    });
+});
+
 test.describe('mathfield behaviour that must not change', () => {
     test('the differential shortcut still writes a derivative', async ({ page }) => {
         await setupEditor(page);

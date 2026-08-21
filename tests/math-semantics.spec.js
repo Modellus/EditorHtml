@@ -224,6 +224,59 @@ test.describe('semantic metadata', () => {
     });
 });
 
+test.describe('rows the engine rejected', () => {
+    const calculator = {
+        getTermsNames: () => ['t', 'n'],
+        properties: { iterationTerm: 'n', independent: { name: 't' } }
+    };
+
+    function rowRolesOf(latex, failingRowIndexes) {
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, latex, [], failingRowIndexes);
+        return MathSemantics.classifyRows(latex, metadata).map(token => `${token.text}:${token.role}`);
+    }
+
+    test('reading the rows one by one classifies them as the whole expression does', () => {
+        const expressions = [
+            'a=0.10',
+            '\\displaylines{a=0.10\\\\b=21.55\\\\K_c=\\frac{b}{a^2}}',
+            '\\begin{align}a & =0.10\\\\ b & =21.55\\end{align}',
+            '\\displaylines{x=\\begin{cases}1&t<2\\\\2&t\\ge2\\end{cases}\\\\y=3}'
+        ];
+        for (const expression of expressions)
+            expect(MathSemantics.classifyRows(expression)).toEqual(MathSemantics.classify(expression));
+    });
+
+    test('a row that failed to parse is classified as failing from end to end', () => {
+        expect(rowRolesOf('\\displaylines{a=1\\\\b=\\\\c=3}', [1])).toEqual([
+            'a:variable', '=:operator', '1:number',
+            'b:error', '=:error',
+            'c:variable', '=:operator', '3:number'
+        ]);
+    });
+
+    test('an aligned block marks the failing row alone', () => {
+        expect(rowRolesOf('\\begin{align}a & =1\\\\ b & ==2\\end{align}', [1])).toEqual([
+            'a:variable', '=:operator', '1:number',
+            'b:error', '=:error', '=:error', '2:error'
+        ]);
+    });
+
+    test('rows nobody rejected keep their categories', () => {
+        expect(rowRolesOf('\\displaylines{a=1\\\\b=2}', [])).toEqual([
+            'a:variable', '=:operator', '1:number',
+            'b:variable', '=:operator', '2:number'
+        ]);
+    });
+
+    test('the failing rows are part of what makes the decoration stale', () => {
+        const clean = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{a=1}', []);
+        const failing = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{a=1}', [], [0]);
+        expect(failing.signature).not.toBe(clean.signature);
+        expect(failing.isFailingRow(0)).toBe(true);
+        expect(clean.isFailingRow(0)).toBe(false);
+    });
+});
+
 test.describe('equation alignment adapter', () => {
     test('several equations are presented as an aligned block', () => {
         expect(ExpressionAlignment.toPresentation('\\displaylines{a=0.10\\\\b=21.55}'))

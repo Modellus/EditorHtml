@@ -72,7 +72,7 @@ class MathSemanticDecorator {
             return false;
         this.decoratedLatex = signature;
         const leaves = MathSemanticDecorator.readLeaves(this.mathfield);
-        const tokens = MathSemantics.classify(latex, metadata);
+        const tokens = MathSemantics.classifyRows(latex, metadata);
         const roles = MathSemanticDecorator.matchTokensToLeaves(leaves, tokens);
         this.applyRoles(leaves, roles);
         return true;

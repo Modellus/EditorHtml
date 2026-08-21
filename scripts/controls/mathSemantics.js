@@ -267,6 +267,20 @@ class MathSemantics {
         return tokens;
     }
 
+    // Classifying a row at a time yields the same tokens the whole expression would, and gives the rows
+    // the calculation engine could not parse a category of their own, so that they read as failing.
+    static classifyRows(latex, metadata = null) {
+        const rows = ExpressionAlignment.readRows(latex);
+        const tokens = [];
+        for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+            const rowTokens = MathSemantics.classify(rows[rowIndex].cells.join(""), metadata);
+            const isFailingRow = metadata?.isFailingRow?.(rowIndex) ?? false;
+            for (let tokenIndex = 0; tokenIndex < rowTokens.length; tokenIndex++)
+                tokens.push(isFailingRow ? { ...rowTokens[tokenIndex], role: MathSymbolRole.ERROR } : rowTokens[tokenIndex]);
+        }
+        return tokens;
+    }
+
     static createContext(overrides = {}) {
         return { forcedRole: null, indexNameRole: null, inDerivative: false, isIndexContent: false, ...overrides };
     }

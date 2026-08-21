@@ -555,16 +555,43 @@ class Calculator extends EventTarget {
         return expressions;
     }
 
+    normalizeExpressionText(text = "") {
+        let normalizedText = this.removeDisplaylinesWrappers(text);
+        normalizedText = normalizedText.replace(/\\placeholder\{\}/g, '');
+        normalizedText = normalizedText.replace(/\\differentialD\s+([A-Za-z][A-Za-z0-9]*)/g, '\\differentialD{$1}');
+        return normalizedText;
+    }
+
     parse(text = "") {
-        text = this.removeDisplaylinesWrappers(text);
-        text = text.replace(/\\placeholder\{\}/g, '');
-        text = text.replace(/\\differentialD\s+([A-Za-z][A-Za-z0-9]*)/g, '\\differentialD{$1}');
-        const expressions = this.splitExpressions(text);
+        const expressions = this.splitExpressions(this.normalizeExpressionText(text));
         expressions.forEach(e => this.parser.parse(e));
         const latexVisitor = new Modellus.LatexVisitor(this.system);
         latexVisitor.build();
         this.engine.reset();
         this.system.reset();
+    }
+
+    // Rows are checked against a system of this call's own: parsing a name is what makes it a term, and a
+    // row the user is still writing would otherwise leave the model holding terms it never asked for.
+    findRowParseErrors(rowsLatex = []) {
+        const parser = new Modellus.Parser(new Modellus.System(this.properties.independent.name, this.properties.iterationTerm));
+        return rowsLatex.map(rowLatex => this.findRowParseError(parser, rowLatex));
+    }
+
+    findRowParseError(parser, rowLatex = "") {
+        const expressions = this.splitExpressions(this.normalizeExpressionText(rowLatex));
+        for (let expressionIndex = 0; expressionIndex < expressions.length; expressionIndex++) {
+            parser.hasErrors = false;
+            parser.errors = [];
+            try {
+                parser.parse(expressions[expressionIndex]);
+            } catch (error) {
+                return String(error?.message ?? error);
+            }
+            if (parser.hasErrors)
+                return parser.errors[0] ?? "The expression could not be parsed.";
+        }
+        return null;
     }
 
     getByName(name = "", caseNumber = 1) {

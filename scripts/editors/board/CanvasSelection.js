@@ -382,7 +382,7 @@ class Selection {
             if (adaptedColor)
                 return adaptedColor;
         }
-        const borderColor = shape.properties?.borderColor ?? shape.properties?.foregroundColor;
+        const borderColor = shape.getBorderColor?.() ?? shape.properties?.borderColor ?? shape.properties?.foregroundColor;
         return this.isTransparentColor(borderColor) ? "#000000" : borderColor;
     }
 

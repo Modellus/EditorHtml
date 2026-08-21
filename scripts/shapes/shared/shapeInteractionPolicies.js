@@ -92,8 +92,11 @@ function resolveEditorHoveredShapeFromPointer(shape, event, selection) {
     return childShape ?? shape;
 }
 
+// The highlight is drawn in the colour the shape borders itself with, so that hovering a shape whose
+// border says something - an expression card with a row the engine rejected - does not ring it in a
+// second colour and read as two borders.
 function resolveEditorHighlightColor(shape, selection) {
-    const borderColor = shape.properties?.borderColor ?? shape.properties?.foregroundColor;
+    const borderColor = shape.getBorderColor?.() ?? shape.properties?.borderColor ?? shape.properties?.foregroundColor;
     return selection.isTransparentColor(borderColor) ? "#000000" : borderColor;
 }
 
