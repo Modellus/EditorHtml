@@ -673,18 +673,22 @@ test.describe('rows the engine cannot parse', () => {
         return page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).failingRowIndexes, name);
     }
 
-    test('the offending row is marked when the expression loses focus', async ({ page }) => {
+    // A row is checked when the user steps out of the card, not while they are still writing it: an
+    // expression halfway through being typed is not an expression the engine could be expected to read.
+    test('the offending row is marked when the expression loses focus, not while it is typed', async ({ page }) => {
         await setupEditor(page);
-        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await addExpression(page, 'Broken', '\\displaylines{a=1\\\\b=2}');
         await setCardBackground(page, 'Broken', '#ffffff');
-        expect(colorOf(await renderedColors(page, 'Broken'), 'b')).toBe(adaptedColor('#183b66', '#ffffff', 6));
         await focusExpression(page, 'Broken');
+        await page.keyboard.press('Backspace');
+        await page.waitForTimeout(400);
+        expect(await failingRows(page, 'Broken')).toEqual([]);
+        expect(colorOf(await renderedColors(page, 'Broken'), 'b')).toBe(adaptedColor('#183b66', '#ffffff', 6));
         await blurExpression(page, 'Broken');
         expect(await failingRows(page, 'Broken')).toEqual([1]);
         const rendered = await renderedColors(page, 'Broken');
         expect(colorOf(rendered, 'b')).toBe(adaptedColor('#d32f2f', '#ffffff', 7));
         expect(colorOf(rendered, 'a')).toBe(adaptedColor('#183b66', '#ffffff', 6));
-        expect(colorOf(rendered, 'c')).toBe(adaptedColor('#183b66', '#ffffff', 6));
     });
 
     function cardBorder(page, name) {
@@ -693,11 +697,11 @@ test.describe('rows the engine cannot parse', () => {
 
     test('the card is bordered in the error colour while a row is failing', async ({ page }) => {
         await setupEditor(page);
+        await addExpression(page, 'Sound', '\\displaylines{a=1\\\\b=2}');
+        expect(await cardBorder(page, 'Sound')).toBe('1px solid rgb(0, 0, 0)');
         await addExpression(page, 'Broken', BROKEN_GROUP);
-        expect(await cardBorder(page, 'Broken')).toBe('1px solid rgb(0, 0, 0)');
-        await focusExpression(page, 'Broken');
-        await blurExpression(page, 'Broken');
         expect(await cardBorder(page, 'Broken')).toBe('1px solid rgb(211, 47, 47)');
+        expect(await cardBorder(page, 'Sound')).toBe('1px solid rgb(0, 0, 0)');
     });
 
     test('the card keeps its own border when every row parses', async ({ page }) => {

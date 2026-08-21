@@ -9,6 +9,7 @@ class CasesTableShape extends BaseTableShape {
         this.properties.columns = this.buildDefaultColumns();
         this.properties.groupColors = {};
         this.properties.visibleCases = null;
+        this.properties.hiddenBaseTerms = [];
     }
 
     tick() {
@@ -225,12 +226,39 @@ class CasesTableShape extends BaseTableShape {
         this.refreshTableRows();
     }
 
+    getHiddenBaseTerms() {
+        return Array.isArray(this.properties.hiddenBaseTerms) ? this.properties.hiddenBaseTerms : [];
+    }
+
+    setHiddenBaseTerms(hiddenTerms) {
+        this.setPropertyCommand("hiddenBaseTerms", hiddenTerms);
+        this.refreshTableRows();
+    }
+
+    hideBaseTerm(term) {
+        const hiddenTerms = this.getHiddenBaseTerms();
+        if (hiddenTerms.includes(term))
+            return false;
+        this.setHiddenBaseTerms([...hiddenTerms, term]);
+        return true;
+    }
+
+    showBaseTerm(term) {
+        const hiddenTerms = this.getHiddenBaseTerms();
+        if (!hiddenTerms.includes(term))
+            return false;
+        this.setHiddenBaseTerms(hiddenTerms.filter(hiddenTerm => hiddenTerm !== term));
+        return true;
+    }
+
     // Iteration 1 is the model's own initial values, which the engine never records as user input,
     // so the base group always lists every selected term while later moments list only what they hold.
     getTermNamesForIteration(iteration, columns = this._activeColumns ?? this.getSelectedColumns()) {
         const terms = this.getSelectedTermNames(columns);
-        if (iteration <= 1)
-            return terms;
+        if (iteration <= 1) {
+            const hiddenTerms = this.getHiddenBaseTerms();
+            return terms.filter(term => !hiddenTerms.includes(term));
+        }
         const calculator = this.board.calculator;
         return terms.filter(term => calculator.getUserInputIterations(term).includes(iteration));
     }
@@ -451,6 +479,8 @@ class CasesTableShape extends BaseTableShape {
         const iteration = Math.floor(Number(row.iteration) || 0);
         if (!termName || iteration < 1)
             return false;
+        if (iteration === 1)
+            return this.hideBaseTerm(termName);
         let changed = false;
         for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
             changed = this.clearTermAtIteration(termName, iteration, caseNumber) || changed;
@@ -506,8 +536,10 @@ class CasesTableShape extends BaseTableShape {
 
     addTermToGroup(term, iteration) {
         iteration = Math.floor(Number(iteration) || 0);
-        if (iteration <= 1 || !this.getSelectedTermNames().includes(term))
+        if (iteration < 1 || !this.getSelectedTermNames().includes(term))
             return false;
+        if (iteration === 1)
+            return this.showBaseTerm(term);
         if (!this.seedTermAtIteration(term, iteration))
             return false;
         const calculator = this.board.calculator;
@@ -606,7 +638,11 @@ class CasesTableShape extends BaseTableShape {
         const focusedRow = this._focusedCellsPayload?.focusedRows?.[0]?.row;
         if (focusedRow?.isIndependentRow)
             return this._focusedCellsPayload?.focusedColumn?.key === this.getMomentColumnKey();
-        return this.isMomentTermRow(focusedRow);
+        return this.isTermRow(focusedRow);
+    }
+
+    isTermRow(row) {
+        return row?.isIndependentRow !== true && row?.termName !== undefined;
     }
 
     isMomentTermRow(row) {
@@ -661,7 +697,7 @@ class CasesTableShape extends BaseTableShape {
     }
 
     isFocusedAddTermAvailable() {
-        if (!this.isFocusedGroupRow() || this.getFocusedGroupIteration() <= 1)
+        if (!this.shouldShowCellsContextToolbar())
             return false;
         return this.getTermNamesMissingFromIteration(this.getFocusedGroupIteration()).length > 0;
     }

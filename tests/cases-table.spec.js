@@ -532,7 +532,7 @@ test.describe('Cases table', () => {
         expect(afterTyping.overlayText).toEqual(['t = 5']);
     });
 
-    test('clicking a base term row cell does not reveal a toolbar', async ({ page }) => {
+    test('clicking a base term row cell reveals a toolbar offering delete but no swap', async ({ page }) => {
         await setupEditor(page);
         await setupModelWithCasesTable(page, 1);
 
@@ -542,11 +542,105 @@ test.describe('Cases table', () => {
             const tableShape = shell.board.shapes.getByName('Inputs1');
             return {
                 hasFocusedCells: tableShape.table.hasFocusedCells(),
-                toolbarVisible: tableShape.cellsContextToolbar?.classList.contains('visible')
+                toolbarVisible: tableShape.cellsContextToolbar?.classList.contains('visible'),
+                deletable: tableShape.isFocusedRowDeletable(),
+                addTermAvailable: tableShape.isFocusedAddTermAvailable(),
+                swapTermAvailable: tableShape.isFocusedSwapTermAvailable()
             };
         });
         expect(state.hasFocusedCells).toBe(true);
-        expect(state.toolbarVisible).toBe(false);
+        expect(state.toolbarVisible).toBe(true);
+        expect(state.deletable).toBe(true);
+        expect(state.addTermAvailable).toBe(false);
+        expect(state.swapTermAvailable).toBe(false);
+    });
+
+    test('a term removed from the base group can be added back from any of its rows', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const afterRemoval = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            const vRow = tableShape.table.rows.find(row => row.termName === 'v' && row.iteration === 1);
+            tableShape.onTableCellValueChanged({ row: vRow, column: tableShape.table.options.columns.find(column => column.key === 'case1'), value: 7 });
+            const removed = tableShape.onTableRowDeleteRequested({ row: vRow });
+            tableShape.refreshTableRows();
+            return {
+                removed: removed,
+                baseTerms: tableShape.getTermNamesForIteration(1),
+                baseRowTerms: tableShape.table.rows.filter(row => row.iteration === 1 && !row.isIndependentRow).map(row => row.termName),
+                missing: tableShape.getTermNamesMissingFromIteration(1),
+                initialValueKept: shell.calculator.system.getByNameOnIteration(1, 'v', 1)
+            };
+        });
+
+        expect(afterRemoval.removed).toBe(true);
+        expect(afterRemoval.baseTerms).toEqual(['x']);
+        expect(afterRemoval.baseRowTerms).toEqual(['x']);
+        expect(afterRemoval.missing).toEqual(['v']);
+        expect(afterRemoval.initialValueKept).toBe(7);
+
+        await page.evaluate(() => shell.board.shapes.getByName('Inputs1').table.render());
+        await page.waitForTimeout(200);
+
+        await clickTableCell(page, 'Inputs1', 1, 1);
+        await page.waitForTimeout(300);
+
+        const focusedTermRow = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            return {
+                focusedTerm: tableShape.getFocusedTermName(),
+                iteration: tableShape.getFocusedGroupIteration(),
+                addTermAvailable: tableShape.isFocusedAddTermAvailable()
+            };
+        });
+        expect(focusedTermRow.focusedTerm).toBe('x');
+        expect(focusedTermRow.iteration).toBe(1);
+        expect(focusedTermRow.addTermAvailable).toBe(true);
+
+        await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.getDropDownButtonInstance(tableShape._focusedAddTermButtonElement).open();
+        });
+        await page.waitForSelector('.mdl-shape-overlay-popup .dx-list-item .mdl-variable-selector math-field');
+
+        const menuTerms = await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .dx-list-item .mdl-variable-selector math-field')).map(item => item.textContent.trim()));
+        expect(menuTerms).toEqual(['v']);
+
+        await page.click('.mdl-shape-overlay-popup .dx-list-item:nth-child(1)');
+        await page.waitForTimeout(300);
+
+        const afterAdd = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.refreshTableRows();
+            return {
+                baseTerms: tableShape.getTermNamesForIteration(1),
+                hiddenTerms: tableShape.getHiddenBaseTerms()
+            };
+        });
+        expect(afterAdd.baseTerms.slice().sort()).toEqual(['v', 'x']);
+        expect(afterAdd.hiddenTerms).toEqual([]);
+    });
+
+    test('terms removed from the base group survive serialize and open roundtrip', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const state = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.hideBaseTerm('v');
+            const model = shell.serialize();
+            shell.openModel(JSON.stringify(model));
+            const reopened = shell.board.shapes.getByName('Inputs1');
+            reopened.refreshTableRows();
+            return {
+                hiddenTerms: reopened.getHiddenBaseTerms(),
+                baseTerms: reopened.getTermNamesForIteration(1)
+            };
+        });
+
+        expect(state.hiddenTerms).toEqual(['v']);
+        expect(state.baseTerms).toEqual(['x']);
     });
 
     test('deleting the base moment resets its values to zero instead of being blocked', async ({ page }) => {
