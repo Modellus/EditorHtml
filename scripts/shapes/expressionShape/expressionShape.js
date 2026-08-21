@@ -82,7 +82,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
 
     getSemanticMetadata() {
         const functionNames = this.expressionControl.getExpressionFunctionShortcuts().map(shortcut => shortcut.shortcutText);
-        return MathSemanticMetadata.fromCalculator(this.board.calculator, this.expressionControl.getCanonicalValue(), functionNames, this.board.translations.get("Unknown Term"));
+        return MathSemanticMetadata.fromCalculator(this.board.calculator, this.expressionControl.getCanonicalValue(), functionNames);
     }
 
     getTemplateShortcuts() {

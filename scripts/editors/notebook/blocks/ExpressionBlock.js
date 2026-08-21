@@ -49,7 +49,7 @@ if (typeof BlocksRegistry !== "undefined") {
 
         getSemanticMetadata() {
             const functionNames = this.expressionControl.getExpressionFunctionShortcuts().map(shortcut => shortcut.shortcutText);
-            return MathSemanticMetadata.fromCalculator(this.notebookEditor.calculator, this.expressionControl.getCanonicalValue(), functionNames, "Unknown term");
+            return MathSemanticMetadata.fromCalculator(this.notebookEditor.calculator, this.expressionControl.getCanonicalValue(), functionNames);
         }
 
         getTemplateShortcuts() {

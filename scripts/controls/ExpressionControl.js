@@ -5,7 +5,6 @@ class ExpressionControl {
         this.mathfield = null;
         this.mathliveController = null;
         this.semanticDecorator = null;
-        this.diagnosticsElement = null;
         this.colorSchemeQuery = null;
         this.onColorSchemeChange = () => this.refreshSemanticColoring();
     }
@@ -95,28 +94,6 @@ class ExpressionControl {
         if (!this.semanticDecorator || !this.mathfield)
             return;
         this.semanticDecorator.refresh();
-        this._renderDiagnostics(this.semanticDecorator.getDiagnostics());
-    }
-
-    _renderDiagnostics(diagnostics) {
-        if (diagnostics.length === 0) {
-            this.diagnosticsElement?.remove();
-            this.diagnosticsElement = null;
-            this.mathfield.removeAttribute("aria-description");
-            return;
-        }
-        const hasError = diagnostics.some(diagnostic => diagnostic.role === MathSymbolRole.ERROR);
-        const messages = diagnostics.map(diagnostic => diagnostic.message).join("; ");
-        const iconClass = hasError ? "fa-light fa-circle-exclamation" : "fa-light fa-triangle-exclamation";
-        const severityClass = hasError ? "mdl-expression-diagnostics-error" : "mdl-expression-diagnostics-warning";
-        if (!this.diagnosticsElement) {
-            this.containerElement.insertAdjacentHTML("beforeend", `<div class="mdl-expression-diagnostics" role="status" aria-live="polite"></div>`);
-            this.diagnosticsElement = this.containerElement.querySelector(".mdl-expression-diagnostics");
-        }
-        this.diagnosticsElement.className = `mdl-expression-diagnostics ${severityClass}`;
-        this.diagnosticsElement.title = messages;
-        this.diagnosticsElement.innerHTML = `<i class="${iconClass}" aria-hidden="true"></i><span class="mdl-expression-diagnostics-count" aria-hidden="true">${diagnostics.length}</span><span class="mdl-expression-diagnostics-text">${messages}</span>`;
-        this.mathfield.setAttribute("aria-description", messages);
     }
 
     _scheduleAlignmentNormalization(inputEvent) {
@@ -844,7 +821,6 @@ class ExpressionControl {
         this.colorSchemeQuery?.removeEventListener("change", this.onColorSchemeChange);
         this.colorSchemeQuery = null;
         this.semanticDecorator = null;
-        this.diagnosticsElement = null;
         if (this.containerElement) {
             const scrollViewInstance = DevExpress.ui.dxScrollView.getInstance(this.containerElement);
             if (scrollViewInstance)

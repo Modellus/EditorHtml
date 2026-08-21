@@ -391,6 +391,16 @@ test.describe('semantic colouring', () => {
         expect(colorOf(rendered, 'n')).toBe(adaptedColor('#7047b8', '#ffffff', 6));
     });
 
+    test('a subscript that names the term is painted with the name, an index is not', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Names', '\\displaylines{v.x=2\\\\a_{n+1}=a_n}');
+        await setCardBackground(page, 'Names', '#ffffff');
+        const rendered = await renderedColors(page, 'Names');
+        expect(colorOf(rendered, 'x')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+        expect(colorOf(rendered, 'n')).toBe(adaptedColor('#7047b8', '#ffffff', 6));
+        expect(colorOf(rendered, '+')).toBe(adaptedColor('#626b75', '#ffffff', 4.5));
+    });
+
     test('colouring reaches inside fractions, powers and roots', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Nested', '\\displaylines{K=\\frac{\\sqrt{b}}{a^2}\\\\a=1\\\\b=2}');
@@ -466,75 +476,38 @@ test.describe('semantic colouring', () => {
         expect(result.after).toBe(result.before);
     });
 
-    test('a term nobody defines is reported with an icon, a tooltip and a message', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Initial', INITIAL_VALUES_GROUP);
-        await page.waitForTimeout(500);
-        const diagnostics = await page.evaluate(() => {
-            const control = shell.board.shapes.getByName('Initial').expressionControl;
-            const element = control.containerElement.querySelector('.mdl-expression-diagnostics');
-            return {
-                messages: control.semanticDecorator.getDiagnostics().map(diagnostic => diagnostic.message),
-                title: element.title,
-                role: element.getAttribute('role'),
-                live: element.getAttribute('aria-live'),
-                icon: element.querySelector('i').className,
-                description: control.mathfield.getAttribute('aria-description')
-            };
-        });
-        expect(diagnostics.messages).toContain('Unknown term: r');
-        expect(diagnostics.title).toContain('Unknown term: r');
-        expect(diagnostics.role).toBe('status');
-        expect(diagnostics.live).toBe('polite');
-        expect(diagnostics.icon).toContain('fa-triangle-exclamation');
-        expect(diagnostics.description).toContain('Unknown term: r');
-    });
-
-    test('an unknown term is painted amber and a known one is not', async ({ page }) => {
+    test('a term nobody defines is left alone, uncoloured and unflagged', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Initial', '\\displaylines{a=1\\\\NO_2\\left(0\\right)=a\\cdot r}');
         await setCardBackground(page, 'Initial', '#ffffff');
-        const rendered = await renderedColors(page, 'Initial');
-        expect(colorOf(rendered, 'r')).toBe(adaptedColor('#ad6800', '#ffffff', 6.5));
-        expect(colorOf(rendered, 'a')).toBe(adaptedColor('#183b66', '#ffffff', 6));
-    });
-
-    test('the report goes away once every term is defined', async ({ page }) => {
-        await setupEditor(page);
-        await addExpression(page, 'Initial', '\\displaylines{r=2\\\\NO_2\\left(0\\right)=a\\cdot r\\\\a=1}');
         await page.waitForTimeout(500);
-        const diagnostics = await page.evaluate(() => {
+        const rendered = await renderedColors(page, 'Initial');
+        expect(colorOf(rendered, 'r')).not.toBe(adaptedColor('#ad6800', '#ffffff', 6.5));
+        expect(colorOf(rendered, 'a')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+        const report = await page.evaluate(() => {
             const control = shell.board.shapes.getByName('Initial').expressionControl;
             return {
-                messages: control.semanticDecorator.getDiagnostics(),
                 element: control.containerElement.querySelector('.mdl-expression-diagnostics'),
                 description: control.mathfield.getAttribute('aria-description')
             };
         });
-        expect(diagnostics.messages).toEqual([]);
-        expect(diagnostics.element).toBe(null);
-        expect(diagnostics.description).toBe(null);
+        expect(report.element).toBe(null);
+        expect(report.description).toBe(null);
     });
 
-    test('an error outranks a warning in the report', async ({ page }) => {
+    test('a term the metadata calls an error is painted in the error colour', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Errors', '\\displaylines{a=q\\\\b=2}');
-        const report = await page.evaluate(() => {
+        await page.evaluate(() => {
             const control = shell.board.shapes.getByName('Errors').expressionControl;
             control.options.getSemanticMetadata = () => ({
                 signature: 'errors',
-                getSymbolRole: symbolName => (symbolName === 'q' ? 'error' : null),
-                getDiagnosticMessage: symbolName => `Unknown term: ${symbolName}`
+                getSymbolRole: symbolName => (symbolName === 'q' ? 'error' : null)
             });
             control.semanticDecorator.invalidate();
             control.refreshSemanticColoring();
-            const element = control.containerElement.querySelector('.mdl-expression-diagnostics');
-            return { className: element.className, icon: element.querySelector('i').className, roles: control.semanticDecorator.getDiagnostics().map(diagnostic => diagnostic.role) };
         });
         await page.waitForTimeout(300);
-        expect(report.roles).toContain('error');
-        expect(report.className).toContain('mdl-expression-diagnostics-error');
-        expect(report.icon).toContain('fa-circle-exclamation');
         await setCardBackground(page, 'Errors', '#ffffff');
         const rendered = await renderedColors(page, 'Errors');
         expect(colorOf(rendered, 'q')).toBe(adaptedColor('#d32f2f', '#ffffff', 7));

@@ -7,8 +7,7 @@ class MathSemanticDecorator {
         "derivative": "--math-derivative",
         "qualifier-index": "--math-qualifier-index",
         "iteration-index": "--math-iteration-index",
-        "error": "--math-error",
-        "warning": "--math-warning"
+        "error": "--math-error"
     };
 
     static fallbackRoleColors = {
@@ -19,14 +18,12 @@ class MathSemanticDecorator {
         "derivative": "#b0185b",
         "qualifier-index": "#347dac",
         "iteration-index": "#7047b8",
-        "error": "#d32f2f",
-        "warning": "#ad6800"
+        "error": "#d32f2f"
     };
 
     static roleContrastTargets = {
         "operator": 4.5,
-        "error": 7,
-        "warning": 6.5
+        "error": 7
     };
 
     static defaultContrastTarget = 6;
@@ -47,7 +44,6 @@ class MathSemanticDecorator {
         this.mathfield = mathfield;
         this.metadataProvider = metadataProvider;
         this.decoratedLatex = null;
-        this.diagnostics = [];
         this.enabled = true;
         this.backgroundColor = "#ffffff";
         this.mathfieldStyle = null;
@@ -79,7 +75,6 @@ class MathSemanticDecorator {
         const tokens = MathSemantics.classify(latex, metadata);
         const roles = MathSemanticDecorator.matchTokensToLeaves(leaves, tokens);
         this.applyRoles(leaves, roles);
-        this.diagnostics = MathSemanticDecorator.collectDiagnostics(tokens, metadata);
         return true;
     }
 
@@ -170,10 +165,6 @@ class MathSemanticDecorator {
         this.mathfield.applyStyle({ color: this.readRoleColor(role) }, { range: [startOffset, endOffset], silenceNotifications: true });
     }
 
-    getDiagnostics() {
-        return this.diagnostics;
-    }
-
     clear() {
         if (!this.mathfield)
             return;
@@ -183,7 +174,6 @@ class MathSemanticDecorator {
         if (savedSelection)
             this.mathfield.selection = savedSelection;
         this.decoratedLatex = null;
-        this.diagnostics = [];
     }
 
     static readLeaves(mathfield) {
@@ -227,22 +217,6 @@ class MathSemanticDecorator {
         if (normalizedText === "\\differentialD")
             return "\\mathrm{d}";
         return normalizedText.replace(/\{\s*\}/g, "{}");
-    }
-
-    static collectDiagnostics(tokens, metadata) {
-        const diagnostics = [];
-        const reportedSymbols = new Set();
-        for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
-            const token = tokens[tokenIndex];
-            if (token.role !== MathSymbolRole.ERROR && token.role !== MathSymbolRole.WARNING)
-                continue;
-            const symbolName = token.symbolName ?? token.text;
-            if (reportedSymbols.has(symbolName))
-                continue;
-            reportedSymbols.add(symbolName);
-            diagnostics.push({ role: token.role, symbolName, message: metadata?.getDiagnosticMessage?.(symbolName, token.role) ?? symbolName });
-        }
-        return diagnostics;
     }
 
     static countLeavesBeforeOffset(mathfield, caretOffset) {

@@ -6,8 +6,7 @@ const MathSymbolRole = {
     DERIVATIVE: "derivative",
     NUMBER: "number",
     OPERATOR: "operator",
-    ERROR: "error",
-    WARNING: "warning"
+    ERROR: "error"
 };
 
 class MathSemanticsParser {
@@ -231,7 +230,6 @@ class MathSemanticsParser {
 class MathSemantics {
     static rolePriority = [
         MathSymbolRole.ERROR,
-        MathSymbolRole.WARNING,
         MathSymbolRole.DERIVATIVE,
         MathSymbolRole.FUNCTION,
         MathSymbolRole.QUALIFIER_INDEX,
@@ -270,7 +268,7 @@ class MathSemantics {
     }
 
     static createContext(overrides = {}) {
-        return { forcedRole: null, inDerivative: false, isIndexContent: false, ...overrides };
+        return { forcedRole: null, indexNameRole: null, inDerivative: false, isIndexContent: false, ...overrides };
     }
 
     static emitNodes(nodes, context, tokens, metadata) {
@@ -294,6 +292,7 @@ class MathSemantics {
         let endIndex = startIndex;
         while (endIndex < nodes.length && nodes[endIndex].type === "character" && MathSemantics.isLetter(nodes[endIndex].text))
             endIndex++;
+        endIndex = MathSemantics.readNameTailEnd(nodes, startIndex, endIndex, metadata);
         const runNodes = nodes.slice(startIndex, endIndex);
         const name = runNodes.map(node => node.text).join("");
         const lastNode = runNodes[runNodes.length - 1];
@@ -302,9 +301,27 @@ class MathSemantics {
         for (let runIndex = 0; runIndex < runNodes.length; runIndex++) {
             const runNode = runNodes[runIndex];
             tokens.push(MathSemantics.createToken(runNode.text, role, symbolName));
-            MathSemantics.emitScripts(runNode, name, MathSemantics.buildSymbolName(name, runNode), context, tokens, metadata);
+            MathSemantics.emitScripts(runNode, name, MathSemantics.buildSymbolName(name, runNode), role, context, tokens, metadata);
         }
         return endIndex;
+    }
+
+    // A name is read the way the engine reads it, letters first and then any mix of letters and digits
+    // (`x2`, `m1`, `F12x`), so the digits belong to the name and are coloured with it instead of reading as
+    // a number multiplying it.  A function keeps its digits out of its name (`log2`), and so does a part
+    // carrying a script: what follows `k_d` or `r12^2` starts a symbol of its own.
+    static readNameTailEnd(nodes, startIndex, endIndex, metadata) {
+        const name = nodes.slice(startIndex, endIndex).map(node => node.text).join("");
+        if (MathSemantics.isFunctionName(name, metadata))
+            return endIndex;
+        while (endIndex < nodes.length && !MathSemantics.carriesScripts(nodes[endIndex - 1])
+            && nodes[endIndex].type === "character" && MathSemantics.isNameTailCharacter(nodes[endIndex].text))
+            endIndex++;
+        return endIndex;
+    }
+
+    static carriesScripts(node) {
+        return Boolean(node?.subscript || node?.superscript);
     }
 
     static emitNumberRun(nodes, startIndex, context, tokens, metadata) {
@@ -317,24 +334,53 @@ class MathSemantics {
         for (let runIndex = 0; runIndex < runNodes.length; runIndex++) {
             const runNode = runNodes[runIndex];
             tokens.push(MathSemantics.createToken(runNode.text, role, numberText));
-            MathSemantics.emitScripts(runNode, numberText, numberText, context, tokens, metadata);
+            MathSemantics.emitScripts(runNode, numberText, numberText, role, context, tokens, metadata);
         }
         return endIndex;
     }
 
-    static emitScripts(node, name, symbolName, context, tokens, metadata) {
+    static emitScripts(node, name, symbolName, nameRole, context, tokens, metadata) {
         if (node.subscript)
-            MathSemantics.emitIndex(node.subscript, name, symbolName, context, tokens, metadata);
+            MathSemantics.emitIndex(node.subscript, name, symbolName, nameRole, context, tokens, metadata);
         if (node.superscript)
             MathSemantics.emitSuperscript(node.superscript, context, tokens, metadata);
     }
 
-    static emitIndex(subscriptNode, name, symbolName, context, tokens, metadata) {
+    static emitIndex(subscriptNode, name, symbolName, nameRole, context, tokens, metadata) {
+        // A term named `a.n` is written `a_{\!n}`: the subscript is a part of the name and is coloured with
+        // it.  `a_n` is a different symbol, an `a` carrying the index `n`, and keeps the index colours.
+        if (MathSemantics.isNamedIndex(subscriptNode.body)) {
+            MathSemantics.emitNamedIndex(subscriptNode.body, name, symbolName, nameRole, context, tokens, metadata);
+            return;
+        }
         const indexText = MathSemantics.getPlainText(subscriptNode.body);
-        const isNamedIndex = MathSemantics.isNamedIndex(subscriptNode.body);
-        const indexRole = MathSemantics.resolveIndexRole(name, symbolName, indexText, isNamedIndex, metadata);
-        const indexContext = MathSemantics.createContext({ forcedRole: indexRole, inDerivative: context.inDerivative, isIndexContent: true });
+        const indexRole = MathSemantics.resolveIndexRole(name, symbolName, indexText, metadata);
+        // `a_{n+1}` is the index `n` a step further on, so only the name in it reads as an index: the sign and
+        // the number keep their own colours and the `n` is coloured the way it is in `a_n`.
+        const isCompoundIndex = MathSemantics.isCompoundIndex(subscriptNode.body);
+        const indexContext = MathSemantics.createContext({
+            forcedRole: isCompoundIndex ? null : indexRole,
+            indexNameRole: isCompoundIndex ? indexRole : null,
+            inDerivative: context.inDerivative,
+            isIndexContent: true
+        });
         MathSemantics.emitNodes(subscriptNode.body, indexContext, tokens, metadata);
+    }
+
+    static emitNamedIndex(bodyNodes, name, symbolName, nameRole, context, tokens, metadata) {
+        for (let nodeIndex = 0; nodeIndex < bodyNodes.length; nodeIndex++) {
+            const node = bodyNodes[nodeIndex];
+            if (node.type !== "character" && node.type !== "command") {
+                MathSemantics.emitNodes([node], MathSemantics.createContext({ forcedRole: nameRole, inDerivative: context.inDerivative, isIndexContent: true }), tokens, metadata);
+                continue;
+            }
+            tokens.push(MathSemantics.createToken(node.text, nameRole, symbolName));
+            MathSemantics.emitScripts(node, name, symbolName, nameRole, context, tokens, metadata);
+        }
+    }
+
+    static isCompoundIndex(bodyNodes) {
+        return /[^A-Za-z0-9Α-ω._]/.test(MathSemantics.getPlainText(bodyNodes));
     }
 
     static emitSuperscript(superscriptNode, context, tokens, metadata) {
@@ -346,8 +392,9 @@ class MathSemantics {
 
     static emitNode(node, context, tokens, metadata) {
         if (node.type === "character") {
-            tokens.push(MathSemantics.createToken(node.text, MathSemantics.resolveRole([context.forcedRole, MathSymbolRole.OPERATOR]), node.text));
-            MathSemantics.emitScripts(node, node.text, node.text, context, tokens, metadata);
+            const characterRole = MathSemantics.resolveRole([context.forcedRole, MathSymbolRole.OPERATOR]);
+            tokens.push(MathSemantics.createToken(node.text, characterRole, node.text));
+            MathSemantics.emitScripts(node, node.text, node.text, characterRole, context, tokens, metadata);
             return;
         }
         if (node.type === "command") {
@@ -360,7 +407,7 @@ class MathSemantics {
         }
         if (node.type === "group" || node.type === "delimited" || node.type === "rows") {
             MathSemantics.emitNodes(node.body, context, tokens, metadata);
-            MathSemantics.emitScripts(node, "", "", context, tokens, metadata);
+            MathSemantics.emitScripts(node, "", "", context.forcedRole, context, tokens, metadata);
             return;
         }
         if (node.type === "fraction") {
@@ -371,19 +418,19 @@ class MathSemantics {
             if (node.rootIndex)
                 MathSemantics.emitNodes(node.rootIndex, context, tokens, metadata);
             MathSemantics.emitNodes(node.radicand, context, tokens, metadata);
-            MathSemantics.emitScripts(node, "", "", context, tokens, metadata);
+            MathSemantics.emitScripts(node, "", "", context.forcedRole, context, tokens, metadata);
             return;
         }
         if (node.type === "differential") {
             tokens.push(MathSemantics.createToken(MathSemantics.differentialLeafText, MathSymbolRole.DERIVATIVE, node.command));
             MathSemantics.emitNodes(node.body, MathSemantics.createContext({ inDerivative: true }), tokens, metadata);
-            MathSemantics.emitScripts(node, "", "", context, tokens, metadata);
+            MathSemantics.emitScripts(node, "", "", context.forcedRole, context, tokens, metadata);
             return;
         }
         if (node.type === "accent") {
             const accentRole = MathSemantics.derivativeAccentCommandNames.has(node.command) ? MathSymbolRole.DERIVATIVE : context.forcedRole;
             MathSemantics.emitNodes(node.body, MathSemantics.createContext({ forcedRole: accentRole, inDerivative: context.inDerivative }), tokens, metadata);
-            MathSemantics.emitScripts(node, "", "", context, tokens, metadata);
+            MathSemantics.emitScripts(node, "", "", context.forcedRole, context, tokens, metadata);
             return;
         }
         if (node.type === "upright") {
@@ -399,7 +446,7 @@ class MathSemantics {
     static emitCommandNode(node, context, tokens, metadata) {
         const role = MathSemantics.resolveCommandRole(node.text, context, metadata);
         tokens.push(MathSemantics.createToken(node.text, role, node.text));
-        MathSemantics.emitScripts(node, node.text, node.text, context, tokens, metadata);
+        MathSemantics.emitScripts(node, node.text, node.text, role, context, tokens, metadata);
     }
 
     static emitUprightNode(node, context, tokens, metadata) {
@@ -407,7 +454,7 @@ class MathSemantics {
         const role = MathSemantics.resolveRole([context.forcedRole, MathSemantics.isFunctionName(uprightText, metadata) ? MathSymbolRole.FUNCTION : MathSymbolRole.VARIABLE]);
         for (let characterIndex = 0; characterIndex < uprightText.length; characterIndex++)
             tokens.push(MathSemantics.createToken(`\\mathrm{${uprightText[characterIndex]}}`, role, uprightText));
-        MathSemantics.emitScripts(node, uprightText, uprightText, context, tokens, metadata);
+        MathSemantics.emitScripts(node, uprightText, uprightText, role, context, tokens, metadata);
     }
 
     static emitFractionNode(node, context, tokens, metadata) {
@@ -415,7 +462,7 @@ class MathSemantics {
         const numeratorContext = MathSemantics.createContext({ inDerivative: isDerivativeFraction, forcedRole: context.forcedRole });
         MathSemantics.emitDifferentialAwareNodes(node.numerator, numeratorContext, tokens, metadata, isDerivativeFraction);
         MathSemantics.emitDifferentialAwareNodes(node.denominator, numeratorContext, tokens, metadata, isDerivativeFraction);
-        MathSemantics.emitScripts(node, "", "", context, tokens, metadata);
+        MathSemantics.emitScripts(node, "", "", context.forcedRole, context, tokens, metadata);
     }
 
     static emitDifferentialAwareNodes(nodes, context, tokens, metadata, isDerivativeFraction) {
@@ -450,7 +497,7 @@ class MathSemantics {
             return MathSemantics.resolveRole([metadataRole, MathSymbolRole.DERIVATIVE]);
         if (MathSemantics.isFunctionName(name, metadata))
             return MathSemantics.resolveRole([metadataRole, context.forcedRole, MathSymbolRole.FUNCTION]);
-        return MathSemantics.resolveRole([metadataRole, context.forcedRole, MathSymbolRole.VARIABLE]);
+        return MathSemantics.resolveRole([metadataRole, context.forcedRole, context.indexNameRole, MathSymbolRole.VARIABLE]);
     }
 
     static resolveCommandRole(commandName, context, metadata) {
@@ -461,12 +508,10 @@ class MathSemantics {
             return MathSemantics.resolveRole([metadataRole, context.forcedRole, MathSymbolRole.FUNCTION]);
         if (MathSemantics.operatorCommandNames.has(commandName))
             return MathSemantics.resolveRole([metadataRole, context.forcedRole, MathSymbolRole.OPERATOR]);
-        return MathSemantics.resolveRole([metadataRole, context.forcedRole, MathSymbolRole.VARIABLE]);
+        return MathSemantics.resolveRole([metadataRole, context.forcedRole, context.indexNameRole, MathSymbolRole.VARIABLE]);
     }
 
-    static resolveIndexRole(name, symbolName, indexText, isNamedIndex, metadata) {
-        if (isNamedIndex)
-            return MathSymbolRole.QUALIFIER_INDEX;
+    static resolveIndexRole(name, symbolName, indexText, metadata) {
         const metadataRole = metadata?.getIndexRole?.(name, indexText, symbolName) ?? null;
         if (metadataRole)
             return metadataRole;
@@ -564,6 +609,10 @@ class MathSemantics {
 
     static isDigitOrDecimalSeparator(text) {
         return /^[0-9.]$/.test(text);
+    }
+
+    static isNameTailCharacter(text) {
+        return /^[A-Za-z0-9Α-ω]$/.test(text);
     }
 }
 

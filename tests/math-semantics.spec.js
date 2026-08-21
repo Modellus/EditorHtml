@@ -30,6 +30,33 @@ test.describe('semantic classification', () => {
         ]);
     });
 
+    test('the digits of a name are coloured with the name', () => {
+        expect(rolesOf('x2=1')).toEqual(['x:variable', '2:variable', '=:operator', '1:number']);
+        expect(rolesOf('F12x=m1')).toEqual([
+            'F:variable', '1:variable', '2:variable', 'x:variable', '=:operator', 'm:variable', '1:variable'
+        ]);
+    });
+
+    test('a number multiplying a name is still a number', () => {
+        expect(rolesOf('2x=1')).toEqual(['2:number', 'x:variable', '=:operator', '1:number']);
+        expect(rolesOf('a=2\\cdot x')).toEqual(['a:variable', '=:operator', '2:number', '\\cdot:operator', 'x:variable']);
+    });
+
+    test('a script closes a name, so the exponent and the index are not read into it', () => {
+        expect(rolesOf('r12^2=1')).toEqual([
+            'r:variable', '1:variable', '2:variable', '2:number', '=:operator', '1:number'
+        ]);
+        expect(rolesOf('k_d2=1')).toEqual([
+            'k:variable', 'd:qualifier-index', '2:number', '=:operator', '1:number'
+        ]);
+    });
+
+    test('a function keeps the digits after it out of its name', () => {
+        expect(rolesOf('y=log2')).toEqual([
+            'y:variable', '=:operator', 'l:function', 'o:function', 'g:function', '2:number'
+        ]);
+    });
+
     test('recognized functions are read as functions', () => {
         expect(roleOf('y=\\sin\\left(x\\right)', '\\sin')).toBe(MathSymbolRole.FUNCTION);
         expect(roleOf('y=\\ln\\left(x\\right)', '\\ln')).toBe(MathSymbolRole.FUNCTION);
@@ -67,13 +94,30 @@ test.describe('semantic classification', () => {
         expect(tokens.find(token => token.text === 't').role).toBe(MathSymbolRole.VARIABLE);
     });
 
-    test('a named subscript is a qualifying index', () => {
-        expect(roleOf('v_{\\!x}=3', 'x')).toBe(MathSymbolRole.QUALIFIER_INDEX);
+    test('a named subscript is a part of the name and is coloured with it', () => {
+        expect(rolesOf('v_{\\!x}=3')).toEqual([
+            'v:variable', '\\!:variable', 'x:variable', '=:operator', '3:number'
+        ]);
+        expect(rolesOf('a_{\\!n2}=3')).toEqual([
+            'a:variable', '\\!:variable', 'n:variable', '2:variable', '=:operator', '3:number'
+        ]);
+    });
+
+    test('a named subscript is not the same as an index', () => {
+        const metadata = { getIndexRole: () => MathSymbolRole.ITERATION_INDEX };
+        expect(roleOf('a_{\\!n}=1', 'n', metadata)).toBe(MathSymbolRole.VARIABLE);
+        expect(roleOf('a_n=1', 'n', metadata)).toBe(MathSymbolRole.ITERATION_INDEX);
     });
 
     test('a compound subscript is an iteration index', () => {
         expect(roleOf('x_{i+1}=x_i', 'i')).toBe(MathSymbolRole.ITERATION_INDEX);
         expect(roleOf('M_{ij}=1', 'i')).toBe(MathSymbolRole.ITERATION_INDEX);
+    });
+
+    test('only the name inside a compound subscript is read as an index', () => {
+        expect(rolesOf('x_{i+1}=1')).toEqual([
+            'x:variable', 'i:iteration-index', '+:operator', '1:number', '=:operator', '1:number'
+        ]);
     });
 
     test('metadata tells a qualifying subscript from an iteration index', () => {
@@ -88,10 +132,9 @@ test.describe('semantic classification', () => {
         expect(roleOf('Q_c=1', 'c')).toBe(MathSymbolRole.QUALIFIER_INDEX);
     });
 
-    test('metadata reports errors and warnings', () => {
-        const metadata = { getSymbolRole: name => (name === 'Q' ? MathSymbolRole.ERROR : name === 'r' ? MathSymbolRole.WARNING : null) };
+    test('metadata reports errors', () => {
+        const metadata = { getSymbolRole: name => (name === 'Q' ? MathSymbolRole.ERROR : null) };
         expect(roleOf('Q=r', 'Q', metadata)).toBe(MathSymbolRole.ERROR);
-        expect(roleOf('Q=r', 'r', metadata)).toBe(MathSymbolRole.WARNING);
     });
 
     test('an error outranks every other category', () => {
@@ -101,7 +144,7 @@ test.describe('semantic classification', () => {
 
     test('the role priority follows the requested order', () => {
         expect(MathSemantics.rolePriority).toEqual([
-            'error', 'warning', 'derivative', 'function', 'qualifier-index', 'iteration-index', 'number', 'variable', 'operator'
+            'error', 'derivative', 'function', 'qualifier-index', 'iteration-index', 'number', 'variable', 'operator'
         ]);
         expect(MathSemantics.resolveRole([MathSymbolRole.VARIABLE, MathSymbolRole.NUMBER])).toBe(MathSymbolRole.NUMBER);
         expect(MathSemantics.resolveRole([MathSymbolRole.OPERATOR, MathSymbolRole.QUALIFIER_INDEX])).toBe(MathSymbolRole.QUALIFIER_INDEX);
@@ -128,29 +171,51 @@ test.describe('semantic metadata', () => {
     };
 
     test('terms defined by the block are not reported as unknown', () => {
-        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{K_c=1\\\\v=K_c}', [], 'Unknown term');
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{K_c=1\\\\v=K_c}', []);
         expect(metadata.definedTermNames).toEqual(['K_c', 'v']);
         expect(metadata.getSymbolRole('K_c')).toBe(MathSymbolRole.VARIABLE);
         expect(metadata.getSymbolRole('a')).toBe(MathSymbolRole.VARIABLE);
     });
 
-    test('a term nobody defines is reported as a warning', () => {
-        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{v=r}', [], 'Unknown term');
-        expect(metadata.getSymbolRole('r')).toBe(MathSymbolRole.WARNING);
-        expect(metadata.getDiagnosticMessage('r')).toBe('Unknown term: r');
+    test('a term nobody defines is left uncoloured rather than flagged', () => {
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{v=r}', []);
+        expect(metadata.getSymbolRole('r')).toBe(null);
+    });
+
+    test('a term defined with digits in its name is read whole', () => {
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{x2=1\\\\F12x=x2}', []);
+        expect(metadata.definedTermNames).toEqual(['x2', 'F12x']);
+        expect(metadata.getSymbolRole('x2')).toBe(MathSymbolRole.VARIABLE);
     });
 
     test('the independent and iteration terms are always known', () => {
-        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{v=t}', [], 'Unknown term');
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{v=t}', []);
         expect(metadata.getSymbolRole('t')).toBe(MathSymbolRole.VARIABLE);
         expect(metadata.getSymbolRole('n')).toBe(MathSymbolRole.VARIABLE);
     });
 
     test('a known term names its subscript a qualifying index and the iteration term an iteration index', () => {
-        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{k_d=1\\\\x=k_d}', [], 'Unknown term');
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{k_d=1\\\\x=k_d}', []);
         expect(metadata.getIndexRole('k', 'd', 'k_d')).toBe(MathSymbolRole.QUALIFIER_INDEX);
         expect(metadata.getIndexRole('x', 'n', 'x_n')).toBe(MathSymbolRole.ITERATION_INDEX);
         expect(metadata.getIndexRole('x', 'q', 'x_q')).toBe(null);
+    });
+
+    test('the iteration term is an index wherever it stands in the subscript', () => {
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{a_{n+1}=a_n}', []);
+        expect(metadata.getIndexRole('a', 'n+1', 'a_n+1')).toBe(MathSymbolRole.ITERATION_INDEX);
+        expect(metadata.getIndexRole('a', 'n', 'a_n')).toBe(MathSymbolRole.ITERATION_INDEX);
+        expect(metadata.getIndexRole('a', 't-2', 'a_t-2')).toBe(MathSymbolRole.ITERATION_INDEX);
+        expect(metadata.getIndexRole('a', 'n2', 'a_n2')).toBe(null);
+    });
+
+    test('the same n is coloured the same way in a_n and in a_(n+1)', () => {
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{a_{n+1}=a_n+1}', []);
+        expect(rolesOf('a_{n+1}=a_n+1', metadata)).toEqual([
+            'a:variable', 'n:iteration-index', '+:operator', '1:number',
+            '=:operator',
+            'a:variable', 'n:iteration-index', '+:operator', '1:number'
+        ]);
     });
 
     test('a left hand side written as a derivative names the term it defines', () => {
@@ -235,15 +300,6 @@ test.describe('decoration matching', () => {
 
     test('a differential atom is matched by the way MathLive writes it', () => {
         expect(MathSemanticDecorator.normalizeText('\\differentialD')).toBe('\\mathrm{d}');
-    });
-
-    test('diagnostics are collected once per symbol', () => {
-        const tokens = MathSemantics.classify('r=r+q', { getSymbolRole: name => (name === 'r' ? MathSymbolRole.WARNING : name === 'q' ? MathSymbolRole.ERROR : null) });
-        const diagnostics = MathSemanticDecorator.collectDiagnostics(tokens, { getDiagnosticMessage: symbolName => `Unknown term: ${symbolName}` });
-        expect(diagnostics).toEqual([
-            { role: 'warning', symbolName: 'r', message: 'Unknown term: r' },
-            { role: 'error', symbolName: 'q', message: 'Unknown term: q' }
-        ]);
     });
 
     test('every semantic category has a theme token and a fallback colour', () => {

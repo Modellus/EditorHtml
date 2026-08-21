@@ -181,7 +181,6 @@ input,
     --math-qualifier-index: #347dac;
     --math-iteration-index: #7047b8;
     --math-error: #d32f2f;
-    --math-warning: #ad6800;
     --math-caret: #0f6cbd;
 }
 
@@ -195,7 +194,6 @@ input,
         --math-qualifier-index: #7fc4e8;
         --math-iteration-index: #c3a9ff;
         --math-error: #ff8a80;
-        --math-warning: #ffce6a;
         --math-caret: #4fa8ff;
     }
 }
@@ -209,7 +207,6 @@ input,
     --math-qualifier-index: #7fc4e8;
     --math-iteration-index: #c3a9ff;
     --math-error: #ff8a80;
-    --math-warning: #ffce6a;
     --math-caret: #4fa8ff;
 }
 
@@ -217,49 +214,6 @@ math-field {
     --selection-background-color: rgba(15, 108, 189, 0.28);
     --selection-color: inherit;
     --caret-color: var(--math-caret);
-}
-
-.mdl-expression-diagnostics {
-    position: absolute;
-    top: 2px;
-    right: 4px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    max-width: 90%;
-    padding: 1px 6px;
-    border-radius: 10px;
-    font-size: 11px;
-    line-height: 16px;
-    pointer-events: auto;
-    z-index: 2;
-}
-
-.mdl-expression-diagnostics-warning {
-    color: var(--math-warning);
-    background: rgba(173, 104, 0, 0.10);
-}
-
-.mdl-expression-diagnostics-error {
-    color: var(--math-error);
-    background: rgba(211, 47, 47, 0.10);
-    text-decoration: underline wavy var(--math-error);
-}
-
-.mdl-expression-diagnostics-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-.mdl-expression-diagnostics-count {
-    font-variant-numeric: tabular-nums;
 }
 
 math-field.mdl-expression-aligned {

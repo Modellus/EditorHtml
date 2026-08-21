@@ -5,18 +5,16 @@ class MathSemanticMetadata {
         this.functionNames = options.functionNames ?? [];
         this.iterationTermName = options.iterationTermName ?? "n";
         this.independentTermName = options.independentTermName ?? "t";
-        this.unknownTermLabel = options.unknownTermLabel ?? "Unknown term";
         this.signature = `${this.termNames.join(",")}::${this.definedTermNames.join(",")}::${this.iterationTermName}::${this.independentTermName}`;
     }
 
-    static fromCalculator(calculator, canonicalLatex, functionNames, unknownTermLabel) {
+    static fromCalculator(calculator, canonicalLatex, functionNames) {
         return new MathSemanticMetadata({
             termNames: calculator.getTermsNames(),
             definedTermNames: MathSemanticMetadata.readDefinedTermNames(canonicalLatex),
             functionNames,
             iterationTermName: calculator.properties?.iterationTerm ?? "n",
-            independentTermName: calculator.properties?.independent?.name ?? "t",
-            unknownTermLabel
+            independentTermName: calculator.properties?.independent?.name ?? "t"
         });
     }
 
@@ -55,13 +53,28 @@ class MathSemanticMetadata {
         return this.functionNames.includes(name);
     }
 
+    // `a_n` and `a_{n+1}` are the same `a` at two steps of the same iteration, so the iteration term is read
+    // as an index wherever it stands in the subscript, before the symbol is looked up as a name of its own.
     getIndexRole(baseName, indexText, symbolName) {
+        if (this.isIterationIndexText(indexText))
+            return MathSymbolRole.ITERATION_INDEX;
         const termName = MathSemanticMetadata.toPlainTermName(symbolName);
         if (this.termNames.includes(termName) || this.definedTermNames.includes(termName))
             return MathSymbolRole.QUALIFIER_INDEX;
-        if (indexText === this.iterationTermName || indexText === this.independentTermName)
-            return MathSymbolRole.ITERATION_INDEX;
         return null;
+    }
+
+    isIterationIndexText(indexText) {
+        const normalizedIndexText = String(indexText ?? "").replace(/\s+/g, "");
+        return [this.iterationTermName, this.independentTermName].some(termName => {
+            if (normalizedIndexText === termName)
+                return true;
+            return new RegExp(`^${MathSemanticMetadata.escapeForPattern(termName)}[+\\-\u2212][0-9]+$`).test(normalizedIndexText);
+        });
+    }
+
+    static escapeForPattern(text) {
+        return String(text ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     }
 
     getSymbolRole(symbolName) {
@@ -74,13 +87,7 @@ class MathSemanticMetadata {
             return MathSymbolRole.VARIABLE;
         if (termName === this.independentTermName || termName === this.iterationTermName)
             return MathSymbolRole.VARIABLE;
-        if (this.termNames.length === 0 && this.definedTermNames.length === 0)
-            return null;
-        return MathSymbolRole.WARNING;
-    }
-
-    getDiagnosticMessage(symbolName) {
-        return `${this.unknownTermLabel}: ${MathSemanticMetadata.toPlainTermName(symbolName)}`;
+        return null;
     }
 }
 
