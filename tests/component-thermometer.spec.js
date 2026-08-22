@@ -97,7 +97,7 @@ test.describe('thermometer on the board', () => {
         await addHeatingModel(page);
         await addThermometer(page);
         const drawn = await readDrawing(page);
-        expect(drawn.readout).toBe('20.0 °C');
+        expect(drawn.readout).toBe('20.0 / °C');
         expect(drawn.term).toBe(20);
         // The liquid is one piece: whatever it reads, the column's foot is still down in the bulb.
         expect(drawn.columnHeight).toBeGreaterThan(0);
@@ -108,7 +108,7 @@ test.describe('thermometer on the board', () => {
         });
         await page.waitForTimeout(300);
         const warmed = await readDrawing(page);
-        expect(warmed.readout).toBe('80.0 °C');
+        expect(warmed.readout).toBe('80.0 / °C');
         expect(warmed.columnTop).toBeLessThan(drawn.columnTop);
         expect(warmed.columnHeight).toBeGreaterThan(drawn.columnHeight);
     });
@@ -126,7 +126,7 @@ test.describe('thermometer on the board', () => {
         // 160 by 300 leaves the scale 222.8px long across a 140 degree range, so forty pixels is
         // twenty-five degrees up from the twenty it stood at.
         expect(warmed.term).toBeCloseTo(45.13, 2);
-        expect(warmed.readout).toBe('45.1 °C');
+        expect(warmed.readout).toBe('45.1 / °C');
         // Let go, it stays: a thermometer is not a pedal that springs back to where it rested.
         await page.waitForTimeout(600);
         expect((await readDrawing(page)).term).toBeCloseTo(45.13, 2);
@@ -195,7 +195,7 @@ test.describe('thermometer on the board', () => {
         await page.waitForTimeout(400);
         expect(await page.evaluate(() => shell.board.shapes.getByName('Thermometer').properties.unit)).toBe('°F');
         // Naming the other scale names it: the reading is the same term, said in Fahrenheit.
-        expect((await readDrawing(page)).readout).toBe('20.0 °F');
+        expect((await readDrawing(page)).readout).toBe('20.0 / °F');
     });
 
     // With no term to read the object holds the temperature itself, the way a gauge with nothing

@@ -2252,14 +2252,22 @@ class BaseShape {
         return this.formatModelValue(numeric);
     }
 
-    getTermUnitText(term) {
+    // A term is measured in what the model says it is; a plain value in what was written beside it,
+    // which is kept on a property of its own next to the one holding the value.
+    getTermUnitText(term, termProperty = "") {
         if (term == null || term === "")
             return "";
         const termName = String(term);
         const calculator = this.board?.calculator;
-        if (!calculator?.isTerm(termName))
+        if (calculator?.isTerm(termName))
+            return calculator.getTermUnit(termName);
+        return this.getValueUnitText(termProperty);
+    }
+
+    getValueUnitText(termProperty) {
+        if (!termProperty)
             return "";
-        return calculator.getTermUnit(termName);
+        return String(this.properties[TermControl.getValueUnitProperty(termProperty)] ?? "");
     }
 
     getTermLabelAnchor() {

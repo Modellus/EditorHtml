@@ -9,7 +9,7 @@
     "capabilities": ["radial", "angular", "reads-model", "scale"],
     "preview": { "parameters": { "valueVariable": "64", "unit": "km/h" } },
     "parameters": [
-        { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model" },
+        { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model", "unitParameter": "unit" },
         { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": 0, "category": "scale" },
         { "id": "maximum", "label": "Maximum", "valueType": "number", "defaultValue": 100, "category": "scale" },
         { "id": "startAngle", "label": "Start angle", "valueType": "number", "defaultValue": 225, "category": "scale", "unit": "deg" },
@@ -17,7 +17,7 @@
         { "id": "majorTicks", "label": "Major ticks", "valueType": "number", "defaultValue": 9, "category": "scale", "minimum": 2, "maximum": 60, "bindable": false },
         { "id": "minorPerMajor", "label": "Minor ticks per major", "valueType": "number", "defaultValue": 4, "category": "scale", "minimum": 0, "maximum": 20, "bindable": false },
         { "id": "digits", "label": "Decimals", "valueType": "number", "defaultValue": 0, "category": "display", "minimum": 0, "maximum": 6 },
-        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "", "category": "display" },
+        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "", "category": "display", "description": "What the reading is named in when the term it reads names nothing of its own. A term carrying a unit is read in that one, picked beside the term the way every unit on the board is, so this is what is left for a speedometer standing at a plain number." },
         { "id": "showReadout", "label": "Show readout", "valueType": "boolean", "defaultValue": true, "category": "display" },
         { "id": "faceColor", "label": "Face colour", "valueType": "colour", "defaultValue": "token:surface.emphasis", "category": "style" },
         { "id": "borderColor", "label": "Border colour", "valueType": "colour", "defaultValue": "token:stroke.default", "category": "style" },
@@ -53,15 +53,8 @@
         { "id": "strokeDefault", "value": { "token": "strokeWidth.default" } },
         { "id": "strokeHairline", "value": { "token": "strokeWidth.hairline" } },
         { "id": "readoutWeight", "value": { "token": "font.weight.strong" } },
-        {
-            "id": "readoutText",
-            "value": {
-                "concat": [
-                    { "format": { "parameter": "value" }, "digits": { "parameter": "digits" } },
-                    { "choose": { "parameter": "unit" }, "then": { "concat": [" ", { "parameter": "unit" }] }, "otherwise": "" }
-                ]
-            }
-        }
+        { "id": "readoutUnit", "fallback": "", "value": { "choose": { "termUnit": { "parameter": "valueVariable" } }, "then": { "termUnit": { "parameter": "valueVariable" } }, "otherwise": { "parameter": "unit" } } },
+        { "id": "readoutText", "value": { "format": { "parameter": "value" }, "digits": { "parameter": "digits" } } }
     ],
     "root": {
         "id": "speedometer",
@@ -181,6 +174,7 @@
                     "x": { "parameter": "cx" },
                     "y": { "parameter": "readoutY" },
                     "text": { "parameter": "readoutText" },
+                    "unit": { "parameter": "readoutUnit" },
                     "fontSize": { "parameter": "readoutFontSize" },
                     "fontWeight": { "parameter": "readoutWeight" },
                     "fill": { "parameter": "labelColor" }

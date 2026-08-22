@@ -554,6 +554,7 @@ test.describe('reusable blocks build several objects', () => {
                     readoutFontSize: Number(part('readout')?.attributes['font-size']),
                     tickLength: Number(ticks[0]?.attributes.x2) - Number(ticks[0]?.attributes.x1),
                     readout: part('readout')?.text ?? null,
+                    readoutUnit: part('readout')?.unit ?? null,
                     crosshair: ['x1', 'y1', 'x2', 'y2'].map(name => Number(part('reading-crosshair')?.attributes[name])),
                     crosshairDash: part('reading-crosshair')?.attributes['stroke-dasharray'] ?? null,
                     press: part('column-grab')?.behaviours?.[0] ?? null,
@@ -634,10 +635,14 @@ test.describe('reusable blocks build several objects', () => {
         for (const drawing of [measured.small, measured.fromTheModel, measured.large])
             expect(drawing.parts.filter(part => part.startsWith('minor-tick'))).toHaveLength(36);
         expect(measured.coarseStep.parts.filter(part => part.startsWith('minor-tick'))).toHaveLength(11);
-        // The reading is the term in figures, to the decimals asked for, named in whichever temperature
-        // scale is chosen — the choice names the scale, it does not convert what the model holds.
-        expect(measured.fromTheModel.readout).toBe('62.0 °C');
-        expect(measured.inFahrenheit.readout).toBe('62 °F');
+        // The reading is the term in figures, to the decimals asked for, and the unit is carried beside
+        // them rather than concatenated into them, so it is written the way every unit on the board is:
+        // named in whichever temperature scale is chosen, which names the scale rather than converting
+        // what the model holds.
+        expect(measured.fromTheModel.readout).toBe('62.0');
+        expect(measured.fromTheModel.readoutUnit).toBe('°C');
+        expect(measured.inFahrenheit.readout).toBe('62');
+        expect(measured.inFahrenheit.readoutUnit).toBe('°F');
         const scaleSpan = bottom - top;
         // A dashed line carries the top of the column across to the scale, so what the column stands at
         // is placed against the marks: it stands at the reading and reaches from the stem to the ends

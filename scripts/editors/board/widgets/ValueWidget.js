@@ -569,7 +569,7 @@ class ValueShape extends BaseShape {
         this.valueText.setAttribute("font-size", this.getValueFontSize());
         this.valueText.setAttribute("font-weight", this.properties.fontBold ? "bold" : "normal");
         this.valueText.setAttribute("font-style", this.properties.fontItalic ? "italic" : "normal");
-        this.setValueTextContent(this.isTermNameVisible(termText) ? this.formatTermForDisplay(termText) : "", valueText, isEditingCurrentTerm ? "" : this.getTermUnitText(termText));
+        this.setValueTextContent(this.isTermNameVisible(termText) ? this.formatTermForDisplay(termText) : "", valueText, isEditingCurrentTerm ? "" : this.getTermUnitText(termText, "term"));
         const valueTextBounds = isEditingCurrentTerm ? this.getValueTextBounds() : null;
         if (isEditingCurrentTerm && this.valueText.lastChild)
             this.valueText.lastChild.setAttribute("fill-opacity", "0");

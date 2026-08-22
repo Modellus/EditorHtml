@@ -412,6 +412,10 @@ var ComponentShapeToolbarMixin = {
             colorProperty: parameter.colorParameter ?? "",
             extraTermProperty: parameter.pairedParameter ?? "",
             modeProperty: modeParameter ? modeParameter.id : "",
+            // A component reading a plain number is measured in the unit its own definition declares
+            // for that input, so the row writes the unit there rather than inventing a property the
+            // object does not know. One declaring none offers no unit to a plain number.
+            valueUnitProperty: parameter.unitParameter ?? "",
             showExtraTerm: () => this.isComponentPairMode(parameter)
         });
         this._componentTermControls[parameter.id] = this.termFormControls[parameter.id];

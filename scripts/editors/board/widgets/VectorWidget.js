@@ -681,7 +681,8 @@ class VectorShape extends ChildShape {
         const component = this.resolveTermNumeric(this.properties[componentTerm], this.getTermCaseNumber(componentCase));
         const tipValue = (Number.isFinite(origin) ? origin : 0) + (Number.isFinite(component) ? component : 0);
         const valueText = this.formatModelValue(tipValue, this.properties[componentTerm]);
-        return { termText: "", valueText: valueText, unitText: this.getTermUnitText(this.normalizeTermValue(this.properties[componentTerm])), text: valueText };
+        const unitText = this.getTermUnitText(this.normalizeTermValue(this.properties[componentTerm]), componentTerm);
+        return { termText: "", valueText: valueText, unitText: unitText, text: Utils.buildTermValueText("", valueText, unitText) };
     }
 
     getTrajectoryPosition() {

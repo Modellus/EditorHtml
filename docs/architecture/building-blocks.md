@@ -600,6 +600,7 @@ Bindings:
 | `{ direction: { x: <binding>, y: <binding> } }` | the angle a pair points in — how far across and how far up — in degrees clockwise from straight up |
 | `{ memory: "history", row: <binding>, field: "x", from: "end" }` | a memory: the whole list, one row, or one field of it |
 | `{ memoryCount: "history" }` | how many rows a memory holds |
+| `{ termUnit: { parameter: "valueVariable" } }` | what the term a parameter names is measured in, as the model holds it |
 
 Expressions are parsed by `Modellus.Parser` (the same engine that runs the model) into a
 `Branch` and evaluated with `branch.calculate(values)`. There is no `eval`, no `new Function`,

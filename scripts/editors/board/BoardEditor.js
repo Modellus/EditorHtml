@@ -426,17 +426,9 @@ class BoardEditor extends Workspace {
         this.unitsController.open();
     }
 
-    setTermUnitCommand(termName, unitText) {
-        if (!termName)
-            return false;
-        const termUnits = Object.assign({}, this.properties.termUnits);
-        const normalizedUnit = String(unitText ?? "").trim();
-        if (normalizedUnit === "")
-            delete termUnits[termName];
-        else
-            termUnits[termName] = normalizedUnit;
+    // The board records it as a property change like any other, so naming a unit is one step of undo.
+    writeTermUnits(termUnits) {
         this.setPropertyCommand("termUnits", termUnits);
-        return true;
     }
 
     clear() {

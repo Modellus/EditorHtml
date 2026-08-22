@@ -10,7 +10,10 @@ class BlockShape {
             suppressNextFocusSelect: false,
             selection: { deselect: () => {}, clearHover: () => {}, applyEditModeHighlight: () => {} },
             markDirty: () => self.markChanged(),
-            get calculator() { return self.notebookEditor?.calculator ?? null; }
+            get calculator() { return self.notebookEditor?.calculator ?? null; },
+            // The notebook is the workspace a block writes the model through, the way the board
+            // editor is for a shape: it is what the shared controls ask for a term's unit.
+            get shell() { return self.notebookEditor ?? null; }
         };
         this.termDisplayEntries = [];
         this.termFormControls = {};
@@ -294,7 +297,7 @@ class BlockShape {
     }
 
     createTermControl(termProperty, title, showVisibilityToggle = true) {
-        const wrapper = $('<div style="width:160px"></div>');
+        const wrapper = $('<div class="notebook-term-control" style="display:flex;align-items:center;gap:4px"></div>');
         this.createNotebookTermControl(wrapper, {
             propertyName: termProperty,
             system: this.board.calculator?.system,
@@ -306,7 +309,7 @@ class BlockShape {
     }
 
     createTermSelectorControl(formAdapter, termProperty, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true) {
-        const wrapper = $('<div style="width:160px"></div>');
+        const wrapper = $('<div class="notebook-term-control" style="display:flex;align-items:center;gap:4px"></div>');
         this.createNotebookTermControl(wrapper, {
             propertyName: termProperty,
             system: this.board.calculator?.system,
@@ -359,7 +362,7 @@ class BlockShape {
         return TermControl.normalizeTermValue(value);
     }
 
-    refreshNotebookTermControl(editor, propertyName, options) {
+    refreshNotebookTermControl(editor, propertyName, options, unitsHost = null) {
         const activeSystem = options.system ?? this.board.calculator?.system;
         const value = this.normalizeNotebookTermValue(propertyName ? this.properties[propertyName] : options.value);
         const isMissingTerm = this.isMissingTermReference(value);
@@ -367,6 +370,19 @@ class BlockShape {
         const editorElement = editor.element();
         editorElement.toggleClass("mdl-missing-term", isMissingTerm);
         editorElement.attr("title", isMissingTerm ? `Term “${value}” no longer exists` : "");
+        this.renderNotebookTermUnits(unitsHost, value, propertyName);
+    }
+
+    // Units belong to what is being read, so a block names its unit where it names its term, out of
+    // the same picker every other surface uses: a term's unit goes to the model, a plain value's to
+    // the block beside the value. A row naming nothing yet has nothing to give a unit to.
+    renderNotebookTermUnits(unitsHost, termValue, propertyName) {
+        if (!unitsHost)
+            return;
+        const valueUnits = propertyName ? TermControl.createBaseShapeValueUnitsSelection(this, TermControl.getValueUnitProperty(propertyName)) : null;
+        const units = TermControl.createTermUnitsSelection(this.board, valueUnits);
+        const hasUnits = TermControl.renderTermUnitsEditor(unitsHost, this.normalizeNotebookTermValue(termValue), units);
+        unitsHost.css({ width: units.width, display: hasUnits ? "" : "none" });
     }
 
     createNotebookTermControl($container, options = {}) {
@@ -375,7 +391,8 @@ class BlockShape {
         const onValueChanged = options.onValueChanged;
         const normalizedValue = this.normalizeNotebookTermValue(propertyName ? this.properties[propertyName] : options.value);
         const width = options.width ?? 120;
-        const editor = $("<div>").appendTo($container);
+        const editor = $("<div>").addClass("notebook-term-control__select").appendTo($container);
+        const unitsHost = $("<div>").addClass("shape-term-units").appendTo($container);
         const editorInstance = editor.dxSelectBox({
             dataSource: this.getNotebookTermItems(system),
             valueExpr: "term",
@@ -403,9 +420,15 @@ class BlockShape {
                     this.setPropertyCommand(propertyName, nextValue);
                 if (typeof onValueChanged === "function")
                     onValueChanged(nextValue);
+                this.renderNotebookTermUnits(unitsHost, nextValue, propertyName);
             }
         }).dxSelectBox("instance");
-        const termControl = { refresh: () => this.refreshNotebookTermControl(editorInstance, propertyName, options) };
+        // The toolbar asks a term control what it names before it lays the menu out, so the notebook's
+        // control answers for itself: it names one term and never a pair.
+        const termControl = {
+            refresh: () => this.refreshNotebookTermControl(editorInstance, propertyName, options, unitsHost),
+            hasExtraTerm: () => false
+        };
         if (propertyName)
             this.termFormControls[propertyName] = { termControl: termControl };
         termControl.refresh();

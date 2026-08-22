@@ -2223,7 +2223,8 @@ BlockDefinitionLoader.registerAll([
                 "label": "Value",
                 "valueType": "variable",
                 "defaultValue": "0",
-                "category": "model"
+                "category": "model",
+                "unitParameter": "unit"
             },
             {
                 "id": "minimum",
@@ -2301,7 +2302,8 @@ BlockDefinitionLoader.registerAll([
                 "label": "Unit",
                 "valueType": "string",
                 "defaultValue": "",
-                "category": "display"
+                "category": "display",
+                "description": "What the reading is named in when the term it reads names nothing of its own. A term carrying a unit is read in that one, picked beside the term the way every unit on the board is, so this is what is left for a gauge standing at a plain number."
             },
             {
                 "id": "showReadout",
@@ -2396,32 +2398,33 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "readoutUnit",
+                "fallback": "",
+                "value": {
+                    "choose": {
+                        "termUnit": {
+                            "parameter": "valueVariable"
+                        }
+                    },
+                    "then": {
+                        "termUnit": {
+                            "parameter": "valueVariable"
+                        }
+                    },
+                    "otherwise": {
+                        "parameter": "unit"
+                    }
+                }
+            },
+            {
                 "id": "readoutText",
                 "value": {
-                    "concat": [
-                        {
-                            "format": {
-                                "parameter": "value"
-                            },
-                            "digits": {
-                                "parameter": "digits"
-                            }
-                        },
-                        {
-                            "choose": {
-                                "parameter": "unit"
-                            },
-                            "then": {
-                                "concat": [
-                                    " ",
-                                    {
-                                        "parameter": "unit"
-                                    }
-                                ]
-                            },
-                            "otherwise": ""
-                        }
-                    ]
+                    "format": {
+                        "parameter": "value"
+                    },
+                    "digits": {
+                        "parameter": "digits"
+                    }
                 }
             }
         ],
@@ -2504,6 +2507,9 @@ BlockDefinitionLoader.registerAll([
                         },
                         "text": {
                             "parameter": "readoutText"
+                        },
+                        "unit": {
+                            "parameter": "readoutUnit"
                         },
                         "fontSize": {
                             "parameter": "readoutFontSize"
@@ -6845,7 +6851,8 @@ BlockDefinitionLoader.registerAll([
                 "label": "Value",
                 "valueType": "variable",
                 "defaultValue": "0",
-                "category": "model"
+                "category": "model",
+                "unitParameter": "unit"
             },
             {
                 "id": "minimum",
@@ -6911,7 +6918,8 @@ BlockDefinitionLoader.registerAll([
                 "label": "Unit",
                 "valueType": "string",
                 "defaultValue": "",
-                "category": "display"
+                "category": "display",
+                "description": "What the reading is named in when the term it reads names nothing of its own. A term carrying a unit is read in that one, picked beside the term the way every unit on the board is, so this is what is left for a speedometer standing at a plain number."
             },
             {
                 "id": "showReadout",
@@ -7086,32 +7094,33 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "readoutUnit",
+                "fallback": "",
+                "value": {
+                    "choose": {
+                        "termUnit": {
+                            "parameter": "valueVariable"
+                        }
+                    },
+                    "then": {
+                        "termUnit": {
+                            "parameter": "valueVariable"
+                        }
+                    },
+                    "otherwise": {
+                        "parameter": "unit"
+                    }
+                }
+            },
+            {
                 "id": "readoutText",
                 "value": {
-                    "concat": [
-                        {
-                            "format": {
-                                "parameter": "value"
-                            },
-                            "digits": {
-                                "parameter": "digits"
-                            }
-                        },
-                        {
-                            "choose": {
-                                "parameter": "unit"
-                            },
-                            "then": {
-                                "concat": [
-                                    " ",
-                                    {
-                                        "parameter": "unit"
-                                    }
-                                ]
-                            },
-                            "otherwise": ""
-                        }
-                    ]
+                    "format": {
+                        "parameter": "value"
+                    },
+                    "digits": {
+                        "parameter": "digits"
+                    }
                 }
             }
         ],
@@ -7346,6 +7355,9 @@ BlockDefinitionLoader.registerAll([
                         },
                         "text": {
                             "parameter": "readoutText"
+                        },
+                        "unit": {
+                            "parameter": "readoutUnit"
                         },
                         "fontSize": {
                             "parameter": "readoutFontSize"
@@ -9403,6 +9415,7 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model",
+                "unitParameter": "unit",
                 "colorParameter": "columnColor",
                 "valueAnchor": {
                     "node": "reading-anchor",
@@ -9460,7 +9473,7 @@ BlockDefinitionLoader.registerAll([
                     "fa-light fa-f"
                 ],
                 "category": "display",
-                "description": "Which temperature scale the reading is named in. It names the scale rather than converting it: the numbers themselves are the minimum and the maximum, so a thermometer switched to Fahrenheit is one whose model measures in Fahrenheit and whose ends are set to match."
+                "description": "Which temperature scale the reading is named in when the term it reads names none of its own. A term carrying a unit is read in that one, chosen beside the term the way every unit on the board is, and this is what is left for a thermometer standing at a plain number. Either way it names the scale rather than converting it: the numbers themselves are the minimum and the maximum, so a thermometer switched to Fahrenheit is one whose model measures in Fahrenheit and whose ends are set to match."
             },
             {
                 "id": "showReadout",
@@ -9907,22 +9920,33 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\frac{span}{scaleSpan}"
             },
             {
+                "id": "readoutUnit",
+                "fallback": "",
+                "value": {
+                    "choose": {
+                        "termUnit": {
+                            "parameter": "valueVariable"
+                        }
+                    },
+                    "then": {
+                        "termUnit": {
+                            "parameter": "valueVariable"
+                        }
+                    },
+                    "otherwise": {
+                        "parameter": "unit"
+                    }
+                }
+            },
+            {
                 "id": "readoutText",
                 "value": {
-                    "concat": [
-                        {
-                            "format": {
-                                "parameter": "value"
-                            },
-                            "digits": {
-                                "parameter": "digits"
-                            }
-                        },
-                        " ",
-                        {
-                            "parameter": "unit"
-                        }
-                    ]
+                    "format": {
+                        "parameter": "value"
+                    },
+                    "digits": {
+                        "parameter": "digits"
+                    }
                 }
             }
         ],
@@ -10291,6 +10315,9 @@ BlockDefinitionLoader.registerAll([
                         },
                         "text": {
                             "parameter": "readoutText"
+                        },
+                        "unit": {
+                            "parameter": "readoutUnit"
                         },
                         "fontSize": {
                             "parameter": "readoutFontSize"

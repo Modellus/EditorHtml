@@ -470,9 +470,9 @@ class TableControl {
         const fontSize = Number(column.useHeaderFontSize === true ? this.options.headerFontSize : this.options.fontSize) || 16;
         let contentWidth = 0;
         for (const row of this.rows) {
-            const unitText = Utils.getUnitsPlainText(row.unit ?? "");
+            const unitsSuffix = Utils.buildTermUnitsSuffix(row.unit ?? "");
             const indent = Number.isFinite(row.textIndent) ? row.textIndent : 0;
-            const unitWidth = unitText === "" ? 0 : this.estimateTextWidth(` (${unitText})`, fontSize);
+            const unitWidth = unitsSuffix === "" ? 0 : this.estimateTextWidth(unitsSuffix, fontSize);
             contentWidth = Math.max(contentWidth, indent + Utils.estimateMathTermWidth(String(row[column.key] ?? ""), fontSize) + unitWidth);
         }
         return Math.ceil(contentWidth + 18);

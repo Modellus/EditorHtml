@@ -19,6 +19,10 @@ const BOARD_URL = '/pages/board/index.html';
 // The six entries carrying a drag were re-recorded again when the drag behaviours gained the pair of
 // inputs that let one write a direction: the drawings are identical, and what changed is the two new
 // names standing empty in the behaviour the signature carries beside them.
+// The four entries that show a unit were re-recorded when the unit stopped being concatenated into
+// the reading: it is written after it the way a unit is written everywhere else on the board, in a
+// tspan of its own so it can be faded, and the entries showing no unit are byte for byte the ones
+// that were captured.
 const BASELINES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'coded-component-baselines.json'), 'utf8'));
 
 const cases = [

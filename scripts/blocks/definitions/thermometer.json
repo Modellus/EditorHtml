@@ -9,12 +9,12 @@
     "capabilities": ["linear", "scale", "reads-model", "interaction", "writes-model"],
     "preview": { "parameters": { "valueVariable": "62", "minimum": -50, "maximum": 150, "tickStep": 50 } },
     "parameters": [
-        { "id": "valueVariable", "label": "Temperature", "valueType": "variable", "defaultValue": "0", "category": "model", "colorParameter": "columnColor", "valueAnchor": { "node": "reading-anchor", "x": 0.5, "y": 0.5 }, "description": "The term the column stands at. Turning on the eye beside the row stands the term and its value out past the scale, level with the top of the column, in the badge and the figures every other term on the board is read in. Dragging the column writes it back, so a thermometer reading a term the model lets you set is also how that temperature is given — and one reading a computed term is read-only, as every other drawing of a computed term is." },
+        { "id": "valueVariable", "label": "Temperature", "valueType": "variable", "defaultValue": "0", "category": "model", "unitParameter": "unit", "colorParameter": "columnColor", "valueAnchor": { "node": "reading-anchor", "x": 0.5, "y": 0.5 }, "description": "The term the column stands at. Turning on the eye beside the row stands the term and its value out past the scale, level with the top of the column, in the badge and the figures every other term on the board is read in. Dragging the column writes it back, so a thermometer reading a term the model lets you set is also how that temperature is given — and one reading a computed term is read-only, as every other drawing of a computed term is." },
         { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": -20, "category": "scale", "description": "The temperature the bottom of the scale stands for, at the top of the bulb. A column at or below it shows a full bulb and an empty stem." },
         { "id": "maximum", "label": "Maximum", "valueType": "number", "defaultValue": 120, "category": "scale" },
         { "id": "tickStep", "label": "Step", "valueType": "number", "defaultValue": 20, "category": "scale", "minimum": 0, "bindable": false, "description": "How many degrees there are between one numbered mark and the next, counted up from the minimum — the whole of the scale's marking, as the step is the whole of a slider's. A step the range does not divide evenly leaves the last part of the scale unmarked, the way an axis does. Between the numbered marks the scale is divided into five by smaller marks of its own. A step so fine that it would ask for more than thirty numbered marks is read as the finest that fits, and so is a step of nothing at all — which is how to let the object mark the scale itself." },
         { "id": "digits", "label": "Decimals", "valueType": "number", "defaultValue": 1, "category": "display", "minimum": 0, "maximum": 6, "description": "Decimals the reading is written to. The numbers along the scale follow it only when the step needs them: a step in whole degrees is marked in whole degrees however finely the reading is given." },
-        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "°C", "enumValues": ["°C", "°F"], "enumIcons": ["fa-light fa-c", "fa-light fa-f"], "category": "display", "description": "Which temperature scale the reading is named in. It names the scale rather than converting it: the numbers themselves are the minimum and the maximum, so a thermometer switched to Fahrenheit is one whose model measures in Fahrenheit and whose ends are set to match." },
+        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "°C", "enumValues": ["°C", "°F"], "enumIcons": ["fa-light fa-c", "fa-light fa-f"], "category": "display", "description": "Which temperature scale the reading is named in when the term it reads names none of its own. A term carrying a unit is read in that one, chosen beside the term the way every unit on the board is, and this is what is left for a thermometer standing at a plain number. Either way it names the scale rather than converting it: the numbers themselves are the minimum and the maximum, so a thermometer switched to Fahrenheit is one whose model measures in Fahrenheit and whose ends are set to match." },
         { "id": "showReadout", "label": "Show readout", "valueType": "boolean", "defaultValue": true, "category": "display", "description": "The reading in figures above the stem. The column says how hot at a glance; this says how hot exactly." },
         { "id": "columnColor", "label": "Column colour", "valueType": "colour", "defaultValue": "token:stroke.warning", "category": "style" },
         { "id": "glassColor", "label": "Glass colour", "valueType": "colour", "defaultValue": "token:surface.default", "category": "style" },
@@ -100,11 +100,8 @@
         { "id": "readoutX", "formula": "\\frac{w}{2}" },
         { "id": "readoutY", "formula": "pad+readoutFontSize\\cdot0.7" },
         { "id": "unitsPerPixel", "formula": "\\frac{span}{scaleSpan}" },
-        { "id": "readoutText", "value": { "concat": [
-            { "format": { "parameter": "value" }, "digits": { "parameter": "digits" } },
-            " ",
-            { "parameter": "unit" }
-        ] } }
+        { "id": "readoutUnit", "fallback": "", "value": { "choose": { "termUnit": { "parameter": "valueVariable" } }, "then": { "termUnit": { "parameter": "valueVariable" } }, "otherwise": { "parameter": "unit" } } },
+        { "id": "readoutText", "value": { "format": { "parameter": "value" }, "digits": { "parameter": "digits" } } }
     ],
     "root": {
         "id": "thermometer",
@@ -278,6 +275,7 @@
                     "x": { "parameter": "readoutX" },
                     "y": { "parameter": "readoutY" },
                     "text": { "parameter": "readoutText" },
+                    "unit": { "parameter": "readoutUnit" },
                     "fontSize": { "parameter": "readoutFontSize" },
                     "fontWeight": { "parameter": "readoutWeight" },
                     "fill": { "parameter": "readoutColor" }

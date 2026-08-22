@@ -116,20 +116,23 @@
         if (!isTerm) {
             const isNumericValue = Number.isFinite(Number(termName));
             const displayedMissingTerm = this.formatTermForDisplay(termName);
+            // A plain value carries the unit written beside it: 100 set as 100 m reads as one.
+            const valueUnitText = isNumericValue ? this.shape.getTermUnitText(termName, entry.term) : "";
             return {
                 termText: isNumericValue ? "" : displayedMissingTerm,
                 valueText: isNumericValue ? valueText : "\u2014",
-                text: isNumericValue ? valueText : `${displayedMissingTerm} = \u2014`,
+                unitText: valueUnitText,
+                text: Utils.buildTermValueText(isNumericValue ? "" : displayedMissingTerm, isNumericValue ? valueText : "\u2014", valueUnitText),
                 isMissingTerm: !isNumericValue
             };
         }
         const displayedTermText = this.formatTermForDisplay(termName);
-        const unitText = this.shape.getTermUnitText(termName);
+        const unitText = this.shape.getTermUnitText(termName, entry.term);
         return {
             termText: displayedTermText,
             valueText: valueText,
             unitText: unitText,
-            text: unitText === "" ? `${displayedTermText} = ${valueText}` : `${displayedTermText} = ${valueText} ${unitText}`
+            text: Utils.buildTermValueText(displayedTermText, valueText, unitText)
         };
     }
 

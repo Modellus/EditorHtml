@@ -1,5 +1,5 @@
 class BlockBindings {
-    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "opaque"];
+    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "opaque", "termUnit"];
 
     static isBinding(value) {
         if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -42,6 +42,13 @@ class BlockBindings {
         if (colour === "" || colour === "none" || colour === "transparent")
             return false;
         return !/^#[0-9a-f]{6}00$/.test(colour) && !/^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*0?\.?0+\s*\)$/.test(colour);
+    }
+
+    // What the term a parameter names is measured in, as the model holds it. A component reading a
+    // term reads its unit from the same place every other drawing of that term does — the unit picked
+    // beside the term itself — rather than from a unit of its own that could say something else.
+    static termUnit(binding) {
+        return { termUnit: binding };
     }
 
     static expression(latex) {
@@ -187,6 +194,8 @@ class BlockBindings {
             return this.resolveMemory(binding, context, fallbackValue);
         if (kind === "memoryCount")
             return BlockMemory.count(BlockMemory.read(context.parameters, binding.memoryCount));
+        if (kind === "termUnit")
+            return this.resolveTermUnit(binding, context, fallbackValue);
         return fallbackValue;
     }
 
@@ -270,6 +279,15 @@ class BlockBindings {
         if (binding.as === "number" || binding.as === "value")
             return this.resolveTermValue(value, this.getCaseNumber(binding, context));
         return value;
+    }
+
+    resolveTermUnit(binding, context, fallbackValue) {
+        const termName = this.resolve(binding.termUnit, context, "");
+        if (termName === null || termName === undefined || termName === "")
+            return fallbackValue;
+        if (!this.calculator?.isTerm(String(termName)))
+            return fallbackValue;
+        return this.calculator.getTermUnit(String(termName)) ?? fallbackValue;
     }
 
     resolveVariable(binding, context, fallbackValue) {

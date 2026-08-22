@@ -237,6 +237,7 @@ Capabilities: `fillable`, `textual`
 | `x` | number | 0 |  |
 | `y` | number | 0 |  |
 | `text` | string | "" |  |
+| `unit` | string | "" |  |
 | `fontSize` | number | "token:font.size.default" | min 1, max 400 |
 | `fontFamily` | string | "token:font.family" |  |
 | `fontWeight` | number | "token:font.weight.default" | min 100, max 900 |

@@ -414,7 +414,7 @@ class ChildShape extends BaseShape {
                     continue;
                 if (axisValueKey)
                     drawnAxisValues.add(axisValueKey);
-                const textHtml = Utils.buildTermValueTextHtml(labelEntry.termText, valueText, this.getTermUnitText(labelEntry.termName));
+                const textHtml = Utils.buildTermValueTextHtml(labelEntry.termText, valueText, this.getTermUnitText(labelEntry.termName, labelEntry.entry?.term ?? ""));
                 html += `<g opacity="${opacity}"><rect class="shape-term-label-bg" rx="3" fill-opacity="0.85" fill="${color}"></rect>`;
                 html += `<text class="shape-term-label" x="${labelPosition.x}" y="${labelPosition.y}" text-anchor="${labelPosition.anchor}" dominant-baseline="central" fill="${textColor}">${textHtml}</text></g>`;
             }

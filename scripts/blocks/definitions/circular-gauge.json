@@ -9,7 +9,7 @@
     "capabilities": ["radial", "angular", "reads-model"],
     "preview": { "parameters": { "valueVariable": "68", "unit": "%" } },
     "parameters": [
-        { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model" },
+        { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model", "unitParameter": "unit" },
         { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": 0, "category": "scale" },
         { "id": "maximum", "label": "Maximum", "valueType": "number", "defaultValue": 100, "category": "scale" },
         { "id": "startAngle", "label": "Start angle", "valueType": "number", "defaultValue": 90, "category": "scale", "unit": "deg" },
@@ -19,7 +19,7 @@
         { "id": "fillColor", "label": "Fill colour", "valueType": "colour", "defaultValue": "token:stroke.accent", "category": "style" },
         { "id": "labelColor", "label": "Label colour", "valueType": "colour", "defaultValue": "token:text.primary", "category": "style" },
         { "id": "digits", "label": "Decimals", "valueType": "number", "defaultValue": 0, "category": "display", "minimum": 0, "maximum": 6 },
-        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "", "category": "display" },
+        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "", "category": "display", "description": "What the reading is named in when the term it reads names nothing of its own. A term carrying a unit is read in that one, picked beside the term the way every unit on the board is, so this is what is left for a gauge standing at a plain number." },
         { "id": "showReadout", "label": "Show readout", "valueType": "boolean", "defaultValue": true, "category": "display" }
     ],
     "locals": [
@@ -37,15 +37,8 @@
         { "id": "fillEnd", "formula": "startAngle-filledSweep" },
         { "id": "readoutFontSize", "formula": "\\max\\left(10,r\\cdot0.34\\right)" },
         { "id": "readoutWeight", "value": { "token": "font.weight.strong" } },
-        {
-            "id": "readoutText",
-            "value": {
-                "concat": [
-                    { "format": { "parameter": "value" }, "digits": { "parameter": "digits" } },
-                    { "choose": { "parameter": "unit" }, "then": { "concat": [" ", { "parameter": "unit" }] }, "otherwise": "" }
-                ]
-            }
-        }
+        { "id": "readoutUnit", "fallback": "", "value": { "choose": { "termUnit": { "parameter": "valueVariable" } }, "then": { "termUnit": { "parameter": "valueVariable" } }, "otherwise": { "parameter": "unit" } } },
+        { "id": "readoutText", "value": { "format": { "parameter": "value" }, "digits": { "parameter": "digits" } } }
     ],
     "root": {
         "id": "circular-gauge",
@@ -91,6 +84,7 @@
                     "x": { "parameter": "cx" },
                     "y": { "parameter": "cy" },
                     "text": { "parameter": "readoutText" },
+                    "unit": { "parameter": "readoutUnit" },
                     "fontSize": { "parameter": "readoutFontSize" },
                     "fontWeight": { "parameter": "readoutWeight" },
                     "fill": { "parameter": "labelColor" }

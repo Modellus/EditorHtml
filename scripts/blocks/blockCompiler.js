@@ -177,6 +177,7 @@ class BlockCompiler {
             tag: rendered.tag,
             attributes: Object.assign({}, rendered.attributes, accumulator.style),
             text: rendered.text ?? null,
+            unit: rendered.unit ?? null,
             transform: BlockModifiers.buildTransform(accumulator),
             order: accumulator.order,
             behaviours: this.resolveBehaviours(node, compilation, context, path),

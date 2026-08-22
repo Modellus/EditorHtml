@@ -119,12 +119,65 @@ class Utils {
         return superscriptText;
     }
 
+    // The iso norm writes a term over its unit, x / m, and brackets a unit built from more than one
+    // symbol, v / (m/s), so the slash that divides the term from its unit is not read as part of it.
+    // The slash and the unit are written in the color of the term, faded, so the name of the term is
+    // what the eye lands on and the unit reads as the measure it is. Every surface — a label drawn as
+    // text, a title typeset as mathematics, a width measured before either is drawn — writes them
+    // through the builders here, so a term reads the same wherever it is shown.
+    static termUnitsSeparator = " / ";
+    static termUnitsLatexSeparator = "\\;/\\;";
+    static termUnitsOpacity = 0.6;
+
+    static isCompoundUnit(unitText) {
+        return /[/\u00b7*\s]/.test(Utils.getUnitsPlainText(unitText));
+    }
+
+    static bracketUnits(unitsText, unitText) {
+        return Utils.isCompoundUnit(unitText) ? `(${unitsText})` : unitsText;
+    }
+
+    // The unit as it stands beside a term name: "m", "(m/s)", or nothing when the term has none.
+    static getTermUnitsText(unitText) {
+        const plainUnit = Utils.getUnitsPlainText(unitText);
+        if (plainUnit === "")
+            return "";
+        return Utils.bracketUnits(plainUnit, plainUnit);
+    }
+
+    // What follows a term name — " / (m/s)" — so whoever writes or measures a label never spells the
+    // separator out for itself.
+    static buildTermUnitsSuffix(unitText) {
+        const unitsText = Utils.getTermUnitsText(unitText);
+        return unitsText === "" ? "" : `${Utils.termUnitsSeparator}${unitsText}`;
+    }
+
+    // A readout says what the term reads right now, so the unit follows the value it measures rather
+    // than the name — but it is written the same way there as anywhere else, after the separator.
+    static buildTermValueText(termText, valueText, unitText = "") {
+        const readingText = `${valueText ?? ""}${Utils.buildTermUnitsSuffix(unitText)}`;
+        const normalizedTermText = String(termText ?? "");
+        return normalizedTermText === "" ? readingText : `${normalizedTermText} = ${readingText}`;
+    }
+
     static buildTermWithUnitsLatex(termLatex, unitText) {
         const normalizedTermLatex = String(termLatex ?? "");
         const unitsLatex = Utils.getUnitsLatex(unitText);
         if (unitsLatex === "" || normalizedTermLatex === "")
             return normalizedTermLatex;
-        return `${normalizedTermLatex}\\;(${unitsLatex})`;
+        return `${normalizedTermLatex}${Utils.termUnitsLatexSeparator}${Utils.bracketUnits(unitsLatex, unitText)}`;
+    }
+
+    // Reads back what buildTermWithUnitsLatex wrote, so whatever draws the label can write the unit
+    // in its own color instead of in the color of the term.
+    static termWithUnitsLatexPattern = /^([\s\S]*?)\\;\/\\;(\(?\\mathrm\{[\s\S]*?\}\)?)$/;
+
+    static splitTermWithUnitsLatex(latexValue) {
+        const normalizedLatex = String(latexValue ?? "");
+        const unitsMatch = normalizedLatex.match(Utils.termWithUnitsLatexPattern);
+        if (!unitsMatch)
+            return { termLatex: normalizedLatex, unitsLatex: "" };
+        return { termLatex: unitsMatch[1], unitsLatex: unitsMatch[2] };
     }
 
     static buildUnitsMathFieldMarkup(unitText, styleText = "") {
@@ -387,9 +440,12 @@ class Utils {
         }
     }
 
+    // A label is typeset in the pieces it is made of — the name of the term, then the unit written
+    // after it — so the unit can be faded against the name it belongs to. The pieces are laid out
+    // along one baseline, each from the metrics mathjax writes on it, and the width one takes is
+    // where the next one starts.
     static appendCaseTermSvg(layer, x, baselineY, fontSize, fill, caseNumber, termLatex) {
-        const svgNs = "http://www.w3.org/2000/svg";
-        const group = document.createElementNS(svgNs, "g");
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
         layer.appendChild(group);
         let termX = x;
         if (caseNumber != null) {
@@ -399,33 +455,53 @@ class Utils {
             if (iconGroup)
                 group.appendChild(iconGroup);
         }
+        const labelParts = Utils.splitTermWithUnitsLatex(termLatex);
+        const segments = [{ latex: labelParts.termLatex, opacity: 1 }];
+        if (labelParts.unitsLatex !== "")
+            segments.push({ latex: `${Utils.termUnitsLatexSeparator}${labelParts.unitsLatex}`, opacity: Utils.termUnitsOpacity });
         MathJax.startup.promise
-            .then(() => MathJax.tex2svgPromise(String(termLatex ?? "")))
-            .then(svgNode => {
+            .then(() => Promise.all(segments.map(segment => MathJax.tex2svgPromise(segment.latex))))
+            .then(svgNodes => {
                 if (!group.isConnected)
                     return;
-                const svgElement = svgNode.querySelector("svg");
-                const cloned = svgElement.cloneNode(true);
-                const exValue = parseFloat(cloned.getAttribute("width")) || 1;
-                const svgWidth = exValue * fontSize * 0.5;
-                const svgHeight = svgWidth * (parseFloat(cloned.getAttribute("height")) / exValue);
-                const topY = baselineY - svgHeight * 0.82;
-                cloned.setAttribute("width", `${svgWidth}`);
-                cloned.setAttribute("height", `${svgHeight}`);
-                cloned.style.color = fill;
-                cloned.style.overflow = "visible";
-                const wrapper = document.createElementNS(svgNs, "g");
-                wrapper.setAttribute("transform", `translate(${termX}, ${topY})`);
-                wrapper.appendChild(cloned);
-                group.appendChild(wrapper);
+                let segmentX = termX;
+                for (let index = 0; index < svgNodes.length; index++)
+                    segmentX += Utils.appendMathSegmentSvg(group, svgNodes[index], segmentX, baselineY, fontSize, fill, segments[index].opacity);
             });
         return group;
     }
 
+    // Mathjax measures a piece of mathematics in ex and writes how far it hangs below its baseline as
+    // the vertical alignment of the box, so what stands above the baseline is the rest of the height.
+    // Placing every piece by that keeps a name, a slash and a unit on one line however tall each of
+    // them happens to be.
+    static appendMathSegmentSvg(group, svgNode, x, baselineY, fontSize, fill, opacity) {
+        const svgElement = svgNode.querySelector("svg");
+        if (!svgElement)
+            return 0;
+        const cloned = svgElement.cloneNode(true);
+        const exToPixels = fontSize * 0.5;
+        const widthEx = parseFloat(cloned.getAttribute("width")) || 1;
+        const heightEx = parseFloat(cloned.getAttribute("height")) || 1;
+        const depthEx = -(parseFloat(cloned.style.verticalAlign) || 0);
+        const segmentWidth = widthEx * exToPixels;
+        cloned.setAttribute("width", `${segmentWidth}`);
+        cloned.setAttribute("height", `${heightEx * exToPixels}`);
+        cloned.style.color = fill;
+        cloned.style.overflow = "visible";
+        const wrapper = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        wrapper.setAttribute("transform", `translate(${x}, ${baselineY - (heightEx - depthEx) * exToPixels})`);
+        if (opacity < 1)
+            wrapper.setAttribute("opacity", `${opacity}`);
+        wrapper.appendChild(cloned);
+        group.appendChild(wrapper);
+        return segmentWidth;
+    }
+
     static estimateMathTermWidth(latexValue, fontSize) {
-        const unitsMatch = String(latexValue ?? "").match(/^([\s\S]*?)\\;\((\\mathrm\{[\s\S]*\})\)$/);
-        if (unitsMatch)
-            return Utils.estimateMathTermWidth(unitsMatch[1], fontSize) + (Utils.getUnitsPlainText(unitsMatch[2]).length + 3) * fontSize * 0.5;
+        const labelParts = Utils.splitTermWithUnitsLatex(latexValue);
+        if (labelParts.unitsLatex !== "")
+            return Utils.estimateMathTermWidth(labelParts.termLatex, fontSize) + (Utils.termUnitsSeparator.length + Utils.getUnitsPlainText(labelParts.unitsLatex).length) * fontSize * 0.5;
         const parsed = Utils.parseMathTermLatex(latexValue);
         const baseWidth = String(parsed.base).length * fontSize * 0.58;
         if (parsed.subscript === null && parsed.superscript === null)
@@ -468,19 +544,25 @@ class Utils {
         textElement.innerHTML = Utils.buildTermTextHtml(termLatex, false);
     }
 
-    static buildTermUnitTextHtml(unitText) {
-        const plainUnit = Utils.getUnitsPlainText(unitText);
-        if (plainUnit === "")
+    // The unit is written in the color the text already carries, faded, so it reads as a note on what
+    // it measures rather than as part of it, whatever color the label is drawn in. One writer serves
+    // a name that carries a unit and a reading that ends in one, so the two cannot drift apart.
+    static termUnitsFillAttribute = ` fill-opacity="${Utils.termUnitsOpacity}"`;
+
+    // A surface that writes in a font of its own — a component drawn from blocks — keeps it by asking
+    // for no font at all; the separator, the brackets and the fading are the same wherever it is used.
+    static buildTermUnitsTextHtml(unitText, options = {}) {
+        const unitsSuffix = Utils.buildTermUnitsSuffix(unitText);
+        if (unitsSuffix === "")
             return "";
-        return `<tspan font-family="Katex_Main" dominant-baseline="central"> ${Utils.escapeXmlText(plainUnit)}</tspan>`;
+        const fontFamily = options.fontFamily === undefined ? "Katex_Main" : options.fontFamily;
+        const fontAttribute = fontFamily ? ` font-family="${fontFamily}"` : "";
+        const baselineAttribute = options.useCentralBaseline === false ? "" : ` dominant-baseline="central"`;
+        return `<tspan${fontAttribute}${Utils.termUnitsFillAttribute}${baselineAttribute}>${Utils.escapeXmlText(unitsSuffix)}</tspan>`;
     }
 
     static buildTermWithUnitsTextHtml(termLatex, unitText) {
-        const plainUnit = Utils.getUnitsPlainText(unitText);
-        const termHtml = Utils.buildTermTextHtml(termLatex, false);
-        if (plainUnit === "")
-            return termHtml;
-        return `${termHtml}<tspan font-family="Katex_Main"> (${Utils.escapeXmlText(plainUnit)})</tspan>`;
+        return `${Utils.buildTermTextHtml(termLatex, false)}${Utils.buildTermUnitsTextHtml(unitText, { useCentralBaseline: false })}`;
     }
 
     static setTermWithUnitsTextContent(textElement, termLatex, unitText) {
@@ -488,7 +570,7 @@ class Utils {
     }
 
     static buildTermValueTextHtml(termLatex, valueText, unitText = "") {
-        const unitHtml = Utils.buildTermUnitTextHtml(unitText);
+        const unitHtml = Utils.buildTermUnitsTextHtml(unitText);
         if (!termLatex)
             return `<tspan font-family="Katex_Main" dominant-baseline="central">${Utils.escapeXmlText(valueText)}</tspan>${unitHtml}`;
         const segments = Utils.splitTermNameSegments(termLatex);

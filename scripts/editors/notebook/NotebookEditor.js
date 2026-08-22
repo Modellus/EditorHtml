@@ -537,6 +537,14 @@ class NotebookEditor extends Workspace {
         this._updateStartLabel();
     }
 
+    // Nothing on a notebook page is undone through a property command, so the unit is written straight
+    // onto the model and every block is drawn again with it.
+    writeTermUnits(termUnits) {
+        super.writeTermUnits(termUnits);
+        this._updateLastModified();
+        this.wall.refresh();
+    }
+
     _reparseExpressions() {
         if (!this.calculator)
             return;

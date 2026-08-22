@@ -270,6 +270,10 @@ var BlockPrimitiveRenderers = {
             x: { valueType: "number", defaultValue: 0, label: "X" },
             y: { valueType: "number", defaultValue: 0, label: "Y" },
             text: { valueType: "string", defaultValue: "", label: "Text" },
+            // What the text is measured in, written after it the way a unit is written everywhere
+            // else on the board — after a "/", bracketed when it is built from more than one symbol,
+            // and faded — rather than concatenated into the text and left to read as part of it.
+            unit: { valueType: "string", defaultValue: "", label: "Unit" },
             fontSize: { valueType: "number", defaultValue: "token:font.size.default", minimum: 1, maximum: 400, label: "Font size" },
             fontFamily: { valueType: "string", defaultValue: "token:font.family", label: "Font family" },
             fontWeight: { valueType: "number", defaultValue: "token:font.weight.default", minimum: 100, maximum: 900, label: "Font weight" },
@@ -279,6 +283,7 @@ var BlockPrimitiveRenderers = {
         render: properties => ({
             tag: "text",
             text: String(properties.text ?? ""),
+            unit: String(properties.unit ?? ""),
             attributes: Object.assign({
                 x: properties.x,
                 y: properties.y,

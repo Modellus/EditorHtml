@@ -314,12 +314,31 @@ class TermControl {
     // Units belong to the term, not to the shape reading it, so the selector that names a term is
     // also where its unit is chosen: whoever picks x picks metres in the same place, and every
     // toolbar that borrows this control gets the choice without asking for it.
-    static createTermUnitsSelection(board) {
+    static createTermUnitsSelection(board, valueUnits = null) {
         return {
             width: "58px",
             getValue: termName => board.calculator.getTermUnit(termName),
             isTerm: termName => board.calculator.isTerm(termName),
-            onValueChanged: (termName, unitText) => board.shell.setTermUnitCommand(termName, unitText)
+            onValueChanged: (termName, unitText) => board.shell.setTermUnitCommand(termName, unitText),
+            // A row may hold a plain value rather than a term — 100 — and a plain value is measured in
+            // something too: it is set to 100 m here the same way a term is. That unit belongs to
+            // whoever wrote the value rather than to the model, so the surface says where it is kept.
+            valueUnits: valueUnits
+        };
+    }
+
+    // A value's unit is kept beside the value: the property holding 100 has a unit property of its
+    // own, the way it already has a case and a lock of its own.
+    static getValueUnitProperty(termProperty) {
+        return `${termProperty}Unit`;
+    }
+
+    static createBaseShapeValueUnitsSelection(baseShape, unitProperty) {
+        if (!unitProperty)
+            return null;
+        return {
+            getValue: () => baseShape.properties[unitProperty] ?? "",
+            onValueChanged: unitText => baseShape.setPropertyCommand(unitProperty, String(unitText ?? "").trim())
         };
     }
 
@@ -419,7 +438,7 @@ class TermControl {
             getStateKey: () => TermControl.getBaseShapeTermControlStateKey(baseShape, term, caseProperty, options.colorProperty ?? "", extraTermProperty, modeProperty),
             mode: TermControl.createBaseShapeModeSelection(baseShape, formInstance, modeProperty, options.modeItems ?? [], options.modePairValue ?? "", () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl)),
             colorSelection: TermControl.createBaseShapeTermColorSelection(baseShape, options.colorProperty ?? ""),
-            units: TermControl.createTermUnitsSelection(baseShape.board),
+            units: TermControl.createTermUnitsSelection(baseShape.board, TermControl.createBaseShapeValueUnitsSelection(baseShape, options.valueUnitProperty === undefined ? TermControl.getValueUnitProperty(term) : options.valueUnitProperty)),
             extraTerm: TermControl.createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl), options.showExtraTerm ?? null),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term, normalizeCustomValue),
             getBoard: () => baseShape.board,
@@ -1400,8 +1419,9 @@ class TermControl {
         return this.options.units != null;
     }
 
-    // Only a term the model knows carries a unit: a row still being named, or one naming a plain
-    // number, has nothing to give units to.
+    // A row still being named has nothing to give units to. One that names a term gives them to the
+    // model; one holding a plain value gives them to wherever the surface keeps that value's unit,
+    // and a surface that keeps none says so by offering no place to put it.
     shouldShowUnitsEditor(item, index) {
         if (!this.hasUnits())
             return false;
@@ -1410,27 +1430,39 @@ class TermControl {
         const termName = this.normalizeTermValue(this.getTermValue(item, index));
         if (termName === "")
             return false;
-        return this.options.units.isTerm(termName) === true;
+        if (this.options.units.isTerm(termName) === true)
+            return true;
+        return this.options.units.valueUnits != null;
     }
 
     getUnitsWidth() {
         return this.options.units.width ?? "58px";
     }
 
-    getUnitsValue(item, index) {
-        return this.options.units.getValue(this.normalizeTermValue(this.getTermValue(item, index)));
-    }
-
     renderUnitsEditor(host, item, index) {
-        UnitsControl.createEditor(host, {
-            value: this.getUnitsValue(item, index),
-            nested: true,
-            onValueChanged: unitText => this.onUnitsValueChanged(item, index, unitText)
-        });
+        TermControl.renderTermUnitsEditor(host, this.normalizeTermValue(this.getTermValue(item, index)), this.options.units, item, index);
     }
 
-    onUnitsValueChanged(item, index, unitText) {
-        this.options.units.onValueChanged(this.normalizeTermValue(this.getTermValue(item, index)), unitText);
+    // The units editor a term row carries, on its own, for a surface that names a term with a control
+    // of its own: the notebook's blocks pick a term from a plain list, and the unit is picked beside
+    // it there out of the same picker. What it writes into depends on what the row holds — the term
+    // the model knows, or the value the surface wrote — and a row naming nothing yet is left empty.
+    static renderTermUnitsEditor(host, termName, units, item = null, index = 0) {
+        host.empty();
+        if (!units || termName == null || termName === "")
+            return false;
+        if (units.isTerm(termName) === true) {
+            TermControl.renderUnitsPicker(host, units.getValue(termName), unitText => units.onValueChanged(termName, unitText));
+            return true;
+        }
+        if (!units.valueUnits)
+            return false;
+        TermControl.renderUnitsPicker(host, units.valueUnits.getValue(item, index), unitText => units.valueUnits.onValueChanged(unitText, item, index));
+        return true;
+    }
+
+    static renderUnitsPicker(host, unitText, onValueChanged) {
+        UnitsControl.createEditor(host, { value: unitText, nested: true, onValueChanged: onValueChanged });
     }
 
     renderColorEditor(host, item, index) {

@@ -51,10 +51,8 @@ that directory: it would become a component in the palette.
         { "id": "r", "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-4\\right)" },
         { "id": "value", "value": { "parameter": "valueVariable", "as": "number" } },
         { "id": "ratio", "formula": "\\max\\left(0,\\min\\left(1,\\frac{value}{maximum}\\right)\\right)" },
-        { "id": "readoutText", "value": { "concat": [
-            { "format": { "parameter": "value" }, "digits": 1 },
-            { "choose": { "parameter": "unit" }, "then": { "concat": [" ", { "parameter": "unit" }] }, "otherwise": "" }
-        ] } }
+        { "id": "readoutText", "value": { "format": { "parameter": "value" }, "digits": 1 } },
+        { "id": "readoutUnit", "fallback": "", "value": { "choose": { "termUnit": { "parameter": "valueVariable" } }, "then": { "termUnit": { "parameter": "valueVariable" } }, "otherwise": { "parameter": "unit" } } }
     ],
 
     "root": {
@@ -79,7 +77,8 @@ that directory: it would become a component in the palette.
                 "bindings": {
                     "x": { "parameter": "cx" },
                     "y": { "parameter": "cy" },
-                    "text": { "parameter": "readoutText" }
+                    "text": { "parameter": "readoutText" },
+                    "unit": { "parameter": "readoutUnit" }
                 }
             }
         ]
@@ -89,6 +88,19 @@ that directory: it would become a component in the palette.
 
 Fill it in in that order — identity, parameters, locals, tree — because each section may only read
 what the ones above it declare.
+
+A `variable` parameter may name a `unitParameter`: the row where the reader picks the term is also
+where its unit is picked, and when the row holds a plain number rather than a term — a thermometer
+standing at 20 rather than at T — that is where the picked unit is written, since a plain number has
+no term to carry one.
+
+**A reading names its unit, it does not spell it out.** Never concatenate a unit into the text: give
+the `text` node a `unit` of its own, and the board writes it the way it writes every unit — after a
+`/`, bracketed when it is built from more than one symbol, and faded against the figures, so `64` in
+kilometres an hour reads `64 / (km/h)`. Where the unit comes from is settled the same way too: the
+term the object reads carries it, chosen beside the term itself, and `{ "termUnit": … }` is how the
+definition asks for it. A unit parameter of the object's own is what is left for an object reading a
+plain number rather than a term.
 
 ### Identity
 
@@ -102,7 +114,7 @@ zero, a phasor of length one); a clock does not need it.
 ### Parameters — what the user edits
 
 Each is `{ id, label, valueType, defaultValue, category }` plus any of `description`, `minimum`,
-`maximum`, `enumValues`, `enumIcons`, `unit`, `required`, `bindable`, `agentAccessible`,
+`maximum`, `enumValues`, `enumIcons`, `unit`, `unitParameter`, `required`, `bindable`, `agentAccessible`,
 `userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`, `modeParameter`,
 `toolbarKey`, `toolbarTooltip`, `valueAnchor`, `visibleWhen`.
 
@@ -319,6 +331,7 @@ handles that rescale an axis.
 | `{ "contrast": <colour binding> }` | black or white, whichever reads on that colour |
 | `{ "memory": "history", "row": …, "field": "x", "from": "end" }` | a memory, a row, or a field |
 | `{ "memoryCount": "history" }` | how many rows it holds |
+| `{ "termUnit": { "parameter": "valueVariable" } }` | what the term a parameter names is measured in, as the model holds it |
 
 ### Colours, fonts and sizes are not the object's to invent
 

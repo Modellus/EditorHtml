@@ -21,6 +21,27 @@ class Workspace {
         return this.session?.properties ?? null;
     }
 
+    // A unit belongs to the term, not to the surface reading it, so every workspace writes one the
+    // same way: the map is rewritten whole — an entry cleared by merging would never go — and handed
+    // to whatever that workspace records model properties with.
+    setTermUnitCommand(termName, unitText) {
+        if (!termName || !this.properties)
+            return false;
+        const termUnits = Object.assign({}, this.properties.termUnits);
+        const normalizedUnit = String(unitText ?? "").trim();
+        if (normalizedUnit === "")
+            delete termUnits[termName];
+        else
+            termUnits[termName] = normalizedUnit;
+        this.writeTermUnits(termUnits);
+        return true;
+    }
+
+    writeTermUnits(termUnits) {
+        this.properties.termUnits = Utils.normalizeTermUnits(termUnits);
+        this.calculator?.setTermUnits(this.properties.termUnits);
+    }
+
     getIndependentStart() {
         return Number(this.calculator?.properties?.independent?.start ?? 0);
     }
