@@ -20,6 +20,18 @@ function resolveExpressionTemplateShortcuts(independentTermName) {
         { name: "Ceil", text: `\\lceil ${previewTermName}\\rceil`, insertText: "\\lceil\\placeholder{}\\rceil", shortcutMac: "⌘_", shortcutWindows: "" },
         { name: "Fraction", text: `\\frac{${previewTermName}}{y}`, insertText: "\\frac{\\placeholder{}}{\\placeholder{}}", shortcutMac: "⌘/", shortcutWindows: "Ctrl+/" },
         { name: "Multiplication", text: `${previewTermName}\\cdot y`, insertText: "\\cdot", shortcut: "*" },
-        { name: "Prime", text: `${previewTermName}^{\\prime}`, insertText: "^{\\prime}", shortcut: "'" }
+        { name: "Prime", text: `${previewTermName}^{\\prime}`, insertText: "^{\\prime}", shortcut: "'" },
+        { name: "Belongs to", text: `${previewTermName}\\in\\{1,2,3\\}`, insertText: "\\in", shortcutMac: "\u2325e", shortcutWindows: "Alt+e" },
+        { name: "Set", text: "\\{1,2,3\\}", insertText: "\\{\\placeholder{},\\placeholder{},\\placeholder{}\\}" },
+        { name: "Range", text: "\\left[1..5\\right]", insertText: "\\left[\\placeholder{}..\\placeholder{}\\right]" },
+        { name: "Interval", text: "\\left[6,7\\right]", insertText: "\\left[\\placeholder{},\\placeholder{}\\right]" },
+        { name: "Union", text: "\\{1,2,3\\}\\cup\\left[6,7\\right]", insertText: "\\cup", shortcutMac: "\u2325u", shortcutWindows: "Alt+u" },
+        { name: "Text values", text: "\\{\\text{red},\\text{green}\\}", insertText: "\\{\\text{\\placeholder{}},\\text{\\placeholder{}}\\}" },
+        { name: "Real numbers", text: `${previewTermName}\\in\\mathbb{R}`, insertText: "\\mathbb{R}" },
+        { name: "Integers", text: `${previewTermName}\\in\\mathbb{Z}`, insertText: "\\mathbb{Z}" },
+        { name: "Natural numbers", text: `${previewTermName}\\in\\mathbb{N}`, insertText: "\\mathbb{N}" },
+        { name: "Booleans", text: `${previewTermName}\\in\\mathbb{B}`, insertText: "\\mathbb{B}" },
+        { name: "Named domain", text: "\\text{domain}\\ Color=\\{\\text{red},\\text{green}\\}", insertText: "\\text{domain}\\ \\placeholder{}=\\placeholder{}" },
+        { name: "Random value", text: `${previewTermName}=rnd\\left(3\\right)`, insertText: "rnd\\left(\\placeholder{}\\right)" }
     ];
 }

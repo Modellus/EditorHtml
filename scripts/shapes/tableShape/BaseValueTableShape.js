@@ -701,8 +701,7 @@ class BaseValueTableShape extends BaseTableShape {
         const numericValue = Number(payload?.value);
         if (!Number.isFinite(numericValue))
             return false;
-        const precision = this.board.calculator.getPrecision();
-        const roundedValue = Utils.roundToPrecision(numericValue, precision);
+        const roundedValue = this.roundTableCellValue(sourceColumn.term, numericValue);
         if (!this._canEditTerm(sourceColumn.term))
             return false;
         const iteration = payload?.rowKey ?? payload?.row?.key;

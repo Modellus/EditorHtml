@@ -100,7 +100,7 @@
 
         <div class="callout callout-info">
             <i class="fa-light fa-download"></i>
-            <span><a href="/resources/models/expression-schema.json">View the full Expression Schema JSON</a> — JSON Schema (Draft-07), 1331 lines.</span>
+            <span><a href="/resources/models/expression-schema.json">View the full Expression Schema JSON</a> — JSON Schema (Draft-07), 1480 lines.</span>
         </div>
 
         <h2>Overview</h2>
@@ -116,6 +116,8 @@
                 <tr><td><code>functionSubscriptDigit</code></td><td><code>x_0 = value</code></td><td>PARAMETER — initial/reference value</td></tr>
                 <tr><td><code>functionIndependent</code></td><td><code>f(t) = expr</code></td><td>FUNCTION — explicit argument form</td></tr>
                 <tr><td><code>conditional</code></td><td><code>name = \begin{cases}...\end{cases}</code></td><td>FUNCTION — piecewise definition (≥ 2 rows)</td></tr>
+                <tr><td><code>domain</code></td><td><code>x \in {1,2,3}</code></td><td>PARAMETER — a scalar restricted to the listed values</td></tr>
+                <tr><td><code>namedDomain</code></td><td><code>\text{domain} Color = {\text{red},\text{green}}</code></td><td>None — a declaration, never a term</td></tr>
                 <tr><td><code>display</code></td><td><code>expr</code> (no assignment)</td><td>None — visual display only</td></tr>
             </tbody>
         </table>
@@ -139,6 +141,7 @@
                 <tr><td>Delta</td><td>Finite difference operator</td><td><code>\Delta x</code></td></tr>
                 <tr><td>SubscriptRef</td><td>Subscript term access</td><td><code>x_{n-1}</code></td></tr>
                 <tr><td>Absolute</td><td>Absolute value bars</td><td><code>|x|</code></td></tr>
+                <tr><td>EnumLiteral</td><td>Categorical value of a declared domain; compares only</td><td><code>\text{red}</code></td></tr>
             </tbody>
         </table>
 
@@ -151,7 +154,7 @@
                 <tr><td>Hyperbolic</td><td><code>\sinh</code>, <code>\cosh</code>, <code>\tanh</code></td></tr>
                 <tr><td>Logarithmic</td><td><code>\ln</code>, <code>\log</code></td></tr>
                 <tr><td>Two-argument</td><td><code>\max(a,b)</code>, <code>\min(a,b)</code>, <code>\mod(a,b)</code></td></tr>
-                <tr><td>Utility</td><td><code>sign(x)</code>, <code>rnd(x)</code>, <code>irnd(x)</code>, <code>int(x)</code>, <code>round(x)</code></td></tr>
+                <tr><td>Utility</td><td><code>sign(x)</code>, <code>rnd(x)</code>, <code>irnd(x)</code>, <code>int(x)</code>, <code>round(x)</code> &mdash; written with no backslash, and drawn upright: the editor writes them back as <code>\mathrm{round}\left(x\right)</code>, which reads the same as the plain spelling</td></tr>
                 <tr><td>Other</td><td><code>\det(x)</code>, <code>\sqrt{x}</code></td></tr>
             </tbody>
         </table>
@@ -171,6 +174,62 @@
         <p><strong>Factorial:</strong> Use postfix notation (<code>n!</code>). Factorial is intended for non-negative integer values.</p>
 
         <p><strong>Integral notation:</strong> LaTeX integral forms such as <code>\int_{a}^{b} f\left(x\right)\,\mathrm{d}x</code> are valid expression syntax. For integer-part behavior, use <code>int(x)</code>.</p>
+
+        <h2>Domains</h2>
+        <p>A domain says which values a scalar term may take. <code>x \in {1,2,3}</code> leaves <code>x</code> a single selectable number: it does not make <code>x</code> a set, and it is not a true/false membership test. Constrain a term with <code>\in</code>; the <code>=</code> form means the same thing but is only read as a domain when the right-hand side is something no ordinary expression could be, so <code>x={1}</code> and <code>x=Color</code> stay assignments.</p>
+        <table class="docs-table">
+            <thead><tr><th>Written</th><th>Means</th></tr></thead>
+            <tbody>
+                <tr><td><code>{1, 2, 3}</code></td><td>Finite domain — exactly the values 1, 2 and 3</td></tr>
+                <tr><td><code>[1, 5]</code></td><td><strong>Continuous</strong> interval — every real value from 1 to 5</td></tr>
+                <tr><td><code>[1..5]</code></td><td><strong>Discrete</strong> inclusive range — <code>{1, 2, 3, 4, 5}</code></td></tr>
+                <tr><td><code>[0..10..2]</code></td><td>Discrete range with a step — <code>{0, 2, 4, 6, 8, 10}</code></td></tr>
+                <tr><td><code>A \cup B</code></td><td>Union — a value belonging to <code>A</code> or to <code>B</code></td></tr>
+                <tr><td><code>x \in D</code></td><td>Constrains the scalar term <code>x</code> to the domain <code>D</code></td></tr>
+            </tbody>
+        </table>
+        <p>A comma between two bounds is a continuous interval and two dots are a discrete range, so <code>[1,5]</code> and <code>[1..5]</code> are different domains. A range is inclusive at both ends when the step reaches the endpoint: <code>[0..10..3]</code> is <code>{0, 3, 6, 9}</code>.</p>
+
+        <p>Every delimiter is read in four spellings — plain, sized, named and sized named — because the editor keeps whichever one was typed: <code>\{ \}</code>, <code>\left\{ \right\}</code>, <code>\lbrace \rbrace</code>, <code>\left\lbrace \right\rbrace</code> for braces, and likewise <code>\lbrack \rbrack</code> and <code>\lparen \rparen</code> for brackets and parentheses. Write the plain form; the others are accepted so a row keeps working whichever way it was written.</p>
+
+        <p><strong>The principal example.</strong> <code>x \in {1,2,3} \cup [6,7]</code> — <code>x</code> may equal 1, 2 or 3, or any real value in the closed interval from 6 to 7. Nothing between 3 and 6 is allowed.</p>
+
+        <p>At the top level of a domain a comma is a union operator too, so <code>x = {1},{2},{3},[6..7]</code> normalizes to <code>x \in {1,2,3,6,7}</code>. Commas inside a set, inside an interval and inside a function call keep their own meaning, so <code>\max\left(a,b\right)</code> is unaffected.</p>
+
+        <h3>Categorical domains</h3>
+        <p>Write categorical values as <code>\text{red}</code>, both where the domain is declared and where it is compared:</p>
+        <pre><code>color \in {\text{red},\text{green},\text{blue}}
+is\_red = \begin{cases}1 &amp; color=\text{red}\\0 &amp; \text{otherwise}\end{cases}</code></pre>
+        <p>These values are enum literals, not references to terms called <code>red</code> or <code>green</code>, and they never appear in the term list. They compare with <code>=</code> and <code>\neq</code> and combine with <code>\land</code>, <code>\lor</code> and <code>\lnot</code>. Arithmetic on one is refused with a type diagnostic rather than treated as a number, and a value belonging to no declared domain is refused rather than read as a term.</p>
+
+        <h3>Built-in domains</h3>
+        <table class="docs-table">
+            <thead><tr><th>Written</th><th>Means</th></tr></thead>
+            <tbody>
+                <tr><td><code>\mathbb{R}</code></td><td>Every finite real value the engine can represent</td></tr>
+                <tr><td><code>\mathbb{Z}</code></td><td>Integers, of either sign</td></tr>
+                <tr><td><code>\mathbb{N}</code></td><td>Non-negative integers, zero included</td></tr>
+                <tr><td><code>\mathbb{B}</code></td><td><code>{false, true}</code>, stored as 0 and 1</td></tr>
+                <tr><td><code>\mathbb{Q}</code></td><td>Accepted, but behaves exactly like <code>\mathbb{R}</code>: values are floating-point numbers, so exact rational membership cannot be decided</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Named domains</h3>
+        <pre><code>\text{domain} Color = {\text{red},\text{green},\text{blue}}
+foreground \in Color
+background \in Color</code></pre>
+        <p>The keyword is the word <code>domain</code>, written <code>\text{domain}</code> so the editor draws it upright. A named domain is a declaration, never a calculation term: it never appears in the term list, in the value rows or on a plot. It resolves globally, works inside a union, and may not be defined in terms of itself.</p>
+
+        <h3>Choosing a value at random</h3>
+        <p>Assigned to a constrained term, <code>rnd</code> reads its argument as a count of domain values rather than as an upper bound:</p>
+        <pre><code>z \in {\text{green},\text{blue},\text{red}}
+z = rnd\left(3\right)</code></pre>
+        <p><code>z</code> becomes one of the three labels, each equally likely; <code>rnd\left(2\right)</code> would only ever choose <code>green</code> or <code>blue</code>, because the argument counts from the start of the domain in declared order. This is the only way to pick a categorical value at random — the numbers the labels are stored as are internal and must never be written into a model. It works the same for a numeric domain: <code>n \in [0..10..2]</code> with <code>n = rnd\left(6\right)</code> picks one of <code>0, 2, 4, 6, 8, 10</code>.</p>
+        <p>Everywhere else <code>rnd</code> keeps its usual meaning, a number between 0 and its argument: when the term has no domain, when the domain is infinite, and when <code>rnd</code> is only part of the assigned expression as in <code>m = n + rnd\left(3\right)</code>. <code>irnd</code> is unchanged.</p>
+
+        <h3>Initial values and enforcement</h3>
+        <p>A constrained term starts on an explicitly supplied initial value when the domain accepts it, otherwise on the first value of a finite domain, the start of a range, the lower bound of an interval, <code>0</code> for the numeric built-ins and <code>false</code> for <code>\mathbb{B}</code>. Values are never clamped or rounded: an update outside the domain is refused and a computed term that leaves its domain becomes undefined for that step, each with a <code>DOMAIN_VIOLATION</code> diagnostic naming the term, the rejected value and the domain.</p>
+        <p>A term constrained to a set of labels is edited by its labels everywhere the user meets it: the scenarios table and the table of values show <code>green</code> rather than the number behind it, and a cell is changed by choosing from the list of the domain's values instead of by typing.</p>
 
         <h2>LaTeX Templates</h2>
         <p>The schema includes a <code>latexTemplates</code> section providing ready-to-use LaTeX strings for common patterns that agents can emit directly into <code>expression</code> fields.</p>

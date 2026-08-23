@@ -9,10 +9,16 @@ declare class Branch {
         [name: string]: number;
     }) => number;
     op?: string;
+    /**
+     * Set on a branch that reads or produces a categorical value, so the type check can tell a
+     * comparison such as `color = red` from arithmetic on a label.
+     */
+    categorical?: boolean;
     constructor(text: string, calculate: (values: {
         [name: string]: number;
     }) => number, ...children: Branch[]);
     withOp(op: string): this;
+    asCategorical(): this;
 }
 
 declare enum TermType {
@@ -69,19 +75,126 @@ declare class Body {
     }): void;
 }
 
+declare enum DomainKind {
+    FINITE_SET = "finiteSet",
+    DISCRETE_RANGE = "discreteRange",
+    INTERVAL = "interval",
+    UNION = "union",
+    BUILTIN = "builtin",
+    REFERENCE = "reference"
+}
+/**
+ * The kind of editor a host application should offer for a constrained term.  The engine does
+ * not draw anything; it only says enough about the domain for the UI to decide without having
+ * to read the source text again.
+ */
+declare enum DomainControl {
+    /** A finite list of numeric or categorical values: dropdown or radio group. */
+    LIST = "list",
+    /** An arithmetic progression: slider snapped to the step. */
+    STEPPED_SLIDER = "steppedSlider",
+    /** A bounded continuous interval: plain slider. */
+    CONTINUOUS_SLIDER = "continuousSlider",
+    /** Anything a single simple control cannot express: domain-aware selector or editor. */
+    DOMAIN_EDITOR = "domainEditor",
+    /** An unbounded built-in domain: plain numeric field. */
+    NUMBER_FIELD = "numberField"
+}
+interface DomainValueMetadata {
+    value: number;
+    label: string;
+}
+interface DomainMetadata {
+    kind: DomainKind;
+    control: DomainControl;
+    /** Human readable rendering, e.g. `{1, 2, 3} ∪ [6, 7]`. */
+    text: string;
+    /** The declared name when the term was constrained through a named domain. */
+    name: string | null;
+    isCategorical: boolean;
+    isFinite: boolean;
+    /** Present when the domain is finite and small enough to list. */
+    values: DomainValueMetadata[] | null;
+    minimum: number | null;
+    maximum: number | null;
+    includesMinimum: boolean;
+    includesMaximum: boolean;
+    step: number | null;
+    /** The parts of a union, so a selector can offer one control per part. */
+    members: DomainMetadata[] | null;
+}
+/** Renders a number the way domains display it: no trailing zeros, no exponent noise. */
+declare function formatDomainNumber(value: number): string;
+declare abstract class Domain {
+    /** How many values `listValues` will expand before giving up and returning null. */
+    static readonly MAXIMUM_LISTED_VALUES: number;
+    /** Set when this domain was reached through a named declaration such as `domain Color = ...`. */
+    declaredName: string | null;
+    abstract get kind(): DomainKind;
+    /** True when this domain's members are categorical labels rather than plain numbers. */
+    abstract get isCategorical(): boolean;
+    /** True when the domain holds a countable number of values. */
+    abstract get isFinite(): boolean;
+    abstract get control(): DomainControl;
+    /** Membership test using the engine's numerical tolerance. */
+    abstract contains(value: number): boolean;
+    /** Human readable rendering used in diagnostics and metadata. */
+    abstract describe(): string;
+    /**
+     * The value a term takes when it is constrained to this domain and no valid initial value
+     * was supplied.  NaN when the domain cannot suggest one.
+     */
+    abstract defaultValue(): number;
+    /**
+     * The domain's values, or null when it is infinite or larger than `limit`.  Ranges are kept
+     * structurally and only expanded here, so a huge range never materialises by accident.
+     */
+    abstract listValues(limit: number): DomainValueMetadata[] | null;
+    /** The label a categorical value is displayed with, or null when the value is plain numeric. */
+    labelOf(_value: number): string | null;
+    toMetadata(): DomainMetadata;
+    get minimum(): number | null;
+    get maximum(): number | null;
+    get includesMinimum(): boolean;
+    get includesMaximum(): boolean;
+    /** The increment a stepped control should use, always positive; null when not stepped. */
+    get controlStep(): number | null;
+    /** A short hint added to a DOMAIN_VIOLATION telling the author what to write instead. */
+    suggestionFor(_value: number): string;
+}
+
 declare class Term {
     name: string;
     type: TermType;
     expressionLatex: string | null;
     unitsTree: Branch | null;
     unitsText: string | null;
+    /**
+     * The domain the term is constrained to, from `x \in {1,2,3}` or `x = [1..5]`.  A term without
+     * one is unconstrained and behaves exactly as it did before domains existed.
+     */
+    domain: Domain | null;
     private _initialValues;
     constructor(name: string, type?: TermType);
+    /**
+     * The explicitly supplied initial value when there is one.  Otherwise the value the domain
+     * suggests - the first value of a finite domain, the start of a range, 0 for the numeric
+     * built-ins and false for booleans - and 0 for an unconstrained term, as before.
+     */
     getInitialValue(iteration?: number): number;
     setInitialValue(value: number, iteration?: number): void;
     get initialValues(): number[];
     set initialValues(values: number[]);
     hasInitialValue(iteration: number): boolean;
+    /** True when the term holds categorical values such as `red`, stored as their label numbers. */
+    get isCategorical(): boolean;
+    /**
+     * Everything a host application needs to pick an editor for this term - a list, a stepped or
+     * continuous slider, or a domain-aware editor - without reading the source text again.
+     */
+    getDomainMetadata(): DomainMetadata | null;
+    /** The categorical label a value is displayed with, or null when the value is plain numeric. */
+    getValueLabel(value: number): string | null;
 }
 
 declare class PreloadedData {
@@ -117,6 +230,280 @@ declare enum SingularityType {
     Infinity = 1,
     NaN = 2,
     Discontinuity = 3
+}
+
+declare enum DiagnosticSeverity {
+    WARNING = "warning",
+    ERROR = "error"
+}
+/**
+ * Structured problem codes reported by the domain layer.  They are strings so a host
+ * application can switch on them and so they survive a JSON round trip unchanged.
+ */
+declare enum DiagnosticCode {
+    DOMAIN_VIOLATION = "DOMAIN_VIOLATION",
+    DOMAIN_INVALID_BOUND = "DOMAIN_INVALID_BOUND",
+    DOMAIN_STEP_ZERO = "DOMAIN_STEP_ZERO",
+    DOMAIN_STEP_DIRECTION = "DOMAIN_STEP_DIRECTION",
+    DOMAIN_EMPTY = "DOMAIN_EMPTY",
+    DOMAIN_MIXED_MEMBERS = "DOMAIN_MIXED_MEMBERS",
+    DOMAIN_UNKNOWN_BUILTIN = "DOMAIN_UNKNOWN_BUILTIN",
+    DOMAIN_UNKNOWN_NAME = "DOMAIN_UNKNOWN_NAME",
+    DOMAIN_CIRCULAR = "DOMAIN_CIRCULAR",
+    DOMAIN_NAME_CONFLICT = "DOMAIN_NAME_CONFLICT",
+    DOMAIN_KEYWORD_EXPECTED = "DOMAIN_KEYWORD_EXPECTED",
+    DOMAIN_ENUMERATION_LIMIT = "DOMAIN_ENUMERATION_LIMIT",
+    DOMAIN_RANDOM_COUNT = "DOMAIN_RANDOM_COUNT",
+    CATEGORICAL_ARITHMETIC = "CATEGORICAL_ARITHMETIC",
+    CATEGORICAL_LABEL_CONFLICT = "CATEGORICAL_LABEL_CONFLICT"
+}
+interface SourceLocation {
+    line: number;
+    column: number;
+    text?: string;
+}
+interface Diagnostic {
+    code: DiagnosticCode;
+    severity: DiagnosticSeverity;
+    message: string;
+    termName?: string;
+    domainName?: string;
+    /** The rejected value, for DOMAIN_VIOLATION. */
+    value?: number;
+    /** The rejected value rendered the way a reader sees it, e.g. a categorical label. */
+    valueText?: string;
+    /** Human readable rendering of the domain the value was checked against. */
+    domainText?: string;
+    suggestion?: string;
+    location?: SourceLocation;
+    iteration?: number;
+    caseNumber?: number;
+}
+/**
+ * Collects diagnostics without letting a long simulation grow the list without bound: the same
+ * problem reported for the same term, value, iteration and case is stored once.
+ */
+declare class DiagnosticCollector {
+    static readonly MAXIMUM_DIAGNOSTICS: number;
+    private readonly diagnostics;
+    private readonly keys;
+    add(diagnostic: Diagnostic): void;
+    private getKey;
+    get all(): ReadonlyArray<Diagnostic>;
+    getByCode(code: DiagnosticCode): Diagnostic[];
+    hasCode(code: DiagnosticCode): boolean;
+    get hasErrors(): boolean;
+    clear(): void;
+    /** Drops every diagnostic raised while running the model, keeping the declaration ones. */
+    clearByCode(code: DiagnosticCode): void;
+}
+
+interface DomainResolver {
+    resolveDomain(name: string): Domain | undefined;
+}
+/**
+ * A use of a named domain, as in `foreground ∈ Color`.  The target is resolved through the
+ * registry on every call rather than captured, so redeclaring `Color` updates every term that
+ * refers to it and the declared name survives serialization.
+ */
+declare class DomainReference extends Domain {
+    readonly referencedName: string;
+    private readonly resolver;
+    /** Guards against a declaration cycle that slipped past the registry check. */
+    private static readonly MAXIMUM_RESOLUTION_DEPTH;
+    private static resolutionDepth;
+    constructor(referencedName: string, resolver: DomainResolver);
+    resolve(): Domain | undefined;
+    get isResolved(): boolean;
+    private withTarget;
+    get kind(): DomainKind;
+    get isCategorical(): boolean;
+    get isFinite(): boolean;
+    get control(): DomainControl;
+    contains(value: number): boolean;
+    /** The declared name: a reader recognizes `Color` more easily than its expansion. */
+    describe(): string;
+    /** The name together with what it stands for, for messages that need the values spelled out. */
+    describeResolved(): string;
+    defaultValue(): number;
+    listValues(limit: number): DomainValueMetadata[] | null;
+    labelOf(value: number): string | null;
+    get minimum(): number | null;
+    get maximum(): number | null;
+    get includesMinimum(): boolean;
+    get includesMaximum(): boolean;
+    get controlStep(): number | null;
+    toMetadata(): DomainMetadata;
+}
+
+/**
+ * A categorical value.  The engine stores every value as a number, so a categorical value is a
+ * label paired with the stable number the label is stored as.
+ */
+declare class EnumLiteral {
+    readonly label: string;
+    readonly value: number;
+    constructor(label: string, value: number);
+}
+/**
+ * The system-wide table of categorical labels.  Labels are interned once and keep the same number
+ * for every domain that uses them, so `color = red` compares equal whichever domain declared
+ * `red`.  `false` and `true` are reserved as 0 and 1 so `𝔹` lines up with the numeric encoding
+ * of a condition, but they only resolve inside expressions once a `𝔹` domain is declared, which
+ * keeps models that already use `true` or `false` as term names working.
+ */
+interface EnumLiteralEntry {
+    label: string;
+    value: number;
+    active: boolean;
+}
+declare class EnumLiteralTable {
+    static readonly FALSE_LABEL: string;
+    static readonly TRUE_LABEL: string;
+    private static readonly RESERVED_VALUES;
+    private readonly valuesByLabel;
+    private readonly labelsByValue;
+    private readonly activeLabels;
+    private nextValue;
+    constructor();
+    private seed;
+    /** Returns the number `label` is stored as, assigning one the first time it is seen. */
+    intern(label: string): number;
+    /** Makes `false` and `true` resolvable in expressions; called when a `𝔹` domain is declared. */
+    activateBooleans(): void;
+    /** The number a label resolves to inside an expression, or undefined when it is not a label. */
+    resolve(label: string): number | undefined;
+    getValue(label: string): number | undefined;
+    getLabel(value: number): string | undefined;
+    isActive(label: string): boolean;
+    getActiveLabels(): string[];
+    /** The whole table, so a model can be reloaded with the labels stored as the same numbers. */
+    export(): EnumLiteralEntry[];
+    restore(entries: EnumLiteralEntry[]): void;
+    clear(): void;
+}
+
+interface NamedDomainDeclaration {
+    name: string;
+    domain: Domain;
+    location?: SourceLocation;
+}
+/**
+ * The system-wide table of named domains declared with `domain Color = {red, green, blue}`.
+ *
+ * Named domains are deliberately kept out of `System.terms`: they are declarations, not
+ * calculation terms, so they never appear in the value rows or in a plot.
+ */
+declare class DomainRegistry implements DomainResolver {
+    private readonly declarations;
+    readonly enumLiterals: EnumLiteralTable;
+    /**
+     * Registers `name`, replacing an earlier declaration.  Returns null when the declaration was
+     * accepted, or the diagnostic explaining why it was refused.
+     */
+    declare(name: string, domain: Domain, location?: SourceLocation): Diagnostic | null;
+    resolveDomain(name: string): Domain | undefined;
+    has(name: string): boolean;
+    getDeclaration(name: string): NamedDomainDeclaration | undefined;
+    getNames(): string[];
+    getDeclarations(): NamedDomainDeclaration[];
+    /** A use of a named domain; it resolves through this registry every time it is read. */
+    createReference(name: string): DomainReference;
+    remove(name: string): void;
+    clear(): void;
+    /** True when declaring `name` as `domain` would make `name` reachable from itself. */
+    private wouldCreateCycle;
+    private collectReferencedNames;
+}
+
+declare enum BuiltinDomainKind {
+    REAL = "R",
+    INTEGER = "Z",
+    NATURAL = "N",
+    BOOLEAN = "B",
+    RATIONAL = "Q"
+}
+/**
+ * `ℝ`, `ℤ`, `ℕ`, `𝔹` and `ℚ`.
+ *
+ * `ℝ` is every finite real the engine can represent.  `ℚ` is accepted for authoring convenience
+ * but behaves exactly like `ℝ`: values are IEEE-754 doubles, so the engine cannot decide exact
+ * rational membership and does not pretend to.
+ */
+declare class BuiltinDomain extends Domain {
+    readonly builtin: BuiltinDomainKind;
+    constructor(builtin: BuiltinDomainKind);
+    static fromSymbol(symbol: string): BuiltinDomain | null;
+    get kind(): DomainKind;
+    get isCategorical(): boolean;
+    get isFinite(): boolean;
+    get control(): DomainControl;
+    contains(value: number): boolean;
+    describe(): string;
+    defaultValue(): number;
+    listValues(limit: number): DomainValueMetadata[] | null;
+    labelOf(value: number): string | null;
+    get minimum(): number | null;
+    get maximum(): number | null;
+    get controlStep(): number | null;
+}
+
+interface FiniteSetDomainJson {
+    kind: DomainKind.FINITE_SET;
+    members: {
+        value: number;
+        label: string | null;
+    }[];
+}
+interface DiscreteRangeDomainJson {
+    kind: DomainKind.DISCRETE_RANGE;
+    start: number;
+    end: number;
+    step: number;
+}
+interface IntervalDomainJson {
+    kind: DomainKind.INTERVAL;
+    lower: number;
+    upper: number;
+    includesLower: boolean;
+    includesUpper: boolean;
+}
+interface UnionDomainJson {
+    kind: DomainKind.UNION;
+    members: DomainJson[];
+}
+interface BuiltinDomainJson {
+    kind: DomainKind.BUILTIN;
+    builtin: BuiltinDomainKind;
+}
+interface DomainReferenceJson {
+    kind: DomainKind.REFERENCE;
+    name: string;
+}
+type DomainJson = FiniteSetDomainJson | DiscreteRangeDomainJson | IntervalDomainJson | UnionDomainJson | BuiltinDomainJson | DomainReferenceJson;
+interface DomainsJson {
+    /** Bumped whenever the shape below changes; a document without domains has no such section. */
+    schemaVersion: number;
+    enumLiterals: EnumLiteralEntry[];
+    namedDomains: {
+        name: string;
+        domain: DomainJson;
+    }[];
+    termDomains: {
+        term: string;
+        domain: DomainJson;
+    }[];
+}
+/**
+ * Reads and writes the domain part of a model.  Named domains keep their name, and the categorical
+ * label table travels with them so a reloaded model stores `red` as exactly the number it did
+ * before.
+ */
+declare class DomainSerializer {
+    static readonly SCHEMA_VERSION: number;
+    static toJson(domain: Domain): DomainJson;
+    /** Rebuilds a domain, reporting and skipping anything the current engine cannot honour. */
+    static fromJson(json: DomainJson, registry: DomainRegistry, report: (diagnostic: Diagnostic) => void): Domain | null;
 }
 
 interface Singularity {
@@ -161,6 +548,12 @@ declare class System {
     private readonly processors;
     private readonly singularitiesByKey;
     private readonly singularityList;
+    /** Named domains declared with `domain Color = {...}`; they are never calculation terms. */
+    readonly domains: DomainRegistry;
+    private readonly diagnosticCollector;
+    /** The terms carrying a domain, so an unconstrained model pays nothing for the checks. */
+    private constrainedTermNames;
+    private readonly domainLocations;
     constructor(independent?: string, iterationTerm?: string, iterationTermStart?: number);
     get independent(): Term;
     set independent(name: string);
@@ -233,6 +626,12 @@ declare class System {
     set(term: Term, value: number, caseNumber?: number): void;
     setByExpression(expression: Expression, value: number, caseNumber?: number): void;
     getExpression(name: string): Expression | undefined;
+    /**
+     * Makes every expression producing `name` undefined.  Used when a statement turns out not to
+     * be calculable - arithmetic on a categorical value, for instance - so the simulation keeps
+     * running with an undefined result instead of a number that means nothing.
+     */
+    invalidateTermExpressions(name: string): void;
     markAsPiecewise(name: string): void;
     storeExpressionTree(name: string, tree: Branch): void;
     storeExpressionTreeWithCondition(name: string, expressionTree: Branch, conditionTree?: Branch): void;
@@ -246,6 +645,57 @@ declare class System {
     isTerm(name: string): boolean;
     setTermUnits(name: string, unitsText: string | null): void;
     getTermUnits(name: string): string | null;
+    /**
+     * Constrains `name` to `domain`, creating the term when it does not exist yet.  A domain
+     * declaration augments a scalar term: `x \in {1,2,3}` makes x a selectable scalar, never a
+     * collection and never a boolean membership expression.
+     */
+    setTermDomain(name: string, domain: Domain | null): void;
+    getTermDomain(name: string): Domain | null;
+    getTermDomainMetadata(name: string): DomainMetadata | null;
+    getConstrainedTermNames(): string[];
+    /**
+     * The domain part of the model as plain JSON, or null when nothing is constrained so an
+     * existing document keeps exactly the shape it had before domains existed.
+     */
+    toDomainsJson(): DomainsJson | null;
+    /**
+     * Restores domains saved by `toDomainsJson`.  Named domains are declared first so the terms
+     * that refer to them resolve, and anything the current engine cannot honour is reported
+     * rather than dropped in silence.
+     */
+    loadDomainsJson(json: DomainsJson | null | undefined): void;
+    /** The number a categorical label such as `red` is stored as, or undefined when unknown. */
+    getEnumValue(label: string): number | undefined;
+    /** How a value of `name` reads to a person: its categorical label when it has one. */
+    getValueLabel(name: string, value: number): string | null;
+    addDiagnostic(diagnostic: Diagnostic): void;
+    getDiagnostics(): ReadonlyArray<Diagnostic>;
+    getDiagnosticsByCode(code: DiagnosticCode): Diagnostic[];
+    clearDiagnostics(): void;
+    /**
+     * A value drawn uniformly from the first `count` values of the domain `name` is constrained
+     * to, or null when the term has no domain that can be listed.  This is what makes `rnd(3)`
+     * choose one of the first three members of the term's domain - the only way to pick a
+     * categorical value at random without writing the numbers the labels are stored as.
+     */
+    randomDomainValue(name: string | null, count: number): number | null;
+    /** True when `value` is allowed for `name`; unconstrained terms always accept every value. */
+    isValueInDomain(name: string, value: number): boolean;
+    /**
+     * Records a DOMAIN_VIOLATION for a value the term's domain rejects and reports whether the
+     * value was accepted.  Values are never clamped or rounded: the caller decides what to do.
+     */
+    reportDomainViolation(name: string, value: number, iteration?: number, caseNumber?: number): boolean;
+    /** Remembers where a term's domain was declared so a violation can point back at it. */
+    setDomainLocation(name: string, location: SourceLocation | undefined): void;
+    /**
+     * Checks every constrained term in a freshly produced row.  A computed term whose value left
+     * its domain becomes undefined for that evaluation, which keeps the simulation loop running
+     * while the diagnostic explains what happened; a value the author supplied is reported but
+     * kept, so it is visible instead of silently replaced.
+     */
+    private enforceDomains;
     renameRegressionTerm(currentName: string, newName: string): void;
     setInitialByTerm(term: Term, value: number, iteration?: number, caseNumber?: number): void;
     setInitialByName(name: string, value: number, iteration?: number, caseNumber?: number): void;
@@ -351,6 +801,30 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitDerivativePrime?: (ctx: DerivativePrimeContext) => void;
+    /**
+     * Enter a parse tree produced by the `DomainConstraint`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     */
+    enterDomainConstraint?: (ctx: DomainConstraintContext) => void;
+    /**
+     * Exit a parse tree produced by the `DomainConstraint`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     */
+    exitDomainConstraint?: (ctx: DomainConstraintContext) => void;
+    /**
+     * Enter a parse tree produced by the `DomainAssignment`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     */
+    enterDomainAssignment?: (ctx: DomainAssignmentContext) => void;
+    /**
+     * Exit a parse tree produced by the `DomainAssignment`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     */
+    exitDomainAssignment?: (ctx: DomainAssignmentContext) => void;
     /**
      * Enter a parse tree produced by the `Function`
      * labeled alternative in `LatexMathParser.assignment`.
@@ -587,6 +1061,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitDerivativePrimeExpression?: (ctx: DerivativePrimeExpressionContext) => void;
+    /**
+     * Enter a parse tree produced by the `EnumLiteralQuoted`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterEnumLiteralQuoted?: (ctx: EnumLiteralQuotedContext) => void;
+    /**
+     * Exit a parse tree produced by the `EnumLiteralQuoted`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitEnumLiteralQuoted?: (ctx: EnumLiteralQuotedContext) => void;
     /**
      * Enter a parse tree produced by the `DerivativeDOperator`
      * labeled alternative in `LatexMathParser.expression`.
@@ -1308,6 +1794,268 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitPower?: (ctx: PowerContext) => void;
     /**
+     * Enter a parse tree produced by the `EnumLiteralWrapped`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterEnumLiteralWrapped?: (ctx: EnumLiteralWrappedContext) => void;
+    /**
+     * Exit a parse tree produced by the `EnumLiteralWrapped`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitEnumLiteralWrapped?: (ctx: EnumLiteralWrappedContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.namedDomainDeclaration`.
+     * @param ctx the parse tree
+     */
+    enterNamedDomainDeclaration?: (ctx: NamedDomainDeclarationContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.namedDomainDeclaration`.
+     * @param ctx the parse tree
+     */
+    exitNamedDomainDeclaration?: (ctx: NamedDomainDeclarationContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainKeyword`.
+     * @param ctx the parse tree
+     */
+    enterDomainKeyword?: (ctx: DomainKeywordContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainKeyword`.
+     * @param ctx the parse tree
+     */
+    exitDomainKeyword?: (ctx: DomainKeywordContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainMembership`.
+     * @param ctx the parse tree
+     */
+    enterDomainMembership?: (ctx: DomainMembershipContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainMembership`.
+     * @param ctx the parse tree
+     */
+    exitDomainMembership?: (ctx: DomainMembershipContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainExpression`.
+     * @param ctx the parse tree
+     */
+    enterDomainExpression?: (ctx: DomainExpressionContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainExpression`.
+     * @param ctx the parse tree
+     */
+    exitDomainExpression?: (ctx: DomainExpressionContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainUnionOperator`.
+     * @param ctx the parse tree
+     */
+    enterDomainUnionOperator?: (ctx: DomainUnionOperatorContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainUnionOperator`.
+     * @param ctx the parse tree
+     */
+    exitDomainUnionOperator?: (ctx: DomainUnionOperatorContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainUnionTerm`.
+     * @param ctx the parse tree
+     */
+    enterDomainUnionTerm?: (ctx: DomainUnionTermContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainUnionTerm`.
+     * @param ctx the parse tree
+     */
+    exitDomainUnionTerm?: (ctx: DomainUnionTermContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainLiteral`.
+     * @param ctx the parse tree
+     */
+    enterDomainLiteral?: (ctx: DomainLiteralContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainLiteral`.
+     * @param ctx the parse tree
+     */
+    exitDomainLiteral?: (ctx: DomainLiteralContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainUnambiguousTerm`.
+     * @param ctx the parse tree
+     */
+    enterDomainUnambiguousTerm?: (ctx: DomainUnambiguousTermContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainUnambiguousTerm`.
+     * @param ctx the parse tree
+     */
+    exitDomainUnambiguousTerm?: (ctx: DomainUnambiguousTermContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.finiteSet`.
+     * @param ctx the parse tree
+     */
+    enterFiniteSet?: (ctx: FiniteSetContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.finiteSet`.
+     * @param ctx the parse tree
+     */
+    exitFiniteSet?: (ctx: FiniteSetContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.plainFiniteSet`.
+     * @param ctx the parse tree
+     */
+    enterPlainFiniteSet?: (ctx: PlainFiniteSetContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.plainFiniteSet`.
+     * @param ctx the parse tree
+     */
+    exitPlainFiniteSet?: (ctx: PlainFiniteSetContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.plainFiniteSetMultiple`.
+     * @param ctx the parse tree
+     */
+    enterPlainFiniteSetMultiple?: (ctx: PlainFiniteSetMultipleContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.plainFiniteSetMultiple`.
+     * @param ctx the parse tree
+     */
+    exitPlainFiniteSetMultiple?: (ctx: PlainFiniteSetMultipleContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.latexFiniteSet`.
+     * @param ctx the parse tree
+     */
+    enterLatexFiniteSet?: (ctx: LatexFiniteSetContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.latexFiniteSet`.
+     * @param ctx the parse tree
+     */
+    exitLatexFiniteSet?: (ctx: LatexFiniteSetContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.setOpenBrace`.
+     * @param ctx the parse tree
+     */
+    enterSetOpenBrace?: (ctx: SetOpenBraceContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.setOpenBrace`.
+     * @param ctx the parse tree
+     */
+    exitSetOpenBrace?: (ctx: SetOpenBraceContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.setCloseBrace`.
+     * @param ctx the parse tree
+     */
+    enterSetCloseBrace?: (ctx: SetCloseBraceContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.setCloseBrace`.
+     * @param ctx the parse tree
+     */
+    exitSetCloseBrace?: (ctx: SetCloseBraceContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainElement`.
+     * @param ctx the parse tree
+     */
+    enterDomainElement?: (ctx: DomainElementContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainElement`.
+     * @param ctx the parse tree
+     */
+    exitDomainElement?: (ctx: DomainElementContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.enumLiteral`.
+     * @param ctx the parse tree
+     */
+    enterEnumLiteral?: (ctx: EnumLiteralContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.enumLiteral`.
+     * @param ctx the parse tree
+     */
+    exitEnumLiteral?: (ctx: EnumLiteralContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.enumName`.
+     * @param ctx the parse tree
+     */
+    enterEnumName?: (ctx: EnumNameContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.enumName`.
+     * @param ctx the parse tree
+     */
+    exitEnumName?: (ctx: EnumNameContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.discreteRange`.
+     * @param ctx the parse tree
+     */
+    enterDiscreteRange?: (ctx: DiscreteRangeContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.discreteRange`.
+     * @param ctx the parse tree
+     */
+    exitDiscreteRange?: (ctx: DiscreteRangeContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.interval`.
+     * @param ctx the parse tree
+     */
+    enterInterval?: (ctx: IntervalContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.interval`.
+     * @param ctx the parse tree
+     */
+    exitInterval?: (ctx: IntervalContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainOpenSquare`.
+     * @param ctx the parse tree
+     */
+    enterDomainOpenSquare?: (ctx: DomainOpenSquareContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainOpenSquare`.
+     * @param ctx the parse tree
+     */
+    exitDomainOpenSquare?: (ctx: DomainOpenSquareContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainCloseSquare`.
+     * @param ctx the parse tree
+     */
+    enterDomainCloseSquare?: (ctx: DomainCloseSquareContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainCloseSquare`.
+     * @param ctx the parse tree
+     */
+    exitDomainCloseSquare?: (ctx: DomainCloseSquareContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainOpenRound`.
+     * @param ctx the parse tree
+     */
+    enterDomainOpenRound?: (ctx: DomainOpenRoundContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainOpenRound`.
+     * @param ctx the parse tree
+     */
+    exitDomainOpenRound?: (ctx: DomainOpenRoundContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainCloseRound`.
+     * @param ctx the parse tree
+     */
+    enterDomainCloseRound?: (ctx: DomainCloseRoundContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainCloseRound`.
+     * @param ctx the parse tree
+     */
+    exitDomainCloseRound?: (ctx: DomainCloseRoundContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.builtinDomain`.
+     * @param ctx the parse tree
+     */
+    enterBuiltinDomain?: (ctx: BuiltinDomainContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.builtinDomain`.
+     * @param ctx the parse tree
+     */
+    exitBuiltinDomain?: (ctx: BuiltinDomainContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.domainReference`.
+     * @param ctx the parse tree
+     */
+    enterDomainReference?: (ctx: DomainReferenceContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.domainReference`.
+     * @param ctx the parse tree
+     */
+    exitDomainReference?: (ctx: DomainReferenceContext) => void;
+    /**
      * Enter a parse tree produced by `LatexMathParser.implicitMultiplicand`.
      * @param ctx the parse tree
      */
@@ -1384,6 +2132,7 @@ declare class ProgramContext extends antlr.ParserRuleContext {
 }
 declare class StatementContext extends antlr.ParserRuleContext {
     constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    namedDomainDeclaration(): NamedDomainDeclarationContext | null;
     differential(): DifferentialContext | null;
     assignment(): AssignmentContext | null;
     expression(): ExpressionContext | null;
@@ -1427,10 +2176,27 @@ declare class FunctionConditionalContext extends AssignmentContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class DomainConstraintContext extends AssignmentContext {
+    constructor(ctx: AssignmentContext);
+    name(): NameContext;
+    domainMembership(): DomainMembershipContext;
+    domainExpression(): DomainExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class FunctionContext extends AssignmentContext {
     constructor(ctx: AssignmentContext);
     name(): NameContext;
     expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainAssignmentContext extends AssignmentContext {
+    constructor(ctx: AssignmentContext);
+    name(): NameContext;
+    domainLiteral(): DomainLiteralContext;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -1598,6 +2364,13 @@ declare class DerivativePrimeExpressionContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     name(): NameContext[];
     name(i: number): NameContext | null;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class EnumLiteralQuotedContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    STRING(): antlr.TerminalNode;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -2070,6 +2843,244 @@ declare class PowerContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class EnumLiteralWrappedContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    SPECIAL(): antlr.TerminalNode;
+    enumName(): EnumNameContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class NamedDomainDeclarationContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    domainKeyword(): DomainKeywordContext;
+    name(): NameContext;
+    domainExpression(): DomainExpressionContext;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainKeywordContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    ID(): antlr.TerminalNode;
+    SPECIAL(): antlr.TerminalNode | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainMembershipContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainExpressionContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    domainUnionTerm(): DomainUnionTermContext[];
+    domainUnionTerm(i: number): DomainUnionTermContext | null;
+    domainUnionOperator(): DomainUnionOperatorContext[];
+    domainUnionOperator(i: number): DomainUnionOperatorContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainUnionOperatorContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainUnionTermContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    finiteSet(): FiniteSetContext | null;
+    discreteRange(): DiscreteRangeContext | null;
+    interval(): IntervalContext | null;
+    builtinDomain(): BuiltinDomainContext | null;
+    domainReference(): DomainReferenceContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainLiteralContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    domainUnionTerm(): DomainUnionTermContext[];
+    domainUnionTerm(i: number): DomainUnionTermContext | null;
+    domainUnionOperator(): DomainUnionOperatorContext[];
+    domainUnionOperator(i: number): DomainUnionOperatorContext | null;
+    domainUnambiguousTerm(): DomainUnambiguousTermContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainUnambiguousTermContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    latexFiniteSet(): LatexFiniteSetContext | null;
+    plainFiniteSetMultiple(): PlainFiniteSetMultipleContext | null;
+    discreteRange(): DiscreteRangeContext | null;
+    interval(): IntervalContext | null;
+    builtinDomain(): BuiltinDomainContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class FiniteSetContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    plainFiniteSet(): PlainFiniteSetContext | null;
+    latexFiniteSet(): LatexFiniteSetContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class PlainFiniteSetContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    domainElement(): DomainElementContext[];
+    domainElement(i: number): DomainElementContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class PlainFiniteSetMultipleContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    domainElement(): DomainElementContext[];
+    domainElement(i: number): DomainElementContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class LatexFiniteSetContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    setOpenBrace(): SetOpenBraceContext;
+    domainElement(): DomainElementContext[];
+    domainElement(i: number): DomainElementContext | null;
+    setCloseBrace(): SetCloseBraceContext;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class SetOpenBraceContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class SetCloseBraceContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainElementContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    decimal(): DecimalContext | null;
+    enumLiteral(): EnumLiteralContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class EnumLiteralContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    enumName(): EnumNameContext | null;
+    STRING(): antlr.TerminalNode | null;
+    SPECIAL(): antlr.TerminalNode | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class EnumNameContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    ID(): antlr.TerminalNode;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DiscreteRangeContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    domainOpenSquare(): DomainOpenSquareContext;
+    decimal(): DecimalContext[];
+    decimal(i: number): DecimalContext | null;
+    RANGE(): antlr.TerminalNode[];
+    RANGE(i: number): antlr.TerminalNode | null;
+    domainCloseSquare(): DomainCloseSquareContext;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class IntervalContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    decimal(): DecimalContext[];
+    decimal(i: number): DecimalContext | null;
+    domainOpenSquare(): DomainOpenSquareContext | null;
+    domainOpenRound(): DomainOpenRoundContext | null;
+    domainCloseSquare(): DomainCloseSquareContext | null;
+    domainCloseRound(): DomainCloseRoundContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainOpenSquareContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainCloseSquareContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainOpenRoundContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainCloseRoundContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class BuiltinDomainContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    BLACKBOARD(): antlr.TerminalNode | null;
+    ID(): antlr.TerminalNode | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class DomainReferenceContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    ID(): antlr.TerminalNode;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class ImplicitMultiplicandContext extends antlr.ParserRuleContext {
     constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
     name(): NameContext | null;
@@ -2175,6 +3186,20 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitDerivativePrime?: (ctx: DerivativePrimeContext) => Result;
+    /**
+     * Visit a parse tree produced by the `DomainConstraint`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainConstraint?: (ctx: DomainConstraintContext) => Result;
+    /**
+     * Visit a parse tree produced by the `DomainAssignment`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainAssignment?: (ctx: DomainAssignmentContext) => Result;
     /**
      * Visit a parse tree produced by the `Function`
      * labeled alternative in `LatexMathParser.assignment`.
@@ -2313,6 +3338,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitDerivativePrimeExpression?: (ctx: DerivativePrimeExpressionContext) => Result;
+    /**
+     * Visit a parse tree produced by the `EnumLiteralQuoted`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitEnumLiteralQuoted?: (ctx: EnumLiteralQuotedContext) => Result;
     /**
      * Visit a parse tree produced by the `DerivativeDOperator`
      * labeled alternative in `LatexMathParser.expression`.
@@ -2734,6 +3766,163 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitPower?: (ctx: PowerContext) => Result;
     /**
+     * Visit a parse tree produced by the `EnumLiteralWrapped`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitEnumLiteralWrapped?: (ctx: EnumLiteralWrappedContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.namedDomainDeclaration`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitNamedDomainDeclaration?: (ctx: NamedDomainDeclarationContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainKeyword`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainKeyword?: (ctx: DomainKeywordContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainMembership`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainMembership?: (ctx: DomainMembershipContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainExpression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainExpression?: (ctx: DomainExpressionContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainUnionOperator`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainUnionOperator?: (ctx: DomainUnionOperatorContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainUnionTerm`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainUnionTerm?: (ctx: DomainUnionTermContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainLiteral`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainLiteral?: (ctx: DomainLiteralContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainUnambiguousTerm`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainUnambiguousTerm?: (ctx: DomainUnambiguousTermContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.finiteSet`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitFiniteSet?: (ctx: FiniteSetContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.plainFiniteSet`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitPlainFiniteSet?: (ctx: PlainFiniteSetContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.plainFiniteSetMultiple`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitPlainFiniteSetMultiple?: (ctx: PlainFiniteSetMultipleContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.latexFiniteSet`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitLatexFiniteSet?: (ctx: LatexFiniteSetContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.setOpenBrace`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitSetOpenBrace?: (ctx: SetOpenBraceContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.setCloseBrace`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitSetCloseBrace?: (ctx: SetCloseBraceContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainElement`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainElement?: (ctx: DomainElementContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.enumLiteral`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitEnumLiteral?: (ctx: EnumLiteralContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.enumName`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitEnumName?: (ctx: EnumNameContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.discreteRange`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDiscreteRange?: (ctx: DiscreteRangeContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.interval`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitInterval?: (ctx: IntervalContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainOpenSquare`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainOpenSquare?: (ctx: DomainOpenSquareContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainCloseSquare`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainCloseSquare?: (ctx: DomainCloseSquareContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainOpenRound`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainOpenRound?: (ctx: DomainOpenRoundContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainCloseRound`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainCloseRound?: (ctx: DomainCloseRoundContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.builtinDomain`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitBuiltinDomain?: (ctx: BuiltinDomainContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.domainReference`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDomainReference?: (ctx: DomainReferenceContext) => Result;
+    /**
      * Visit a parse tree produced by `LatexMathParser.implicitMultiplicand`.
      * @param ctx the parse tree
      * @return the visitor result
@@ -2879,6 +4068,8 @@ declare class Parser {
     private readonly system;
     hasErrors: boolean;
     errors: string[];
+    /** The structured diagnostics raised while reading the last statement. */
+    diagnostics: Diagnostic[];
     constructor(system: System);
     parse(expression: string): Branch | null;
 }
@@ -3067,13 +4258,53 @@ declare class Simplifier {
 declare class Visitor extends LatexMathVisitor<Branch> {
     private readonly system;
     private isParsingUnits;
+    private readonly domainBuilder;
+    /** The term the expression being visited is assigned to, so `rnd` can read its domain. */
+    private assignmentTargetName;
     constructor(system: System);
     /**
      * Visits an expression as a units expression: unit symbols such as m or s are turned
      * into a tree but are never registered as terms of the system.
      */
     visitUnitsExpression: (context: ExpressionContext) => Branch | null;
+    /**
+     * Records which term an expression is being assigned to while it is visited.  Only `rnd` uses
+     * it, to read the target's domain; nothing else in the tree depends on the assignment target.
+     */
+    private withAssignmentTarget;
     visitStatement: (context: StatementContext) => Branch;
+    /**
+     * `x \in {1,2,3}`: constrains an existing or newly created scalar term.  The statement never
+     * turns x into a set or into a boolean membership test; it attaches the normalized domain to
+     * the term and leaves x a plain selectable scalar.
+     */
+    /**
+     * `\text{red}` inside an expression: the unambiguous way of writing a categorical value, so it
+     * reads as that value wherever the bare label would.  A wrapper around anything that is not a
+     * declared label is refused rather than read as a term, which would silently change the meaning.
+     */
+    visitEnumLiteralWrapped: (context: EnumLiteralWrappedContext) => Branch;
+    /** `"red"` inside an expression, for a label a bare name could not spell. */
+    visitEnumLiteralQuoted: (context: EnumLiteralQuotedContext) => Branch;
+    private categoricalValueBranch;
+    private unknownCategoricalValue;
+    visitDomainConstraint: (context: DomainConstraintContext) => Branch;
+    /**
+     * `x = {1,2,3}`: the same thing written with `=`.  The grammar only reaches this rule for
+     * shapes an ordinary expression can never produce, so `x = {1}` and `x = y` keep meaning
+     * exactly what they meant before.
+     */
+    visitDomainAssignment: (context: DomainAssignmentContext) => Branch;
+    private applyDomain;
+    /**
+     * `domain Color = {red, green, blue}`: a reusable domain that terms refer to by name.  The
+     * keyword is read as an ordinary identifier and checked here, so a model that already uses
+     * `domain` as a term name is unaffected.  MathLive's `\text{domain}` spelling is accepted and
+     * stored as the same declaration.
+     */
+    /** Reads the keyword whether it was written plainly or wrapped by the editor in \text{...}. */
+    private static readDomainKeyword;
+    visitNamedDomainDeclaration: (context: NamedDomainDeclarationContext) => Branch;
     private getConditionEvaluator;
     private buildConditionTree;
     visitFractionDigits: (context: FractionDigitsContext) => Branch;
@@ -3135,6 +4366,13 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitModulo: (context: ModuloContext) => Branch;
     visitDeterminant: (context: DeterminantContext) => Branch;
     visitSign: (context: SignContext) => Branch;
+    /**
+     * `rnd(n)` reads its argument as a count when the term being assigned is constrained to a
+     * domain that can be listed: `z \in {green, blue, red}` with `z = rnd(3)` picks one of the
+     * three labels.  Everywhere else it keeps returning a number between 0 and n.  The domain is
+     * resolved when the value is calculated, not when the expression is parsed, so declaring the
+     * domain after the assignment works exactly as well as declaring it before.
+     */
     visitRnd: (context: RndContext) => Branch;
     visitIRnd: (context: IRndContext) => Branch;
     visitInt: (context: IntContext) => Branch;
@@ -3169,5 +4407,117 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
 
-export { Body, Branch, RegressionType as DataRegressionType, Deriver, Engine, Expression, ExpressionExpander, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, Simplifier, SingularitiesDetector, SingularityType, System, Term, TermType, Visitor };
-export type { RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult, Singularity, SystemProcessor };
+interface FiniteSetMember {
+    value: number;
+    /** The categorical label, or null when the member is a plain number. */
+    label: string | null;
+}
+/** `{1, 2, 3}` or `{red, green, blue}`: an explicit list of allowed scalar values. */
+declare class FiniteSetDomain extends Domain {
+    readonly members: FiniteSetMember[];
+    constructor(members: FiniteSetMember[]);
+    /** Removes repeated values while preserving the order they were declared in. */
+    private static deduplicate;
+    get kind(): DomainKind;
+    get isCategorical(): boolean;
+    get isFinite(): boolean;
+    get control(): DomainControl;
+    contains(value: number): boolean;
+    describe(): string;
+    defaultValue(): number;
+    listValues(limit: number): DomainValueMetadata[] | null;
+    labelOf(value: number): string | null;
+    get minimum(): number | null;
+    get maximum(): number | null;
+}
+
+/**
+ * `[1..5]` or `[0..10..2]`: the arithmetic progression from `start` towards `end` in `step`
+ * increments.  The progression is kept structurally and only expanded through `listValues`, so a
+ * range spanning millions of values costs nothing until something explicitly asks for the list.
+ */
+declare class DiscreteRangeDomain extends Domain {
+    readonly start: number;
+    readonly end: number;
+    readonly step: number;
+    /** How many values the progression holds; 0 when the range is malformed. */
+    readonly count: number;
+    constructor(start: number, end: number, step: number);
+    /** The step a range without an explicit one uses: +1 ascending, -1 descending. */
+    static defaultStep(start: number, end: number): number;
+    static isValid(start: number, end: number, step: number): boolean;
+    private static countOf;
+    /** Tolerance expressed in steps, so `[0..1..0.1]` still reaches 1 despite binary rounding. */
+    private static spanTolerance;
+    get kind(): DomainKind;
+    get isCategorical(): boolean;
+    get isFinite(): boolean;
+    get control(): DomainControl;
+    /** The last value the progression actually reaches, which is `end` only when it is on a step. */
+    get lastValue(): number;
+    contains(value: number): boolean;
+    describe(): string;
+    defaultValue(): number;
+    listValues(limit: number): DomainValueMetadata[] | null;
+    get minimum(): number | null;
+    get maximum(): number | null;
+    /** Always positive: a control steps through the range from its minimum upwards. */
+    get controlStep(): number | null;
+}
+
+/**
+ * `[6, 7]`, `(6, 7)`, `[6, 7)` or `(6, 7]`: every real value between the two bounds.  A comma
+ * separates the bounds; two dots would make it a discrete range instead.
+ */
+declare class IntervalDomain extends Domain {
+    readonly lower: number;
+    readonly upper: number;
+    readonly includesLower: boolean;
+    readonly includesUpper: boolean;
+    constructor(lower: number, upper: number, includesLower: boolean, includesUpper: boolean);
+    static isValid(lower: number, upper: number): boolean;
+    get kind(): DomainKind;
+    get isCategorical(): boolean;
+    get isFinite(): boolean;
+    get control(): DomainControl;
+    contains(value: number): boolean;
+    describe(): string;
+    defaultValue(): number;
+    listValues(_limit: number): DomainValueMetadata[] | null;
+    get minimum(): number | null;
+    get maximum(): number | null;
+    get includesMinimum(): boolean;
+    get includesMaximum(): boolean;
+}
+
+/**
+ * `{1, 2, 3} ∪ [6, 7]`: a value belongs to the union when it belongs to any of its parts.
+ *
+ * `normalize` is what turns the authoring shorthand `x = {1},{2},{3},[6..7]` into the single
+ * finite domain `{1, 2, 3, 6, 7}`: nested unions are flattened, finite parts are merged and
+ * duplicates are dropped while the declared order is preserved.  Parts that are not finite, and
+ * ranges too large to expand safely, stay structural.
+ */
+declare class UnionDomain extends Domain {
+    readonly members: Domain[];
+    /** How many values a finite part may hold before it is left structural instead of merged. */
+    static readonly MAXIMUM_MERGED_VALUES: number;
+    private constructor();
+    /** Builds the simplest domain equivalent to the union of `members`. */
+    static normalize(members: Domain[]): Domain;
+    get kind(): DomainKind;
+    get isCategorical(): boolean;
+    get isFinite(): boolean;
+    get control(): DomainControl;
+    contains(value: number): boolean;
+    describe(): string;
+    defaultValue(): number;
+    listValues(limit: number): DomainValueMetadata[] | null;
+    labelOf(value: number): string | null;
+    get minimum(): number | null;
+    get maximum(): number | null;
+    toMetadata(): DomainMetadata;
+}
+
+export { Body, Branch, BuiltinDomain, BuiltinDomainKind, RegressionType as DataRegressionType, Deriver, DiagnosticCode, DiagnosticCollector, DiagnosticSeverity, DiscreteRangeDomain, Domain, DomainControl, DomainKind, DomainReference, DomainRegistry, DomainSerializer, Engine, EnumLiteral, EnumLiteralTable, Expression, ExpressionExpander, FiniteSetDomain, IntervalDomain, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, Simplifier, SingularitiesDetector, SingularityType, System, Term, TermType, UnionDomain, Visitor, formatDomainNumber };
+export type { RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult, Diagnostic, DomainJson, DomainMetadata, DomainResolver, DomainValueMetadata, DomainsJson, EnumLiteralEntry, FiniteSetMember, NamedDomainDeclaration, Singularity, SourceLocation, SystemProcessor };

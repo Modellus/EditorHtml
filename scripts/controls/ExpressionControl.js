@@ -274,6 +274,10 @@ class ExpressionControl {
                 return ["moveToSuperscript"];
             if (keydownEvent.code === 'KeyN')
                 return ["insert", "\\neg"];
+            if (keydownEvent.code === 'KeyE')
+                return ["insert", "\\in"];
+            if (keydownEvent.code === 'KeyU')
+                return ["insert", "\\cup"];
             return null;
         }
         if (keydownEvent.code === 'BracketLeft')
@@ -287,6 +291,14 @@ class ExpressionControl {
 
     _isSlashShortcutKey(keydownEvent) {
         return keydownEvent.key === '/' || (keydownEvent.code === 'Slash' && !keydownEvent.shiftKey) || (keydownEvent.code === 'Digit7' && keydownEvent.shiftKey);
+    }
+
+    _isBelongsToShortcutKey(keydownEvent) {
+        return keydownEvent.code === 'KeyE' || keydownEvent.key === 'e' || keydownEvent.key === '\u00e9';
+    }
+
+    _isUnionShortcutKey(keydownEvent) {
+        return keydownEvent.code === 'KeyU' || keydownEvent.key === 'u' || keydownEvent.key === '\u00fc';
     }
 
     _isUnderscoreShortcutKey(keydownEvent) {
@@ -359,6 +371,18 @@ class ExpressionControl {
                 keydownEvent.preventDefault();
                 keydownEvent.stopImmediatePropagation();
                 this.insert(this.getTemplateShortcut("Differential").insertText);
+                return;
+            }
+            if (this._isBelongsToShortcutKey(keydownEvent)) {
+                keydownEvent.preventDefault();
+                keydownEvent.stopImmediatePropagation();
+                this.insert(this.getTemplateShortcut("Belongs to").insertText);
+                return;
+            }
+            if (this._isUnionShortcutKey(keydownEvent)) {
+                keydownEvent.preventDefault();
+                keydownEvent.stopImmediatePropagation();
+                this.insert(this.getTemplateShortcut("Union").insertText);
                 return;
             }
         }
@@ -531,6 +555,9 @@ class ExpressionControl {
             return false;
         this.mathfield.selection = { ranges: [[shortcutStart, caretPosition]], direction: "forward" };
         this.mathfield.executeCommand("insert", functionLatex);
+        // A function written upright leaves the caret carrying its face, so the parenthesis and the
+        // argument typed next would be drawn upright too - and read back as part of the function name.
+        this.mathfield.applyStyle({ variant: "auto", variantStyle: "auto" });
         return true;
     }
 
@@ -546,10 +573,10 @@ class ExpressionControl {
             { shortcutText: "sqrt", functionLatex: "\\sqrt" },
             { shortcutText: "frac", functionLatex: "\\frac" },
             { shortcutText: "cdot", functionLatex: "\\cdot" },
-            { shortcutText: "sign", functionLatex: "sign", requiresParenthesis: true },
-            { shortcutText: "round", functionLatex: "round", requiresParenthesis: true },
-            { shortcutText: "irnd", functionLatex: "irnd", requiresParenthesis: true },
-            { shortcutText: "rnd", functionLatex: "rnd", requiresParenthesis: true },
+            { shortcutText: "sign", functionLatex: "\\mathrm{sign}", requiresParenthesis: true },
+            { shortcutText: "round", functionLatex: "\\mathrm{round}", requiresParenthesis: true },
+            { shortcutText: "irnd", functionLatex: "\\mathrm{irnd}", requiresParenthesis: true },
+            { shortcutText: "rnd", functionLatex: "\\mathrm{rnd}", requiresParenthesis: true },
             { shortcutText: "sin", functionLatex: "\\sin", requiresParenthesis: true },
             { shortcutText: "cos", functionLatex: "\\cos", requiresParenthesis: true },
             { shortcutText: "tan", functionLatex: "\\tan", requiresParenthesis: true },
@@ -772,9 +799,10 @@ class ExpressionControl {
     }
 
     // Names written with a dot, as they come from the parser or from a saved model, are written back as
-    // named subscripts so a name always reads the same way, whoever wrote it.
+    // named subscripts so a name always reads the same way, whoever wrote it. A function the parser
+    // spells in plain letters is written upright for the same reason, so it never reads as a product.
     setValue(value) {
-        const canonicalLatex = Utils.writeTermNames(value);
+        const canonicalLatex = Utils.writeFunctionNames(Utils.writeTermNames(value));
         this.mathfield.value = this.buildPresentedLatex(canonicalLatex);
         this.semanticDecorator?.invalidate();
         this.scheduleSemanticColoring();

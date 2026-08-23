@@ -54,6 +54,8 @@
         { "$ref": "#/$defs/FunctionSubscriptDigitAssignment" },
         { "$ref": "#/$defs/FunctionIndependentAssignment" },
         { "$ref": "#/$defs/ConditionalAssignment" },
+        { "$ref": "#/$defs/DomainStatement" },
+        { "$ref": "#/$defs/NamedDomainStatement" },
         { "$ref": "#/$defs/DisplayStatement" }
       ]
     },
@@ -213,6 +215,134 @@
       }
     },
 
+    "DomainStatement": {
+      "title": "DomainStatement",
+      "description": "Constrains a scalar term to a domain. Grammar: name domainMembership domainExpression (#DomainConstraint) or name '=' domainLiteral (#DomainAssignment). The term stays an ordinary selectable scalar: it does not become a set and the statement is not a boolean membership test. Write \\in for the membership form. The '=' form is only read as a domain when the right-hand side cannot be an ordinary expression, so x=\\{1\\} and x=Color stay assignments; prefer \\in whenever in doubt.",
+      "type": "object",
+      "required": ["kind", "termName", "domain", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["domain"] },
+        "termName": { "type": "string", "description": "Name being constrained. Can be ID ('x', 'color') or SPECIAL ('\\omega')." },
+        "domain": { "$ref": "#/$defs/Domain" },
+        "latex": { "type": "string", "description": "Examples: \"x\\in\\{1,2,3\\}\", \"x\\in\\left[1..5\\right]\", \"x\\in\\{1,2,3\\}\\cup\\left[6,7\\right]\", \"color\\in\\{\\text{red},\\text{green}\\}\"." }
+      }
+    },
+
+    "NamedDomainStatement": {
+      "title": "NamedDomainStatement",
+      "description": "Declares a reusable domain that terms then refer to by name. Grammar: domainKeyword name '=' domainExpression (namedDomainDeclaration). The keyword is the word 'domain'; write it as \\text{domain} so the editor draws it upright. A named domain is a declaration, never a calculation term: it never appears in the term list, in the value rows or on a plot. It may not be defined in terms of itself.",
+      "type": "object",
+      "required": ["kind", "domainName", "domain", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["namedDomain"] },
+        "domainName": { "type": "string", "description": "Name of the domain, e.g. 'Color' or 'Rating'." },
+        "domain": { "$ref": "#/$defs/Domain" },
+        "latex": { "type": "string", "description": "Examples: \"\\text{domain}\\ Color=\\{\\text{red},\\text{green},\\text{blue}\\}\", \"\\text{domain}\\ Rating=\\left[1..5\\right]\"." }
+      }
+    },
+
+    "Domain": {
+      "title": "Domain",
+      "description": "The set of values a constrained term may take. A comma between two bounds is a continuous interval and two dots are a discrete range, so \\left[1,5\\right] and \\left[1..5\\right] are different domains.",
+      "oneOf": [
+        { "$ref": "#/$defs/FiniteSetDomain" },
+        { "$ref": "#/$defs/DiscreteRangeDomain" },
+        { "$ref": "#/$defs/IntervalDomain" },
+        { "$ref": "#/$defs/UnionDomain" },
+        { "$ref": "#/$defs/BuiltinDomain" },
+        { "$ref": "#/$defs/DomainReference" }
+      ]
+    },
+
+    "FiniteSetDomain": {
+      "title": "FiniteSetDomain",
+      "description": "An explicit list of allowed values. Grammar: '\\{' domainElement (',' domainElement)* '\\}'. Members are numbers or categorical labels, never a mix in practice. Repeated values are dropped and the declared order is kept, so it is also the order a dropdown shows.",
+      "type": "object",
+      "required": ["kind", "members", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["finiteSet"] },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": ["number", "string"], "description": "A number, or a categorical label written \\text{red} in the latex." }
+        },
+        "latex": { "type": "string", "description": "Examples: \"\\{1,2,3\\}\", \"\\{\\text{red},\\text{green},\\text{blue}\\}\"." }
+      }
+    },
+
+    "DiscreteRangeDomain": {
+      "title": "DiscreteRangeDomain",
+      "description": "An arithmetic progression written with two dots. Grammar: '[' decimal '..' decimal ('..' decimal)? ']'. Inclusive at both ends when the step reaches the endpoint, so [0..10..3] is {0,3,6,9}. The step must be nonzero and must point from the start towards the end; without one it steps by 1 up or by -1 down.",
+      "type": "object",
+      "required": ["kind", "start", "end", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["discreteRange"] },
+        "start": { "type": "number" },
+        "end": { "type": "number" },
+        "step": { "type": "number", "description": "Optional. Nonzero, pointing from start towards end." },
+        "latex": { "type": "string", "description": "Examples: \"\\left[1..5\\right]\", \"\\left[0..10..2\\right]\", \"\\left[10..0..-2\\right]\"." }
+      }
+    },
+
+    "IntervalDomain": {
+      "title": "IntervalDomain",
+      "description": "Every real value between two bounds, written with a comma. Grammar: ('[' | '(') decimal ',' decimal (']' | ')'). A square bracket includes its bound and a round one excludes it.",
+      "type": "object",
+      "required": ["kind", "lower", "upper", "includesLower", "includesUpper", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["interval"] },
+        "lower": { "type": "number" },
+        "upper": { "type": "number" },
+        "includesLower": { "type": "boolean" },
+        "includesUpper": { "type": "boolean" },
+        "latex": { "type": "string", "description": "Examples: \"\\left[6,7\\right]\", \"\\left(6,7\\right)\", \"\\left[6,7\\right)\", \"\\left(6,7\\right]\"." }
+      }
+    },
+
+    "UnionDomain": {
+      "title": "UnionDomain",
+      "description": "A value belonging to any of the parts. Grammar: domainUnionTerm (('\\cup' | ',') domainUnionTerm)+. At the top level of a domain a comma is a union operator too, so x=\\{1\\},\\{2\\},\\left[6..7\\right] is the single finite domain {1,2,6,7}: finite parts are merged and repeated values dropped. Commas inside a set, inside an interval and inside a function call keep their own meaning.",
+      "type": "object",
+      "required": ["kind", "members", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["union"] },
+        "members": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/Domain" } },
+        "latex": { "type": "string", "description": "Example: \"\\{1,2,3\\}\\cup\\left[6,7\\right]\" — 1, 2 or 3, or any real value from 6 to 7." }
+      }
+    },
+
+    "BuiltinDomain": {
+      "title": "BuiltinDomain",
+      "description": "One of the standard number sets. Grammar: '\\mathbb' '{' ID '}'. R is every finite real the engine can represent, Z the integers, N the non-negative integers including zero, B is {false,true} stored as 0 and 1. Q is accepted but behaves exactly like R, because values are floating-point numbers and exact rational membership cannot be decided.",
+      "type": "object",
+      "required": ["kind", "builtin", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["builtin"] },
+        "builtin": { "type": "string", "enum": ["R", "Z", "N", "B", "Q"] },
+        "latex": { "type": "string", "description": "Examples: \"\\mathbb{R}\", \"\\mathbb{Z}\", \"\\mathbb{N}\", \"\\mathbb{B}\"." }
+      }
+    },
+
+    "DomainReference": {
+      "title": "DomainReference",
+      "description": "A use of a domain declared by a NamedDomainStatement. Grammar: domainReference → ID. The name must already be declared, and it resolves again on every read, so redeclaring the domain updates every term that refers to it.",
+      "type": "object",
+      "required": ["kind", "domainName", "latex"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["domainReference"] },
+        "domainName": { "type": "string" },
+        "latex": { "type": "string", "description": "Example: \"Color\" in \"foreground\\in Color\"." }
+      }
+    },
+
     "CaseRow": {
       "title": "CaseRow",
       "description": "One branch in a \\begin{cases} block. Grammar: expression '&' condition.",
@@ -350,7 +480,8 @@
         { "$ref": "#/$defs/FunctionCallNode" },
         { "$ref": "#/$defs/DerivativeNode" },
         { "$ref": "#/$defs/ParenthesisNode" },
-        { "$ref": "#/$defs/BracesNode" }
+        { "$ref": "#/$defs/BracesNode" },
+        { "$ref": "#/$defs/EnumLiteralNode" }
       ]
     },
 
@@ -647,6 +778,18 @@
       }
     },
 
+    "EnumLiteralNode": {
+      "title": "EnumLiteralNode",
+      "description": "A categorical value of a declared domain, used where a number would be. Grammar: '\\text' '{' enumName '}' (#EnumLiteralWrapped) or a quoted string (#EnumLiteralQuoted). Only compares: color=\\text{red} and color\\neq\\text{red} are the operations a categorical value takes part in, and arithmetic on one is refused with a type diagnostic. A label of no declared domain is refused rather than read as a term.",
+      "type": "object",
+      "required": ["kind", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["enumLiteral"] },
+        "label": { "type": "string", "description": "The label, e.g. 'red'. Written \\text{red} in the latex." }
+      }
+    },
+
     "BuiltInFunction": {
       "title": "BuiltInFunction",
       "description": "All built-in functions in the LatexMath grammar. Backslash-prefixed: \\sin, \\cos, \\tan, \\cot, \\sec, \\csc (also \\cosec), \\arcsin, \\arccos, \\arctan, \\sinh, \\cosh, \\tanh, \\ln, \\log, \\max, \\min, \\mod, \\det. No-backslash: sign, rnd, irnd, int, round. Note: \\sqrt uses braces not \\left\\right and is a separate SqrtNode.",
@@ -714,10 +857,16 @@
             "wrapper":              { "type": "string", "const": "Always wrap the full content in \\displaylines{...}. Separate statements with \\\\\\\\." },
             "multiplySymbol":       { "type": "string", "const": "Use \\cdot for all explicit multiplication. Never write \\times. Variable*variable juxtaposition is NOT supported — write x\\cdot y, not xy." },
             "functionParens":       { "type": "string", "const": "All function calls require \\left( \\right) delimiters: \\sin\\left(x\\right), NOT \\sin(x)." },
-            "noBackslashFunctions": { "type": "string", "const": "sign, rnd, irnd, int, round have no backslash: write sign\\left(x\\right), not \\sign\\left(x\\right)." },
+            "noBackslashFunctions": { "type": "string", "const": "sign, rnd, irnd, int, round have no backslash: write sign\\left(x\\right), not \\sign\\left(x\\right). The editor draws these upright and writes them back as \\mathrm{round}\\left(x\\right); both spellings are read the same way, so write whichever you like." },
             "absoluteValue":        { "type": "string", "const": "Use \\det\\left(x\\right) for absolute value |x|. There is no \\abs function." },
             "fractionVsDivide":     { "type": "string", "const": "Prefer \\frac{a}{b} for display quality. Use a/b for inline division in compact expressions." },
             "greekTermNames":       { "type": "string", "const": "Greek letter term names are SPECIAL tokens: \\omega, \\alpha, \\beta, \\rho, etc. They can be used in assignments and references just like plain ID names." },
+            "domainMembership":     { "type": "string", "const": "Constrain a term with \\in: x\\in\\{1,2,3\\} makes x a scalar that may only hold 1, 2 or 3. It does not make x a set. The '=' form works too but only for a right-hand side no ordinary expression could be, so prefer \\in." },
+            "domainCommaVsDots":    { "type": "string", "const": "A comma between two bounds is a continuous interval and two dots are a discrete range: \\left[1,5\\right] is every real value from 1 to 5, \\left[1..5\\right] is {1,2,3,4,5}." },
+            "domainUnion":          { "type": "string", "const": "Write \\cup for a union: x\\in\\{1,2,3\\}\\cup\\left[6,7\\right] means 1, 2 or 3, or any real value from 6 to 7." },
+            "categoricalValues":    { "type": "string", "const": "Write categorical values as \\text{red}, both where the domain is declared and where it is compared: color\\in\\{\\text{red},\\text{green}\\} then color=\\text{red} inside a case row. Never do arithmetic on one." },
+            "domainRandomValue":    { "type": "string", "const": "To give a constrained term a random value, assign rnd with the number of domain values to choose from: z\\in\\{\\text{green},\\text{blue},\\text{red}\\} then z=rnd\\left(3\\right) picks one of the three labels. The argument counts values from the start of the domain, so rnd\\left(2\\right) only picks green or blue. Never write the numbers a label is stored as — they are internal. For a term with no domain rnd keeps its usual meaning, a number between 0 and its argument, and irnd is unchanged." },
+            "namedDomains":         { "type": "string", "const": "Declare a reusable domain with \\text{domain}\\ Color=\\{\\text{red},\\text{green}\\} and then write foreground\\in Color. A named domain is not a term and never appears in the term list." },
             "noReservedAsNames":    { "type": "string", "const": "Never use e, E, \\e, \\E, \\pi, or \\PI as term names — they are parsed as the constants Euler's e and pi." },
             "physicalConstants":    { "type": "string", "const": "Physical constants (g, c, k, R, NA, etc.) are NOT built in. Always define them as parameter assignments: g=9.8, c=3\\cdot10^{8}, etc." },
             "conditionNotEqual":    { "type": "string", "const": "In \\begin{cases} conditions, use \\neq for not-equal. Do NOT write \\ne — it is NOT in the grammar." },

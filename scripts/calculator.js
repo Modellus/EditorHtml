@@ -557,6 +557,7 @@ class Calculator extends EventTarget {
 
     normalizeExpressionText(text = "") {
         let normalizedText = this.removeDisplaylinesWrappers(text);
+        normalizedText = Utils.readFunctionNames(normalizedText);
         normalizedText = normalizedText.replace(/\\placeholder\{\}/g, '');
         normalizedText = normalizedText.replace(/\\differentialD\s+([A-Za-z][A-Za-z0-9]*)/g, '\\differentialD{$1}');
         return normalizedText;
@@ -773,7 +774,7 @@ class Calculator extends EventTarget {
     setUserInput(name = "", value = 0, iteration = 1, caseNumber = 1) {
         if (!this.isUserInputTerm(name))
             return false;
-        const numericValue = Number(value);
+        const numericValue = this.resolveTermValue(name, value);
         if (!Number.isFinite(numericValue))
             return false;
         const normalizedIteration = Math.max(1, Math.floor(Number(iteration) || 1));
@@ -911,6 +912,7 @@ class Calculator extends EventTarget {
         var term = system.getTerm(name);
         if (!term)
             return;
+        value = this.resolveTermValue(name, value);
         const normalizedIteration = Math.max(1, Math.floor(Number(iteration) || 1));
         // system.set only ever writes on the last iteration, which is not where the user is looking
         // when the player replays already-computed rows.
@@ -955,6 +957,58 @@ class Calculator extends EventTarget {
 
     getTermPrecision(name) {
         return this.isIterationTerm(name) ? 0 : this.getPrecision();
+    }
+
+    // ---- Categorical terms -----------------------------------------------
+    // A term constrained to a set of labels - z ∈ {green, blue, red} - holds the number the label
+    // is stored as. Everything the user sees and types is the label, so these four helpers are the
+    // only place the number and the label meet.
+
+    isCategoricalTerm(name = "") {
+        return this.system.getTerm(name)?.isCategorical === true;
+    }
+
+    // The {value, label} pairs a categorical term can take, in declared order, or null for every
+    // other term. A dropdown is built straight from this. Every visible cell asks on every frame,
+    // so the answer is kept against the domain object that produced it: parsing again builds a new
+    // domain, which is the only thing that can change the list.
+    getTermDomainValues(name = "") {
+        if (!this.isCategoricalTerm(name))
+            return null;
+        const domain = this.system.getTermDomain(name);
+        if (!domain)
+            return null;
+        if (!this._domainValuesByDomain)
+            this._domainValuesByDomain = new WeakMap();
+        if (this._domainValuesByDomain.has(domain))
+            return this._domainValuesByDomain.get(domain);
+        const values = this.system.getTermDomainMetadata(name)?.values;
+        const resolved = Array.isArray(values) && values.length > 0 ? values : null;
+        this._domainValuesByDomain.set(domain, resolved);
+        return resolved;
+    }
+
+    getValueLabel(name = "", value = 0) {
+        return this.system.getValueLabel(name, Number(value));
+    }
+
+    // The number behind a value written as a label, so a caller can pass either. A label the term's
+    // domain does not hold still resolves when the model knows it, which lets the domain report the
+    // violation rather than the value being dropped without a word.
+    resolveTermValue(name = "", value = 0) {
+        if (typeof value !== "string")
+            return Number(value);
+        const label = value.trim();
+        if (label === "")
+            return Number(value);
+        const domainValues = this.getTermDomainValues(name);
+        if (domainValues) {
+            const match = domainValues.find(entry => entry.label === label);
+            if (match)
+                return match.value;
+        }
+        const enumValue = this.system.getEnumValue(label);
+        return enumValue !== undefined ? enumValue : Number(value);
     }
 
     getTermsByType() {

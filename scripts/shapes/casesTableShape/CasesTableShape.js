@@ -425,7 +425,7 @@ class CasesTableShape extends BaseTableShape {
         const caseNumber = Number(column.caseNumber);
         if (!Number.isFinite(caseNumber) || caseNumber < 1)
             return false;
-        const roundedValue = Utils.roundToPrecision(numericValue, calculator.getPrecision());
+        const roundedValue = this.roundTableCellValue(termName, numericValue);
         if (!calculator.setUserInput(termName, roundedValue, iteration, caseNumber))
             return false;
         calculator.emit("iterate", { calculator: calculator });

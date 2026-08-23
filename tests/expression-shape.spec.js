@@ -218,7 +218,7 @@ test.describe('Keyboard shortcuts', () => {
         await expect(palette.locator('.mdl-shortcuts-palette-search')).toHaveCount(0);
         await expect(palette.locator('.dx-textbox')).toHaveCount(0);
         await expect(palette.locator('.dx-tileview')).toHaveCount(1);
-        await expect(palette.locator('.mdl-shortcuts-palette-tile')).toHaveCount(19);
+        await expect(palette.locator('.mdl-shortcuts-palette-tile')).toHaveCount(31);
         await expect(palette.locator('.mdl-shortcuts-palette-name')).toHaveCount(0);
         await expect(palette.locator('.mdl-shortcuts-palette-key')).toHaveCount(0);
         await expect(palette.locator('.mdl-shortcuts-palette-tile-focused')).toHaveCount(0);
@@ -230,6 +230,8 @@ test.describe('Keyboard shortcuts', () => {
             return shape.getTemplateShortcuts().map(shortcut => shape.getShortcutPaletteKeyText(shortcut));
         });
         expect(shortcutKeys).toEqual(expect.arrayContaining(['!', '%', '|', '<>', '>=', '<=', '*', "'"]));
+        const shortcutNames = await page.evaluate(() => shell.board.shapes.getByName('Expr1').getTemplateShortcuts().map(shortcut => shortcut.name));
+        expect(shortcutNames).toEqual(expect.arrayContaining(['Belongs to', 'Set', 'Range', 'Interval', 'Union', 'Text values', 'Real numbers', 'Integers', 'Natural numbers', 'Booleans', 'Named domain']));
     });
 
     test('template palette focuses explicitly and inserts the focused result with Enter', async ({ page }) => {

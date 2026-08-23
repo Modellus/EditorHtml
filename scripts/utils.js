@@ -238,6 +238,29 @@ class Utils {
             baseName + namedParts.replace(Utils.termNamePartPattern, (namedPart, partName) => `_{${Utils.termNamedIndexMarker}${partName}}`));
     }
 
+    // Most functions the parser knows come as commands - \sin, \log, \max - and mathlive draws a
+    // command upright. Four of them are spelled in plain letters instead - sign, round, rnd, irnd -
+    // and plain letters are drawn slanted, so those four read as a product of variables rather than
+    // as the function they are. They are written upright wherever an expression is shown, and read
+    // back plain on the way to the parser, which knows only the plain spelling.
+    static plainFunctionNames = ["sign", "round", "irnd", "rnd"];
+
+    static getPlainFunctionCallPattern() {
+        return new RegExp(`(^|[^\\\\A-Za-z0-9])(${Utils.plainFunctionNames.join("|")})(?=\\s*(?:\\\\left)?\\()`, "g");
+    }
+
+    static getUprightFunctionPattern() {
+        return new RegExp(`\\\\(?:mathrm|operatorname)\\s*\\{(${Utils.plainFunctionNames.join("|")})\\}`, "g");
+    }
+
+    static writeFunctionNames(text) {
+        return String(text ?? "").replace(Utils.getPlainFunctionCallPattern(), (matchedCall, precedingCharacter, functionName) => `${precedingCharacter}\\mathrm{${functionName}}`);
+    }
+
+    static readFunctionNames(text) {
+        return String(text ?? "").replace(Utils.getUprightFunctionPattern(), (matchedName, functionName) => functionName);
+    }
+
     static convertTermNamedIndexesToPlainText(text) {
         return String(text ?? "").replace(Utils.termNamedIndexPattern, (matchedIndex, partName) => `_${partName}`);
     }

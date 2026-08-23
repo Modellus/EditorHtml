@@ -869,6 +869,75 @@ test.describe('rows the engine cannot parse', () => {
     });
 });
 
+// The parser knows most of its functions as commands - \sin, \log - which mathlive draws upright,
+// and four of them as plain letters - sign, round, rnd, irnd - which it draws slanted, so those four
+// read as a product of variables unless they are written upright themselves.
+test.describe('functions the parser spells in plain letters', () => {
+    function renderedFontStyle(page, name, text) {
+        return page.evaluate(({ shapeName, letter }) => {
+            const mathfield = shell.board.shapes.getByName(shapeName).mathfield;
+            const elements = Array.from(mathfield.shadowRoot.querySelectorAll('*'));
+            const element = elements.find(candidate => candidate.children.length === 0 && candidate.textContent.trim() === letter);
+            return element ? getComputedStyle(element).fontStyle : null;
+        }, { shapeName: name, letter: text });
+    }
+
+    test('a function typed with a parenthesis is written upright', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Rounded', '\\displaylines{}');
+        await focusExpression(page, 'Rounded');
+        await page.keyboard.type('y=round(x+2');
+        await page.waitForTimeout(400);
+        // The upright face has to stop at the name: carried on, it would swallow the argument as well.
+        expect(await canonicalLatex(page, 'Rounded')).toContain('y=\\mathrm{round}\\left(x+2\\right)');
+    });
+
+    test('every plain-letter function the parser knows is written upright', async ({ page }) => {
+        await setupEditor(page);
+        for (const functionName of ['sign', 'rnd', 'irnd']) {
+            await addExpression(page, functionName, '\\displaylines{}');
+            await focusExpression(page, functionName);
+            await page.keyboard.type(`y=${functionName}(0`);
+            await page.waitForTimeout(400);
+            expect(await canonicalLatex(page, functionName)).toContain(`\\mathrm{${functionName}}`);
+        }
+    });
+
+    test('a function written in plain letters is lifted upright when the model is opened', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Opened', '\\displaylines{y=round\\left(x\\right)}');
+        expect(await presentedLatex(page, 'Opened')).toContain('\\mathrm{round}');
+        expect(await storedExpression(page, 'Opened')).toContain('\\mathrm{round}');
+    });
+
+    test('a name that merely ends in a function name is left alone', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Ground', '\\displaylines{ground=2}');
+        expect(await presentedLatex(page, 'Ground')).not.toContain('\\mathrm');
+    });
+
+    test('the upright function is drawn upright and the variable beside it slanted', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Drawn', '\\displaylines{y=round\\left(x\\right)}');
+        expect(await renderedFontStyle(page, 'Drawn', 'r')).toBe('normal');
+        expect(await renderedFontStyle(page, 'Drawn', 'x')).toBe('italic');
+    });
+
+    // The engine reads only the plain spelling, so the upright one has to be read back on the way in:
+    // a function left wrapped would be taken for a term of its own and the row would stop parsing.
+    test('the upright function still parses and leaves no term behind', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Parsed', '\\displaylines{x=2.4\\\\y=round\\left(x\\right)}');
+        await page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).mathfield.blur(), 'Parsed');
+        await page.evaluate(() => shell.reset());
+        await page.waitForTimeout(400);
+        expect(await page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).failingRowIndexes, 'Parsed')).toEqual([]);
+        const termNames = await page.evaluate(() => shell.calculator.getTermsNames());
+        expect(termNames).toContain('y');
+        expect(termNames.some(termName => termName.includes('mathrm'))).toBe(false);
+    });
+});
+
 test.describe('mathfield behaviour that must not change', () => {
     test('the differential shortcut still writes a derivative', async ({ page }) => {
         await setupEditor(page);

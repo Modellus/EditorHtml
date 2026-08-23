@@ -44,6 +44,24 @@ class BaseTableShape extends BaseShape {
         return true;
     }
 
+    // A categorical value is the number a label stands for, not a measurement: rounding it to the
+    // model's precision could only ever move it off its own label.
+    roundTableCellValue(termName, value) {
+        if (this.board.calculator.isCategoricalTerm(termName))
+            return value;
+        return Utils.roundToPrecision(value, this.board.calculator.getPrecision());
+    }
+
+    // The values a cell may hold when its term is constrained to a set of labels, so the table
+    // shows the label and offers the list instead of the number the label is stored as. A row
+    // carries the term when the terms run down the table, a column when they run across it.
+    getTableCellOptions(row, column) {
+        const termName = row?.termName ?? column?.term;
+        if (!termName)
+            return null;
+        return this.board.calculator.getTermDomainValues(termName);
+    }
+
     getCellsToolbarItems() {
         return [];
     }
@@ -228,7 +246,8 @@ class BaseTableShape extends BaseShape {
             shouldKeepFocusedCellsOnPointerDown: payload => this.shouldKeepFocusedCellsOnPointerDown(payload),
             isOutlierCell: (rowIndex, columnIndex) => this.isOutlierTableCell(rowIndex, columnIndex),
             isCellEditable: (row, column, rowIndex, columnIndex) => this.isTableCellEditable(row, column, rowIndex, columnIndex),
-            isUserInputCell: (rowIndex, columnIndex) => this.isUserInputTableCell(rowIndex, columnIndex)
+            isUserInputCell: (rowIndex, columnIndex) => this.isUserInputTableCell(rowIndex, columnIndex),
+            getCellOptions: (row, column) => this.getTableCellOptions(row, column)
         };
     }
 

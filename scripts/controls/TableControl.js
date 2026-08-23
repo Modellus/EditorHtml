@@ -15,6 +15,10 @@ class TableControl {
         this.nextFocusedRangeColorIndex = 0;
         this.regressionRangeOverlays = [];
         this.editingCell = null;
+        this.optionsCell = null;
+        this.optionsPopover = null;
+        this.optionsPopoverHost = null;
+        this.optionsAnchor = null;
         this.cellBoxes = [];
         this.verticalScrollbarThumbRect = null;
         this.horizontalScrollbarThumbRect = null;
@@ -77,6 +81,7 @@ class TableControl {
             isOutlierCell: null,
             isCellEditable: null,
             isUserInputCell: null,
+            getCellOptions: null,
             userInputMarkerColor: "#2f80ed",
             focusOnSingleClick: false,
             showHeader: true
@@ -158,6 +163,7 @@ class TableControl {
         this.clearHeaderTooltipHoverTimer();
         this.hideHeaderTooltip();
         this.disposeHeaderTooltip();
+        this.disposeCellOptionsPopover();
         this.rootElement.removeEventListener("wheel", this.onWheelHandler);
         window.removeEventListener("wheel", this.onWindowWheelHandler);
         window.removeEventListener("pointerdown", this.onWindowPointerDownHandler, true);
@@ -392,6 +398,9 @@ class TableControl {
         if (normalizedScrollTop === this.scrollTop)
             return;
         this.scrollTop = normalizedScrollTop;
+        // The dropdown is placed once, over the cell it belongs to; scrolling moves that cell out
+        // from under it, so the choice is dismissed rather than left pointing somewhere else.
+        this.closeCellOptions();
         this.render();
     }
 
@@ -401,6 +410,9 @@ class TableControl {
         if (normalizedScrollLeft === this.scrollLeft)
             return;
         this.scrollLeft = normalizedScrollLeft;
+        // The dropdown is placed once, over the cell it belongs to; scrolling moves that cell out
+        // from under it, so the choice is dismissed rather than left pointing somewhere else.
+        this.closeCellOptions();
         this.render();
     }
 
@@ -548,6 +560,7 @@ class TableControl {
         this.renderSelectedFocusedRanges(layout, geometry);
         this.renderScrollbars(layout);
         this.renderEditingValue(layout, geometry);
+        this.renderCellOptionsAnchor(layout, geometry);
     }
 
     getColumnValueRanges(columns) {
@@ -1052,6 +1065,9 @@ class TableControl {
             return "";
         if (this.isTermTextColumn(column))
             return String(rawValue);
+        const optionLabel = this.getCellOptionLabel(row, column, rawValue);
+        if (optionLabel !== null)
+            return optionLabel;
         const numericValue = Number(rawValue);
         if (numericValue === Infinity)
             return "∞";
@@ -1089,6 +1105,9 @@ class TableControl {
             return "";
         if (this.isTermTextColumn(column))
             return String(rawValue);
+        const optionLabel = this.getCellOptionLabel(row, column, rawValue);
+        if (optionLabel !== null)
+            return optionLabel;
         return Utils.formatValueForEditing(rawValue, this.getCellPrecision(row, column));
     }
 
@@ -1438,6 +1457,7 @@ class TableControl {
     }
 
     applyCellSelection(event, point) {
+        this.closeCellOptions();
         const cell = this.getCellFromPoint(point);
         if (!cell) {
             this.selectedCell = null;
@@ -1468,6 +1488,15 @@ class TableControl {
             return;
         const key = event.key;
         const hasCommandModifier = event.ctrlKey || event.metaKey || event.altKey;
+        // The dropdown owns the keyboard while it is open; only Escape takes it back.
+        if (this.optionsCell) {
+            if (key === "Escape") {
+                event.preventDefault();
+                this.closeCellOptions();
+                this.render();
+            }
+            return;
+        }
         if (this.editingCell) {
             if (key === "Enter") {
                 event.preventDefault();
@@ -1518,6 +1547,12 @@ class TableControl {
                 this.render();
                 return;
             }
+        }
+        if (!hasCommandModifier && key.length === 1 && this.canEditCell(this.selectedCell.rowIndex, this.selectedCell.columnIndex)
+            && this.getCellOptionsAt(this.selectedCell.rowIndex, this.selectedCell.columnIndex)) {
+            event.preventDefault();
+            this.openCellOptions(this.selectedCell.rowIndex, this.selectedCell.columnIndex);
+            return;
         }
         if (!hasCommandModifier && this.isAcceptedEditKey(key) && this.canEditCell(this.selectedCell.rowIndex, this.selectedCell.columnIndex)) {
             event.preventDefault();
@@ -2098,11 +2133,187 @@ class TableControl {
         return true;
     }
 
+    // ---- Cells that hold one of a fixed set of values ---------------------
+    // A term constrained to a set of labels - z ∈ {green, blue, red} - stores the number its label
+    // stands for. The cell shows the label and is edited by choosing from the list, so the number
+    // behind it never has to be typed or even known.
+
+    getCellOptionsFor(row, column) {
+        if (!row || !column || typeof this.options.getCellOptions !== "function")
+            return null;
+        if (this.isTermTextColumn(column))
+            return null;
+        const options = this.options.getCellOptions(row, column);
+        return Array.isArray(options) && options.length > 0 ? options : null;
+    }
+
+    getCellOptionLabel(row, column, rawValue) {
+        const options = this.getCellOptionsFor(row, column);
+        if (!options)
+            return null;
+        const numericValue = Number(rawValue);
+        const match = options.find(option => Number(option.value) === numericValue);
+        return match ? String(match.label) : null;
+    }
+
+    getCellOptionsAt(rowIndex, columnIndex) {
+        return this.getCellOptionsFor(this.getRowByIndex(rowIndex), this.getColumnByIndex(columnIndex));
+    }
+
+    openCellOptions(rowIndex, columnIndex) {
+        const row = this.getRowByIndex(rowIndex);
+        const column = this.getColumnByIndex(columnIndex);
+        const options = this.getCellOptionsFor(row, column);
+        if (!options)
+            return false;
+        this.editingCell = null;
+        this.optionsCell = { rowIndex: rowIndex, columnIndex: columnIndex };
+        this.selectCell(rowIndex, columnIndex);
+        this.render();
+        if (this.optionsCell)
+            this.showCellOptionsPopover(row, column, options);
+        return true;
+    }
+
+    closeCellOptions() {
+        if (!this.optionsCell)
+            return;
+        this.optionsCell = null;
+        if (this.optionsAnchor?.parentNode)
+            this.optionsAnchor.parentNode.removeChild(this.optionsAnchor);
+        if (this.optionsPopover)
+            this.optionsPopover.hide();
+    }
+
+    // The dropdown is anchored to a transparent rectangle over the cell, the same way the header
+    // tooltip anchors to the header it belongs to. The rectangle is one long-lived element that is
+    // moved and re-attached on every render: handing the popover a new target element instead would
+    // rebuild its contents underneath the click that is still on its way to the list.
+    ensureCellOptionsAnchor() {
+        if (this.optionsAnchor)
+            return this.optionsAnchor;
+        const anchor = this.createSvgElement("rect");
+        anchor.setAttribute("fill", "transparent");
+        anchor.setAttribute("pointer-events", "none");
+        this.optionsAnchor = anchor;
+        return anchor;
+    }
+
+    renderCellOptionsAnchor(layout, geometry) {
+        if (!this.optionsCell)
+            return;
+        const rowIndex = this.optionsCell.rowIndex;
+        const visible = this.getVisibleRange(layout);
+        const cell = geometry[this.optionsCell.columnIndex];
+        if (!cell || rowIndex < visible.first || rowIndex > visible.last) {
+            this.closeCellOptions();
+            return;
+        }
+        const rowHeight = Math.max(16, Number(this.options.rowHeight) || 24);
+        const y = layout.headerHeight + (rowIndex - visible.first) * rowHeight - visible.offset;
+        const anchor = this.ensureCellOptionsAnchor();
+        anchor.setAttribute("x", `${cell.x}`);
+        anchor.setAttribute("y", `${y}`);
+        anchor.setAttribute("width", `${cell.width}`);
+        anchor.setAttribute("height", `${rowHeight}`);
+        this.overlayLayer.appendChild(anchor);
+    }
+
+    canUseDxPopover() {
+        return typeof $ === "function";
+    }
+
+    showCellOptionsPopover(row, column, options) {
+        if (!this.canUseDxPopover() || !this.optionsAnchor)
+            return;
+        const selectedValue = Number(row[column.key]);
+        const items = options.map(option => ({ value: Number(option.value), text: String(option.label) }));
+        const selectedIndex = items.findIndex(item => item.value === selectedValue);
+        if (!this.optionsPopoverHost)
+            this.optionsPopoverHost = $("<div>").appendTo("body");
+        if (this.optionsPopover)
+            this.optionsPopover.dispose();
+        this.optionsPopover = this.optionsPopoverHost.dxPopover({
+            target: this.optionsAnchor,
+            position: "bottom",
+            width: "auto",
+            shading: false,
+            wrapperAttr: { class: "mdl-table-cell-options" },
+            contentTemplate: contentElement => {
+                $("<div>").appendTo(contentElement).dxList({
+                    dataSource: items,
+                    displayExpr: "text",
+                    keyExpr: "value",
+                    selectionMode: "single",
+                    selectedItemKeys: selectedIndex >= 0 ? [items[selectedIndex].value] : [],
+                    scrollingEnabled: items.length > 8,
+                    height: items.length > 8 ? 240 : "auto",
+                    focusStateEnabled: true,
+                    onItemClick: listEvent => this.commitCellOption(listEvent.itemData?.value)
+                });
+            },
+            onHidden: () => {
+                this.optionsCell = null;
+            }
+        }).dxPopover("instance");
+        this.optionsPopover.show();
+    }
+
+    disposeCellOptionsPopover() {
+        if (this.optionsPopover) {
+            this.optionsPopover.dispose();
+            this.optionsPopover = null;
+        }
+        if (this.optionsPopoverHost) {
+            this.optionsPopoverHost.remove();
+            this.optionsPopoverHost = null;
+        }
+        this.optionsCell = null;
+        this.optionsAnchor = null;
+    }
+
+    // Chosen values travel the same path a typed value does, so a shape sees one kind of change.
+    commitCellOption(value) {
+        const cell = this.optionsCell;
+        const numericValue = Number(value);
+        if (!cell || !Number.isFinite(numericValue)) {
+            this.closeCellOptions();
+            return false;
+        }
+        const row = this.getRowByIndex(cell.rowIndex);
+        const column = this.getColumnByIndex(cell.columnIndex);
+        this.closeCellOptions();
+        if (!row || !column)
+            return false;
+        const oldValue = row[column.key];
+        let accepted = true;
+        const callback = this.options.onCellValueChanged;
+        if (typeof callback === "function") {
+            accepted = callback({
+                row: row,
+                rowKey: row.key,
+                rowIndex: cell.rowIndex,
+                column: column,
+                columnIndex: cell.columnIndex,
+                value: numericValue,
+                oldValue: oldValue
+            }) !== false;
+        }
+        if (accepted)
+            row[column.key] = numericValue;
+        this.render();
+        return accepted;
+    }
+
     startEditing(rowIndex, columnIndex, initialKey) {
         if (!this.canEditCell(rowIndex, columnIndex))
             return;
         const row = this.getRowByIndex(rowIndex);
         const column = this.getColumnByIndex(columnIndex);
+        if (this.getCellOptionsFor(row, column)) {
+            this.openCellOptions(rowIndex, columnIndex);
+            return;
+        }
         let text = this.getCellEditText(row, column);
         if (initialKey != null && this.isAcceptedEditKey(initialKey))
             text = this.normalizeEditCharacter(initialKey);

@@ -96,7 +96,7 @@ class BlockBindings {
         parser.errors = [];
         let branch = null;
         try {
-            branch = parser.parse(latex);
+            branch = parser.parse(Utils.readFunctionNames(latex));
         } catch (error) {
             branch = null;
             this.parseErrors.set(latex, String(error?.message ?? error));

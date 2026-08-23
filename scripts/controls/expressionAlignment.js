@@ -166,6 +166,8 @@ class ExpressionAlignment {
                         delimiterDepth++;
                     else if (commandMatch[1] === "right")
                         delimiterDepth--;
+                    else if (commandMatch[1] === "in" && braceDepth === 0 && environmentDepth === 0 && delimiterDepth === 0)
+                        return characterIndex;
                     characterIndex += commandMatch[0].length;
                     continue;
                 }
