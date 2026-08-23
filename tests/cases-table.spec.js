@@ -1692,4 +1692,44 @@ test.describe('Cases table', () => {
         expect(afterShow.widths[2]).toBe(resized.widths[1]);
         expect(afterShow.widths[3]).toBe(before.widths[3]);
     });
+    test('the case badges sit in their own columns, on the first render and after a rebuild', async ({ page }) => {
+        await setupEditor(page);
+        await page.evaluate(() => modellus.shape.addExpression('Expr1'));
+        await page.waitForTimeout(400);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Expr1').properties.expression = 'x=x_{\\!0}+v_{\\!0x}\\cdot t+\\frac12\\cdot a_{\\!x}\\cdot t^2';
+            shell.setProperties({ casesCount: 2 });
+            shell.reset();
+            shell.writeTermUnits({ x: 'm', t: 's', 'x.0': 'm', 'v.0x': '\\frac{m}{s}', 'a.x': '\\frac{m}{s^2}' });
+            modellus.shape.addCasesTable('Inputs1');
+        });
+        await page.waitForTimeout(600);
+
+        const readHeaderLayout = () => page.evaluate(() => {
+            const table = shell.board.shapes.getByName('Inputs1').table;
+            const geometry = table.getColumnGeometry(table.getLayout(), table.options.columns);
+            return {
+                headerPositions: [...table.headerContentLayer.children].map(group => group.firstElementChild.getAttribute('transform')),
+                columnPositions: geometry.map(cellGeometry => `translate(${cellGeometry.x}, 0)`),
+                caseIcons: table.headerContentLayer.querySelectorAll('path').length
+            };
+        });
+
+        // The term column is measured from the rows, which arrive after the header is drawn, so a header
+        // placed by the widths of the first render sits outside its own column clip and is never seen.
+        const firstRender = await readHeaderLayout();
+        expect(firstRender.headerPositions).toEqual(firstRender.columnPositions);
+        expect(firstRender.caseIcons).toBe(2);
+
+        await page.evaluate(() => {
+            shell.collabCoordinator = { channel: null, isApplyingRemote: () => true };
+            shell.applyRemoteSnapshot(JSON.parse(JSON.stringify(shell.serialize())));
+        });
+        await page.waitForTimeout(800);
+
+        const afterRebuild = await readHeaderLayout();
+        expect(afterRebuild.headerPositions).toEqual(afterRebuild.columnPositions);
+        expect(afterRebuild.headerPositions).toEqual(firstRender.headerPositions);
+        expect(afterRebuild.caseIcons).toBe(2);
+    });
 });

@@ -513,9 +513,9 @@ class TableControl {
         return `${this.options.headerBackgroundColor}|${this.options.foregroundColor}|${this.options.headerFontSize}|${columnSummary}`;
     }
 
-    getHeaderGeometryKey(layout, columns) {
-        const columnWidths = columns.map(column => column.width ?? "auto").join(",");
-        return `${layout.bodyWidth}|${layout.headerHeight}|${this.options.gridColor}|${this.scrollLeft}|${columnWidths}`;
+    getHeaderGeometryKey(layout, geometry) {
+        const columnPositions = geometry.map(cellGeometry => `${cellGeometry.x}:${cellGeometry.width}`).join(",");
+        return `${layout.bodyWidth}|${layout.headerHeight}|${this.options.gridColor}|${this.scrollLeft}|${columnPositions}`;
     }
 
     render() {
@@ -546,10 +546,10 @@ class TableControl {
             this._headerContentForeignObjects = [];
             this.renderHeader(layout, columns, geometry);
             this._appliedHeaderContentKey = headerContentKey;
-            this._appliedHeaderGeometryKey = this.getHeaderGeometryKey(layout, columns);
+            this._appliedHeaderGeometryKey = this.getHeaderGeometryKey(layout, geometry);
         } else {
             this.renderHeaderBackground(layout, columns, geometry);
-            const headerGeometryKey = this.getHeaderGeometryKey(layout, columns);
+            const headerGeometryKey = this.getHeaderGeometryKey(layout, geometry);
             if (this._appliedHeaderGeometryKey !== headerGeometryKey) {
                 this.updateHeaderContentGeometry(columns, geometry, layout);
                 this._appliedHeaderGeometryKey = headerGeometryKey;
