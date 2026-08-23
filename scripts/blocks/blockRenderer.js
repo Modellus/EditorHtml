@@ -32,8 +32,10 @@ class BlockRenderer {
             }
             if (node.text !== null && node.text !== undefined) {
                 // The unit keeps the font the text is drawn in — a component writes in its own — so
-                // only the separator, the brackets and the fading are shared with the rest of the board.
-                const unitMarkup = Utils.buildTermUnitsTextHtml(node.unit ?? "", { fontFamily: null, useCentralBaseline: false });
+                // only the spacing and the fading are shared with the rest of the board. What a
+                // component writes is a reading, so its unit stands after the value with no slash
+                // dividing them.
+                const unitMarkup = Utils.buildTermUnitsTextHtml(node.unit ?? "", { fontFamily: null, useCentralBaseline: false, followsValue: true });
                 markup += `<${node.tag} ${attributes}>${Utils.escapeXmlText(node.text)}${unitMarkup}</${node.tag}>`;
                 continue;
             }

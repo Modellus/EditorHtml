@@ -95,9 +95,10 @@ standing at 20 rather than at T — that is where the picked unit is written, si
 no term to carry one.
 
 **A reading names its unit, it does not spell it out.** Never concatenate a unit into the text: give
-the `text` node a `unit` of its own, and the board writes it the way it writes every unit — after a
-`/`, bracketed when it is built from more than one symbol, and faded against the figures, so `64` in
-kilometres an hour reads `64 / (km/h)`. Where the unit comes from is settled the same way too: the
+the `text` node a `unit` of its own, and the board writes it the way it writes every unit after a
+reading — a space away, faded against the figures, so `64` in kilometres an hour reads `64 km/h`. The
+`/` that divides a term from its unit, `v / (km/h)`, belongs to a name standing on its own; a reading
+already says what it is worth, so nothing divides it from what it is measured in. Where the unit comes from is settled the same way too: the
 term the object reads carries it, chosen beside the term itself, and `{ "termUnit": … }` is how the
 definition asks for it. A unit parameter of the object's own is what is left for an object reading a
 plain number rather than a term.

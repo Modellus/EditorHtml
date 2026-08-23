@@ -156,7 +156,7 @@ test.describe('Term units', () => {
         expect(table.units).toEqual([{ term: 'x', unit: 'm' }, { term: 'v', unit: 'm/s' }]);
         expect(table.drawnTexts).toContain('x / m');
         expect(table.drawnTexts).toContain('v / (m/s)');
-        expect(table.drawnTexts).toContain('t = 0.00 / s');
+        expect(table.drawnTexts).toContain('t = 0.00 s');
     });
 
     test('the term column of the scenarios table widens to hold the unit it now carries', async ({ page }) => {
@@ -505,7 +505,7 @@ test.describe('Term units', () => {
         expect(unitFields[0].latex).toBe('\\mathrm{m/s^{2}}');
     });
 
-    test('the unit is written after the value in a name = value label, behind the same separator', async ({ page }) => {
+    test('the unit stands beside the value in a name = value label, with no slash dividing them', async ({ page }) => {
         await setupEditor(page);
         const html = await page.evaluate(() => ({
             withUnit: Utils.buildTermValueTextHtml('x', '5', 'm/s'),
@@ -513,9 +513,10 @@ test.describe('Term units', () => {
             valueOnly: Utils.buildTermValueTextHtml('', '5', 'm/s')
         }));
         expect(html.withUnit).toContain('> = 5</tspan>');
-        expect(html.withUnit).toContain('> / (m/s)</tspan>');
+        expect(html.withUnit).toContain('> m/s</tspan>');
+        expect(html.withUnit).not.toContain('/ (m/s)');
         expect(html.withoutUnit).not.toContain('m/s');
-        expect(html.valueOnly).toContain('> / (m/s)</tspan>');
+        expect(html.valueOnly).toContain('> m/s</tspan>');
     });
 
     test('a value shape shows the unit of the term it displays', async ({ page }) => {
@@ -528,7 +529,7 @@ test.describe('Term units', () => {
         });
         await page.waitForTimeout(500);
         const text = await page.evaluate(() => shell.board.shapes.getByName('Value1').valueText.textContent);
-        expect(text.trim()).toBe('x = 0.00 / m');
+        expect(text.trim()).toBe('x = 0.00 m');
     });
 
     test('one shared writer builds the name, the value and the unit for every surface', async ({ page }) => {
@@ -537,6 +538,7 @@ test.describe('Term units', () => {
             suffix: Utils.buildTermUnitsSuffix('m/s'),
             simpleSuffix: Utils.buildTermUnitsSuffix('m'),
             noSuffix: Utils.buildTermUnitsSuffix(''),
+            valueSuffix: Utils.buildValueUnitsSuffix('m/s'),
             reading: Utils.buildTermValueText('v', '5.00', 'm/s'),
             readingWithoutUnit: Utils.buildTermValueText('v', '5.00', ''),
             valueOnly: Utils.buildTermValueText('', '5.00', 'm'),
@@ -547,9 +549,10 @@ test.describe('Term units', () => {
         expect(written.suffix).toBe(' / (m/s)');
         expect(written.simpleSuffix).toBe(' / m');
         expect(written.noSuffix).toBe('');
-        expect(written.reading).toBe('v = 5.00 / (m/s)');
+        expect(written.valueSuffix).toBe(' m/s');
+        expect(written.reading).toBe('v = 5.00 m/s');
         expect(written.readingWithoutUnit).toBe('v = 5.00');
-        expect(written.valueOnly).toBe('5.00 / m');
+        expect(written.valueOnly).toBe('5.00 m');
         expect(written.split).toEqual({ termLatex: 'v_{\\!x}', unitsLatex: '(\\mathrm{m/s})' });
         expect(written.splitSimple).toEqual({ termLatex: 't', unitsLatex: '\\mathrm{s}' });
         expect(written.splitWithoutUnits).toEqual({ termLatex: 'v_{\\!x}', unitsLatex: '' });
@@ -599,7 +602,7 @@ test.describe('Term units', () => {
         }));
         expect(written.valueUnit).toBe('m');
         expect(written.modelUnits).toEqual({});
-        expect(written.readout.endsWith('100.00 / m')).toBe(true);
+        expect(written.readout.endsWith('100.00 m')).toBe(true);
     });
 
     // A component keeps the unit of a plain value where its own definition says: the unit parameter it
@@ -617,14 +620,14 @@ test.describe('Term units', () => {
         await page.waitForTimeout(600);
         const readout = () => page.evaluate(() => shell.board.shapes.getByName('Thermometer').element.querySelector('[data-source-id="readout"]').textContent);
         expect(await page.evaluate(() => [...document.querySelectorAll('.shape-term-units')].filter(host => host.offsetParent !== null).length)).toBe(1);
-        expect(await readout()).toBe('20.0 / °C');
+        expect(await readout()).toBe('20.0 °C');
         await page.evaluate(() => {
             const host = [...document.querySelectorAll('.shape-term-units')].find(element => element.offsetParent !== null);
             $(host).find('.mdl-units-editor').first().dxDropDownBox('instance').option('value', '°F');
         });
         await page.waitForTimeout(800);
         expect(await page.evaluate(() => shell.board.shapes.getByName('Thermometer').properties.unit)).toBe('°F');
-        expect(await readout()).toBe('20.0 / °F');
+        expect(await readout()).toBe('20.0 °F');
     });
 
     // The notebook's blocks name a term with a control of their own, so the unit is picked beside it
@@ -706,10 +709,10 @@ test.describe('Term units', () => {
             return { text: readout.textContent, html: readout.innerHTML, unitFont: readout.querySelector('tspan')?.getAttribute('font-family') ?? null };
         }));
         // The thermometer names °C itself, and the term says kelvin: what the model measures in wins.
-        expect(readouts[0].text).toBe('20.0 / K');
-        expect(readouts[1].text).toBe('64 / (km/h)');
+        expect(readouts[0].text).toBe('20.0 K');
+        expect(readouts[1].text).toBe('64 km/h');
         // Nothing but a number to read, so the unit the gauge carries itself is the one it writes.
-        expect(readouts[2].text).toBe('68 / %');
+        expect(readouts[2].text).toBe('68 %');
         for (const readout of readouts) {
             expect(readout.html).toContain(`fill-opacity="${await page.evaluate(() => Utils.termUnitsOpacity)}"`);
             expect(readout.unitFont).toBe(null);

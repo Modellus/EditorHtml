@@ -121,11 +121,15 @@ class Utils {
 
     // The iso norm writes a term over its unit, x / m, and brackets a unit built from more than one
     // symbol, v / (m/s), so the slash that divides the term from its unit is not read as part of it.
-    // The slash and the unit are written in the color of the term, faded, so the name of the term is
-    // what the eye lands on and the unit reads as the measure it is. Every surface — a label drawn as
-    // text, a title typeset as mathematics, a width measured before either is drawn — writes them
-    // through the builders here, so a term reads the same wherever it is shown.
+    // That slash only belongs after a name standing on its own: a reading already says what it is
+    // worth, so the unit simply follows the value it measures — v = 5.00 m/s — with nothing dividing
+    // them and nothing to bracket away. The unit is written in the color of the term, faded, so the
+    // name of the term is what the eye lands on and the unit reads as the measure it is. Every
+    // surface — a label drawn as text, a title typeset as mathematics, a width measured before
+    // either is drawn — writes them through the builders here, so a term reads the same wherever it
+    // is shown.
     static termUnitsSeparator = " / ";
+    static valueUnitsSeparator = " ";
     static termUnitsLatexSeparator = "\\;/\\;";
     static termUnitsOpacity = 0.6;
 
@@ -152,10 +156,17 @@ class Utils {
         return unitsText === "" ? "" : `${Utils.termUnitsSeparator}${unitsText}`;
     }
 
+    // What follows a value — " m/s" — where there is no dividing slash for a compound unit to be
+    // confused with, so the unit is written plainly, exactly as it is read aloud.
+    static buildValueUnitsSuffix(unitText) {
+        const plainUnit = Utils.getUnitsPlainText(unitText);
+        return plainUnit === "" ? "" : `${Utils.valueUnitsSeparator}${plainUnit}`;
+    }
+
     // A readout says what the term reads right now, so the unit follows the value it measures rather
-    // than the name — but it is written the same way there as anywhere else, after the separator.
+    // than the name, and stands beside it without the slash that would divide a name from its unit.
     static buildTermValueText(termText, valueText, unitText = "") {
-        const readingText = `${valueText ?? ""}${Utils.buildTermUnitsSuffix(unitText)}`;
+        const readingText = `${valueText ?? ""}${Utils.buildValueUnitsSuffix(unitText)}`;
         const normalizedTermText = String(termText ?? "");
         return normalizedTermText === "" ? readingText : `${normalizedTermText} = ${readingText}`;
     }
@@ -573,9 +584,10 @@ class Utils {
     static termUnitsFillAttribute = ` fill-opacity="${Utils.termUnitsOpacity}"`;
 
     // A surface that writes in a font of its own — a component drawn from blocks — keeps it by asking
-    // for no font at all; the separator, the brackets and the fading are the same wherever it is used.
+    // for no font at all; the fading is the same wherever it is used, and followsValue picks which
+    // way the unit is joined on: after a name over its slash, or plainly after a value.
     static buildTermUnitsTextHtml(unitText, options = {}) {
-        const unitsSuffix = Utils.buildTermUnitsSuffix(unitText);
+        const unitsSuffix = options.followsValue === true ? Utils.buildValueUnitsSuffix(unitText) : Utils.buildTermUnitsSuffix(unitText);
         if (unitsSuffix === "")
             return "";
         const fontFamily = options.fontFamily === undefined ? "Katex_Main" : options.fontFamily;
@@ -593,7 +605,7 @@ class Utils {
     }
 
     static buildTermValueTextHtml(termLatex, valueText, unitText = "") {
-        const unitHtml = Utils.buildTermUnitsTextHtml(unitText);
+        const unitHtml = Utils.buildTermUnitsTextHtml(unitText, { followsValue: true });
         if (!termLatex)
             return `<tspan font-family="Katex_Main" dominant-baseline="central">${Utils.escapeXmlText(valueText)}</tspan>${unitHtml}`;
         const segments = Utils.splitTermNameSegments(termLatex);
