@@ -94,10 +94,13 @@ class Calculator extends EventTarget {
         }
         if (this.status != STATUS.PLAYING)
             return;
-        if (this.system.iteration < this.system.lastCalculatedIteration)
-            this.system.iteration++;
-        else if (!this.properties.independent.noLimit && Math.abs(this.getIndependentValue(this.system.iteration) - this.properties.independent.end) < this.properties.independent.step / 10.0)
+        // The end is not always on a step - "0 to 2.28 by 0.1" stops on 2.20 - so the player counts
+        // iterations instead of waiting for the independent to land on the end value, which an
+        // off-step end never does.
+        if (!this.properties.independent.noLimit && this.system.iteration >= this.getFinalIteration())
             this.pause();
+        else if (this.system.iteration < this.system.lastCalculatedIteration)
+            this.system.iteration++;
         else
             this.engine.iterate();
         this.emit("iterate", { calculator: this });     
@@ -927,8 +930,11 @@ class Calculator extends EventTarget {
     getFinalIteration() {
         if (this.properties.independent.noLimit)
             return Math.max(1, this.system.lastIteration);
-        var independent = this.properties.independent;
-        return Math.floor((independent.end - independent.start) / independent.step) + 1;
+        const independent = this.properties.independent;
+        // Binary rounding leaves a whole-step end just short of its own step - (0.3 - 0) / 0.1 is
+        // 2.9999999999999996 - so the range domain counts the iterations with the engine's tolerance.
+        const range = new Modellus.DiscreteRangeDomain(independent.start, independent.end, independent.step);
+        return Math.max(1, range.count);
     }
 
     getEnd() {
