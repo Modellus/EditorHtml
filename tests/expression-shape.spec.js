@@ -149,7 +149,7 @@ test.describe('Inline shortcut handling', () => {
 });
 
 test.describe('Differential expansion caret placement', () => {
-    test('caret is placed after expanded fraction', async ({ page }) => {
+    test('caret is left writing the name the differential was written around', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
         await focusExpression(page, 'Expr1');
@@ -169,12 +169,51 @@ test.describe('Differential expansion caret placement', () => {
         });
         expect(positionCheck.value).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}');
         expect(positionCheck.currentPosition).toBe(positionCheck.groupEndPosition);
+        await page.keyboard.type('ime');
+        await page.waitForTimeout(300);
+        expect(await getExpressionValue(page, 'Expr1')).toContain('\\frac{\\differentialD{x}}{\\differentialD{time}}');
         await page.keyboard.type('=1');
         await page.waitForTimeout(300);
         const valueAfterEquals = await getExpressionValue(page, 'Expr1');
-        expect(valueAfterEquals).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}=1');
+        expect(valueAfterEquals).toContain('\\frac{\\differentialD{x}}{\\differentialD{time}}=1');
         expect(valueAfterEquals).not.toContain('\\differentialD{x=}');
-        expect(valueAfterEquals).not.toContain('\\differentialD{t=}');
+        expect(valueAfterEquals).not.toContain('\\differentialD{time=}');
+    });
+
+    test('a space after the name carries on after the fraction', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('dx/dt');
+        await page.waitForTimeout(400);
+        await page.keyboard.press('Space');
+        await page.keyboard.type('+1');
+        await page.waitForTimeout(300);
+        expect(await getExpressionValue(page, 'Expr1')).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}+1');
+    });
+
+    test('a greek letter name is written as the letter it names', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('dtheta/dt=10');
+        await page.waitForTimeout(400);
+        expect(await getExpressionValue(page, 'Expr1')).toContain('\\frac{\\differentialD{\\theta}}{\\differentialD{t}}=10');
+    });
+
+    test('a new row after the name is a row of its own', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('dx/dt');
+        await page.waitForTimeout(400);
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('y=2');
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}');
+        expect(value).toContain('y=2');
+        expect(value).not.toContain('\\differentialD{ty}');
     });
 });
 

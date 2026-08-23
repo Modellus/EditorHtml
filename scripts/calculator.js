@@ -562,7 +562,7 @@ class Calculator extends EventTarget {
         let normalizedText = this.removeDisplaylinesWrappers(text);
         normalizedText = Utils.readFunctionNames(normalizedText);
         normalizedText = normalizedText.replace(/\\placeholder\{\}/g, '');
-        normalizedText = normalizedText.replace(/\\differentialD\s+([A-Za-z][A-Za-z0-9]*)/g, '\\differentialD{$1}');
+        normalizedText = normalizedText.replace(new RegExp(`\\\\differentialD\\s+(${Utils.termNameLatexSource})`, "g"), '\\differentialD{$1}');
         return normalizedText;
     }
 

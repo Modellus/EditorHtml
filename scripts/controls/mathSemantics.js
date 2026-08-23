@@ -98,7 +98,7 @@ class MathSemanticsParser {
         if (commandName === "\\sqrt")
             return { type: "root", rootIndex: this.parseOptionalArgument(), radicand: this.parseArgument() };
         if (MathSemantics.differentialCommandNames.has(commandName))
-            return { type: "differential", command: commandName, body: this.parseArgument() };
+            return { type: "differential", command: commandName, body: this.parseDifferentialBody() };
         if (MathSemantics.discardedArgumentCommandNames.has(commandName)) {
             this.parseArgument();
             return { type: "group", body: this.parseArgument() };
@@ -114,6 +114,19 @@ class MathSemanticsParser {
             return { type: "placeholder" };
         }
         return { type: "command", text: commandName };
+    }
+
+    // The name of a differential is written without braces wherever mathlive drops them, and the parts the
+    // name carries then follow the differential rather than the name, so they are read back into it.
+    parseDifferentialBody() {
+        this.skipWhitespace();
+        const isBracedBody = this.latex[this.index] === "{";
+        const body = this.parseArgument();
+        if (isBracedBody)
+            return body;
+        while (body.length > 0 && (this.latex[this.index] === "_" || this.latex[this.index] === "^"))
+            this.attachScript(body, this.parseNode());
+        return body;
     }
 
     parseEnvironmentNode() {

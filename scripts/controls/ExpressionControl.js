@@ -329,6 +329,8 @@ class ExpressionControl {
             return;
         }
         this._leaveTermNamedIndexOnKeydown(keydownEvent);
+        if (this._leaveDifferentialNameOnKeydown(keydownEvent))
+            return;
         if (keydownEvent.key === "Dead") {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
@@ -444,6 +446,25 @@ class ExpressionControl {
         if (!Utils.endsWithOpenTermNamedIndex(this._getLatexBeforeCaret()))
             return;
         this.mathfield.executeCommand("moveAfterParent");
+    }
+
+    // The name of a differential is made of name characters only - a named part and an index included - so
+    // anything else ends it and is written after the fraction, where the rest of the row belongs. A space
+    // is what ends a name and nothing else, so it is spent leaving the differential it ends.
+    _leaveDifferentialNameOnKeydown(keydownEvent) {
+        if (keydownEvent.altKey || keydownEvent.ctrlKey || keydownEvent.metaKey)
+            return false;
+        const typedKey = keydownEvent.key;
+        const nameEndKeys = ["Enter", "Tab", "Escape"];
+        const endsTheName = nameEndKeys.includes(typedKey) || (typedKey.length === 1 && !/[A-Za-z0-9._]/.test(typedKey));
+        if (!endsTheName)
+            return false;
+        const leftDifferential = this.mathliveController?.leaveDifferentialName();
+        if (!leftDifferential || typedKey !== " ")
+            return false;
+        keydownEvent.preventDefault();
+        keydownEvent.stopImmediatePropagation();
+        return true;
     }
 
     _getLatexBeforeCaret() {

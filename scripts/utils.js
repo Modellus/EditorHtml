@@ -243,6 +243,21 @@ class Utils {
     // Mathlive writes the latex up to the caret with the enclosing groups left open, so a named part
     // still being written ends with its marker followed by the name characters typed so far.
     static openTermNamedIndexPattern = /\\!\s*[A-Za-z0-9]*$/;
+    // A name written in latex is the base name followed by the named parts and the index it carries, so a
+    // pattern reading names out of latex - a differential in particular - is built from this source.
+    static termNameLatexSource = "(?:\\\\[A-Za-z]+|[A-Za-zΑ-ω][A-Za-z0-9]*)(?:_\\{\\\\![A-Za-z0-9]+\\}|_\\{[A-Za-z0-9]+\\}|_[A-Za-z0-9])*";
+
+    // The `d` of a differential holds back the conversion mathlive does as a greek letter name is typed,
+    // so a name written into a differential is converted here instead.
+    static writeGreekLetterName(termName) {
+        const nameMatch = /^([A-Za-z][A-Za-z0-9]*)(.*)$/.exec(String(termName ?? ""));
+        if (!nameMatch)
+            return termName;
+        const greekLetterCommand = `\\${nameMatch[1]}`;
+        if (!Utils.greekLetters[greekLetterCommand])
+            return termName;
+        return `${greekLetterCommand}${nameMatch[2]}`;
+    }
 
     static writeTermNames(text) {
         return String(text ?? "").replace(Utils.dottedTermNamePattern, (matchedName, baseName, namedParts) =>

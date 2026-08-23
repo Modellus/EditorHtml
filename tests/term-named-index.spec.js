@@ -89,6 +89,42 @@ test.describe('Named term parts', () => {
         expect(value).toContain('=3');
     });
 
+    test('a differential over a named term is written upright', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('dv.x/dt=1', { delay: 60 });
+        await page.waitForTimeout(400);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toBe('\\frac{\\differentialD{v_{\\!x}}}{\\differentialD{t}}=1');
+        await page.evaluate(() => shell.reset());
+        await page.waitForTimeout(300);
+        const terms = await page.evaluate(() => shell.board.calculator.getTermsNames());
+        expect(terms).toContain('v.x');
+    });
+
+    test('a named part is still written after the differential is', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('dv.x/dv.y=2', { delay: 60 });
+        await page.waitForTimeout(400);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toBe('\\frac{\\differentialD{v_{\\!x}}}{\\differentialD{v_{\\!y}}}=2');
+    });
+
+    test('a differential over a named term parses without braces around the name', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await page.evaluate(() => shell.board.shapes.getByName('Expr1')
+            .setProperties({ expression: '\\displaylines{\\frac{\\differentialD v_{\\!x}}{\\differentialD{t}}=10}' }));
+        await page.waitForTimeout(400);
+        await page.evaluate(() => shell.reset());
+        await page.waitForTimeout(400);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Expr1').failingRowIndexes)).toEqual([]);
+        expect(await page.evaluate(() => shell.board.calculator.getTermsNames())).toContain('v.x');
+    });
+
     test('a dotted name is written as a named subscript wherever it appears', async ({ page }) => {
         await setupEditor(page);
         const result = await page.evaluate(() => ({

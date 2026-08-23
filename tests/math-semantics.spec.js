@@ -78,6 +78,11 @@ test.describe('semantic classification', () => {
         ]);
     });
 
+    test('a differential name written without braces is coloured like the name it is', () => {
+        expect(rolesOf('\\frac{\\differentialD v_{\\!x}}{\\differentialD{t}}=10'))
+            .toEqual(rolesOf('\\frac{\\differentialD{v_{\\!x}}}{\\differentialD{t}}=10'));
+    });
+
     test('a plain d over d fraction is read as a derivative too', () => {
         expect(roleOf('\\frac{dx}{dt}=1', 'd')).toBe(MathSymbolRole.DERIVATIVE);
     });
