@@ -1,4 +1,7 @@
 class TermControl {
+    // The list of terms is given the height the units picker gives its own list: the drop down it is
+    // dressed after is 240 tall and spends 34 of them on the line the reader writes in.
+    static termTreeMaxHeight = 206;
     static directionModes = [
         { value: "angle", icon: "fa-light fa-angle", hint: "Angle" },
         { value: "orientation", icon: "fa-light fa-arrow-up-right", hint: "Orientation" }
@@ -1471,7 +1474,11 @@ class TermControl {
         this.renderColorSecondaryEditor(host, item, index);
     }
 
+    // The picker is dressed the way the units picker is: what the reader writes sits at the top of the
+    // drop down, divided by a rule from the list underneath, and the drop down is as wide as its
+    // widest term rather than as wide as the field it drops from.
     renderTermDropdownContent(contentElement, item, index, treeItems, acceptCustomValue, currentTermValue, closeDropdown, onChanged, onCustomItemCreating, editorInstance) {
+        const dropdownContent = $('<div class="mdl-term-tree-content">').appendTo(contentElement);
         if (acceptCustomValue) {
             const customInputHost = $('<div class="mdl-term-tree-custom-input">');
             $('<div>').dxTextBox({
@@ -1487,7 +1494,7 @@ class TermControl {
                     closeDropdown?.();
                 }
             }).appendTo(customInputHost);
-            contentElement.append(customInputHost);
+            dropdownContent.append(customInputHost);
         }
         $('<div class="mdl-term-tree-view">').dxTreeView({
             items: treeItems,
@@ -1501,7 +1508,7 @@ class TermControl {
             },
             selectionMode: "single",
             selectByClick: true,
-            height: 220,
+            height: "auto",
             onItemClick: e => {
                 if (e.itemData.term !== undefined) {
                     onChanged(e.itemData.term);
@@ -1514,8 +1521,24 @@ class TermControl {
                     if (selectedItem?.parentId)
                         e.component.expandItem(selectedItem.parentId);
                 }
-            }
-        }).appendTo(contentElement);
+            },
+            onItemExpanded: e => TermControl.fitTermTreeHeight(e.component),
+            onItemCollapsed: e => TermControl.fitTermTreeHeight(e.component)
+        }).appendTo(dropdownContent);
+    }
+
+    // The wheel inside an overlay is only given to a scroll view, so the list keeps the tree's own
+    // scroller and is measured into it: as tall as the terms it holds, and no taller than the list.
+    static fitTermTreeHeight(component) {
+        const scrollableContent = component.element().find(".dx-scrollable-content").first()[0];
+        component.option("height", Math.min(scrollableContent.scrollHeight, TermControl.termTreeMaxHeight));
+    }
+
+    // The list is measured while the drop down is being shown and before it is placed, so a picker
+    // near the foot of the board is flipped over the size the list ends up with.
+    static fitTermTreeHeightOnShowing(popupComponent) {
+        const treeElement = $(popupComponent.content()).find(".mdl-term-tree-view");
+        TermControl.fitTermTreeHeight(treeElement.dxTreeView("instance"));
     }
 
     resolveTermEditorSelectedValue(data, fallbackValue = null) {
@@ -1655,7 +1678,9 @@ class TermControl {
             contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), item, index, treeItems, acceptCustomValue, termValue, () => dropDownBoxInstance?.close(), onChanged, onCustomItemCreating, dropDownBoxInstance),
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup")
+                width: "auto",
+                onShowing: e => TermControl.fitTermTreeHeightOnShowing(e.component),
+                wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup mdl-term-tree-popup")
             },
             ...(providedOptions.onOpened ? { onOpened: providedOptions.onOpened } : {})
         };

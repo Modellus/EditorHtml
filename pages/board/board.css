@@ -1838,16 +1838,44 @@ svg:active.pan-available {
     filter: url(#sketchy-line);
 }
 
-.mdl-term-tree-popup {
-    min-width: 160px;
+.mdl-term-tree-popup .dx-overlay-content {
+    padding: 0;
+}
+
+.mdl-term-tree-popup .dx-popup-content {
+    padding: 0;
+}
+
+.mdl-term-tree-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
 }
 
 .mdl-term-tree-custom-input {
-    padding: 4px 4px 0 4px;
+    flex: 0 0 auto;
+    padding: 0;
+    border-bottom: 1px solid #e0e0e0;
 }
 
-.mdl-term-tree-custom-input .dx-texteditor {
+.mdl-term-tree-custom-input .dx-texteditor.dx-editor-filled {
     width: 100%;
+    height: 34px;
+    font-size: 15px;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+}
+
+.mdl-term-tree-custom-input .dx-texteditor.dx-editor-filled::before {
+    display: none;
+}
+
+.mdl-term-tree-custom-input .dx-texteditor.dx-editor-filled .dx-texteditor-input,
+.mdl-term-tree-custom-input .dx-texteditor.dx-editor-filled .dx-placeholder::before {
+    padding: 0 8px;
+    min-height: 34px;
+    line-height: 34px;
 }
 
 .mdl-term-tree-view .dx-treeview-item-content {
