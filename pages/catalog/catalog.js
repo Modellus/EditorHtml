@@ -551,12 +551,16 @@ class ModelsApp {
               </div>`}
               <div class="card-meta">
                 ${creatorName ? `<div class="card-creator">${Utils.buildAvatarMarkup(data.creator_name, creatorAvatar, { size: 18, className: "card-creator-avatar" })}<span class="card-creator-name">${creatorName}</span></div>` : ""}
-                ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
+                <div class="card-meta-row">
+                  ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
+                  <span class="card-stats">${this.buildModelCardStatsMarkup(this.getModelUsageCount(data), this.getModelDistinctUsers(data))}</span>
+                </div>
               </div>
             </div>
           </div>
         `;
         host.innerHTML = cardMarkup;
+        if (!isDeleted) this.refreshModelCardStats(host, data);
         const cardTile = host.querySelector(".card-tile");
         const likeButton = host.querySelector(".like-button");
         const favoriteButton = host.querySelector(".favorite-button");
@@ -3227,6 +3231,39 @@ class ModelsApp {
 
   getModelUsageCount(model) {
     return Number(model.usage_count ?? model.usageCount) || 0;
+  }
+
+  getModelDistinctUsers(model) {
+    const distinctUsers = Number(model.distinct_users ?? model.distinctUsers);
+    return Number.isFinite(distinctUsers) ? distinctUsers : null;
+  }
+
+  buildModelCardStatsMarkup(usageCount, distinctUsers) {
+    const stats = [];
+    if (distinctUsers !== null && distinctUsers > 0)
+      stats.push(`<span class="card-stat" title="${this.translations.get("Users")}"><i class="fa-light fa-users" aria-hidden="true"></i>${this.formatDashboardNumber(distinctUsers)}</span>`);
+    if (usageCount > 0)
+      stats.push(`<span class="card-stat" title="${this.translations.get("Times used")}"><i class="fa-light fa-play" aria-hidden="true"></i>${this.formatDashboardNumber(usageCount)}</span>`);
+    return stats.join("");
+  }
+
+  fetchModelUsageStats(modelId) {
+    // One in-flight request per model, shared by every repaint of its card.
+    if (!this.modelUsageStatsByModelId) this.modelUsageStatsByModelId = new Map();
+    if (!this.modelUsageStatsByModelId.has(modelId))
+      this.modelUsageStatsByModelId.set(modelId, this.apiClient.fetchModelUsage(modelId).catch(() => null));
+    return this.modelUsageStatsByModelId.get(modelId);
+  }
+
+  refreshModelCardStats(host, model) {
+    const statsHost = host.querySelector(".card-stats");
+    if (!statsHost || !model.id) return;
+    this.fetchModelUsageStats(model.id).then(usage => {
+      if (!usage || !statsHost.isConnected) return;
+      if (typeof usage.usage_count === "number") model.usage_count = usage.usage_count;
+      if (typeof usage.distinct_users === "number") model.distinct_users = usage.distinct_users;
+      statsHost.innerHTML = this.buildModelCardStatsMarkup(this.getModelUsageCount(model), this.getModelDistinctUsers(model));
+    });
   }
 
   async fetchTopModelUsage(models) {

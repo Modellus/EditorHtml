@@ -457,6 +457,30 @@ body {
   padding-top: 0.4rem;
   margin-top: 0.25rem;
 }
+.card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+.card-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.card-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.845rem;
+  color: var(--c-muted);
+  white-space: nowrap;
+}
+.card-stat i {
+  font-size: 12px;
+}
 .card-badge {
   display: inline-flex;
   align-items: center;
