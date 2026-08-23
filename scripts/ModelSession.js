@@ -3,8 +3,8 @@ class ModelSession {
         this.calculator = new Calculator();
         this.modelsApiClient = modelsApiClient;
         this.properties = {};
-        this.pendingInitialValuesByCase = null;
-        this.pendingUserInputsByCase = null;
+        this.pendingInitialValuesByCase = undefined;
+        this.pendingUserInputsByCase = undefined;
         this.setDefaults();
     }
 
@@ -58,8 +58,8 @@ class ModelSession {
     }
 
     deserialise(model) {
-        this.pendingInitialValuesByCase = model?.properties?.initialValuesByCase ?? model?.properties?.initialValues ?? null;
-        this.pendingUserInputsByCase = model?.properties?.userInputsByCase ?? null;
+        this.pendingInitialValuesByCase = model?.properties?.initialValuesByCase ?? model?.properties?.initialValues;
+        this.pendingUserInputsByCase = model?.properties?.userInputsByCase;
         this.setProperties(model.properties);
         this.calculator.loadOutlierIterations(model?.outlierIterations);
         this.calculator.loadRegressionTerms(model?.regressionTerms);

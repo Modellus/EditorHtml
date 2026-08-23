@@ -1692,6 +1692,68 @@ test.describe('Cases table', () => {
         expect(afterShow.widths[2]).toBe(resized.widths[1]);
         expect(afterShow.widths[3]).toBe(before.widths[3]);
     });
+    test('undoing a model property change keeps the groups and their per-case values', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 3);
+
+        const state = await page.evaluate(() => {
+            shell.calculator.setUserInput('v', 5, 10, 1);
+            shell.calculator.setUserInput('v', 7, 10, 2);
+            shell.setPropertyCommand('precision', 3);
+            shell.commands.invoker.undo();
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.refreshTableRows();
+            return {
+                groups: tableShape.getGroupIterations(),
+                userInputs: shell.calculator.getUserInputsByCase()
+            };
+        });
+
+        expect(state.groups).toEqual([1, 10]);
+        expect(state.userInputs).toEqual({ 1: { v: { 10: 5 } }, 2: { v: { 10: 7 } } });
+    });
+
+    test('a collaboration snapshot that carries no moments field leaves the groups alone', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 3);
+
+        const state = await page.evaluate(() => {
+            shell.calculator.setUserInput('v', 5, 10, 1);
+            const snapshot = shell.serialize();
+            delete snapshot.properties.userInputsByCase;
+            shell.collabCoordinator = { channel: null, isApplyingRemote: () => true };
+            shell.applyRemoteSnapshot(snapshot);
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.refreshTableRows();
+            return {
+                groups: tableShape.getGroupIterations(),
+                userInputs: shell.calculator.getUserInputsByCase()
+            };
+        });
+
+        expect(state.groups).toEqual([1, 10]);
+        expect(state.userInputs).toEqual({ 1: { v: { 10: 5 } } });
+    });
+
+    test('a model opened with no moments of its own does not keep the ones on screen', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 3);
+
+        const state = await page.evaluate(() => {
+            const withoutMoments = JSON.stringify(shell.serialize());
+            shell.calculator.setUserInput('v', 5, 10, 1);
+            shell.openModel(withoutMoments);
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.refreshTableRows();
+            return {
+                groups: tableShape.getGroupIterations(),
+                userInputs: shell.calculator.getUserInputsByCase()
+            };
+        });
+
+        expect(state.groups).toEqual([1]);
+        expect(state.userInputs).toBeNull();
+    });
     test('the case badges sit in their own columns, on the first render and after a rebuild', async ({ page }) => {
         await setupEditor(page);
         await page.evaluate(() => modellus.shape.addExpression('Expr1'));

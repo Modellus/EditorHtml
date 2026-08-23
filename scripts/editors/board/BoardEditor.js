@@ -476,10 +476,10 @@ class BoardEditor extends Workspace {
     
     reset() {
         this.restoreUserPermissions();
-        const initialValuesByCase = this.session.pendingInitialValuesByCase ?? this.calculator.getInitialValuesByCase();
-        this.session.pendingInitialValuesByCase = null;
-        const userInputsByCase = this.session.pendingUserInputsByCase ?? this.calculator.getUserInputsByCase();
-        this.session.pendingUserInputsByCase = null;
+        const initialValuesByCase = this.session.pendingInitialValuesByCase !== undefined ? this.session.pendingInitialValuesByCase : this.calculator.getInitialValuesByCase();
+        this.session.pendingInitialValuesByCase = undefined;
+        const userInputsByCase = this.session.pendingUserInputsByCase !== undefined ? this.session.pendingUserInputsByCase : this.calculator.getUserInputsByCase();
+        this.session.pendingUserInputsByCase = undefined;
         this.calculator.reset();
         this.board.shapes.shapes.forEach(shape => {
             if (shape.properties?.expression !== undefined)

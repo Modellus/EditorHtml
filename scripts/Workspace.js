@@ -253,8 +253,8 @@ class Workspace {
     applySerializedSession(model, applyProperties) {
         if (!this.session || !model)
             return;
-        this.session.pendingInitialValuesByCase = model?.properties?.initialValuesByCase ?? model?.properties?.initialValues ?? null;
-        this.session.pendingUserInputsByCase = model?.properties?.userInputsByCase ?? null;
+        this.session.pendingInitialValuesByCase = model?.properties?.initialValuesByCase ?? model?.properties?.initialValues;
+        this.session.pendingUserInputsByCase = model?.properties?.userInputsByCase;
         applyProperties(model.properties);
         this.calculator.loadOutlierIterations(model?.outlierIterations);
         this.calculator.loadRegressionTerms(model?.regressionTerms);

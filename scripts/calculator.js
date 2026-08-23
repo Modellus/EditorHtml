@@ -27,6 +27,7 @@ class Calculator extends EventTarget {
 
     setDefaults() {
         this.properties = this.createDefaultProperties();
+        this.userInputsByCase = {};
         this.preloadedRegressionTerms = null;
         this.preloadedOutlierIterations = null;
         this.recalculationRevision = 0;
@@ -192,7 +193,6 @@ class Calculator extends EventTarget {
         this.status = STATUS.STOPPED;
         this.recalculationRevision = 0;
         this.recalculatedIteration = 1;
-        this.userInputsByCase = {};
         this.clearHook();
     }
 
