@@ -197,8 +197,7 @@ test.describe('Differential expansion caret placement', () => {
         await addExpression(page, 'Expr1');
         await focusExpression(page, 'Expr1');
         await page.keyboard.type('dtheta/dt=10');
-        await page.waitForTimeout(400);
-        expect(await getExpressionValue(page, 'Expr1')).toContain('\\frac{\\differentialD{\\theta}}{\\differentialD{t}}=10');
+        await expect.poll(() => getExpressionValue(page, 'Expr1')).toContain('\\frac{\\differentialD{\\theta}}{\\differentialD{t}}=10');
     });
 
     test('a new row after the name is a row of its own', async ({ page }) => {

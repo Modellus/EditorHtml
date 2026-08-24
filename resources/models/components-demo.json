@@ -102,32 +102,23 @@
               "secondVariable": {
                 "parameter": "secondVariable"
               },
-              "showSecondHand": {
-                "parameter": "showSecondHand"
-              },
-              "showNumbers": {
-                "parameter": "showNumbers"
-              },
-              "showMinuteTicks": {
-                "parameter": "showMinuteTicks"
-              },
               "faceColor": {
                 "parameter": "faceColor"
               },
               "borderColor": {
                 "parameter": "borderColor"
               },
-              "handColor": {
-                "parameter": "handColor"
+              "hourColor": {
+                "parameter": "hourColor"
               },
-              "secondHandColor": {
-                "parameter": "secondHandColor"
+              "minuteColor": {
+                "parameter": "minuteColor"
+              },
+              "secondColor": {
+                "parameter": "secondColor"
               },
               "numberColor": {
                 "parameter": "numberColor"
-              },
-              "interactive": {
-                "parameter": "interactive"
               }
             }
           },
@@ -169,42 +160,6 @@
               "category": "model"
             },
             {
-              "id": "showSecondHand",
-              "label": "Show second hand",
-              "valueType": "boolean",
-              "defaultValue": true,
-              "description": "",
-              "required": false,
-              "bindable": true,
-              "agentAccessible": true,
-              "userEditable": true,
-              "category": "display"
-            },
-            {
-              "id": "showNumbers",
-              "label": "Show numbers",
-              "valueType": "boolean",
-              "defaultValue": true,
-              "description": "",
-              "required": false,
-              "bindable": true,
-              "agentAccessible": true,
-              "userEditable": true,
-              "category": "display"
-            },
-            {
-              "id": "showMinuteTicks",
-              "label": "Show minute ticks",
-              "valueType": "boolean",
-              "defaultValue": true,
-              "description": "",
-              "required": false,
-              "bindable": true,
-              "agentAccessible": true,
-              "userEditable": true,
-              "category": "display"
-            },
-            {
               "id": "faceColor",
               "label": "Face colour",
               "valueType": "colour",
@@ -229,8 +184,8 @@
               "category": "style"
             },
             {
-              "id": "handColor",
-              "label": "Hand colour",
+              "id": "hourColor",
+              "label": "Hour",
               "valueType": "colour",
               "defaultValue": "token:stroke.strong",
               "description": "",
@@ -241,8 +196,20 @@
               "category": "style"
             },
             {
-              "id": "secondHandColor",
-              "label": "Second hand colour",
+              "id": "minuteColor",
+              "label": "Minute",
+              "valueType": "colour",
+              "defaultValue": "token:stroke.strong",
+              "description": "",
+              "required": false,
+              "bindable": true,
+              "agentAccessible": true,
+              "userEditable": true,
+              "category": "style"
+            },
+            {
+              "id": "secondColor",
+              "label": "Second",
               "valueType": "colour",
               "defaultValue": "token:stroke.warning",
               "description": "",
@@ -254,7 +221,7 @@
             },
             {
               "id": "numberColor",
-              "label": "Number colour",
+              "label": "Number",
               "valueType": "colour",
               "defaultValue": "token:text.primary",
               "description": "",
@@ -263,18 +230,6 @@
               "agentAccessible": true,
               "userEditable": true,
               "category": "style"
-            },
-            {
-              "id": "interactive",
-              "label": "Hands can be dragged",
-              "valueType": "boolean",
-              "defaultValue": false,
-              "description": "",
-              "required": false,
-              "bindable": true,
-              "agentAccessible": true,
-              "userEditable": true,
-              "category": "interaction"
             }
           ],
           "metadata": {
@@ -287,14 +242,11 @@
         "hourVariable": "hour",
         "minuteVariable": "minute",
         "secondVariable": "second",
-        "showSecondHand": true,
-        "showNumbers": true,
-        "showMinuteTicks": true,
         "faceColor": "#ffffff",
-        "handColor": "#000000",
-        "secondHandColor": "#e03130",
-        "numberColor": "#1e1e1e",
-        "interactive": false
+        "hourColor": "#000000",
+        "minuteColor": "#000000",
+        "secondColor": "#e03130",
+        "numberColor": "#1e1e1e"
       }
     },
     {

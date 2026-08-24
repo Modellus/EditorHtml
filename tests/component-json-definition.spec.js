@@ -23,6 +23,14 @@ const BOARD_URL = '/pages/board/index.html';
 // the reading: it is written after it the way a unit is written everywhere else on the board, in a
 // tspan of its own so it can be faded, and the entries showing no unit are byte for byte the ones
 // that were captured.
+// Those same four were re-recorded once more when the reading stopped carrying the dividing "/" as
+// well: a value already says what it is worth, so its unit simply follows it — "65 km/h", where a
+// label naming a term alone still reads "v / (m/s)".
+// The six entries carrying a drag were re-recorded when the drag behaviours gained "signed" and the
+// pair of hover fields: the drawings are identical and only the behaviour beside them grew.
+// The four clock entries were re-recorded when the face stopped being switched on and off by flags
+// and started being unpainted instead: the ticks now follow the analogue face itself, the numbers
+// follow the colour they are written in, and the hands carry the drag that makes them turnable.
 const BASELINES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'coded-component-baselines.json'), 'utf8'));
 
 const cases = [

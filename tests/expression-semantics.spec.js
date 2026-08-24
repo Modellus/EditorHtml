@@ -641,7 +641,7 @@ test.describe('semantic colouring', () => {
             control.semanticDecorator.clear();
             return control.mathfield.style.color;
         });
-        expect(cleared).toBe('rgb(0, 128, 127)');
+        expect(cleared).toBe('rgb(0, 133, 132)');
     });
 
     test('the caret and the selection follow the background', async ({ page }) => {
@@ -944,8 +944,7 @@ test.describe('mathfield behaviour that must not change', () => {
         await addExpression(page, 'Rates', '\\displaylines{}');
         await focusExpression(page, 'Rates');
         await page.keyboard.type('dx/dt');
-        await page.waitForTimeout(400);
-        expect(await canonicalLatex(page, 'Rates')).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}');
+        await expect.poll(() => canonicalLatex(page, 'Rates')).toContain('\\frac{\\differentialD{x}}{\\differentialD{t}}');
     });
 
     test('a named part of a term is still written as a marked subscript', async ({ page }) => {
@@ -960,8 +959,7 @@ test.describe('mathfield behaviour that must not change', () => {
         await addExpression(page, 'Relations', '\\displaylines{}');
         await focusExpression(page, 'Relations');
         await page.keyboard.type('x>=1');
-        await page.waitForTimeout(400);
-        expect(await canonicalLatex(page, 'Relations')).toContain('\\ge');
+        await expect.poll(() => canonicalLatex(page, 'Relations')).toContain('\\ge');
     });
 
     test('a function shortcut is still applied', async ({ page }) => {
@@ -969,7 +967,6 @@ test.describe('mathfield behaviour that must not change', () => {
         await addExpression(page, 'Functions', '\\displaylines{}');
         await focusExpression(page, 'Functions');
         await page.keyboard.type('y=sin(');
-        await page.waitForTimeout(400);
-        expect(await canonicalLatex(page, 'Functions')).toContain('\\sin');
+        await expect.poll(() => canonicalLatex(page, 'Functions')).toContain('\\sin');
     });
 });

@@ -319,9 +319,23 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         this.expressionControl?.scheduleSemanticColoring();
         this.foreignObject.style.backgroundColor = this.properties.backgroundColor;
         this.applyBorderStyle(this.container, 1);
-        this.mathfield.style.color = this.properties.foregroundColor;
+        this.mathfield.style.color = this.readReadableForegroundColor();
         this.mathfield.style.backgroundColor = this.properties.backgroundColor ?? "transparent";
         this.syncHandwrittenStyle();
+    }
+
+    readReadableForegroundColor() {
+        const foregroundColor = this.properties.foregroundColor;
+        const foreground = MathColorScheme.parse(foregroundColor);
+        if (!foreground)
+            return foregroundColor;
+        const cardColor = MathColorScheme.parse(this.properties.backgroundColor);
+        if (!cardColor || cardColor.alpha === 0)
+            return foregroundColor;
+        const background = MathColorScheme.flatten([cardColor]);
+        if (MathColorScheme.contrastRatio(foreground, background) >= MathColorScheme.minimumReadableContrast)
+            return foregroundColor;
+        return MathColorScheme.adapt(foregroundColor, MathColorScheme.format(background), MathColorScheme.minimumReadableContrast);
     }
 
     draw() {

@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 const BOARD_URL = '/pages/board/index.html';
+const OBJECTS_ENDPOINT = '**/objects?**';
 
 // An object the editor does not ship with: it stands for what the catalogue will deliver, and for
 // what a model carries with it. Tagged "object", so the picker is meant to list it.
@@ -20,7 +21,11 @@ const SESSION_OBJECT = {
     }
 };
 
+// The catalogue is answered with nothing, so the picker draws every card from the definitions the
+// editor ships with. Left to reach the real one, it replaces those drawings with screenshots as
+// soon as it answers, and what a card shows depends on when the answer arrives.
 async function setupBoard(page) {
+    await page.route(OBJECTS_ENDPOINT, route => route.fulfill({ json: { items: [], total: 0 } }));
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
     });
@@ -31,6 +36,13 @@ async function setupBoard(page) {
 async function openPicker(page) {
     await page.click('#components-button');
     await page.waitForSelector('.mdl-object-picker-card');
+    await page.evaluate(() => BlockObjectCatalogue.loadPromise);
+    await page.waitForFunction(() => {
+        const cards = Array.from(document.querySelectorAll('.mdl-object-picker-card'));
+        return cards.length > 0 && cards
+            .filter(card => card.dataset.objectKey !== 'BlockChartShape')
+            .every(card => (card.querySelector('.mdl-object-picker-preview > svg')?.childElementCount ?? 0) > 0);
+    });
 }
 
 async function closePickerWithEscape(page) {

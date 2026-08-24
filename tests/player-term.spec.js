@@ -132,13 +132,14 @@ test.describe('Player term visibility toggles', () => {
         expect(state.independent).toBe(false);
     });
 
-    test('Cases option in the dropdown sets casesCount', async ({ page }) => {
+    test('Scenarios option in the dropdown sets casesCount', async ({ page }) => {
         await setupEditor(page);
         await openIndependentDropdown(page);
         await page.evaluate(() => {
             const wrapper = document.querySelector('.mdl-independent-dropdown');
             const rows = [...wrapper.querySelectorAll('.mdl-dropdown-list-item')];
-            const row = rows.find(r => r.querySelector('.mdl-dropdown-list-label').textContent === 'Cases');
+            const casesCountLabel = shell.board.translations.get('CasesCount');
+            const row = rows.find(r => r.querySelector('.mdl-dropdown-list-label').textContent === casesCountLabel);
             const numberBox = $(row.querySelector('.dx-numberbox')).dxNumberBox('instance');
             numberBox.option('value', 3);
         });

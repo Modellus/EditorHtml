@@ -42,3 +42,32 @@ These rules apply to all code changes in this repository.
 - Prefer optional chaining (`?.`) instead of `&&` null-check chains.
 - Do not add defensive validation guards in UI event handlers (e.g. `!event`, `!event.itemData`, `!data`, `!id`).
 - In UI event handlers, read callback data directly from the control contract.
+
+## Running Tests
+
+The suite is 807 tests across 69 spec files. Never run all of it to check one change.
+
+- While iterating on a failure, run `npx playwright test --last-failed`.
+- After a change, run only the specs covering the area touched, by path:
+  `npx playwright test tests/term-units.spec.js`. Narrow to one case with `-g "<test name>"`.
+- Run the full suite once, at the end, and run it in the background rather than waiting on it.
+  CI runs it too, sharded four ways, on every push and pull request.
+- Always pass `--reporter=line`. Never open the HTML report.
+- `--only-changed` does not work here: the specs reach the app over HTTP and do not import
+  `scripts/`, so Playwright cannot map a source change to a spec. Choose specs by name.
+- Before reading a failure as a regression, run that spec alone. `main` is green, but a handful of
+  specs are load-sensitive and can lose a race on a busy machine; CI retries twice for that reason.
+- Never let a test reach the real API. Answer the endpoint with `page.route`, the way the catalogue
+  specs do: a test that talks to the live service is decided by what the service happens to hold.
+
+The config runs `fullyParallel` at 8 workers: the full suite takes ~5-7 minutes, a single spec seconds.
+If a spec genuinely shares state across its tests, give that one file
+`test.describe.configure({ mode: 'serial' })` rather than turning off the global setting.
+
+## Waiting in Tests
+
+- Do not add `page.waitForTimeout()`. A fixed sleep is the main cause of slowness and of the
+  suite's flakiness under load — it either wastes time or loses the race.
+- Wait on the condition instead: `page.waitForFunction()`, `expect(locator).toBeVisible()`,
+  or `expect(...).toPass()` / `expect.poll()` around an assertion that has to settle.
+- When editing a spec that already sleeps, convert the sleeps in the part being touched.

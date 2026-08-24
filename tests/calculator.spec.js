@@ -48,7 +48,7 @@ test.describe('Cases expression values in table', () => {
             latexVisitor.build();
             return xTerm.expressionLatex;
         });
-        expect(expressionLatex).toBe('v');
+        expect(expressionLatex).toBe('x=v');
     });
 
     test('Calculator parse rebuilds term latex after parsing expressions', async ({ page }) => {
@@ -76,7 +76,7 @@ test.describe('Cases expression values in table', () => {
             const fitTerm = calculator.system.getTerm('x.fit');
             return fitTerm?.expressionLatex ?? null;
         });
-        expect(regressionLatex).toBe('x.fit.m1 \\cdot t + x.fit.m2');
+        expect(regressionLatex).toBe('\\widehat{x}=m1 \\cdot t + m2');
     });
 
     test('x is 1 at t=0, NaN from 0.1 to 1.9, and matches y from t>=2', async ({ page }) => {
