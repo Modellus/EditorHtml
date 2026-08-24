@@ -111,7 +111,8 @@ async function openObjectsNode(page) {
 }
 
 async function openObjectEditor(page) {
-    await page.click('#nav-add-object');
+    await page.click('#nav-upload');
+    await page.click('.mdl-nav-menu-dropdown .dx-item:has-text("Add Object")');
     await page.waitForSelector('#object-definition-editor');
 }
 
@@ -132,7 +133,7 @@ test.describe('catalogue objects', () => {
         await stubCatalogApi(page, createState());
         await openCatalog(page);
         const branch = await page.evaluate(() => {
-            const assets = window.modelsApp.getTreeData().find(item => item.id === 'assets');
+            const assets = window.modelsApp.findTreeItemById(window.modelsApp.getTreeData(), 'assets');
             const objects = assets.items.find(item => item.id === 'catalog-objects');
             return { assetsText: assets.text, objectsText: objects.text, children: objects.items.map(item => item.id) };
         });

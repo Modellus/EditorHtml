@@ -32,6 +32,28 @@
         <div id="drawer-shell" class="drawer-shell">
           <div id="drawer" class="drawer-panel"></div>
           <div class="drawer-content">
+            <div id="content-header" class="content-header">
+              <div class="content-heading">
+                <h1 id="content-title" class="content-title"></h1>
+                <div id="content-count" class="content-count"></div>
+              </div>
+              <div class="content-tools">
+                <div class="content-search">
+                  <i class="fa-light fa-magnifying-glass content-search-icon" aria-hidden="true"></i>
+                  <input id="content-search-input" class="content-search-input" type="text" autocomplete="off">
+                </div>
+                <button id="content-filter-button" class="content-tool-button" type="button">
+                  <i class="fa-light fa-filter" aria-hidden="true"></i>
+                  <span id="content-filter-label"></span>
+                  <span id="content-filter-badge" class="content-filter-badge"></span>
+                </button>
+                <div id="content-sort" class="content-sort"></div>
+                <div class="content-view-toggle">
+                  <button id="content-view-grid" class="content-view-button is-active" type="button"><i class="fa-light fa-grid-2" aria-hidden="true"></i></button>
+                  <button id="content-view-list" class="content-view-button" type="button"><i class="fa-light fa-list" aria-hidden="true"></i></button>
+                </div>
+              </div>
+            </div>
             <div class="card-view-shell">
               <div id="models-card-view" class="card-view"></div>
             </div>

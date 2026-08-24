@@ -30,6 +30,8 @@ const treeNodeIds = {
   catalogObjects: "catalog-objects",
   catalogObjectsEducation: "catalog-objects-education",
   catalogObjectsSciences: "catalog-objects-sciences",
+  discover: "discover",
+  system: "system",
   samples: "samples",
   samplesModels: "samples-models",
   samplesEducation: "samples-education",
@@ -82,13 +84,29 @@ class ModelsApp {
       drawerShell: document.getElementById("drawer-shell"),
       drawerHost: document.getElementById("drawer"),
       cardView: document.getElementById("models-card-view"),
+      contentHeader: document.getElementById("content-header"),
+      contentTitle: document.getElementById("content-title"),
+      contentCount: document.getElementById("content-count"),
+      searchInput: document.getElementById("content-search-input"),
+      filterButton: document.getElementById("content-filter-button"),
+      filterLabel: document.getElementById("content-filter-label"),
+      filterBadge: document.getElementById("content-filter-badge"),
+      sortHost: document.getElementById("content-sort"),
+      viewGridButton: document.getElementById("content-view-grid"),
+      viewListButton: document.getElementById("content-view-list"),
       toolbar: null
     };
     this.state = {
       session: this.userSdk.readSession(),
       user: this.userSdk.readUser(),
-      selectedTreeNodeId: treeNodeIds.myPersonal
+      selectedTreeNodeId: treeNodeIds.myPersonal,
+      sortMode: "updated",
+      viewMode: "grid",
+      filters: { educationLevelId: "", scienceId: "", modelKind: "" }
     };
+    this.activeFeed = null;
+    this.contentSortInstance = null;
+    this.contentFilterPopoverInstance = null;
     this.personalModels = [];
     this.favoriteModels = [];
     this.libraryModels = [];
@@ -172,8 +190,8 @@ class ModelsApp {
     this.charactersData = [];
     this.initNavToolbar();
     this.cacheNavElements();
-    this.bindNav();
     this.initDrawer();
+    this.initContentHeader();
     this.initDeletePopup();
     this.userSdk.refreshState(this.state);
     this.normalizeAuthenticationState();
@@ -217,6 +235,8 @@ class ModelsApp {
     // Catalog/Samples model branches are selectable: clicking a parent branch
     // loads every model inside it via the API.
     return nodeId === treeNodeIds.myModels
+      || nodeId === treeNodeIds.discover
+      || nodeId === treeNodeIds.system
       || nodeId === treeNodeIds.maintenance;
   }
 
@@ -238,6 +258,27 @@ class ModelsApp {
       closeOnOutsideClick: true
     });
   }
+  buildUploadMenuItems() {
+    return [
+      { id: "upload-video", text: this.translations.get("Upload Video"), icon: "fa-light fa-video", iconColor: "#e11d48", action: () => this.showUploadVideoPopup() },
+      { id: "upload-data", text: this.translations.get("Upload Data"), icon: "fa-light fa-table", iconColor: "#d97706", action: () => this.showDataPopup() },
+      { id: "add-character", text: this.translations.get("Add Character"), icon: "fa-light fa-person-running", iconColor: "#7c3aed", action: () => this.showCharacterPopup() },
+      { id: "add-object", text: this.translations.get("Add Object"), icon: "fa-light fa-shapes", iconColor: "#0891b2", action: () => this.showObjectPopup() }
+    ];
+  }
+
+  buildCreateMenuItems() {
+    const items = [{ id: "create-model", text: this.translations.get("Create Model"), icon: "fa-light fa-earth-africa", iconColor: "#2563eb", action: () => this.createModel() }];
+    if (this.canAccessMaintenance())
+      items.push({ id: "create-notebook", text: this.translations.get("Create Notebook"), icon: "fa-light fa-notebook", iconColor: "#059669", action: () => this.createNotebook() });
+    return items;
+  }
+
+  renderNavMenuItem(itemData, itemElement) {
+    const host = itemElement.get(0);
+    host.innerHTML = `<span class="mdl-menu-item-content"><i class="${itemData.icon} mdl-menu-icon" style="color:${itemData.iconColor}"></i>${itemData.text}</span>`;
+  }
+
   initNavToolbar() {
     if (!this.elements.navToolbar || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxToolbar) return;
     const isAuthenticated = this.isAuthenticated();
@@ -246,94 +287,42 @@ class ModelsApp {
       items: [
         {
           location: "after",
-          widget: "dxButton",
+          widget: "dxDropDownButton",
           visible: isAuthenticated,
           options: {
-            elementAttr: { id: "nav-upload-video", title: "Upload Video" },
-            stylingMode: "text",
+            elementAttr: { id: "nav-upload", class: "nav-upload-button" },
+            items: this.buildUploadMenuItems(),
+            keyExpr: "id",
+            displayExpr: "text",
+            stylingMode: "outlined",
+            showArrowIcon: false,
+            dropDownOptions: { width: "auto", minWidth: 190, wrapperAttr: { class: "mdl-nav-menu-dropdown" } },
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderNavMenuItem(itemData, itemElement),
+            onItemClick: event => event.itemData.action(),
             template: (_, contentElement) => {
               const host = contentElement.get(0);
-              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-video mdl-nav-action-icon" style="color:#e11d48;font-size:1rem"></i><i class="fa-solid fa-video mdl-nav-action-icon-hover" style="color:#e11d48;font-size:1rem"></i><span>Upload Video</span></span>`;
+              host.innerHTML = `<span class="nav-button-content"><i class="fa-light fa-arrow-up-from-bracket" aria-hidden="true"></i><span>${this.translations.get("Upload")}</span></span>`;
             }
           }
         },
         {
           location: "after",
-          widget: "dxButton",
+          widget: "dxDropDownButton",
           visible: isAuthenticated,
           options: {
-            elementAttr: { id: "nav-upload-data", title: "Upload Data" },
-            stylingMode: "text",
+            elementAttr: { id: "nav-create", class: "nav-create-button" },
+            items: this.buildCreateMenuItems(),
+            keyExpr: "id",
+            displayExpr: "text",
+            stylingMode: "contained",
+            type: "default",
+            showArrowIcon: false,
+            dropDownOptions: { width: "auto", minWidth: 190, wrapperAttr: { class: "mdl-nav-menu-dropdown" } },
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderNavMenuItem(itemData, itemElement),
+            onItemClick: event => event.itemData.action(),
             template: (_, contentElement) => {
               const host = contentElement.get(0);
-              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-table mdl-nav-action-icon" style="color:#d97706;font-size:1rem"></i><i class="fa-solid fa-table mdl-nav-action-icon-hover" style="color:#d97706;font-size:1rem"></i><span>Upload Data</span></span>`;
-            }
-          }
-        },
-        {
-          location: "after",
-          widget: "dxButton",
-          visible: isAuthenticated,
-          options: {
-            elementAttr: { id: "nav-add-character", title: "Add Character" },
-            stylingMode: "text",
-            template: (_, contentElement) => {
-              const host = contentElement.get(0);
-              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-person-running mdl-nav-action-icon" style="color:#7c3aed;font-size:1rem"></i><i class="fa-solid fa-person-running mdl-nav-action-icon-hover" style="color:#7c3aed;font-size:1rem"></i><span>Add Character</span></span>`;
-            }
-          }
-        },
-        {
-          location: "after",
-          widget: "dxButton",
-          visible: isAuthenticated,
-          options: {
-            elementAttr: { id: "nav-add-object", title: "Add Object" },
-            stylingMode: "text",
-            template: (_, contentElement) => {
-              const host = contentElement.get(0);
-              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-shapes mdl-nav-action-icon" style="color:#0891b2;font-size:1rem"></i><i class="fa-solid fa-shapes mdl-nav-action-icon-hover" style="color:#0891b2;font-size:1rem"></i><span>Add Object</span></span>`;
-            }
-          }
-        },
-        {
-          location: "after",
-          widget: "dxButton",
-          visible: isAuthenticated,
-          options: {
-            elementAttr: { id: "nav-new-model", title: "Create Model" },
-            stylingMode: "text",
-            template: (_, contentElement) => {
-              const host = contentElement.get(0);
-              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-earth-africa mdl-nav-action-icon" style="color:#2563eb;font-size:1rem"></i><i class="fa-solid fa-earth-africa mdl-nav-action-icon-hover" style="color:#2563eb;font-size:1rem"></i><span>Create Model</span></span>`;
-            }
-          }
-        },
-        {
-          location: "after",
-          widget: "dxButton",
-          visible: isAuthenticated,
-          options: {
-            elementAttr: { id: "nav-new-notebook", title: "Create Notebook" },
-            stylingMode: "text",
-            template: (_, contentElement) => {
-              const host = contentElement.get(0);
-              host.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px"><i class="fa-light fa-notebook mdl-nav-action-icon" style="color:#059669;font-size:1rem"></i><i class="fa-solid fa-notebook mdl-nav-action-icon-hover" style="color:#059669;font-size:1rem"></i><span>Create Notebook</span></span>`;
-            }
-          }
-        },
-        {
-          location: "after",
-          widget: "dxButton",
-          visible: isAuthenticated,
-          options: {
-            elementAttr: { id: "nav-notifications", title: "Notifications" },
-            stylingMode: "text",
-            onClick: () => this.navigateToNotifications(),
-            template: (_, contentElement) => {
-              const host = contentElement.get(0);
-              host.innerHTML = `<span class="notification-bell"><i class="fa-light fa-bell mdl-nav-icon mdl-nav-action-icon"></i><i class="fa-solid fa-bell mdl-nav-icon mdl-nav-action-icon-hover"></i></span>`;
-              this.bellElement = host.querySelector(".notification-bell");
+              host.innerHTML = `<span class="nav-button-content"><span>${this.translations.get("Create")}</span><i class="fa-light fa-chevron-down nav-button-caret" aria-hidden="true"></i></span>`;
             }
           }
         },
@@ -350,6 +339,7 @@ class ModelsApp {
             ],
             keyExpr: "id",
             displayExpr: "text",
+            showArrowIcon: false,
             onItemClick: event => {
               if (event.itemData.id === "profile")
                 this.profileController.show();
@@ -370,6 +360,22 @@ class ModelsApp {
         },
         {
           location: "after",
+          widget: "dxButton",
+          visible: isAuthenticated,
+          options: {
+            elementAttr: { id: "nav-notifications", title: this.translations.get("Notifications") },
+            stylingMode: "text",
+            onClick: () => this.navigateToNotifications(),
+            template: (_, contentElement) => {
+              const host = contentElement.get(0);
+              host.innerHTML = `<span class="notification-bell"><i class="fa-light fa-bell mdl-nav-icon mdl-nav-action-icon"></i><i class="fa-solid fa-bell mdl-nav-icon mdl-nav-action-icon-hover"></i></span>`;
+              this.bellElement = host.querySelector(".notification-bell");
+              this.updateBellBadge();
+            }
+          }
+        },
+        {
+          location: "after",
           visible: !isAuthenticated,
           widget: "dxButton",
           options: {
@@ -385,12 +391,8 @@ class ModelsApp {
     });
   }
   cacheNavElements() {
-    this.elements.navNewModel = document.getElementById("nav-new-model");
-    this.elements.navNewNotebook = document.getElementById("nav-new-notebook");
-    this.elements.navUploadVideo = document.getElementById("nav-upload-video");
-    this.elements.navUploadData = document.getElementById("nav-upload-data");
-    this.elements.navAddCharacter = document.getElementById("nav-add-character");
-    this.elements.navAddObject = document.getElementById("nav-add-object");
+    this.elements.navUpload = document.getElementById("nav-upload");
+    this.elements.navCreate = document.getElementById("nav-create");
     this.elements.userMenu = document.getElementById("user-menu");
     this.elements.navLogin = document.getElementById("nav-login");
     this.userSdk.applyUserMenu(this.elements.userMenu, this.state.session);
@@ -455,7 +457,6 @@ class ModelsApp {
         pager: { visible: false },
         noDataText: this.translations.get("No models found."),
         onContentReady: () => this.bindFeedScroll(this.modelsFeed),
-        onOptionChanged: event => this.handleFeedSearchChange(this.modelsFeed, event),
         showBorders: false,
       focusStateEnabled: false,
       hoverStateEnabled: false,
@@ -464,10 +465,10 @@ class ModelsApp {
       columnHidingEnabled: true,
       headerPanel: { visible: false },
       groupPanel: { visible: false },
-      searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search by name, author, science…") },
+      searchPanel: { visible: false },
       grouping: { autoExpandAll: false, contextMenuEnabled: false },
       sorting: { mode: "none" },
-      cardsPerRow: 4,
+      cardsPerRow: this.getCardsPerRow(),
       cardMinWidth: 125,
       columns: [
         { dataField: "title", caption: this.translations.get("Title") },
@@ -503,12 +504,9 @@ class ModelsApp {
         const escapedDescriptionLabel = hasDescription ? this.escapeHtml(descriptionText) : this.escapeHtml(this.translations.get("No description provided."));
         const creatorName = this.escapeHtml(data.creator_name || "");
         const creatorAvatar = data.creator_avatar || "";
-        const createdDate = this.formatShortDate(data.created_at);
-        const modifiedDate = this.formatShortDate(data.updated_at);
-        const modelKind = data.model_kind === "notebook" ? "notebook" : "board";
-        const kindIcon = modelKind === "notebook" ? "fa-light fa-notebook" : "fa-light fa-earth-africa";
+        const modelKind = this.getModelKind(data);
         const kindLabel = modelKind === "notebook" ? this.translations.get("Notebook") : this.translations.get("Board");
-        const kindBadgeMarkup = `<span class="card-kind-badge card-kind-badge--${modelKind}" title="${kindLabel}"><i class="${kindIcon}" aria-hidden="true"></i>${kindLabel}</span>`;
+        const kindBadgeMarkup = `<span class="card-kind-badge card-kind-badge--${modelKind}" title="${kindLabel}">${kindLabel}</span>`;
         const taxonomyDropDownMarkup = `
           <div class="card-thumb-dropdowns">
             <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
@@ -537,23 +535,22 @@ class ModelsApp {
                 ${kindBadgeMarkup}
               </div>
               <p class="card-desc${hasDescription ? "" : " card-desc--empty"}">${escapedDescriptionLabel}</p>
-              ${isDeleted ? "" : `<div class="card-meta-actions">
-                <button class="like-button${isLiked ? " is-liked" : ""}" aria-label="${isLiked ? this.translations.get("Unlike action") : this.translations.get("Like action")}">
-                  <i class="${isLiked ? "fa-solid fa-heart like-icon" : "fa-light fa-heart like-icon"}" aria-hidden="true"></i>
-                  ${likesCount > 0 ? `<span class="like-count">${likesCount}</span>` : ""}
-                </button>
-                <button class="favorite-button${isFavorite ? " is-favorite" : ""}" aria-label="${isFavorite ? this.translations.get("Unfavorite action") : this.translations.get("Favorite action")}">
-                  <i class="${isFavorite ? "fa-solid fa-star favorite-icon" : "fa-regular fa-star favorite-icon"}" aria-hidden="true"></i>
-                </button>
-                <button class="pick-button${isPicked ? " is-picked" : ""}" aria-label="${isPicked ? this.translations.get("Remove from library") : this.translations.get("Add to library")}" title="${isPicked ? this.translations.get("In library") : this.translations.get("Add to library")}">
-                  <i class="${isPicked ? "fa-solid fa-bookmark pick-icon" : "fa-regular fa-bookmark pick-icon"}" aria-hidden="true"></i>
-                </button>
-              </div>`}
-              <div class="card-meta">
+              <div class="card-footer">
                 ${creatorName ? `<div class="card-creator">${Utils.buildAvatarMarkup(data.creator_name, creatorAvatar, { size: 18, className: "card-creator-avatar" })}<span class="card-creator-name">${creatorName}</span></div>` : ""}
-                <div class="card-meta-row">
-                  ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
+                <div class="card-footer-actions">
                   <span class="card-stats">${this.buildModelCardStatsMarkup(this.getModelUsageCount(data), this.getModelDistinctUsers(data))}</span>
+                  ${isDeleted ? "" : `<div class="card-meta-actions">
+                    <button class="like-button${isLiked ? " is-liked" : ""}" aria-label="${isLiked ? this.translations.get("Unlike action") : this.translations.get("Like action")}" title="${isLiked ? this.translations.get("Unlike action") : this.translations.get("Like action")}">
+                      <i class="${isLiked ? "fa-solid fa-heart like-icon" : "fa-light fa-heart like-icon"}" aria-hidden="true"></i>
+                      ${likesCount > 0 ? `<span class="like-count">${likesCount}</span>` : ""}
+                    </button>
+                    <button class="favorite-button${isFavorite ? " is-favorite" : ""}" aria-label="${isFavorite ? this.translations.get("Unfavorite action") : this.translations.get("Favorite action")}" title="${isFavorite ? this.translations.get("Unfavorite action") : this.translations.get("Favorite action")}">
+                      <i class="${isFavorite ? "fa-solid fa-star favorite-icon" : "fa-regular fa-star favorite-icon"}" aria-hidden="true"></i>
+                    </button>
+                    <button class="pick-button${isPicked ? " is-picked" : ""}" aria-label="${isPicked ? this.translations.get("Remove from library") : this.translations.get("Add to library")}" title="${isPicked ? this.translations.get("In library") : this.translations.get("Add to library")}">
+                      <i class="${isPicked ? "fa-solid fa-bookmark pick-icon" : "fa-regular fa-bookmark pick-icon"}" aria-hidden="true"></i>
+                    </button>
+                  </div>`}
                 </div>
               </div>
             </div>
@@ -655,7 +652,7 @@ class ModelsApp {
         }
       }
     });
-    this.modelsFeed = this.createFeed(this.cardViewInstance, (search, offset, limit) => this.fetchModelsFeedPage(search, offset, limit));
+    this.modelsFeed = this.createFeed(this.cardViewInstance, (search, offset, limit) => this.fetchModelsFeedPage(search, offset, limit), this.translations.get("models"));
   }
 
   disposeCardView() {
@@ -783,7 +780,6 @@ class ModelsApp {
     this.elements.cardView.innerHTML = "";
     this.characterCardViewInstance = new CardView(this.elements.cardView, {
       onContentReady: () => this.bindFeedScroll(this.charactersFeed),
-      onOptionChanged: event => this.handleFeedSearchChange(this.charactersFeed, event),
       dataSource: [],
       height: "100%",
       repaintChangesOnly: true,
@@ -799,10 +795,10 @@ class ModelsApp {
       columnHidingEnabled: true,
       headerPanel: { visible: false },
       groupPanel: { visible: false },
-      searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search…") },
+      searchPanel: { visible: false },
       grouping: { autoExpandAll: false, contextMenuEnabled: false },
       sorting: { mode: "none" },
-      cardsPerRow: 4,
+      cardsPerRow: this.getCardsPerRow(),
       cardMinWidth: 125,
       columns: [
         { dataField: "title", caption: this.translations.get("Title") },
@@ -871,7 +867,7 @@ class ModelsApp {
           });
       }
     });
-    this.charactersFeed = this.createFeed(this.characterCardViewInstance, (search, offset, limit) => this.fetchCharactersFeedPage(search, offset, limit));
+    this.charactersFeed = this.createFeed(this.characterCardViewInstance, (search, offset, limit) => this.fetchCharactersFeedPage(search, offset, limit), this.translations.get("characters"));
   }
 
   ensureVideosCardView() {
@@ -880,7 +876,6 @@ class ModelsApp {
     this.elements.cardView.innerHTML = "";
     this.videosCardViewInstance = new CardView(this.elements.cardView, {
       onContentReady: () => this.bindFeedScroll(this.videosFeed),
-      onOptionChanged: event => this.handleFeedSearchChange(this.videosFeed, event),
       dataSource: [],
       height: "100%",
       repaintChangesOnly: true,
@@ -896,10 +891,10 @@ class ModelsApp {
       columnHidingEnabled: true,
       headerPanel: { visible: false },
       groupPanel: { visible: false },
-      searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search…") },
+      searchPanel: { visible: false },
       grouping: { autoExpandAll: false, contextMenuEnabled: false },
       sorting: { mode: "none" },
-      cardsPerRow: 4,
+      cardsPerRow: this.getCardsPerRow(),
       cardMinWidth: 125,
       columns: [
         { dataField: "title", caption: this.translations.get("Title") },
@@ -1046,7 +1041,7 @@ class ModelsApp {
         }
       }
     });
-    this.videosFeed = this.createFeed(this.videosCardViewInstance, (search, offset, limit) => this.fetchVideosFeedPage(search, offset, limit));
+    this.videosFeed = this.createFeed(this.videosCardViewInstance, (search, offset, limit) => this.fetchVideosFeedPage(search, offset, limit), this.translations.get("videos"));
   }
 
   ensureObjectsCardView() {
@@ -1055,7 +1050,6 @@ class ModelsApp {
     this.elements.cardView.innerHTML = "";
     this.objectsCardViewInstance = new CardView(this.elements.cardView, {
       onContentReady: () => this.bindFeedScroll(this.objectsFeed),
-      onOptionChanged: event => this.handleFeedSearchChange(this.objectsFeed, event),
       dataSource: [],
       height: "100%",
       repaintChangesOnly: true,
@@ -1071,10 +1065,10 @@ class ModelsApp {
       columnHidingEnabled: true,
       headerPanel: { visible: false },
       groupPanel: { visible: false },
-      searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search…") },
+      searchPanel: { visible: false },
       grouping: { autoExpandAll: false, contextMenuEnabled: false },
       sorting: { mode: "none" },
-      cardsPerRow: 4,
+      cardsPerRow: this.getCardsPerRow(),
       cardMinWidth: 125,
       columns: [
         { dataField: "title", caption: this.translations.get("Title") },
@@ -1221,7 +1215,7 @@ class ModelsApp {
         }
       }
     });
-    this.objectsFeed = this.createFeed(this.objectsCardViewInstance, (search, offset, limit) => this.fetchObjectsFeedPage(search, offset, limit));
+    this.objectsFeed = this.createFeed(this.objectsCardViewInstance, (search, offset, limit) => this.fetchObjectsFeedPage(search, offset, limit), this.translations.get("objects"));
   }
 
   ensureDataCardView() {
@@ -1230,7 +1224,6 @@ class ModelsApp {
     this.elements.cardView.innerHTML = "";
     this.dataCardViewInstance = new CardView(this.elements.cardView, {
       onContentReady: () => this.bindFeedScroll(this.dataSetsFeed),
-      onOptionChanged: event => this.handleFeedSearchChange(this.dataSetsFeed, event),
       dataSource: [],
       height: "100%",
       repaintChangesOnly: true,
@@ -1246,10 +1239,10 @@ class ModelsApp {
       columnHidingEnabled: true,
       headerPanel: { visible: false },
       groupPanel: { visible: false },
-      searchPanel: { visible: true, width: 280, placeholder: this.translations.get("Search…") },
+      searchPanel: { visible: false },
       grouping: { autoExpandAll: false, contextMenuEnabled: false },
       sorting: { mode: "none" },
-      cardsPerRow: 4,
+      cardsPerRow: this.getCardsPerRow(),
       cardMinWidth: 125,
       columns: [
         { dataField: "title", caption: this.translations.get("Title") },
@@ -1396,7 +1389,7 @@ class ModelsApp {
         }
       }
     });
-    this.dataSetsFeed = this.createFeed(this.dataCardViewInstance, (search, offset, limit) => this.fetchDataSetsFeedPage(search, offset, limit));
+    this.dataSetsFeed = this.createFeed(this.dataCardViewInstance, (search, offset, limit) => this.fetchDataSetsFeedPage(search, offset, limit), this.translations.get("data sets"));
   }
 
   showVideosCardView() {
@@ -1482,6 +1475,7 @@ class ModelsApp {
   renderAssets() {
     this.showCharacterCardView();
     this.charactersFeed.fetchPage = (search, offset, limit) => this.fetchAssetsFeedPage(search, offset, limit);
+    this.charactersFeed.noun = this.translations.get("assets");
     this.charactersFeed.key = ["asset_type", "id"];
     this.startFeed(this.charactersFeed);
   }
@@ -1491,7 +1485,9 @@ class ModelsApp {
     if (!feed || !feed.instance) return;
     feed.search = "";
     if (feed.searchTimer) { clearTimeout(feed.searchTimer); feed.searchTimer = null; }
-    feed.instance.option("searchPanel.text", "");
+    this.activeFeed = feed;
+    this.elements.searchInput.value = "";
+    this.applyViewMode(feed.instance);
     this.bindFeedScroll(feed);
     this.reloadFeed(feed);
   }
@@ -3653,6 +3649,7 @@ class ModelsApp {
   }
 
   renderCurrentTreeNode() {
+    this.updateContentHeader();
     if (this.state.selectedTreeNodeId !== treeNodeIds.maintenanceDashboard)
       this.disposeUsageDashboard();
     if (this.state.selectedTreeNodeId === treeNodeIds.maintenanceDashboard) {
@@ -3939,8 +3936,8 @@ class ModelsApp {
   // dxCardView does not drive remote paging on its own, so each card view is fed
   // by a "feed": an ArrayStore that we append 20-item pages into as the user
   // scrolls, plus a debounced server search.
-  createFeed(instance, fetchPage) {
-    return { instance, fetchPage, key: "id", store: null, offset: 0, total: 0, loading: false, search: "", done: false, searchTimer: null, scrollable: null, scrollHandler: null };
+  createFeed(instance, fetchPage, noun) {
+    return { instance, fetchPage, noun, key: "id", store: null, offset: 0, total: 0, loading: false, search: "", done: false, searchTimer: null, scrollable: null, scrollHandler: null };
   }
 
   getFeedScrollable(feed) {
@@ -3975,6 +3972,7 @@ class ModelsApp {
       feed.offset += rows.length;
       if (rows.length === 0 || feed.offset >= feed.total)
         feed.done = true;
+      this.updateContentCount(feed);
     } catch (error) {
       if (error?.message?.includes("401") && this.isAuthenticated())
         this.userSdk.logout();
@@ -4000,10 +3998,237 @@ class ModelsApp {
       this.loadFeedNext(feed);
   }
 
-  handleFeedSearchChange(feed, event) {
-    if (!feed || event.fullName !== "searchPanel.text") return;
-    const value = event.value || "";
-    if (value === feed.search) return;
+  initContentHeader() {
+    this.elements.searchInput.placeholder = this.translations.get("Search by name, author, science…");
+    this.elements.filterLabel.textContent = this.translations.get("Filter");
+    this.elements.viewGridButton.title = this.translations.get("Grid view");
+    this.elements.viewListButton.title = this.translations.get("List view");
+    this.elements.searchInput.addEventListener("input", event => this.applyContentSearch(event.target.value));
+    this.elements.filterButton.addEventListener("click", () => this.toggleContentFilters());
+    this.elements.viewGridButton.addEventListener("click", () => this.setViewMode("grid"));
+    this.elements.viewListButton.addEventListener("click", () => this.setViewMode("list"));
+    this.contentSortInstance = new DevExpress.ui.dxDropDownButton(this.elements.sortHost, {
+      items: this.buildSortItems(),
+      keyExpr: "id",
+      displayExpr: "text",
+      useSelectMode: true,
+      selectedItemKey: this.state.sortMode,
+      stylingMode: "outlined",
+      elementAttr: { class: "content-sort-button" },
+      dropDownOptions: { width: "auto", minWidth: 200, wrapperAttr: { class: "mdl-nav-menu-dropdown" } },
+      onItemClick: event => this.setSortMode(event.itemData.id)
+    });
+    this.updateContentFilterBadge();
+  }
+
+  buildSortItems() {
+    return [
+      { id: "updated", text: this.translations.get("Recently updated") },
+      { id: "created", text: this.translations.get("Recently created") },
+      { id: "used", text: this.translations.get("Most used") },
+      { id: "title", text: this.translations.get("Title A–Z") }
+    ];
+  }
+
+  updateContentHeader() {
+    const selectedNodeId = this.state.selectedTreeNodeId;
+    const isCardFeed = this.isCardFeedNodeId(selectedNodeId);
+    const isModelsFeed = this.isModelsFeedNodeId(selectedNodeId);
+    this.elements.contentTitle.textContent = this.getSelectedTreeNodeLabel();
+    this.elements.contentHeader.classList.toggle("content-header--tools-hidden", !isCardFeed);
+    this.elements.contentHeader.classList.toggle("content-header--models-only-hidden", !isModelsFeed);
+    if (!isCardFeed) {
+      this.activeFeed = null;
+      this.elements.contentCount.textContent = "";
+    }
+  }
+
+  updateContentCount(feed) {
+    if (feed !== this.activeFeed) return;
+    this.elements.contentCount.textContent = `${feed.total} ${feed.noun}`;
+  }
+
+  getSelectedTreeNodeLabel() {
+    const node = this.findTreeItemById(this.getTreeData(), this.state.selectedTreeNodeId);
+    return node?.label || node?.text || "";
+  }
+
+  findTreeItemById(items, nodeId) {
+    if (!Array.isArray(items)) return null;
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index];
+      if (item.id === nodeId) return item;
+      const match = this.findTreeItemById(item.items, nodeId);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  isMaintenanceNodeId(nodeId) {
+    return typeof nodeId === "string" && nodeId.startsWith("maintenance");
+  }
+
+  isCardFeedNodeId(nodeId) {
+    return !this.isMaintenanceNodeId(nodeId);
+  }
+
+  isModelsFeedNodeId(nodeId) {
+    if (this.isMaintenanceNodeId(nodeId)) return false;
+    if (nodeId === treeNodeIds.assets) return false;
+    return !this.isVideoNodeId(nodeId) && !this.isDataNodeId(nodeId) && !this.isCharacterNodeId(nodeId) && !this.isObjectNodeId(nodeId);
+  }
+
+  setSortMode(sortMode) {
+    if (sortMode === this.state.sortMode) return;
+    this.state.sortMode = sortMode;
+    this.reloadFeed(this.activeFeed);
+  }
+
+  setViewMode(viewMode) {
+    if (viewMode === this.state.viewMode) return;
+    this.state.viewMode = viewMode;
+    this.elements.viewGridButton.classList.toggle("is-active", viewMode === "grid");
+    this.elements.viewListButton.classList.toggle("is-active", viewMode === "list");
+    this.applyViewMode(this.activeFeed?.instance);
+  }
+
+  applyViewMode(cardViewInstance) {
+    this.elements.cardView.classList.toggle("card-view--list", this.state.viewMode === "list");
+    if (cardViewInstance)
+      cardViewInstance.option("cardsPerRow", this.getCardsPerRow());
+  }
+
+  getCardsPerRow() {
+    return this.state.viewMode === "list" ? 1 : 4;
+  }
+
+  toggleContentFilters() {
+    const popover = this.ensureContentFilterPopover();
+    popover.option("visible", !popover.option("visible"));
+  }
+
+  ensureContentFilterPopover() {
+    if (this.contentFilterPopoverInstance) return this.contentFilterPopoverInstance;
+    const popoverHost = this.createNodeFromMarkup(`<div class="content-filter-popover-host"></div>`);
+    document.body.appendChild(popoverHost);
+    this.contentFilterPopoverInstance = new DevExpress.ui.dxPopover(popoverHost, {
+      target: this.elements.filterButton,
+      position: "bottom",
+      width: 260,
+      shading: false,
+      hideOnOutsideClick: true,
+      wrapperAttr: { class: "content-filter-popover" },
+      contentTemplate: contentElement => this.renderContentFilters(contentElement.get(0))
+    });
+    return this.contentFilterPopoverInstance;
+  }
+
+  renderContentFilters(host) {
+    host.innerHTML = `
+      <div class="content-filter-panel">
+        <label class="content-filter-field">
+          <span class="content-filter-field-label">${this.translations.get("Education Levels")}</span>
+          <div class="content-filter-education"></div>
+        </label>
+        <label class="content-filter-field">
+          <span class="content-filter-field-label">${this.translations.get("Sciences")}</span>
+          <div class="content-filter-science"></div>
+        </label>
+        <label class="content-filter-field">
+          <span class="content-filter-field-label">${this.translations.get("Kind")}</span>
+          <div class="content-filter-kind"></div>
+        </label>
+        <button class="content-filter-clear" type="button">${this.translations.get("Clear filters")}</button>
+      </div>
+    `;
+    const allOption = { id: "", name: this.translations.get("All") };
+    new DevExpress.ui.dxSelectBox(host.querySelector(".content-filter-education"), {
+      items: [allOption].concat(this.educationLookupOptions),
+      valueExpr: "id",
+      displayExpr: "name",
+      value: this.state.filters.educationLevelId,
+      onValueChanged: event => this.setContentFilter("educationLevelId", event.value)
+    });
+    new DevExpress.ui.dxSelectBox(host.querySelector(".content-filter-science"), {
+      items: [allOption].concat(this.scienceLookupOptions),
+      valueExpr: "id",
+      displayExpr: "name",
+      value: this.state.filters.scienceId,
+      onValueChanged: event => this.setContentFilter("scienceId", event.value)
+    });
+    new DevExpress.ui.dxSelectBox(host.querySelector(".content-filter-kind"), {
+      items: [allOption, { id: "board", name: this.translations.get("Board") }, { id: "notebook", name: this.translations.get("Notebook") }],
+      valueExpr: "id",
+      displayExpr: "name",
+      value: this.state.filters.modelKind,
+      onValueChanged: event => this.setContentFilter("modelKind", event.value)
+    });
+    host.querySelector(".content-filter-clear").addEventListener("click", () => this.clearContentFilters());
+  }
+
+  setContentFilter(filterName, filterValue) {
+    if (this.state.filters[filterName] === filterValue) return;
+    this.state.filters[filterName] = filterValue;
+    this.updateContentFilterBadge();
+    this.reloadFeed(this.activeFeed);
+  }
+
+  clearContentFilters() {
+    this.state.filters = { educationLevelId: "", scienceId: "", modelKind: "" };
+    this.updateContentFilterBadge();
+    if (this.contentFilterPopoverInstance)
+      this.contentFilterPopoverInstance.repaint();
+    this.reloadFeed(this.activeFeed);
+  }
+
+  getContentFilterCount() {
+    return Object.values(this.state.filters).filter(filterValue => Boolean(filterValue)).length;
+  }
+
+  updateContentFilterBadge() {
+    const filterCount = this.getContentFilterCount();
+    this.elements.filterBadge.textContent = filterCount ? String(filterCount) : "";
+    this.elements.filterButton.classList.toggle("is-active", filterCount > 0);
+  }
+
+  matchesContentFilters(model) {
+    const filters = this.state.filters;
+    if (filters.educationLevelId && model.education_level_id !== filters.educationLevelId) return false;
+    if (filters.scienceId && model.science_id !== filters.scienceId) return false;
+    return this.matchesModelKindFilter(model);
+  }
+
+  matchesModelKindFilter(model) {
+    if (!this.state.filters.modelKind) return true;
+    return this.getModelKind(model) === this.state.filters.modelKind;
+  }
+
+  getModelKind(model) {
+    return model.model_kind === "notebook" ? "notebook" : "board";
+  }
+
+  getDateValue(value) {
+    const time = new Date(value).getTime();
+    return Number.isFinite(time) ? time : 0;
+  }
+
+  getModelSortComparer() {
+    if (this.state.sortMode === "created")
+      return (left, right) => this.getDateValue(right.createdAt) - this.getDateValue(left.createdAt);
+    if (this.state.sortMode === "used")
+      return (left, right) => this.getModelUsageCount(right) - this.getModelUsageCount(left);
+    if (this.state.sortMode === "title")
+      return (left, right) => String(left.title || "").localeCompare(String(right.title || ""));
+    return (left, right) => this.getDateValue(right.lastModified) - this.getDateValue(left.lastModified);
+  }
+
+  sortModelRows(rows) {
+    return rows.slice().sort(this.getModelSortComparer());
+  }
+
+  applyContentSearch(value) {
+    const feed = this.activeFeed;
+    if (!feed || value === feed.search) return;
     feed.search = value;
     if (feed.searchTimer) clearTimeout(feed.searchTimer);
     feed.searchTimer = setTimeout(() => this.reloadFeed(feed), 300);
@@ -4011,14 +4236,22 @@ class ModelsApp {
 
   fetchModelsFeedPage(search, offset, limit) {
     const source = this.modelsSource || { kind: "remote", filter: {} };
+    const headerFilters = this.state.filters;
     if (source.kind === "local") {
       const all = Array.isArray(source.array) ? source.array : [];
-      const filtered = search ? all.filter(model => this.matchesSearch(model, search)) : all;
-      return Promise.resolve({ items: filtered.slice(offset, offset + limit), total: filtered.length });
+      const matched = all.filter(model => this.matchesContentFilters(model) && (!search || this.matchesSearch(model, search)));
+      const sorted = this.sortModelRows(matched);
+      return Promise.resolve({ items: sorted.slice(offset, offset + limit), total: sorted.length });
     }
     const filter = source.filter || {};
-    return this.apiClient.fetchPublicModelsPage({ search, educationLevelId: filter.educationLevelId, scienceId: filter.scienceId, isSample: filter.isSample, offset, limit })
-      .then(result => ({ items: this.applyModelLookupLabels(result.items), total: result.total }));
+    return this.apiClient.fetchPublicModelsPage({
+      search,
+      educationLevelId: headerFilters.educationLevelId || filter.educationLevelId,
+      scienceId: headerFilters.scienceId || filter.scienceId,
+      isSample: filter.isSample,
+      offset,
+      limit
+    }).then(result => ({ items: this.sortModelRows(this.applyModelLookupLabels(result.items).filter(model => this.matchesModelKindFilter(model))), total: result.total }));
   }
 
   fetchVideosFeedPage(search, offset, limit) {
@@ -4197,6 +4430,7 @@ class ModelsApp {
         const nodeSuffix = entry.lookupId ? `id:${encodeURIComponent(entry.lookupId)}` : `label:${encodeURIComponent(entry.label)}`;
         return {
           id: `${nodePrefix}${nodeSuffix}`,
+          label: entry.label,
           text: `${entry.label} (${entry.count})`,
           nodeType: nodeType,
           count: entry.count,
@@ -4223,6 +4457,7 @@ class ModelsApp {
     const items = (facets.categories || [])
       .map(entry => ({
         id: `catalog-character-category-item:id:${encodeURIComponent(entry.id)}`,
+        label: entry.name || entry.id,
         text: `${entry.name || entry.id} (${entry.count || 0})`,
         nodeType: "catalog-character-category-item",
         iconClass: "fa-light fa-person-running",
@@ -4232,6 +4467,7 @@ class ModelsApp {
     if (facets.uncategorized)
       items.push({
         id: "catalog-character-category-item:uncategorized",
+        label: this.translations.get("Uncategorized"),
         text: `${this.translations.get("Uncategorized")} (${facets.uncategorized})`,
         nodeType: "catalog-character-category-item",
         iconClass: "fa-light fa-person-running",
@@ -4263,14 +4499,14 @@ class ModelsApp {
     if (this.isAuthenticated())
       treeData.push({
         id: treeNodeIds.myModels,
-        text: `${this.translations.get("My Models")} (${this.personalModels.length + this.deletedModels.length})`,
-        iconClass: "fa-light fa-folder-user",
-        iconColor: "#2563eb",
+        text: this.translations.get("My Library"),
+        isGroup: true,
         expanded: true,
         selectable: false,
         items: [
           {
             id: treeNodeIds.myPersonal,
+            label: this.translations.get("Personal"),
             text: `${this.translations.get("Personal")} (${this.personalModels.length})`,
             nodeType: "my-personal",
             iconClass: "fa-light fa-user",
@@ -4278,13 +4514,15 @@ class ModelsApp {
           },
           {
             id: treeNodeIds.myFavorite,
-            text: `${this.translations.get("Favorite")} (${this.favoriteModels.length})`,
+            label: this.translations.get("Favorites"),
+            text: `${this.translations.get("Favorites")} (${this.favoriteModels.length})`,
             nodeType: "my-favorite",
             iconClass: "fa-light fa-star",
             iconColor: "#f59e0b"
           },
           {
             id: treeNodeIds.myLibrary,
+            label: this.translations.get("Library"),
             text: `${this.translations.get("Library")} (${this.libraryModels.length})`,
             nodeType: "my-library",
             iconClass: "fa-light fa-bookmark",
@@ -4292,13 +4530,15 @@ class ModelsApp {
           },
           {
             id: treeNodeIds.myDraft,
-            text: `${this.translations.get("Draft")} (${this.draftModels.length})`,
+            label: this.translations.get("Drafts"),
+            text: `${this.translations.get("Drafts")} (${this.draftModels.length})`,
             nodeType: "my-draft",
             iconClass: "fa-light fa-file-pen",
             iconColor: "#6b7280"
           },
           {
             id: treeNodeIds.myPublished,
+            label: this.translations.get("Published"),
             text: `${this.translations.get("Published")} (${this.publishedModels.length})`,
             nodeType: "my-published",
             iconClass: "fa-light fa-earth-americas",
@@ -4306,7 +4546,8 @@ class ModelsApp {
           },
           {
             id: treeNodeIds.myDeleted,
-            text: `${this.translations.get("Deleted")} (${this.deletedModels.length})`,
+            label: this.translations.get("Trash"),
+            text: `${this.translations.get("Trash")} (${this.deletedModels.length})`,
             nodeType: "my-deleted",
             iconClass: "fa-light fa-trash-can",
             iconColor: "#dc2626"
@@ -4314,237 +4555,283 @@ class ModelsApp {
         ]
       });
     treeData.push({
-        id: treeNodeIds.catalog,
-        text: `${this.translations.get("Community")} (${publicModelsCount})`,
-        iconClass: "fa-light fa-users",
-        iconColor: "#16a34a",
-        expanded: false,
-        items: [
-          {
-            id: treeNodeIds.catalogModels,
-            text: `${this.translations.get("Models")} (${publicModelsCount})`,
-            iconClass: "fa-light fa-cube",
-            iconColor: "#16a34a",
-            expanded: false,
-            items: [
-              {
-                id: treeNodeIds.catalogModelsEducation,
-                text: `${this.translations.get("Education Levels")} (${publicModelsCount})`,
-                iconClass: "fa-light fa-graduation-cap",
-                iconColor: "#8b5cf6",
-                expanded: false,
-                items: educationItems
-              },
-              {
-                id: treeNodeIds.catalogModelsSciences,
-                text: `${this.translations.get("Sciences")} (${publicModelsCount})`,
-                iconClass: "fa-light fa-flask",
-                iconColor: "#0ea5e9",
-                expanded: false,
-                items: scienceItems
-              }
-            ]
-          }
-        ]
-      });
-    treeData.push({
-        id: treeNodeIds.samples,
-        text: `${this.translations.get("Samples")} (${sampleModelsCount})`,
-        iconClass: "fa-light fa-flask-vial",
-        iconColor: "#a855f7",
-        expanded: false,
-        items: [
-          {
-            id: treeNodeIds.samplesModels,
-            text: `${this.translations.get("Models")} (${sampleModelsCount})`,
-            iconClass: "fa-light fa-cube",
-            iconColor: "#a855f7",
-            expanded: false,
-            items: [
-              {
-                id: treeNodeIds.samplesEducation,
-                text: `${this.translations.get("Education Levels")} (${sampleModelsCount})`,
-                iconClass: "fa-light fa-graduation-cap",
-                iconColor: "#8b5cf6",
-                expanded: false,
-                items: sampleEducationItems
-              },
-              {
-                id: treeNodeIds.samplesSciences,
-                text: `${this.translations.get("Sciences")} (${sampleModelsCount})`,
-                iconClass: "fa-light fa-flask",
-                iconColor: "#0ea5e9",
-                expanded: false,
-                items: sampleScienceItems
-              }
-            ]
-          }
-        ]
-      });
-    treeData.push({
-        id: treeNodeIds.assets,
-        text: `${this.translations.get("Assets")} (${assetsCount})`,
-        iconClass: "fa-light fa-photo-film",
-        iconColor: "#d97706",
-        expanded: false,
-        items: [
-          {
-            id: treeNodeIds.catalogVideos,
-            text: `${this.translations.get("Videos")} (${videosCount})`,
-            iconClass: "fa-light fa-video",
-            iconColor: "#e11d48",
-            expanded: false,
-            items: [
-              {
-                id: treeNodeIds.catalogVideosEducation,
-                text: `${this.translations.get("Education Levels")} (${videosCount})`,
-                iconClass: "fa-light fa-graduation-cap",
-                iconColor: "#8b5cf6",
-                expanded: false,
-                items: videoEducationItems
-              },
-              {
-                id: treeNodeIds.catalogVideosSciences,
-                text: `${this.translations.get("Sciences")} (${videosCount})`,
-                iconClass: "fa-light fa-flask",
-                iconColor: "#0ea5e9",
-                expanded: false,
-                items: videoScienceItems
-              }
-            ]
-          },
-          {
-            id: treeNodeIds.catalogData,
-            text: `${this.translations.get("Data")} (${dataCount})`,
-            iconClass: "fa-light fa-table",
-            iconColor: "#d97706",
-            expanded: false,
-            items: [
-              {
-                id: treeNodeIds.catalogDataEducation,
-                text: `${this.translations.get("Education Levels")} (${dataCount})`,
-                iconClass: "fa-light fa-graduation-cap",
-                iconColor: "#8b5cf6",
-                expanded: false,
-                items: dataEducationItems
-              },
-              {
-                id: treeNodeIds.catalogDataSciences,
-                text: `${this.translations.get("Sciences")} (${dataCount})`,
-                iconClass: "fa-light fa-flask",
-                iconColor: "#0ea5e9",
-                expanded: false,
-                items: dataScienceItems
-              }
-            ]
-          },
-          {
-            id: treeNodeIds.catalogCharacters,
-            text: `${this.translations.get("Characters")} (${charactersCount})`,
-            iconClass: "fa-light fa-person-running",
-            iconColor: "#7c3aed",
-            expanded: false,
-            items: characterCategoryItems
-          },
-          {
-            id: treeNodeIds.catalogObjects,
-            text: `${this.translations.get("Objects")} (${objectsCount})`,
-            iconClass: "fa-light fa-shapes",
-            iconColor: "#0891b2",
-            expanded: false,
-            items: [
-              {
-                id: treeNodeIds.catalogObjectsEducation,
-                text: `${this.translations.get("Education Levels")} (${objectsCount})`,
-                iconClass: "fa-light fa-graduation-cap",
-                iconColor: "#8b5cf6",
-                expanded: false,
-                items: objectEducationItems
-              },
-              {
-                id: treeNodeIds.catalogObjectsSciences,
-                text: `${this.translations.get("Sciences")} (${objectsCount})`,
-                iconClass: "fa-light fa-flask",
-                iconColor: "#0ea5e9",
-                expanded: false,
-                items: objectScienceItems
-              }
-            ]
-          }
-        ]
-      }
-    );
+      id: treeNodeIds.discover,
+      text: this.translations.get("Discover"),
+      isGroup: true,
+      expanded: true,
+      selectable: false,
+      items: [
+        {
+          id: treeNodeIds.catalog,
+          label: this.translations.get("Community"),
+          text: `${this.translations.get("Community")} (${publicModelsCount})`,
+          iconClass: "fa-light fa-users",
+          iconColor: "#16a34a",
+          expanded: false,
+          items: [
+            {
+              id: treeNodeIds.catalogModels,
+              label: this.translations.get("Models"),
+              text: `${this.translations.get("Models")} (${publicModelsCount})`,
+              iconClass: "fa-light fa-cube",
+              iconColor: "#16a34a",
+              expanded: false,
+              items: [
+                {
+                  id: treeNodeIds.catalogModelsEducation,
+                  label: this.translations.get("Education Levels"),
+                  text: `${this.translations.get("Education Levels")} (${publicModelsCount})`,
+                  iconClass: "fa-light fa-graduation-cap",
+                  iconColor: "#8b5cf6",
+                  expanded: false,
+                  items: educationItems
+                },
+                {
+                  id: treeNodeIds.catalogModelsSciences,
+                  label: this.translations.get("Sciences"),
+                  text: `${this.translations.get("Sciences")} (${publicModelsCount})`,
+                  iconClass: "fa-light fa-flask",
+                  iconColor: "#0ea5e9",
+                  expanded: false,
+                  items: scienceItems
+                }
+              ]
+            }
+          ]
+        },
+        {
+          id: treeNodeIds.samples,
+          label: this.translations.get("Samples"),
+          text: `${this.translations.get("Samples")} (${sampleModelsCount})`,
+          iconClass: "fa-light fa-flask-vial",
+          iconColor: "#a855f7",
+          expanded: false,
+          items: [
+            {
+              id: treeNodeIds.samplesModels,
+              label: this.translations.get("Models"),
+              text: `${this.translations.get("Models")} (${sampleModelsCount})`,
+              iconClass: "fa-light fa-cube",
+              iconColor: "#a855f7",
+              expanded: false,
+              items: [
+                {
+                  id: treeNodeIds.samplesEducation,
+                  label: this.translations.get("Education Levels"),
+                  text: `${this.translations.get("Education Levels")} (${sampleModelsCount})`,
+                  iconClass: "fa-light fa-graduation-cap",
+                  iconColor: "#8b5cf6",
+                  expanded: false,
+                  items: sampleEducationItems
+                },
+                {
+                  id: treeNodeIds.samplesSciences,
+                  label: this.translations.get("Sciences"),
+                  text: `${this.translations.get("Sciences")} (${sampleModelsCount})`,
+                  iconClass: "fa-light fa-flask",
+                  iconColor: "#0ea5e9",
+                  expanded: false,
+                  items: sampleScienceItems
+                }
+              ]
+            }
+          ]
+        },
+        {
+          id: treeNodeIds.assets,
+          label: this.translations.get("Assets"),
+          text: `${this.translations.get("Assets")} (${assetsCount})`,
+          iconClass: "fa-light fa-photo-film",
+          iconColor: "#d97706",
+          expanded: false,
+          items: [
+            {
+              id: treeNodeIds.catalogVideos,
+              label: this.translations.get("Videos"),
+              text: `${this.translations.get("Videos")} (${videosCount})`,
+              iconClass: "fa-light fa-video",
+              iconColor: "#e11d48",
+              expanded: false,
+              items: [
+                {
+                  id: treeNodeIds.catalogVideosEducation,
+                  label: this.translations.get("Education Levels"),
+                  text: `${this.translations.get("Education Levels")} (${videosCount})`,
+                  iconClass: "fa-light fa-graduation-cap",
+                  iconColor: "#8b5cf6",
+                  expanded: false,
+                  items: videoEducationItems
+                },
+                {
+                  id: treeNodeIds.catalogVideosSciences,
+                  label: this.translations.get("Sciences"),
+                  text: `${this.translations.get("Sciences")} (${videosCount})`,
+                  iconClass: "fa-light fa-flask",
+                  iconColor: "#0ea5e9",
+                  expanded: false,
+                  items: videoScienceItems
+                }
+              ]
+            },
+            {
+              id: treeNodeIds.catalogData,
+              label: this.translations.get("Data"),
+              text: `${this.translations.get("Data")} (${dataCount})`,
+              iconClass: "fa-light fa-table",
+              iconColor: "#d97706",
+              expanded: false,
+              items: [
+                {
+                  id: treeNodeIds.catalogDataEducation,
+                  label: this.translations.get("Education Levels"),
+                  text: `${this.translations.get("Education Levels")} (${dataCount})`,
+                  iconClass: "fa-light fa-graduation-cap",
+                  iconColor: "#8b5cf6",
+                  expanded: false,
+                  items: dataEducationItems
+                },
+                {
+                  id: treeNodeIds.catalogDataSciences,
+                  label: this.translations.get("Sciences"),
+                  text: `${this.translations.get("Sciences")} (${dataCount})`,
+                  iconClass: "fa-light fa-flask",
+                  iconColor: "#0ea5e9",
+                  expanded: false,
+                  items: dataScienceItems
+                }
+              ]
+            },
+            {
+              id: treeNodeIds.catalogCharacters,
+              label: this.translations.get("Characters"),
+              text: `${this.translations.get("Characters")} (${charactersCount})`,
+              iconClass: "fa-light fa-person-running",
+              iconColor: "#7c3aed",
+              expanded: false,
+              items: characterCategoryItems
+            },
+            {
+              id: treeNodeIds.catalogObjects,
+              label: this.translations.get("Objects"),
+              text: `${this.translations.get("Objects")} (${objectsCount})`,
+              iconClass: "fa-light fa-shapes",
+              iconColor: "#0891b2",
+              expanded: false,
+              items: [
+                {
+                  id: treeNodeIds.catalogObjectsEducation,
+                  label: this.translations.get("Education Levels"),
+                  text: `${this.translations.get("Education Levels")} (${objectsCount})`,
+                  iconClass: "fa-light fa-graduation-cap",
+                  iconColor: "#8b5cf6",
+                  expanded: false,
+                  items: objectEducationItems
+                },
+                {
+                  id: treeNodeIds.catalogObjectsSciences,
+                  label: this.translations.get("Sciences"),
+                  text: `${this.translations.get("Sciences")} (${objectsCount})`,
+                  iconClass: "fa-light fa-flask",
+                  iconColor: "#0ea5e9",
+                  expanded: false,
+                  items: objectScienceItems
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
     if (this.canAccessMaintenance())
       treeData.push({
-        id: treeNodeIds.maintenance,
-        text: this.translations.get("Maintenance"),
-        iconClass: "fa-light fa-screwdriver-wrench",
-        iconColor: "#475569",
-        expanded: false,
+        id: treeNodeIds.system,
+        text: this.translations.get("System"),
+        isGroup: true,
+        expanded: true,
         selectable: false,
         items: [
           {
-            id: treeNodeIds.maintenanceDashboard,
-            text: this.translations.get("Overview"),
-            nodeType: "maintenance-dashboard",
-            iconClass: "fa-light fa-chart-pie",
-            iconColor: "#2563eb"
-          },
-          {
-            id: treeNodeIds.maintenanceModels,
-            text: this.translations.get("Models"),
-            nodeType: "maintenance-models",
-            iconClass: "fa-light fa-cube",
-            iconColor: "#475569"
-          },
-          {
-            id: treeNodeIds.maintenanceSystemTemplates,
-            text: this.translations.get("System Templates"),
-            nodeType: "maintenance-system-templates",
-            iconClass: "fa-light fa-layer-group",
-            iconColor: "#9333ea"
-          },
-          {
-            id: treeNodeIds.maintenanceEducation,
-            text: this.translations.get("Education Levels"),
-            nodeType: "maintenance-education",
-            iconClass: "fa-light fa-graduation-cap",
-            iconColor: "#8b5cf6"
-          },
-          {
-            id: treeNodeIds.maintenanceSciences,
-            text: this.translations.get("Sciences"),
-            nodeType: "maintenance-sciences",
-            iconClass: "fa-light fa-flask",
-            iconColor: "#0ea5e9"
-          },
-          {
-            id: treeNodeIds.maintenanceNotifications,
-            text: this.translations.get("Notifications"),
-            nodeType: "maintenance-notifications",
-            iconClass: "fa-light fa-bell",
-            iconColor: "#f59e0b"
-          },
-          {
-            id: treeNodeIds.maintenanceUsers,
-            text: this.translations.get("Users"),
-            nodeType: "maintenance-users",
-            iconClass: "fa-light fa-users",
-            iconColor: "#2563eb"
-          },
-          {
-            id: treeNodeIds.maintenanceWhatsNew,
-            text: this.translations.get("What's New"),
-            nodeType: "maintenance-whats-new",
-            iconClass: "fa-light fa-sparkles",
-            iconColor: "#10b981"
-          },
-          {
-            id: treeNodeIds.maintenanceCharacterCategories,
-            text: this.translations.get("Character Categories"),
-            nodeType: "maintenance-character-categories",
-            iconClass: "fa-light fa-person-running",
-            iconColor: "#f97316"
+            id: treeNodeIds.maintenance,
+            label: this.translations.get("Maintenance"),
+            text: this.translations.get("Maintenance"),
+            iconClass: "fa-light fa-screwdriver-wrench",
+            iconColor: "#475569",
+            expanded: false,
+            selectable: false,
+            items: [
+              {
+                id: treeNodeIds.maintenanceDashboard,
+                label: this.translations.get("Overview"),
+                text: this.translations.get("Overview"),
+                nodeType: "maintenance-dashboard",
+                iconClass: "fa-light fa-chart-pie",
+                iconColor: "#2563eb"
+              },
+              {
+                id: treeNodeIds.maintenanceModels,
+                label: this.translations.get("Models"),
+                text: this.translations.get("Models"),
+                nodeType: "maintenance-models",
+                iconClass: "fa-light fa-cube",
+                iconColor: "#475569"
+              },
+              {
+                id: treeNodeIds.maintenanceSystemTemplates,
+                label: this.translations.get("System Templates"),
+                text: this.translations.get("System Templates"),
+                nodeType: "maintenance-system-templates",
+                iconClass: "fa-light fa-layer-group",
+                iconColor: "#9333ea"
+              },
+              {
+                id: treeNodeIds.maintenanceEducation,
+                label: this.translations.get("Education Levels"),
+                text: this.translations.get("Education Levels"),
+                nodeType: "maintenance-education",
+                iconClass: "fa-light fa-graduation-cap",
+                iconColor: "#8b5cf6"
+              },
+              {
+                id: treeNodeIds.maintenanceSciences,
+                label: this.translations.get("Sciences"),
+                text: this.translations.get("Sciences"),
+                nodeType: "maintenance-sciences",
+                iconClass: "fa-light fa-flask",
+                iconColor: "#0ea5e9"
+              },
+              {
+                id: treeNodeIds.maintenanceNotifications,
+                label: this.translations.get("Notifications"),
+                text: this.translations.get("Notifications"),
+                nodeType: "maintenance-notifications",
+                iconClass: "fa-light fa-bell",
+                iconColor: "#f59e0b"
+              },
+              {
+                id: treeNodeIds.maintenanceUsers,
+                label: this.translations.get("Users"),
+                text: this.translations.get("Users"),
+                nodeType: "maintenance-users",
+                iconClass: "fa-light fa-users",
+                iconColor: "#2563eb"
+              },
+              {
+                id: treeNodeIds.maintenanceWhatsNew,
+                label: this.translations.get("What's New"),
+                text: this.translations.get("What's New"),
+                nodeType: "maintenance-whats-new",
+                iconClass: "fa-light fa-sparkles",
+                iconColor: "#10b981"
+              },
+              {
+                id: treeNodeIds.maintenanceCharacterCategories,
+                label: this.translations.get("Character Categories"),
+                text: this.translations.get("Character Categories"),
+                nodeType: "maintenance-character-categories",
+                iconClass: "fa-light fa-person-running",
+                iconColor: "#f97316"
+              }
+            ]
           }
         ]
       });
@@ -4817,6 +5104,10 @@ class ModelsApp {
 
   renderTreeItem(itemData, itemElement) {
     const host = itemElement.get(0);
+    if (itemData?.isGroup) {
+      host.innerHTML = `<span class="tree-group-label">${itemData.text || ""}</span>`;
+      return;
+    }
     const iconClass = itemData?.iconClass || "fa-light fa-folder";
     const iconColor = itemData?.iconColor || "#6b7280";
     host.innerHTML = `
@@ -4831,41 +5122,24 @@ class ModelsApp {
     if (!this.treeViewInstance)
       return;
     this.treeViewInstance.option("dataSource", this.getTreeData());
-    this.updateUploadButtonsVisibility();
+    this.updateNavMenus();
   }
 
-  updateUploadButtonsVisibility() {
+  updateNavMenus() {
     const canAccess = this.canAccessMaintenance();
-    const uploadVideoElement = this.elements.navUploadVideo;
-    const uploadDataElement = this.elements.navUploadData;
-    const createNotebookElement = this.elements.navNewNotebook;
-    if (uploadVideoElement) {
-      const uploadVideoContainer = uploadVideoElement.closest(".dx-item");
-      if (uploadVideoContainer)
-        uploadVideoContainer.style.display = canAccess ? "" : "none";
+    if (this.elements.navUpload) {
+      const uploadContainer = this.elements.navUpload.closest(".dx-item");
+      if (uploadContainer)
+        uploadContainer.style.display = canAccess ? "" : "none";
     }
-    if (uploadDataElement) {
-      const uploadDataContainer = uploadDataElement.closest(".dx-item");
-      if (uploadDataContainer)
-        uploadDataContainer.style.display = canAccess ? "" : "none";
-    }
-    const addCharacterElement = this.elements.navAddCharacter;
-    if (addCharacterElement) {
-      const addCharacterContainer = addCharacterElement.closest(".dx-item");
-      if (addCharacterContainer)
-        addCharacterContainer.style.display = canAccess ? "" : "none";
-    }
-    const addObjectElement = this.elements.navAddObject;
-    if (addObjectElement) {
-      const addObjectContainer = addObjectElement.closest(".dx-item");
-      if (addObjectContainer)
-        addObjectContainer.style.display = canAccess ? "" : "none";
-    }
-    if (createNotebookElement) {
-      const createNotebookContainer = createNotebookElement.closest(".dx-item");
-      if (createNotebookContainer)
-        createNotebookContainer.style.display = canAccess ? "" : "none";
-    }
+    const createInstance = this.getNavDropDownInstance(this.elements.navCreate);
+    if (createInstance)
+      createInstance.option("items", this.buildCreateMenuItems());
+  }
+
+  getNavDropDownInstance(host) {
+    if (!host) return null;
+    return $(host).dxDropDownButton("instance");
   }
 
   refreshTreeSelection() {
@@ -4878,14 +5152,6 @@ class ModelsApp {
     const isOpen = this.drawerInstance.option("opened");
     this.drawerInstance.option("opened", !isOpen);
     this.elements.drawerShell.classList.toggle("drawer-collapsed", isOpen);
-  }
-  bindNav() {
-    if (this.elements.navNewModel) this.elements.navNewModel.addEventListener("click", () => this.createModel());
-    if (this.elements.navNewNotebook) this.elements.navNewNotebook.addEventListener("click", () => this.createNotebook());
-    if (this.elements.navUploadVideo) this.elements.navUploadVideo.addEventListener("click", () => this.showUploadVideoPopup());
-    if (this.elements.navUploadData) this.elements.navUploadData.addEventListener("click", () => this.showDataPopup());
-    if (this.elements.navAddCharacter) this.elements.navAddCharacter.addEventListener("click", () => this.showCharacterPopup());
-    if (this.elements.navAddObject) this.elements.navAddObject.addEventListener("click", () => this.showObjectPopup());
   }
   async createModel() {
     this.userSdk.refreshState(this.state);
