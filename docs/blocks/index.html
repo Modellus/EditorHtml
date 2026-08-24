@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Building Blocks – Modellus Docs</title>
+    <meta name="description" content="How Modellus objects are composed from reusable building blocks: the layers, the registry, and how a drawing is made." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/pages/board/index.html">Editor</a></li>
+                    <li><a href="/pages/catalog/index.html">Community</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/pages/board/index.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Editors</h5>
+        <ul>
+            <li><a href="/docs/board/index.html"><i class="fa-light fa-earth-africa"></i> Board</a></li>
+            <li><a href="/docs/notebook/index.html"><i class="fa-light fa-notebook"></i> Notebook</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="/docs/shapes/expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="/docs/shapes/table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="/docs/shapes/initial-values.html"><i class="fa-light fa-table-list"></i> Initial Values</a></li>
+            <li><a href="/docs/shapes/chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="/docs/shapes/body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="/docs/shapes/point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="/docs/shapes/line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="/docs/shapes/arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="/docs/shapes/vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="/docs/shapes/slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="/docs/shapes/gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="/docs/shapes/value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="/docs/shapes/media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="/docs/shapes/text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="/docs/shapes/ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="/docs/shapes/protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="/docs/shapes/referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="/docs/shapes/question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+            <li><a href="/docs/shapes/mindmap.html"><i class="fa-light fa-diagram-project"></i> Mind Map</a></li>
+            <li><a href="/docs/shapes/component.html"><i class="fa-light fa-shapes"></i> Components</a></li>
+        </ul>
+        <h5>Building Blocks</h5>
+        <ul>
+            <li><a href="/docs/blocks/index.html" class="active"><i class="fa-light fa-cubes"></i> Building Blocks</a></li>
+            <li><a href="/docs/blocks/object-definition.html"><i class="fa-light fa-file-code"></i> Object Definition</a></li>
+            <li><a href="/docs/blocks/reference.html"><i class="fa-light fa-list-tree"></i> Block Reference</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>Community</h5>
+        <ul>
+            <li><a href="/docs/catalog/index.html"><i class="fa-light fa-store"></i> Community</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <span>Building Blocks</span>
+        </div>
+
+        <h1>Building Blocks</h1>
+        <p class="page-desc">Every object on the board that is not one of the built-in shapes is composed from building blocks: a small, closed set of approved primitives, modifiers, behaviours and components held in one registry. A clock, a compass, a speedometer, a thermometer and a steering wheel are all the same circles, arcs, lines, text and rotations, arranged differently. Nothing draws outside the registry, and no object carries code.</p>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>Building an object? The recipe is on <a href="/docs/blocks/object-definition.html">Object Definition</a>, and every block with its properties, defaults and ranges is on <a href="/docs/blocks/reference.html">Block Reference</a>. This page is the why and the how.</span>
+        </div>
+
+        <h2>The five layers</h2>
+        <p>A block is a named, registered building unit with a declared input schema. There are four kinds, and objects made of them are the fifth.</p>
+        <table class="docs-table">
+            <thead><tr><th>Layer</th><th>What it is</th><th>Examples</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Primitives</strong></td><td>The things that actually draw. Each one is a pure function from resolved values to one SVG tag.</td><td><code>circle</code>, <code>rect</code>, <code>ellipse</code>, <code>line</code>, <code>polyline</code>, <code>polygon</code>, <code>arc</code>, <code>ring</code>, <code>path</code>, <code>text</code>, <code>image</code>, <code>group</code></td></tr>
+                <tr><td><strong>Modifiers</strong></td><td>Transforms and paint applied to a node and everything under it.</td><td><code>translate</code>, <code>rotate</code>, <code>scale</code>, <code>mirror</code>, <code>opacity</code>, <code>visibility</code>, <code>stroke</code>, <code>fill</code>, <code>z-order</code>, <code>repeat</code></td></tr>
+                <tr><td><strong>Behaviours</strong></td><td>What the reader can do to a node, and what that writes.</td><td><code>clickable</code>, <code>drag-angle</code>, <code>drag-rotate</code>, <code>press-and-slide</code>, <code>drag-axis-tick</code>, <code>keep-time</code>, <code>follow-pointer</code>, <code>remember</code>, <code>track-pointer</code>, <code>tooltip</code></td></tr>
+                <tr><td><strong>Bindings</strong></td><td>Where a value comes from, declared rather than computed.</td><td><code>constant</code>, <code>parameter</code>, <code>variable</code>, <code>expression</code>, <code>formula</code>, <code>token</code>, <code>format</code>, <code>choose</code>, <code>concat</code>, <code>direction</code>, <code>memory</code>, <code>termUnit</code></td></tr>
+                <tr><td><strong>Components</strong></td><td>Ready-made assemblies that compose the layers above, from a tick ring to a whole clock. An object is itself a component, so one can be reused inside another.</td><td><code>dial-face</code>, <code>tick-ring</code>, <code>label-ring</code>, <code>pointer-hand</code>, <code>key-cap</code>, <code>seven-segment-display</code>, <code>plot-grid</code>, <code>plot-axes</code>, <code>plot-crosshair</code>, <code>memory-list</code>, <code>memory-trace</code>, <code>clock</code>, <code>compass</code>, <code>speedometer</code>, <code>circular-gauge</code>, <code>rotating-vector</code>, <code>orbit-system</code>, <code>steering-wheel</code>, <code>thermometer</code>, <code>calculator</code>, <code>mouse-tracker</code></td></tr>
+            </tbody>
+        </table>
+
+        <h2>How a drawing is made</h2>
+        <p>The spine is the same for every object on the board. The shape holds the values, the compiler turns the definition into render nodes, and the renderer writes the SVG once.</p>
+        <table class="docs-table">
+            <thead><tr><th>Step</th><th>What happens</th></tr></thead>
+            <tbody>
+                <tr><td>1. The shape</td><td>A <code>ComponentShape</code> on the board holds the object's parameter values in its own <code>properties</code> — which is why an object gets undo/redo, copy/paste, collaboration and saving with nothing written for the purpose.</td></tr>
+                <tr><td>2. The compiler</td><td><code>BlockCompiler</code> evaluates the definition's <code>locals</code>, drops the children whose <code>when</code> is false, expands <code>repeat</code>, resolves every binding and walks down to primitives.</td></tr>
+                <tr><td>3. The renderer</td><td><code>BlockRenderer</code> builds every tag itself and escapes every value. No markup from a definition ever reaches the page.</td></tr>
+                <tr><td>4. The interaction</td><td>A behaviour writes exactly one command — a property of the shape, or a model variable through the calculator — and the next compilation reads it back. That is why a whole drag is a single undo entry and why no object has a redraw path of its own.</td></tr>
+            </tbody>
+        </table>
+        <p>Values that change on their own — a model variable, the iteration on screen, the object's own size — arrive as bindings, so a definition never subscribes to anything or schedules a redraw. Bind a property to a variable and the object follows the simulation.</p>
+
+        <div class="callout callout-tip">
+            <i class="fa-light fa-lightbulb"></i>
+            <span>There is no <code>eval</code> anywhere on this path, and no JavaScript in a definition. Formulas are Modellus LaTeX, parsed by the same parser the expression shapes use. A block type the registry does not hold is refused by the compiler and by the validator alike.</span>
+        </div>
+
+        <h2>An object is one JSON document</h2>
+        <p>A new object is a single JSON document: no JavaScript, no markup, no file to wire up. It declares what the reader can edit (<code>parameters</code>), what it works out for itself (<code>locals</code>) and what it draws (<code>root</code>).</p>
+<pre><code>{
+    "schemaVersion": "1.0.0",
+    "type": "my-object",
+    "category": "component",
+    "displayName": "My object",
+    "description": "One sentence, written for the person choosing it from the palette.",
+    "icon": "fa-light fa-circle-notch",
+    "tags": ["object"],
+    "parameters": [ … ],
+    "locals":     [ … ],
+    "root":       { "id": "my-object", "type": "group", "children": [ … ] }
+}</code></pre>
+        <p>The same document is what the editor bundles, what the community catalogue publishes, what the assistant invents and what a model carries with it. Nothing about the object depends on which way it arrived. The full recipe, field by field, is on <a href="/docs/blocks/object-definition.html">Object Definition</a>.</p>
+
+        <h2>Where an object comes from</h2>
+        <table class="docs-table">
+            <thead><tr><th>Source</th><th>How it gets there</th><th>Who sees it</th></tr></thead>
+            <tbody>
+                <tr><td>Bundled</td><td>A JSON file the editor ships with</td><td>Everyone, offline included</td></tr>
+                <tr><td>Community catalogue</td><td>Published under <strong>Assets → Objects</strong>, fetched when placed</td><td>Anyone whose palette reads the catalogue</td></tr>
+                <tr><td>Invented on a board</td><td>The assistant's <code>save_custom_component</code>, or <strong>Copy definition</strong> from an object's settings menu</td><td>The model that uses it</td></tr>
+                <tr><td>Carried by a model</td><td>The model file's own objects section</td><td>Whoever opens that model, anywhere</td></tr>
+            </tbody>
+        </table>
+        <p>An object the editor does not ship with travels inside the model that uses it, so a board can invent one and a colleague can open the file and see it. A document naming a type the editor already ships is refused, deliberately: a model cannot freeze a bundled object at an old version.</p>
+
+        <h2>Three ways to build one</h2>
+        <table class="docs-table">
+            <thead><tr><th>Way</th><th>What you do</th></tr></thead>
+            <tbody>
+                <tr><td>Start from an object that exists</td><td>Place one from the <i class="fa-light fa-compass-drafting"></i> Objects palette, set it up, then <strong>Copy definition</strong> in its settings menu and edit the JSON.</td></tr>
+                <tr><td>Write the document</td><td>Follow <a href="/docs/blocks/object-definition.html">Object Definition</a> and paste the result into the object editor in the <a href="/docs/catalog/index.html">catalogue</a>, or bundle it with the editor.</td></tr>
+                <tr><td>Ask the assistant</td><td>Describe the object. The assistant composes it through the block tools, validates it and inserts it — and what it produces is an ordinary object, fully editable.</td></tr>
+            </tbody>
+        </table>
+        <p>Drawing rather than writing is the fourth way in for the parts that are illustration: an SVG file can be converted into primitive nodes and pasted into the document, wired by the ids in the drawing. It is converted, not embedded — nothing new reaches the renderer.</p>
+
+        <h2>The look is not the object's to invent</h2>
+        <p>An object drawn from blocks has to look like the board it stands on, and the board already has a look: the font it writes in, the grey its axes are drawn in, the length of a tick, the dash of a crosshair, the plate a value is read on. Those numbers are the <strong>design tokens</strong>, and the chart, the ruler and the referential read the same ones — so an object drawing against a scale is the same grey as a chart beside it.</p>
+        <p>Two rules follow, and together they mean no definition ever names a font or an axis colour:</p>
+        <ul>
+            <li>A colour, a size or a width is written as a token reference — <code>"token:stroke.accent"</code>, or the binding <code>{ "token": "font.size.tick" }</code> — never as a literal.</li>
+            <li>Anything cartesian is a component, not a drawing: <code>plot-grid</code>, <code>plot-axes</code> and <code>plot-crosshair</code> carry the board's own nice ticks, minor ticks, label spacing and the drag handles that rescale an axis.</li>
+        </ul>
+        <p>Because the tokens are one table, a preset restyles every object at once. Five ship with the editor: <code>standard</code>, <code>minimal</code>, <code>scientific</code>, <code>classroom</code> and <code>high-contrast</code>, and every value in each is listed on <a href="/docs/blocks/reference.html#tokens">Block Reference</a>.</p>
+
+        <h2>What an object can do</h2>
+        <table class="docs-table">
+            <thead><tr><th>Capability</th><th>How</th></tr></thead>
+            <tbody>
+                <tr><td>Read the model</td><td>A <code>variable</code> binding, or an <code>expression</code> over model variables. The object redraws with the simulation.</td></tr>
+                <tr><td>Scale with its box</td><td>The reserved parameters <code>$width</code> and <code>$height</code>, read through a local, so geometry is worked out from the size the reader dragged.</td></tr>
+                <tr><td>Be driven by hand</td><td><code>drag-angle</code>, <code>drag-rotate</code>, <code>press-and-slide</code>, <code>clickable</code> and <code>drag-axis-tick</code> write a model variable — or the object's own parameter when the row holds a plain number instead of a term.</td></tr>
+                <tr><td>Refuse to be driven</td><td>Nothing switches interaction on or off: a row naming a term the model works out for itself is read-only, and says so with the cursor a locked handle uses.</td></tr>
+                <tr><td>Remember</td><td>A <code>memory</code> parameter holds rows of <code>{ text, x, y }</code>, filled by <code>remember</code>, <code>track-pointer</code> or a key, and read back by <code>memory-list</code> or <code>memory-trace</code>. It lives in the shape, so the file carries it and undo restores it.</td></tr>
+                <tr><td>Replay a recording</td><td>A memory declaring <code>termParameters</code> makes row <em>n</em> iteration <em>n</em> of those terms, so the board's player replays it and everything bound to them moves along.</td></tr>
+                <tr><td>Follow the pointer</td><td><code>follow-pointer</code> reports where the cursor is into parameters the definition names, without writing anything down — no edit, no undo entry, no changed file — and stops while the player runs.</td></tr>
+                <tr><td>Count real time</td><td><code>keep-time</code> runs a clock of its own, so it goes on counting while the model stands still, and the whole run is one undo entry.</td></tr>
+            </tbody>
+        </table>
+
+        <h2>What is checked before an object is drawn</h2>
+        <p>A definition passes two gates. Registration reads the document; validation reads the tree it compiles to. An object cannot be published from the catalogue, inserted by the assistant or saved as a component until both are clean.</p>
+        <table class="docs-table">
+            <thead><tr><th>Gate</th><th>Refuses</th></tr></thead>
+            <tbody>
+                <tr><td>Registration</td><td>An unsupported <code>schemaVersion</code>, a <code>type</code> outside <code>^[a-z][a-z0-9-]{2,48}$</code> or already shipped, a <code>category</code> other than <code>component</code>, a missing <code>root</code>, a parameter or local without an <code>id</code>, a local colliding with a parameter or an earlier local, and any formula reading a name the document does not declare.</td></tr>
+                <tr><td>Validation</td><td>Unknown block types, bindings on properties that do not accept them, variables that do not exist (with the nearest name suggested), expressions that do not parse, the runtime limits, and a visual pass: nothing drawn, everything invisible, zero-size interactive targets, nodes far outside the box.</td></tr>
+            </tbody>
+        </table>
+        <p>The runtime limits are 2 000 nodes, 16 levels of nesting, 8 levels of component nesting, a <code>repeat</code> count of 720, 512 characters per expression and 2 000 memory rows. Image sources are limited to <code>https:</code>, <code>data:image/</code> and relative paths; path data must match the SVG path grammar.</p>
+
+        <h2>Where to go next</h2>
+        <div class="docs-grid">
+            <a href="/docs/blocks/object-definition.html" class="docs-grid-card">
+                <i class="fa-light fa-file-code"></i>
+                <h4>Object Definition</h4>
+                <p>The document a new object is written as, field by field, with a worked example.</p>
+            </a>
+            <a href="/docs/blocks/reference.html" class="docs-grid-card">
+                <i class="fa-light fa-list-tree"></i>
+                <h4>Block Reference</h4>
+                <p>Every block in the registry with its properties, defaults and ranges.</p>
+            </a>
+            <a href="/docs/shapes/component.html" class="docs-grid-card">
+                <i class="fa-light fa-shapes"></i>
+                <h4>Objects on the board</h4>
+                <p>What the objects built this way do, and how the reader works them.</p>
+            </a>
+            <a href="/docs/ai/reference.html" class="docs-grid-card">
+                <i class="fa-light fa-robot"></i>
+                <h4>AI Reference</h4>
+                <p>The model format and the tool surface an agent composes an object through.</p>
+            </a>
+        </div>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

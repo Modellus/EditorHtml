@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Block Reference – Modellus Docs</title>
+    <meta name="description" content="Every Modellus building block with its properties, defaults and ranges, generated from the live registry." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/pages/board/index.html">Editor</a></li>
+                    <li><a href="/pages/catalog/index.html">Community</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/pages/board/index.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Editors</h5>
+        <ul>
+            <li><a href="/docs/board/index.html"><i class="fa-light fa-earth-africa"></i> Board</a></li>
+            <li><a href="/docs/notebook/index.html"><i class="fa-light fa-notebook"></i> Notebook</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="/docs/shapes/expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="/docs/shapes/table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="/docs/shapes/initial-values.html"><i class="fa-light fa-table-list"></i> Initial Values</a></li>
+            <li><a href="/docs/shapes/chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="/docs/shapes/body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="/docs/shapes/point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="/docs/shapes/line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="/docs/shapes/arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="/docs/shapes/vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="/docs/shapes/slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="/docs/shapes/gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="/docs/shapes/value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="/docs/shapes/media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="/docs/shapes/text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="/docs/shapes/ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="/docs/shapes/protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="/docs/shapes/referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="/docs/shapes/question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+            <li><a href="/docs/shapes/mindmap.html"><i class="fa-light fa-diagram-project"></i> Mind Map</a></li>
+            <li><a href="/docs/shapes/component.html"><i class="fa-light fa-shapes"></i> Components</a></li>
+        </ul>
+        <h5>Building Blocks</h5>
+        <ul>
+            <li><a href="/docs/blocks/index.html"><i class="fa-light fa-cubes"></i> Building Blocks</a></li>
+            <li><a href="/docs/blocks/object-definition.html"><i class="fa-light fa-file-code"></i> Object Definition</a></li>
+            <li><a href="/docs/blocks/reference.html" class="active"><i class="fa-light fa-list-tree"></i> Block Reference</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>Community</h5>
+        <ul>
+            <li><a href="/docs/catalog/index.html"><i class="fa-light fa-store"></i> Community</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <span>Block Reference</span>
+        </div>
+
+        <h1>Block Reference</h1>
+        <p class="page-desc">Every building block an object may be composed of, with its properties, their types, defaults and ranges. This page is generated from the live registry, so it cannot drift from what the compiler will accept.</p>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>New here? <a href="/docs/blocks/index.html">Building Blocks</a> explains what these are and how a drawing is made from them, and <a href="/docs/blocks/object-definition.html">Object Definition</a> is the document you put them in.</span>
+        </div>
+
+        <h2>How to read this page</h2>
+        <ul>
+            <li><strong>Primitives</strong> and <strong>modifiers</strong> and <strong>behaviours</strong> list <em>properties</em>; a node sets them as constants under <code>properties</code>, or as bindings under <code>bindings</code> for the same names. A binding always wins.</li>
+            <li><strong>Components</strong> list <em>parameters</em>; a node sets them under <code>parameters</code>, each one a constant or a binding.</li>
+            <li>A default written <code>"token:stroke.accent"</code> is read through the design tokens, so it follows the board's preset rather than being a fixed colour.</li>
+            <li>A range column reading <code>min 0, max 1</code> clamps the value; one listing alternatives is the set the value must come from.</li>
+            <li>Every drawing block also carries <code>fill</code>, <code>stroke</code>, <code>strokeWidth</code>, <code>strokeDash</code>, <code>strokeLinecap</code>, <code>opacity</code> and <code>visible</code>.</li>
+        </ul>
+        <p>The same catalogue is available to an agent at runtime through <code>list_building_blocks</code>, <code>search_building_blocks</code> and <code>get_building_block_schema</code>, which read the registry directly.</p>
+
+        <h2>Limits</h2>
+        <table class="docs-table">
+            <thead><tr><th>Limit</th><th>Value</th></tr></thead>
+            <tbody>
+                <tr><td>Nodes in one object</td><td>2 000</td></tr>
+                <tr><td>Nesting depth</td><td>16</td></tr>
+                <tr><td>Component nesting depth</td><td>8</td></tr>
+                <tr><td><code>repeat</code> count</td><td>720</td></tr>
+                <tr><td>Characters in one expression</td><td>512</td></tr>
+                <tr><td>Rows in one memory</td><td>2 000, at six decimals</td></tr>
+                <tr><td><code>image</code> sources</td><td><code>https:</code>, <code>data:image/</code> and relative paths</td></tr>
+                <tr><td><code>path</code> data</td><td>The SVG path grammar only</td></tr>
+            </tbody>
+        </table>
+
+<!-- generated:blocks-start -->
+        <h2 id="primitives">Primitives</h2>
+        <p>The blocks that draw. A node names one as its <code>type</code>, and sets these under <code>properties</code> as constants or under <code>bindings</code> as declarative values.</p>
+        <p class="block-index"><a href="#block-arc">arc</a> <a href="#block-circle">circle</a> <a href="#block-ellipse">ellipse</a> <a href="#block-group">group</a> <a href="#block-image">image</a> <a href="#block-line">line</a> <a href="#block-path">path</a> <a href="#block-polygon">polygon</a> <a href="#block-polyline">polyline</a> <a href="#block-rect">rect</a> <a href="#block-ring">ring</a> <a href="#block-text">text</a></p>
+        <h3 id="block-arc"><code>arc</code> — Arc</h3>
+        <p>Circular arc or annular sector measured clockwise from the start angle.</p>
+        <p class="block-meta">Capabilities: <code>fillable</code> <code>strokable</code> <code>radial</code> <code>angular</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>radius</code></td><td>number</td><td><code>40</code></td><td>min 0</td></tr>
+                <tr><td><code>innerRadius</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
+                <tr><td><code>startAngle</code></td><td>number</td><td><code>225</code></td><td></td></tr>
+                <tr><td><code>endAngle</code></td><td>number</td><td><code>-45</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-circle"><code>circle</code> — Circle</h3>
+        <p>Circle defined by a centre point and a radius.</p>
+        <p class="block-meta">Capabilities: <code>fillable</code> <code>strokable</code> <code>radial</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>radius</code></td><td>number</td><td><code>40</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-ellipse"><code>ellipse</code> — Ellipse</h3>
+        <p>Ellipse defined by a centre point and two radii.</p>
+        <p class="block-meta">Capabilities: <code>fillable</code> <code>strokable</code> <code>radial</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>radiusX</code></td><td>number</td><td><code>50</code></td><td>min 0</td></tr>
+                <tr><td><code>radiusY</code></td><td>number</td><td><code>30</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-group"><code>group</code> — Group</h3>
+        <p>Container that positions, rotates and scales its children as one unit.</p>
+        <p class="block-meta">Capabilities: <code>container</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <p class="block-meta">Accepts children.</p>
+        <h3 id="block-image"><code>image</code> — Image</h3>
+        <p>Bitmap or SVG image placed in a box. Only https:, data: and same-origin relative sources are allowed.</p>
+        <p class="block-meta">Capabilities: <code>sizable</code> <code>media</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>60</code></td><td>min 0</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>60</code></td><td>min 0</td></tr>
+                <tr><td><code>href</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>preserveAspectRatio</code></td><td>string</td><td><code>"xMidYMid meet"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-line"><code>line</code> — Line</h3>
+        <p>Straight line segment between two points.</p>
+        <p class="block-meta">Capabilities: <code>strokable</code> <code>linear</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>x1</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y1</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>x2</code></td><td>number</td><td><code>100</code></td><td></td></tr>
+                <tr><td><code>y2</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-path"><code>path</code> — Path</h3>
+        <p>Raw SVG path data. Commands are restricted to the standard path grammar.</p>
+        <p class="block-meta">Capabilities: <code>fillable</code> <code>strokable</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>d</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-polygon"><code>polygon</code> — Polygon</h3>
+        <p>Closed sequence of connected points.</p>
+        <p class="block-meta">Capabilities: <code>fillable</code> <code>strokable</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>points</code></td><td>points</td><td><code>[]</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-polyline"><code>polyline</code> — Polyline</h3>
+        <p>Open sequence of connected points.</p>
+        <p class="block-meta">Capabilities: <code>strokable</code> <code>linear</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>points</code></td><td>points</td><td><code>[]</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-rect"><code>rect</code> — Rectangle</h3>
+        <p>Axis-aligned rectangle with optional corner radius.</p>
+        <p class="block-meta">Capabilities: <code>fillable</code> <code>strokable</code> <code>sizable</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>100</code></td><td>min 0</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>60</code></td><td>min 0</td></tr>
+                <tr><td><code>cornerRadius</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-ring"><code>ring</code> — Ring</h3>
+        <p>Full annulus between an inner and an outer radius.</p>
+        <p class="block-meta">Capabilities: <code>fillable</code> <code>strokable</code> <code>radial</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>innerRadius</code></td><td>number</td><td><code>30</code></td><td>min 0</td></tr>
+                <tr><td><code>outerRadius</code></td><td>number</td><td><code>40</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-text"><code>text</code> — Text</h3>
+        <p>Single line of text anchored at a point.</p>
+        <p class="block-meta">Capabilities: <code>fillable</code> <code>textual</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>text</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>unit</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>fontSize</code></td><td>number</td><td><code>"token:font.size.default"</code></td><td>min 1, max 400</td></tr>
+                <tr><td><code>fontFamily</code></td><td>string</td><td><code>"token:font.family"</code></td><td></td></tr>
+                <tr><td><code>fontWeight</code></td><td>number</td><td><code>"token:font.weight.default"</code></td><td>min 100, max 900</td></tr>
+                <tr><td><code>textAnchor</code></td><td>string</td><td><code>"middle"</code></td><td>start | middle | end</td></tr>
+                <tr><td><code>baseline</code></td><td>string</td><td><code>"central"</code></td><td>auto | central | hanging</td></tr>
+            </tbody>
+        </table>
+        <h2 id="modifiers">Modifiers</h2>
+        <p>Applied to a node and everything under it, in the order the <code>modifiers</code> array lists them.</p>
+        <p class="block-index"><a href="#block-fill">fill</a> <a href="#block-mirror">mirror</a> <a href="#block-opacity">opacity</a> <a href="#block-repeat">repeat</a> <a href="#block-rotate">rotate</a> <a href="#block-scale">scale</a> <a href="#block-stroke">stroke</a> <a href="#block-translate">translate</a> <a href="#block-visibility">visibility</a> <a href="#block-z-order">z-order</a></p>
+        <h3 id="block-fill"><code>fill</code> — Fill</h3>
+        <p>Overrides the fill colour of a node.</p>
+        <p class="block-meta">Capabilities: <code>style</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>color</code></td><td>colour</td><td><code>null</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-mirror"><code>mirror</code> — Mirror</h3>
+        <p>Mirrors a node about a horizontal or vertical axis through an anchor point.</p>
+        <p class="block-meta">Capabilities: <code>transform</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>axis</code></td><td>string</td><td><code>"horizontal"</code></td><td>horizontal | vertical</td></tr>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-opacity"><code>opacity</code> — Opacity</h3>
+        <p>Sets the opacity of a node or group.</p>
+        <p class="block-meta">Capabilities: <code>style</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>value</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-repeat"><code>repeat</code> — Repeat</h3>
+        <p>Repeats the node it is applied to, offsetting each copy by an angle step, a translation or a scale. The copy index is available to bindings as the parameter $index.</p>
+        <p class="block-meta">Capabilities: <code>layout</code> <code>structural</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>count</code></td><td>number</td><td><code>1</code></td><td>min 0</td></tr>
+                <tr><td><code>angleStep</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>angleStart</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>dx</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>dy</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-rotate"><code>rotate</code> — Rotate</h3>
+        <p>Rotates a node clockwise around an anchor point, in degrees.</p>
+        <p class="block-meta">Capabilities: <code>transform</code> <code>angular</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>angle</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-scale"><code>scale</code> — Scale</h3>
+        <p>Scales a node around an anchor point.</p>
+        <p class="block-meta">Capabilities: <code>transform</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>scaleX</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>scaleY</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-stroke"><code>stroke</code> — Stroke</h3>
+        <p>Overrides the stroke colour, width and dash pattern of a node.</p>
+        <p class="block-meta">Capabilities: <code>style</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>color</code></td><td>colour</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>null</code></td><td>min 0</td></tr>
+                <tr><td><code>dash</code></td><td>string</td><td><code>null</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-translate"><code>translate</code> — Translate</h3>
+        <p>Moves a node or group by an offset.</p>
+        <p class="block-meta">Capabilities: <code>transform</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>dx</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>dy</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-visibility"><code>visibility</code> — Visibility</h3>
+        <p>Shows or hides a node, typically bound to a model condition.</p>
+        <p class="block-meta">Capabilities: <code>style</code> <code>conditional</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-z-order"><code>z-order</code> — Z order</h3>
+        <p>Sorts siblings; higher values are drawn on top.</p>
+        <p class="block-meta">Capabilities: <code>layout</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>order</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h2 id="behaviours">Behaviours</h2>
+        <p>What the reader can do to a node, and what that writes. Listed on the node under <code>behaviours</code>.</p>
+        <p class="block-index"><a href="#block-clickable">clickable</a> <a href="#block-drag-angle">drag-angle</a> <a href="#block-drag-axis-tick">drag-axis-tick</a> <a href="#block-drag-rotate">drag-rotate</a> <a href="#block-draggable">draggable</a> <a href="#block-follow-pointer">follow-pointer</a> <a href="#block-forget">forget</a> <a href="#block-hoverable">hoverable</a> <a href="#block-keep-time">keep-time</a> <a href="#block-press-and-slide">press-and-slide</a> <a href="#block-remember">remember</a> <a href="#block-resizable">resizable</a> <a href="#block-respond-to-simulation">respond-to-simulation</a> <a href="#block-rotatable">rotatable</a> <a href="#block-selectable">selectable</a> <a href="#block-tooltip">tooltip</a> <a href="#block-track-pointer">track-pointer</a></p>
+        <h3 id="block-clickable"><code>clickable</code> — Clickable</h3>
+        <p>Writes a value into a model variable or into a component parameter when the node is clicked. The value is a binding like any other, so a key can write what the model or the object itself currently holds rather than only a constant.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>writes-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>variable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>property</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>value</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-drag-angle"><code>drag-angle</code> — Drag angle</h3>
+        <p>Lets the user drag the node around an anchor point and writes the resulting angle back into a model variable, using the same angle-to-value mapping the node was bound with.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>angular</code> <code>writes-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>variable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>property</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>verticalVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>verticalProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>degreesPerUnit</code></td><td>number</td><td><code>6</code></td><td></td></tr>
+                <tr><td><code>offsetDegrees</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>signed</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>minimum</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>maximum</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>wrapAt</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>hoverFill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>hoverOpacity</code></td><td>number</td><td><code>0.15</code></td><td>min 0, max 1</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-drag-axis-tick"><code>drag-axis-tick</code> — Drag axis tick</h3>
+        <p>Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>axis</code></td><td>string</td><td><code>"x"</code></td><td>x | y</td></tr>
+                <tr><td><code>value</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>minimumProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>maximumProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>originPixel</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>lengthPixels</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-drag-rotate"><code>drag-rotate</code> — Drag rotate</h3>
+        <p>Lets the user turn the node around an anchor point by dragging it. The variable moves by the angle the pointer travels, so the grabbed point follows the pointer instead of jumping to it, which is what a rose, a bezel or a dial ring needs.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>angular</code> <code>writes-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>variable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>property</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>verticalVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>verticalProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>degreesPerUnit</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>minimum</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>maximum</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>wrapAt</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>hoverFill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>hoverOpacity</code></td><td>number</td><td><code>0.15</code></td><td>min 0, max 1</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-draggable"><code>draggable</code> — Draggable</h3>
+        <p>The object can be moved with the move handle. Provided by the host shape for every component.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code></p>
+        <h3 id="block-follow-pointer"><code>follow-pointer</code> — Follow pointer</h3>
+        <p>Reports where the pointer is over the node, in the units the node is scaled in, so a drawing can show the value under the cursor. What is reported is not kept: it lasts as long as the pointer is over the node, and the model is not touched.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>xParameter</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>yParameter</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>activeParameter</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>originX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>originY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>scaleX</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>scaleY</code></td><td>number</td><td><code>-1</code></td><td></td></tr>
+                <tr><td><code>minimumX</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>maximumX</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>minimumY</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>maximumY</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-forget"><code>forget</code> — Forget</h3>
+        <p>Empties one of the object's memories when the node is clicked.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>memory</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>memory</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-hoverable"><code>hoverable</code> — Hoverable</h3>
+        <p>The node reacts to pointer hover with the standard highlight cursor.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>cursor</code></td><td>string</td><td><code>"pointer"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-keep-time"><code>keep-time</code> — Keep time</h3>
+        <p>A transport key for a reading of the clock: play sets it counting real time from wherever it stands, pause holds it there, and stop ends the run and clears it. A key set to toggle is both — it starts a clock standing still and holds a clock that is counting, so one key does the work of two. What is counted is written into the four parts of the reading — the hours, the minutes, the seconds and the thousandths — each into the term that part names, or into the object's own property when it names a plain number instead. The whole run is one edit.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>writes-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>action</code></td><td>string</td><td><code>"play"</code></td><td>play | pause | stop | toggle</td></tr>
+                <tr><td><code>hourVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>hourProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>minuteVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>minuteProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>secondVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>secondProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>millisecondVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>millisecondProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>runningParameter</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>intervalMs</code></td><td>number</td><td><code>33</code></td><td>min 10, max 1000</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-press-and-slide"><code>press-and-slide</code> — Press and slide</h3>
+        <p>A control the reader holds down: pressing keeps the value where it is, sliding the pointer up raises it and down lowers it, by however far it travelled, and letting go lets the value fall back to its resting value a step at a time. It is what a pedal or a throttle needs — nothing is written by pressing alone, and the whole gesture, the fall back included, is one edit.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>linear</code> <code>writes-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>variable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>property</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>verticalVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>verticalProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>bearing</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>unitsPerPixel</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>restValue</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>returnStep</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
+                <tr><td><code>intervalMs</code></td><td>number</td><td><code>100</code></td><td>min 20, max 5000</td></tr>
+                <tr><td><code>minimum</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>maximum</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>hoverFill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>hoverOpacity</code></td><td>number</td><td><code>0.15</code></td><td>min 0, max 1</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-remember"><code>remember</code> — Remember</h3>
+        <p>Appends a row to one of the object's memories when the node is clicked. A row carries a label and two numbers, all of them bindings, so a key records what the object held at the moment it was pressed.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>memory</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>memory</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>text</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>limit</code></td><td>number</td><td><code>50</code></td><td>min 1, max 2000</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-resizable"><code>resizable</code> — Resizable</h3>
+        <p>The object can be resized with the corner handles. Provided by the host shape for every component.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code></p>
+        <h3 id="block-respond-to-simulation"><code>respond-to-simulation</code> — Respond to simulation updates</h3>
+        <p>Marks the object as redrawing on every simulation tick. Components with model bindings get this automatically.</p>
+        <p class="block-meta">Capabilities: <code>simulation</code></p>
+        <h3 id="block-rotatable"><code>rotatable</code> — Rotatable</h3>
+        <p>The object can be rotated with the rotation handle. Provided by the host shape for every component.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code></p>
+        <h3 id="block-selectable"><code>selectable</code> — Selectable</h3>
+        <p>The object can be selected on the board. Provided by the host shape for every component.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code></p>
+        <h3 id="block-tooltip"><code>tooltip</code> — Tooltip</h3>
+        <p>Shows a native tooltip with a fixed or bound text when the pointer rests on the node.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>textual</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>text</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-track-pointer"><code>track-pointer</code> — Track pointer</h3>
+        <p>Records where the pointer is while it is dragged over the node, one sample every sampling interval, into one of the object's memories. The sample is written in the units the node is scaled in, so what is recorded is a pair of values rather than a pair of pixels — and when the memory names model terms, the run becomes the values those terms take, iteration by iteration. Nothing is recorded until the pointer travels: a click that never moves leaves the memory alone, and a drag opens its run at the point the pointer went down.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>memory</code> <code>writes-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>memory</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>mode</code></td><td>string</td><td><code>"replace"</code></td><td>replace | append</td></tr>
+                <tr><td><code>limit</code></td><td>number</td><td><code>600</code></td><td>min 1, max 2000</td></tr>
+                <tr><td><code>sampleMs</code></td><td>number</td><td><code>33</code></td><td>min 10, max 1000</td></tr>
+                <tr><td><code>minimumMovePixels</code></td><td>number</td><td><code>0</code></td><td>min 0, max 50</td></tr>
+                <tr><td><code>breakOnDrag</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>originX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>originY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>scaleX</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>scaleY</code></td><td>number</td><td><code>-1</code></td><td></td></tr>
+                <tr><td><code>minimumX</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>maximumX</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>minimumY</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>maximumY</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h2 id="components">Components</h2>
+        <p>Ready-made assemblies. A node names one as its <code>type</code> and sets these under <code>parameters</code>.</p>
+        <p class="block-index"><a href="#block-calculator">calculator</a> <a href="#block-circular-gauge">circular-gauge</a> <a href="#block-clock">clock</a> <a href="#block-compass">compass</a> <a href="#block-dial-face">dial-face</a> <a href="#block-key-cap">key-cap</a> <a href="#block-label-ring">label-ring</a> <a href="#block-memory-list">memory-list</a> <a href="#block-memory-trace">memory-trace</a> <a href="#block-mouse-tracker">mouse-tracker</a> <a href="#block-orbit-system">orbit-system</a> <a href="#block-plot-axes">plot-axes</a> <a href="#block-plot-crosshair">plot-crosshair</a> <a href="#block-plot-grid">plot-grid</a> <a href="#block-pointer-hand">pointer-hand</a> <a href="#block-pointer-ring">pointer-ring</a> <a href="#block-rotating-vector">rotating-vector</a> <a href="#block-seven-segment-display">seven-segment-display</a> <a href="#block-speedometer">speedometer</a> <a href="#block-steering-wheel">steering-wheel</a> <a href="#block-thermometer">thermometer</a> <a href="#block-tick-ring">tick-ring</a></p>
+        <h3 id="block-calculator"><code>calculator</code> — Calculator</h3>
+        <p>Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>textual</code> <code>reads-model</code> <code>writes-model</code> <code>memory</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>n</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>a</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>p</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>s</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>dp</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>ad</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>fresh</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>history</code></td><td>memory</td><td><code>[]</code></td><td></td></tr>
+                <tr><td><code>termA</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>termB</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>termC</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>termD</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>keyAColor</code></td><td>colour</td><td><code>"token:surface.muted"</code></td><td></td></tr>
+                <tr><td><code>keyBColor</code></td><td>colour</td><td><code>"token:surface.muted"</code></td><td></td></tr>
+                <tr><td><code>keyCColor</code></td><td>colour</td><td><code>"token:surface.muted"</code></td><td></td></tr>
+                <tr><td><code>keyDColor</code></td><td>colour</td><td><code>"token:surface.muted"</code></td><td></td></tr>
+                <tr><td><code>resultVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>digits</code></td><td>number</td><td><code>2</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>showHistory</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>historyLimit</code></td><td>number</td><td><code>24</code></td><td>min 1, max 200</td></tr>
+                <tr><td><code>bodyColor</code></td><td>colour</td><td><code>"token:surface.emphasis"</code></td><td></td></tr>
+                <tr><td><code>displayColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>keyColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>functionKeyColor</code></td><td>colour</td><td><code>"token:surface.muted"</code></td><td></td></tr>
+                <tr><td><code>accentColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+                <tr><td><code>textColor</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+                <tr><td><code>accentTextColor</code></td><td>colour</td><td><code>"token:text.inverse"</code></td><td></td></tr>
+                <tr><td><code>mutedTextColor</code></td><td>colour</td><td><code>"token:text.secondary"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-circular-gauge"><code>circular-gauge</code> — Circular gauge</h3>
+        <p>Ring gauge that fills clockwise in proportion to a model variable.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>reads-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>valueVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>minimum</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximum</code></td><td>number</td><td><code>100</code></td><td></td></tr>
+                <tr><td><code>startAngle</code></td><td>number</td><td><code>90</code></td><td></td></tr>
+                <tr><td><code>spanAngle</code></td><td>number</td><td><code>360</code></td><td>min 1, max 360</td></tr>
+                <tr><td><code>thickness</code></td><td>number</td><td><code>0.22</code></td><td>min 0.02, max 1</td></tr>
+                <tr><td><code>trackColor</code></td><td>colour</td><td><code>"token:surface.muted"</code></td><td></td></tr>
+                <tr><td><code>fillColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>labelColor</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+                <tr><td><code>digits</code></td><td>number</td><td><code>0</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>unit</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>showReadout</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-clock"><code>clock</code> — Clock</h3>
+        <p>Clock reading the hour, minute, second and millisecond a model gives it, or reading the model's own time as a count of seconds, shown either as a face with a hand for each or as a digital readout of the same time. The seconds and the milliseconds can each be left out, and what is left out goes from the face and from the readout alike. Run by its own keys it is a stopwatch: one key starts and holds it, one takes a lap, and one ends the run — and the laps it has taken are kept in a list of their own under the face.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>reads-model</code> <code>textual</code> <code>interaction</code> <code>memory</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>syncedWithPlayer</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>hourVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>minuteVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>secondVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>millisecondVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>shownAs</code></td><td>string</td><td><code>"analogue"</code></td><td>analogue | digital</td></tr>
+                <tr><td><code>showControls</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>showLaps</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>faceColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>hourColor</code></td><td>colour</td><td><code>"token:stroke.strong"</code></td><td></td></tr>
+                <tr><td><code>minuteColor</code></td><td>colour</td><td><code>"token:stroke.strong"</code></td><td></td></tr>
+                <tr><td><code>secondColor</code></td><td>colour</td><td><code>"token:stroke.warning"</code></td><td></td></tr>
+                <tr><td><code>millisecondColor</code></td><td>colour</td><td><code>"#00000000"</code></td><td></td></tr>
+                <tr><td><code>numberColor</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+                <tr><td><code>buttonColor</code></td><td>colour</td><td><code>"token:surface.muted"</code></td><td></td></tr>
+                <tr><td><code>running</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>laps</code></td><td>memory</td><td><code>[]</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-compass"><code>compass</code> — Compass</h3>
+        <p>Compass rose with cardinal labels, a needle whose heading comes from a model variable and a rose that a second variable can turn. The needle and the rim of the rose can be dragged to write those variables back.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>reads-model</code> <code>interaction</code> <code>writes-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>headingVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>rotationVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>pointers</code></td><td>terms</td><td><code>[]</code></td><td></td></tr>
+                <tr><td><code>showDegrees</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>faceColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>tickColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+                <tr><td><code>needleColor</code></td><td>colour</td><td><code>"token:stroke.warning"</code></td><td></td></tr>
+                <tr><td><code>tailColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+                <tr><td><code>labelColor</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-dial-face"><code>dial-face</code> — Dial face</h3>
+        <p>Circular face with an optional bezel ring, used as the background of clocks, gauges and compasses.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>background</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>radius</code></td><td>number</td><td><code>80</code></td><td>min 1</td></tr>
+                <tr><td><code>faceColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>borderWidth</code></td><td>number</td><td><code>2</code></td><td>min 0, max 40</td></tr>
+                <tr><td><code>bezelWidth</code></td><td>number</td><td><code>0</code></td><td>min 0, max 60</td></tr>
+                <tr><td><code>bezelColor</code></td><td>colour</td><td><code>"token:surface.emphasis"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-key-cap"><code>key-cap</code> — Key cap</h3>
+        <p>Rounded key with a centred label. It carries no interaction of its own: put it inside a group and give that group the behaviour the key performs, so the same cap serves a keypad, a legend or a toolbar.</p>
+        <p class="block-meta">Capabilities: <code>sizable</code> <code>textual</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>44</code></td><td>min 0</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>32</code></td><td>min 0</td></tr>
+                <tr><td><code>label</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+                <tr><td><code>borderWidth</code></td><td>number</td><td><code>1</code></td><td>min 0</td></tr>
+                <tr><td><code>cornerRadius</code></td><td>number</td><td><code>6</code></td><td>min 0</td></tr>
+                <tr><td><code>labelColor</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+                <tr><td><code>fontSize</code></td><td>number</td><td><code>14</code></td><td>min 1</td></tr>
+                <tr><td><code>fontWeight</code></td><td>number</td><td><code>500</code></td><td>min 100, max 900</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-label-ring"><code>label-ring</code> — Label ring</h3>
+        <p>Numeric or text labels placed evenly around a centre, always drawn upright.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>textual</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>radius</code></td><td>number</td><td><code>60</code></td><td>min 1</td></tr>
+                <tr><td><code>count</code></td><td>number</td><td><code>12</code></td><td>min 0, max 360</td></tr>
+                <tr><td><code>startAngle</code></td><td>number</td><td><code>90</code></td><td></td></tr>
+                <tr><td><code>spanAngle</code></td><td>number</td><td><code>360</code></td><td></td></tr>
+                <tr><td><code>includeEnd</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>startValue</code></td><td>number</td><td><code>12</code></td><td></td></tr>
+                <tr><td><code>valueStep</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>wrapAt</code></td><td>number</td><td><code>12</code></td><td>min 0</td></tr>
+                <tr><td><code>digits</code></td><td>number</td><td><code>0</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>texts</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>fontSize</code></td><td>number</td><td><code>12</code></td><td>min 1</td></tr>
+                <tr><td><code>fontFamily</code></td><td>string</td><td><code>"token:font.family"</code></td><td></td></tr>
+                <tr><td><code>fontWeight</code></td><td>number</td><td><code>400</code></td><td>min 100, max 900</td></tr>
+                <tr><td><code>color</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-memory-list"><code>memory-list</code> — Memory list</h3>
+        <p>The rows of a memory drawn as a list, newest first, with the label on the left and the number on the right. Rows can carry actions, so choosing one puts what it holds back into the object.</p>
+        <p class="block-meta">Capabilities: <code>memory</code> <code>textual</code> <code>interaction</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>rows</code></td><td>object</td><td><code>[]</code></td><td></td></tr>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>120</code></td><td>min 0</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>160</code></td><td>min 0</td></tr>
+                <tr><td><code>rowHeight</code></td><td>number</td><td><code>20</code></td><td>min 6</td></tr>
+                <tr><td><code>order</code></td><td>string</td><td><code>"newest"</code></td><td>newest | oldest</td></tr>
+                <tr><td><code>layout</code></td><td>string</td><td><code>"row"</code></td><td>row | stacked</td></tr>
+                <tr><td><code>digits</code></td><td>number</td><td><code>2</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>fontSize</code></td><td>number</td><td><code>"token:font.size.default"</code></td><td>min 1</td></tr>
+                <tr><td><code>textColor</code></td><td>colour</td><td><code>"token:text.secondary"</code></td><td></td></tr>
+                <tr><td><code>valueColor</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+                <tr><td><code>rowColor</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>cornerRadius</code></td><td>number</td><td><code>4</code></td><td>min 0</td></tr>
+                <tr><td><code>emptyText</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>rowActions</code></td><td>object</td><td><code>[]</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-memory-trace"><code>memory-trace</code> — Memory trace</h3>
+        <p>The path the rows of a memory draw, mapped from the values they hold to the pixels of a plot with the same origin and scale the recording used.</p>
+        <p class="block-meta">Capabilities: <code>memory</code> <code>linear</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>rows</code></td><td>object</td><td><code>[]</code></td><td></td></tr>
+                <tr><td><code>originX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>originY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>scaleX</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>scaleY</code></td><td>number</td><td><code>-1</code></td><td></td></tr>
+                <tr><td><code>color</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>lineWidth</code></td><td>number</td><td><code>2</code></td><td>min 0</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>shownRows</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
+                <tr><td><code>showPoints</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>pointRadius</code></td><td>number</td><td><code>1.5</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-mouse-tracker"><code>mouse-tracker</code> — Mouse tracker</h3>
+        <p>Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>memory</code> <code>linear</code> <code>writes-model</code> <code>textual</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>samples</code></td><td>memory</td><td><code>[]</code></td><td></td></tr>
+                <tr><td><code>xVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>yVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>xValueColor</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
+                <tr><td><code>yValueColor</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
+                <tr><td><code>characterKey</code></td><td>character</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>characterImage</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>characterPivotX</code></td><td>number</td><td><code>0.5</code></td><td></td></tr>
+                <tr><td><code>characterPivotY</code></td><td>number</td><td><code>0.5</code></td><td></td></tr>
+                <tr><td><code>characterAspect</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>hoverX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>hoverY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>hovering</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>autoScale</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>equalScales</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>minimumX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximumX</code></td><td>number</td><td><code>10</code></td><td></td></tr>
+                <tr><td><code>minimumY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximumY</code></td><td>number</td><td><code>10</code></td><td></td></tr>
+                <tr><td><code>perStep</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>showGrid</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>showTicks</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>ticks</code></td><td>number</td><td><code>5</code></td><td>min 2, max 11</td></tr>
+                <tr><td><code>backgroundColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>dataAreaColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>axisColor</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
+                <tr><td><code>valueColor</code></td><td>colour</td><td><code>"token:stroke.warning"</code></td><td></td></tr>
+                <tr><td><code>foregroundColor</code></td><td>colour</td><td><code>"token:axis.labelColor"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-orbit-system"><code>orbit-system</code> — Orbit system</h3>
+        <p>Central body with up to four orbiting bodies whose angular positions come from model variables or from simulation time and an orbital period.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>reads-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>timeVariable</code></td><td>variable</td><td><code>"t"</code></td><td></td></tr>
+                <tr><td><code>bodyCount</code></td><td>number</td><td><code>3</code></td><td>min 0, max 4</td></tr>
+                <tr><td><code>period1</code></td><td>number</td><td><code>4</code></td><td>min 0.0001</td></tr>
+                <tr><td><code>period2</code></td><td>number</td><td><code>8</code></td><td>min 0.0001</td></tr>
+                <tr><td><code>period3</code></td><td>number</td><td><code>16</code></td><td>min 0.0001</td></tr>
+                <tr><td><code>period4</code></td><td>number</td><td><code>32</code></td><td>min 0.0001</td></tr>
+                <tr><td><code>showOrbits</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>starColor</code></td><td>colour</td><td><code>"#f08c02"</code></td><td></td></tr>
+                <tr><td><code>bodyColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>orbitColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-plot-axes"><code>plot-axes</code> — Plot axes</h3>
+        <p>Horizontal and vertical axis of a plot box, with tick marks and numbered labels. Any object that shows a value against a scale reads the same way a chart does.</p>
+        <p class="block-meta">Capabilities: <code>layout</code> <code>textual</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>100</code></td><td>min 1</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>100</code></td><td>min 1</td></tr>
+                <tr><td><code>minimumX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximumX</code></td><td>number</td><td><code>10</code></td><td></td></tr>
+                <tr><td><code>minimumY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximumY</code></td><td>number</td><td><code>10</code></td><td></td></tr>
+                <tr><td><code>ticksX</code></td><td>number</td><td><code>5</code></td><td>min 2, max 41</td></tr>
+                <tr><td><code>ticksY</code></td><td>number</td><td><code>5</code></td><td>min 2, max 41</td></tr>
+                <tr><td><code>showTicks</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>showLabels</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>showBorder</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>showZeroLines</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>minimumXProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>maximumXProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>minimumYProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>maximumYProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>color</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
+                <tr><td><code>labelColor</code></td><td>colour</td><td><code>"token:axis.labelColor"</code></td><td></td></tr>
+                <tr><td><code>fontFamily</code></td><td>string</td><td><code>"token:font.family"</code></td><td></td></tr>
+                <tr><td><code>fontSize</code></td><td>number</td><td><code>"token:font.size.tick"</code></td><td>min 1</td></tr>
+                <tr><td><code>lineWidth</code></td><td>number</td><td><code>"token:axis.strokeWidth"</code></td><td>min 0</td></tr>
+                <tr><td><code>tickLength</code></td><td>number</td><td><code>"token:axis.tickLength"</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-plot-crosshair"><code>plot-crosshair</code> — Plot crosshair</h3>
+        <p>Dashed lines from a point out to both axes, with the value it stands at read on a badge against each one — the way a chart answers where a point is.</p>
+        <p class="block-meta">Capabilities: <code>layout</code> <code>textual</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>100</code></td><td>min 1</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>100</code></td><td>min 1</td></tr>
+                <tr><td><code>minimumX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximumX</code></td><td>number</td><td><code>10</code></td><td></td></tr>
+                <tr><td><code>minimumY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximumY</code></td><td>number</td><td><code>10</code></td><td></td></tr>
+                <tr><td><code>valueX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>valueY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>rows</code></td><td>object</td><td><code>[]</code></td><td></td></tr>
+                <tr><td><code>digits</code></td><td>number</td><td><code>2</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>showBadges</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>color</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>xColor</code></td><td>colour</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>yColor</code></td><td>colour</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>pointColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>axisBadgeColor</code></td><td>colour</td><td><code>"token:axis.labelColor"</code></td><td></td></tr>
+                <tr><td><code>badgeColor</code></td><td>colour</td><td><code>"token:text.secondary"</code></td><td></td></tr>
+                <tr><td><code>badgeTextColor</code></td><td>colour</td><td><code>"token:text.inverse"</code></td><td></td></tr>
+                <tr><td><code>fontFamily</code></td><td>string</td><td><code>"token:font.family"</code></td><td></td></tr>
+                <tr><td><code>fontSize</code></td><td>number</td><td><code>"token:font.size.tick"</code></td><td>min 1</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-plot-grid"><code>plot-grid</code> — Plot grid</h3>
+        <p>Grid inside a plot box: one line at every tick of both axes, drawn the way the chart draws its own.</p>
+        <p class="block-meta">Capabilities: <code>layout</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>100</code></td><td>min 1</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>100</code></td><td>min 1</td></tr>
+                <tr><td><code>minimumX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximumX</code></td><td>number</td><td><code>10</code></td><td></td></tr>
+                <tr><td><code>minimumY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximumY</code></td><td>number</td><td><code>10</code></td><td></td></tr>
+                <tr><td><code>ticksX</code></td><td>number</td><td><code>5</code></td><td>min 2, max 41</td></tr>
+                <tr><td><code>ticksY</code></td><td>number</td><td><code>5</code></td><td>min 2, max 41</td></tr>
+                <tr><td><code>color</code></td><td>colour</td><td><code>"token:grid.color"</code></td><td></td></tr>
+                <tr><td><code>lineWidth</code></td><td>number</td><td><code>"token:strokeWidth.default"</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-pointer-hand"><code>pointer-hand</code> — Pointer hand</h3>
+        <p>A clock hand, gauge needle or compass pointer that rotates clockwise around an anchor. Angle 0 points up.</p>
+        <p class="block-meta">Capabilities: <code>angular</code> <code>rotation</code> <code>interaction</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>angle</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>length</code></td><td>number</td><td><code>60</code></td><td>min 0</td></tr>
+                <tr><td><code>tailLength</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>4</code></td><td>min 0</td></tr>
+                <tr><td><code>color</code></td><td>colour</td><td><code>"token:stroke.strong"</code></td><td></td></tr>
+                <tr><td><code>style</code></td><td>string</td><td><code>"needle"</code></td><td>needle | line | arrow</td></tr>
+                <tr><td><code>dragVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>dragProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>degreesPerUnit</code></td><td>number</td><td><code>6</code></td><td></td></tr>
+                <tr><td><code>offsetDegrees</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>wrapAt</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-pointer-ring"><code>pointer-ring</code> — Pointer ring</h3>
+        <p>Directions marked around a dial, one marker per row: a row names an angle, or a pair of values read as a vector — how far across and how far up. Each marker stands where the tick for its direction stands, so it is read against the same scale.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>reads-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>radius</code></td><td>number</td><td><code>80</code></td><td>min 1</td></tr>
+                <tr><td><code>length</code></td><td>number</td><td><code>14</code></td><td>min 0</td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>10</code></td><td>min 0</td></tr>
+                <tr><td><code>startAngle</code></td><td>number</td><td><code>90</code></td><td></td></tr>
+                <tr><td><code>pointers</code></td><td>object</td><td><code>[]</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-rotating-vector"><code>rotating-vector</code> — Rotating vector</h3>
+        <p>Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections.</p>
+        <p class="block-meta">Capabilities: <code>angular</code> <code>reads-model</code> <code>vector</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>angleVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>lengthVariable</code></td><td>variable</td><td><code>"1"</code></td><td></td></tr>
+                <tr><td><code>lengthScale</code></td><td>number</td><td><code>1</code></td><td>min 0</td></tr>
+                <tr><td><code>showCircle</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>showProjections</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>vectorColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>circleColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+                <tr><td><code>projectionColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-seven-segment-display"><code>seven-segment-display</code> — Seven-segment display</h3>
+        <p>A reading spelled out in seven-segment lamps, the way a digital clock, a meter or a stopwatch shows one. Digits, the colon, the point and the minus sign are drawn as bars; the bars a character does not light are left showing faintly, the way the unlit ones on a real panel are. The text is fitted to the box it is given, so it is placed by handing it a box rather than a font size.</p>
+        <p class="block-meta">Capabilities: <code>sizable</code> <code>textual</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>120</code></td><td>min 0</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>40</code></td><td>min 0</td></tr>
+                <tr><td><code>text</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>color</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+                <tr><td><code>colors</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>ghostOpacity</code></td><td>number</td><td><code>0.12</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>thickness</code></td><td>number</td><td><code>0.16</code></td><td>min 0.02, max 0.4</td></tr>
+                <tr><td><code>digitWidth</code></td><td>number</td><td><code>0.56</code></td><td>min 0.2, max 1.5</td></tr>
+                <tr><td><code>spacing</code></td><td>number</td><td><code>0.14</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>slant</code></td><td>number</td><td><code>0</code></td><td>min -30, max 30</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-speedometer"><code>speedometer</code> — Speedometer</h3>
+        <p>Sweeping dial with a scale, a needle bound to a model variable and a numeric readout.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>reads-model</code> <code>scale</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>valueVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>minimum</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximum</code></td><td>number</td><td><code>100</code></td><td></td></tr>
+                <tr><td><code>startAngle</code></td><td>number</td><td><code>225</code></td><td></td></tr>
+                <tr><td><code>endAngle</code></td><td>number</td><td><code>-45</code></td><td></td></tr>
+                <tr><td><code>majorTicks</code></td><td>number</td><td><code>9</code></td><td>min 2, max 60</td></tr>
+                <tr><td><code>minorPerMajor</code></td><td>number</td><td><code>4</code></td><td>min 0, max 20</td></tr>
+                <tr><td><code>digits</code></td><td>number</td><td><code>0</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>unit</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>showReadout</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>faceColor</code></td><td>colour</td><td><code>"token:surface.emphasis"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>needleColor</code></td><td>colour</td><td><code>"token:stroke.warning"</code></td><td></td></tr>
+                <tr><td><code>labelColor</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-steering-wheel"><code>steering-wheel</code> — Steering wheel</h3>
+        <p>The controls a vehicle is driven with: a wheel turned by a model variable, drawn as a car wheel, a motorbike handlebar or a ship's helm, and the accelerator and brake of that same vehicle under it. The wheel, the pedals, and the brake among the pedals, can each be left out. Dragging the wheel turns it and writes back what it reads; the accelerator and the brake each press a value of its own up from zero, both above zero and both pressed the same way, each read the way the wheel is — a term, or a pair laid down along the bearing the wheel is turned to, forwards for the accelerator and back the other way for the brake.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>linear</code> <code>reads-model</code> <code>scale</code> <code>interaction</code> <code>writes-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>turnedBy</code></td><td>string</td><td><code>"angle"</code></td><td>angle | orientation</td></tr>
+                <tr><td><code>angleVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>angleUpVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>accelerationVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>accelerationUpVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>brakingVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>brakingUpVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>wheelType</code></td><td>string</td><td><code>"car"</code></td><td>car | motor bike | boat</td></tr>
+                <tr><td><code>showWheel</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>showPedals</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>showBrake</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>brakeMaximum</code></td><td>number</td><td><code>100</code></td><td>min 0</td></tr>
+                <tr><td><code>maximum</code></td><td>number</td><td><code>100</code></td><td></td></tr>
+                <tr><td><code>pedalReturnStep</code></td><td>number</td><td><code>10</code></td><td>min 0</td></tr>
+                <tr><td><code>rimColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>gripColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+                <tr><td><code>hubColor</code></td><td>colour</td><td><code>"token:surface.muted"</code></td><td></td></tr>
+                <tr><td><code>restingAngle</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>markColor</code></td><td>colour</td><td><code>"token:stroke.warning"</code></td><td></td></tr>
+                <tr><td><code>acceleratorColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>brakeColor</code></td><td>colour</td><td><code>"token:stroke.warning"</code></td><td></td></tr>
+                <tr><td><code>frameColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>surfaceColor</code></td><td>colour</td><td><code>"token:surface.muted"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-thermometer"><code>thermometer</code> — Thermometer</h3>
+        <p>A temperature read as the height of a column: a bulb, a stem the liquid rises up, and a scale beside it marked every so many degrees. A dashed line carries the top of the column across to the scale, so the reading is placed against the marks the way a chart places a point against its axes. The column can be dragged to write the temperature back, and the marks and their numbers are the sizes the board's own axes are drawn to, so the scale stretches as the object is resized rather than the writing on it.</p>
+        <p class="block-meta">Capabilities: <code>linear</code> <code>scale</code> <code>reads-model</code> <code>interaction</code> <code>writes-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>valueVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>minimum</code></td><td>number</td><td><code>-20</code></td><td></td></tr>
+                <tr><td><code>maximum</code></td><td>number</td><td><code>120</code></td><td></td></tr>
+                <tr><td><code>tickStep</code></td><td>number</td><td><code>20</code></td><td>min 0</td></tr>
+                <tr><td><code>digits</code></td><td>number</td><td><code>1</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>unit</code></td><td>string</td><td><code>"°C"</code></td><td>°C | °F</td></tr>
+                <tr><td><code>showReadout</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>columnColor</code></td><td>colour</td><td><code>"token:stroke.warning"</code></td><td></td></tr>
+                <tr><td><code>glassColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>scaleColor</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
+                <tr><td><code>scaleLabelColor</code></td><td>colour</td><td><code>"token:axis.labelColor"</code></td><td></td></tr>
+                <tr><td><code>readoutColor</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-tick-ring"><code>tick-ring</code> — Tick ring</h3>
+        <p>Evenly spaced radial tick marks around a centre, with optional longer major ticks.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>scale</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>radius</code></td><td>number</td><td><code>80</code></td><td>min 1</td></tr>
+                <tr><td><code>count</code></td><td>number</td><td><code>12</code></td><td>min 0, max 720</td></tr>
+                <tr><td><code>startAngle</code></td><td>number</td><td><code>90</code></td><td></td></tr>
+                <tr><td><code>spanAngle</code></td><td>number</td><td><code>360</code></td><td></td></tr>
+                <tr><td><code>includeEnd</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>length</code></td><td>number</td><td><code>8</code></td><td>min 0</td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>1</code></td><td>min 0</td></tr>
+                <tr><td><code>color</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>majorEvery</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
+                <tr><td><code>majorLength</code></td><td>number</td><td><code>12</code></td><td>min 0</td></tr>
+                <tr><td><code>majorWidth</code></td><td>number</td><td><code>2</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h2 id="tokens">Design tokens</h2>
+        <p>The board's own colours, widths, fonts, axis and crosshair numbers. Write one as a default with <code>"token:stroke.accent"</code>, or read one with the binding <code>{ "token": "stroke.accent" }</code> — never the literal value, so a preset restyles every object at once.</p>
+        <p class="block-meta">Values below are the <code>standard</code> preset. The presets are <code>standard</code> <code>minimal</code> <code>scientific</code> <code>classroom</code> <code>high-contrast</code>; each one overrides some of these and inherits the rest.</p>
+        <table class="docs-table">
+            <thead><tr><th>Token</th><th>Standard value</th></tr></thead>
+            <tbody>
+                <tr><td><code>surface.default</code></td><td><code>"#ffffff"</code></td></tr>
+                <tr><td><code>surface.emphasis</code></td><td><code>"#f7f7f7"</code></td></tr>
+                <tr><td><code>surface.muted</code></td><td><code>"#eeeeee"</code></td></tr>
+                <tr><td><code>stroke.default</code></td><td><code>"#1e1e1e"</code></td></tr>
+                <tr><td><code>stroke.strong</code></td><td><code>"#000000"</code></td></tr>
+                <tr><td><code>stroke.subtle</code></td><td><code>"#9a9a9a"</code></td></tr>
+                <tr><td><code>stroke.accent</code></td><td><code>"#1871c2"</code></td></tr>
+                <tr><td><code>stroke.warning</code></td><td><code>"#e03130"</code></td></tr>
+                <tr><td><code>text.primary</code></td><td><code>"#1e1e1e"</code></td></tr>
+                <tr><td><code>text.secondary</code></td><td><code>"#6b6b6b"</code></td></tr>
+                <tr><td><code>text.inverse</code></td><td><code>"#ffffff"</code></td></tr>
+                <tr><td><code>selection.outline</code></td><td><code>"#1871c2"</code></td></tr>
+                <tr><td><code>handle.fill</code></td><td><code>"#ffffff"</code></td></tr>
+                <tr><td><code>handle.stroke</code></td><td><code>"#1871c2"</code></td></tr>
+                <tr><td><code>strokeWidth.hairline</code></td><td><code>0.5</code></td></tr>
+                <tr><td><code>strokeWidth.default</code></td><td><code>1</code></td></tr>
+                <tr><td><code>strokeWidth.strong</code></td><td><code>2</code></td></tr>
+                <tr><td><code>strokeWidth.heavy</code></td><td><code>3</code></td></tr>
+                <tr><td><code>radius.small</code></td><td><code>2</code></td></tr>
+                <tr><td><code>radius.medium</code></td><td><code>4</code></td></tr>
+                <tr><td><code>radius.large</code></td><td><code>8</code></td></tr>
+                <tr><td><code>spacing.small</code></td><td><code>4</code></td></tr>
+                <tr><td><code>spacing.medium</code></td><td><code>8</code></td></tr>
+                <tr><td><code>spacing.large</code></td><td><code>16</code></td></tr>
+                <tr><td><code>font.family</code></td><td><code>"Katex_Main, Inter, serif"</code></td></tr>
+                <tr><td><code>font.family.sans</code></td><td><code>"Inter, Assistant, system-ui, sans-serif"</code></td></tr>
+                <tr><td><code>font.size.small</code></td><td><code>9</code></td></tr>
+                <tr><td><code>font.size.default</code></td><td><code>11</code></td></tr>
+                <tr><td><code>font.size.large</code></td><td><code>14</code></td></tr>
+                <tr><td><code>font.size.tick</code></td><td><code>10</code></td></tr>
+                <tr><td><code>font.weight.default</code></td><td><code>400</code></td></tr>
+                <tr><td><code>font.weight.strong</code></td><td><code>600</code></td></tr>
+                <tr><td><code>axis.color</code></td><td><code>"#7a7a7a"</code></td></tr>
+                <tr><td><code>axis.labelColor</code></td><td><code>"#666666"</code></td></tr>
+                <tr><td><code>axis.strokeWidth</code></td><td><code>1.2</code></td></tr>
+                <tr><td><code>axis.tickLength</code></td><td><code>4</code></td></tr>
+                <tr><td><code>axis.minorTickLength</code></td><td><code>2.5</code></td></tr>
+                <tr><td><code>axis.minorOpacity</code></td><td><code>0.45</code></td></tr>
+                <tr><td><code>axis.labelGapX</code></td><td><code>1.8</code></td></tr>
+                <tr><td><code>axis.labelGapY</code></td><td><code>0.7</code></td></tr>
+                <tr><td><code>axis.labelRise</code></td><td><code>0.3</code></td></tr>
+                <tr><td><code>grid.color</code></td><td><code>"#d3d3d3"</code></td></tr>
+                <tr><td><code>grid.majorOpacity</code></td><td><code>0.75</code></td></tr>
+                <tr><td><code>grid.minorOpacity</code></td><td><code>0.4</code></td></tr>
+                <tr><td><code>crosshair.dash</code></td><td><code>"4 3"</code></td></tr>
+                <tr><td><code>crosshair.opacity</code></td><td><code>0.25</code></td></tr>
+                <tr><td><code>crosshair.strokeWidth</code></td><td><code>1</code></td></tr>
+                <tr><td><code>badge.opacity</code></td><td><code>0.85</code></td></tr>
+                <tr><td><code>badge.cornerRadius</code></td><td><code>3</code></td></tr>
+                <tr><td><code>badge.paddingX</code></td><td><code>4</code></td></tr>
+                <tr><td><code>badge.paddingY</code></td><td><code>2</code></td></tr>
+                <tr><td><code>badge.charWidth</code></td><td><code>0.58</code></td></tr>
+                <tr><td><code>shadow.soft</code></td><td><code>"0 1px 2px rgba(0,0,0,0.16)"</code></td></tr>
+                <tr><td><code>opacity.disabled</code></td><td><code>0.4</code></td></tr>
+                <tr><td><code>opacity.ghost</code></td><td><code>0.5</code></td></tr>
+                <tr><td><code>duration.fast</code></td><td><code>120</code></td></tr>
+                <tr><td><code>duration.default</code></td><td><code>240</code></td></tr>
+                <tr><td><code>size.default.width</code></td><td><code>180</code></td></tr>
+                <tr><td><code>size.default.height</code></td><td><code>180</code></td></tr>
+                <tr><td><code>handle.size</code></td><td><code>8</code></td></tr>
+            </tbody>
+        </table>
+<!-- generated:blocks-end -->
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

@@ -71,6 +71,12 @@
             <li><a href="/docs/shapes/mindmap.html"><i class="fa-light fa-diagram-project"></i> Mind Map</a></li>
             <li><a href="/docs/shapes/component.html"><i class="fa-light fa-shapes"></i> Components</a></li>
         </ul>
+        <h5>Building Blocks</h5>
+        <ul>
+            <li><a href="/docs/blocks/index.html"><i class="fa-light fa-cubes"></i> Building Blocks</a></li>
+            <li><a href="/docs/blocks/object-definition.html"><i class="fa-light fa-file-code"></i> Object Definition</a></li>
+            <li><a href="/docs/blocks/reference.html"><i class="fa-light fa-list-tree"></i> Block Reference</a></li>
+        </ul>
         <h5>Data Analysis</h5>
         <ul>
             <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
@@ -224,6 +230,11 @@ e (or \E) = 2.71828...</code></pre>
 
         <h2>Building Blocks and Component Objects</h2>
         <p>Visual objects that are not one of the shape classes above are built from <strong>building blocks</strong>: approved primitives, modifiers, behaviours and components held in a single registry. An agent never writes rendering code — it composes a declarative object definition through structured tools and the deterministic compiler turns it into an editable <code>ComponentShape</code>.</p>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>Building a new object? <a href="/docs/blocks/object-definition.html">Object Definition</a> is the complete document specification — identity, parameters, locals, the node tree, bindings, behaviours and what gets a definition refused — and <a href="/docs/blocks/reference.html">Block Reference</a> lists every block with its properties, defaults and ranges, generated from this same registry. The summary below is the shape of it.</span>
+        </div>
         <table class="docs-table">
             <thead><tr><th>Layer</th><th>Examples</th></tr></thead>
             <tbody>
@@ -233,7 +244,8 @@ e (or \E) = 2.71828...</code></pre>
                 <tr><td>Components</td><td><code>dial-face</code>, <code>tick-ring</code>, <code>label-ring</code>, <code>pointer-hand</code>, <code>key-cap</code>, <code>seven-segment-display</code>, <code>clock</code>, <code>compass</code>, <code>speedometer</code>, <code>circular-gauge</code>, <code>rotating-vector</code>, <code>orbit-system</code>, <code>steering-wheel</code>, <code>thermometer</code>, <code>calculator</code></td></tr>
             </tbody>
         </table>
-        <p>Call <code>list_building_blocks</code> for the live catalogue; it is generated from the same registry the renderer uses, so it never drifts.</p>
+        <p>Call <code>list_building_blocks</code> for the live catalogue; it is generated from the same registry the renderer uses, so it never drifts. The published copy of it is <a href="/docs/blocks/reference.html">Block Reference</a>.</p>
+        <p>A definition is one JSON document: <code>schemaVersion</code>, <code>type</code>, <code>category: "component"</code>, <code>parameters</code> (what the user edits, held in the shape's own properties), <code>locals</code> (derived values evaluated in order, LaTeX formulas over declared names only) and <code>root</code> (the node tree). A node is <code>{ id, type, properties, bindings, modifiers, behaviours, children }</code> for a primitive or <code>{ id, type, parameters, modifiers, behaviours }</code> for a component; a binding always wins over a constant, and <code>when</code> drops a child before compilation. Reserved parameters <code>$width</code>, <code>$height</code>, <code>$iteration</code>, <code>$playing</code>, <code>$precision</code>, <code>$index</code> and <code>$count</code> are reached through locals. Colours, fonts and axis values are written as design tokens (<code>"token:stroke.accent"</code>), never as literals. See <a href="/docs/blocks/object-definition.html">Object Definition</a> for the full specification.</p>
 
         <h3>Tools</h3>
         <table class="docs-table">
@@ -283,6 +295,8 @@ e (or \E) = 2.71828...</code></pre>
             <li>Data columns in Tables produce terms of type DATA</li>
             <li>Regression results produce terms of type REGRESSION</li>
             <li>Objects that are not a built-in shape are composed from building blocks and inserted as a ComponentShape — never by writing rendering code</li>
+            <li>A new object definition must declare every name its formulas read; an undeclared name is refused at registration rather than falling through to a model term</li>
+            <li>Anything cartesian uses <code>plot-grid</code>, <code>plot-axes</code> and <code>plot-crosshair</code> rather than hand-drawn lines and text</li>
         </ul>
 
         <div class="callout callout-info">

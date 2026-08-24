@@ -415,3 +415,33 @@ kbd {
 @media (max-width: 767.98px) {
     .navmenu { display: none; }
 }
+
+/* ── Generated block reference ── */
+.block-meta {
+    font-size: 13px;
+    color: color-mix(in srgb, var(--default-color), transparent 25%);
+    margin: 0 0 12px;
+}
+
+.block-meta code { font-size: 12px; }
+
+.block-index {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 24px;
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 12px;
+}
+
+.block-index a {
+    background: var(--light-bg);
+    border-radius: 4px;
+    padding: 2px 8px;
+}
+
+.block-index a:hover { background: color-mix(in srgb, var(--accent-color), transparent 88%); }
+
+.docs-main h3 code { font-size: inherit; background: none; padding: 0; }
+
+.docs-main h2[id], .docs-main h3[id] { scroll-margin-top: 90px; }

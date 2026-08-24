@@ -71,6 +71,12 @@
             <li><a href="mindmap.html"><i class="fa-light fa-diagram-project"></i> Mind Map</a></li>
             <li><a href="component.html"><i class="fa-light fa-shapes"></i> Components</a></li>
         </ul>
+        <h5>Building Blocks</h5>
+        <ul>
+            <li><a href="/docs/blocks/index.html"><i class="fa-light fa-cubes"></i> Building Blocks</a></li>
+            <li><a href="/docs/blocks/object-definition.html"><i class="fa-light fa-file-code"></i> Object Definition</a></li>
+            <li><a href="/docs/blocks/reference.html"><i class="fa-light fa-list-tree"></i> Block Reference</a></li>
+        </ul>
         <h5>Data Analysis</h5>
         <ul>
             <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
@@ -106,7 +112,7 @@
         <h2>Overview</h2>
         <p>The <i class="fa-light fa-compass-drafting"></i> Objects button on the toolbar opens the object palette: every object with a preview of what it draws and a description of what it does, searchable by name, description or tag. Pick one and drag on the board to place it. An object behaves like every other shape: it can be selected, moved, resized, rotated, locked, hidden, duplicated, copied, undone and saved.</p>
         <p>An object you build on the board — with the AI assistant, or by hand — can be shared: <strong>Copy definition</strong> in its settings menu puts its definition on the clipboard, ready to paste into the object editor in the catalogue.</p>
-        <p>What makes a component different is how it is built. Instead of a dedicated drawing for each object, a component is a small tree of approved building blocks — shapes, transforms, interactions and value bindings — that Modellus compiles and draws. Because they share the same blocks, components look consistent with each other and can be extended without new drawing code.</p>
+        <p>What makes a component different is how it is built. Instead of a dedicated drawing for each object, a component is a small tree of approved building blocks — shapes, transforms, interactions and value bindings — that Modellus compiles and draws. Because they share the same blocks, components look consistent with each other and can be extended without new drawing code. <a href="/docs/blocks/index.html">Building Blocks</a> explains the construct, and <a href="/docs/blocks/object-definition.html">Object Definition</a> is how a new object is written.</p>
 
         <div class="callout callout-info">
             <i class="fa-light fa-info-circle"></i>
@@ -187,6 +193,27 @@
 
         <h2>Asking the assistant for an object</h2>
         <p>The Modellus assistant builds components through the same building blocks. It can only use approved blocks, must bind values to variables that exist in your model, and cannot insert an object that fails validation, so anything it produces behaves like an object you placed yourself and stays fully editable.</p>
+
+        <h2>Building an object of your own</h2>
+        <p>An object is not drawing code: it is one JSON document naming approved blocks, and the same document is what the editor bundles, what the community catalogue publishes and what the assistant invents. Anything on this page can be built that way.</p>
+
+        <div class="docs-grid">
+            <a href="/docs/blocks/index.html" class="docs-grid-card">
+                <i class="fa-light fa-cubes"></i>
+                <h4>Building Blocks</h4>
+                <p>What the blocks are, and how a drawing is made from them.</p>
+            </a>
+            <a href="/docs/blocks/object-definition.html" class="docs-grid-card">
+                <i class="fa-light fa-file-code"></i>
+                <h4>Object Definition</h4>
+                <p>The document a new object is written as, with a worked example.</p>
+            </a>
+            <a href="/docs/blocks/reference.html" class="docs-grid-card">
+                <i class="fa-light fa-list-tree"></i>
+                <h4>Block Reference</h4>
+                <p>Every block with its properties, defaults and ranges.</p>
+            </a>
+        </div>
 
     </main>
 </div>

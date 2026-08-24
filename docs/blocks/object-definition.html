@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Object Definition – Modellus Docs</title>
+    <meta name="description" content="The JSON document a new Modellus object is written as: identity, parameters, locals, the node tree, bindings and behaviours." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/pages/board/index.html">Editor</a></li>
+                    <li><a href="/pages/catalog/index.html">Community</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/pages/board/index.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Editors</h5>
+        <ul>
+            <li><a href="/docs/board/index.html"><i class="fa-light fa-earth-africa"></i> Board</a></li>
+            <li><a href="/docs/notebook/index.html"><i class="fa-light fa-notebook"></i> Notebook</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="/docs/shapes/expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="/docs/shapes/table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="/docs/shapes/initial-values.html"><i class="fa-light fa-table-list"></i> Initial Values</a></li>
+            <li><a href="/docs/shapes/chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="/docs/shapes/body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="/docs/shapes/point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="/docs/shapes/line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="/docs/shapes/arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="/docs/shapes/vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="/docs/shapes/slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="/docs/shapes/gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="/docs/shapes/value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="/docs/shapes/media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="/docs/shapes/text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="/docs/shapes/ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="/docs/shapes/protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="/docs/shapes/referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="/docs/shapes/question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+            <li><a href="/docs/shapes/mindmap.html"><i class="fa-light fa-diagram-project"></i> Mind Map</a></li>
+            <li><a href="/docs/shapes/component.html"><i class="fa-light fa-shapes"></i> Components</a></li>
+        </ul>
+        <h5>Building Blocks</h5>
+        <ul>
+            <li><a href="/docs/blocks/index.html"><i class="fa-light fa-cubes"></i> Building Blocks</a></li>
+            <li><a href="/docs/blocks/object-definition.html" class="active"><i class="fa-light fa-file-code"></i> Object Definition</a></li>
+            <li><a href="/docs/blocks/reference.html"><i class="fa-light fa-list-tree"></i> Block Reference</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>Community</h5>
+        <ul>
+            <li><a href="/docs/catalog/index.html"><i class="fa-light fa-store"></i> Community</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <span>Object Definition</span>
+        </div>
+
+        <h1>Object Definition</h1>
+        <p class="page-desc">The document a new object is written as, and the vocabulary it is allowed to use. One JSON file: no JavaScript, no markup, nothing to wire up. It is compiled by the same compiler, drawn by the same renderer and hosted by the same shape as the objects the editor ships with.</p>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>This page is the recipe. <a href="/docs/blocks/index.html">Building Blocks</a> is why the layers look like this, and <a href="/docs/blocks/reference.html">Block Reference</a> is the property list of every block named here, generated from the live registry.</span>
+        </div>
+
+        <h2>The document at a glance</h2>
+        <p>Fill the sections in the order they are written, because each one may only read what the ones above it declare: identity, then parameters, then locals, then the tree.</p>
+<pre><code>{
+    "schemaVersion": "1.0.0",
+    "type": "my-object",
+    "category": "component",
+    "displayName": "My object",
+    "description": "One sentence, written for the person choosing it from the palette.",
+    "icon": "fa-light fa-circle-notch",
+    "tags": ["object", "meter"],
+    "capabilities": ["radial", "reads-model"],
+    "preview": { "parameters": { "valueVariable": "64", "unit": "km/h" } },
+
+    "parameters": [
+        { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model", "unitParameter": "unit" },
+        { "id": "maximum", "label": "Maximum", "valueType": "number", "defaultValue": 100, "category": "scale", "minimum": 0 },
+        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "", "category": "display" },
+        { "id": "showReadout", "label": "Show readout", "valueType": "boolean", "defaultValue": true, "category": "display" },
+        { "id": "fillColor", "label": "Fill colour", "valueType": "colour", "defaultValue": "token:stroke.accent", "category": "style" }
+    ],
+
+    "locals": [
+        { "id": "w", "value": { "parameter": "$width" } },
+        { "id": "h", "value": { "parameter": "$height" } },
+        { "id": "cx", "formula": "\\frac{w}{2}" },
+        { "id": "cy", "formula": "\\frac{h}{2}" },
+        { "id": "r", "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-4\\right)" },
+        { "id": "value", "value": { "parameter": "valueVariable", "as": "number" } },
+        { "id": "ratio", "formula": "\\max\\left(0,\\min\\left(1,\\frac{value}{maximum}\\right)\\right)" },
+        { "id": "readoutText", "value": { "format": { "parameter": "value" }, "digits": 1 } },
+        { "id": "readoutUnit", "fallback": "", "value": { "choose": { "termUnit": { "parameter": "valueVariable" } }, "then": { "termUnit": { "parameter": "valueVariable" } }, "otherwise": { "parameter": "unit" } } }
+    ],
+
+    "root": {
+        "id": "my-object",
+        "type": "group",
+        "children": [
+            {
+                "id": "body",
+                "type": "circle",
+                "bindings": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "r" },
+                    "fill": { "parameter": "fillColor" }
+                },
+                "properties": { "stroke": "none" }
+            },
+            {
+                "id": "readout",
+                "type": "text",
+                "when": { "parameter": "showReadout" },
+                "bindings": {
+                    "x": { "parameter": "cx" },
+                    "y": { "parameter": "cy" },
+                    "text": { "parameter": "readoutText" },
+                    "unit": { "parameter": "readoutUnit" }
+                }
+            }
+        ]
+    }
+}</code></pre>
+
+        <h2>Identity</h2>
+        <table class="docs-table">
+            <thead><tr><th>Field</th><th>Rule</th></tr></thead>
+            <tbody>
+                <tr><td><code>schemaVersion</code></td><td>Required. <code>"1.0.0"</code>.</td></tr>
+                <tr><td><code>type</code></td><td>Required. Matches <code>^[a-z][a-z0-9-]{2,48}$</code> and must not be a type the editor already ships — a document naming a built-in is refused, so a model cannot freeze a bundled object at an old version.</td></tr>
+                <tr><td><code>category</code></td><td>Required. Always <code>"component"</code>.</td></tr>
+                <tr><td><code>displayName</code></td><td>The name in the palette.</td></tr>
+                <tr><td><code>description</code></td><td>One sentence, written for the person choosing it from the palette. It is what the palette search reads.</td></tr>
+                <tr><td><code>icon</code></td><td>A Font Awesome light class, e.g. <code>"fa-light fa-gauge"</code>.</td></tr>
+                <tr><td><code>tags</code></td><td>Give it <code>"object"</code> or it will not appear in the board's Objects palette. Low-level components deliberately do not have it.</td></tr>
+                <tr><td><code>capabilities</code></td><td>Free-form marks used by search, e.g. <code>radial</code>, <code>angular</code>, <code>reads-model</code>, <code>writes-model</code>, <code>memory</code>.</td></tr>
+                <tr><td><code>preview</code></td><td><code>{ "parameters": { … } }</code> — the values the palette thumbnail and the catalogue screenshot are drawn with. Needed whenever the defaults draw nothing recognisable: a gauge reading zero, a phasor of length one. A clock does not need it.</td></tr>
+                <tr><td><code>art</code></td><td>Provenance for imported drawings: <code>{ "rose": "art/compass-rose.svg" }</code>. Nothing reads it at runtime; it is what lets a redrawn file be imported again over the same document.</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Parameters — what the reader edits</h2>
+        <p>Each parameter is <code>{ id, label, valueType, defaultValue, category }</code> and becomes a row in the object's toolbar. <strong>Parameter values live in the shape, not in the document</strong> — which is what gives a new object undo/redo, copy/paste, collaboration and saving with nothing written for the purpose.</p>
+        <table class="docs-table">
+            <thead><tr><th><code>valueType</code></th><th>The row is</th></tr></thead>
+            <tbody>
+                <tr><td><code>number</code></td><td>A number box, honouring <code>minimum</code>, <code>maximum</code> and <code>unit</code>.</td></tr>
+                <tr><td><code>string</code></td><td>A text box, or a drop-down with <code>enumValues</code>, or a button group when <code>enumIcons</code> of the same length is given.</td></tr>
+                <tr><td><code>boolean</code></td><td>A switch.</td></tr>
+                <tr><td><code>colour</code></td><td>A swatch. Default it to a token: <code>"token:stroke.accent"</code>.</td></tr>
+                <tr><td><code>variable</code></td><td>A term selector that also takes a plain number, exactly like the terms of a body or a point.</td></tr>
+                <tr><td><code>expression</code></td><td>A LaTeX expression over model variables.</td></tr>
+                <tr><td><code>terms</code></td><td>A list the reader adds rows to, each row naming a term or a pair of them with a colour of its own, reordered by its handle and removed by its bin — what the compass marks its pointers with. Read the rows with a <code>parameter</code> binding and hand them to a component that takes a list, such as <code>pointer-ring</code>.</td></tr>
+                <tr><td><code>memory</code></td><td>Rows the object remembers. See <a href="#memory">If the object has to remember something</a>.</td></tr>
+                <tr><td><code>character</code></td><td>A character picked from the character library.</td></tr>
+                <tr><td><code>object</code></td><td>A structured value the object keeps for itself.</td></tr>
+            </tbody>
+        </table>
+        <p><strong>A label names the thing, not the kind of thing.</strong> A <code>variable</code> row already stands in the variables menu under a term selector — so call it <em>Hour</em>, <em>Value</em>, <em>Time</em>, never <em>Hour variable</em>.</p>
+
+        <h3>Where the row appears</h3>
+        <table class="docs-table">
+            <thead><tr><th><code>category</code></th><th>Menu</th></tr></thead>
+            <tbody>
+                <tr><td><code>style</code></td><td>The name and colours menu</td></tr>
+                <tr><td><code>model</code>, <code>orbits</code></td><td>The variables menu</td></tr>
+                <tr><td><code>state</code></td><td>Nowhere — what the object keeps for itself</td></tr>
+                <tr><td>anything else (<code>scale</code>, <code>display</code>, <code>general</code>, …)</td><td>The settings menu</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Optional fields</h3>
+        <table class="docs-table">
+            <thead><tr><th>Field</th><th>What it does</th></tr></thead>
+            <tbody>
+                <tr><td><code>description</code></td><td>Help text on the row.</td></tr>
+                <tr><td><code>minimum</code>, <code>maximum</code></td><td>Clamp a number, and bound its box.</td></tr>
+                <tr><td><code>enumValues</code>, <code>enumIcons</code></td><td>A fixed set of alternatives; with icons of the same length it becomes a single-selection button group.</td></tr>
+                <tr><td><code>unit</code></td><td>What the number is measured in, e.g. <code>"deg"</code>.</td></tr>
+                <tr><td><code>unitParameter</code></td><td>On a <code>variable</code>: the row where the term is picked is where its unit is picked too, and when the row holds a plain number rather than a term, that is where the picked unit is written.</td></tr>
+                <tr><td><code>colorParameter</code></td><td>On a <code>variable</code>: carries that colour's swatch on its own row, so the colour is chosen beside the term it paints.</td></tr>
+                <tr><td><code>pairedParameter</code></td><td>On a <code>variable</code>: a second selector beside the first, so the row names a pair — how far across and how far up. Read it with a <code>direction</code> binding and leave the paired parameter <code>userEditable: false</code>.</td></tr>
+                <tr><td><code>modeParameter</code></td><td>On a <code>variable</code> that also names a <code>pairedParameter</code>: the row is read as an angle or as an orientation, chosen from a key of its own in the toolbar. The mode parameter is an ordinary <code>string</code> with <code>"enumValues": ["angle", "orientation"]</code>, marked <code>userEditable: false</code>.</td></tr>
+                <tr><td><code>valueAnchor</code></td><td>On a <code>variable</code>: <code>{ "x": 0.25, "y": 0.07 }</code>, a point in the object's box as a fraction of its width and height — or <code>{ "node": "accelerator-press", "x": 0.5, "y": 0.06 }</code> to read the fractions in one named node's box. The row is then offered the eye every term on the board is shown with, and turning it on draws <em>term</em> = <em>value</em> there, in the badge, font and colour every other term label uses. A row without an anchor has nowhere to put a label, so it is not offered the eye.</td></tr>
+                <tr><td><code>visibleWhen</code></td><td><code>{ "parameter": "showPedals" }</code>, or <code>{ "parameter": "turnedBy", "equals": "angle" }</code>, or a list of conditions that all have to hold. The toolbar leaves the row out while that is false, so an optional part takes its rows, ends and colours away with it. It is about the menus alone — what is drawn is decided by <code>when</code>.</td></tr>
+                <tr><td><code>toolbarKey</code></td><td>On a <code>string</code> with <code>enumValues</code> and <code>enumIcons</code>: a key of its own in the toolbar instead of a row in a menu, wearing the icon of the choice it is on. For a choice the other rows hang off — the clock's face-or-digits. Mark it <code>userEditable: false</code> and name a <code>toolbarTooltip</code> translation key.</td></tr>
+                <tr><td><code>required</code>, <code>bindable</code>, <code>agentAccessible</code>, <code>userEditable</code>, <code>structured</code>, <code>termParameters</code></td><td>Whether the parameter must be given, may carry a binding, is offered to the assistant, is offered to the reader, holds a structured value, and which terms a memory's fields belong to.</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Names that come with behaviour</h3>
+        <p>Some parameter names are recognised by the toolbar and bring a shared control with them, for free:</p>
+        <table class="docs-table">
+            <thead><tr><th>Declare</th><th>Get</th></tr></thead>
+            <tbody>
+                <tr><td><code>minimumX</code>, <code>maximumX</code>, <code>minimumY</code>, <code>maximumY</code></td><td>The board's own axis-range control — a minimum and a maximum side by side — instead of four separate number boxes.</td></tr>
+                <tr><td><code>autoScale</code>, <code>equalScales</code></td><td>The chart's own two switches, with the chart's own behaviour: auto scale fits both axes to what the object holds, padded the way the chart pads its data; equal scale widens whichever axis needs it. What they work out is shown in the number boxes, disabled, and never written down, so the ends the object was set to survive the switch being turned off. An axis deciding for itself is not an axis to drag, so its tick handles are not drawn.</td></tr>
+                <tr><td><code>backgroundColor</code>, <code>dataAreaColor</code>, <code>axisColor</code></td><td>The chart's colour menu exactly, under the same labels and icons.</td></tr>
+            </tbody>
+        </table>
+
+        <h2>Locals — what the object works out once</h2>
+        <p>Derived values, evaluated in order onto the parameter frame before the tree compiles. Each is <code>{ "id": …, "value": &lt;binding&gt; }</code> or <code>{ "id": …, "formula": "&lt;latex&gt;" }</code>, with an optional <code>fallback</code> (default <code>0</code>). A local may read the parameters and any earlier local, so a value the whole tree needs is worked out once rather than per node.</p>
+        <p><strong>Nothing is implicit.</strong> A formula may only read what the document declares. A name that is neither a parameter, an earlier local nor listed in an explicit <code>inputs</code> block is rejected at registration — otherwise it would quietly fall through to a model term of that name. Reach the drawing size, the iteration on screen or the player state by declaring a local bound to a reserved parameter:</p>
+        <table class="docs-table">
+            <thead><tr><th>Reserved</th><th>Meaning</th></tr></thead>
+            <tbody>
+                <tr><td><code>$width</code>, <code>$height</code></td><td>The object's box, so it scales on resize</td></tr>
+                <tr><td><code>$iteration</code></td><td>The iteration the board is showing</td></tr>
+                <tr><td><code>$playing</code></td><td>1 while the player runs — a drawing that follows the pointer stops when it does</td></tr>
+                <tr><td><code>$precision</code></td><td>The decimals the model is read to</td></tr>
+                <tr><td><code>$index</code>, <code>$count</code></td><td>Inside a <code>repeat</code>: which copy this is, and how many there are</td></tr>
+            </tbody>
+        </table>
+        <p>Formulas are Modellus LaTeX, parsed against this layer's own system rather than the model's — so a local named <code>pad</code> or <code>gap</code> never becomes a model variable, and there is no <code>eval</code> anywhere on this path.</p>
+
+        <h2>The tree — what is drawn</h2>
+        <p>Two node shapes, and only <code>group</code> accepts <code>children</code>:</p>
+<pre><code>{ "id": "…", "type": "&lt;primitive&gt;", "properties": {…}, "bindings": {…}, "modifiers": [], "behaviours": [], "children": [] }
+{ "id": "…", "type": "&lt;component&gt;", "parameters": {…}, "modifiers": [], "behaviours": [] }</code></pre>
+        <ul>
+            <li><code>properties</code> are constants and <code>bindings</code> are declarative values for the same names. <strong>A binding always wins over a constant.</strong></li>
+            <li><code>when</code> on a child drops it before compilation, so a hidden part costs nothing and does not shift its siblings' ids. Use it rather than <code>visible: false</code>. A behaviour may carry a <code>when</code> too.</li>
+            <li>An <code>id</code> is the handle everything else attaches to — a binding, a <code>when</code>, a modifier, a behaviour, a <code>valueAnchor</code>. Ids must be unique in the document.</li>
+        </ul>
+
+        <h3>Bindings</h3>
+        <table class="docs-table">
+            <thead><tr><th>Form</th><th>Meaning</th></tr></thead>
+            <tbody>
+                <tr><td><code>{ "constant": 12 }</code></td><td>A fixed value</td></tr>
+                <tr><td><code>{ "parameter": "unit" }</code></td><td>Another parameter or a local; add <code>"as": "number"</code> to read it as a model variable</td></tr>
+                <tr><td><code>{ "variable": "minute", "case": 1 }</code></td><td>A model variable, or a numeric literal</td></tr>
+                <tr><td><code>{ "expression": "minute\\cdot6" }</code></td><td>LaTeX over model variables</td></tr>
+                <tr><td><code>{ "formula": "a+b", "inputs": {…} }</code></td><td>LaTeX whose free names the definition supplies; wired at registration, not per draw</td></tr>
+                <tr><td><code>{ "token": "stroke.accent" }</code></td><td>A design token</td></tr>
+                <tr><td><code>{ "format": &lt;binding&gt;, "digits": 1, "prefix": …, "suffix": … }</code></td><td>A number as text; <code>digits</code>, <code>prefix</code> and <code>suffix</code> are bindings too</td></tr>
+                <tr><td><code>{ "choose": &lt;binding&gt;, "then": …, "otherwise": … }</code></td><td>A conditional. <code>0</code> and <code>""</code> are false, which is how a gauge guards a zero range and a missing unit without a comparison operator</td></tr>
+                <tr><td><code>{ "choose": …, "equals": …, "then": …, "otherwise": … }</code></td><td>The same conditional comparing two values — what a parameter offering named alternatives picks with</td></tr>
+                <tr><td><code>{ "direction": { "x": &lt;binding&gt;, "y": &lt;binding&gt; } }</code></td><td>The angle a pair points in, in degrees clockwise from straight up</td></tr>
+                <tr><td><code>{ "concat": [ … ] }</code></td><td>Resolved parts joined into one string</td></tr>
+                <tr><td><code>{ "contrast": &lt;colour binding&gt; }</code></td><td>Black or white, whichever reads on that colour</td></tr>
+                <tr><td><code>{ "memory": "history", "row": …, "field": "x", "from": "end" }</code></td><td>A memory, a row, or a field of one</td></tr>
+                <tr><td><code>{ "memoryCount": "history" }</code></td><td>How many rows it holds</td></tr>
+                <tr><td><code>{ "termUnit": { "parameter": "valueVariable" } }</code></td><td>What the term a parameter names is measured in, as the model holds it</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Modifiers</h3>
+        <p><code>translate</code> · <code>rotate</code> · <code>scale</code> · <code>mirror</code> · <code>opacity</code> · <code>visibility</code> · <code>stroke</code> · <code>fill</code> · <code>z-order</code> · <code>repeat</code></p>
+        <p><code>repeat</code> is the one structural modifier: the compiler expands it before anything else and exposes <code>$index</code> and <code>$count</code> to bindings inside the repeated subtree. It is how a scale gets its marks and their numbers from one <code>line</code> and one <code>text</code>.</p>
+
+        <h3>Behaviours</h3>
+        <table class="docs-table">
+            <thead><tr><th>Behaviour</th><th>Reach for it when</th></tr></thead>
+            <tbody>
+                <tr><td><code>clickable</code></td><td>A click writes a model variable or one of the object's own parameters. The value is a binding, so a key can write what the model currently holds rather than only a constant.</td></tr>
+                <tr><td><code>press-and-slide</code></td><td>The reader holds the node. Pressing writes nothing — the value stays where it was; sliding up raises it by <code>unitsPerPixel</code> a pixel and down lowers it, clamped between <code>minimum</code> and <code>maximum</code>; letting go walks it back to <code>restValue</code> by <code>returnStep</code> every <code>intervalMs</code>, and a <code>returnStep</code> of zero leaves it where it was released. What a pedal or a throttle needs — and the press, the slide and the fall back are one undo entry. Naming a <code>verticalVariable</code> presses a pair rather than a number, and naming a <code>bearing</code> says which way it is laid down, so the reading carries a sign.</td></tr>
+                <tr><td><code>drag-angle</code></td><td>Dragging a hand around a centre points it at the pointer and writes the angle back, measured from <code>offsetDegrees</code> — zero straight up when that is left at nothing. <code>signed</code> reads the angle the short way round, which is what a wheel wants; left off it runs from nothing to a whole turn, which is what a bearing wants.</td></tr>
+                <tr><td><code>drag-rotate</code></td><td>Dragging a rim or a bezel turns it by the angle travelled, not to the pointer — what a rose or a dial ring needs.</td></tr>
+                <tr><td><code>drag-axis-tick</code></td><td>An axis tick rescales the axis: the near end holds still and the far one moves, writing the object's own maximum. The chart's interaction and the chart's arithmetic.</td></tr>
+                <tr><td><code>keep-time</code></td><td>A key runs a clock: <code>play</code> counts real time from wherever it stands, <code>pause</code> holds it, <code>stop</code> ends the run and clears it. It counts on a clock of its own, so it goes on while the player stands still.</td></tr>
+                <tr><td><code>follow-pointer</code></td><td>The drawing shows what is under the cursor without keeping it: the values are handed to the next compilation rather than written to the shape, so hovering leaves no edit and no undo entry.</td></tr>
+                <tr><td><code>remember</code>, <code>forget</code>, <code>track-pointer</code></td><td>The object keeps a memory: append on click, empty, or record a drag one sample every <code>sampleMs</code>.</td></tr>
+                <tr><td><code>hoverable</code>, <code>tooltip</code></td><td>Cursor and native tooltip.</td></tr>
+                <tr><td><code>respond-to-simulation</code></td><td>Redraw every tick — automatic for model bindings, so it is rarely needed.</td></tr>
+                <tr><td><code>selectable</code>, <code>draggable</code>, <code>resizable</code>, <code>rotatable</code></td><td>Never: every object gets all four from the base shape. They are registered for discovery only.</td></tr>
+            </tbody>
+        </table>
+        <p>Two rules govern anything the reader touches:</p>
+        <ul>
+            <li><strong>Interaction is in the object's pixels, not the drawing's.</strong> A node carrying <code>drag-angle</code>, <code>drag-rotate</code>, <code>track-pointer</code>, <code>press-and-slide</code> or <code>follow-pointer</code> has to be expressed in the object's own box — outside the group that scales imported art. The compass puts its two grab areas beside the art rather than inside it for exactly this reason.</li>
+            <li><strong>A grab selects the object it belongs to.</strong> A grab area answers the pointer before the board does and holds it for the whole drag, so the drag behaviours select on the way in. Without that, pressing an object whose face is nearly all grab area would leave it unselected and its toolbar hidden.</li>
+        </ul>
+
+        <h3>Components to compose with</h3>
+        <p>Do not redraw what one of these already draws.</p>
+        <table class="docs-table">
+            <thead><tr><th>Need</th><th>Component</th></tr></thead>
+            <tbody>
+                <tr><td>A dial background</td><td><code>dial-face</code></td></tr>
+                <tr><td>Ticks and numbers around a centre</td><td><code>tick-ring</code>, <code>label-ring</code></td></tr>
+                <tr><td>A hand, needle or arrow</td><td><code>pointer-hand</code></td></tr>
+                <tr><td>As many directions as the reader names, marked round a dial</td><td><code>pointer-ring</code></td></tr>
+                <tr><td>A key with a label</td><td><code>key-cap</code></td></tr>
+                <tr><td>A reading spelled out in lamps, the way a digital clock shows one</td><td><code>seven-segment-display</code></td></tr>
+                <tr><td><strong>Anything cartesian</strong></td><td><code>plot-grid</code>, <code>plot-axes</code>, <code>plot-crosshair</code></td></tr>
+                <tr><td>A memory shown as a list or a path</td><td><code>memory-list</code>, <code>memory-trace</code></td></tr>
+                <tr><td>A whole object reused inside another</td><td><code>clock</code>, <code>compass</code>, <code>speedometer</code>, <code>circular-gauge</code>, <code>rotating-vector</code>, <code>orbit-system</code>, <code>steering-wheel</code>, <code>thermometer</code>, <code>calculator</code>, <code>mouse-tracker</code></td></tr>
+            </tbody>
+        </table>
+        <div class="callout callout-warning">
+            <i class="fa-light fa-triangle-exclamation"></i>
+            <span>An axis drawn as three lines and some text is the classic mistake. The plot components carry the board's nice ticks, its minor ticks, label gaps measured in tick fonts, and the drag handles that rescale an axis — none of which a hand-drawn axis can have.</span>
+        </div>
+
+        <h2>Colours, fonts and sizes are not the object's to invent</h2>
+        <p><strong>No definition names a font or an axis colour.</strong> Write <code>"defaultValue": "token:font.family"</code>, or bind <code>{ "token": "strokeWidth.hairline" }</code>. The tokens are read by the chart, the ruler and the shared drawing helpers too, so a preset restyles every object at once and nothing drifts.</p>
+        <p>The families: <code>surface.*</code>, <code>stroke.*</code>, <code>text.*</code>, <code>selection.*</code>, <code>handle.*</code>, <code>strokeWidth.*</code>, <code>radius.*</code>, <code>spacing.*</code>, <code>font.family</code>, <code>font.family.sans</code>, <code>font.size.*</code>, <code>font.weight.*</code>, <code>axis.*</code>, <code>grid.*</code>, <code>crosshair.*</code>, <code>badge.*</code>, <code>shadow.soft</code>, <code>opacity.*</code>, <code>duration.*</code>, <code>size.default.*</code>. Every value is listed on <a href="/docs/blocks/reference.html#tokens">Block Reference</a>.</p>
+        <p>What scales with the box and what does not is a decision, not an accident: geometry is worked out from <code>$width</code> and <code>$height</code>, while writing and tick marks keep the sizes <code>font.size.tick</code>, <code>font.size.large</code>, <code>axis.tickLength</code> and <code>axis.minorTickLength</code> hold — so resizing stretches a scale rather than the labels on it.</p>
+
+        <h3>A reading names its unit, it does not spell it out</h3>
+        <p>Never concatenate a unit into text. Give the <code>text</code> node a <code>unit</code> of its own and the board writes it the way it writes every unit after a reading — a space away, faded against the figures, so <code>64</code> in kilometres an hour reads <code>64 km/h</code>. Where the unit comes from is settled the same way: the term the object reads carries it, and <code>{ "termUnit": … }</code> is how the definition asks for it. A <code>unit</code> parameter of the object's own is what is left for an object reading a plain number rather than a term.</p>
+
+        <h2 id="memory">If the object has to remember something</h2>
+        <p>A memory is a parameter with <code>"valueType": "memory"</code>, so its rows live in the shape beside the numbers: the model carries them, undo restores them and the clipboard takes them. A row is <code>{ text, x, y }</code> and writes only the fields it holds.</p>
+<pre><code>{ "id": "samples", "valueType": "memory", "defaultValue": [], "termParameters": { "x": "xVariable", "y": "yVariable" } }</code></pre>
+        <p>Declare <code>termParameters</code> and the rows stop being private notes: <strong>row <em>n</em> is iteration <em>n</em></strong> of those terms, so the board's player replays the recording and everything bound to those variables moves with it. Omit it and the memory stays with the object, as the calculator's history does.</p>
+        <p><code>remember</code> appends on click, <code>forget</code> empties, <code>track-pointer</code> records a drag one sample every <code>sampleMs</code> in the node's own units. Limits: 2 000 rows, a <code>limit</code> per behaviour, six decimals. A whole drag is one undo entry.</p>
+
+        <h2>Drawing it instead of writing it</h2>
+        <p>Geometry that is illustration rather than arithmetic does not have to be typed. Draw it in a drawing program, convert it, and paste the nodes into <code>root</code> — they are ordinary primitive nodes, so nothing else about the document changes.</p>
+<pre><code>const imported = BlockSvgImport.import(markup);
+imported.problems     // every element, attribute or paint that was refused or is unsupported
+imported.unmapped     // colours that matched no design token, so they will not follow a preset
+imported.count        // how many nodes it costs, against the limit of 2 000
+BlockSvgImport.merge(previousNodes, imported.nodes)   // re-import, keeping the wiring by id</code></pre>
+        <p>It converts, it does not embed: no new node type, no markup reaching the renderer, nothing for the compiler, the validator or the serializer to learn — which is also the security boundary, since a definition travels through the model file, the clipboard, a collaboration op, the catalogue and the assistant.</p>
+        <table class="docs-table">
+            <thead><tr><th>Treatment</th><th>What</th></tr></thead>
+            <tbody>
+                <tr><td>Converted</td><td><code>svg</code>, <code>g</code>, <code>circle</code>, <code>ellipse</code>, <code>rect</code>, <code>line</code>, <code>polyline</code>, <code>polygon</code>, <code>path</code>, <code>text</code>, <code>image</code>, with fill, stroke, width, dash, linecap, opacity and visibility read from either the attribute or the inline style. <code>transform</code> becomes <code>translate</code>, <code>rotate</code> and <code>scale</code> modifiers.</td></tr>
+                <tr><td>Refused, and reported</td><td><code>script</code>, <code>style</code>, <code>foreignObject</code>, animation elements, <code>on*</code> handlers, links, image sources outside the allow-list, and path data outside the path grammar. Nothing is dropped silently.</td></tr>
+                <tr><td>Unsupported, and reported</td><td><code>use</code>, <code>defs</code>, gradients, masks, filters, clip paths, <code>matrix()</code> and <code>skew()</code>. A drawing leaning on them imports into something that differs from the file, which the author has to know.</td></tr>
+                <tr><td>Mapped</td><td>A colour matching a token is written as <code>token:surface.default</code> rather than <code>#ffffff</code>, preferring the family that suits the property. That is what keeps imported art following the presets. What could not be matched is listed in <code>unmapped</code>.</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Import illustration, keep measurement as blocks.</strong> Art is authored at one size and has one layout: it cannot put ticks on round numbers, keep a label legible when the object is small, or move one part to make room for another. Those stay components.</p>
+
+        <h2>A complete object</h2>
+        <p>The circular gauge is the smallest complete object in the editor: a track, a fill and a readout, all worked out from one ratio. It is bundled as <a href="/scripts/blocks/definitions/circular-gauge.json"><code>circular-gauge.json</code></a>.</p>
+<pre><code>{
+    "schemaVersion": "1.0.0",
+    "type": "circular-gauge",
+    "category": "component",
+    "displayName": "Circular gauge",
+    "description": "Ring gauge that fills clockwise in proportion to a model variable.",
+    "icon": "fa-light fa-circle-notch",
+    "tags": ["object", "gauge", "progress", "ring", "meter"],
+    "capabilities": ["radial", "angular", "reads-model"],
+    "preview": { "parameters": { "valueVariable": "68", "unit": "%" } },
+    "parameters": [
+        { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model", "unitParameter": "unit" },
+        { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": 0, "category": "scale" },
+        { "id": "maximum", "label": "Maximum", "valueType": "number", "defaultValue": 100, "category": "scale" },
+        { "id": "startAngle", "label": "Start angle", "valueType": "number", "defaultValue": 90, "category": "scale", "unit": "deg" },
+        { "id": "spanAngle", "label": "Span", "valueType": "number", "defaultValue": 360, "category": "scale", "unit": "deg", "minimum": 1, "maximum": 360 },
+        { "id": "thickness", "label": "Ring thickness", "valueType": "number", "defaultValue": 0.22, "category": "style", "minimum": 0.02, "maximum": 1 },
+        { "id": "trackColor", "label": "Track colour", "valueType": "colour", "defaultValue": "token:surface.muted", "category": "style" },
+        { "id": "fillColor", "label": "Fill colour", "valueType": "colour", "defaultValue": "token:stroke.accent", "category": "style" },
+        { "id": "labelColor", "label": "Label colour", "valueType": "colour", "defaultValue": "token:text.primary", "category": "style" },
+        { "id": "digits", "label": "Decimals", "valueType": "number", "defaultValue": 0, "category": "display", "minimum": 0, "maximum": 6 },
+        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "", "category": "display" },
+        { "id": "showReadout", "label": "Show readout", "valueType": "boolean", "defaultValue": true, "category": "display" }
+    ],
+    "locals": [
+        { "id": "w", "value": { "parameter": "$width" } },
+        { "id": "h", "value": { "parameter": "$height" } },
+        { "id": "cx", "formula": "\\frac{w}{2}" },
+        { "id": "cy", "formula": "\\frac{h}{2}" },
+        { "id": "r", "formula": "\\max\\left(4,\\frac{\\min\\left(w,h\\right)}{2}-4\\right)" },
+        { "id": "innerRadius", "formula": "r\\cdot\\left(1-\\max\\left(0.02,\\min\\left(1,thickness\\right)\\right)\\right)" },
+        { "id": "value", "value": { "parameter": "valueVariable", "as": "number" } },
+        { "id": "ratio", "value": { "choose": { "formula": "maximum-minimum" }, "then": { "formula": "\\max\\left(0,\\min\\left(1,\\frac{value-minimum}{maximum-minimum}\\right)\\right)" }, "otherwise": 0 } },
+        { "id": "sweep", "formula": "\\max\\left(0.001,\\min\\left(360,spanAngle\\right)\\right)" },
+        { "id": "filledSweep", "formula": "\\max\\left(0.001,sweep\\cdot ratio\\right)" },
+        { "id": "trackEnd", "value": { "choose": { "formula": "360-sweep" }, "then": { "formula": "startAngle-sweep" }, "otherwise": { "formula": "startAngle-sweep+0.001" } } },
+        { "id": "fillEnd", "formula": "startAngle-filledSweep" },
+        { "id": "readoutFontSize", "formula": "\\max\\left(10,r\\cdot0.34\\right)" },
+        { "id": "readoutWeight", "value": { "token": "font.weight.strong" } },
+        { "id": "readoutUnit", "fallback": "", "value": { "choose": { "termUnit": { "parameter": "valueVariable" } }, "then": { "termUnit": { "parameter": "valueVariable" } }, "otherwise": { "parameter": "unit" } } },
+        { "id": "readoutText", "value": { "format": { "parameter": "value" }, "digits": { "parameter": "digits" } } }
+    ],
+    "root": {
+        "id": "circular-gauge",
+        "type": "group",
+        "children": [
+            { "id": "track", "type": "arc",
+              "bindings": { "centerX": { "parameter": "cx" }, "centerY": { "parameter": "cy" }, "radius": { "parameter": "r" },
+                            "innerRadius": { "parameter": "innerRadius" }, "startAngle": { "parameter": "startAngle" },
+                            "endAngle": { "parameter": "trackEnd" }, "fill": { "parameter": "trackColor" } },
+              "properties": { "stroke": "none" } },
+            { "id": "fill", "type": "arc",
+              "bindings": { "centerX": { "parameter": "cx" }, "centerY": { "parameter": "cy" }, "radius": { "parameter": "r" },
+                            "innerRadius": { "parameter": "innerRadius" }, "startAngle": { "parameter": "startAngle" },
+                            "endAngle": { "parameter": "fillEnd" }, "fill": { "parameter": "fillColor" } },
+              "properties": { "stroke": "none" } },
+            { "id": "readout", "type": "text", "when": { "parameter": "showReadout" },
+              "bindings": { "x": { "parameter": "cx" }, "y": { "parameter": "cy" }, "text": { "parameter": "readoutText" },
+                            "unit": { "parameter": "readoutUnit" }, "fontSize": { "parameter": "readoutFontSize" },
+                            "fontWeight": { "parameter": "readoutWeight" }, "fill": { "parameter": "labelColor" } },
+              "properties": { "stroke": "none" } }
+        ]
+    }
+}</code></pre>
+
+        <h2>Read the nearest example first</h2>
+        <table class="docs-table">
+            <thead><tr><th>If the new object is</th><th>Start from</th></tr></thead>
+            <tbody>
+                <tr><td>A dial, gauge or meter</td><td><a href="/scripts/blocks/definitions/circular-gauge.json"><code>circular-gauge.json</code></a> — the smallest complete object</td></tr>
+                <tr><td>A scale with a needle</td><td><a href="/scripts/blocks/definitions/speedometer.json"><code>speedometer.json</code></a></td></tr>
+                <tr><td>A quantity read as a length, up a scale of its own</td><td><a href="/scripts/blocks/definitions/thermometer.json"><code>thermometer.json</code></a> — the marks and their numbers are one <code>line</code> and one <code>text</code> under a <code>repeat</code>, and it is where to see what scales with the box and what does not</td></tr>
+                <tr><td>A hand or arrow driven by an angle</td><td><a href="/scripts/blocks/definitions/rotating-vector.json"><code>rotating-vector.json</code></a></td></tr>
+                <tr><td>Interactive, writing values back</td><td><a href="/scripts/blocks/definitions/compass.json"><code>compass.json</code></a> — <code>drag-angle</code> and <code>drag-rotate</code> on invisible grab areas</td></tr>
+                <tr><td>Drawn rather than written</td><td><a href="/scripts/blocks/definitions/compass.json"><code>compass.json</code></a> again — its rose and needle are imported SVG, wired by id, with the labels left to <code>label-ring</code></td></tr>
+                <tr><td>One object drawn several ways, with parts the reader switches on and off</td><td><a href="/scripts/blocks/definitions/steering-wheel.json"><code>steering-wheel.json</code></a> — a drawing per vehicle carried by a <code>when</code> on a <code>choose</code> with an <code>equals</code>, and a <code>press-and-slide</code> area over each pedal</td></tr>
+                <tr><td>Composed of several sub-objects</td><td><a href="/scripts/blocks/definitions/clock.json"><code>clock.json</code></a>, <a href="/scripts/blocks/definitions/orbit-system.json"><code>orbit-system.json</code></a></td></tr>
+                <tr><td>A keypad that keeps its working</td><td><a href="/scripts/blocks/definitions/calculator.json"><code>calculator.json</code></a> — <code>key-cap</code>, <code>remember</code>, <code>memory-list</code></td></tr>
+                <tr><td>A plot that records</td><td><a href="/scripts/blocks/definitions/mouse-tracker.json"><code>mouse-tracker.json</code></a> — the plot components over a <code>memory-trace</code></td></tr>
+            </tbody>
+        </table>
+
+        <h2>Where the document goes</h2>
+        <table class="docs-table">
+            <thead><tr><th>Destination</th><th>What to do</th><th>Who gets it</th></tr></thead>
+            <tbody>
+                <tr><td>Bundled with the editor</td><td>Write <code>scripts/blocks/definitions/&lt;type&gt;.json</code>, then regenerate the delivered bundle</td><td>Everyone, offline included</td></tr>
+                <tr><td>Published to the catalogue</td><td>Paste the same document into <strong>Assets → Objects</strong> in the <a href="/pages/catalog/index.html">community catalogue</a></td><td>Anyone whose palette reads the catalogue</td></tr>
+                <tr><td>Invented on a board</td><td>The assistant's <code>save_custom_component</code>, or <strong>Copy definition</strong> from an object's settings menu</td><td>The model that carries it</td></tr>
+            </tbody>
+        </table>
+        <p>The three are the same document. Every JSON file in the definitions directory is registered at load time, so nothing is added anywhere else — and for the same reason, a draft or a template left in that directory would become a component in the palette.</p>
+
+        <h2>What gets a document refused</h2>
+        <p><strong>Registration</strong> rejects an unsupported <code>schemaVersion</code>, a <code>type</code> that is not the pattern or is already shipped, a <code>category</code> other than <code>component</code>, a missing <code>root</code>, a parameter or local with no <code>id</code>, a local colliding with a parameter or an earlier local, and any formula reading a name the document does not declare.</p>
+        <p><strong>Validation</strong> adds unknown block types, bindings on properties that do not accept them, variables that do not exist, expressions that do not parse, the runtime limits — 2 000 nodes, depth 16, component depth 8, <code>repeat</code> count 720, expression length 512 — and then a visual pass: nothing drawn, everything invisible, zero-size interactive targets, nodes far outside the box.</p>
+        <p>Errors come back structured, with the path that failed and, where there is one, the name it should have been:</p>
+<pre><code>{
+  "valid": false,
+  "errors": [
+    {
+      "code": "UNKNOWN_VARIABLE",
+      "path": "root.children[2].bindings.rotation",
+      "message": "The variable 'minutes' does not exist in the current model.",
+      "suggestion": "minute"
+    }
+  ]
+}</code></pre>
+        <p>Common codes: <code>UNKNOWN_NODE_TYPE</code>, <code>UNKNOWN_PROPERTY</code>, <code>PROPERTY_NOT_BINDABLE</code>, <code>INVALID_BINDING</code>, <code>BINDING_TYPE_MISMATCH</code>, <code>UNKNOWN_VARIABLE</code>, <code>MISSING_VARIABLE</code>, <code>INVALID_EXPRESSION</code>, <code>EXPRESSION_TOO_COMPLEX</code>, <code>UNKNOWN_PARAMETER</code>, <code>MISSING_REQUIRED_PARAMETER</code>, <code>UNKNOWN_TOKEN</code>, <code>UNKNOWN_MODIFIER</code>, <code>UNKNOWN_BEHAVIOUR</code>, <code>BEHAVIOUR_NOT_SUPPORTED</code>, <code>DUPLICATE_NODE_ID</code>, <code>NESTING_LIMIT_EXCEEDED</code>, <code>NODE_LIMIT_EXCEEDED</code>, <code>NODE_OUTSIDE_BOUNDS</code>, <code>EMPTY_OBJECT</code>, <code>INVISIBLE_OBJECT</code>.</p>
+
+        <h2>Building it through the assistant's tools</h2>
+        <p>An agent never writes rendering code. It composes the same document through a structured tool surface, validates it, and inserts it as an ordinary editable object.</p>
+        <table class="docs-table">
+            <thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
+            <tbody>
+                <tr><td><code>list_building_blocks</code>, <code>search_building_blocks</code>, <code>get_building_block_schema</code></td><td>Discover blocks and read their properties, defaults and ranges from the live registry</td></tr>
+                <tr><td><code>list_model_variables</code></td><td>Read the variables of the open model with their current values</td></tr>
+                <tr><td><code>create_object_draft</code>, <code>get_object_draft</code></td><td>Start and read a draft, optionally seeded with an existing component</td></tr>
+                <tr><td><code>add_primitive</code>, <code>add_component</code>, <code>add_group</code>, <code>add_child</code></td><td>Build the node tree</td></tr>
+                <tr><td><code>set_property</code>, <code>set_parameter</code>, <code>apply_modifier</code>, <code>add_behaviour</code></td><td>Configure nodes</td></tr>
+                <tr><td><code>bind_variable</code>, <code>bind_expression</code></td><td>Drive a property from a model variable or a LaTeX expression</td></tr>
+                <tr><td><code>validate_object</code>, <code>render_object_preview</code></td><td>Check the draft and preview it in isolation</td></tr>
+                <tr><td><code>insert_object</code>, <code>save_custom_component</code></td><td>Insert a valid object into the document, or register it for reuse</td></tr>
+            </tbody>
+        </table>
+        <p>Over the chat tool bridge these are named <code>modellus_blocks_&lt;tool&gt;</code>, for example <code>modellus_blocks_bind_expression</code>.</p>
+        <ol>
+            <li><code>list_model_variables</code> and <code>list_building_blocks</code> to see what exists</li>
+            <li><code>create_object_draft</code>, then add nodes, parameters, modifiers, behaviours and bindings</li>
+            <li><code>validate_object</code> — correct the draft with the same tools and validate again</li>
+            <li><code>render_object_preview</code> to check the result, then <code>insert_object</code></li>
+        </ol>
+<pre><code>const draft = modellus.blocks.execute('create_object_draft', { name: 'Clock', componentType: 'clock' });
+modellus.blocks.execute('bind_variable', { draftId: draft.draftId, nodeId: 'root', property: 'hourVariable', variable: 'hour' });
+modellus.blocks.execute('bind_variable', { draftId: draft.draftId, nodeId: 'root', property: 'minuteVariable', variable: 'minute' });
+modellus.blocks.execute('validate_object', { draftId: draft.draftId });
+modellus.blocks.execute('render_object_preview', { draftId: draft.draftId });
+modellus.blocks.execute('insert_object', { draftId: draft.draftId });</code></pre>
+
+        <h2>Checklist</h2>
+        <ul>
+            <li><code>type</code> is new, <code>category</code> is <code>component</code>, tagged <code>object</code>, with an <code>icon</code> and a one-sentence <code>description</code></li>
+            <li>Every parameter has a <code>category</code>, and every colour defaults to a <code>token:…</code></li>
+            <li><code>$width</code> and <code>$height</code> are reached through locals, so the object scales on resize</li>
+            <li>No font, axis colour or grid colour is written as a literal</li>
+            <li>Anything cartesian is <code>plot-grid</code>, <code>plot-axes</code> or <code>plot-crosshair</code>, not hand-drawn lines</li>
+            <li>Optional parts carry <code>when</code>, and the rows that govern them carry <code>visibleWhen</code></li>
+            <li>A reading gives its <code>text</code> node a <code>unit</code> rather than concatenating one</li>
+            <li>Interactive nodes are expressed in the object's own box, outside any group that scales art</li>
+            <li><code>preview.parameters</code> is set if the defaults draw nothing recognisable</li>
+            <li><code>validate_object</code> comes back clean before the object is inserted, saved or published</li>
+        </ul>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

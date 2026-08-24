@@ -6,6 +6,11 @@ object is written from, [`building-blocks-assessment.md`](building-blocks-assess
 for why the architecture looks like this, [`building-blocks-catalogue.md`](building-blocks-catalogue.md)
 for the block list, and [`migration-plan.md`](migration-plan.md) for the remaining shapes.
 
+The public documentation site carries the same construct for readers and for agents building an
+object from outside the repository: [Building Blocks](../blocks/index.html) is the overview,
+[Object Definition](../blocks/object-definition.html) the document specification, and
+[Block Reference](../blocks/reference.html) the generated block list.
+
 ## 1. Architecture
 
 Five layers, one registry, no runtime code evaluation.
