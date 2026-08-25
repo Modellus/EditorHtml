@@ -1621,6 +1621,14 @@ svg:active.pan-available {
     pointer-events: none;
 }
 
+.mdl-glow-host {
+    transition: filter 250ms ease-out;
+}
+
+.mdl-glow-host.mdl-glow {
+    filter: drop-shadow(0 0 2px var(--mdl-glow-color)) drop-shadow(0 0 7px var(--mdl-glow-color));
+}
+
 .dx-texteditor-input-container .case-select__icon {
     margin-right: 0;
     margin-left: 8px;
