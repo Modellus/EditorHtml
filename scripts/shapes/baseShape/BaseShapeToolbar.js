@@ -430,6 +430,19 @@ var BaseShapeToolbarMixin = {
                 this.setPropertyCommand("opacity", opacity);
         }, 300);
     },
+    createGlowMenuItem() {
+        const glowLabel = this.board.translations.get("Glow") ?? "Glow";
+        return {
+            text: glowLabel,
+            iconHtml: this.menuIconHtml("fa-lightbulb-on", this.isGlowOnChangeEnabled()),
+            buildControl: $container => {
+                $('<div class="mdl-glow-switch">').dxSwitch({
+                    value: this.isGlowOnChangeEnabled(),
+                    onValueChanged: event => this.setPropertyCommand("glowOnChange", event.value)
+                }).appendTo($container);
+            }
+        };
+    },
     createOpacityMenuItem() {
         const opacityLabel = this.board.translations.get("Opacity") ?? "Opacity";
         return {
@@ -570,6 +583,7 @@ var BaseShapeToolbarMixin = {
             }
         ];
         this.populateShapeColorMenuSections(sections);
+        sections[0].items.push(this.createGlowMenuItem());
         sections[0].items.push(this.createOpacityMenuItem());
         const listItems = sections.flatMap(section => section.items);
         Utils.renderDropdownMenuScroll(contentElement, 300, scrollContent => {

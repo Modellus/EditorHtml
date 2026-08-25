@@ -4,6 +4,7 @@ class BaseShape {
     static embeddedMathStyles = "";
     static interactiveHandleClasses = ["splitter", "gauge-pointer"];
     static defaultNameFontSize = 10;
+    static glowDurationMilliseconds = 1000;
     static nameFontSizes = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48];
     static shapeIcons = {
         BodyShape: "fa-light fa-circle",
@@ -142,6 +143,9 @@ class BaseShape {
         this.termDisplayEntries = [];
         this.termFormControls = {};
         this.isReferential = false;
+        this.glowTermValues = null;
+        this.glowColor = null;
+        this.glowTimer = null;
         this.setDefaults();
         this.initializeElement();
     }
@@ -163,6 +167,7 @@ class BaseShape {
         this.properties.flipHorizontal = false;
         this.properties.flipVertical = false;
         this.properties.opacity = 1;
+        this.properties.glowOnChange = false;
         this.properties.showName = false;
         this.properties.nameColor = null;
         this.properties.nameFontSize = BaseShape.defaultNameFontSize;
@@ -1441,6 +1446,96 @@ class BaseShape {
             this.shapeNameLayer.style.opacity = opacityStyle;
     }
 
+    isGlowOnChangeEnabled() {
+        return this.properties.glowOnChange === true;
+    }
+
+    getGlowColor() {
+        const foregroundColor = this.properties.foregroundColor;
+        if (foregroundColor && foregroundColor !== "transparent")
+            return foregroundColor;
+        const borderColor = this.properties.borderColor;
+        if (borderColor && borderColor !== "transparent")
+            return borderColor;
+        return "#000000";
+    }
+
+    getGlowTermSources() {
+        const sources = this.termDisplayEntries.map(entry => ({ termProperty: entry.term, caseProperty: entry.caseProperty }));
+        for (const mapping of this.termsMapping)
+            if (!sources.some(source => source.termProperty === mapping.termProperty))
+                sources.push({ termProperty: mapping.termProperty, caseProperty: mapping.caseProperty });
+        return sources;
+    }
+
+    readGlowTermValues() {
+        const calculator = this.board.calculator;
+        const values = new Map();
+        for (const source of this.getGlowTermSources()) {
+            const termName = this.normalizeTermValue(this.properties[source.termProperty]);
+            if (termName == null || termName === "")
+                continue;
+            const caseNumber = this.getTermCaseNumber(source.caseProperty);
+            const value = calculator.isTerm(termName) ? calculator.getByName(termName, caseNumber) : Number(termName);
+            values.set(`${source.termProperty}:${termName}:${caseNumber}`, value);
+        }
+        return values;
+    }
+
+    hasGlowTermValueChanged(previousValues, currentValues) {
+        for (const [key, value] of currentValues) {
+            if (!previousValues.has(key))
+                continue;
+            if (!Object.is(previousValues.get(key), value))
+                return true;
+        }
+        return false;
+    }
+
+    updateGlowState() {
+        if (!this.element)
+            return;
+        if (!this.isGlowOnChangeEnabled()) {
+            if (this.glowTermValues == null)
+                return;
+            this.glowTermValues = null;
+            this.stopGlow();
+            return;
+        }
+        const glowColor = this.getGlowColor();
+        if (this.glowColor !== glowColor) {
+            this.glowColor = glowColor;
+            this.element.style.setProperty("--mdl-glow-color", glowColor);
+        }
+        this.element.classList.add("mdl-glow-host");
+        const currentValues = this.readGlowTermValues();
+        const previousValues = this.glowTermValues;
+        this.glowTermValues = currentValues;
+        if (previousValues && this.hasGlowTermValueChanged(previousValues, currentValues))
+            this.startGlow();
+    }
+
+    startGlow() {
+        this.element.classList.add("mdl-glow");
+        if (this.glowTimer)
+            clearTimeout(this.glowTimer);
+        this.glowTimer = setTimeout(() => {
+            this.glowTimer = null;
+            this.element?.classList.remove("mdl-glow");
+        }, BaseShape.glowDurationMilliseconds);
+    }
+
+    stopGlow() {
+        if (this.glowTimer) {
+            clearTimeout(this.glowTimer);
+            this.glowTimer = null;
+        }
+        this.glowColor = null;
+        this.element.classList.remove("mdl-glow");
+        this.element.classList.remove("mdl-glow-host");
+        this.element.style.removeProperty("--mdl-glow-color");
+    }
+
     applyUserPermissions() {
         if (!this.properties.visibleToUsers)
             this.element.style.display = "none";
@@ -1463,6 +1558,7 @@ class BaseShape {
         this.children.forEach(child => child.draw());
         this.drawTermDisplayLabels();
         this.drawShapeNameLabel();
+        this.updateGlowState();
     }
 
     tick() {

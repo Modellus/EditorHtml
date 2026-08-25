@@ -257,7 +257,8 @@ class BaseTranslations {
                 "Slider Scale Tooltip": "<div style=\"text-align: center\"><b>Escala</b></div><br /><div style=\"text-align: center\">Configura o intervalo de valores e a precisão deste slider.<br /><br />Clique para definir escala automática, mínimo, máximo e precisão.</div>",
                 "Scale Linear": "Linear",
                 "Scale Logarithmic": "Logarítmica",
-                "Opacity": "Opacidade"
+                "Opacity": "Opacidade",
+                "Glow": "Brilho"
             };
         this.languages["en-US"] =
             {
@@ -515,7 +516,8 @@ class BaseTranslations {
                 "Slider Scale Tooltip": "<div style=\"text-align: center\"><b>Scale</b></div><br /><div style=\"text-align: center\">Configures the value range and precision of this slider.<br /><br />Click to set auto scale, minimum, maximum, and step precision.</div>",
                 "Scale Linear": "Linear",
                 "Scale Logarithmic": "Logarithmic",
-                "Opacity": "Opacity"
+                "Opacity": "Opacity",
+                "Glow": "Glow"
             };
     }
 
