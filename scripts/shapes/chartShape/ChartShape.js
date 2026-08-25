@@ -230,7 +230,66 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         }
         if (!hasChanges)
             return;
-        this.chart.setData(this.chartRows);
+        this.chart.setData(this.getChartDataRows(chartDataConfig));
+    }
+
+    getChartDataRows(chartDataConfig) {
+        if (!chartDataConfig.categories)
+            return this.chartRows;
+        return this.getCategoryDataRows(chartDataConfig);
+    }
+
+    getChartCategories(ySeries) {
+        const calculator = this.board.calculator;
+        const domainValuesBySeries = ySeries.map(series => calculator.getTermDomainValues(this.normalizeYTermValue(series.term)));
+        if (!domainValuesBySeries.some(domainValues => domainValues !== null))
+            return null;
+        const labels = [];
+        for (const domainValues of domainValuesBySeries) {
+            if (!domainValues)
+                continue;
+            for (const domainValue of domainValues) {
+                if (!labels.includes(domainValue.label))
+                    labels.push(domainValue.label);
+            }
+        }
+        const categoryIndexByValue = domainValuesBySeries.map(domainValues => {
+            if (!domainValues)
+                return null;
+            const indexByValue = new Map();
+            for (const domainValue of domainValues)
+                indexByValue.set(domainValue.value, labels.indexOf(domainValue.label));
+            return indexByValue;
+        });
+        return { labels: labels, categoryIndexByValue: categoryIndexByValue };
+    }
+
+    getCategoryDataRows(chartDataConfig) {
+        const categories = chartDataConfig.categories;
+        const rows = categories.labels.map((label, index) => ({ [chartDataConfig.argumentField]: index }));
+        for (let seriesIndex = 0; seriesIndex < chartDataConfig.ySeries.length; seriesIndex++) {
+            const indexByValue = categories.categoryIndexByValue[seriesIndex];
+            if (!indexByValue)
+                continue;
+            const valueField = chartDataConfig.ySeries[seriesIndex].valueField;
+            const counts = new Array(categories.labels.length).fill(0);
+            for (let rowIndex = 0; rowIndex < this.chartRows.length; rowIndex++) {
+                const categoryIndex = indexByValue.get(this.chartRows[rowIndex][valueField]);
+                if (categoryIndex === undefined)
+                    continue;
+                counts[categoryIndex]++;
+            }
+            for (let categoryIndex = 0; categoryIndex < counts.length; categoryIndex++)
+                rows[categoryIndex][valueField] = counts[categoryIndex];
+        }
+        return rows;
+    }
+
+    getCategoryArgumentTitle(ySeries, categories) {
+        const categoricalSeries = ySeries.filter((series, index) => categories.categoryIndexByValue[index] !== null);
+        if (categoricalSeries.length !== 1)
+            return this.getTermLabelWithCase("");
+        return this.getTermLabelWithCase(categoricalSeries[0].term, categoricalSeries[0].case);
     }
 
     createChartDataItem(iteration, chartDataConfig) {
@@ -271,6 +330,11 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
 
     updateFocus() {
         const chartDataConfig = this.chartDataConfig;
+        if (chartDataConfig?.categories) {
+            if (this.chart)
+                this.chart.setFocusArgumentValue(null);
+            return;
+        }
         if (!chartDataConfig) {
             if (this.chart)
                 this.chart.setFocusArgumentValue(null);
@@ -313,11 +377,13 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             valueField: this.getSeriesValueFieldName(index),
             name: this.getSeriesName(yTerm)
         }));
+        const categories = this.getChartCategories(ySeries);
         const chartDataConfig = {
             xTerm: xTerm,
             xCase: xCase,
             argumentField: argumentField,
-            ySeries: ySeries
+            ySeries: ySeries,
+            categories: categories
         };
         this.chartDataConfig = chartDataConfig;
         const config = {
@@ -339,10 +405,12 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             xAxisType: this.properties.xAxisType || "decimal",
             yAxisType: this.properties.yAxisType || "decimal",
             border: this.getBorderColor(),
-            argTitle: this.getTermLabelWithCase(xTerm, xCase)
+            categories: categories ? categories.labels : [],
+            argTitle: categories ? this.getCategoryArgumentTitle(ySeries, categories) : this.getTermLabelWithCase(xTerm, xCase)
         };
         const dataConfig = {
             argField: config.argField,
+            categories: config.categories,
             series: config.series.map(series => ({ valueField: series.valueField, name: series.name }))
         };
         const dataChanged = JSON.stringify(dataConfig) !== JSON.stringify(this._appliedDataConfig);
@@ -354,6 +422,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
                 interactable: config.interactable,
                 argumentField: config.argField,
                 series: config.series,
+                categories: config.categories,
                 foregroundColor: config.color,
                 backgroundColor: config.bg,
                 dataAreaColor: config.dataAreaColor,
