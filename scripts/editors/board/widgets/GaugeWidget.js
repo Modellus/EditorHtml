@@ -433,6 +433,10 @@ class GaugeShape extends BaseShape {
         );
     }
 
+    getPulseElements(key) {
+        return [this.pointerLine, this.hubCircle];
+    }
+
     draw() {
         super.draw();
         const geometry = this.getGaugeGeometry();

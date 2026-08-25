@@ -258,7 +258,7 @@ class BaseTranslations {
                 "Scale Linear": "Linear",
                 "Scale Logarithmic": "Logarítmica",
                 "Opacity": "Opacidade",
-                "Glow": "Brilho"
+                "Pulse": "Pulsar"
             };
         this.languages["en-US"] =
             {
@@ -517,7 +517,7 @@ class BaseTranslations {
                 "Scale Linear": "Linear",
                 "Scale Logarithmic": "Logarithmic",
                 "Opacity": "Opacity",
-                "Glow": "Glow"
+                "Pulse": "Pulse"
             };
     }
 

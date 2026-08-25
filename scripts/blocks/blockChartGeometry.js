@@ -150,6 +150,7 @@ class BlockChartGeometry {
             }
             const yPosition = yScale(rawYValue);
             bars.push({
+                xValue: rawXValue,
                 x: xScale(rawXValue) + offset - barWidth * 0.45,
                 y: Math.min(yPosition, baselineY),
                 width: barWidth * 0.9,

@@ -165,6 +165,10 @@ class PointShape extends ChildShape {
         this.properties.borderColor = this.properties.foregroundColor;
     }
 
+    getPulseElements(key) {
+        return [this.circle];
+    }
+
     draw() {
         super.draw();
         this.drawShape();

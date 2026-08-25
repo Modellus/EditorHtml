@@ -250,6 +250,7 @@
         return this.shape.getTermLabelAnchor();
     }
 
+
     clearLayerChildren(layer) {
         if (!layer)
             return;

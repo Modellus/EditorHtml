@@ -762,6 +762,12 @@ class BodyShape extends ChildShape {
             this.imageDropZoneControl.setImageSource(imageSource);
     }
 
+    getPulseElements(key) {
+        if (this.getSelectedCharacter() || this.getImageSource())
+            return [this.image];
+        return [this.circle];
+    }
+
     draw() {
         super.draw();
         this.drawShape();

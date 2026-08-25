@@ -410,6 +410,10 @@ class ArcShape extends ChildShape {
         return `M ${startX} ${startY} A ${pixelRadius} ${pixelRadius} 0 ${largeArc} ${sweepFlag} ${endX} ${endY}`;
     }
 
+    getPulseElements(key) {
+        return [this.arcPath, this.pointMarker];
+    }
+
     draw() {
         super.draw();
         const position = this.getBoardPosition();

@@ -430,15 +430,15 @@ var BaseShapeToolbarMixin = {
                 this.setPropertyCommand("opacity", opacity);
         }, 300);
     },
-    createGlowMenuItem() {
-        const glowLabel = this.board.translations.get("Glow") ?? "Glow";
+    createPulseMenuItem() {
+        const pulseLabel = this.board.translations.get("Pulse") ?? "Pulse";
         return {
-            text: glowLabel,
-            iconHtml: this.menuIconHtml("fa-lightbulb-on", this.isGlowOnChangeEnabled()),
+            text: pulseLabel,
+            iconHtml: this.menuIconHtml("fa-wave-pulse", this.isPulseOnChangeEnabled()),
             buildControl: $container => {
-                $('<div class="mdl-glow-switch">').dxSwitch({
-                    value: this.isGlowOnChangeEnabled(),
-                    onValueChanged: event => this.setPropertyCommand("glowOnChange", event.value)
+                $('<div class="mdl-pulse-switch">').dxSwitch({
+                    value: this.isPulseOnChangeEnabled(),
+                    onValueChanged: event => this.setPropertyCommand("pulseOnChange", event.value)
                 }).appendTo($container);
             }
         };
@@ -583,7 +583,7 @@ var BaseShapeToolbarMixin = {
             }
         ];
         this.populateShapeColorMenuSections(sections);
-        sections[0].items.push(this.createGlowMenuItem());
+        sections[0].items.push(this.createPulseMenuItem());
         sections[0].items.push(this.createOpacityMenuItem());
         const listItems = sections.flatMap(section => section.items);
         Utils.renderDropdownMenuScroll(contentElement, 300, scrollContent => {

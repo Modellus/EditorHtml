@@ -4,7 +4,8 @@ class BaseShape {
     static embeddedMathStyles = "";
     static interactiveHandleClasses = ["splitter", "gauge-pointer"];
     static defaultNameFontSize = 10;
-    static glowDurationMilliseconds = 1000;
+    static pulseDurationMilliseconds = 1000;
+    static pulsePeriodMilliseconds = 1000;
     static nameFontSizes = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 40, 48];
     static shapeIcons = {
         BodyShape: "fa-light fa-circle",
@@ -143,9 +144,12 @@ class BaseShape {
         this.termDisplayEntries = [];
         this.termFormControls = {};
         this.isReferential = false;
-        this.glowTermValues = null;
-        this.glowColor = null;
-        this.glowTimer = null;
+        this.pulseTermValues = null;
+        this.pulseColor = null;
+        this.pulseTimer = null;
+        this.pulseExpiryByTerm = new Map();
+        this.pulsingElements = new Set();
+        this.pulseStartedAt = null;
         this.setDefaults();
         this.initializeElement();
     }
@@ -167,7 +171,7 @@ class BaseShape {
         this.properties.flipHorizontal = false;
         this.properties.flipVertical = false;
         this.properties.opacity = 1;
-        this.properties.glowOnChange = false;
+        this.properties.pulseOnChange = false;
         this.properties.showName = false;
         this.properties.nameColor = null;
         this.properties.nameFontSize = BaseShape.defaultNameFontSize;
@@ -1446,94 +1450,145 @@ class BaseShape {
             this.shapeNameLayer.style.opacity = opacityStyle;
     }
 
-    isGlowOnChangeEnabled() {
-        return this.properties.glowOnChange === true;
+    isPulseOnChangeEnabled() {
+        return this.properties.pulseOnChange === true;
     }
 
-    getGlowColor() {
-        const foregroundColor = this.properties.foregroundColor;
-        if (foregroundColor && foregroundColor !== "transparent")
-            return foregroundColor;
-        const borderColor = this.properties.borderColor;
-        if (borderColor && borderColor !== "transparent")
-            return borderColor;
-        return "#000000";
+    getPulseColor() {
+        const shapeColors = [this.properties.foregroundColor, this.properties.borderColor, this.properties.backgroundColor];
+        return shapeColors.find(color => color && color !== "transparent") ?? "#000000";
     }
 
-    getGlowTermSources() {
-        const sources = this.termDisplayEntries.map(entry => ({ termProperty: entry.term, caseProperty: entry.caseProperty }));
+    getPulseTermSources() {
+        const sources = this.termDisplayEntries.map(entry => this.createPulseTermSource(entry.term, entry.caseProperty));
         for (const mapping of this.termsMapping)
-            if (!sources.some(source => source.termProperty === mapping.termProperty))
-                sources.push({ termProperty: mapping.termProperty, caseProperty: mapping.caseProperty });
+            if (!sources.some(source => source.key === mapping.termProperty))
+                sources.push(this.createPulseTermSource(mapping.termProperty, mapping.caseProperty));
         return sources;
     }
 
-    readGlowTermValues() {
+    createPulseTermSource(termProperty, caseProperty) {
+        return {
+            key: termProperty,
+            termName: this.normalizeTermValue(this.properties[termProperty]),
+            caseNumber: this.getTermCaseNumber(caseProperty)
+        };
+    }
+
+    readPulseTermValues() {
         const calculator = this.board.calculator;
         const values = new Map();
-        for (const source of this.getGlowTermSources()) {
-            const termName = this.normalizeTermValue(this.properties[source.termProperty]);
-            if (termName == null || termName === "")
+        for (const source of this.getPulseTermSources()) {
+            if (source.termName == null || source.termName === "")
                 continue;
-            const caseNumber = this.getTermCaseNumber(source.caseProperty);
-            const value = calculator.isTerm(termName) ? calculator.getByName(termName, caseNumber) : Number(termName);
-            values.set(`${source.termProperty}:${termName}:${caseNumber}`, value);
+            const termName = String(source.termName);
+            const value = calculator.isTerm(termName) ? calculator.getByName(termName, source.caseNumber) : Number(termName);
+            values.set(`${source.key}:${termName}:${source.caseNumber}`, { key: source.key, value: value });
         }
         return values;
     }
 
-    hasGlowTermValueChanged(previousValues, currentValues) {
-        for (const [key, value] of currentValues) {
-            if (!previousValues.has(key))
+    getChangedPulseTerms(previousValues, currentValues) {
+        const changedKeys = [];
+        for (const [valueKey, current] of currentValues) {
+            const previous = previousValues.get(valueKey);
+            if (previous === undefined)
                 continue;
-            if (!Object.is(previousValues.get(key), value))
-                return true;
+            if (!Object.is(previous.value, current.value))
+                changedKeys.push(current.key);
         }
-        return false;
+        return changedKeys;
     }
 
-    updateGlowState() {
+    getPulseElements(key) {
+        return [];
+    }
+
+    updatePulseState() {
         if (!this.element)
             return;
-        if (!this.isGlowOnChangeEnabled()) {
-            if (this.glowTermValues == null)
+        if (!this.isPulseOnChangeEnabled()) {
+            if (this.pulseTermValues == null)
                 return;
-            this.glowTermValues = null;
-            this.stopGlow();
+            this.pulseTermValues = null;
+            this.stopPulse();
             return;
         }
-        const glowColor = this.getGlowColor();
-        if (this.glowColor !== glowColor) {
-            this.glowColor = glowColor;
-            this.element.style.setProperty("--mdl-glow-color", glowColor);
+        const pulseColor = this.getPulseColor();
+        if (this.pulseColor !== pulseColor) {
+            this.pulseColor = pulseColor;
+            this.element.style.setProperty("--mdl-pulse-color", pulseColor);
         }
-        this.element.classList.add("mdl-glow-host");
-        const currentValues = this.readGlowTermValues();
-        const previousValues = this.glowTermValues;
-        this.glowTermValues = currentValues;
-        if (previousValues && this.hasGlowTermValueChanged(previousValues, currentValues))
-            this.startGlow();
+        this.element.classList.add("mdl-pulse-host");
+        const currentValues = this.readPulseTermValues();
+        const previousValues = this.pulseTermValues;
+        this.pulseTermValues = currentValues;
+        const now = performance.now();
+        if (previousValues)
+            for (const termProperty of this.getChangedPulseTerms(previousValues, currentValues))
+                this.pulseExpiryByTerm.set(termProperty, now + BaseShape.pulseDurationMilliseconds);
+        this.applyPulse(now);
     }
 
-    startGlow() {
-        this.element.classList.add("mdl-glow");
-        if (this.glowTimer)
-            clearTimeout(this.glowTimer);
-        this.glowTimer = setTimeout(() => {
-            this.glowTimer = null;
-            this.element?.classList.remove("mdl-glow");
-        }, BaseShape.glowDurationMilliseconds);
+    applyPulse(now) {
+        for (const [termProperty, expiry] of this.pulseExpiryByTerm)
+            if (expiry <= now)
+                this.pulseExpiryByTerm.delete(termProperty);
+        if (this.pulseExpiryByTerm.size === 0) {
+            this.stopPulse();
+            return;
+        }
+        this.pulseStartedAt ??= now;
+        const pulsingElements = new Set();
+        for (const termProperty of this.pulseExpiryByTerm.keys())
+            for (const element of this.getPulseElements(termProperty))
+                if (element)
+                    pulsingElements.add(element);
+        for (const element of this.pulsingElements)
+            if (!pulsingElements.has(element))
+                this.clearPulseElement(element);
+        for (const element of pulsingElements)
+            this.markPulseElement(element, now);
+        this.pulsingElements = pulsingElements;
+        this.schedulePulseEnd(Math.max(...this.pulseExpiryByTerm.values()) - now);
     }
 
-    stopGlow() {
-        if (this.glowTimer) {
-            clearTimeout(this.glowTimer);
-            this.glowTimer = null;
+    markPulseElement(element, now) {
+        if (element.classList.contains("mdl-pulse"))
+            return;
+        element.style.animationDelay = `-${(now - this.pulseStartedAt) % BaseShape.pulsePeriodMilliseconds}ms`;
+        element.classList.add("mdl-pulse");
+    }
+
+    clearPulseElement(element) {
+        element.classList.remove("mdl-pulse");
+        element.style.removeProperty("animation-delay");
+    }
+
+    schedulePulseEnd(delay) {
+        if (this.pulseTimer)
+            clearTimeout(this.pulseTimer);
+        this.pulseTimer = setTimeout(() => {
+            this.pulseTimer = null;
+            this.board.markDirty(this);
+        }, delay + 20);
+    }
+
+    stopPulse() {
+        if (this.pulseTimer) {
+            clearTimeout(this.pulseTimer);
+            this.pulseTimer = null;
         }
-        this.glowColor = null;
-        this.element.classList.remove("mdl-glow");
-        this.element.classList.remove("mdl-glow-host");
-        this.element.style.removeProperty("--mdl-glow-color");
+        for (const element of this.pulsingElements)
+            this.clearPulseElement(element);
+        this.pulsingElements = new Set();
+        this.pulseExpiryByTerm.clear();
+        this.pulseStartedAt = null;
+        if (!this.isPulseOnChangeEnabled()) {
+            this.pulseColor = null;
+            this.element.classList.remove("mdl-pulse-host");
+            this.element.style.removeProperty("--mdl-pulse-color");
+        }
     }
 
     applyUserPermissions() {
@@ -1558,7 +1613,7 @@ class BaseShape {
         this.children.forEach(child => child.draw());
         this.drawTermDisplayLabels();
         this.drawShapeNameLabel();
-        this.updateGlowState();
+        this.updatePulseState();
     }
 
     tick() {

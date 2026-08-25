@@ -863,7 +863,9 @@ class TableControl {
             }
             if (!isEditingCell) {
                 const textValue = this.getCellText(row, columns[columnIndex]);
-                this.renderCellText(cell, y, rowHeight, textValue, columnIndex, columns[columnIndex], row);
+                const cellText = this.renderCellText(cell, y, rowHeight, textValue, columnIndex, columns[columnIndex], row);
+                cellText.setAttribute("data-row-key", `${row.key}`);
+                cellText.setAttribute("data-column-index", `${columnIndex}`);
             }
             this.cellBoxes.push({
                 x: cell.x,
@@ -1055,6 +1057,7 @@ class TableControl {
         else
             text.textContent = textValue;
         this.rowsLayer.appendChild(text);
+        return text;
     }
 
     getCellText(row, column) {

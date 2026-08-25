@@ -561,6 +561,10 @@ class VectorShape extends ChildShape {
         return this.buildMarkerForTip("start") + this.buildMarkerForTip("end");
     }
 
+    getPulseElements(key) {
+        return [this.line, this.tipPointMarker];
+    }
+
     draw() {
         super.draw();
         const lineWidth = this.properties.lineWidth ?? 1;

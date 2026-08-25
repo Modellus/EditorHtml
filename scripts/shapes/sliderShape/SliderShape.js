@@ -244,6 +244,12 @@ class SliderShape extends BaseShape {
         return element;
     }
 
+    getPulseElements(termProperty) {
+        if (termProperty === "term")
+            return [this.fillPart];
+        return super.getPulseElements(termProperty);
+    }
+
     createExportElementClone(element) {
         const clone = super.createExportElementClone(element);
         clone.querySelectorAll(".slider-export-exclude").forEach(node => node.remove());

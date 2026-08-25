@@ -951,7 +951,7 @@ class ChartControl {
             const geometry = BlockChartGeometry.getBarGeometry(this.dataRows, this.options.argumentField, series, seriesIndex, barSeriesList.length, barWidth, xScale, yScale);
             for (const bar of geometry.bars) {
                 barsMarkup += `
-                    <rect x="${bar.x}" y="${bar.y}" width="${bar.width}" height="${bar.height}" fill="${series.color}" fill-opacity="0.8" />
+                    <rect class="chart-bar" data-series-index="${seriesIndex}" data-argument="${bar.xValue}" x="${bar.x}" y="${bar.y}" width="${bar.width}" height="${bar.height}" fill="${series.color}" fill-opacity="0.8" />
                 `;
             }
             outlierPointsBySeries.push({ points: geometry.outliers, color: series.color });
@@ -1087,9 +1087,39 @@ class ChartControl {
         if (!Number.isFinite(xPosition) || !Number.isFinite(yPosition))
             return;
         let markerMarkup = `
-            <circle cx="${xPosition}" cy="${yPosition}" r="3.5" fill="${series.color}" stroke="#ffffff" stroke-width="1" />
+            <circle class="chart-focus-marker" data-series-index="${seriesIndex}" cx="${xPosition}" cy="${yPosition}" r="3.5" fill="${series.color}" stroke="#ffffff" stroke-width="1" />
         `;
         this.appendSvgMarkup(this.focusLayer, markerMarkup);
+    }
+
+    getFocusValueElements(seriesIndex) {
+        const elements = [];
+        const marker = this.focusLayer?.querySelector(`.chart-focus-marker[data-series-index="${seriesIndex}"]`);
+        if (marker)
+            elements.push(marker);
+        const bar = this.getFocusBarElement(seriesIndex);
+        if (bar)
+            elements.push(bar);
+        return elements;
+    }
+
+    getFocusBarElement(seriesIndex) {
+        if (!Number.isFinite(this.focusArgumentValue))
+            return null;
+        const bars = this.seriesLayer?.querySelectorAll(`.chart-bar[data-series-index="${seriesIndex}"]`) ?? [];
+        let nearestBar = null;
+        let nearestDistance = Number.POSITIVE_INFINITY;
+        for (const bar of bars) {
+            const argument = Number(bar.getAttribute("data-argument"));
+            if (!Number.isFinite(argument))
+                continue;
+            const distance = Math.abs(argument - this.focusArgumentValue);
+            if (distance >= nearestDistance)
+                continue;
+            nearestDistance = distance;
+            nearestBar = bar;
+        }
+        return nearestBar;
     }
 
     getNearestSeriesPoint(series, focusArgumentValue) {

@@ -410,6 +410,10 @@ class LineShape extends ChildShape {
             this.trajectory.element.removeAttribute("points");
     }
 
+    getPulseElements(key) {
+        return [this.mainLine, this.pointMarker];
+    }
+
     draw() {
         super.draw();
         const position = this.getBoardPosition();
