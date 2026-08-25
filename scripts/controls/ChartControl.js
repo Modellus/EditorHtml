@@ -28,6 +28,7 @@ class ChartControl {
             chartType: "line",
             argumentField: "argument",
             series: [],
+            categories: [],
             argumentTitle: "",
             valueTitle: "",
             backgroundColor: "#ffffff",
@@ -243,7 +244,7 @@ class ChartControl {
         let maxXTickWidth = 0;
         let maxYTickWidth = 0;
         for (let index = 0; index < xTicks.length; index++) {
-            const labelWidth = this.estimateTextWidth(this.formatAxisValue(xTicks[index], this.options.xAxisType), tickFontSize);
+            const labelWidth = this.estimateTextWidth(this.formatAxisValue(xTicks[index], this.getXAxisType()), tickFontSize);
             if (labelWidth > maxXTickWidth)
                 maxXTickWidth = labelWidth;
         }
@@ -299,7 +300,37 @@ class ChartControl {
         this.render();
     }
 
+    isCategoryMode() {
+        return Array.isArray(this.options.categories) && this.options.categories.length > 0;
+    }
+
+    getXAxisType() {
+        return this.isCategoryMode() ? "category" : (this.options.xAxisType || "decimal");
+    }
+
+    getCategoryLabel(value) {
+        const categoryIndex = Math.round(Number(value));
+        const categories = this.options.categories;
+        if (!Number.isFinite(categoryIndex) || categoryIndex < 0 || categoryIndex >= categories.length)
+            return "";
+        return categories[categoryIndex];
+    }
+
+    getCategoryDomain(series) {
+        let highestCount = 0;
+        for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
+            for (let seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
+                const countValue = this.getNumericValue(this.dataRows[rowIndex], series[seriesIndex].valueField);
+                if (countValue != null && countValue > highestCount)
+                    highestCount = countValue;
+            }
+        }
+        return { xMin: -0.6, xMax: this.options.categories.length - 0.4, yMin: 0, yMax: Math.max(1, highestCount) * 1.08 };
+    }
+
     getDomain(argumentField, series) {
+        if (this.isCategoryMode())
+            return this.getCategoryDomain(series);
         const xValues = [];
         const yValues = [];
         for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
@@ -380,6 +411,8 @@ class ChartControl {
     }
 
     formatAxisValue(value, axisType = "decimal") {
+        if (axisType === "category")
+            return this.getCategoryLabel(value);
         return formatAxisTickValue(value, axisType);
     }
 
@@ -393,6 +426,8 @@ class ChartControl {
     formatArgumentValue(value) {
         if (!Number.isFinite(value))
             return "";
+        if (this.isCategoryMode())
+            return this.getCategoryLabel(value);
         if (typeof this.options.getArgumentPrecision === "function")
             return Utils.formatNumber(value, this.options.getArgumentPrecision());
         return this.formatCrosshairValue(value);
@@ -523,14 +558,16 @@ class ChartControl {
     // for, the ticks that fit it, the box left for the plot and the two scales. Held apart from
     // the painting so a control that draws through the block layer can reuse all of it.
     buildRenderPlan(width, height) {
+        if (this.isCategoryMode())
+            return this.buildCategoryRenderPlan(width, height);
         const rawDomain = this.getDomain(this.options.argumentField, this.options.series);
-        const preliminaryXTicks = this.buildTicks(rawDomain.xMin, rawDomain.xMax, 5, this.options.xAxisType);
+        const preliminaryXTicks = this.buildTicks(rawDomain.xMin, rawDomain.xMax, 5, this.getXAxisType());
         const preliminaryYTicks = this.buildTicks(rawDomain.yMin, rawDomain.yMax, 5, this.options.yAxisType);
         const preliminaryLayout = this.getLayout(width, height, preliminaryXTicks, preliminaryYTicks);
         const domain = this.options.equalScales
             ? this.equalizeDomain(rawDomain, preliminaryLayout.plotWidth, preliminaryLayout.plotHeight)
             : rawDomain;
-        const xMajorTicks = this.buildTicks(domain.xMin, domain.xMax, 5, this.options.xAxisType);
+        const xMajorTicks = this.buildTicks(domain.xMin, domain.xMax, 5, this.getXAxisType());
         const yMajorTicks = this.buildTicks(domain.yMin, domain.yMax, 5, this.options.yAxisType);
         const xTicks = this.injectPinnedTick(xMajorTicks, this._pinnedTickValues.x, domain.xMin, domain.xMax);
         const yTicks = this.injectPinnedTick(yMajorTicks, this._pinnedTickValues.y, domain.yMin, domain.yMax);
@@ -554,6 +591,30 @@ class ChartControl {
             xMinorTicks: xMinorTicks,
             yMinorTicks: yMinorTicks
         };
+    }
+
+    buildCategoryRenderPlan(width, height) {
+        const domain = this.getDomain(this.options.argumentField, this.options.series);
+        const xTicks = this.options.categories.map((label, index) => index);
+        const yTicks = this.buildCountTicks(domain.yMin, domain.yMax);
+        const layout = this.getLayout(width, height, xTicks, yTicks);
+        const scales = this.getScales(layout, domain);
+        return {
+            width: width,
+            height: height,
+            layout: layout,
+            domain: domain,
+            xScale: scales.xScale,
+            yScale: scales.yScale,
+            xTicks: xTicks,
+            yTicks: yTicks,
+            xMinorTicks: [],
+            yMinorTicks: []
+        };
+    }
+
+    buildCountTicks(minValue, maxValue) {
+        return this.buildTicks(minValue, maxValue, 5).filter(tickValue => Number.isInteger(tickValue));
     }
 
     applyClipRects(plan) {
@@ -692,7 +753,7 @@ class ChartControl {
             anchor = "end";
             labelX = xPosition - 2;
         }
-        const labelText = this.escapeMarkupText(this.formatAxisValue(xValue, this.options.xAxisType));
+        const labelText = this.escapeMarkupText(this.formatAxisValue(xValue, this.getXAxisType()));
         this.appendSvgMarkup(this.axisLayer, `
             <g clip-path="url(#${this.xTicksClipId})">
                 <line x1="${xPosition}" y1="${layout.plotBottom}" x2="${xPosition}" y2="${layout.plotBottom + 4}" stroke="${this.options.axisColor}" stroke-width="1" />
@@ -871,8 +932,12 @@ class ChartControl {
         this.appendSvgMarkup(this.seriesLayer, markersMarkup);
     }
 
+    getMaximumBarWidth() {
+        return this.isCategoryMode() ? 48 : 24;
+    }
+
     getBarWidth(barSeriesCount, layout, xScale) {
-        return BlockChartGeometry.getBarWidth(this.dataRows, this.options.argumentField, barSeriesCount, xScale, layout.plotWidth);
+        return BlockChartGeometry.getBarWidth(this.dataRows, this.options.argumentField, barSeriesCount, xScale, layout.plotWidth, this.getMaximumBarWidth());
     }
 
     renderBarSeries(layout, xScale, yScale, barSeriesList) {
@@ -1141,6 +1206,8 @@ class ChartControl {
     }
 
     renderTickHitAreas(layout, xScale, yScale, xTicks, yTicks) {
+        if (this.isCategoryMode())
+            return;
         const tickCursors = this.getTickCursors();
         for (let index = 0; index < xTicks.length; index++) {
             const xValue = xTicks[index];
@@ -1270,6 +1337,8 @@ class ChartControl {
         if (event.button !== 0)
             return;
         if (this.options.interactable === false)
+            return;
+        if (this.isCategoryMode())
             return;
         event.stopPropagation();
         event.preventDefault();

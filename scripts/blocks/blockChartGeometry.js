@@ -115,7 +115,7 @@ class BlockChartGeometry {
 
     // Bars are as wide as the tightest gap between two argument values allows, shared between the
     // bar series so that they stand side by side instead of hiding one another.
-    static getBarWidth(rows, argumentField, barSeriesCount, xScale, plotWidth) {
+    static getBarWidth(rows, argumentField, barSeriesCount, xScale, plotWidth, maximumBarWidth = 24) {
         const xValues = [];
         for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
             const rawXValue = BlockChartGeometry.getNumericValue(rows[rowIndex], argumentField);
@@ -130,7 +130,7 @@ class BlockChartGeometry {
             if (diff > 0)
                 stepPixels = Math.min(stepPixels, diff);
         }
-        return Math.max(2, Math.min(24, stepPixels / Math.max(1, barSeriesCount + 1)));
+        return Math.max(2, Math.min(maximumBarWidth, stepPixels / Math.max(1, barSeriesCount + 1)));
     }
 
     static getBarGeometry(rows, argumentField, series, seriesIndex, barSeriesCount, barWidth, xScale, yScale) {

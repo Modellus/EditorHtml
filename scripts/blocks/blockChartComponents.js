@@ -436,6 +436,7 @@
             chartParameter("foregroundColor", "Label colour", "colour", "#666666"),
             chartParameter("fontFamily", "Font family", "string", "Katex_Main"),
             chartParameter("tickFontSize", "Tick font size", "number", 10, { minimum: 1 }),
+            chartParameter("maxBarWidth", "Max bar width", "number", 24, { minimum: 1 }),
             chartParameter("plotClipId", "Plot clip", "string", ""),
             chartParameter("shapeClipId", "Shape clip", "string", ""),
             chartParameter("xTicksClipId", "X tick clip", "string", ""),
@@ -478,7 +479,7 @@
             const series = parameters.series ?? [];
             const barSeries = series.filter(entry => (entry.chartTypes ?? ["line"]).includes("bar"));
             if (barSeries.length > 0) {
-                const barWidth = BlockChartGeometry.getBarWidth(rows, parameters.argumentField, barSeries.length, scales.xScale, plot.plotWidth);
+                const barWidth = BlockChartGeometry.getBarWidth(rows, parameters.argumentField, barSeries.length, scales.xScale, plot.plotWidth, parameters.maxBarWidth);
                 children.push(clipped({
                     id: "bars",
                     type: "chart-bars",
