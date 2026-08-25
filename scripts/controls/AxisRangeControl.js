@@ -2,10 +2,13 @@
 // with whatever else that axis needs after them — the chart puts the 0/π switch there. The chart
 // keeps its range in a domain override, an object built from blocks keeps it in two of its own
 // parameters; both hand this control a way to read a bound and a way to write one, and neither
-// draws a pair of number boxes of its own.
+// draws a pair of number boxes of its own. The axes it edits are named by the caller: a chart names
+// the two directions it plots in, a frequency chart the two value scales it reads its series
+// against.
 class AxisRangeControl {
     constructor(options) {
         this.options = options;
+        this.axes = options.axes ?? ["x", "y"];
         this.boxes = {};
     }
 
@@ -39,7 +42,7 @@ class AxisRangeControl {
     }
 
     refresh() {
-        for (const axis of ["x", "y"]) {
+        for (const axis of this.axes) {
             for (const bound of ["Min", "Max"])
                 this.boxes[`${axis}${bound}`]?.option({ value: this.options.read(axis, bound), disabled: this.isDisabled(axis) });
         }

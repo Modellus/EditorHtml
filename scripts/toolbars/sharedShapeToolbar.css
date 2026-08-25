@@ -159,6 +159,56 @@ math-field {
     width: 100%;
 }
 
+/* The frequency chart names its categories with a term picker and its values with a list of series,
+   and the menu holding both is as wide as that list. The picker is given the whole of that width
+   rather than being left at the width a lone selector would have had. */
+.mdl-frequency-terms-menu .mdl-dropdown-list-control {
+    width: 360px;
+    justify-content: flex-end;
+}
+
+.mdl-frequency-terms-menu .mdl-dropdown-list-control .term-packed-control,
+.mdl-frequency-terms-menu .mdl-dropdown-list-control .frequency-series-control {
+    width: 100%;
+}
+
+.mdl-frequency-mark-selector,
+.mdl-frequency-function-selector {
+    width: 100%;
+}
+
+.mdl-frequency-mark-field {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+}
+
+.mdl-frequency-mark-icon {
+    flex: none;
+    margin-left: 9px;
+    opacity: 0.85;
+}
+
+.mdl-frequency-mark-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.mdl-frequency-mark-text .dx-texteditor {
+    background: transparent;
+}
+
+.mdl-frequency-mark-text .dx-texteditor::before,
+.mdl-frequency-mark-text .dx-texteditor::after {
+    display: none;
+}
+
+.mdl-frequency-mark-text .dx-texteditor-input {
+    padding-left: 8px;
+    background: transparent;
+}
+
 .mdl-dropdown-list-control .component-terms-control {
     width: 320px;
 }

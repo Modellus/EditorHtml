@@ -51,13 +51,14 @@ class BoardEditor extends Workspace {
         this.blockTools = new BlockAgentTools(this);
         this.board.svg.addEventListener("shapeChanged", e => this.onShapeChanged(e));
         this.board.svg.addEventListener("expressionChanged", e => this.onExpressionChanged(e));
-        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, BlockChartWidget, TableWidget, DataTableWidget, CasesTableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget, MindMapBubbleWidget, MindMapRectangleWidget, MindMapCircleWidget, MindMapConnectorWidget, ComponentWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
+        [BodyWidget, PointWidget, ExpressionWidget, ValueWidget, ChartWidget, BlockChartWidget, FrequencyChartWidget, TableWidget, DataTableWidget, CasesTableWidget, SliderWidget, GaugeWidget, VectorWidget, LineWidget, ArcWidget, MediaWidget, ReferentialWidget, TextWidget, QuestionWidget, RulerWidget, ProtractorWidget, SlopeWidget, MindMapBubbleWidget, MindMapRectangleWidget, MindMapCircleWidget, MindMapConnectorWidget, ComponentWidget].forEach(shapeClass => this.commands.registerShape(shapeClass));
         this.commands.registerShapeAlias("BodyShape", BodyWidget);
         this.commands.registerShapeAlias("PointShape", PointWidget);
         this.commands.registerShapeAlias("ExpressionShape", ExpressionWidget);
         this.commands.registerShapeAlias("ValueShape", ValueWidget);
         this.commands.registerShapeAlias("ChartShape", ChartWidget);
         this.commands.registerShapeAlias("BlockChartShape", BlockChartWidget);
+        this.commands.registerShapeAlias("FrequencyChartShape", FrequencyChartWidget);
         this.commands.registerShapeAlias("TableShape", TableWidget);
         this.commands.registerShapeAlias("DataTableShape", DataTableWidget);
         this.commands.registerShapeAlias("CasesTableShape", CasesTableWidget);

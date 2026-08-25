@@ -1150,6 +1150,7 @@ class TermControl {
         const lock = this.options.lock;
         const selectedValue = this.getLockValue(item, index);
         const items = typeof lock?.getItems === "function" ? lock.getItems(item, index) : [];
+        const dropDownOptions = typeof lock?.dropDownOptions === "function" ? lock.dropDownOptions(item, index) : (lock?.dropDownOptions ?? {});
         return {
             items: items,
             stylingMode: "text",
@@ -1162,7 +1163,7 @@ class TermControl {
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup"),
-                ...(lock?.dropDownOptions ?? {})
+                ...dropDownOptions
             }
         };
     }

@@ -250,6 +250,18 @@ class ModellusShapeToolbar {
             },
             {
                 location: "center",
+                widget: "dxButton",
+                options: {
+                    elementAttr: {
+                        id: "frequency-chart-button"
+                    },
+                    icon: "fa-light fa-chart-simple",
+                    onClick: _ => shell.shapeDrawController.toggle("FrequencyChartShape", "Frequencies", "frequency-chart-button"),
+                    onInitialized: event => shell.createTranslatedTooltip(event, "Frequency Chart Tooltip", 280)
+                }
+            },
+            {
+                location: "center",
                 template: () => {
                     const dropdownElement = $('<div id="table-button" class="mdl-table-type-selector">');
                     dropdownElement.dxDropDownButton({
