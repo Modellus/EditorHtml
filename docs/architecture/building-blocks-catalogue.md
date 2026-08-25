@@ -598,7 +598,7 @@ Capabilities: `interaction`, `memory`, `writes-model`
 
 ### `calculator` — Calculator
 
-Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.
+Calculator whose working is held by the object itself: four functions on a narrow one, and a scientific pad of powers, roots, trigonometry and logarithms beside the digits once it is wide enough to hold one. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.
 
 Capabilities: `interaction`, `textual`, `reads-model`, `writes-model`, `memory`
 
@@ -611,6 +611,7 @@ Capabilities: `interaction`, `textual`, `reads-model`, `writes-model`, `memory`
 | `dp` | number | 0 |  |
 | `ad` | number | 0 |  |
 | `fresh` | number | 0 |  |
+| `inv` | number | 0 |  |
 | `history` | memory | [] |  |
 | `termA` | variable | "" |  |
 | `termB` | variable | "" |  |
@@ -622,6 +623,8 @@ Capabilities: `interaction`, `textual`, `reads-model`, `writes-model`, `memory`
 | `keyDColor` | colour | "token:surface.muted" |  |
 | `resultVariable` | variable | "" |  |
 | `digits` | number | 2 | min 0, max 6 |
+| `scientific` | boolean | true |  |
+| `angleUnit` | string | "radians" | radians \| degrees |
 | `showHistory` | boolean | true |  |
 | `historyLimit` | number | 24 | min 1, max 200 |
 | `bodyColor` | colour | "token:surface.emphasis" |  |

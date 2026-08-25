@@ -588,10 +588,10 @@
           "type": "string",
           "description": "Fill color (hex or 'transparent')."
         },
-        "glowOnChange": {
+        "pulseOnChange": {
           "type": "boolean",
           "default": false,
-          "description": "When true, the shape's colors and displayed values glow for one second each time a term it reads lands on a new value. A term recomputed to the same value does not glow."
+          "description": "When true, the part of the shape showing a term's current value pulses in the shape's color for one second each time that term lands on a new value. A term recomputed to the same value does not pulse."
         },
         "showName": {
           "type": "boolean",

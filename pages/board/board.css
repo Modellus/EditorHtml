@@ -1621,12 +1621,20 @@ svg:active.pan-available {
     pointer-events: none;
 }
 
-.mdl-glow-host {
-    transition: filter 250ms ease-out;
+.mdl-pulse {
+    animation: mdl-pulse-beat 1000ms ease-in-out infinite;
 }
 
-.mdl-glow-host.mdl-glow {
-    filter: drop-shadow(0 0 2px var(--mdl-glow-color)) drop-shadow(0 0 7px var(--mdl-glow-color));
+@keyframes mdl-pulse-beat {
+    0% {
+        filter: brightness(1) drop-shadow(0 0 0 var(--mdl-pulse-color)) drop-shadow(0 0 0 var(--mdl-pulse-color));
+    }
+    45% {
+        filter: brightness(1.35) drop-shadow(0 0 5px var(--mdl-pulse-color)) drop-shadow(0 0 16px var(--mdl-pulse-color));
+    }
+    90%, 100% {
+        filter: brightness(1) drop-shadow(0 0 0 var(--mdl-pulse-color)) drop-shadow(0 0 0 var(--mdl-pulse-color));
+    }
 }
 
 .dx-texteditor-input-container .case-select__icon {

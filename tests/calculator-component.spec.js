@@ -325,3 +325,241 @@ test('the history panel can be turned off and gives its room back to the keypad'
     expect(await page.locator('[data-source-id="history-panel"]').count()).toBe(0);
     expect(withoutPanel).toBeGreaterThan(withPanel);
 });
+
+// The function pad needs two columns of its own, so it is drawn only where the keypad is wide
+// enough to take them. The default box in these tests is, and 180 across is not.
+const NARROW = { width: 180, height: 320 };
+
+function scientificState(page) {
+    return page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Calc');
+        return { n: shape.properties.n, a: shape.properties.a, p: shape.properties.p, dp: shape.properties.dp, fresh: shape.properties.fresh, inv: shape.properties.inv };
+    });
+}
+
+function keyLabel(page, blockIdSuffix) {
+    return page.evaluate(id => document.querySelector(`[data-block-id$="${id}"] text`).textContent, blockIdSuffix);
+}
+
+test('the function pad is drawn beside the digits once there is room for it', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page);
+    expect(await page.locator('[data-block-id$="key-sin"]').count()).toBe(1);
+
+    // The digits keep their four columns and are moved along by the pad rather than squeezed by it.
+    const laidOut = await page.evaluate(() => {
+        const box = id => document.querySelector(`[data-block-id$="${id}"] rect`).getBoundingClientRect();
+        return { inverse: box('key-inverse'), clear: box('key-clear'), sin: box('key-sin'), log: box('key-log') };
+    });
+    expect(laidOut.inverse.left).toBeLessThan(laidOut.clear.left);
+    expect(laidOut.inverse.top).toBeCloseTo(laidOut.clear.top, 0);
+    expect(laidOut.sin.left).toBeCloseTo(laidOut.inverse.left, 0);
+    expect(laidOut.log.top).toBeGreaterThan(laidOut.sin.top);
+    expect(laidOut.inverse.width).toBeCloseTo(laidOut.clear.width, 0);
+
+    await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Calc');
+        shape.setProperties({ width: 180 });
+        shell.board.markDirty(shape);
+        shell.board.draw();
+    });
+    await page.waitForTimeout(200);
+    expect(await page.locator('[data-block-id$="key-sin"]').count()).toBe(0);
+    expect(await page.locator('[data-block-id$="key-add"]').count()).toBe(1);
+});
+
+test('the function pad can be turned off and gives its room back to the digits', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page);
+    const withPad = await page.evaluate(() => document.querySelector('[data-block-id$="key-add"] rect').getBoundingClientRect().width);
+    await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Calc');
+        shape.setProperty('scientific', false);
+        shell.board.draw();
+    });
+    await page.waitForTimeout(200);
+    expect(await page.locator('[data-block-id$="key-sin"]').count()).toBe(0);
+    const withoutPad = await page.evaluate(() => document.querySelector('[data-block-id$="key-add"] rect').getBoundingClientRect().width);
+    expect(withoutPad).toBeGreaterThan(withPad);
+});
+
+test('a narrow calculator is still the four-function one', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page, NARROW);
+    expect(await page.locator('[data-block-id$="key-inverse"]').count()).toBe(0);
+    await press(page, DIGIT(6));
+    await press(page, 'key-multiply');
+    await press(page, DIGIT(7));
+    await press(page, 'key-equals');
+    expect(await state(page)).toMatchObject({ n: 42 });
+});
+
+test('the function keys work on the number on the display', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page);
+
+    await press(page, DIGIT(9));
+    await press(page, 'key-square');
+    expect(await scientificState(page)).toMatchObject({ n: 81, fresh: 1, dp: 2 });
+
+    await press(page, 'key-clear');
+    await press(page, DIGIT(4));
+    await press(page, 'key-reciprocal');
+    expect((await state(page)).n).toBeCloseTo(0.25, 9);
+
+    await press(page, 'key-clear');
+    await press(page, DIGIT(1));
+    await press(page, 'key-zero');
+    await press(page, 'key-zero');
+    await press(page, 'key-log');
+    expect((await state(page)).n).toBeCloseTo(2, 9);
+
+    await press(page, 'key-clear');
+    await press(page, 'key-constant');
+    expect((await state(page)).n).toBeCloseTo(Math.PI, 9);
+
+    // A key press starts a number of its own rather than extending the answer it was given.
+    await press(page, DIGIT(3));
+    expect(await state(page)).toMatchObject({ n: 3 });
+});
+
+test('the trigonometric keys read the angle in the unit the object is set to', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page);
+
+    await press(page, DIGIT(1));
+    await press(page, 'key-sin');
+    expect((await state(page)).n).toBeCloseTo(Math.sin(1), 9);
+
+    await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Calc');
+        shape.setProperty('angleUnit', 'degrees');
+        shell.board.draw();
+    });
+    await page.waitForTimeout(200);
+    await press(page, 'key-clear');
+    await press(page, DIGIT(3));
+    await press(page, 'key-zero');
+    await press(page, 'key-sin');
+    expect((await state(page)).n).toBeCloseTo(0.5, 9);
+
+    await press(page, 'key-clear');
+    await press(page, DIGIT(6));
+    await press(page, 'key-zero');
+    await press(page, 'key-cos');
+    expect((await state(page)).n).toBeCloseTo(0.5, 9);
+
+    await press(page, 'key-clear');
+    await press(page, DIGIT(4));
+    await press(page, DIGIT(5));
+    await press(page, 'key-tan');
+    expect((await state(page)).n).toBeCloseTo(1, 9);
+});
+
+test('the second function key turns a key into its inverse and puts itself out again', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page);
+
+    expect(await keyLabel(page, 'key-sin')).toBe('sin');
+    await press(page, 'key-inverse');
+    expect((await scientificState(page)).inv).toBe(1);
+    expect(await keyLabel(page, 'key-sin')).toBe('sin⁻¹');
+    expect(await keyLabel(page, 'key-square')).toBe('√x');
+    expect(await keyLabel(page, 'key-constant')).toBe('e');
+
+    await press(page, DIGIT(1));
+    await press(page, 'key-sin');
+    expect((await state(page)).n).toBeCloseTo(Math.PI / 2, 9);
+    expect((await scientificState(page)).inv).toBe(0);
+    expect(await keyLabel(page, 'key-sin')).toBe('sin');
+
+    // Pressed twice it puts itself out without spending itself on a key.
+    await press(page, 'key-inverse');
+    await press(page, 'key-inverse');
+    expect((await scientificState(page)).inv).toBe(0);
+
+    await press(page, 'key-clear');
+    await press(page, DIGIT(8));
+    await press(page, DIGIT(1));
+    await press(page, 'key-inverse');
+    await press(page, 'key-square');
+    expect((await state(page)).n).toBeCloseTo(9, 9);
+
+    await press(page, 'key-clear');
+    await press(page, DIGIT(2));
+    await press(page, 'key-inverse');
+    await press(page, 'key-ln');
+    expect((await state(page)).n).toBeCloseTo(Math.E * Math.E, 9);
+});
+
+test('the power key waits for its exponent the way the arithmetic keys wait for their operand', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page, WIDE);
+
+    await press(page, DIGIT(2));
+    await press(page, 'key-power');
+    expect(await scientificState(page)).toMatchObject({ a: 2, n: 0, p: 5 });
+    await press(page, DIGIT(5));
+    await press(page, 'key-equals');
+    expect((await state(page)).n).toBeCloseTo(32, 9);
+
+    await press(page, 'key-clear');
+    await press(page, DIGIT(8));
+    await press(page, 'key-inverse');
+    await press(page, 'key-power');
+    expect(await scientificState(page)).toMatchObject({ a: 8, p: 6, inv: 0 });
+    await press(page, DIGIT(3));
+    await press(page, 'key-equals');
+    expect((await state(page)).n).toBeCloseTo(2, 9);
+
+    const history = await page.evaluate(() => shell.board.shapes.getByName('Calc').properties.history);
+    expect(history.map(row => row.text)).toEqual(['2 ^ 5', '8 ⁿ√ 3']);
+    expect(history.map(row => Math.round(row.x))).toEqual([32, 2]);
+});
+
+test('the display names the angle unit and says when the second function is on', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page);
+    const status = () => page.evaluate(() => document.querySelector('[data-block-id$="status"]')?.textContent ?? null);
+
+    expect(await status()).toBe('RAD');
+    await press(page, 'key-inverse');
+    expect(await status()).toBe('RAD  INV');
+    await press(page, 'key-inverse');
+
+    await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Calc');
+        shape.setProperty('angleUnit', 'degrees');
+        shell.board.draw();
+    });
+    await page.waitForTimeout(200);
+    expect(await status()).toBe('DEG');
+
+    // It belongs to the function pad: a calculator without one has no unit to name.
+    await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Calc');
+        shape.setProperty('scientific', false);
+        shell.board.draw();
+    });
+    await page.waitForTimeout(200);
+    expect(await status()).toBeNull();
+});
+
+test('a function key writes its answer into the model through the result variable', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addCalculator(page, { termA: 'mass', resultVariable: 'out' });
+    await press(page, 'term-a');
+    await press(page, 'key-power');
+    await press(page, DIGIT(2));
+    await press(page, 'key-equals');
+    expect(await page.evaluate(() => shell.board.calculator.getByName('out', 1))).toBeCloseTo(144, 6);
+});

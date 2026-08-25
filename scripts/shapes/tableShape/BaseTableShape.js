@@ -287,6 +287,24 @@ class BaseTableShape extends BaseShape {
         this.setPropertyCommand("columnWidths", columnWidths);
     }
 
+    getPulseTermSources() {
+        const columns = this._activeColumns ?? this.getSelectedColumns();
+        return columns.map((column, columnIndex) => ({
+            key: `column${columnIndex}`,
+            termName: this.normalizeColumnValue(column.term),
+            caseNumber: column.case ?? 1
+        }));
+    }
+
+    getPulseElements(key) {
+        const rowKey = this.getFocusedRowKey();
+        if (rowKey == null)
+            return [];
+        const columnIndex = Number(key.slice("column".length));
+        const cellText = this.element.querySelector(`[data-row-key="${rowKey}"][data-column-index="${columnIndex}"]`);
+        return cellText ? [cellText] : [];
+    }
+
     updateFocus() {
         if (!this.table)
             return;

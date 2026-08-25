@@ -109,6 +109,12 @@ class ValueShape extends BaseShape {
     drawTermDisplayLabels() {
     }
 
+    getPulseElements(termProperty) {
+        if (termProperty === "term")
+            return [this.valueText];
+        return super.getPulseElements(termProperty);
+    }
+
     getContentClipId() {
         return `clip-value-${this.id}`;
     }

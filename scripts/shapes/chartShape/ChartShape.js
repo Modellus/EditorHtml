@@ -469,6 +469,15 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         }
     }
 
+    getPulseElements(key) {
+        if (!key.startsWith("_yTerm"))
+            return [];
+        const seriesIndex = Number(key.slice("_yTerm".length));
+        if (!Number.isFinite(seriesIndex))
+            return super.getPulseElements(key);
+        return this.chart?.getFocusValueElements(seriesIndex) ?? [];
+    }
+
     getTermLabelAnchor() {
         const width = Number(this.properties.width);
         const height = Number(this.properties.height);

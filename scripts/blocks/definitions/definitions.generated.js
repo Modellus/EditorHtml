@@ -6,7 +6,7 @@ BlockDefinitionLoader.registerAll([
         "type": "calculator",
         "category": "component",
         "displayName": "Calculator",
-        "description": "Four-function calculator whose working is held by the object itself. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.",
+        "description": "Calculator whose working is held by the object itself: four functions on a narrow one, and a scientific pad of powers, roots, trigonometry and logarithms beside the digits once it is wide enough to hold one. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.",
         "icon": "fa-light fa-calculator",
         "tags": [
             "object",
@@ -15,7 +15,10 @@ BlockDefinitionLoader.registerAll([
             "arithmetic",
             "reads-model",
             "memory",
-            "history"
+            "history",
+            "scientific",
+            "trigonometry",
+            "logarithm"
         ],
         "capabilities": [
             "interaction",
@@ -104,6 +107,15 @@ BlockDefinitionLoader.registerAll([
                 "category": "state",
                 "userEditable": false,
                 "description": "Set after a result or a term key, so the next digit starts a number instead of extending one."
+            },
+            {
+                "id": "inv",
+                "label": "Second function",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "description": "Set while the second-function key is on, so the next function key does the inverse of the one it names. The key that uses it puts it out again."
             },
             {
                 "id": "history",
@@ -199,6 +211,26 @@ BlockDefinitionLoader.registerAll([
                 "category": "display",
                 "minimum": 0,
                 "maximum": 6
+            },
+            {
+                "id": "scientific",
+                "label": "Scientific keys",
+                "valueType": "boolean",
+                "defaultValue": true,
+                "category": "display",
+                "description": "Puts the pad of function keys beside the digits: powers and roots, the trigonometric functions, the logarithms, π and e, and a second-function key that turns each of them into its inverse. The pad needs room of its own, so it is drawn only once the keypad is wide enough to take two more columns without the keys becoming too small to read — a narrow calculator stays the four-function one, and widening it is what brings the pad out."
+            },
+            {
+                "id": "angleUnit",
+                "label": "Angle unit",
+                "valueType": "string",
+                "defaultValue": "radians",
+                "enumValues": [
+                    "radians",
+                    "degrees"
+                ],
+                "category": "display",
+                "description": "Which unit the trigonometric keys read an angle in, and give one back in. A model works in radians, so that is what the calculator starts in; degrees is for an angle read off a drawing or written on a page. Whichever is in force is named on the display, since the same number is two different angles under the two."
             },
             {
                 "id": "showHistory",
@@ -332,6 +364,30 @@ BlockDefinitionLoader.registerAll([
                 "formula": "w-2\\cdot pad-historyW-historyGap"
             },
             {
+                "id": "sciRoom",
+                "formula": "\\left\\lfloor\\min\\left(1,\\max\\left(0,contentW-200\\right)\\right)\\right\\rfloor"
+            },
+            {
+                "id": "sciOn",
+                "value": {
+                    "choose": {
+                        "parameter": "scientific"
+                    },
+                    "then": {
+                        "parameter": "sciRoom"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "sciCols",
+                "formula": "2\\cdot sciOn"
+            },
+            {
+                "id": "cols",
+                "formula": "4+sciCols"
+            },
+            {
                 "id": "displayH",
                 "formula": "\\max\\left(34,h\\cdot0.17\\right)"
             },
@@ -349,7 +405,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "keyW",
-                "formula": "\\frac{contentW-3\\cdot gap}{4}"
+                "formula": "\\frac{contentW-\\left(cols-1\\right)\\cdot gap}{cols}"
             },
             {
                 "id": "keyH",
@@ -360,24 +416,36 @@ BlockDefinitionLoader.registerAll([
                 "formula": "keyW+gap"
             },
             {
+                "id": "padX",
+                "formula": "pad+sciCols\\cdot colStep"
+            },
+            {
                 "id": "rowStep",
                 "formula": "keyH+gap"
             },
             {
                 "id": "x1",
-                "formula": "pad"
+                "formula": "padX"
             },
             {
                 "id": "x2",
-                "formula": "pad+colStep"
+                "formula": "padX+colStep"
             },
             {
                 "id": "x3",
-                "formula": "pad+2\\cdot colStep"
+                "formula": "padX+2\\cdot colStep"
             },
             {
                 "id": "x4",
-                "formula": "pad+3\\cdot colStep"
+                "formula": "padX+3\\cdot colStep"
+            },
+            {
+                "id": "sx1",
+                "formula": "pad"
+            },
+            {
+                "id": "sx2",
+                "formula": "pad+colStep"
             },
             {
                 "id": "y1",
@@ -464,6 +532,10 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\max\\left(10,keyH\\cdot0.42\\right)"
             },
             {
+                "id": "sciFont",
+                "formula": "\\max\\left(7,\\min\\left(keyFont,\\left(keyW-4\\right)\\cdot0.36\\right)\\right)"
+            },
+            {
                 "id": "termFont",
                 "formula": "\\max\\left(8,termH\\cdot0.5\\right)"
             },
@@ -534,6 +606,70 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "degrees",
+                "value": {
+                    "choose": {
+                        "parameter": "angleUnit"
+                    },
+                    "equals": "degrees",
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "toRadians",
+                "value": {
+                    "choose": {
+                        "parameter": "degrees"
+                    },
+                    "then": {
+                        "formula": "\\frac{\\pi}{180}"
+                    },
+                    "otherwise": 1
+                }
+            },
+            {
+                "id": "fromRadians",
+                "value": {
+                    "choose": {
+                        "parameter": "degrees"
+                    },
+                    "then": {
+                        "formula": "\\frac{180}{\\pi}"
+                    },
+                    "otherwise": 1
+                }
+            },
+            {
+                "id": "eulerE",
+                "value": 2.718281828459045
+            },
+            {
+                "id": "statusText",
+                "value": {
+                    "concat": [
+                        {
+                            "choose": {
+                                "parameter": "degrees"
+                            },
+                            "then": "DEG",
+                            "otherwise": "RAD"
+                        },
+                        {
+                            "choose": {
+                                "parameter": "inv"
+                            },
+                            "then": "  INV",
+                            "otherwise": ""
+                        }
+                    ]
+                }
+            },
+            {
+                "id": "statusX",
+                "formula": "pad+8"
+            },
+            {
                 "id": "result",
                 "value": {
                     "choose": {
@@ -552,7 +688,23 @@ BlockDefinitionLoader.registerAll([
                                     "formula": "p-4"
                                 },
                                 "then": {
-                                    "parameter": "n"
+                                    "choose": {
+                                        "formula": "p-5"
+                                    },
+                                    "then": {
+                                        "choose": {
+                                            "formula": "p-6"
+                                        },
+                                        "then": {
+                                            "parameter": "n"
+                                        },
+                                        "otherwise": {
+                                            "formula": "a^{\\frac{1}{n}}"
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "a^{n}"
+                                    }
                                 },
                                 "otherwise": {
                                     "formula": "\\frac{a}{n}"
@@ -589,7 +741,19 @@ BlockDefinitionLoader.registerAll([
                                 "choose": {
                                     "formula": "p-4"
                                 },
-                                "then": "",
+                                "then": {
+                                    "choose": {
+                                        "formula": "p-5"
+                                    },
+                                    "then": {
+                                        "choose": {
+                                            "formula": "p-6"
+                                        },
+                                        "then": "",
+                                        "otherwise": "ⁿ√"
+                                    },
+                                    "otherwise": "^"
+                                },
                                 "otherwise": "÷"
                             },
                             "otherwise": "×"
@@ -745,6 +909,35 @@ BlockDefinitionLoader.registerAll([
                     "properties": {
                         "stroke": "none",
                         "textAnchor": "end",
+                        "baseline": "central"
+                    }
+                },
+                {
+                    "id": "status",
+                    "type": "text",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "statusX"
+                        },
+                        "y": {
+                            "parameter": "tapeY"
+                        },
+                        "text": {
+                            "parameter": "statusText"
+                        },
+                        "fontSize": {
+                            "parameter": "tapeFont"
+                        },
+                        "fill": {
+                            "parameter": "mutedTextColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none",
+                        "textAnchor": "start",
                         "baseline": "central"
                     }
                 },
@@ -1788,7 +1981,7 @@ BlockDefinitionLoader.registerAll([
                             "type": "key-cap",
                             "parameters": {
                                 "x": {
-                                    "formula": "pad+\\mod\\left(i,3\\right)\\cdot colStep",
+                                    "formula": "padX+\\mod\\left(i,3\\right)\\cdot colStep",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
@@ -2089,6 +2282,959 @@ BlockDefinitionLoader.registerAll([
                         {
                             "type": "clickable",
                             "property": "fresh",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "key-inverse",
+                    "type": "group",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "children": [
+                        {
+                            "id": "cap",
+                            "type": "key-cap",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "sx1"
+                                },
+                                "y": {
+                                    "parameter": "y1"
+                                },
+                                "width": {
+                                    "parameter": "keyW"
+                                },
+                                "height": {
+                                    "parameter": "keyH"
+                                },
+                                "label": "INV",
+                                "fill": {
+                                    "choose": {
+                                        "parameter": "inv"
+                                    },
+                                    "then": {
+                                        "parameter": "accentColor"
+                                    },
+                                    "otherwise": {
+                                        "parameter": "functionKeyColor"
+                                    }
+                                },
+                                "borderColor": {
+                                    "parameter": "borderColor"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "radiusMedium"
+                                },
+                                "labelColor": {
+                                    "choose": {
+                                        "parameter": "inv"
+                                    },
+                                    "then": {
+                                        "parameter": "accentTextColor"
+                                    },
+                                    "otherwise": {
+                                        "parameter": "textColor"
+                                    }
+                                },
+                                "fontSize": {
+                                    "parameter": "sciFont"
+                                }
+                            }
+                        }
+                    ],
+                    "behaviours": [
+                        {
+                            "type": "tooltip",
+                            "text": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": "The next key does what it names rather than the inverse of it",
+                                "otherwise": "The next function key does the inverse of what it names"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "inv",
+                            "value": {
+                                "formula": "1-inv"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "key-constant",
+                    "type": "group",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "children": [
+                        {
+                            "id": "cap",
+                            "type": "key-cap",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "sx2"
+                                },
+                                "y": {
+                                    "parameter": "y1"
+                                },
+                                "width": {
+                                    "parameter": "keyW"
+                                },
+                                "height": {
+                                    "parameter": "keyH"
+                                },
+                                "label": {
+                                    "choose": {
+                                        "parameter": "inv"
+                                    },
+                                    "then": "e",
+                                    "otherwise": "π"
+                                },
+                                "fill": {
+                                    "parameter": "functionKeyColor"
+                                },
+                                "borderColor": {
+                                    "parameter": "borderColor"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "radiusMedium"
+                                },
+                                "labelColor": {
+                                    "parameter": "textColor"
+                                },
+                                "fontSize": {
+                                    "parameter": "sciFont"
+                                }
+                            }
+                        }
+                    ],
+                    "behaviours": [
+                        {
+                            "type": "tooltip",
+                            "text": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": "e onto the display",
+                                "otherwise": "π onto the display"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "n",
+                            "value": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": {
+                                    "formula": "eulerE"
+                                },
+                                "otherwise": {
+                                    "formula": "\\pi"
+                                }
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "s",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "dp",
+                            "value": {
+                                "parameter": "digits"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "fresh",
+                            "value": 1
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "inv",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "key-square",
+                    "type": "group",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "children": [
+                        {
+                            "id": "cap",
+                            "type": "key-cap",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "sx1"
+                                },
+                                "y": {
+                                    "parameter": "y2"
+                                },
+                                "width": {
+                                    "parameter": "keyW"
+                                },
+                                "height": {
+                                    "parameter": "keyH"
+                                },
+                                "label": {
+                                    "choose": {
+                                        "parameter": "inv"
+                                    },
+                                    "then": "√x",
+                                    "otherwise": "x²"
+                                },
+                                "fill": {
+                                    "parameter": "functionKeyColor"
+                                },
+                                "borderColor": {
+                                    "parameter": "borderColor"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "radiusMedium"
+                                },
+                                "labelColor": {
+                                    "parameter": "textColor"
+                                },
+                                "fontSize": {
+                                    "parameter": "sciFont"
+                                }
+                            }
+                        }
+                    ],
+                    "behaviours": [
+                        {
+                            "type": "tooltip",
+                            "text": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": "The square root of the number on the display",
+                                "otherwise": "The number on the display, squared"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "n",
+                            "value": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": {
+                                    "formula": "\\sqrt{n}"
+                                },
+                                "otherwise": {
+                                    "formula": "n^{2}"
+                                }
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "s",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "dp",
+                            "value": {
+                                "parameter": "digits"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "fresh",
+                            "value": 1
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "inv",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "key-power",
+                    "type": "group",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "children": [
+                        {
+                            "id": "cap",
+                            "type": "key-cap",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "sx2"
+                                },
+                                "y": {
+                                    "parameter": "y2"
+                                },
+                                "width": {
+                                    "parameter": "keyW"
+                                },
+                                "height": {
+                                    "parameter": "keyH"
+                                },
+                                "label": {
+                                    "choose": {
+                                        "parameter": "inv"
+                                    },
+                                    "then": "ⁿ√x",
+                                    "otherwise": "xⁿ"
+                                },
+                                "fill": {
+                                    "parameter": "functionKeyColor"
+                                },
+                                "borderColor": {
+                                    "parameter": "borderColor"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "radiusMedium"
+                                },
+                                "labelColor": {
+                                    "parameter": "textColor"
+                                },
+                                "fontSize": {
+                                    "parameter": "sciFont"
+                                }
+                            }
+                        }
+                    ],
+                    "behaviours": [
+                        {
+                            "type": "tooltip",
+                            "text": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": "The root of the number on the display, of the order typed next",
+                                "otherwise": "The number on the display raised to the power typed next"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "a",
+                            "value": {
+                                "parameter": "result"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "ad",
+                            "value": {
+                                "parameter": "dp"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "n",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "p",
+                            "value": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": 6,
+                                "otherwise": 5
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "s",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "dp",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "fresh",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "inv",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "key-sin",
+                    "type": "group",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "children": [
+                        {
+                            "id": "cap",
+                            "type": "key-cap",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "sx1"
+                                },
+                                "y": {
+                                    "parameter": "y3"
+                                },
+                                "width": {
+                                    "parameter": "keyW"
+                                },
+                                "height": {
+                                    "parameter": "keyH"
+                                },
+                                "label": {
+                                    "choose": {
+                                        "parameter": "inv"
+                                    },
+                                    "then": "sin⁻¹",
+                                    "otherwise": "sin"
+                                },
+                                "fill": {
+                                    "parameter": "functionKeyColor"
+                                },
+                                "borderColor": {
+                                    "parameter": "borderColor"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "radiusMedium"
+                                },
+                                "labelColor": {
+                                    "parameter": "textColor"
+                                },
+                                "fontSize": {
+                                    "parameter": "sciFont"
+                                }
+                            }
+                        }
+                    ],
+                    "behaviours": [
+                        {
+                            "type": "tooltip",
+                            "text": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": "The angle whose sine is on the display",
+                                "otherwise": "The sine of the angle on the display"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "n",
+                            "value": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": {
+                                    "formula": "\\arcsin\\left(n\\right)\\cdot fromRadians"
+                                },
+                                "otherwise": {
+                                    "formula": "\\sin\\left(n\\cdot toRadians\\right)"
+                                }
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "s",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "dp",
+                            "value": {
+                                "parameter": "digits"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "fresh",
+                            "value": 1
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "inv",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "key-cos",
+                    "type": "group",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "children": [
+                        {
+                            "id": "cap",
+                            "type": "key-cap",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "sx2"
+                                },
+                                "y": {
+                                    "parameter": "y3"
+                                },
+                                "width": {
+                                    "parameter": "keyW"
+                                },
+                                "height": {
+                                    "parameter": "keyH"
+                                },
+                                "label": {
+                                    "choose": {
+                                        "parameter": "inv"
+                                    },
+                                    "then": "cos⁻¹",
+                                    "otherwise": "cos"
+                                },
+                                "fill": {
+                                    "parameter": "functionKeyColor"
+                                },
+                                "borderColor": {
+                                    "parameter": "borderColor"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "radiusMedium"
+                                },
+                                "labelColor": {
+                                    "parameter": "textColor"
+                                },
+                                "fontSize": {
+                                    "parameter": "sciFont"
+                                }
+                            }
+                        }
+                    ],
+                    "behaviours": [
+                        {
+                            "type": "tooltip",
+                            "text": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": "The angle whose cosine is on the display",
+                                "otherwise": "The cosine of the angle on the display"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "n",
+                            "value": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": {
+                                    "formula": "\\arccos\\left(n\\right)\\cdot fromRadians"
+                                },
+                                "otherwise": {
+                                    "formula": "\\cos\\left(n\\cdot toRadians\\right)"
+                                }
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "s",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "dp",
+                            "value": {
+                                "parameter": "digits"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "fresh",
+                            "value": 1
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "inv",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "key-tan",
+                    "type": "group",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "children": [
+                        {
+                            "id": "cap",
+                            "type": "key-cap",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "sx1"
+                                },
+                                "y": {
+                                    "parameter": "y4"
+                                },
+                                "width": {
+                                    "parameter": "keyW"
+                                },
+                                "height": {
+                                    "parameter": "keyH"
+                                },
+                                "label": {
+                                    "choose": {
+                                        "parameter": "inv"
+                                    },
+                                    "then": "tan⁻¹",
+                                    "otherwise": "tan"
+                                },
+                                "fill": {
+                                    "parameter": "functionKeyColor"
+                                },
+                                "borderColor": {
+                                    "parameter": "borderColor"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "radiusMedium"
+                                },
+                                "labelColor": {
+                                    "parameter": "textColor"
+                                },
+                                "fontSize": {
+                                    "parameter": "sciFont"
+                                }
+                            }
+                        }
+                    ],
+                    "behaviours": [
+                        {
+                            "type": "tooltip",
+                            "text": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": "The angle whose tangent is on the display",
+                                "otherwise": "The tangent of the angle on the display"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "n",
+                            "value": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": {
+                                    "formula": "\\arctan\\left(n\\right)\\cdot fromRadians"
+                                },
+                                "otherwise": {
+                                    "formula": "\\tan\\left(n\\cdot toRadians\\right)"
+                                }
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "s",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "dp",
+                            "value": {
+                                "parameter": "digits"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "fresh",
+                            "value": 1
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "inv",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "key-reciprocal",
+                    "type": "group",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "children": [
+                        {
+                            "id": "cap",
+                            "type": "key-cap",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "sx2"
+                                },
+                                "y": {
+                                    "parameter": "y4"
+                                },
+                                "width": {
+                                    "parameter": "keyW"
+                                },
+                                "height": {
+                                    "parameter": "keyH"
+                                },
+                                "label": "1/x",
+                                "fill": {
+                                    "parameter": "functionKeyColor"
+                                },
+                                "borderColor": {
+                                    "parameter": "borderColor"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "radiusMedium"
+                                },
+                                "labelColor": {
+                                    "parameter": "textColor"
+                                },
+                                "fontSize": {
+                                    "parameter": "sciFont"
+                                }
+                            }
+                        }
+                    ],
+                    "behaviours": [
+                        {
+                            "type": "tooltip",
+                            "text": "One divided by the number on the display"
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "n",
+                            "value": {
+                                "formula": "\\frac{1}{n}"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "s",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "dp",
+                            "value": {
+                                "parameter": "digits"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "fresh",
+                            "value": 1
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "inv",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "key-ln",
+                    "type": "group",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "children": [
+                        {
+                            "id": "cap",
+                            "type": "key-cap",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "sx1"
+                                },
+                                "y": {
+                                    "parameter": "y5"
+                                },
+                                "width": {
+                                    "parameter": "keyW"
+                                },
+                                "height": {
+                                    "parameter": "keyH"
+                                },
+                                "label": {
+                                    "choose": {
+                                        "parameter": "inv"
+                                    },
+                                    "then": "eˣ",
+                                    "otherwise": "ln"
+                                },
+                                "fill": {
+                                    "parameter": "functionKeyColor"
+                                },
+                                "borderColor": {
+                                    "parameter": "borderColor"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "radiusMedium"
+                                },
+                                "labelColor": {
+                                    "parameter": "textColor"
+                                },
+                                "fontSize": {
+                                    "parameter": "sciFont"
+                                }
+                            }
+                        }
+                    ],
+                    "behaviours": [
+                        {
+                            "type": "tooltip",
+                            "text": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": "e raised to the number on the display",
+                                "otherwise": "The natural logarithm of the number on the display"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "n",
+                            "value": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": {
+                                    "formula": "eulerE^{n}"
+                                },
+                                "otherwise": {
+                                    "formula": "\\ln\\left(n\\right)"
+                                }
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "s",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "dp",
+                            "value": {
+                                "parameter": "digits"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "fresh",
+                            "value": 1
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "inv",
+                            "value": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "key-log",
+                    "type": "group",
+                    "when": {
+                        "parameter": "sciOn"
+                    },
+                    "children": [
+                        {
+                            "id": "cap",
+                            "type": "key-cap",
+                            "parameters": {
+                                "x": {
+                                    "parameter": "sx2"
+                                },
+                                "y": {
+                                    "parameter": "y5"
+                                },
+                                "width": {
+                                    "parameter": "keyW"
+                                },
+                                "height": {
+                                    "parameter": "keyH"
+                                },
+                                "label": {
+                                    "choose": {
+                                        "parameter": "inv"
+                                    },
+                                    "then": "10ˣ",
+                                    "otherwise": "log"
+                                },
+                                "fill": {
+                                    "parameter": "functionKeyColor"
+                                },
+                                "borderColor": {
+                                    "parameter": "borderColor"
+                                },
+                                "cornerRadius": {
+                                    "parameter": "radiusMedium"
+                                },
+                                "labelColor": {
+                                    "parameter": "textColor"
+                                },
+                                "fontSize": {
+                                    "parameter": "sciFont"
+                                }
+                            }
+                        }
+                    ],
+                    "behaviours": [
+                        {
+                            "type": "tooltip",
+                            "text": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": "Ten raised to the number on the display",
+                                "otherwise": "The logarithm to base ten of the number on the display"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "n",
+                            "value": {
+                                "choose": {
+                                    "parameter": "inv"
+                                },
+                                "then": {
+                                    "formula": "10^{n}"
+                                },
+                                "otherwise": {
+                                    "formula": "\\log\\left(n\\right)"
+                                }
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "s",
+                            "value": 0
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "dp",
+                            "value": {
+                                "parameter": "digits"
+                            }
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "fresh",
+                            "value": 1
+                        },
+                        {
+                            "type": "clickable",
+                            "property": "inv",
                             "value": 0
                         }
                     ]
