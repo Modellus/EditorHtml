@@ -88,7 +88,8 @@
         "VectorShape":       { "type": "string", "const": "Animated arrow inside a ReferentialShape. xTerm/yTerm = vector components. xOriginTerm/yOriginTerm = base of arrow. Use to visualize force, velocity, or acceleration vectors." },
         "LineShape":         { "type": "string", "const": "Infinite line inside a ReferentialShape defined by a point (xTerm, yTerm) and angleTerm." },
         "ArcShape":          { "type": "string", "const": "Animated arc inside a ReferentialShape. xTerm/yTerm = center, radiusTerm = radius, startAngleTerm/endAngleTerm = sweep. Use for angles, sectors, pendulum bobs." },
-        "ChartShape":        { "type": "string", "const": "Line/scatter/area/bar chart. xTerm is usually the independent variable 't'. yTerms lists series: each entry has a term name and a case number. For multi-case comparisons add one entry per case with the same term name. autoScale:true fills the axis range automatically." },
+        "ChartShape":        { "type": "string", "const": "Line/scatter/area/bar chart. xTerm is usually the independent variable 't'. yTerms lists series: each entry has a term name and a case number. For multi-case comparisons add one entry per case with the same term name. autoScale:true fills the axis range automatically. A yTerm constrained to a set of labels is charted as the count of each label, one column per label, so the horizontal axis carries the labels and xTerm is not used." },
+        "FrequencyChartShape": { "type": "string", "const": "Frequency chart. categoryTerm names the term whose discrete values make one axis \u2014 the labels of a term constrained to a set, or the distinct numbers a term was seen to hold. series lists what is shown for each of those values: every entry names a term, an aggregate (count, probability, sum, mean, median, min, max, sd \u2014 probability being the share of every reading that fell into that value), the value axis it is read against (primary or secondary, each with a scale of its own) and the mark it is drawn with (bar, circle, square, triangle, diamond). orientation \u0027vertical\u0027 puts the categories along the bottom, \u0027horizontal\u0027 down the left. Use it for terms taking values from a set \u2014 colour names, fruit, player numbers \u2014 rather than ChartShape." },
         "SliderShape":       { "type": "string", "const": "Interactive slider controlling a PARAMETER term. term = parameter name (e.g. 'g', 'k', 'm'). Set minimum/maximum to a sensible physical range. Users drag to explore parameter sensitivity." },
         "ValueShape":        { "type": "string", "const": "Displays the current numeric value of any calculator term. term = term name. termDisplayMode: 'nameValue' shows label + number, 'valueOnly' shows only the number." },
         "TableShape":        { "type": "string", "const": "Tabular view of term values across iterations. columns array lists term names. Useful for discrete/recurrence models or when exact numeric output matters." },
@@ -523,6 +524,7 @@
         { "$ref": "#/$defs/TextShape" },
         { "$ref": "#/$defs/BodyShape" },
         { "$ref": "#/$defs/ChartShape" },
+        { "$ref": "#/$defs/FrequencyChartShape" },
         { "$ref": "#/$defs/SliderShape" },
         { "$ref": "#/$defs/ValueShape" },
         { "$ref": "#/$defs/TableShape" },
@@ -1112,6 +1114,113 @@
           "enum": ["line", "scatter", "area", "bar"],
           "default": "line",
           "description": "Rendering style for this series."
+        }
+      }
+    },
+
+    "FrequencyChartShape": {
+      "title": "FrequencyChartShape",
+      "description": "A chart of how often, and of how much, the discrete values of a term occur.",
+      "type": "object",
+      "required": ["type", "id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["FrequencyChartShape"] },
+        "id": { "type": "string", "format": "uuid" },
+        "parent": { "type": ["string", "null"] },
+        "properties": {
+          "allOf": [
+            { "$ref": "#/$defs/BaseProperties" },
+            {
+              "type": "object",
+              "required": ["categoryTerm", "series"],
+              "properties": {
+                "categoryTerm": {
+                  "type": "string",
+                  "description": "Term whose discrete values make the category axis. A term constrained to a set of labels carries its whole set; any other term carries the values it was seen to hold."
+                },
+                "categoryTermCase": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 1,
+                  "description": "1-based case index the category term is read in."
+                },
+                "orientation": {
+                  "type": "string",
+                  "enum": ["vertical", "horizontal"],
+                  "default": "vertical",
+                  "description": "Where the category axis runs: 'vertical' along the bottom with the value axes at left and right, 'horizontal' down the left with the value axes at bottom and top."
+                },
+                "autoScale": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "When true, both value axes are scaled to fit what their own series reached."
+                },
+                "valueRange": {
+                  "type": "object",
+                  "description": "Ends of the two value axes, used only while autoScale is false. An end left null is still the chart's own to find.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "primaryMin": { "type": ["number", "null"] },
+                    "primaryMax": { "type": ["number", "null"] },
+                    "secondaryMin": { "type": ["number", "null"] },
+                    "secondaryMax": { "type": ["number", "null"] }
+                  }
+                },
+                "series": {
+                  "type": "array",
+                  "description": "One entry per series. Every series answers for each category with a single number.",
+                  "items": { "$ref": "#/$defs/FrequencySeries" }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+
+    "FrequencySeries": {
+      "title": "FrequencySeries",
+      "type": "object",
+      "required": ["term"],
+      "additionalProperties": false,
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "Calculator term this series reads. A counting series counts the readings in each category that hold a value for it."
+        },
+        "case": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1,
+          "description": "1-based case index."
+        },
+        "aggregate": {
+          "type": "string",
+          "enum": ["count", "probability", "sum", "mean", "median", "min", "max", "sd"],
+          "default": "count",
+          "description": "What the series makes of the readings that fell into a category."
+        },
+        "axis": {
+          "type": "string",
+          "enum": ["primary", "secondary"],
+          "default": "primary",
+          "description": "Value axis this series is read against. Each axis carries a scale of its own."
+        },
+        "mark": {
+          "type": "string",
+          "enum": ["bar", "circle", "square", "triangle", "diamond"],
+          "default": "bar",
+          "description": "What the series is drawn with."
+        },
+        "color": {
+          "type": "string",
+          "description": "Series color (hex or empty string for theme default)."
+        },
+        "showLabel": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the number the series answered with is written beside its mark."
         }
       }
     },

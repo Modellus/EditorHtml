@@ -10,6 +10,7 @@ var modellus = {
         addArc: (name, parentName) => shell.commands.addShape("ArcShape", name, parentName),
         addChart: name => shell.commands.addShape("ChartShape", name),
         addBlockChart: name => shell.commands.addShape("BlockChartShape", name),
+        addFrequencyChart: name => shell.commands.addShape("FrequencyChartShape", name),
         addText: name => shell.commands.addShape("TextShape", name),
         addImage: name => shell.commands.addShape("MediaShape", name),
         addTable: name => shell.commands.addShape("TableShape", name),

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frequencies Shape – Modellus Docs</title>
+    <meta name="description" content="Frequencies shape documentation: counting the discrete values of a term, aggregate functions, two value axes, marks and orientation." />
+    <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Inter:wght@400;500;600;700&family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/libraries/fontawesome/css/all.css" />
+    <link rel="stylesheet" href="../docs.css" />
+</head>
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <div class="header-inner">
+            <a href="/index.html" class="logo">
+                <img src="/scripts/themes/modellus.svg" alt="Modellus" />
+                <span>Modellus</span>
+            </a>
+            <nav class="navmenu">
+                <ul>
+                    <li><a href="/index.html">Home</a></li>
+                    <li><a href="/docs/index.html" class="active">Docs</a></li>
+                    <li><a href="/pages/board/index.html">Editor</a></li>
+                    <li><a href="/pages/catalog/index.html">Community</a></li>
+                </ul>
+            </nav>
+            <div class="header-actions">
+                <a href="/pages/board/index.html" class="btn-try">Open Editor</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="docs-layout">
+    <aside class="docs-sidebar">
+        <h5>Getting Started</h5>
+        <ul>
+            <li><a href="/docs/index.html"><i class="fa-light fa-house"></i> Documentation Home</a></li>
+        </ul>
+        <h5>Editors</h5>
+        <ul>
+            <li><a href="/docs/board/index.html"><i class="fa-light fa-earth-africa"></i> Board</a></li>
+            <li><a href="/docs/notebook/index.html"><i class="fa-light fa-notebook"></i> Notebook</a></li>
+        </ul>
+        <h5>Shapes</h5>
+        <ul>
+            <li><a href="expression.html"><i class="fa-light fa-function"></i> Expression</a></li>
+            <li><a href="table.html"><i class="fa-light fa-table"></i> Table</a></li>
+            <li><a href="initial-values.html"><i class="fa-light fa-table-list"></i> Initial Values</a></li>
+            <li><a href="chart.html"><i class="fa-light fa-chart-line"></i> Chart</a></li>
+            <li><a href="frequencies.html" class="active"><i class="fa-light fa-chart-simple"></i> Frequencies</a></li>
+            <li><a href="body.html"><i class="fa-light fa-person-running"></i> Body</a></li>
+            <li><a href="point.html"><i class="fa-light fa-circle-dot"></i> Point</a></li>
+            <li><a href="line.html"><i class="fa-light fa-minus"></i> Line</a></li>
+            <li><a href="arc.html"><i class="fa-light fa-bezier-curve"></i> Arc</a></li>
+            <li><a href="vector.html"><i class="fa-light fa-arrow-right-long"></i> Vector</a></li>
+            <li><a href="slider.html"><i class="fa-light fa-sliders"></i> Slider</a></li>
+            <li><a href="gauge.html"><i class="fa-light fa-gauge"></i> Gauge</a></li>
+            <li><a href="value.html"><i class="fa-light fa-hashtag"></i> Value</a></li>
+            <li><a href="media.html"><i class="fa-light fa-image"></i> Media</a></li>
+            <li><a href="text.html"><i class="fa-light fa-font"></i> Text</a></li>
+            <li><a href="ruler.html"><i class="fa-light fa-ruler"></i> Ruler</a></li>
+            <li><a href="protractor.html"><i class="fa-light fa-compass-drafting"></i> Protractor</a></li>
+            <li><a href="referential.html"><i class="fa-light fa-axis-y"></i> Referential</a></li>
+            <li><a href="question.html"><i class="fa-light fa-circle-question"></i> Question</a></li>
+            <li><a href="mindmap.html"><i class="fa-light fa-diagram-project"></i> Mind Map</a></li>
+            <li><a href="component.html"><i class="fa-light fa-shapes"></i> Components</a></li>
+        </ul>
+        <h5>Building Blocks</h5>
+        <ul>
+            <li><a href="/docs/blocks/index.html"><i class="fa-light fa-cubes"></i> Building Blocks</a></li>
+            <li><a href="/docs/blocks/object-definition.html"><i class="fa-light fa-file-code"></i> Object Definition</a></li>
+            <li><a href="/docs/blocks/reference.html"><i class="fa-light fa-list-tree"></i> Block Reference</a></li>
+        </ul>
+        <h5>Data Analysis</h5>
+        <ul>
+            <li><a href="/docs/analysis/regression.html"><i class="fa-light fa-chart-scatter"></i> Regression</a></li>
+            <li><a href="/docs/analysis/outliers.html"><i class="fa-light fa-bullseye"></i> Outliers</a></li>
+        </ul>
+        <h5>Community</h5>
+        <ul>
+            <li><a href="/docs/catalog/index.html"><i class="fa-light fa-store"></i> Community</a></li>
+        </ul>
+        <h5>For AI Agents</h5>
+        <ul>
+            <li><a href="/docs/ai/reference.html"><i class="fa-light fa-robot"></i> AI Reference</a></li>
+            <li><a href="/docs/ai/model-schema.html"><i class="fa-light fa-file-code"></i> Model Schema</a></li>
+            <li><a href="/docs/ai/expression-schema.html"><i class="fa-light fa-file-code"></i> Expression Schema</a></li>
+        </ul>
+    </aside>
+
+    <main class="docs-main">
+        <div class="docs-breadcrumb">
+            <a href="/docs/index.html">Docs</a> <span class="sep">/</span>
+            <a href="/docs/index.html">Shapes</a> <span class="sep">/</span>
+            <span>Frequencies</span>
+        </div>
+
+        <h1>Frequencies Shape</h1>
+        <p class="page-desc">The Frequencies shape groups a run by the discrete values a term takes and shows, for each of them, what every series makes of the readings that fell there.</p>
+
+        <div class="screenshot-placeholder">
+            <i class="fa-light fa-image"></i>
+            Screenshot: Frequencies chart counting the colours a term took, with the mean of a second term on the right axis
+        </div>
+
+        <h2>Overview</h2>
+        <p>Some terms do not take a range of values but one of a set: a colour name, a fruit, a player number, the face a die landed on. There is no curve to plot for such a term — what there is to see is how often each of its values came up, and what the rest of the model was doing when it did.</p>
+        <p>A Frequencies shape answers both. One axis carries the values the <strong>category term</strong> can take. Every <strong>series</strong> answers for each of those values with a single number: how many readings there were, or what its own term summed, averaged, or spread to across them.</p>
+        <p>Where a <a href="chart.html">Chart</a> plots one term against another reading by reading, a Frequencies chart reads the whole run at once and reports it category by category.</p>
+
+        <h2>The Category Axis</h2>
+        <p>The category axis is built from the term named in <strong>Categories</strong>:</p>
+        <ul>
+            <li>A term held to a set of labels — <code>z \in \{green, blue, red\}</code> — carries its <em>whole</em> set, in the order it was declared. A label the run never reached still keeps a place of its own, standing at zero, rather than being missing from the picture.</li>
+            <li>Any other term carries the values it was seen to hold, in order, read to the precision the model works to so that the same reading is not counted twice. Whole numbers are written as whole numbers: a player number is <code>7</code>, not <code>7.00</code>.</li>
+        </ul>
+
+        <h2>Functions</h2>
+        <p>Each series names a function, chosen from the button at the end of its row. The function decides what the series makes of the readings that fell into a category.</p>
+        <table class="docs-table">
+            <thead><tr><th>Function</th><th>Answers with</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Count</strong></td><td>How many readings in the category held a value for the series term. With the category term itself as the series term, this is the frequency of each value.</td></tr>
+                <tr><td><strong>Probability</strong></td><td>The share those readings are of every reading the series made, so the categories together come to 1. Over a long enough run it is what the model says the chance of that value is.</td></tr>
+                <tr><td><strong>Sum</strong></td><td>The total of the series term over the category.</td></tr>
+                <tr><td><strong>Mean</strong></td><td>The average of the series term over the category.</td></tr>
+                <tr><td><strong>Median</strong></td><td>The middle reading, or the average of the middle two.</td></tr>
+                <tr><td><strong>Minimum</strong> / <strong>Maximum</strong></td><td>The lowest and the highest reading in the category.</td></tr>
+                <tr><td><strong>Standard deviation</strong></td><td>The spread of the readings, as a sample.</td></tr>
+            </tbody>
+        </table>
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>Counting carries no unit. However the term is measured, how many times it was read — and what share of the whole that is — are bare numbers, so the axis such a series is read against says <code>count(z)</code> or <code>P(z)</code> and nothing more.</span>
+        </div>
+
+        <h2>Two Value Axes</h2>
+        <p>A count runs to a handful and an average may run to hundreds. Read against one scale, the smaller of the two flattens against the axis. So each series is assigned a value axis of its own choosing — named on its row by the edge that axis runs along, drawn rather than written — and the two carry separate scales:</p>
+        <table class="docs-table">
+            <thead><tr><th>Axis</th><th>Upright chart</th><th>Chart on its side</th></tr></thead>
+            <tbody>
+                <tr><td>Primary</td><td>Left</td><td>Bottom</td></tr>
+                <tr><td>Secondary</td><td>Right</td><td>Top</td></tr>
+            </tbody>
+        </table>
+        <p>Each axis is fitted to what its own series reached, and each is named along its edge by the series read against it, so a mark can be traced back to the scale it belongs to without a legend sitting apart from the chart. The grid is drawn for the primary axis alone: a second set of lines would cross it at values that mean nothing on it.</p>
+        <p>An axis that carries a bar always includes zero, because a bar is drawn from zero. An axis carrying only symbols is fitted tightly around its values.</p>
+
+        <h2>Marks</h2>
+        <p>Every series is drawn with a mark and a colour of its own, both chosen in its row. The mark is picked from a list that draws each one, and the row itself carries that mark beside the name of the function, so what a series is and what it will look like are read off the row without opening it.</p>
+        <table class="docs-table">
+            <thead><tr><th>Mark</th><th>Drawn as</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Bar</strong></td><td>A column from the axis zero. Bar series stand side by side inside the band of their category, one slot each, so no bar hides another.</td></tr>
+                <tr><td><strong>Circle</strong>, <strong>Square</strong>, <strong>Triangle</strong>, <strong>Diamond</strong></td><td>A symbol on the middle of the band, which reads as a value taken over the whole category rather than as one column among several.</td></tr>
+            </tbody>
+        </table>
+        <p>Turning on the eye beside a series writes the number it answered with beside each of its marks.</p>
+
+        <h2>Orientation</h2>
+        <p>The chart is drawn upright or on its side, from the <strong>Orientation</strong> row of the settings menu.</p>
+        <ul>
+            <li><strong>Vertical</strong> — the categories run along the bottom, the value axes down the left and right edges. Bars grow upwards.</li>
+            <li><strong>Horizontal</strong> — the categories run down the left, the value axes along the foot and the head. Bars grow to the right.</li>
+        </ul>
+        <p>Category labels that are too wide for their band are turned on an upright chart. Long labels — fruit and colour names — read better with the chart on its side.</p>
+
+        <h2>Scale</h2>
+        <p>While <strong>Auto Scale</strong> is on, both value axes are fitted to what their own series reached. Turning it off hands the four ends to the two rows below it; an end left empty is still the chart's own to find.</p>
+
+        <h2>Properties</h2>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td><code>categoryTerm</code></td><td>Term whose discrete values make the category axis.</td></tr>
+                <tr><td><code>categoryTermCase</code></td><td>Case the category term is read in.</td></tr>
+                <tr><td><code>orientation</code></td><td><code>vertical</code> or <code>horizontal</code>.</td></tr>
+                <tr><td><code>series</code></td><td>One entry per series: <code>term</code>, <code>case</code>, <code>aggregate</code> (<code>count</code>, <code>probability</code>, <code>sum</code>, <code>mean</code>, <code>median</code>, <code>min</code>, <code>max</code>, <code>sd</code>), <code>axis</code>, <code>mark</code>, <code>color</code>, <code>showLabel</code>.</td></tr>
+                <tr><td><code>autoScale</code></td><td>When true, both value axes fit themselves to their series.</td></tr>
+                <tr><td><code>valueRange</code></td><td>The four ends — <code>primaryMin</code>, <code>primaryMax</code>, <code>secondaryMin</code>, <code>secondaryMax</code> — used while auto scale is off.</td></tr>
+            </tbody>
+        </table>
+
+        <div class="callout callout-info">
+            <i class="fa-light fa-info-circle"></i>
+            <span>See <a href="/docs/ai/model-schema.html">Model Schema</a> for the full shape definition, and <a href="expression.html">Expression</a> for how a term is held to a set of labels.</span>
+        </div>
+
+    </main>
+</div>
+
+<footer class="docs-footer">
+    <div class="container">
+        <p>© <script>document.write(new Date().getFullYear())</script> Modellus. All Rights Reserved.</p>
+    </div>
+</footer>
+
+</body>
+</html>

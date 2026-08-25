@@ -1209,6 +1209,14 @@ class Utils {
     // whatever the popup measured — and, once the menu is written again where it stands, as a switch
     // that takes rows away or brings them back has it written, at the whole of its cap with the rows
     // stopping short of the bottom. A box inside is the menu's own, and is measured on every writing.
+    // One row of a picker, written as an icon beside what it is called. The same markup stands for the
+    // row in the list and for the choice shown once the list is closed, so the two read alike.
+    static renderIconListItem(element, iconClassName, text) {
+        const host = element instanceof Element ? element : element[0];
+        host.innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${iconClassName}"></i><span class="mdl-dropdown-list-label">${text}</span></div>`;
+        return host;
+    }
+
     static renderDropdownMenuScroll(contentElement, maximumHeight, buildContent) {
         const host = $(contentElement);
         Utils.disposeDropdownMenuScroll(host);
