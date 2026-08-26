@@ -150,29 +150,18 @@ if (typeof BlocksRegistry !== "undefined" && typeof SliderShape !== "undefined")
             this.notebookEditor.insertBlockAfter(this.id, this.properties);
         }
 
+        getClipboardRepresentations() {
+            return [ClipboardService.blockRepresentation(Utils.cloneProperties(this.properties))];
+        }
+
         async copyBlockToClipboard() {
-            const payload = JSON.stringify({ type: "notebook-block", block: Utils.cloneProperties(this.properties) });
-            await navigator.clipboard.writeText(payload);
+            await ClipboardService.write(this.getClipboardRepresentations());
         }
 
         async pasteBlockFromClipboard() {
-            let text = "";
-            try {
-                text = await navigator.clipboard.readText();
-            } catch {
-                return;
-            }
-            if (!text)
-                return;
-            let payload = null;
-            try {
-                payload = JSON.parse(text);
-            } catch {
-                return;
-            }
-            if (payload?.type !== "notebook-block" || !payload.block)
-                return;
-            this.notebookEditor.insertBlockAfter(this.id, payload.block);
+            const block = await ClipboardService.readNotebookBlock();
+            if (block)
+                this.notebookEditor.insertBlockAfter(this.id, block);
         }
 
         setPropertyCommand(name, value) {

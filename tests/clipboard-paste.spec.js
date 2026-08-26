@@ -5,6 +5,7 @@ const EDITOR_URL = '/pages/board/index.html';
 async function setupEditor(page) {
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
+        navigator.clipboard.read = async () => [];
     });
     await page.goto(EDITOR_URL);
     await page.waitForFunction(() => typeof shell !== 'undefined' && shell !== null && shell.board !== null, null, { timeout: 15000 });

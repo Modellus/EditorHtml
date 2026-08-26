@@ -15,13 +15,30 @@ class TextShape extends BaseShape {
         ];
     }
 
+    getPlainTextRepresentation() {
+        return ClipboardService.textRepresentation(this.htmlEditor.getQuillInstance().getText());
+    }
+
+    getHtmlRepresentation() {
+        return ClipboardService.htmlRepresentation(this.properties.text ?? "");
+    }
+
+    getClipboardRepresentations() {
+        return [
+            this.getModellusRepresentation(),
+            this.getHtmlRepresentation(),
+            this.getPlainTextRepresentation(),
+            this.getSvgRepresentation(),
+            this.getImageRepresentation()
+        ];
+    }
+
     async copyAsText() {
-        const plainText = this.htmlEditor.getQuillInstance().getText();
-        await navigator.clipboard.writeText(plainText);
+        await ClipboardService.write([this.getPlainTextRepresentation()]);
     }
 
     async copyAsMarkup() {
-        await navigator.clipboard.writeText(this.properties.text ?? "");
+        await ClipboardService.writeText(this.properties.text ?? "");
     }
 
     setDefaults() {

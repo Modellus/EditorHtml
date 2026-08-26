@@ -802,6 +802,6 @@ class CasesTableShape extends BaseTableShape {
             }
             rows.push(values.join(","));
         }
-        await navigator.clipboard.writeText(rows.join("\n"));
+        await ClipboardService.writeText(rows.join("\n"));
     }
 }

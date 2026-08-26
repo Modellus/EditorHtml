@@ -291,6 +291,29 @@ class Utils {
         return String(text ?? "").replace(Utils.termNamedIndexPattern, (matchedIndex, partName) => `_${partName}`);
     }
 
+    static convertTermNamedIndexesToLatexGroups(text) {
+        return String(text ?? "").replace(Utils.termNamedIndexPattern, (matchedIndex, partName) => `_{${partName}}`);
+    }
+
+    static convertLatexToReadableMath(latexValue) {
+        return Utils.readFunctionNames(Utils.convertTermNamedIndexesToLatexGroups(latexValue));
+    }
+
+    static convertLatexToPlainMath(latexValue) {
+        const asciiMath = MathLive.convertLatexToAsciiMath(Utils.convertLatexToReadableMath(latexValue));
+        return Utils.joinPlainMathLetters(asciiMath).replace(/ \* /g, "*");
+    }
+
+    static joinPlainMathLetters(text) {
+        let joinedText = text;
+        let previousText = null;
+        while (joinedText !== previousText) {
+            previousText = joinedText;
+            joinedText = joinedText.replace(/\b([A-Za-z]) (?=[A-Za-z]\b)/g, "$1");
+        }
+        return joinedText;
+    }
+
     static endsWithTermName(text) {
         return Utils.termNameEndPattern.test(String(text ?? ""));
     }
