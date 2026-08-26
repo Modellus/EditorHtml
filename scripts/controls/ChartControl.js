@@ -638,6 +638,9 @@ class ChartControl {
         this.yTicksClipRect.setAttribute("height", `${layout.plotHeight}`);
     }
 
+    // The chart written straight to SVG. The board draws through `BlockChartControl` instead, which
+    // overrides this with the compiled block tree; what is written here is the picture that one is
+    // held to, and the reason the swap is checkable.
     paintChart(plan) {
         this.renderBackground(plan.width, plan.height);
         this.renderDataAreaBackground(plan.layout);

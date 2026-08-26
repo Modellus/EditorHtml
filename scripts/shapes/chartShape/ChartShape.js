@@ -93,6 +93,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             yAxisType: this.properties.yAxisType || "decimal",
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
+            getCalculator: () => this.board.calculator,
             getRotationDegrees: () => this.getHandleRotationDegrees(),
             getPrecision: () => this.board.calculator.getPrecision(),
             calculateArea: (argumentValues, values) => this.board.calculator.calculateArea(argumentValues, values),
@@ -142,10 +143,28 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         this.board.pointerLocked = false;
     }
 
-    // The control that draws the chart. A chart shape built on blocks answers with the
-    // block-drawing control, and inherits everything else from here.
+    // The control that draws the chart. The picture is compiled from the `chart` building block
+    // and written by `BlockRenderer`, which is what makes it inspectable block by block. The plan
+    // behind it — the domain, the ticks, the layout, the rows — and every interaction come from
+    // `ChartControl`, which also still carries the drawing the block one is held to.
     getChartControlClass() {
-        return ChartControl;
+        return BlockChartControl;
+    }
+
+    // The compiled block tree behind the current frame: what was drawn, which component each
+    // node came from and what the compiler had to say about it.
+    getInspectionReport() {
+        const report = this.chart?.getInspectionReport() ?? { definition: null, stats: null, diagnostics: [], markup: "", nodes: [] };
+        return Object.assign({ shapeId: this.id, name: this.properties.name }, report);
+    }
+
+    toPreviewSvg() {
+        const compilation = this.chart?.lastCompilation ?? null;
+        const width = Number(this.properties.width) || 400;
+        const height = Number(this.properties.height) || 200;
+        if (!compilation)
+            return BlockRenderer.toStandaloneSvg([], width, height, "none");
+        return BlockRenderer.toStandaloneSvg(compilation.nodes, width, height, "none");
     }
 
     createElement() {

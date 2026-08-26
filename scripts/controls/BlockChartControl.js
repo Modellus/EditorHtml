@@ -1,10 +1,12 @@
-// A chart control that draws through the building-block layer instead of writing its own SVG.
+// The chart's drawing: the plan `ChartControl` works out, handed to the `chart` building block,
+// compiled to primitives and written once per changed frame. Every chart on the board is drawn
+// this way, which is what makes the picture inspectable block by block.
 //
 // Everything that decides *what* the chart shows — the domain, the ticks, the layout, the data
 // rows, the focus point, the tick drags, the zoom and the crosshair — is inherited from
-// `ChartControl` unchanged, so a chart drawn this way answers to the same interactions as the
-// drawn one. Only the painting differs: the plan the base class works out is handed to the
-// `chart` component, compiled to primitives and written once per changed frame.
+// `ChartControl` unchanged, and so is the SVG that class writes for the same plan: it is no
+// longer what the board draws, but it is the picture this one is held to, tag for tag and
+// coordinate for coordinate, by `tests/block-chart-shape.spec.js`.
 //
 // The parts that are not geometry stay with the base class: the axis title and the series
 // legend are term labels with case icons, and the area readout is an icon glyph with a
@@ -109,6 +111,37 @@ class BlockChartControl extends ChartControl {
                 continue;
             this.renderAreaValueLabel(points, series.color, areaBaseY, plan.layout);
         }
+    }
+
+    // A bar the focus falls on is what the shape lights up when the value it reads moves. The bars
+    // are block nodes rather than SVG this control wrote, so the one to light up is found by the
+    // id the `chart-bars` component gave it — same series, same nearest argument value as the
+    // drawn chart picks out of its own markup.
+    getFocusBarElement(seriesIndex) {
+        if (!Number.isFinite(this.focusArgumentValue) || !this.renderState)
+            return null;
+        const barSeriesList = this.options.series.filter(series => (series.chartTypes ?? ["line"]).includes("bar"));
+        if (seriesIndex >= barSeriesList.length)
+            return null;
+        const barWidth = this.getBarWidth(barSeriesList.length, this.renderState.layout, this.renderState.xScale);
+        const geometry = BlockChartGeometry.getBarGeometry(this.dataRows, this.options.argumentField, barSeriesList[seriesIndex], seriesIndex, barSeriesList.length, barWidth, this.renderState.xScale, this.renderState.yScale);
+        const nearestBarIndex = this.getNearestBarIndex(geometry.bars);
+        if (nearestBarIndex < 0)
+            return null;
+        return this.blockLayer?.querySelector(`[data-source-id="bar-${seriesIndex}-${nearestBarIndex}"]`) ?? null;
+    }
+
+    getNearestBarIndex(bars) {
+        let nearestIndex = -1;
+        let nearestDistance = Number.POSITIVE_INFINITY;
+        for (let index = 0; index < bars.length; index++) {
+            const distance = Math.abs(bars[index].xValue - this.focusArgumentValue);
+            if (distance >= nearestDistance)
+                continue;
+            nearestDistance = distance;
+            nearestIndex = index;
+        }
+        return nearestIndex;
     }
 
     getInspectionReport() {

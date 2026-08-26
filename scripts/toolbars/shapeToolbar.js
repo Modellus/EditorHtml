@@ -16,6 +16,59 @@ class ModellusShapeToolbar {
         ];
     }
 
+    // The two charts share one toolbar button, the way the three tables do: the button carries the
+    // family, the list says which of them is being drawn.
+    static getChartShapeTypes(shell) {
+        const translations = shell.board.translations;
+        return [
+            { text: translations.get("Chart Name") ?? "Chart", icon: "fa-light fa-chart-line", type: "ChartShape", name: "Chart", properties: null },
+            { text: translations.get("Frequency Chart Name") ?? "Frequencies", icon: "fa-light fa-chart-simple", type: "FrequencyChartShape", name: "Frequencies", properties: null }
+        ];
+    }
+
+    static getTableShapeTypes(shell) {
+        const translations = shell.board.translations;
+        return [
+            { text: translations.get("Table Name") ?? "Table", icon: "fa-light fa-table", type: "TableShape", name: "Table", properties: null },
+            { text: translations.get("Cases Table Name") ?? "Scenarios", icon: "fa-light fa-table-list", type: "CasesTableShape", name: "Scenarios", properties: null },
+            { text: translations.get("Data Table Name") ?? "Data Analysis", icon: "fa-light fa-flask", type: "DataTableShape", name: "Data Analysis", properties: null }
+        ];
+    }
+
+    // A toolbar button that stands for a family of shapes: clicking it opens the list, and picking
+    // from the list arms that shape for drawing under the same button. The list is read when the
+    // button opens, so it carries whatever the translations say at that moment.
+    static createShapeTypeDropDownButton(shell, buttonId, className, icon, tooltipKey, getShapeTypes) {
+        const dropdownElement = $(`<div id="${buttonId}" class="${className}">`);
+        dropdownElement.dxDropDownButton({
+            showArrowIcon: false,
+            stylingMode: "text",
+            useSelectMode: false,
+            icon: icon,
+            onInitialized: event => shell.createTranslatedTooltip(event, tooltipKey, 280),
+            dropDownOptions: {
+                container: document.body,
+                wrapperAttr: { class: "mdl-shape-overlay-popup" },
+                width: "auto",
+                contentTemplate: contentElement => {
+                    $(contentElement).empty();
+                    $("<div>").appendTo(contentElement).dxList({
+                        dataSource: getShapeTypes(),
+                        scrollingEnabled: false,
+                        itemTemplate: (data, _, el) => {
+                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${data.icon}"></i><span class="mdl-dropdown-list-label">${data.text}</span></div>`;
+                        },
+                        onItemClick: event => {
+                            dropdownElement.dxDropDownButton("instance").close();
+                            shell.shapeDrawController.toggle(event.itemData.type, event.itemData.name, buttonId, event.itemData.properties);
+                        }
+                    });
+                }
+            }
+        });
+        return dropdownElement;
+    }
+
     static createObjectsButton(shell) {
         const buttonElement = $(`<div id="${ObjectPicker.buttonId}" class="mdl-component-type-selector">`);
         buttonElement.dxButton({
@@ -28,34 +81,15 @@ class ModellusShapeToolbar {
     }
 
     static createMindMapDropDownButton(shell) {
-        const dropdownElement = $('<div id="mindmap-button" class="mdl-mindmap-type-selector">');
-        dropdownElement.dxDropDownButton({
-            showArrowIcon: false,
-            stylingMode: "text",
-            useSelectMode: false,
-            icon: "fa-light fa-diagram-project",
-            onInitialized: event => shell.createTranslatedTooltip(event, "Mind Map Tooltip", 280),
-            dropDownOptions: {
-                container: document.body,
-                wrapperAttr: { class: "mdl-shape-overlay-popup" },
-                width: "auto",
-                contentTemplate: contentElement => {
-                    $(contentElement).empty();
-                    $("<div>").appendTo(contentElement).dxList({
-                        dataSource: ModellusShapeToolbar.getMindMapShapeTypes(shell),
-                        scrollingEnabled: false,
-                        itemTemplate: (data, _, el) => {
-                            el[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${data.icon}"></i><span class="mdl-dropdown-list-label">${data.text}</span></div>`;
-                        },
-                        onItemClick: event => {
-                            dropdownElement.dxDropDownButton("instance").close();
-                            shell.shapeDrawController.toggle(event.itemData.type, event.itemData.name, "mindmap-button", event.itemData.properties);
-                        }
-                    });
-                }
-            }
-        });
-        return dropdownElement;
+        return ModellusShapeToolbar.createShapeTypeDropDownButton(shell, "mindmap-button", "mdl-mindmap-type-selector", "fa-light fa-diagram-project", "Mind Map Tooltip", () => ModellusShapeToolbar.getMindMapShapeTypes(shell));
+    }
+
+    static createChartDropDownButton(shell) {
+        return ModellusShapeToolbar.createShapeTypeDropDownButton(shell, "chart-button", "mdl-chart-type-selector", "fa-light fa-chart-line", "Chart Tooltip", () => ModellusShapeToolbar.getChartShapeTypes(shell));
+    }
+
+    static createTableDropDownButton(shell) {
+        return ModellusShapeToolbar.createShapeTypeDropDownButton(shell, "table-button", "mdl-table-type-selector", "fa-light fa-table", "Table Tooltip", () => ModellusShapeToolbar.getTableShapeTypes(shell));
     }
 
     static notebookItems(notebook) {
@@ -238,65 +272,11 @@ class ModellusShapeToolbar {
             },
             {
                 location: "center",
-                widget: "dxButton",
-                options: {
-                    elementAttr: {
-                        id: "chart-button"
-                    },
-                    icon: "fa-light fa-chart-line",
-                    onClick: _ => shell.shapeDrawController.toggle("ChartShape", "Chart", "chart-button"),
-                    onInitialized: event => shell.createTranslatedTooltip(event, "Chart Tooltip", 280)
-                }
+                template: () => ModellusShapeToolbar.createChartDropDownButton(shell)
             },
             {
                 location: "center",
-                widget: "dxButton",
-                options: {
-                    elementAttr: {
-                        id: "frequency-chart-button"
-                    },
-                    icon: "fa-light fa-chart-simple",
-                    onClick: _ => shell.shapeDrawController.toggle("FrequencyChartShape", "Frequencies", "frequency-chart-button"),
-                    onInitialized: event => shell.createTranslatedTooltip(event, "Frequency Chart Tooltip", 280)
-                }
-            },
-            {
-                location: "center",
-                template: () => {
-                    const dropdownElement = $('<div id="table-button" class="mdl-table-type-selector">');
-                    dropdownElement.dxDropDownButton({
-                        showArrowIcon: false,
-                        stylingMode: "text",
-                        useSelectMode: false,
-                        icon: "fa-light fa-table",
-                        onInitialized: event => shell.createTranslatedTooltip(event, "Table Tooltip", 280),
-                        dropDownOptions: {
-                            container: document.body,
-                            wrapperAttr: { class: "mdl-shape-overlay-popup" },
-                            width: "auto",
-                            contentTemplate: contentElement => {
-                                const tableTypes = [
-                                    { text: shell.board.translations.get("Table Name") ?? "Table", icon: "fa-light fa-table", type: "TableShape", name: "Table" },
-                                    { text: shell.board.translations.get("Cases Table Name") ?? "Scenarios", icon: "fa-light fa-table-list", type: "CasesTableShape", name: "Scenarios" },
-                                    { text: shell.board.translations.get("Data Table Name") ?? "Data Analysis", icon: "fa-light fa-flask", type: "DataTableShape", name: "Data Analysis" }
-                                ];
-                                $(contentElement).empty();
-                                $("<div>").appendTo(contentElement).dxList({
-                                    dataSource: tableTypes,
-                                    scrollingEnabled: false,
-                                    itemTemplate: (data, _, el) => {
-                                        el[0].innerHTML = `<div class="mdl-dropdown-list-item"><i class="dx-icon ${data.icon}"></i><span class="mdl-dropdown-list-label">${data.text}</span></div>`;
-                                    },
-                                    onItemClick: event => {
-                                        dropdownElement.dxDropDownButton("instance").close();
-                                        shell.shapeDrawController.toggle(event.itemData.type, event.itemData.name, "table-button");
-                                    }
-                                });
-                            }
-                        }
-                    });
-                    return dropdownElement;
-                }
+                template: () => ModellusShapeToolbar.createTableDropDownButton(shell)
             },
             {
                 location: "center",

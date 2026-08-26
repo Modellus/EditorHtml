@@ -251,9 +251,12 @@ test.describe('Frequency chart', () => {
         expect(chart.domains.primary).toEqual({ min: 0, max: 20 });
     });
 
-    test('the toolbar button arms the frequency chart for drawing', async ({ page }) => {
+    test('the chart button lists the frequency chart and arms it for drawing', async ({ page }) => {
         await setupEditor(page);
-        await page.click('#frequency-chart-button');
+        await page.click('#chart-button');
+        const labels = page.locator('.mdl-shape-overlay-popup .mdl-dropdown-list-label');
+        await expect(labels).toHaveText(['Chart', 'Frequencies']);
+        await page.click('.mdl-shape-overlay-popup .dx-list-item:nth-child(2)');
         await expect.poll(() => page.evaluate(() => shell.shapeDrawController.pendingShapeType)).toBe('FrequencyChartShape');
     });
 

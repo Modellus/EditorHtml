@@ -11,6 +11,12 @@ async function setupEditor(page) {
     await page.waitForTimeout(500);
 }
 
+// The chart button is a family: clicking it opens the list, and the first entry is the chart.
+async function armChart(page) {
+    await page.click('#chart-button');
+    await page.click('.mdl-shape-overlay-popup .dx-list-item:nth-child(1)');
+}
+
 async function svgClientPoint(page, x, y) {
     return page.evaluate(({ x, y }) => {
         const rect = document.getElementById('svg').getBoundingClientRect();
@@ -23,9 +29,9 @@ async function svgClientPoint(page, x, y) {
 }
 
 test.describe('Draw-to-create shapes from the top toolbar', () => {
-    test('clicking a shape button arms draw mode with crosshair and highlighted button', async ({ page }) => {
+    test('picking a shape from a toolbar button arms draw mode with crosshair and highlighted button', async ({ page }) => {
         await setupEditor(page);
-        await page.click('#chart-button');
+        await armChart(page);
         const armed = await page.evaluate(() => ({
             svgClass: document.getElementById('svg').classList.contains('shape-draw-mode'),
             buttonClass: document.getElementById('chart-button').classList.contains('mdl-draw-armed'),
@@ -38,10 +44,10 @@ test.describe('Draw-to-create shapes from the top toolbar', () => {
         expect(armed.iconWeight).toBe('900');
     });
 
-    test('clicking the armed button again cancels draw mode', async ({ page }) => {
+    test('picking the armed shape again cancels draw mode', async ({ page }) => {
         await setupEditor(page);
-        await page.click('#chart-button');
-        await page.click('#chart-button');
+        await armChart(page);
+        await armChart(page);
         const armed = await page.evaluate(() => ({
             svgClass: document.getElementById('svg').classList.contains('shape-draw-mode'),
             buttonClass: document.getElementById('chart-button').classList.contains('mdl-draw-armed')
@@ -52,7 +58,7 @@ test.describe('Draw-to-create shapes from the top toolbar', () => {
 
     test('dragging on the board draws the shape as a rectangle', async ({ page }) => {
         await setupEditor(page);
-        await page.click('#chart-button');
+        await armChart(page);
         const start = await svgClientPoint(page, 300, 300);
         const end = await svgClientPoint(page, 520, 440);
         await page.mouse.move(start.x, start.y);
@@ -100,7 +106,7 @@ test.describe('Draw-to-create shapes from the top toolbar', () => {
 
     test('a drag too small to be usable creates the shape at its default minimum size', async ({ page }) => {
         await setupEditor(page);
-        await page.click('#chart-button');
+        await armChart(page);
         const start = await svgClientPoint(page, 300, 300);
         const end = await svgClientPoint(page, 330, 305);
         await page.mouse.move(start.x, start.y);
