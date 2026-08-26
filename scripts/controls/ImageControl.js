@@ -250,22 +250,11 @@ class ImageControl {
         const activeElement = document.activeElement;
         if (activeElement?.matches("input, textarea") || activeElement?.isContentEditable)
             return;
-        let clipboardItems;
-        try {
-            clipboardItems = await navigator.clipboard.read();
-        } catch {
+        const image = await ClipboardService.readImageBlob();
+        if (!image)
             return;
-        }
-        for (const clipboardItem of clipboardItems) {
-            const imageType = clipboardItem.types.find(type => type.startsWith("image/"));
-            if (!imageType)
-                continue;
-            const blob = await clipboardItem.getType(imageType);
-            const extension = imageType.split("/")[1] || "png";
-            const file = new File([blob], `pasted-image.${extension}`, { type: imageType });
-            await this.handleFile(file);
-            break;
-        }
+        const extension = image.type.split("/")[1] || "png";
+        await this.handleFile(new File([image.blob], `pasted-image.${extension}`, { type: image.type }));
     }
 
     async onContainerPaste(event) {

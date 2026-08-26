@@ -24,8 +24,8 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
     }
 
     async copyAsMath() {
-        const mathml = this.mathfield.getValue("math-ml");
-        await navigator.clipboard.writeText(mathml);
+        const mathmlDocument = ClipboardService.buildMathmlDocument(this.toMathml());
+        await ClipboardService.write([ClipboardService.mathmlRepresentation(mathmlDocument), ClipboardService.textRepresentation(mathmlDocument)]);
     }
 
     setDefaults() {
@@ -343,7 +343,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         super.draw();
     }
 
-    toImageBlob() {
+    toSvgString() {
         const width = this.properties.width;
         const height = this.properties.height;
         const color = this.properties.foregroundColor || "black";
@@ -354,7 +354,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         const handwrittenOverride = isMidSchool
             ? `@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap'); .ML__latex, .ML__text, .ML__mathit, .ML__cmr, .ML__ams { font-family: "Caveat", cursive !important; }`
             : "";
-        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
             <defs><style>${mathStyles} ${handwrittenOverride}</style></defs>
             <foreignObject width="100%" height="100%">
                 <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;width:${width}px;height:${height}px;padding:4px;box-sizing:border-box;background:${backgroundColor};color:${color};font-size:16px;overflow:hidden;">
@@ -362,6 +362,12 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
                 </div>
             </foreignObject>
         </svg>`;
+    }
+
+    toImageBlob() {
+        const width = this.properties.width;
+        const height = this.properties.height;
+        const svgString = this.toSvgString();
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
@@ -378,19 +384,34 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         });
     }
 
-    async copyToClipboard() {
-        const shapeData = this.getClipboardData();
-        const json = JSON.stringify(shapeData);
-        const jsonBlob = new Blob([json], { type: "text/plain" });
-        try {
-            const imageBlob = await this.toImageBlob();
-            await navigator.clipboard.write([new ClipboardItem({
-                "text/plain": jsonBlob,
-                "image/png": imageBlob
-            })]);
-        } catch (_) {
-            await navigator.clipboard.writeText(json);
-        }
+    getCanonicalExpressionLatex() {
+        return this.properties.expression ?? "";
+    }
+
+    getMathMLRepresentation() {
+        return ClipboardService.mathmlRepresentation(this.toMathml());
+    }
+
+    getPlainTextRepresentation() {
+        return ClipboardService.textRepresentation(Utils.convertLatexToPlainMath(this.getCanonicalExpressionLatex()));
+    }
+
+    getModellusRepresentation() {
+        return ClipboardService.expressionRepresentation(this.getClipboardData());
+    }
+
+    toMathml() {
+        return MathLive.convertLatexToMathMl(Utils.convertLatexToReadableMath(this.getCanonicalExpressionLatex()));
+    }
+
+    getClipboardRepresentations() {
+        return [
+            this.getModellusRepresentation(),
+            this.getMathMLRepresentation(),
+            this.getPlainTextRepresentation(),
+            this.getSvgRepresentation(),
+            this.getImageRepresentation()
+        ];
     }
 
     async pasteTextFromClipboard() {

@@ -353,13 +353,20 @@ test.describe('editing an aligned block', () => {
         await addExpression(page, 'Parameters', '\\displaylines{a=0.10\\\\b=21.55}');
         const copied = await page.evaluate(async () => {
             const control = shell.board.shapes.getByName('Parameters').expressionControl;
-            let written = '';
-            navigator.clipboard.writeText = async text => { written = text; };
+            const written = { types: [], contents: {} };
+            navigator.clipboard.write = async items => {
+                const item = items[0];
+                written.types = item.types.slice();
+                for (const type of item.types)
+                    written.contents[type] = await (await item.getType(type)).text();
+            };
             control.mathfield.position = control.mathfield.lastOffset;
             await control.copyToClipboardUsingMathlive();
             return written;
         });
-        expect(copied).toBe('a=0.10\\\\b=21.55');
+        expect(copied.contents['text/plain']).toBe('a=0.10\\\\b=21.55');
+        expect(JSON.parse(copied.contents['web application/x-modellus-expression+json']).latex).toBe('a=0.10\\\\b=21.55');
+        expect(copied.contents['web application/mathml+xml']).toContain('<math xmlns="http://www.w3.org/1998/Math/MathML"');
     });
 
     test('pasting an aligned block back reads as the same rows', async ({ page }) => {

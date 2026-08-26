@@ -903,20 +903,23 @@ class BaseValueTableShape extends BaseTableShape {
             });
             rows.push(values.join(","));
         }
-        await navigator.clipboard.writeText(rows.join("\n"));
+        await ClipboardService.writeText(rows.join("\n"));
     }
 
-    async copyToClipboard() {
-        const shapeData = this.getClipboardData();
-        const json = JSON.stringify(shapeData);
-        const htmlTable = this.toHtmlTable();
-        const tsvTable = this.toTsvTable();
-        const imageBlob = this.toImageBlob();
-        const items = [new ClipboardItem({
-            "text/plain": new Blob([tsvTable], { type: "text/plain" }),
-            "text/html": new Blob([htmlTable], { type: "text/html" }),
-            "image/png": imageBlob
-        })];
-        await navigator.clipboard.write(items);
+    getHtmlRepresentation() {
+        return ClipboardService.htmlRepresentation(this.toHtmlTable());
+    }
+
+    getPlainTextRepresentation() {
+        return ClipboardService.textRepresentation(this.toTsvTable());
+    }
+
+    getClipboardRepresentations() {
+        return [
+            this.getModellusRepresentation(),
+            this.getHtmlRepresentation(),
+            this.getPlainTextRepresentation(),
+            this.getImageRepresentation()
+        ];
     }
 }

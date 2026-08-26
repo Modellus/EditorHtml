@@ -781,21 +781,40 @@ class ExpressionControl {
         return expressionRows;
     }
 
-    copyToClipboardUsingMathlive() {
-        let latex;
+    getSelectionLatex() {
         if (this.mathfield.selectionIsCollapsed)
-            latex = this.getCanonicalValue();
-        else {
-            const [start, end] = this._getSelectionRange();
-            latex = this._getRowAwareLatex(start, end);
-        }
-        const strippedLatex = latex.replace(/^\\displaylines\{([\s\S]*)\}$/, "$1");
-        navigator.clipboard.writeText(strippedLatex);
+            return this.getCanonicalValue();
+        const [start, end] = this._getSelectionRange();
+        return this._getRowAwareLatex(start, end);
+    }
+
+    static stripDisplaylines(latex) {
+        return String(latex ?? "").replace(/^\\displaylines\{([\s\S]*)\}$/, "$1");
+    }
+
+    getClipboardRepresentations() {
+        const strippedLatex = ExpressionControl.stripDisplaylines(this.getSelectionLatex());
+        return [
+            ClipboardService.expressionRepresentation({ latex: strippedLatex }),
+            ClipboardService.mathmlRepresentation(MathLive.convertLatexToMathMl(strippedLatex)),
+            ClipboardService.textRepresentation(strippedLatex)
+        ];
+    }
+
+    async copyToClipboardUsingMathlive() {
+        await ClipboardService.write(this.getClipboardRepresentations());
+    }
+
+    async readClipboardLatex() {
+        const expressionLatex = await ClipboardService.readExpressionLatex();
+        if (expressionLatex != null)
+            return ExpressionControl.stripDisplaylines(expressionLatex);
+        return ExpressionControl.stripDisplaylines(await navigator.clipboard.readText());
     }
 
     async pasteFromClipboardUsingMathlive() {
         try {
-            const clipboardText = await navigator.clipboard.readText();
+            const clipboardText = await this.readClipboardLatex();
             if (!clipboardText)
                 return;
             const expressionRows = this._splitTopLevelRows(clipboardText);

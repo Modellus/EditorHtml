@@ -1916,33 +1916,43 @@ class BaseShape {
         });
     }
 
+    getModellusRepresentation() {
+        return ClipboardService.shapeRepresentation(this.getClipboardData());
+    }
+
+    getImageRepresentation() {
+        return ClipboardService.imageRepresentation(() => this.toImageBlob());
+    }
+
+    getSvgRepresentation() {
+        return ClipboardService.svgRepresentation(() => this.toSvgString());
+    }
+
+    getClipboardRepresentations() {
+        return [
+            this.getModellusRepresentation(),
+            this.getSvgRepresentation(),
+            this.getImageRepresentation()
+        ];
+    }
+
     async copyToClipboard() {
-        const shapeData = this.getClipboardData();
-        const json = JSON.stringify(shapeData);
-        const imageBlob = this.toImageBlob();
-        const items = [new ClipboardItem({
-            "text/plain": new Blob([json], { type: "text/plain" }),
-            "image/png": imageBlob
-        })];
-        await navigator.clipboard.write(items);
+        await ClipboardService.write(this.getClipboardRepresentations());
     }
 
     async copyAsImage() {
-        const imageBlob = await this.toImageBlob();
-        const items = [new ClipboardItem({ "image/png": imageBlob })];
-        await navigator.clipboard.write(items);
+        await ClipboardService.write([this.getImageRepresentation()]);
     }
 
     async copyAsSvg() {
-        const svgString = this.toSvgString();
-        await navigator.clipboard.writeText(svgString);
+        await ClipboardService.write([this.getSvgRepresentation(), ClipboardService.textRepresentation(() => this.toSvgString())]);
     }
 
     static async pasteFromClipboard(board, parent) {
-        const text = await navigator.clipboard.readText();
-        let data;
-        try { data = JSON.parse(text); } catch (_) { return; }
-        BaseShape.pasteShapeData(board, parent, data);
+        const data = await ClipboardService.readShapeDocument();
+        if (!data)
+            return false;
+        return BaseShape.pasteShapeData(board, parent, data);
     }
 
     static pasteShapeData(board, parent, data) {

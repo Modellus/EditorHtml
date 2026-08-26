@@ -47,26 +47,42 @@ class ClipboardPasteController {
         if (this.isEditingTarget(event.target) || this.isEditingTarget(document.activeElement))
             return;
         const clipboardData = event.clipboardData;
-        const text = clipboardData.getData("text/plain");
-        if (this.pasteShapeText(text)) {
+        const shapeDocument = ClipboardService.getDataTransferShapeDocument(clipboardData);
+        if (shapeDocument) {
             event.preventDefault();
+            this.pasteShapeDocument(shapeDocument);
             return;
         }
-        const mediaFile = this.findMediaFile(clipboardData);
+        const content = { text: clipboardData.getData(ClipboardService.textFormat), files: Array.from(clipboardData.files) };
+        event.preventDefault();
+        this.pasteClipboardContent(content);
+    }
+
+    async pasteClipboardContent(content) {
+        const shapeDocument = await ClipboardService.readShapeDocument();
+        if (shapeDocument) {
+            this.pasteShapeDocument(shapeDocument);
+            return;
+        }
+        this.pasteExternalContent(content);
+    }
+
+    pasteExternalContent(content) {
+        const text = content.text;
+        if (this.pasteShapeText(text))
+            return;
+        const mediaFile = this.findMediaFile(content.files);
         if (mediaFile) {
-            event.preventDefault();
             this.pasteMediaFile(mediaFile);
             return;
         }
-        const csvFile = this.findCsvFile(clipboardData);
+        const csvFile = this.findCsvFile(content.files);
         if (csvFile) {
-            event.preventDefault();
             this.pasteCsvFile(csvFile);
             return;
         }
         if (text.trim() === "")
             return;
-        event.preventDefault();
         if (this.isUrlText(text))
             this.pasteUrl(text.trim());
         else if (this.isCsvText(text))
@@ -75,15 +91,20 @@ class ClipboardPasteController {
             this.pasteText(text);
     }
 
-    pasteShapeText(text) {
-        let data;
-        try { data = JSON.parse(text); } catch (_) { return false; }
+    pasteShapeDocument(data) {
         const selectedShape = this.board.selection.selectedShape;
         return BaseShape.pasteShapeData(this.board, selectedShape?.parent ?? null, data);
     }
 
-    findMediaFile(clipboardData) {
-        return Array.from(clipboardData.files).find(file => this.getMediaKind(file.type) != null) ?? null;
+    pasteShapeText(text) {
+        const data = ClipboardService.parseDocument(text);
+        if (!ClipboardService.isShapeDocument(data))
+            return false;
+        return this.pasteShapeDocument(data);
+    }
+
+    findMediaFile(files) {
+        return files.find(file => this.getMediaKind(file.type) != null) ?? null;
     }
 
     getMediaKind(contentType) {
@@ -149,8 +170,8 @@ class ClipboardPasteController {
         return this.getMediaKind(contentType);
     }
 
-    findCsvFile(clipboardData) {
-        return Array.from(clipboardData.files).find(file => file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv")) ?? null;
+    findCsvFile(files) {
+        return files.find(file => file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv")) ?? null;
     }
 
     isCsvText(text) {
