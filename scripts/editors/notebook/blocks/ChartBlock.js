@@ -76,7 +76,8 @@ if (typeof BlocksRegistry !== "undefined" && typeof ChartShape !== "undefined") 
             this.lastSyncedCalculatedIteration = 0;
             this.lastSyncedRecalculationRevision = 0;
             this.chartDataConfig = null;
-            this.chart = new ChartControl(element, this.getChartControlOptions());
+            const ChartControlClass = this.getChartControlClass();
+            this.chart = new ChartControlClass(element, this.getChartControlOptions());
             this._appliedConfig = {};
             this._appliedDomainConfig = null;
             return element;

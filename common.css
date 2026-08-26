@@ -334,3 +334,12 @@ math-field.mdl-units-input::part(menu-toggle) {
     color: transparent;
     caret-color: transparent;
 }
+
+/* The chart's tick labels are compiled from blocks, so they carry no class of their own. Every
+   piece of text the block layer writes for a chart is a label, and none of it is to be selected
+   or to take the pointer away from the plot underneath. */
+.chart-block-layer text {
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+}

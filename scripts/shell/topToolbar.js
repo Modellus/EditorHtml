@@ -226,7 +226,7 @@ class TopToolbar {
         this.expressionButton = $("#expression-button").dxButton("instance");
         this.valueButton = $("#value-button").dxButton("instance");
         this.referentialButton = $("#referential-button").dxButton("instance");
-        this.chartButton = $("#chart-button").dxButton("instance");
+        this.chartButton = $("#chart-button").dxDropDownButton("instance");
         this.tableButton = $("#table-button").dxDropDownButton("instance");
         this.backgroundButton = $("#background-button").dxButton("instance");
         this.textButton = $("#text-button").dxButton("instance");

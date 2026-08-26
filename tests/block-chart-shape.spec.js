@@ -1,6 +1,26 @@
 const { test, expect } = require('@playwright/test');
 
 const EDITOR_URL = '/pages/board/index.html';
+const NOTEBOOK_URL = '/pages/notebook/index.html';
+
+const NOTEBOOK_MODEL = {
+    properties: {
+        precision: 2,
+        angleUnit: 'radians',
+        independent: { name: 't', start: 0, end: 10, step: 0.1, noLimit: false },
+        iterationTerm: 'n',
+        casesCount: 1,
+        initialValuesByCase: {}
+    },
+    notebook: {
+        title: 'Chart drawn from blocks',
+        author: 'test',
+        blocks: [
+            { id: 1, type: 'expression', content: 'x=2\\cdot t' },
+            { id: 2, type: 'chart', xTerm: 't', xTermCase: 1, yTerms: [{ term: 'x', case: 1, color: '#1871c2', showLabel: false, chartTypes: ['line'] }], autoScale: true }
+        ]
+    }
+};
 
 async function setupEditor(page) {
     await page.addInitScript(() => {
@@ -26,6 +46,18 @@ async function addModel(page) {
     await page.waitForTimeout(300);
 }
 
+// The chart the board draws is the block one. The SVG `ChartControl` writes for the same plan is
+// what it is held to, so the reference is opted into here — nothing in the editor reaches for it.
+async function registerDrawnChart(page) {
+    await page.evaluate(() => {
+        shell.commands.registerShapeAlias('DrawnChartWidget', class DrawnChartWidget extends ChartWidget {
+            getChartControlClass() {
+                return ChartControl;
+            }
+        });
+    });
+}
+
 const CHART_PROPERTIES = {
     xTerm: 'x',
     yTerms: [{ term: 'y', case: 1, color: '#1871c2', showLabel: false, chartTypes: ['line'] }],
@@ -34,14 +66,14 @@ const CHART_PROPERTIES = {
     height: 200
 };
 
-async function addChart(page, factory, name, overrides = {}) {
-    await page.evaluate(({ factory, name, properties }) => {
-        modellus.shape[factory](name);
+async function addChart(page, shapeType, name, overrides = {}) {
+    await page.evaluate(({ shapeType, name, properties }) => {
+        shell.commands.addShape(shapeType, name);
         const chartShape = shell.board.shapes.getByName(name);
         chartShape.setProperties(properties);
         chartShape.update();
         chartShape.draw();
-    }, { factory, name, properties: Object.assign({}, CHART_PROPERTIES, overrides) });
+    }, { shapeType, name, properties: Object.assign({}, CHART_PROPERTIES, overrides) });
     await page.waitForTimeout(600);
 }
 
@@ -80,12 +112,13 @@ async function getChartDigest(page, shapeName, layerNames) {
     }, { shapeName, layerNames });
 }
 
-test.describe('block chart shape', () => {
+test.describe('the chart, drawn from blocks', () => {
     test('draws the same geometry as the chart it is modelled on', async ({ page }) => {
         await setupEditor(page);
         await addModel(page);
-        await addChart(page, 'addChart', 'Chart1');
-        await addChart(page, 'addBlockChart', 'BlockChart1');
+        await registerDrawnChart(page);
+        await addChart(page, 'DrawnChartWidget', 'Chart1');
+        await addChart(page, 'ChartShape', 'BlockChart1');
 
         // The drawn chart paints into four layers; the block chart paints the same picture into
         // its block layer and keeps only the term titles and the legend in the axis layer.
@@ -107,8 +140,9 @@ test.describe('block chart shape', () => {
                 { term: 'y', case: 1, color: '#2f9e44', showLabel: false, chartTypes: ['bar'] }
             ]
         };
-        await addChart(page, 'addChart', 'Chart1', seriesOverride);
-        await addChart(page, 'addBlockChart', 'BlockChart1', seriesOverride);
+        await registerDrawnChart(page);
+        await addChart(page, 'DrawnChartWidget', 'Chart1', seriesOverride);
+        await addChart(page, 'ChartShape', 'BlockChart1', seriesOverride);
 
         const drawnDigest = await getChartDigest(page, 'Chart1', ['backgroundLayer', 'gridLayer', 'seriesLayer', 'axisLayer']);
         const blockDigest = await getChartDigest(page, 'BlockChart1', ['blockLayer', 'axisLayer']);
@@ -121,7 +155,7 @@ test.describe('block chart shape', () => {
     test('an area series still shows the area it encloses', async ({ page }) => {
         await setupEditor(page);
         await addModel(page);
-        await addChart(page, 'addBlockChart', 'BlockChart1', {
+        await addChart(page, 'ChartShape', 'BlockChart1', {
             yTerms: [{ term: 'y', case: 1, color: '#1871c2', showLabel: true, chartTypes: ['area'] }]
         });
 
@@ -133,14 +167,14 @@ test.describe('block chart shape', () => {
         expect(labelText).toMatch(/^\uf1fe /);
     });
 
-    test('is placed from the components palette by drawing on the board', async ({ page }) => {
+    test('is placed from the chart button by drawing on the board', async ({ page }) => {
         await setupEditor(page);
         await addModel(page);
-        await page.click('#components-button');
+        await page.click('#chart-button');
         await page.waitForTimeout(300);
-        await page.click('.mdl-object-picker-card:has-text("Chart (blocks)")');
+        await page.click('.mdl-shape-overlay-popup .dx-list-item:nth-child(1)');
         await page.waitForTimeout(200);
-        expect(await page.evaluate(() => shell.shapeDrawController.pendingShapeType)).toBe('BlockChartShape');
+        expect(await page.evaluate(() => shell.shapeDrawController.pendingShapeType)).toBe('ChartShape');
 
         const canvas = await page.evaluate(() => {
             const matrix = shell.board.svg.getScreenCTM();
@@ -155,7 +189,7 @@ test.describe('block chart shape', () => {
         await page.waitForTimeout(500);
 
         const placed = await page.evaluate(() => {
-            const shape = shell.board.shapes.shapes.find(entry => entry instanceof BlockChartShape);
+            const shape = shell.board.shapes.shapes.find(entry => entry instanceof ChartShape);
             return { drawnWithBlocks: shape?.chart instanceof BlockChartControl, nodeCount: shape?.chart?.lastCompilation?.stats?.nodeCount ?? 0 };
         });
         expect(placed.drawnWithBlocks).toBe(true);
@@ -165,7 +199,7 @@ test.describe('block chart shape', () => {
     test('the drawing is compiled from the chart building blocks', async ({ page }) => {
         await setupEditor(page);
         await addModel(page);
-        await addChart(page, 'addBlockChart', 'BlockChart1');
+        await addChart(page, 'ChartShape', 'BlockChart1');
 
         const report = await page.evaluate(() => shell.board.shapes.getByName('BlockChart1').getInspectionReport());
         expect(report.diagnostics).toEqual([]);
@@ -180,7 +214,7 @@ test.describe('block chart shape', () => {
     test('double click in the data area recentres the domain', async ({ page }) => {
         await setupEditor(page);
         await addModel(page);
-        await addChart(page, 'addBlockChart', 'BlockChart1');
+        await addChart(page, 'ChartShape', 'BlockChart1');
 
         const plotCenter = await page.evaluate(() => {
             const chartControl = shell.board.shapes.getByName('BlockChart1')?.chart;
@@ -212,7 +246,7 @@ test.describe('block chart shape', () => {
     test('tick handles are on the chart and the domain override redraws it', async ({ page }) => {
         await setupEditor(page);
         await addModel(page);
-        await addChart(page, 'addBlockChart', 'BlockChart1');
+        await addChart(page, 'ChartShape', 'BlockChart1');
 
         const result = await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('BlockChart1');
@@ -227,10 +261,61 @@ test.describe('block chart shape', () => {
         expect(result.after).not.toEqual(result.before);
     });
 
+    // The bars are block nodes, so the shape has to find the one under the focus by the id the
+    // `chart-bars` component gave it rather than by a class the drawn chart wrote.
+    test('the bar under the focus is an element the shape lights up', async ({ page }) => {
+        await setupEditor(page);
+        await addModel(page);
+        await addChart(page, 'ChartShape', 'BlockChart1', {
+            yTerms: [{ term: 'y', case: 1, color: '#2f9e44', showLabel: false, chartTypes: ['bar'] }]
+        });
+
+        const focused = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('BlockChart1');
+            const rows = shape.chart.dataRows;
+            shape.chart.setFocusArgumentValue(rows[Math.floor(rows.length / 2)].argument);
+            const elements = shape.getPulseElements('_yTerm0');
+            return {
+                tags: elements.map(element => element.tagName),
+                sources: elements.map(element => element.getAttribute('data-source-id'))
+            };
+        });
+        expect(focused.tags).toContain('rect');
+        expect(focused.sources.some(source => (source ?? '').startsWith('bar-0-'))).toBe(true);
+    });
+
+    // The notebook is a second editor with a chart of its own, and it is the same chart: the block
+    // layer is loaded there too, so it draws through the same control rather than keeping a
+    // hand-written drawing of its own.
+    test('the notebook draws its chart from the same blocks', async ({ page }) => {
+        await page.addInitScript(() => {
+            localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
+        });
+        await page.goto(NOTEBOOK_URL);
+        await page.waitForFunction(() => typeof notebook !== 'undefined' && notebook !== null && notebook.invoker != null, null, { timeout: 15000 });
+
+        const drawn = await page.evaluate(model => {
+            notebook.deserialize(model);
+            const chartBlock = notebook.blocks.find(block => block.type === 'chart');
+            const shape = notebook.shapeInstances.get(chartBlock.id);
+            shape.draw();
+            return {
+                usesBlockControl: shape.chart instanceof BlockChartControl,
+                diagnostics: shape.chart.lastCompilation?.diagnostics ?? null,
+                componentsUsed: shape.chart.lastCompilation?.stats?.componentsUsed ?? [],
+                axisLabels: shape.chart.blockLayer.querySelectorAll('text').length
+            };
+        }, NOTEBOOK_MODEL);
+        expect(drawn.usesBlockControl).toBe(true);
+        expect(drawn.diagnostics).toEqual([]);
+        expect(drawn.componentsUsed).toEqual(expect.arrayContaining(['chart', 'chart-frame', 'chart-grid', 'chart-axes']));
+        expect(drawn.axisLabels).toBeGreaterThan(0);
+    });
+
     test('survives a serialization round trip', async ({ page }) => {
         await setupEditor(page);
         await addModel(page);
-        await addChart(page, 'addBlockChart', 'BlockChart1');
+        await addChart(page, 'ChartShape', 'BlockChart1');
 
         const restored = await page.evaluate(() => {
             const serialized = shell.board.shapes.getByName('BlockChart1').serialize();
@@ -242,7 +327,7 @@ test.describe('block chart shape', () => {
                 usesBlockControl: shape.chart instanceof BlockChartControl
             };
         });
-        expect(restored.serializedType).toBe('BlockChartWidget');
+        expect(restored.serializedType).toBe('ChartWidget');
         expect(restored.xTerm).toBe('x');
         expect(restored.yTerms[0].term).toBe('y');
         expect(restored.usesBlockControl).toBe(true);

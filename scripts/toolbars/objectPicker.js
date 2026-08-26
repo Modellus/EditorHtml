@@ -143,13 +143,12 @@ class ObjectPicker {
     // By name, because the palette is scanned by name. It is also what keeps the grid still: the
     // picker draws what is registered and draws again when the catalogue answers, and the
     // catalogue lists newest first, so any order that follows the source would rearrange the
-    // cards under the pointer. The chart is a shape rather than an object and stays at the end.
+    // cards under the pointer.
     getItems() {
         const catalogueItems = this.getCatalogueItems();
         const catalogueTypes = new Set(catalogueItems.map(item => item.componentType));
         const registryItems = this.getObjectItems().filter(item => !catalogueTypes.has(item.componentType));
-        const objectItems = registryItems.concat(catalogueItems).sort((left, right) => left.title.localeCompare(right.title));
-        return objectItems.concat(this.getShapeItems());
+        return registryItems.concat(catalogueItems).sort((left, right) => left.title.localeCompare(right.title));
     }
 
     // A catalogue object naming a type the editor ships with under another name is that same object
@@ -181,18 +180,6 @@ class ObjectPicker {
             }));
     }
 
-    getShapeItems() {
-        return [{
-            key: "BlockChartShape",
-            shapeType: "BlockChartShape",
-            shapeName: this.translations.get("Chart Name"),
-            title: this.translations.get("Block Chart Name"),
-            description: this.translations.get("Block Chart Description"),
-            icon: BaseShape.shapeIcons.BlockChartShape,
-            tags: ["chart", "plot", "graph"]
-        }];
-    }
-
     getVisibleItems() {
         const terms = this.searchText.toLowerCase().split(/\s+/).filter(term => term !== "");
         const items = this.getItems();
@@ -208,12 +195,8 @@ class ObjectPicker {
         if (item.catalogueId && !await this.registerCatalogueObject(item))
             return;
         this.popupInstance.hide();
-        if (item.componentType) {
-            const componentProperties = ComponentShape.createInstanceProperties(item.componentType);
-            this.shell.shapeDrawController.toggle("ComponentShape", componentProperties.name, ObjectPicker.buttonId, componentProperties);
-            return;
-        }
-        this.shell.shapeDrawController.toggle(item.shapeType, item.shapeName, ObjectPicker.buttonId);
+        const componentProperties = ComponentShape.createInstanceProperties(item.componentType);
+        this.shell.shapeDrawController.toggle("ComponentShape", componentProperties.name, ObjectPicker.buttonId, componentProperties);
     }
 
     // The picker stays open when the definition cannot be read, so the choice is not lost and the

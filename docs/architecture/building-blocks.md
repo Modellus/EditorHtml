@@ -137,7 +137,6 @@ Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
 | `scripts/shapes/shared/characterPicker.js` | `CharacterLibrary`, `CharacterPickerMixin` | the characters a shape can wear, and the popup that picks one |
 | `scripts/toolbars/objectPicker.js` | `ObjectPicker` | the object palette: previews, descriptions, search |
 | `scripts/controls/BlockChartControl.js` | `BlockChartControl` | the chart control that paints through blocks |
-| `scripts/shapes/blockChartShape/BlockChartShape.js` | `BlockChartShape` | the chart shape built on blocks |
 
 ## 2. The object definition
 
@@ -566,15 +565,18 @@ Three things follow from a chart being a drawing of a whole run rather than a di
   the Components palette and out of the agent catalogue: without a host to hand them a plan there
   is nothing for them to draw.
 
-`BlockChartShape` is the host, and it is placed from the board's Components palette beside the
-component objects: the palette lists the component types tagged `object` and, after them, the
-objects that are built from blocks but are shapes of their own. It inherits every behaviour from `ChartShape` — the same properties,
-the same toolbar, the same term collection, the same domain handling, the same drags — and only
-swaps the control for `BlockChartControl`, which compiles the `chart` component and writes it with
-`BlockRenderer` instead of writing SVG itself. The axis title, the series legend and the area
+`ChartShape` is the host, and it is the only chart there is: on the board it is placed from the chart
+button in the top toolbar, which lists the chart and the frequency chart the way the table button
+lists the three tables, and in the notebook `ChartBlock` extends it and draws through the same
+control, which is why `pages/notebook/index.html` loads the block layer too. Nothing about the shape changed for it — the same properties, the same serialized
+`type`, the same toolbar, the same term collection, the same domain handling, the same drags — only
+the control it draws through, `BlockChartControl`, which compiles the `chart` component and writes
+it with `BlockRenderer` instead of writing SVG itself. The axis title, the series legend and the area
 readout stay with the base control: they are term labels with case icons and an icon glyph over a
-measured background, which the primitives do not describe. `tests/block-chart-shape.spec.js` holds
-both drawings to the same geometry, tag for tag and coordinate for coordinate.
+measured background, which the primitives do not describe. `ChartControl`'s own painting is no
+longer what the board draws; it stays as the picture the block drawing is held to, and
+`tests/block-chart-shape.spec.js` holds the two to the same geometry, tag for tag and coordinate for
+coordinate.
 
 ## 7. Parameters and bindings
 

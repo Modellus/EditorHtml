@@ -40,7 +40,6 @@ async function openPicker(page) {
     await page.waitForFunction(() => {
         const cards = Array.from(document.querySelectorAll('.mdl-object-picker-card'));
         return cards.length > 0 && cards
-            .filter(card => card.dataset.objectKey !== 'BlockChartShape')
             .every(card => (card.querySelector('.mdl-object-picker-preview > svg')?.childElementCount ?? 0) > 0);
     });
 }
@@ -65,9 +64,9 @@ test.describe('object picker', () => {
         await openPicker(page);
         const cards = await readCards(page);
         expect(cards.map(card => card.key)).toEqual([
-            'calculator', 'circular-gauge', 'clock', 'compass', 'mouse-tracker', 'orbit-system', 'rotating-vector', 'speedometer', 'steering-wheel', 'thermometer', 'BlockChartShape'
+            'calculator', 'circular-gauge', 'clock', 'compass', 'mouse-tracker', 'orbit-system', 'rotating-vector', 'speedometer', 'steering-wheel', 'thermometer'
         ]);
-        for (const card of cards.filter(entry => entry.key !== 'BlockChartShape')) {
+        for (const card of cards) {
             expect(card.previewNodeCount, card.key).toBeGreaterThan(0);
             expect(card.description.length, card.key).toBeGreaterThan(0);
         }
@@ -105,18 +104,6 @@ test.describe('object picker', () => {
         }));
         expect(armed).toEqual({ armed: true, shapeType: 'ComponentShape', componentType: 'compass', buttonHighlighted: true });
         expect(await page.evaluate(() => shell.objectPicker.popupInstance.option('visible'))).toBe(false);
-    });
-
-    test('the chart is placed as its own shape rather than as a component', async ({ page }) => {
-        await setupBoard(page);
-        await openPicker(page);
-        await page.click('[data-object-key="BlockChartShape"]');
-        await page.waitForTimeout(300);
-        const pending = await page.evaluate(() => ({
-            shapeType: shell.shapeDrawController.pendingShapeType,
-            properties: shell.shapeDrawController.pendingShapeProperties
-        }));
-        expect(pending).toEqual({ shapeType: 'BlockChartShape', properties: null });
     });
 
     test('an object registered for the session is listed beside the built-in ones', async ({ page }) => {

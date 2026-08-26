@@ -14,7 +14,6 @@ class BaseShape {
         LineShape: "fa-light fa-slash-forward",
         ArcShape: "fa-light fa-circle-half-stroke",
         ChartShape: "fa-light fa-chart-line",
-        BlockChartShape: "fa-light fa-chart-line",
         FrequencyChartShape: "fa-light fa-chart-simple",
         TableShape: "fa-light fa-table",
         DataTableShape: "fa-light fa-flask",

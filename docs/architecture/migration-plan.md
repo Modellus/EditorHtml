@@ -10,7 +10,7 @@ layer was added beside the existing shapes, and `ComponentShape` is a new, addit
 | `GaugeShape` | `getArcPoint()` and `buildAnnularSectorPath()` now delegate to `BlockGeometry` | `polarPoint`, `annularSectorPath` |
 | `ProtractorShape` | `getArcPoint()` and the full-circle ring path now delegate to `BlockGeometry` | `polarPoint`, `ringPath` |
 | `ChartControl` | scales, series points, line/area paths, bar layout and the equal-scales domain now delegate to `BlockChartGeometry`; `render()` splits into `buildRenderPlan()` / `applyClipRects()` / `paintChart()` | `chart`, `chart-frame`, `chart-grid`, `chart-axes`, `chart-series`, `chart-bars`, `clip` |
-| — (new) | `BlockChartShape`: the chart, drawn from those blocks, behaving like `ChartShape` in every other way | — |
+| `ChartShape` | draws through `BlockChartControl`: the plan it works out is compiled from the `chart` component and written by `BlockRenderer`. `ChartControl`'s own SVG is no longer drawn on the board and stays as the picture the block one is held to | — |
 | — (new) | analogue clock, compass, speedometer, circular gauge, rotating vector, orbit system | the whole primitive/modifier/behaviour/component set |
 
 Covered by `tests/gauge.spec.js`, `tests/shape-flip.spec.js`, `tests/rotated-handles.spec.js`,
@@ -36,7 +36,7 @@ objects are created as `ComponentShape`, existing documents keep the legacy shap
 | 5 | `PointShape`, `BodyShape` | runtime adaptation | trajectory polyline, stroboscopy ghosts, character sprite | high — the motion layer is shared and performance-sensitive |
 | 6 | `MindMap*Shape` | runtime adaptation | rounded-box/bubble/ellipse nodes, connector routing | medium — connector attachment logic is independent of drawing |
 | 7 | `ReferentialShape` | not converted for now | axis/grid components can be extracted for reuse | high — it is the coordinate system every child depends on |
-| done | `ChartShape` | new inserts may be `BlockChartShape`; existing charts stay | chart geometry, `chart` and its parts, `clip` | done — the two drawings are held to the same geometry by `tests/block-chart-shape.spec.js` |
+| done | `ChartShape` | every chart, new and existing, draws from blocks; the serialized `type` is unchanged | chart geometry, `chart` and its parts, `clip` | done — the two drawings are held to the same geometry by `tests/block-chart-shape.spec.js` |
 | — | `Table*Shape`, `ExpressionShape`, `TextShape`, `MediaShape`, `QuestionShape`, `SliderShape` | not candidates | — | these are DevExtreme/HTML overlays, not SVG geometry; the block layer would add nothing |
 
 ## Rules for each conversion
