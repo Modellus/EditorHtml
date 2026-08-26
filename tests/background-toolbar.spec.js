@@ -107,6 +107,36 @@ test.describe('Background toolbar', () => {
         expect(state.svgBackground.length).toBeGreaterThan(0);
     });
 
+    test('The background colour swatch stays visible against a toolbar of the same colour', async ({ page }) => {
+        await setupEditor(page);
+        await clickEmptyBackground(page);
+        const swatch = await page.evaluate(() => {
+            shell.backgroundToolbar.colorControl.refreshColorPickerButtonTemplate(shell.backgroundToolbar._backgroundColorPicker, '#FFFFFF');
+            const icon = document.querySelector('.mdl-background-toolbar .mdl-color-picker-button-icon');
+            const style = getComputedStyle(icon);
+            return {
+                fill: Utils.toHexColor(style.color),
+                outline: Utils.toHexColor(style.webkitTextStrokeColor),
+                strokeWidth: style.webkitTextStrokeWidth
+            };
+        });
+        // The white square would disappear on the white toolbar without an edge that contrasts with it.
+        expect(swatch.fill).toBe('#ffffff');
+        expect(swatch.outline).toBe('#000000');
+        expect(parseFloat(swatch.strokeWidth)).toBeGreaterThan(0);
+    });
+
+    test('The colours in the drop down list are left unoutlined', async ({ page }) => {
+        await setupEditor(page);
+        await clickEmptyBackground(page);
+        await page.evaluate(() => shell.backgroundToolbar._backgroundColorPicker.dxDropDownButton('instance').open());
+        await page.waitForTimeout(300);
+        const strokeWidths = await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-color-picker-menu .mdl-color-picker-item-icon'))
+            .map(icon => parseFloat(getComputedStyle(icon).webkitTextStrokeWidth) || 0));
+        expect(strokeWidths.length).toBeGreaterThan(0);
+        expect(strokeWidths.every(width => width === 0)).toBe(true);
+    });
+
     test('Background picker applies a pattern to the svg', async ({ page }) => {
         await setupEditor(page);
         await clickEmptyBackground(page);

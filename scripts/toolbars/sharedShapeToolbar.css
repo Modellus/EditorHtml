@@ -606,6 +606,7 @@ math-field {
 .mdl-color-picker-button-icon {
     font-size: 18px;
     line-height: 1;
+    -webkit-text-stroke-width: 1px;
 }
 
 .mdl-color-picker-menu .dx-popup-content {

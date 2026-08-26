@@ -75,15 +75,34 @@ class ColorControl {
         return "fa-solid fa-square";
     }
 
+    // The selected colour sits on a toolbar that may be painted the same colour, and a white square on
+    // a white toolbar vanishes. Only the button swatch is outlined, in the colour that contrasts with
+    // its own fill: light fills get a dark edge, dark ones a light edge. The palette tiles are left
+    // plain — they are read against each other, not against the surface behind them.
+    getColorPickerIconOutlineColor(color) {
+        if (color == "#00000000")
+            return null;
+        if (Utils.getContrastColor(color) == "#000000")
+            return "rgba(0, 0, 0, 0.55)";
+        return "rgba(255, 255, 255, 0.7)";
+    }
+
     createColorPickerIcon(color, className) {
         const icon = $("<i>").addClass(`${this.getColorPickerIconClass(color)} ${className}`);
         icon.css("color", this.getColorPickerIconColor(color));
         return icon;
     }
 
+    createColorPickerButtonIcon(color, className) {
+        const icon = this.createColorPickerIcon(color, className);
+        const outlineColor = this.getColorPickerIconOutlineColor(color);
+        icon.css("-webkit-text-stroke-color", outlineColor ?? "transparent");
+        return icon;
+    }
+
     renderColorPickerButtonTemplate(selectedColor, element) {
         const content = $("<div>").addClass("mdl-color-picker-button-template");
-        const icon = this.createColorPickerIcon(selectedColor, "mdl-color-picker-button-icon");
+        const icon = this.createColorPickerButtonIcon(selectedColor, "mdl-color-picker-button-icon");
         content.append(icon);
         $(element).empty().append(content);
     }
