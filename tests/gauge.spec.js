@@ -282,7 +282,7 @@ test('notebook gauge exposes the same value scale and color range editor', async
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
     });
     await page.goto(NOTEBOOK_URL);
-    await page.waitForFunction(() => typeof notebook !== 'undefined' && notebook.invoker != null, null, { timeout: 15000 });
+    await page.waitForFunction(() => typeof notebook !== 'undefined' && notebook !== null && notebook.invoker != null, null, { timeout: 15000 });
     const blockId = await page.evaluate(() => {
         notebook.addBlock('gauge');
         return notebook.blocks[notebook.blocks.length - 1].id;

@@ -111,7 +111,7 @@ test.describe('component visual snapshots', () => {
         });
         await page.waitForTimeout(400);
         const clock = page.locator('#svg > g').last();
-        await expect(clock).toHaveScreenshot('clock-board.png');
+        await expect(clock).toHaveScreenshot(`clock-board-${process.platform}.png`);
         await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Clock')));
         await page.waitForTimeout(300);
         const selectionHandles = await page.evaluate(() => shell.board.shapes.getByName('Clock').handleElements.length);
@@ -122,6 +122,6 @@ test.describe('component visual snapshots', () => {
             shell.board.shapes.getByName('Clock').draw();
         });
         await page.waitForTimeout(400);
-        await expect(page.locator('#svg > g').last()).toHaveScreenshot('clock-board-large.png');
+        await expect(page.locator('#svg > g').last()).toHaveScreenshot(`clock-board-large-${process.platform}.png`);
     });
 });
