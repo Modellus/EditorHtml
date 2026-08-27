@@ -714,6 +714,19 @@ declare class System {
         [name: string]: number;
     }, caseNumber?: number): number;
     getValueAtIndependent(value: number, term: string, caseNumber?: number): number;
+    /**
+     * Reads a term at a given independent while a row is still being built.  A term the engine
+     * integrates or preloads has no closed form to evaluate at an arbitrary independent, so
+     * `x\left(3\right)` has to be sampled from the calculated rows; the row for the iteration in
+     * flight has not been stored yet, so a read of the current independent resolves against the
+     * in-flight values, exactly as `getValueAtIterationInRow` does for subscripts.  An independent
+     * the run has not reached, or has already passed out of, reads NaN.
+     */
+    getValueAtIndependentInRow(value: number, term: string, values: {
+        [name: string]: number;
+    }, caseNumber?: number): number;
+    /** The iteration whose independent is closest to `value`, or NaN before the first row exists. */
+    private independentToIteration;
     getInitialByExpression(expression: Expression, iteration?: number): number;
     getTermsNames(): string[];
     getDifferentialTermsNames(): string[];
@@ -4325,6 +4338,16 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitFunctionSubscript: (context: FunctionSubscriptContext) => Branch;
     visitFunctionSubscriptDigit: (context: FunctionSubscriptDigitContext) => Branch;
     visitFunctionIndependent: (context: FunctionIndependentContext) => Branch;
+    /**
+     * Whether `x\left(3\right)` can be answered by evaluating the term's own expression at that
+     * independent.  A term the engine integrates cannot: the tree stored under its name is the
+     * right-hand side of its differential, so substituting there would return the derivative at
+     * that independent instead of the term.  Those terms, and terms with no expression at all such
+     * as preloaded data, are sampled from the calculated rows instead.  The type is read when the
+     * expression runs rather than when it is parsed, so the order the statements were written in
+     * does not matter.
+     */
+    private hasClosedForm;
     visitFunctionApplication: (context: FunctionApplicationContext) => Branch;
     visitPower: (context: PowerContext) => Branch;
     private factorial;
