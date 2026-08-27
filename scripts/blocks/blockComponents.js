@@ -143,7 +143,8 @@ var BlockComponentHelpers = {
         const axisBadge = Object.assign({}, badge, { backgroundColor: axisBadgeColor, textColor: Utils.getContrastColor(axisBadgeColor) });
         const valueBadge = Object.assign({}, badge, { backgroundColor: valueBadgeColor, textColor: Utils.getContrastColor(valueBadgeColor) });
         const digits = Math.max(0, Math.min(6, Math.floor(Number(parameters.digits))));
-        const valueText = Utils.formatNumber(nearestY, digits);
+        const valueText = BlockComponentHelpers.readingText(nearestY, digits, parameters.yUnit);
+        const axisText = BlockComponentHelpers.readingText(nearestX, digits, parameters.xUnit);
         const gapX = Number(badge.fontSize) * context.tokens.getNumber("axis.labelGapX", 1.8);
         return [
             {
@@ -158,7 +159,7 @@ var BlockComponentHelpers = {
                     strokeWidth: 1.5
                 }
             },
-            ...BlockComponentHelpers.badgeNodes("value-x", Utils.formatNumber(nearestX, digits), box.toX(nearestX), box.bottom + gapX * 0.6, axisBadge),
+            ...BlockComponentHelpers.badgeNodes("value-x", axisText, box.toX(nearestX), box.bottom + gapX * 0.6, axisBadge),
             ...BlockComponentHelpers.badgeNodes("value-y", valueText, box.left - BlockComponentHelpers.badgeWidth(valueText, badge) / 2 - 4, positionY, valueBadge)
         ];
     },
@@ -285,6 +286,14 @@ var BlockComponentHelpers = {
         if (character === ".")
             return { point: BlockComponentHelpers.sevenSegmentLampPoints(centerX, top + height - thickness / 2, thickness, slantTangent, baseline) };
         return {};
+    },
+
+    // A value read on a badge is read in what it is measured in: the unit follows the number the way
+    // it follows one everywhere else on the board, and a value measured in nothing is read bare.
+    readingText(value, digits, unit) {
+        const unitText = String(unit ?? "").trim();
+        const numberText = Utils.formatNumber(Number(value), digits);
+        return unitText === "" ? numberText : `${numberText} ${unitText}`;
     },
 
     badgeWidth(text, options) {
@@ -800,6 +809,8 @@ var BlockComponentHelpers = {
             BlockComponentHelpers.parameter("valueY", "Value Y", "number", 0),
             BlockComponentHelpers.parameter("rows", "Points", "object", [], { description: "The points to answer the pointer with: the one nearest its horizontal value is marked and read off both axes." }),
             BlockComponentHelpers.parameter("digits", "Decimals", "number", 2, { minimum: 0, maximum: 6, description: "How the values are rounded. Bound to the model's own precision, a readout beside the drawing reads the way every other readout on the board does." }),
+            BlockComponentHelpers.parameter("xUnit", "Horizontal unit", "string", "", { description: "What the horizontal value is read in, written after it on every badge that reads it. Left unset the value is read as a bare number." }),
+            BlockComponentHelpers.parameter("yUnit", "Vertical unit", "string", "", { description: "What the vertical value is read in." }),
             BlockComponentHelpers.parameter("showBadges", "Show values", "boolean", true),
             BlockComponentHelpers.parameter("color", "Line colour", "colour", "token:stroke.default", { category: "style" }),
             BlockComponentHelpers.parameter("xColor", "Horizontal value colour", "colour", "", { category: "style", description: "Colour of the line standing at the horizontal value and of the badge reading it. Left unset both keep the crosshair's own colours." }),
@@ -843,7 +854,7 @@ var BlockComponentHelpers = {
             };
             // Where the pointer itself is, read under it as a pair.
             const digits = Math.max(0, Math.min(6, Math.floor(Number(parameters.digits))));
-            const pointerText = `${Utils.formatNumber(Number(parameters.valueX), digits)}, ${Utils.formatNumber(Number(parameters.valueY), digits)}`;
+            const pointerText = `${BlockComponentHelpers.readingText(parameters.valueX, digits, parameters.xUnit)}, ${BlockComponentHelpers.readingText(parameters.valueY, digits, parameters.yUnit)}`;
             children.push(...BlockComponentHelpers.badgeNodes("pointer-values", pointerText, pointX, pointY + fontSize * 1.2, badge));
             children.push(...BlockComponentHelpers.pointAtPointerNodes(parameters, box, badge, context));
             return { id: "plot-crosshair", type: "group", children: children };

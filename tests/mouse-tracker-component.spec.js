@@ -827,6 +827,127 @@ test('each variable carries its colour on its own row in the model menu', async 
     expect(await page.evaluate(() => shell.board.shapes.getByName('Tracker').properties.xValueColor)).toBe(chosen.before);
 });
 
+// An object built from blocks shows a value on its toolbar rather than only the name of a term, so a
+// row naming nothing is not blank: it reads what the object is standing at, and the gesture leaves it
+// standing at what it recorded. A blank key is a key that says nothing is on offer there.
+test('a row naming no term reads the value the gesture left it standing at', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page);
+    await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Tracker')));
+    await page.waitForTimeout(300);
+    const readKey = () => page.evaluate(() => document.querySelector('.mdl-component-model-selector .dx-button-content').innerText.split('\n').filter(line => line.trim() !== ''));
+    // Standing at nothing it still reads a pair of values, so the row is visibly there to be named.
+    expect(await readKey()).toEqual(['0.00', '0.00']);
+    await dragAcross(page, 5);
+    const recorded = await tracker(page);
+    const last = recorded.samples.filter(sample => sample.x !== undefined).slice(-1)[0];
+    const held = await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        return { x: shape.properties.xVariable, y: shape.properties.yVariable };
+    });
+    expect(Number(held.x)).toBeCloseTo(last.x, 1);
+    expect(Number(held.y)).toBeCloseTo(last.y, 1);
+    expect(await readKey()).toEqual([Number(held.x).toFixed(2), Number(held.y).toFixed(2)]);
+    // The value was written inside the recording's own edit, so the gesture is still one undo step.
+    await page.evaluate(() => shell.board.invoker.undo());
+    await page.waitForTimeout(200);
+    expect(await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        return { x: shape.properties.xVariable, y: shape.properties.yVariable, samples: shape.properties.samples.length };
+    })).toEqual({ x: '0', y: '0', samples: 0 });
+});
+
+// A number is not a name: a row standing at a value names no term, so the model is handed no column
+// for it and never grows a term called "0".
+test('a row standing at a value is not a term the model is given', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page);
+    await dragAcross(page, 4);
+    expect(await page.evaluate(() => ({
+        sources: Array.from(shell.board.calculator.dataSources.keys()),
+        valueIsTerm: shell.board.calculator.isTerm('0'),
+        lastIteration: shell.board.calculator.getLastIteration()
+    }))).toEqual({ sources: [], valueIsTerm: false, lastIteration: 1 });
+});
+
+// A named term is the model's to write, so the gesture leaves the row naming it alone: the recording
+// reaches the term as measurements rather than as a number written over the name.
+test('a row naming a term keeps the name the gesture cannot write over', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    await dragAcross(page, 4);
+    const recorded = await tracker(page);
+    expect(await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        return { x: shape.properties.xVariable, y: shape.properties.yVariable, lastIteration: shell.board.calculator.getLastIteration() };
+    })).toEqual({ x: 'px', y: 'py', lastIteration: recorded.samples.length });
+});
+
+// The row is the whole control every other term is named on: the term, the unit it is measured in,
+// the case it is read in and the colour it is answered in, all on the one row.
+test('each variable is named on the full term control, units and cases and all', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await page.evaluate(() => { shell.board.calculator.properties.casesCount = 3; shell.reset(); });
+    await page.waitForTimeout(300);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Tracker')));
+    await page.waitForTimeout(300);
+    await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+    await page.waitForTimeout(400);
+    const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .shape-term-row'))
+        .map(row => Array.from(row.children).map(child => child.className.split(' ').find(name => name.startsWith('shape-term-')) ?? '')));
+    expect(rows).toHaveLength(2);
+    for (const row of rows)
+        expect(row).toEqual(expect.arrayContaining(['shape-term-term', 'shape-term-units', 'shape-term-secondary', 'shape-term-color']));
+});
+
+// A value the object worked out for itself is read in what it is measured in, the way every other
+// value on the board is. The unit lives beside the value while the row names no term; a row naming
+// one is read in the unit that term carries, since that is the model's to say.
+test('the values are read in the unit their row is given', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { samples: [{ x: 2, y: 4 }, { x: 5, y: 7 }], xVariableUnit: 'm', yVariableUnit: 's' });
+    const box = await plotBox(page);
+    const readBadges = async () => {
+        await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.4);
+        await page.waitForTimeout(250);
+        return page.evaluate(() => ['pointer-values-text', 'value-x-text', 'value-y-text']
+            .map(id => document.querySelector(`[data-source-id="${id}"]`)?.textContent ?? ''));
+    };
+    const [pointer, axisX, axisY] = await readBadges();
+    expect(pointer).toMatch(/^-?[\d.]+ m, -?[\d.]+ s$/);
+    expect(axisX).toBe('5.00 m');
+    expect(axisY).toBe('7.00 s');
+    // Named, the term brings its own unit and the row's own is left where it was, for whenever the
+    // row stands at a value again.
+    await page.evaluate(() => {
+        shell.setTermUnitCommand('px', 'km');
+        shell.board.shapes.getByName('Tracker').setProperty('xVariable', 'px');
+        shell.board.draw();
+    });
+    const [, namedAxisX] = await readBadges();
+    expect(namedAxisX).toBe('5.00 km');
+    expect(await page.evaluate(() => shell.board.shapes.getByName('Tracker').properties.xVariableUnit)).toBe('m');
+});
+
+// The unit is chosen beside the value it measures, on the row itself, the way a colour is.
+test('the unit is picked on the row the value stands on', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariableUnit: 'm', yVariableUnit: 's' });
+    await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Tracker')));
+    await page.waitForTimeout(300);
+    await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+    await page.waitForTimeout(400);
+    expect(await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .shape-term-units input')).map(input => input.value)))
+        .toEqual(expect.arrayContaining(['m', 's']));
+});
+
 // A tracker saved before a parameter existed carries no value for it. The drawing falls back to the
 // parameter's own default and looks right; a control reading the property would read nothing and
 // show a fallback of its own, which is how a swatch ends up black beside a grey drawing.

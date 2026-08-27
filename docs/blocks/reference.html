@@ -664,6 +664,10 @@
             <tbody>
                 <tr><td><code>memory</code></td><td>string</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>mode</code></td><td>string</td><td><code>"replace"</code></td><td>replace | append</td></tr>
+                <tr><td><code>xVariable</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>xProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>yVariable</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>yProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>limit</code></td><td>number</td><td><code>600</code></td><td>min 1, max 2000</td></tr>
                 <tr><td><code>sampleMs</code></td><td>number</td><td><code>33</code></td><td>min 10, max 1000</td></tr>
                 <tr><td><code>minimumMovePixels</code></td><td>number</td><td><code>0</code></td><td>min 0, max 50</td></tr>
@@ -895,8 +899,10 @@
             <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
             <tbody>
                 <tr><td><code>samples</code></td><td>memory</td><td><code>[]</code></td><td></td></tr>
-                <tr><td><code>xVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
-                <tr><td><code>yVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>xVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>yVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>xVariableUnit</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>yVariableUnit</code></td><td>string</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>xValueColor</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
                 <tr><td><code>yValueColor</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
                 <tr><td><code>characterKey</code></td><td>character</td><td><code>""</code></td><td></td></tr>
@@ -993,6 +999,8 @@
                 <tr><td><code>valueY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
                 <tr><td><code>rows</code></td><td>object</td><td><code>[]</code></td><td></td></tr>
                 <tr><td><code>digits</code></td><td>number</td><td><code>2</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>xUnit</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>yUnit</code></td><td>string</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>showBadges</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
                 <tr><td><code>color</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
                 <tr><td><code>xColor</code></td><td>colour</td><td><code>""</code></td><td></td></tr>

@@ -6192,19 +6192,39 @@ BlockDefinitionLoader.registerAll([
                 "id": "xVariable",
                 "label": "Horizontal",
                 "valueType": "variable",
-                "defaultValue": "",
+                "defaultValue": "0",
                 "category": "model",
                 "colorParameter": "xValueColor",
-                "description": "Model variable that takes the horizontal position of sample n at iteration n. Left empty the recording stays with the object."
+                "unitParameter": "xVariableUnit",
+                "description": "Model variable that takes the horizontal position of sample n at iteration n. Naming none the row holds the value itself: the recording stays with the object and the row reads the horizontal position the last gesture left it standing at."
             },
             {
                 "id": "yVariable",
                 "label": "Vertical",
                 "valueType": "variable",
-                "defaultValue": "",
+                "defaultValue": "0",
                 "category": "model",
                 "colorParameter": "yValueColor",
-                "description": "Model variable that takes the vertical position of sample n at iteration n."
+                "unitParameter": "yVariableUnit",
+                "description": "Model variable that takes the vertical position of sample n at iteration n. Naming none the row holds the value itself, the way the horizontal one does."
+            },
+            {
+                "id": "xVariableUnit",
+                "label": "Horizontal unit",
+                "valueType": "string",
+                "defaultValue": "",
+                "category": "model",
+                "userEditable": false,
+                "description": "What the horizontal value is read in while the row names no term. A row naming one is read in the unit that term carries, picked beside it the way every unit on the board is, so this is what is left for a tracker standing at a plain number."
+            },
+            {
+                "id": "yVariableUnit",
+                "label": "Vertical unit",
+                "valueType": "string",
+                "defaultValue": "",
+                "category": "model",
+                "userEditable": false,
+                "description": "What the vertical value is read in while the row names no term."
             },
             {
                 "id": "xValueColor",
@@ -6651,6 +6671,44 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "xUnitText",
+                "fallback": "",
+                "value": {
+                    "choose": {
+                        "termUnit": {
+                            "parameter": "xVariable"
+                        }
+                    },
+                    "then": {
+                        "termUnit": {
+                            "parameter": "xVariable"
+                        }
+                    },
+                    "otherwise": {
+                        "parameter": "xVariableUnit"
+                    }
+                }
+            },
+            {
+                "id": "yUnitText",
+                "fallback": "",
+                "value": {
+                    "choose": {
+                        "termUnit": {
+                            "parameter": "yVariable"
+                        }
+                    },
+                    "then": {
+                        "termUnit": {
+                            "parameter": "yVariable"
+                        }
+                    },
+                    "otherwise": {
+                        "parameter": "yVariableUnit"
+                    }
+                }
+            },
+            {
                 "id": "steppedCount",
                 "value": {
                     "choose": {
@@ -7032,6 +7090,12 @@ BlockDefinitionLoader.registerAll([
                         },
                         "digits": {
                             "parameter": "precision"
+                        },
+                        "xUnit": {
+                            "parameter": "xUnitText"
+                        },
+                        "yUnit": {
+                            "parameter": "yUnitText"
                         }
                     }
                 },
@@ -7120,6 +7184,14 @@ BlockDefinitionLoader.registerAll([
                         {
                             "type": "track-pointer",
                             "memory": "samples",
+                            "xVariable": {
+                                "parameter": "xVariable"
+                            },
+                            "xProperty": "xVariable",
+                            "yVariable": {
+                                "parameter": "yVariable"
+                            },
+                            "yProperty": "yVariable",
                             "mode": "append",
                             "limit": 600,
                             "minimumMovePixels": 2,

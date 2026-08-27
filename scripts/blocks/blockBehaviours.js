@@ -246,6 +246,13 @@ var BlockBehaviours = {
             properties: {
                 memory: { valueType: "string", defaultValue: "", label: "Memory", bindable: false },
                 mode: { valueType: "string", defaultValue: "replace", enumValues: ["replace", "append"], label: "Mode", bindable: false, description: "Whether a new drag starts a fresh recording or carries on from the last one." },
+                // A row naming a term is written by the recording itself, iteration by iteration. One
+                // naming none holds the value, so the gesture leaves it standing at what it recorded —
+                // the way a dial that is bound to nothing keeps the number it was turned to.
+                xVariable: { valueType: "string", defaultValue: "", label: "Horizontal variable", description: "Term the horizontal value is recorded into, or the value itself." },
+                xProperty: { valueType: "string", defaultValue: "", label: "Horizontal property", bindable: false, description: "Parameter the horizontal value the gesture ended at is written to while that row names no term." },
+                yVariable: { valueType: "string", defaultValue: "", label: "Vertical variable", description: "Term the vertical value is recorded into, or the value itself." },
+                yProperty: { valueType: "string", defaultValue: "", label: "Vertical property", bindable: false, description: "Parameter the vertical value the gesture ended at is written to while that row names no term." },
                 limit: { valueType: "number", defaultValue: 600, minimum: 1, maximum: 2000, label: "Samples kept" },
                 sampleMs: { valueType: "number", defaultValue: 33, minimum: 10, maximum: 1000, label: "Sampling interval", unit: "ms" },
                 minimumMovePixels: { valueType: "number", defaultValue: 0, minimum: 0, maximum: 50, label: "Movement before another sample", unit: "px", description: "How far the pointer must have travelled since the last sample for the clock to take another one. Left at zero the clock records a pause inside a drag as a pause; above it a pointer resting adds nothing where it rests." },

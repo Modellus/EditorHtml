@@ -581,6 +581,10 @@ Capabilities: `interaction`, `memory`, `writes-model`
 | --- | --- | --- | --- |
 | `memory` | string | "" |  |
 | `mode` | string | "replace" | replace \| append |
+| `xVariable` | string | "" |  |
+| `xProperty` | string | "" |  |
+| `yVariable` | string | "" |  |
+| `yProperty` | string | "" |  |
 | `limit` | number | 600 | min 1, max 2000 |
 | `sampleMs` | number | 33 | min 10, max 1000 |
 | `minimumMovePixels` | number | 0 | min 0, max 50 |
@@ -821,8 +825,10 @@ Capabilities: `interaction`, `memory`, `linear`, `writes-model`, `textual`
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
 | `samples` | memory | [] |  |
-| `xVariable` | variable | "" |  |
-| `yVariable` | variable | "" |  |
+| `xVariable` | variable | "0" |  |
+| `yVariable` | variable | "0" |  |
+| `xVariableUnit` | string | "" |  |
+| `yVariableUnit` | string | "" |  |
 | `xValueColor` | colour | "token:axis.color" |  |
 | `yValueColor` | colour | "token:axis.color" |  |
 | `characterKey` | character | "" |  |
@@ -922,6 +928,8 @@ Capabilities: `layout`, `textual`
 | `valueY` | number | 0 |  |
 | `rows` | object | [] |  |
 | `digits` | number | 2 | min 0, max 6 |
+| `xUnit` | string | "" |  |
+| `yUnit` | string | "" |  |
 | `showBadges` | boolean | true |  |
 | `color` | colour | "token:stroke.default" |  |
 | `xColor` | colour | "" |  |

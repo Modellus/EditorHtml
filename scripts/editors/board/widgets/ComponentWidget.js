@@ -120,6 +120,22 @@ class ComponentShape extends BaseShape {
         const missing = BlockObjects.getMissingInstancePropertyDefaults(componentType, this.properties, this.properties.preset ?? "standard");
         if (Object.keys(missing).length > 0)
             Object.assign(this.properties, missing);
+        this.backfillEmptyComponentValues();
+    }
+
+    // A row naming no term holds the number itself, so one saved holding nothing at all is given the
+    // value its definition starts from: left blank the toolbar has nothing to show, and the reader
+    // cannot tell a row that is theirs to name from an object that offers none. Only a row whose
+    // definition starts it at a plain value is filled in — one that starts by naming a term is left
+    // as it was found rather than quietly bound to that term.
+    backfillEmptyComponentValues() {
+        for (const parameter of BlockObjects.getComponentParameters(this.getComponentType())) {
+            if (parameter.valueType !== "variable" || String(this.properties[parameter.id] ?? "") !== "")
+                continue;
+            if (String(parameter.defaultValue ?? "") === "" || !Number.isFinite(Number(parameter.defaultValue)))
+                continue;
+            this.properties[parameter.id] = parameter.defaultValue;
+        }
     }
 
     migrateDefinition(definition) {
@@ -823,7 +839,27 @@ class ComponentShape extends BaseShape {
     writeTrackedSample(input, point) {
         const sample = this.getTrackedSample(input, point);
         this._trackLastPoint = point;
+        this._trackLastSample = sample;
         this.appendMemoryRow(this._trackMemory, BlockMemory.createRow("", sample.x, sample.y), input.limit);
+    }
+
+    // A row naming a term is written by the recording itself, iteration by iteration. A row naming
+    // none holds the value, so the gesture leaves it standing at the sample it ended on — the way a
+    // dial bound to nothing keeps the number it was turned to. It is written once the gesture is
+    // over, inside the edit the recording already opened, so a drag is still one thing to undo.
+    writeTrackedValues(input) {
+        const sample = this._trackLastSample;
+        if (!sample)
+            return;
+        this.writeTrackedValue(input.xVariable, input.xProperty, sample.x);
+        this.writeTrackedValue(input.yVariable, input.yProperty, sample.y);
+    }
+
+    writeTrackedValue(variableInput, propertyInput, value) {
+        const property = this.getBehaviourProperty({ property: propertyInput });
+        if (property === null || this.namesTerm(variableInput))
+            return;
+        this.setProperty(property, Utils.roundToPrecision(value, this.board.calculator.getPrecision()));
     }
 
     // A pointer that has not travelled far enough since the last sample has nothing new to say: the
@@ -877,6 +913,8 @@ class ComponentShape extends BaseShape {
         if (!this._trackRecording)
             return;
         this._trackRecording = false;
+        this.writeTrackedValues(this._trackInput);
+        this._trackLastSample = null;
         this.dragEnd();
         this.refreshModelData();
     }
@@ -893,13 +931,21 @@ class ComponentShape extends BaseShape {
         return `memory:${this.id}:${parameterId}`;
     }
 
+    // A row holding a plain number names no term: it is the value the object is standing at, and a
+    // number is not a name the model can be handed a column of.
+    namesTerm(value) {
+        const name = String(value ?? "");
+        return name !== "" && !Number.isFinite(Number(name));
+    }
+
     buildMemorySeries(parameter) {
         const fieldTerms = {};
         for (const [field, termParameter] of Object.entries(parameter.termParameters ?? {})) {
             const termName = String(this.properties[termParameter] ?? "");
             // A name the model works out for itself would be overwritten by the recording, so the
-            // column is left out and the model keeps its own answer.
-            if (termName === "" || !this.board.calculator.isEditable(termName))
+            // column is left out and the model keeps its own answer. A row standing at a value names
+            // nothing, so there is no column to write at all.
+            if (!this.namesTerm(termName) || !this.board.calculator.isEditable(termName))
                 continue;
             fieldTerms[field] = termName;
         }
