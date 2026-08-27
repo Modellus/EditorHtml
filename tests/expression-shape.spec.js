@@ -196,7 +196,7 @@ test.describe('Differential expansion caret placement', () => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
         await focusExpression(page, 'Expr1');
-        await page.keyboard.type('dtheta/dt=10');
+        await page.keyboard.type('dtheta/dt=10', { delay: 60 });
         await expect.poll(() => getExpressionValue(page, 'Expr1')).toContain('\\frac{\\differentialD{\\theta}}{\\differentialD{t}}=10');
     });
 
@@ -568,7 +568,7 @@ test.describe('Keyboard shortcuts', () => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
         await focusExpression(page, 'Expr1');
-        await page.keyboard.type('x<=1');
+        await page.keyboard.type('x<=1', { delay: 60 });
         await page.waitForTimeout(500);
         const value = await getExpressionValue(page, 'Expr1');
         expect(value).toMatch(/\\le/);
