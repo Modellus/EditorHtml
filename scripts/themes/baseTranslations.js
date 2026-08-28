@@ -255,7 +255,20 @@ class BaseTranslations {
                 "Scale Linear": "Linear",
                 "Scale Logarithmic": "Logarítmica",
                 "Opacity": "Opacidade",
-                "Pulse": "Pulsar"
+                "Pulse": "Pulsar",
+                "Catalog Video": "Vídeo do Catálogo",
+                "No video available": "Sem vídeos disponíveis",
+                "Failed to load videos": "Não foi possível carregar os vídeos",
+                "Listen to this audio": "Ouvir este áudio",
+                "Watch this video": "Ver este vídeo",
+                "Preview this data": "Pré-visualizar estes dados",
+                "Play this animation": "Reproduzir esta animação",
+                "This character has no animation": "Esta personagem não tem animação",
+                "Failed to load the preview": "Não foi possível carregar a pré-visualização",
+                "No data available": "Sem dados disponíveis",
+                "The preview shows the start of the file": "A pré-visualização mostra o início do ficheiro",
+                "rows": "linhas",
+                "columns": "colunas"
             };
         this.languages["en-US"] =
             {
@@ -511,7 +524,20 @@ class BaseTranslations {
                 "Scale Linear": "Linear",
                 "Scale Logarithmic": "Logarithmic",
                 "Opacity": "Opacity",
-                "Pulse": "Pulse"
+                "Pulse": "Pulse",
+                "Catalog Video": "Catalog Video",
+                "No video available": "No video available",
+                "Failed to load videos": "Failed to load videos",
+                "Listen to this audio": "Listen to this audio",
+                "Watch this video": "Watch this video",
+                "Preview this data": "Preview this data",
+                "Play this animation": "Play this animation",
+                "This character has no animation": "This character has no animation",
+                "Failed to load the preview": "Failed to load the preview",
+                "No data available": "No data available",
+                "The preview shows the start of the file": "The preview shows the start of the file",
+                "rows": "rows",
+                "columns": "columns"
             };
     }
 

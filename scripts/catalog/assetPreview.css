@@ -1,0 +1,165 @@
+.mdl-asset-preview {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.mdl-asset-preview-button {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: rgba(17, 24, 39, 0.62);
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0.9;
+    transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+}
+
+.mdl-asset-preview-button:hover {
+    background: rgba(17, 24, 39, 0.88);
+    opacity: 1;
+    transform: scale(1.06);
+}
+
+.mdl-asset-preview.is-playing .mdl-asset-preview-button {
+    opacity: 0.65;
+}
+
+.mdl-asset-preview.is-playing .mdl-asset-preview-button:hover {
+    opacity: 1;
+}
+
+/* The walk is the whole point of a character card, so the button that started it gets out of the
+   way of the figure rather than standing on it. */
+.mdl-asset-preview--character.is-playing .mdl-asset-preview-button,
+.mdl-asset-preview--character.is-playing .mdl-asset-preview-button:hover {
+    opacity: 0.15;
+}
+
+.mdl-asset-preview.is-unavailable .mdl-asset-preview-button {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.mdl-asset-preview-progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 4px;
+    border-radius: 0 0 10px 10px;
+    background: rgba(17, 24, 39, 0.35);
+    overflow: hidden;
+}
+
+.mdl-asset-preview-progress-fill {
+    width: 0;
+    height: 100%;
+    background: #fff;
+    transition: width 0.1s linear;
+}
+
+.mdl-asset-preview-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 10px;
+    background: var(--c-surface-alt, #f0f2f5);
+    display: none;
+}
+
+.mdl-asset-preview-frame.is-visible {
+    display: block;
+}
+
+.mdl-asset-preview-popup .dx-popup-content {
+    overflow: hidden;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.mdl-asset-preview-video {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    background: #000;
+    object-fit: contain;
+}
+
+.mdl-asset-preview-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 8px;
+    opacity: 0.6;
+}
+
+.mdl-asset-preview-data {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 8px;
+}
+
+.mdl-asset-preview-data-summary {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.mdl-asset-preview-data-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    border: 1px solid var(--dx-color-border, #e5e7eb);
+    border-radius: 8px;
+}
+
+.mdl-asset-preview-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.mdl-asset-preview-data-table th,
+.mdl-asset-preview-data-table td {
+    padding: 5px 12px;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--dx-color-border, #e5e7eb);
+}
+
+.mdl-asset-preview-data-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-weight: 600;
+    background: var(--dx-color-bg, #fff);
+}
+
+.mdl-asset-preview-data-note {
+    font-size: 12px;
+    opacity: 0.65;
+}
+
+.mdl-catalog-data-thumb-wrap {
+    position: relative;
+}
+
+/* A catalogue card carries its education and science pills along the bottom of the thumbnail, so
+   the button that plays it sits above them rather than across them. */
+.card-thumb-wrap .mdl-asset-preview {
+    padding-bottom: 22px;
+}

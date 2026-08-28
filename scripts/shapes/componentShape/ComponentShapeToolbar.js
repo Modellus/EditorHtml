@@ -621,4 +621,4 @@ var ComponentShapeToolbarMixin = {
     }
 };
 
-if (typeof ComponentShape !== "undefined") Object.assign(ComponentShape.prototype, CharacterPickerMixin, CatalogAudioPickerMixin, ComponentShapeToolbarMixin);
+if (typeof ComponentShape !== "undefined") Object.assign(ComponentShape.prototype, CharacterPickerMixin, CatalogAssetPickerMixin, ComponentShapeToolbarMixin);

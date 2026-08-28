@@ -69,6 +69,19 @@ var MediaShapeToolbarMixin = {
                 }
             },
             {
+                text: "Catalog Video",
+                buildControl: $container => {
+                    $('<div>').appendTo($container).dxButton({
+                        icon: "fa-light fa-video",
+                        stylingMode: "text",
+                        onClick: () => {
+                            this._mediaSettingsDropdownElement.dxDropDownButton("instance").close();
+                            this.showCatalogVideoPopup();
+                        }
+                    });
+                }
+            },
+            {
                 text: "Keep Proportions",
                 buildControl: $container => {
                     $('<div>').appendTo($container).dxSwitch({
@@ -112,4 +125,4 @@ var MediaShapeToolbarMixin = {
         });
     }
 };
-if (typeof MediaShape !== "undefined") Object.assign(MediaShape.prototype, CatalogAudioPickerMixin, MediaShapeToolbarMixin);
+if (typeof MediaShape !== "undefined") Object.assign(MediaShape.prototype, CatalogAssetPickerMixin, MediaShapeToolbarMixin);

@@ -203,10 +203,11 @@ var CharacterPickerMixin = {
                         : `<div class="mdl-catalog-data-thumb-placeholder"><i class="fa-light fa-person-running"></i></div>`;
                     grid.insertAdjacentHTML("beforeend", `
                         <div class="mdl-catalog-data-card${isSelected ? " selected" : ""}" id="${cardId}" data-character-id="${this.escapeCharacterPickerHtml(character.id)}" data-character-title="${this.escapeCharacterPickerHtml((character.title || "").toLowerCase())}">
-                            ${thumbHtml}
+                            <div class="mdl-catalog-data-thumb-wrap">${thumbHtml}</div>
                             <div class="mdl-catalog-data-title">${this.escapeCharacterPickerHtml(character.title || "")}</div>
                         </div>`);
                     const card = grid.lastElementChild;
+                    AssetPreview.character(card.querySelector(".mdl-catalog-data-thumb-wrap"), { characterId: character.id, apiClient: apiClient, translations: this.board.translations });
                     card.addEventListener("click", () => {
                         host.querySelectorAll(".mdl-catalog-data-card").forEach(other => other.classList.remove("selected"));
                         card.classList.add("selected");

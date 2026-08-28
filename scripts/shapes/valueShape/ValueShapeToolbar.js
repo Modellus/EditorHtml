@@ -71,4 +71,4 @@ var ValueShapeToolbarMixin = {
         this._fontDropdownElement.appendTo(itemElement);
     }
 };
-if (typeof ValueShape !== "undefined") Object.assign(ValueShape.prototype, CatalogAudioPickerMixin, ValueShapeToolbarMixin);
+if (typeof ValueShape !== "undefined") Object.assign(ValueShape.prototype, CatalogAssetPickerMixin, ValueShapeToolbarMixin);

@@ -85,6 +85,13 @@ class MediaShape extends BaseShape {
         this.onImageControlChanged(audioUrl, "audio/*");
     }
 
+    applyCatalogVideo(video) {
+        const videoUrl = video?.asset_url;
+        if (!videoUrl)
+            return;
+        this.onImageControlChanged(videoUrl, "video/*");
+    }
+
     onImageControlCleared() {
         this.properties.imageBase64 = "";
         this.properties.videoUrl = "";

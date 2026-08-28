@@ -338,7 +338,16 @@ CatalogTranslations._strings = {
     "usage": "usage",
     "users": "users",
     "different user countries": "different user countries",
-    "Untitled model": "Untitled model"
+    "Untitled model": "Untitled model",
+    "Listen to this audio": "Listen to this audio",
+    "Watch this video": "Watch this video",
+    "Preview this data": "Preview this data",
+    "Play this animation": "Play this animation",
+    "This character has no animation": "This character has no animation",
+    "Failed to load the preview": "Failed to load the preview",
+    "The preview shows the start of the file": "The preview shows the start of the file",
+    "rows": "rows",
+    "columns": "columns"
   },
   "pt-PT": {
     "My Models": "Os meus Modelos",
@@ -550,6 +559,15 @@ CatalogTranslations._strings = {
     "usage": "utilizações",
     "users": "utilizadores",
     "different user countries": "países diferentes de utilizadores",
-    "Untitled model": "Modelo sem título"
+    "Untitled model": "Modelo sem título",
+    "Listen to this audio": "Ouvir este áudio",
+    "Watch this video": "Ver este vídeo",
+    "Preview this data": "Pré-visualizar estes dados",
+    "Play this animation": "Reproduzir esta animação",
+    "This character has no animation": "Esta personagem não tem animação",
+    "Failed to load the preview": "Não foi possível carregar a pré-visualização",
+    "The preview shows the start of the file": "A pré-visualização mostra o início do ficheiro",
+    "rows": "linhas",
+    "columns": "colunas"
   }
 };

@@ -242,10 +242,16 @@ class DataTableShape extends BaseValueTableShape {
                         : `<div class="mdl-catalog-data-thumb-placeholder"><i class="fa-light fa-table"></i></div>`;
                     grid.insertAdjacentHTML("beforeend", `
                         <div class="mdl-catalog-data-card" data-id="${dataset.id ?? ""}">
-                            ${thumbHtml}
+                            <div class="mdl-catalog-data-thumb-wrap">${thumbHtml}</div>
                             <div class="mdl-catalog-data-title">${dataset.title ?? "Untitled"}</div>
                         </div>`);
                     const cardElement = grid.lastElementChild;
+                    AssetPreview.data(cardElement.querySelector(".mdl-catalog-data-thumb-wrap"), {
+                        assetUrl: dataset.asset_url,
+                        title: dataset.title,
+                        translations: this.board.translations,
+                        popupWrapperClass: this.getShapeNestedOverlayWrapperAttr().class
+                    });
                     cardElement.addEventListener("click", () => {
                         grid.querySelectorAll(".mdl-catalog-data-card").forEach(c => c.classList.remove("selected"));
                         cardElement.classList.add("selected");
@@ -280,7 +286,7 @@ class DataTableShape extends BaseValueTableShape {
                 width: 680,
                 height: 520,
                 dragEnabled: true,
-                hideOnOutsideClick: true,
+                hideOnOutsideClick: event => !$(event.target).closest(".mdl-asset-preview-popup").length,
                 showCloseButton: true,
                 wrapperAttr: this.getShapeOverlayWrapperAttr("mdl-catalog-data-popup"),
                 toolbarItems: [

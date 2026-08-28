@@ -796,6 +796,22 @@ class ModelsApp {
     this.charactersFeed = null;
   }
 
+  // A catalogue card is a still picture of something that moves or sounds. The preview is bound to
+  // the thumbnail itself, so the sound, the film, the walk and the table are reached from the card
+  // rather than from a page the reader has to open first.
+  bindCardAssetPreview(host, data, assetType) {
+    const wrapElement = host.querySelector(".card-thumb-wrap");
+    const options = { assetUrl: data.asset_url, characterId: data.id, apiClient: this.apiClient, title: data.title, translations: this.translations };
+    if (assetType === "audio")
+      AssetPreview.audio(wrapElement, options);
+    else if (assetType === "video")
+      AssetPreview.video(wrapElement, options);
+    else if (assetType === "data")
+      AssetPreview.data(wrapElement, options);
+    else if (assetType === "character")
+      AssetPreview.character(wrapElement, options);
+  }
+
   ensureCharacterCardView() {
     if (this.characterCardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
     const CardView = DevExpress.ui.dxCardView;
@@ -862,6 +878,7 @@ class ModelsApp {
           </div>
         `;
         host.innerHTML = cardMarkup;
+        this.bindCardAssetPreview(host, data, data.asset_type ?? "character");
         const cardDescElement = host.querySelector(".card-desc");
         const editButton = host.querySelector(".edit-button");
         const deleteButton = host.querySelector(".delete-button");
@@ -966,6 +983,7 @@ class ModelsApp {
           </div>
         `;
         host.innerHTML = cardMarkup;
+        this.bindCardAssetPreview(host, data, "video");
         const cardDescElement = host.querySelector(".card-desc");
         const editButton = host.querySelector(".edit-button");
         const deleteButton = host.querySelector(".delete-button");
@@ -1140,6 +1158,7 @@ class ModelsApp {
           </div>
         `;
         host.innerHTML = cardMarkup;
+        this.bindCardAssetPreview(host, data, "audio");
         const cardDescElement = host.querySelector(".card-desc");
         const editButton = host.querySelector(".edit-button");
         const deleteButton = host.querySelector(".delete-button");
@@ -1488,6 +1507,7 @@ class ModelsApp {
           </div>
         `;
         host.innerHTML = cardMarkup;
+        this.bindCardAssetPreview(host, data, "data");
         const cardDescElement = host.querySelector(".card-desc");
         const editButton = host.querySelector(".edit-button");
         const deleteButton = host.querySelector(".delete-button");
