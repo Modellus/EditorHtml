@@ -6032,10 +6032,1010 @@ BlockDefinitionLoader.registerAll([
     },
     {
         "schemaVersion": "1.0.0",
+        "type": "mechanical-wave",
+        "category": "component",
+        "displayName": "Mechanical wave",
+        "description": "A mechanical wave drawn as a chain of oscillators, each receiving the disturbance with the delay of its distance from the source.",
+        "icon": "fa-light fa-wave-sine",
+        "tags": [
+            "object",
+            "wave",
+            "oscillation",
+            "transverse",
+            "longitudinal",
+            "propagation"
+        ],
+        "capabilities": [
+            "reads-model",
+            "oscillation"
+        ],
+        "preview": {
+            "parameters": {
+                "wavefront": false,
+                "elements": 24
+            }
+        },
+        "parameters": [
+            {
+                "id": "displacement",
+                "label": "Displacement",
+                "valueType": "variable",
+                "defaultValue": "",
+                "category": "model",
+                "description": "A name the model defined over element indices, as y\\left[i\\right]=... does. The first oscillator is element 1. Left empty, the object works the wave out itself from the amplitude, frequency, speed and phase below."
+            },
+            {
+                "id": "amplitude",
+                "label": "Amplitude",
+                "valueType": "variable",
+                "defaultValue": "2",
+                "category": "model",
+                "description": "Greatest displacement of an oscillator."
+            },
+            {
+                "id": "frequency",
+                "label": "Frequency",
+                "valueType": "variable",
+                "defaultValue": "0.5",
+                "category": "model"
+            },
+            {
+                "id": "speed",
+                "label": "Speed",
+                "valueType": "variable",
+                "defaultValue": "5",
+                "category": "model",
+                "description": "Propagation speed. A negative speed sends the wave the other way."
+            },
+            {
+                "id": "phase",
+                "label": "Initial phase",
+                "valueType": "variable",
+                "defaultValue": "0",
+                "category": "model",
+                "description": "Phase of the first oscillator at the start of the run, in radians."
+            },
+            {
+                "id": "length",
+                "label": "Length",
+                "valueType": "number",
+                "defaultValue": 20,
+                "category": "scale",
+                "minimum": 0.001,
+                "description": "How long the chain is in model units. The spacing between oscillators follows from it."
+            },
+            {
+                "id": "elements",
+                "label": "Oscillators",
+                "valueType": "number",
+                "defaultValue": 30,
+                "category": "display",
+                "minimum": 2,
+                "maximum": 200,
+                "bindable": false
+            },
+            {
+                "id": "orientation",
+                "label": "Orientation",
+                "valueType": "string",
+                "defaultValue": "transverse",
+                "category": "display",
+                "enumValues": [
+                    "transverse",
+                    "longitudinal"
+                ]
+            },
+            {
+                "id": "wavefront",
+                "label": "Wavefront",
+                "valueType": "boolean",
+                "defaultValue": true,
+                "category": "display",
+                "description": "Holds each oscillator at rest until the wave reaches it. Turned off, the whole chain is already oscillating."
+            },
+            {
+                "id": "elementSize",
+                "label": "Element size",
+                "valueType": "number",
+                "defaultValue": 4,
+                "category": "display",
+                "minimum": 1,
+                "maximum": 30
+            },
+            {
+                "id": "referenceIndex",
+                "label": "Reference oscillator",
+                "valueType": "number",
+                "defaultValue": 1,
+                "category": "display",
+                "minimum": 0,
+                "maximum": 200,
+                "description": "The oscillator drawn in its own colour, so one of them can be followed. Zero marks none."
+            },
+            {
+                "id": "showArrows",
+                "label": "Velocity arrows",
+                "valueType": "boolean",
+                "defaultValue": false,
+                "category": "display"
+            },
+            {
+                "id": "showLine",
+                "label": "Connecting line",
+                "valueType": "boolean",
+                "defaultValue": false,
+                "category": "display"
+            },
+            {
+                "id": "waveColor",
+                "label": "Colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.accent",
+                "category": "style"
+            },
+            {
+                "id": "referenceColor",
+                "label": "Reference colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.strong",
+                "category": "style"
+            }
+        ],
+        "locals": [
+            {
+                "id": "w",
+                "value": {
+                    "parameter": "$width"
+                }
+            },
+            {
+                "id": "h",
+                "value": {
+                    "parameter": "$height"
+                }
+            },
+            {
+                "id": "t",
+                "value": {
+                    "independent": "value"
+                }
+            },
+            {
+                "id": "amp",
+                "value": {
+                    "parameter": "amplitude",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "freq",
+                "value": {
+                    "parameter": "frequency",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "spd",
+                "value": {
+                    "parameter": "speed",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "ph",
+                "value": {
+                    "parameter": "phase",
+                    "as": "number"
+                }
+            },
+            {
+                "id": "wf",
+                "value": {
+                    "choose": {
+                        "parameter": "wavefront"
+                    },
+                    "then": {
+                        "constant": 1
+                    },
+                    "otherwise": {
+                        "constant": 0
+                    }
+                }
+            },
+            {
+                "id": "count",
+                "formula": "\\max\\left(2,\\min\\left(200,round\\left(elements\\right)\\right)\\right)"
+            },
+            {
+                "id": "gaps",
+                "formula": "count-1"
+            },
+            {
+                "id": "spacingPixels",
+                "formula": "\\frac{w}{gaps}"
+            },
+            {
+                "id": "spacing",
+                "formula": "\\frac{length}{gaps}"
+            },
+            {
+                "id": "ppu",
+                "formula": "\\frac{w}{length}"
+            },
+            {
+                "id": "omega",
+                "formula": "2\\cdot\\pi\\cdot freq"
+            },
+            {
+                "id": "delay",
+                "formula": "\\frac{spacing}{spd}"
+            },
+            {
+                "id": "centerY",
+                "formula": "\\frac{h}{2}"
+            },
+            {
+                "id": "barHeight",
+                "formula": "h\\cdot0.6"
+            },
+            {
+                "id": "barTop",
+                "formula": "centerY-\\frac{barHeight}{2}"
+            },
+            {
+                "id": "headSize",
+                "formula": "\\max\\left(2,\\min\\left(5,elementSize\\right)\\right)"
+            },
+            {
+                "id": "arrowScale",
+                "formula": "0.2"
+            }
+        ],
+        "root": {
+            "id": "wave",
+            "type": "group",
+            "children": [
+                {
+                    "id": "link",
+                    "type": "line",
+                    "when": {
+                        "choose": {
+                            "parameter": "orientation"
+                        },
+                        "equals": {
+                            "constant": "longitudinal"
+                        },
+                        "then": {
+                            "constant": 0
+                        },
+                        "otherwise": {
+                            "parameter": "showLine"
+                        }
+                    },
+                    "bindings": {
+                        "x1": {
+                            "formula": "i\\cdot spacingPixels",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                }
+                            }
+                        },
+                        "y1": {
+                            "formula": "centerY-d\\cdot ppu",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                },
+                                "d": {
+                                    "choose": {
+                                        "parameter": "displacement"
+                                    },
+                                    "then": {
+                                        "element": {
+                                            "parameter": "displacement"
+                                        },
+                                        "index": {
+                                            "formula": "i+1",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "x2": {
+                            "formula": "\\left(i+1\\right)\\cdot spacingPixels",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                }
+                            }
+                        },
+                        "y2": {
+                            "formula": "centerY-d\\cdot ppu",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                },
+                                "d": {
+                                    "choose": {
+                                        "parameter": "displacement"
+                                    },
+                                    "then": {
+                                        "element": {
+                                            "parameter": "displacement"
+                                        },
+                                        "index": {
+                                            "formula": "i+2",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-\\left(i+1\\right)\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(\\left(i+1\\right)\\cdot delay-t\\right)\\right)\\right)",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "stroke": {
+                            "parameter": "waveColor"
+                        },
+                        "strokeWidth": {
+                            "token": "strokeWidth.hairline"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "gaps"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "arrow-shaft",
+                    "type": "line",
+                    "when": {
+                        "choose": {
+                            "parameter": "orientation"
+                        },
+                        "equals": {
+                            "constant": "longitudinal"
+                        },
+                        "then": {
+                            "constant": 0
+                        },
+                        "otherwise": {
+                            "choose": {
+                                "parameter": "displacement"
+                            },
+                            "then": {
+                                "constant": 0
+                            },
+                            "otherwise": {
+                                "parameter": "showArrows"
+                            }
+                        }
+                    },
+                    "bindings": {
+                        "x1": {
+                            "formula": "i\\cdot spacingPixels",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                }
+                            }
+                        },
+                        "y1": {
+                            "formula": "centerY-d\\cdot ppu",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                },
+                                "d": {
+                                    "choose": {
+                                        "parameter": "displacement"
+                                    },
+                                    "then": {
+                                        "element": {
+                                            "parameter": "displacement"
+                                        },
+                                        "index": {
+                                            "formula": "i+1",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "x2": {
+                            "formula": "i\\cdot spacingPixels",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                }
+                            }
+                        },
+                        "y2": {
+                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                },
+                                "d": {
+                                    "choose": {
+                                        "parameter": "displacement"
+                                    },
+                                    "then": {
+                                        "element": {
+                                            "parameter": "displacement"
+                                        },
+                                        "index": {
+                                            "formula": "i+1",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "stroke": {
+                            "choose": {
+                                "formula": "i+1",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "equals": {
+                                "parameter": "referenceIndex"
+                            },
+                            "then": {
+                                "parameter": "referenceColor"
+                            },
+                            "otherwise": {
+                                "parameter": "waveColor"
+                            }
+                        },
+                        "strokeWidth": {
+                            "token": "strokeWidth.hairline"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "count"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "arrow-barb-left",
+                    "type": "line",
+                    "when": {
+                        "choose": {
+                            "parameter": "orientation"
+                        },
+                        "equals": {
+                            "constant": "longitudinal"
+                        },
+                        "then": {
+                            "constant": 0
+                        },
+                        "otherwise": {
+                            "choose": {
+                                "parameter": "displacement"
+                            },
+                            "then": {
+                                "constant": 0
+                            },
+                            "otherwise": {
+                                "parameter": "showArrows"
+                            }
+                        }
+                    },
+                    "bindings": {
+                        "x1": {
+                            "formula": "i\\cdot spacingPixels",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                }
+                            }
+                        },
+                        "y1": {
+                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                },
+                                "d": {
+                                    "choose": {
+                                        "parameter": "displacement"
+                                    },
+                                    "then": {
+                                        "element": {
+                                            "parameter": "displacement"
+                                        },
+                                        "index": {
+                                            "formula": "i+1",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "x2": {
+                            "formula": "i\\cdot spacingPixels-headSize",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                }
+                            }
+                        },
+                        "y2": {
+                            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                },
+                                "d": {
+                                    "choose": {
+                                        "parameter": "displacement"
+                                    },
+                                    "then": {
+                                        "element": {
+                                            "parameter": "displacement"
+                                        },
+                                        "index": {
+                                            "formula": "i+1",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "stroke": {
+                            "choose": {
+                                "formula": "i+1",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "equals": {
+                                "parameter": "referenceIndex"
+                            },
+                            "then": {
+                                "parameter": "referenceColor"
+                            },
+                            "otherwise": {
+                                "parameter": "waveColor"
+                            }
+                        },
+                        "strokeWidth": {
+                            "token": "strokeWidth.hairline"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "count"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "arrow-barb-right",
+                    "type": "line",
+                    "when": {
+                        "choose": {
+                            "parameter": "orientation"
+                        },
+                        "equals": {
+                            "constant": "longitudinal"
+                        },
+                        "then": {
+                            "constant": 0
+                        },
+                        "otherwise": {
+                            "choose": {
+                                "parameter": "displacement"
+                            },
+                            "then": {
+                                "constant": 0
+                            },
+                            "otherwise": {
+                                "parameter": "showArrows"
+                            }
+                        }
+                    },
+                    "bindings": {
+                        "x1": {
+                            "formula": "i\\cdot spacingPixels",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                }
+                            }
+                        },
+                        "y1": {
+                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                },
+                                "d": {
+                                    "choose": {
+                                        "parameter": "displacement"
+                                    },
+                                    "then": {
+                                        "element": {
+                                            "parameter": "displacement"
+                                        },
+                                        "index": {
+                                            "formula": "i+1",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "x2": {
+                            "formula": "i\\cdot spacingPixels+headSize",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                }
+                            }
+                        },
+                        "y2": {
+                            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                },
+                                "d": {
+                                    "choose": {
+                                        "parameter": "displacement"
+                                    },
+                                    "then": {
+                                        "element": {
+                                            "parameter": "displacement"
+                                        },
+                                        "index": {
+                                            "formula": "i+1",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "stroke": {
+                            "choose": {
+                                "formula": "i+1",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "equals": {
+                                "parameter": "referenceIndex"
+                            },
+                            "then": {
+                                "parameter": "referenceColor"
+                            },
+                            "otherwise": {
+                                "parameter": "waveColor"
+                            }
+                        },
+                        "strokeWidth": {
+                            "token": "strokeWidth.hairline"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "count"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "oscillator",
+                    "type": "circle",
+                    "when": {
+                        "choose": {
+                            "parameter": "orientation"
+                        },
+                        "equals": {
+                            "constant": "longitudinal"
+                        },
+                        "then": {
+                            "constant": 0
+                        },
+                        "otherwise": {
+                            "constant": 1
+                        }
+                    },
+                    "bindings": {
+                        "centerX": {
+                            "formula": "i\\cdot spacingPixels",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                }
+                            }
+                        },
+                        "centerY": {
+                            "formula": "centerY-d\\cdot ppu",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                },
+                                "d": {
+                                    "choose": {
+                                        "parameter": "displacement"
+                                    },
+                                    "then": {
+                                        "element": {
+                                            "parameter": "displacement"
+                                        },
+                                        "index": {
+                                            "formula": "i+1",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "radius": {
+                            "parameter": "elementSize"
+                        },
+                        "fill": {
+                            "choose": {
+                                "formula": "i+1",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "equals": {
+                                "parameter": "referenceIndex"
+                            },
+                            "then": {
+                                "parameter": "referenceColor"
+                            },
+                            "otherwise": {
+                                "parameter": "waveColor"
+                            }
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none"
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "count"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "bar",
+                    "type": "rect",
+                    "when": {
+                        "choose": {
+                            "parameter": "orientation"
+                        },
+                        "equals": {
+                            "constant": "longitudinal"
+                        },
+                        "then": {
+                            "constant": 1
+                        },
+                        "otherwise": {
+                            "constant": 0
+                        }
+                    },
+                    "bindings": {
+                        "x": {
+                            "formula": "i\\cdot spacingPixels+d\\cdot ppu-\\frac{elementSize}{2}",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                },
+                                "d": {
+                                    "choose": {
+                                        "parameter": "displacement"
+                                    },
+                                    "then": {
+                                        "element": {
+                                            "parameter": "displacement"
+                                        },
+                                        "index": {
+                                            "formula": "i+1",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "otherwise": {
+                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "y": {
+                            "parameter": "barTop"
+                        },
+                        "width": {
+                            "parameter": "elementSize"
+                        },
+                        "height": {
+                            "parameter": "barHeight"
+                        },
+                        "fill": {
+                            "choose": {
+                                "formula": "i+1",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "equals": {
+                                "parameter": "referenceIndex"
+                            },
+                            "then": {
+                                "parameter": "referenceColor"
+                            },
+                            "otherwise": {
+                                "parameter": "waveColor"
+                            }
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none"
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "count"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "schemaVersion": "1.0.0",
         "type": "mouse-tracker",
         "category": "component",
         "displayName": "Mouse tracker",
-        "description": "Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.",
+        "description": "Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. A variable the model works out for itself is read rather than written: the gesture says where the model's input now stands, the definitions say what comes out of it, and that is the value the line is drawn through and the value the run remembers, so a recording made against a definition is in the model's own coordinates. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.",
         "icon": "fa-light fa-arrow-pointer",
         "tags": [
             "object",

@@ -92,7 +92,7 @@ test.describe('domains in the expression shape', () => {
             + 'b\\in\\left[1..5\\right]\\\\'
             + 'c\\in\\left[0..10..2\\right]\\\\'
             + 'd\\in\\left[6,7\\right]\\\\'
-            + 'e_{1}\\in\\left(6,7\\right]\\\\'
+            + 'k\\in\\left(6,7\\right]\\\\'
             + 'f\\in\\{1,2,3\\}\\cup\\left[6,7\\right]\\\\'
             + 'g\\in\\mathbb{R}\\\\'
             + 'h\\in\\mathbb{Z}\\\\'
@@ -106,6 +106,7 @@ test.describe('domains in the expression shape', () => {
         expect(await domainText(page, 'b')).toBe('[1..5]');
         expect(await domainText(page, 'c')).toBe('[0..10..2]');
         expect(await domainText(page, 'd')).toBe('[6, 7]');
+        expect(await domainText(page, 'k')).toBe('(6, 7]');
         expect(await domainText(page, 'f')).toBe('{1, 2, 3} ∪ [6, 7]');
         expect(await domainText(page, 'g')).toBe('ℝ');
         expect(await domainText(page, 'h')).toBe('ℤ');

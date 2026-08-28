@@ -3,7 +3,7 @@
     "type": "mouse-tracker",
     "category": "component",
     "displayName": "Mouse tracker",
-    "description": "Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.",
+    "description": "Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. A variable the model works out for itself is read rather than written: the gesture says where the model's input now stands, the definitions say what comes out of it, and that is the value the line is drawn through and the value the run remembers, so a recording made against a definition is in the model's own coordinates. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.",
     "icon": "fa-light fa-arrow-pointer",
     "tags": [
         "object",

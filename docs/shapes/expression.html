@@ -326,6 +326,21 @@
             </tbody>
         </table>
 
+        <h3>Indexed Terms (Element References)</h3>
+        <p>A term can stand for many values at once — the oscillators of a wave, say — by being defined over an element index instead of over time. The index is bound by the assignment, so it never becomes a variable of the model:</p>
+        <pre><code>y\left[i\right] = A\cdot\cos\left(k\cdot i - \omega\cdot t\right)</code></pre>
+        <table class="docs-table">
+            <thead><tr><th>Syntax</th><th>Meaning</th></tr></thead>
+            <tbody>
+                <tr><td><code>y\left[i\right] = …</code></td><td>Defines y over element indices; the body is evaluated once per element asked for</td></tr>
+                <tr><td><code>y\left[3\right]</code></td><td>Element 3 of y</td></tr>
+                <tr><td><code>y\left[i\right]</code></td><td>Element i, where i is any expression</td></tr>
+                <tr><td><code>s = y + z</code></td><td>Superposition: s is indexed too, added element by element</td></tr>
+            </tbody>
+        </table>
+        <p>This is a third index space beside the two above: <code>y_3</code> reads y at iteration 3 and <code>y\left(3\right)</code> reads it at independent value 3, while only the square brackets read an element. An indexed term holds no single value, so it is read for its elements rather than shown as a number.</p>
+        <p>A Mechanical wave object draws one: name the indexed term in its <em>Displacement</em> and it shows an oscillator per element. Two travelling waves added this way — one with <code>-\omega\cdot t</code>, one with <code>+\omega\cdot t</code> — give a standing wave with fixed nodes.</p>
+
         <h3>Units Annotation</h3>
         <p>Append display-only units after any statement:</p>
         <pre><code>v = 10 \quad\textcolor{gray}{\mathrm{m/s}}</code></pre>

@@ -125,6 +125,35 @@ test.describe('Named term parts', () => {
         expect(await page.evaluate(() => shell.board.calculator.getTermsNames())).toContain('v.x');
     });
 
+    test('a name built on E is a term and not Euler\u2019s number', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('E.c=3', { delay: 60 });
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toContain('E_{\\!c}');
+        await page.evaluate(() => shell.reset());
+        await page.waitForTimeout(300);
+        const result = await page.evaluate(() => ({
+            terms: shell.board.calculator.getTermsNames(),
+            failingRowIndexes: shell.board.shapes.getByName('Expr1').failingRowIndexes
+        }));
+        expect(result.terms).toContain('E.c');
+        expect(result.failingRowIndexes).toEqual([]);
+    });
+
+    test('a row the parser cannot read to the end is reported instead of dropped', async ({ page }) => {
+        await setupEditor(page);
+        const errors = await page.evaluate(() => {
+            const calculator = new Calculator();
+            return calculator.findRowParseErrors(['x=1 y=2', 'E=1', 'x=2']);
+        });
+        expect(errors[0]).not.toBeNull();
+        expect(errors[1]).not.toBeNull();
+        expect(errors[2]).toBeNull();
+    });
+
     test('a dotted name is written as a named subscript wherever it appears', async ({ page }) => {
         await setupEditor(page);
         const result = await page.evaluate(() => ({

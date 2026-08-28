@@ -837,10 +837,66 @@ class ComponentShape extends BaseShape {
     }
 
     writeTrackedSample(input, point) {
-        const sample = this.getTrackedSample(input, point);
+        const sample = this.resolveTrackedSample(input, this.getTrackedSample(input, point));
         this._trackLastPoint = point;
         this._trackLastSample = sample;
         this.appendMemoryRow(this._trackMemory, BlockMemory.createRow("", sample.x, sample.y), input.limit);
+    }
+
+    // A sample is a pair of values, and the model may already have something to say about one of
+    // them: an axis naming a term the model works out for itself — the y in y = 2·t — is not the
+    // pointer's to place. The gesture only says where the model's own input now stands; the
+    // definitions say what comes out of it, and what comes out is what the run is made of. So the
+    // pointer is written in, the model is worked through on the row being read back, and its answer
+    // takes the place of the pointer's own value — the line is drawn through it, the row remembers
+    // it, and the recording is in the coordinates the model defines rather than the pointer's.
+    // The two sides are the two the recording already tells apart: the side it publishes as a column
+    // is the side it writes in, and the side it leaves the model to answer is the side it reads back.
+    // An object naming no such term is left alone entirely, so it costs a recording nothing.
+    resolveTrackedSample(input, sample) {
+        if (!this.namesComputedTerm(input.xVariable) && !this.namesComputedTerm(input.yVariable))
+            return sample;
+        const calculator = this.board.calculator;
+        const caseNumber = this.getTermCaseNumber("caseNumber");
+        const iteration = calculator.getIteration();
+        this.writeTrackedInput(input.xVariable, sample.x, iteration, caseNumber);
+        this.writeTrackedInput(input.yVariable, sample.y, iteration, caseNumber);
+        calculator.calculate(iteration);
+        return {
+            x: this.readComputedTerm(input.xVariable, sample.x, caseNumber),
+            y: this.readComputedTerm(input.yVariable, sample.y, caseNumber)
+        };
+    }
+
+    // Where the pointer reached is where the model now stands, put on the row about to be read back
+    // and nowhere else. The recording's own record of itself is the column it publishes when the
+    // gesture ends, and that column is what drives every iteration of the next run; a sample written
+    // down as a starting point as well would sit in front of it on the first row.
+    writeTrackedInput(variableInput, value, iteration, caseNumber) {
+        const name = String(variableInput ?? "");
+        if (!this.namesTerm(name) || !this.board.calculator.isEditable(name))
+            return;
+        this.board.calculator.setTermValueOnIteration(name, value, iteration, caseNumber);
+    }
+
+    // What the model answers, unclamped: the ends of the plot bound where a pointer can be, because
+    // a pointer is a place, but they have no say over what a definition works out to. Squeezing the
+    // answer into them would put a number in the recording that the model never gave. A definition
+    // with nothing to say on this row — a division by nothing, a root of a negative — leaves the
+    // pointer's own value standing rather than losing the row.
+    readComputedTerm(variableInput, value, caseNumber) {
+        if (!this.namesComputedTerm(variableInput))
+            return value;
+        const computed = Number(this.board.calculator.getByName(String(variableInput), caseNumber));
+        return Number.isFinite(computed) ? computed : value;
+    }
+
+    // A term the model works out for itself from the definitions it was given. It is exactly the
+    // term the recording leaves out of the columns it publishes, and for the same reason: the
+    // model's answer is the model's, and the recording would only be overwriting it.
+    namesComputedTerm(variableInput) {
+        const name = String(variableInput ?? "");
+        return this.namesTerm(name) && this.board.calculator.isTerm(name) && !this.board.calculator.isEditable(name);
     }
 
     // A row naming a term is written by the recording itself, iteration by iteration. A row naming

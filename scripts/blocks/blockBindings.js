@@ -1,5 +1,5 @@
 class BlockBindings {
-    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "opaque", "termUnit"];
+    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "opaque", "termUnit", "element"];
 
     static isBinding(value) {
         if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -28,6 +28,10 @@ class BlockBindings {
     // is how far the run has got, "name" is the term that holds it.
     static independent(field = "value") {
         return { independent: field };
+    }
+
+    static element(termBinding, indexBinding) {
+        return { element: termBinding, index: indexBinding };
     }
 
     // Whether a colour paints anything at all. A part of a drawing is left out by being given no
@@ -174,6 +178,8 @@ class BlockBindings {
             return this.resolveVariable(binding, context, fallbackValue);
         if (kind === "independent")
             return this.resolveIndependent(binding, fallbackValue);
+        if (kind === "element")
+            return this.resolveElement(binding, context, fallbackValue);
         if (kind === "opaque")
             return BlockBindings.isOpaqueColour(this.resolve(binding.opaque, context, "")) ? 1 : 0;
         if (kind === "expression")
@@ -295,6 +301,19 @@ class BlockBindings {
         if (!Number.isFinite(value))
             return fallbackValue;
         return value;
+    }
+
+    // One element of a name the model defined over element indices, as `y\left[i\right]=...` does.
+    // The name is read from whatever binding supplies it, so an object points at a wave the reader
+    // names rather than at a term written into the definition.
+    resolveElement(binding, context, fallbackValue) {
+        const termName = String(this.resolve(binding.element, context, "")).trim();
+        const index = Number(this.resolve(binding.index, context, NaN));
+        if (termName === "" || !Number.isFinite(index))
+            return fallbackValue;
+        const values = this.getModelValues(this.getCaseNumber(binding, context));
+        const value = Number(this.calculator?.system?.getElementValue(termName, index, values));
+        return Number.isFinite(value) ? value : fallbackValue;
     }
 
     resolveIndependent(binding, fallbackValue) {
@@ -421,6 +440,14 @@ class BlockBindings {
             return { variables: [], parameters: [binding.memoryCount] };
         if (kind === "independent")
             return { variables: [String(this.calculator?.properties?.independent?.name ?? "")].filter(name => name !== ""), parameters: [] };
+        if (kind === "element") {
+            const termDependencies = this.getBindingDependencies(binding.element);
+            const indexDependencies = this.getBindingDependencies(binding.index);
+            return {
+                variables: termDependencies.variables.concat(indexDependencies.variables),
+                parameters: termDependencies.parameters.concat(indexDependencies.parameters)
+            };
+        }
         if (kind === "opaque")
             return this.getBindingDependencies(binding.opaque);
         return { variables: [], parameters: [] };

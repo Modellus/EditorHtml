@@ -684,7 +684,7 @@
         </table>
         <h2 id="components">Components</h2>
         <p>Ready-made assemblies. A node names one as its <code>type</code> and sets these under <code>parameters</code>.</p>
-        <p class="block-index"><a href="#block-calculator">calculator</a> <a href="#block-circular-gauge">circular-gauge</a> <a href="#block-clock">clock</a> <a href="#block-compass">compass</a> <a href="#block-dial-face">dial-face</a> <a href="#block-key-cap">key-cap</a> <a href="#block-label-ring">label-ring</a> <a href="#block-memory-list">memory-list</a> <a href="#block-memory-trace">memory-trace</a> <a href="#block-mouse-tracker">mouse-tracker</a> <a href="#block-orbit-system">orbit-system</a> <a href="#block-plot-axes">plot-axes</a> <a href="#block-plot-crosshair">plot-crosshair</a> <a href="#block-plot-grid">plot-grid</a> <a href="#block-pointer-hand">pointer-hand</a> <a href="#block-pointer-ring">pointer-ring</a> <a href="#block-rotating-vector">rotating-vector</a> <a href="#block-seven-segment-display">seven-segment-display</a> <a href="#block-speedometer">speedometer</a> <a href="#block-steering-wheel">steering-wheel</a> <a href="#block-thermometer">thermometer</a> <a href="#block-tick-ring">tick-ring</a></p>
+        <p class="block-index"><a href="#block-calculator">calculator</a> <a href="#block-circular-gauge">circular-gauge</a> <a href="#block-clock">clock</a> <a href="#block-compass">compass</a> <a href="#block-dial-face">dial-face</a> <a href="#block-key-cap">key-cap</a> <a href="#block-label-ring">label-ring</a> <a href="#block-mechanical-wave">mechanical-wave</a> <a href="#block-memory-list">memory-list</a> <a href="#block-memory-trace">memory-trace</a> <a href="#block-mouse-tracker">mouse-tracker</a> <a href="#block-orbit-system">orbit-system</a> <a href="#block-plot-axes">plot-axes</a> <a href="#block-plot-crosshair">plot-crosshair</a> <a href="#block-plot-grid">plot-grid</a> <a href="#block-pointer-hand">pointer-hand</a> <a href="#block-pointer-ring">pointer-ring</a> <a href="#block-rotating-vector">rotating-vector</a> <a href="#block-seven-segment-display">seven-segment-display</a> <a href="#block-speedometer">speedometer</a> <a href="#block-steering-wheel">steering-wheel</a> <a href="#block-thermometer">thermometer</a> <a href="#block-tick-ring">tick-ring</a></p>
         <h3 id="block-calculator"><code>calculator</code> — Calculator</h3>
         <p>Calculator whose working is held by the object itself: four functions on a narrow one, and a scientific pad of powers, roots, trigonometry and logarithms beside the digits once it is wide enough to hold one. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.</p>
         <p class="block-meta">Capabilities: <code>interaction</code> <code>textual</code> <code>reads-model</code> <code>writes-model</code> <code>memory</code></p>
@@ -849,6 +849,29 @@
                 <tr><td><code>color</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
             </tbody>
         </table>
+        <h3 id="block-mechanical-wave"><code>mechanical-wave</code> — Mechanical wave</h3>
+        <p>A mechanical wave drawn as a chain of oscillators, each receiving the disturbance with the delay of its distance from the source.</p>
+        <p class="block-meta">Capabilities: <code>reads-model</code> <code>oscillation</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>displacement</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>amplitude</code></td><td>variable</td><td><code>"2"</code></td><td></td></tr>
+                <tr><td><code>frequency</code></td><td>variable</td><td><code>"0.5"</code></td><td></td></tr>
+                <tr><td><code>speed</code></td><td>variable</td><td><code>"5"</code></td><td></td></tr>
+                <tr><td><code>phase</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>length</code></td><td>number</td><td><code>20</code></td><td>min 0.001</td></tr>
+                <tr><td><code>elements</code></td><td>number</td><td><code>30</code></td><td>min 2, max 200</td></tr>
+                <tr><td><code>orientation</code></td><td>string</td><td><code>"transverse"</code></td><td>transverse | longitudinal</td></tr>
+                <tr><td><code>wavefront</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>elementSize</code></td><td>number</td><td><code>4</code></td><td>min 1, max 30</td></tr>
+                <tr><td><code>referenceIndex</code></td><td>number</td><td><code>1</code></td><td>min 0, max 200</td></tr>
+                <tr><td><code>showArrows</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>showLine</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>waveColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>referenceColor</code></td><td>colour</td><td><code>"token:stroke.strong"</code></td><td></td></tr>
+            </tbody>
+        </table>
         <h3 id="block-memory-list"><code>memory-list</code> — Memory list</h3>
         <p>The rows of a memory drawn as a list, newest first, with the label on the left and the number on the right. Rows can carry actions, so choosing one puts what it holds back into the object.</p>
         <p class="block-meta">Capabilities: <code>memory</code> <code>textual</code> <code>interaction</code></p>
@@ -893,7 +916,7 @@
             </tbody>
         </table>
         <h3 id="block-mouse-tracker"><code>mouse-tracker</code> — Mouse tracker</h3>
-        <p>Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.</p>
+        <p>Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. A variable the model works out for itself is read rather than written: the gesture says where the model's input now stands, the definitions say what comes out of it, and that is the value the line is drawn through and the value the run remembers, so a recording made against a definition is in the model's own coordinates. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.</p>
         <p class="block-meta">Capabilities: <code>interaction</code> <code>memory</code> <code>linear</code> <code>writes-model</code> <code>textual</code></p>
         <table class="docs-table">
             <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>

@@ -515,6 +515,12 @@ interface Singularity {
 declare class System {
     static readonly ZERO: number;
     static readonly INFINITY: number;
+    /**
+     * The key an element index travels under inside a row of values.  It is not a term: it exists
+     * only for the span of an element read, so a name standing for many values - the oscillators of
+     * a wave - knows which one is being asked for.
+     */
+    static readonly ELEMENT_INDEX: string;
     private _independent;
     private _iterationTerm;
     private _iterationTermStart;
@@ -554,6 +560,10 @@ declare class System {
     /** The terms carrying a domain, so an unconstrained model pays nothing for the checks. */
     private constrainedTermNames;
     private readonly domainLocations;
+    /** Names that stand for a whole run of values addressed by index rather than for one number. */
+    private readonly indexedSources;
+    private readonly resolvingElements;
+    private indexedDependentNames;
     constructor(independent?: string, iterationTerm?: string, iterationTermStart?: number);
     get independent(): Term;
     set independent(name: string);
@@ -727,6 +737,33 @@ declare class System {
     }, caseNumber?: number): number;
     /** The iteration whose independent is closest to `value`, or NaN before the first row exists. */
     private independentToIteration;
+    /**
+     * Registers a name that stands for many values at once - the oscillators of a wave - resolved by
+     * element index.  The resolver is called only for a name the model does not assign; an assignment
+     * wins, so `y=x+z` over three waves defines y element by element.  Registration is dropped by
+     * `clear`, so whatever holds the values registers again whenever the model is reset.
+     */
+    registerIndexedSource(name: string, resolver: (index: number, values: {
+        [name: string]: number;
+    }) => number): void;
+    removeIndexedSource(name: string): void;
+    isIndexedSource(name: string): boolean;
+    /**
+     * Reads one element of an indexed name.  This is a third index space beside the two that already
+     * exist: a subscript indexes iterations and `w\left(3\right)` indexes the independent, while
+     * `w\left[3\right]` indexes the elements a single name stands for.  An index that is not a whole
+     * finite number reads NaN, as does a name that is neither assigned nor registered.
+     */
+    getElementValue(name: string, index: number, values: {
+        [name: string]: number;
+    }): number;
+    /**
+     * The assigned names that read an indexed name, and so stand for many values themselves.  Worked
+     * out once and kept until the expressions or the registered sources change, because it is asked
+     * for on every row.
+     */
+    private getIndexedDependentNames;
+    private branchReadsIndexedSource;
     getInitialByExpression(expression: Expression, iteration?: number): number;
     getTermsNames(): string[];
     getDifferentialTermsNames(): string[];
@@ -772,6 +809,16 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitProgram?: (ctx: ProgramContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.legacyUnits`.
+     * @param ctx the parse tree
+     */
+    enterLegacyUnits?: (ctx: LegacyUnitsContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.legacyUnits`.
+     * @param ctx the parse tree
+     */
+    exitLegacyUnits?: (ctx: LegacyUnitsContext) => void;
     /**
      * Enter a parse tree produced by `LatexMathParser.statement`.
      * @param ctx the parse tree
@@ -850,6 +897,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitFunction?: (ctx: FunctionContext) => void;
+    /**
+     * Enter a parse tree produced by the `FunctionElement`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     */
+    enterFunctionElement?: (ctx: FunctionElementContext) => void;
+    /**
+     * Exit a parse tree produced by the `FunctionElement`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     */
+    exitFunctionElement?: (ctx: FunctionElementContext) => void;
     /**
      * Enter a parse tree produced by the `FunctionSubscript`
      * labeled alternative in `LatexMathParser.assignment`.
@@ -1398,6 +1457,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitIRnd?: (ctx: IRndContext) => void;
+    /**
+     * Enter a parse tree produced by the `ElementIndex`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterElementIndex?: (ctx: ElementIndexContext) => void;
+    /**
+     * Exit a parse tree produced by the `ElementIndex`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitElementIndex?: (ctx: ElementIndexContext) => void;
     /**
      * Enter a parse tree produced by the `Cosine`
      * labeled alternative in `LatexMathParser.expression`.
@@ -2049,6 +2120,26 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitDomainCloseRound?: (ctx: DomainCloseRoundContext) => void;
     /**
+     * Enter a parse tree produced by `LatexMathParser.elementOpen`.
+     * @param ctx the parse tree
+     */
+    enterElementOpen?: (ctx: ElementOpenContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.elementOpen`.
+     * @param ctx the parse tree
+     */
+    exitElementOpen?: (ctx: ElementOpenContext) => void;
+    /**
+     * Enter a parse tree produced by `LatexMathParser.elementClose`.
+     * @param ctx the parse tree
+     */
+    enterElementClose?: (ctx: ElementCloseContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.elementClose`.
+     * @param ctx the parse tree
+     */
+    exitElementClose?: (ctx: ElementCloseContext) => void;
+    /**
      * Enter a parse tree produced by `LatexMathParser.builtinDomain`.
      * @param ctx the parse tree
      */
@@ -2109,6 +2200,16 @@ declare class LatexMathListener implements ParseTreeListener {
      */
     exitName?: (ctx: NameContext) => void;
     /**
+     * Enter a parse tree produced by `LatexMathParser.eulerLetter`.
+     * @param ctx the parse tree
+     */
+    enterEulerLetter?: (ctx: EulerLetterContext) => void;
+    /**
+     * Exit a parse tree produced by `LatexMathParser.eulerLetter`.
+     * @param ctx the parse tree
+     */
+    exitEulerLetter?: (ctx: EulerLetterContext) => void;
+    /**
      * Enter a parse tree produced by `LatexMathParser.namedIndex`.
      * @param ctx the parse tree
      */
@@ -2138,6 +2239,16 @@ declare class ProgramContext extends antlr.ParserRuleContext {
     constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
     statement(): StatementContext;
     EOF(): antlr.TerminalNode;
+    legacyUnits(): LegacyUnitsContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class LegacyUnitsContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    name(): NameContext;
+    expression(): ExpressionContext;
     get ruleIndex(): number;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
@@ -2201,6 +2312,17 @@ declare class DomainConstraintContext extends AssignmentContext {
 declare class FunctionContext extends AssignmentContext {
     constructor(ctx: AssignmentContext);
     name(): NameContext;
+    expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class FunctionElementContext extends AssignmentContext {
+    constructor(ctx: AssignmentContext);
+    name(): NameContext[];
+    name(i: number): NameContext | null;
+    elementOpen(): ElementOpenContext;
+    elementClose(): ElementCloseContext;
     expression(): ExpressionContext;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
@@ -2596,6 +2718,16 @@ declare class NthRootContext extends ExpressionContext {
 declare class IRndContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class ElementIndexContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    name(): NameContext;
+    elementOpen(): ElementOpenContext;
+    expression(): ExpressionContext;
+    elementClose(): ElementCloseContext;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -3077,6 +3209,20 @@ declare class DomainCloseRoundContext extends antlr.ParserRuleContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class ElementOpenContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class ElementCloseContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class BuiltinDomainContext extends antlr.ParserRuleContext {
     constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
     BLACKBOARD(): antlr.TerminalNode | null;
@@ -3099,6 +3245,8 @@ declare class ImplicitMultiplicandContext extends antlr.ParserRuleContext {
     name(): NameContext | null;
     expression(): ExpressionContext[];
     expression(i: number): ExpressionContext | null;
+    elementOpen(): ElementOpenContext | null;
+    elementClose(): ElementCloseContext | null;
     get ruleIndex(): number;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
@@ -3132,6 +3280,14 @@ declare class NameContext extends antlr.ParserRuleContext {
     namedIndex(i: number): NamedIndexContext | null;
     DOT(): antlr.TerminalNode[];
     DOT(i: number): antlr.TerminalNode | null;
+    eulerLetter(): EulerLetterContext | null;
+    get ruleIndex(): number;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
+declare class EulerLetterContext extends antlr.ParserRuleContext {
+    constructor(parent: antlr.ParserRuleContext | null, invokingState: number);
     get ruleIndex(): number;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
@@ -3174,6 +3330,12 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitProgram?: (ctx: ProgramContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.legacyUnits`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitLegacyUnits?: (ctx: LegacyUnitsContext) => Result;
     /**
      * Visit a parse tree produced by `LatexMathParser.statement`.
      * @param ctx the parse tree
@@ -3220,6 +3382,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitFunction?: (ctx: FunctionContext) => Result;
+    /**
+     * Visit a parse tree produced by the `FunctionElement`
+     * labeled alternative in `LatexMathParser.assignment`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitFunctionElement?: (ctx: FunctionElementContext) => Result;
     /**
      * Visit a parse tree produced by the `FunctionSubscript`
      * labeled alternative in `LatexMathParser.assignment`.
@@ -3540,6 +3709,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitIRnd?: (ctx: IRndContext) => Result;
+    /**
+     * Visit a parse tree produced by the `ElementIndex`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitElementIndex?: (ctx: ElementIndexContext) => Result;
     /**
      * Visit a parse tree produced by the `Cosine`
      * labeled alternative in `LatexMathParser.expression`.
@@ -3924,6 +4100,18 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitDomainCloseRound?: (ctx: DomainCloseRoundContext) => Result;
     /**
+     * Visit a parse tree produced by `LatexMathParser.elementOpen`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitElementOpen?: (ctx: ElementOpenContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.elementClose`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitElementClose?: (ctx: ElementCloseContext) => Result;
+    /**
      * Visit a parse tree produced by `LatexMathParser.builtinDomain`.
      * @param ctx the parse tree
      * @return the visitor result
@@ -3959,6 +4147,12 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      * @return the visitor result
      */
     visitName?: (ctx: NameContext) => Result;
+    /**
+     * Visit a parse tree produced by `LatexMathParser.eulerLetter`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitEulerLetter?: (ctx: EulerLetterContext) => Result;
     /**
      * Visit a parse tree produced by `LatexMathParser.namedIndex`.
      * @param ctx the parse tree
@@ -4269,6 +4463,7 @@ declare class Simplifier {
 }
 
 declare class Visitor extends LatexMathVisitor<Branch> {
+    private readonly boundIndexNames;
     private readonly system;
     private isParsingUnits;
     private readonly domainBuilder;
@@ -4349,6 +4544,20 @@ declare class Visitor extends LatexMathVisitor<Branch> {
      */
     private hasClosedForm;
     visitFunctionApplication: (context: FunctionApplicationContext) => Branch;
+    /**
+     * `w\left[3\right]` reads element 3 of a name that stands for many values.  The index is an
+     * expression, so `w\left[i\right]` follows a term, and it is read when the expression runs rather
+     * than when it is parsed - the same rule the other two index spaces follow.
+     */
+    visitElementIndex: (context: ElementIndexContext) => Branch;
+    /**
+     * `y\left[i\right]=...` defines a name over element indices rather than over time: the index is
+     * bound by the assignment and the body is evaluated once per element that is asked for.  Nothing
+     * is computed up front, so the name has no count of its own - whatever reads it decides how many
+     * elements it wants.  The name gets no scalar expression, which is what leaves `y` free to mean
+     * "the element in hand" wherever it is read bare.
+     */
+    visitFunctionElement: (context: FunctionElementContext) => Branch;
     visitPower: (context: PowerContext) => Branch;
     private factorial;
     visitFactorial: (context: FactorialContext) => Branch;

@@ -236,6 +236,10 @@ class Calculator extends EventTarget {
         return this.dataSources.get(sourceId) ?? null;
     }
 
+    isIndexedSource(name) {
+        return this.system.isIndexedSource(name);
+    }
+
     applyDataSources() {
         const merged = Calculator.mergeDataSources(Array.from(this.dataSources.values()));
         this.system.loadTerms(merged.names, merged.values);
@@ -911,20 +915,31 @@ class Calculator extends EventTarget {
     // recording it would turn computed values into saved scenario overrides that the next run then
     // re-applies as initial values.
     setComputedTermValue(name = "", value = 0, iteration = this.system.iteration, caseNumber = 1) {
-        const system = this.system;
-        var term = system.getTerm(name);
-        if (!term)
+        if (!this.setTermValueOnIteration(name, value, iteration, caseNumber))
             return;
-        value = this.resolveTermValue(name, value);
+        const normalizedIteration = Math.max(1, Math.floor(Number(iteration) || 1));
+        if (normalizedIteration == 1)
+            this.system.setInitialByName(name, this.resolveTermValue(name, value), normalizedIteration, caseNumber);
+    }
+
+    // The value on the row and nothing else: nothing is written down about where a run should start
+    // from. That is what a question put to the definitions needs — the asker wants the answer, not a
+    // model that starts from what it asked about ever after — and it is what the writes that do
+    // record a starting point are built out of.
+    setTermValueOnIteration(name = "", value = 0, iteration = this.system.iteration, caseNumber = 1) {
+        const system = this.system;
+        const term = system.getTerm(name);
+        if (!term)
+            return false;
+        const numericValue = this.resolveTermValue(name, value);
         const normalizedIteration = Math.max(1, Math.floor(Number(iteration) || 1));
         // system.set only ever writes on the last iteration, which is not where the user is looking
         // when the player replays already-computed rows.
         if (normalizedIteration >= system.lastIteration)
-            system.set(term, value, caseNumber);
+            system.set(term, numericValue, caseNumber);
         else if (system.isEditable(term))
-            system.getIteration(normalizedIteration, caseNumber)[name] = value;
-        if (normalizedIteration == 1)
-            system.setInitialByName(name, value, normalizedIteration, caseNumber);
+            system.getIteration(normalizedIteration, caseNumber)[name] = numericValue;
+        return true;
     }
 
     getFinalIteration() {

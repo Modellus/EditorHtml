@@ -337,6 +337,7 @@ handles that rescale an axis.
 | `{ "memory": "history", "row": …, "field": "x", "from": "end" }` | a memory, a row, or a field |
 | `{ "memoryCount": "history" }` | how many rows it holds |
 | `{ "termUnit": { "parameter": "valueVariable" } }` | what the term a parameter names is measured in, as the model holds it |
+| `{ "element": <binding>, "index": <binding> }` | one element of a name the model defined over element indices with `y\left[i\right]=…`; the name comes from a binding, so an object points at whichever one the reader names |
 
 ### Colours, fonts and sizes are not the object's to invent
 

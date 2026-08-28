@@ -771,6 +771,30 @@ Capabilities: `radial`, `angular`, `textual`
 | `fontWeight` | number | 400 | min 100, max 900 |
 | `color` | colour | "token:text.primary" |  |
 
+### `mechanical-wave` — Mechanical wave
+
+A mechanical wave drawn as a chain of oscillators, each receiving the disturbance with the delay of its distance from the source.
+
+Capabilities: `reads-model`, `oscillation`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `displacement` | variable | "" |  |
+| `amplitude` | variable | "2" |  |
+| `frequency` | variable | "0.5" |  |
+| `speed` | variable | "5" |  |
+| `phase` | variable | "0" |  |
+| `length` | number | 20 | min 0.001 |
+| `elements` | number | 30 | min 2, max 200 |
+| `orientation` | string | "transverse" | transverse \| longitudinal |
+| `wavefront` | boolean | true |  |
+| `elementSize` | number | 4 | min 1, max 30 |
+| `referenceIndex` | number | 1 | min 0, max 200 |
+| `showArrows` | boolean | false |  |
+| `showLine` | boolean | false |  |
+| `waveColor` | colour | "token:stroke.accent" |  |
+| `referenceColor` | colour | "token:stroke.strong" |  |
+
 ### `memory-list` — Memory list
 
 The rows of a memory drawn as a list, newest first, with the label on the left and the number on the right. Rows can carry actions, so choosing one puts what it holds back into the object.
@@ -818,7 +842,7 @@ Capabilities: `memory`, `linear`
 
 ### `mouse-tracker` — Mouse tracker
 
-Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.
+Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. A variable the model works out for itself is read rather than written: the gesture says where the model's input now stands, the definitions say what comes out of it, and that is the value the line is drawn through and the value the run remembers, so a recording made against a definition is in the model's own coordinates. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.
 
 Capabilities: `interaction`, `memory`, `linear`, `writes-model`, `textual`
 

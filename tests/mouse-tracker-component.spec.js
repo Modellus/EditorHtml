@@ -1215,3 +1215,121 @@ test('what a drawing works out for itself never becomes a model variable', async
     for (const local of ['plotX', 'plotW', 'gap', 'pad', 'sampleCount', 'markerX', 'head'])
         expect(termNames, local).not.toContain(local);
 });
+
+// A model that works something out of its own: px is left undefined, so it is a parameter the
+// recording is allowed to write, and w is a function the model works out from it.
+async function addComputedModel(page, expression) {
+    await page.evaluate(() => modellus.shape.addExpression('Values'));
+    await page.waitForTimeout(300);
+    await page.evaluate(text => {
+        shell.board.shapes.getByName('Values').properties.expression = text;
+        shell.reset();
+    }, expression);
+    await page.waitForTimeout(400);
+}
+
+test('an axis naming a term the model works out for itself records what the model says', async ({ page }) => {
+    await setupBoard(page);
+    await addComputedModel(page, 'w=\\frac{px}{2}');
+    await addTracker(page, { xVariable: 'px', yVariable: 'w' });
+    await dragAcross(page);
+    const recorded = await tracker(page);
+    expect(recorded.samples.length).toBeGreaterThan(4);
+    const kinds = await page.evaluate(() => ({
+        pxEditable: shell.board.calculator.isEditable('px'),
+        wEditable: shell.board.calculator.isEditable('w')
+    }));
+    // px is the side the recording speaks for; w is the side the model answers.
+    expect(kinds.pxEditable).toBe(true);
+    expect(kinds.wEditable).toBe(false);
+    for (const sample of recorded.samples)
+        expect(BlockMemoryValue(sample, 'y')).toBeCloseTo(BlockMemoryValue(sample, 'x') / 2, 3);
+    // The gesture climbs the plot as it crosses it, so the pointer's own height is nowhere near
+    // half of where it has reached: what was recorded is the definition, not the pointer.
+    const last = recorded.samples[recorded.samples.length - 1];
+    expect(BlockMemoryValue(last, 'x')).toBeGreaterThan(9);
+    expect(BlockMemoryValue(last, 'y')).toBeLessThan(6);
+});
+
+test('the line drawn is the line the model works out', async ({ page }) => {
+    await setupBoard(page);
+    await addComputedModel(page, 'w=\\frac{px}{2}');
+    await addTracker(page, { xVariable: 'px', yVariable: 'w' });
+    await dragAcross(page);
+    const recorded = await tracker(page);
+    // The axes run 0 to 10 both ways, so the plot rectangle is the whole of the mapping: a value
+    // sits that fraction of the way across it, and that fraction of the way up from its floor.
+    const drawn = await page.evaluate(() => {
+        const plot = document.querySelector('[data-source-id="plot"]');
+        return {
+            points: document.querySelector('[data-source-component="memory-trace"] polyline')?.getAttribute('points') ?? '',
+            left: Number(plot.getAttribute('x')),
+            bottom: Number(plot.getAttribute('y')) + Number(plot.getAttribute('height')),
+            width: Number(plot.getAttribute('width')),
+            height: Number(plot.getAttribute('height'))
+        };
+    });
+    const points = drawn.points.trim().split(' ').map(pair => pair.split(',').map(Number));
+    expect(points).toHaveLength(recorded.samples.length);
+    for (let index = 0; index < points.length; index++) {
+        const value = BlockMemoryValue(recorded.samples[index], 'x');
+        expect(points[index][0]).toBeCloseTo(drawn.left + (value / 10) * drawn.width, 1);
+        expect(points[index][1]).toBeCloseTo(drawn.bottom - (value / 2 / 10) * drawn.height, 1);
+    }
+});
+
+test('the ends of the plot never stand in for what a definition works out to', async ({ page }) => {
+    await setupBoard(page);
+    await addComputedModel(page, 'w=3\\cdot px');
+    await addTracker(page, { xVariable: 'px', yVariable: 'w', maximumY: 10 });
+    await dragAcross(page);
+    const recorded = await tracker(page);
+    for (const sample of recorded.samples)
+        expect(BlockMemoryValue(sample, 'y')).toBeCloseTo(BlockMemoryValue(sample, 'x') * 3, 3);
+    // Three times what the pointer reached runs well past the top of the plot, and the recording
+    // holds it: an axis end is where a pointer stops, not what the model is allowed to answer.
+    expect(BlockMemoryValue(recorded.samples[recorded.samples.length - 1], 'y')).toBeGreaterThan(10);
+});
+
+test('a chain of definitions is worked through before the sample is taken', async ({ page }) => {
+    await setupBoard(page);
+    await addComputedModel(page, 'g=px+1\\\\w=2\\cdot g');
+    await addTracker(page, { xVariable: 'px', yVariable: 'w' });
+    await dragAcross(page);
+    const recorded = await tracker(page);
+    expect(recorded.samples.length).toBeGreaterThan(4);
+    for (const sample of recorded.samples)
+        expect(BlockMemoryValue(sample, 'y')).toBeCloseTo((BlockMemoryValue(sample, 'x') + 1) * 2, 3);
+});
+
+test('the side the model answers is left out of the columns the recording publishes', async ({ page }) => {
+    await setupBoard(page);
+    await addComputedModel(page, 'w=\\frac{px}{2}');
+    await addTracker(page, { xVariable: 'px', yVariable: 'w' });
+    await dragAcross(page, 4);
+    const recorded = await tracker(page);
+    await page.evaluate(() => shell.board.calculator.play());
+    await page.waitForFunction(count => shell.board.calculator.getLastCalculatedIteration() >= count, recorded.samples.length, { timeout: 20000 });
+    const model = await page.evaluate(() => {
+        const calculator = shell.board.calculator;
+        const shape = shell.board.shapes.getByName('Tracker');
+        calculator.pause();
+        const perIteration = [];
+        for (let iteration = 1; iteration <= calculator.getLastIteration(); iteration++) {
+            calculator.setIteration(iteration);
+            calculator.calculate(iteration);
+            perIteration.push({ px: calculator.getByName('px', 1), w: calculator.getByName('w', 1) });
+        }
+        return {
+            perIteration: perIteration,
+            held: calculator.getDataSourceValues(shape.getMemorySourceId('samples'), 'px'),
+            heldComputed: calculator.getDataSourceValues(shape.getMemorySourceId('samples'), 'w')
+        };
+    });
+    // The recording hands the model the side it speaks for and nothing else; the model works the
+    // other side out again, iteration by iteration, and arrives at what was recorded.
+    expect(model.held).toEqual(recorded.samples.map(sample => sample.x ?? 0));
+    expect(model.heldComputed).toEqual([]);
+    for (let index = 0; index < recorded.samples.length; index++)
+        expect(model.perIteration[index].w).toBeCloseTo(recorded.samples[index].y ?? 0, 2);
+});

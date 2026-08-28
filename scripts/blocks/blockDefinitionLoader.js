@@ -64,11 +64,13 @@ class BlockDefinitionLoader {
         return scope;
     }
 
-    // The names a formula reads, found lexically: commands go first, then number literals — but
-    // only where a digit starts a number rather than ending a name, so "orbitRadius0" stays whole
-    // while "1e5" does not leave an "e5" behind.
+    // The names a formula reads, found lexically: the four functions spelled in plain letters go
+    // first, since nothing marks them as functions once the parentheses are gone; then commands,
+    // then number literals — but only where a digit starts a number rather than ending a name, so
+    // "orbitRadius0" stays whole while "1e5" does not leave an "e5" behind.
     static readNames(latex) {
         const bare = String(latex)
+            .replace(Utils.getPlainFunctionCallPattern(), "$1 ")
             .replace(/\\[A-Za-z]+/g, " ")
             .replace(/(?<![A-Za-z0-9])\d+(\.\d+)?([eE][+-]?\d+)?/g, " ");
         return Array.from(new Set(bare.match(/[A-Za-z][A-Za-z0-9]*/g) ?? []));
