@@ -76,6 +76,15 @@ class MediaShape extends BaseShape {
         this._updateMediaSettingsButtonIcon();
     }
 
+    // A catalogue entry carries the URL its asset is streamed from, and that is the whole of what
+    // the shape keeps: playing a picked audio and playing an uploaded one are the same thing to it.
+    applyCatalogAudio(audio) {
+        const audioUrl = audio?.asset_url;
+        if (!audioUrl)
+            return;
+        this.onImageControlChanged(audioUrl, "audio/*");
+    }
+
     onImageControlCleared() {
         this.properties.imageBase64 = "";
         this.properties.videoUrl = "";

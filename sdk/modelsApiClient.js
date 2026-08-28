@@ -738,6 +738,88 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Delete video failed (${response.status})`);
   }
 
+  async fetchAudiosPage(options = {}) {
+    const url = new URL(`${this.apiBaseUrl}/audios`);
+    url.searchParams.set("limit", String(options.limit || 20));
+    url.searchParams.set("offset", String(options.offset || 0));
+    if (options.search) url.searchParams.set("q", options.search);
+    if (options.educationLevelId) url.searchParams.set("education_level_id", options.educationLevelId);
+    if (options.scienceId) url.searchParams.set("science_id", options.scienceId);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch audios failed (${response.status})`);
+    return this.parsePagedResponse(await response.json());
+  }
+
+  async fetchAudiosFacets() {
+    const response = await fetch(`${this.apiBaseUrl}/audios/facets`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch audio facets failed (${response.status})`);
+    return this.parseTaxonomyFacets(await response.json());
+  }
+
+  async fetchAudios(filters = {}) {
+    const url = new URL(`${this.apiBaseUrl}/audios`);
+    if (filters.science_id) url.searchParams.set("science_id", filters.science_id);
+    if (filters.education_level_id) url.searchParams.set("education_level_id", filters.education_level_id);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch audios failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createAudio(payload, assetFile) {
+    const formData = new FormData();
+    formData.append("title", payload.title);
+    if (payload.description) formData.append("description", payload.description);
+    if (payload.science_id) formData.append("science_id", payload.science_id);
+    if (payload.education_level_id) formData.append("education_level_id", payload.education_level_id);
+    if (assetFile) formData.append("asset", assetFile);
+    const response = await fetch(`${this.apiBaseUrl}/audios`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Create audio failed (${response.status})`);
+    return await response.json();
+  }
+
+  async patchAudio(audioId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/audios/${encodeURIComponent(audioId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update audio failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteAudio(audioId) {
+    const response = await fetch(`${this.apiBaseUrl}/audios/${encodeURIComponent(audioId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete audio failed (${response.status})`);
+  }
+
+  async uploadAudioThumbnail(audioId, imageFile) {
+    const formData = new FormData();
+    formData.append("asset", imageFile);
+    const response = await fetch(`${this.apiBaseUrl}/audios/${encodeURIComponent(audioId)}/thumbnail`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Upload audio thumbnail failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteAudioThumbnail(audioId) {
+    const response = await fetch(`${this.apiBaseUrl}/audios/${encodeURIComponent(audioId)}/thumbnail`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete audio thumbnail failed (${response.status})`);
+  }
+
   async fetchDataSetsPage(options = {}) {
     const url = new URL(`${this.apiBaseUrl}/data`);
     url.searchParams.set("limit", String(options.limit || 20));

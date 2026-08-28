@@ -23,6 +23,9 @@ const treeNodeIds = {
   catalogVideos: "catalog-videos",
   catalogVideosEducation: "catalog-videos-education",
   catalogVideosSciences: "catalog-videos-sciences",
+  catalogAudios: "catalog-audios",
+  catalogAudiosEducation: "catalog-audios-education",
+  catalogAudiosSciences: "catalog-audios-sciences",
   catalogData: "catalog-data",
   catalogDataEducation: "catalog-data-education",
   catalogDataSciences: "catalog-data-sciences",
@@ -117,6 +120,7 @@ class ModelsApp {
     this.pageSize = 20;
     this.modelsSource = { kind: "remote", filter: {} };
     this.videosSource = { filter: {} };
+    this.audiosSource = { filter: {} };
     this.dataSetsSource = { filter: {} };
     this.charactersSource = { filter: {} };
     this.objectsSource = { filter: {} };
@@ -124,10 +128,12 @@ class ModelsApp {
     this.publicFacets = { education: [], sciences: [], total: 0 };
     this.sampleFacets = { education: [], sciences: [], total: 0 };
     this.videoFacets = { education: [], sciences: [], total: 0 };
+    this.audioFacets = { education: [], sciences: [], total: 0 };
     this.dataFacets = { education: [], sciences: [], total: 0 };
     this.characterFacets = { categories: [], uncategorized: 0, total: 0 };
     this.objectFacets = { education: [], sciences: [], total: 0 };
     this.videosData = [];
+    this.audiosData = [];
     this.dataSetData = [];
     this.educationLookupOptions = [];
     this.scienceLookupOptions = [];
@@ -150,10 +156,12 @@ class ModelsApp {
     this.modelCardMenuInstance = null;
     this.modelCardMenuHost = null;
     this.videosCardViewInstance = null;
+    this.audiosCardViewInstance = null;
     this.dataCardViewInstance = null;
     this.characterCardViewInstance = null;
     this.modelsFeed = null;
     this.videosFeed = null;
+    this.audiosFeed = null;
     this.dataSetsFeed = null;
     this.charactersFeed = null;
     this.drawerInstance = null;
@@ -171,16 +179,22 @@ class ModelsApp {
     this.unreadNotificationCount = 0;
     this.notificationsGridInstance = null;
     this.uploadVideoPopupInstance = null;
+    this.uploadAudioPopupInstance = null;
     this.dataPopupInstance = null;
     this.editVideoPopupInstance = null;
+    this.editAudioPopupInstance = null;
     this.characterPopupInstance = null;
     this._uploadVideoFile = null;
+    this._uploadAudioFile = null;
     this._dataFile = null;
     this._characterAssetFile = null;
     this._uploadVideoThumbnailFile = null;
+    this._uploadAudioThumbnailFile = null;
     this._dataThumbnailFile = null;
     this._editVideoThumbnailFile = null;
+    this._editAudioThumbnailFile = null;
     this._editVideoHTMLEditor = null;
+    this._editAudioHTMLEditor = null;
     this._editDataHTMLEditor = null;
     this._editCharacterHTMLEditor = null;
     this._charEditorCharacter = null;
@@ -261,6 +275,7 @@ class ModelsApp {
   buildUploadMenuItems() {
     return [
       { id: "upload-video", text: this.translations.get("Upload Video"), icon: "fa-light fa-video", iconColor: "#e11d48", action: () => this.showUploadVideoPopup() },
+      { id: "upload-audio", text: this.translations.get("Upload Audio"), icon: "fa-light fa-waveform-lines", iconColor: "#16a34a", action: () => this.showUploadAudioPopup() },
       { id: "upload-data", text: this.translations.get("Upload Data"), icon: "fa-light fa-table", iconColor: "#d97706", action: () => this.showDataPopup() },
       { id: "add-character", text: this.translations.get("Add Character"), icon: "fa-light fa-person-running", iconColor: "#7c3aed", action: () => this.showCharacterPopup() },
       { id: "add-object", text: this.translations.get("Add Object"), icon: "fa-light fa-shapes", iconColor: "#0891b2", action: () => this.showObjectPopup() }
@@ -753,6 +768,13 @@ class ModelsApp {
     this.videosFeed = null;
   }
 
+  disposeAudiosCardView() {
+    if (!this.audiosCardViewInstance) return;
+    this.audiosCardViewInstance.dispose();
+    this.audiosCardViewInstance = null;
+    this.audiosFeed = null;
+  }
+
   disposeDataCardView() {
     if (!this.dataCardViewInstance) return;
     this.dataCardViewInstance.dispose();
@@ -813,8 +835,8 @@ class ModelsApp {
         const currentUserId = this.userSdk.getUserId(this.state.session);
         const isAssetsView = this.state.selectedTreeNodeId === treeNodeIds.assets;
         const canEdit = !isAssetsView && (this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId));
-        const assetIcon = data.asset_type === "video" ? "fa-light fa-video" : data.asset_type === "data" ? "fa-light fa-table" : data.asset_type === "object" ? "fa-light fa-shapes" : "fa-light fa-person-running";
-        const assetLabel = data.asset_type === "video" ? this.translations.get("Videos") : data.asset_type === "data" ? this.translations.get("Data") : data.asset_type === "object" ? this.translations.get("Objects") : this.translations.get("Characters");
+        const assetIcon = data.asset_type === "video" ? "fa-light fa-video" : data.asset_type === "audio" ? "fa-light fa-waveform-lines" : data.asset_type === "data" ? "fa-light fa-table" : data.asset_type === "object" ? "fa-light fa-shapes" : "fa-light fa-person-running";
+        const assetLabel = data.asset_type === "video" ? this.translations.get("Videos") : data.asset_type === "audio" ? this.translations.get("Audios") : data.asset_type === "data" ? this.translations.get("Data") : data.asset_type === "object" ? this.translations.get("Objects") : this.translations.get("Characters");
         const thumbContent = assetUrl
           ? `<img class="card-thumb character-card-thumb" src="${this.escapeHtml(assetUrl)}" alt="${this.escapeHtml(data.title || "")}">`
           : `<div class="media-thumb-placeholder character-thumb"><i class="${assetIcon} media-thumb-icon" aria-hidden="true"></i></div>`;
@@ -1042,6 +1064,180 @@ class ModelsApp {
       }
     });
     this.videosFeed = this.createFeed(this.videosCardViewInstance, (search, offset, limit) => this.fetchVideosFeedPage(search, offset, limit), this.translations.get("videos"));
+  }
+
+  ensureAudiosCardView() {
+    if (this.audiosCardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
+    const CardView = DevExpress.ui.dxCardView;
+    this.elements.cardView.innerHTML = "";
+    this.audiosCardViewInstance = new CardView(this.elements.cardView, {
+      onContentReady: () => this.bindFeedScroll(this.audiosFeed),
+      dataSource: [],
+      height: "100%",
+      repaintChangesOnly: true,
+      scrolling: { mode: "virtual" },
+      paging: { enabled: false },
+      pager: { visible: false },
+      noDataText: this.translations.get("No models found."),
+      showBorders: false,
+      focusStateEnabled: false,
+      hoverStateEnabled: false,
+      allowColumnReordering: false,
+      allowColumnResizing: false,
+      columnHidingEnabled: true,
+      headerPanel: { visible: false },
+      groupPanel: { visible: false },
+      searchPanel: { visible: false },
+      grouping: { autoExpandAll: false, contextMenuEnabled: false },
+      sorting: { mode: "none" },
+      cardsPerRow: this.getCardsPerRow(),
+      cardMinWidth: 125,
+      columns: [
+        { dataField: "title", caption: this.translations.get("Title") },
+        { dataField: "description", caption: this.translations.get("Description") }
+      ],
+      cardTemplate: (cardData, cardElement) => {
+        const host = cardElement.get(0);
+        const data = cardData.card.data;
+        const thumbnailUrl = data.thumbnail_url || "";
+        const educationLookupId = data.education_level_id;
+        const scienceLookupId = data.science_id;
+        const educationLabel = this.educationLookupNameById.get(educationLookupId) || data.education_level || this.translations.get("Uncategorized");
+        const scienceLabel = this.scienceLookupNameById.get(scienceLookupId) || data.science || this.translations.get("Uncategorized");
+        const educationColor = this.educationLookupColorById.get(educationLookupId) || "#8b5cf6";
+        const scienceColor = this.scienceLookupColorById.get(scienceLookupId) || "#0ea5e9";
+        const escapedEducationLabel = this.escapeHtml(educationLabel);
+        const escapedScienceLabel = this.escapeHtml(scienceLabel);
+        const descriptionLabel = this.escapeHtml(data.description || "");
+        const createdDate = this.formatShortDate(data.created_at);
+        const currentUserId = this.userSdk.getUserId(this.state.session);
+        const canEdit = this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId);
+        const taxonomyMarkup = `
+          <div class="card-thumb-dropdowns">
+            <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
+            <div class="card-thumb-dropdown science-dropdown-host" data-lookup-id="${scienceLookupId}">${escapedScienceLabel}</div>
+          </div>
+        `;
+        const thumbContent = thumbnailUrl
+          ? `<img class="card-thumb" src="${this.escapeHtml(thumbnailUrl)}" alt="${this.escapeHtml(data.title || "")}">`
+          : `<div class="media-thumb-placeholder audio-thumb"><i class="fa-light fa-waveform-lines media-thumb-icon" aria-hidden="true"></i></div>`;
+        const cardMarkup = `
+          <div class="card-tile" data-item-id="${this.escapeHtml(data.id || "")}">
+            <div class="card-thumb-wrap">${thumbContent}${taxonomyMarkup}</div>
+            <div class="card-actions">
+              ${canEdit ? `<button class="edit-button" aria-label="Edit audio"><i class="fa-light fa-pen" aria-hidden="true"></i></button>` : ""}
+              ${canEdit ? `<button class="delete-button" aria-label="Delete audio"><i class="fa-light fa-trash-can trash" aria-hidden="true"></i><i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i></button>` : ""}
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">${this.escapeHtml(data.title) || "Untitled"}</h3>
+              <p class="card-desc">${descriptionLabel}</p>
+              <div class="card-meta">
+                <div class="card-dates">
+                  ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        host.innerHTML = cardMarkup;
+        const cardDescElement = host.querySelector(".card-desc");
+        const editButton = host.querySelector(".edit-button");
+        const deleteButton = host.querySelector(".delete-button");
+        const educationDropdownHost = host.querySelector(".education-dropdown-host");
+        const scienceDropdownHost = host.querySelector(".science-dropdown-host");
+        if (educationDropdownHost) educationDropdownHost.style.setProperty("--pill-color", educationColor);
+        if (scienceDropdownHost) scienceDropdownHost.style.setProperty("--pill-color", scienceColor);
+        if (cardDescElement && (data.title || data.description)) {
+          $('<div>').appendTo('body').dxTooltip({
+            target: cardDescElement,
+            contentTemplate: contentElement => {
+              contentElement.append($('<div class="card-desc-tooltip">').html(`<strong>${this.escapeHtml(data.title || "")}</strong>${data.description ? `<p>${this.escapeHtml(data.description)}</p>` : ""}`) );
+            },
+            showEvent: { delay: 600, name: 'mouseenter' },
+            hideEvent: 'mouseleave',
+            position: 'bottom',
+            maxWidth: 300
+          });
+        }
+        if (editButton)
+          editButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.showEditAudioPopup(data);
+          });
+        if (deleteButton)
+          deleteButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.deleteAudioItem(data);
+          });
+        if (educationDropdownHost) {
+          educationDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("click", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(educationDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchEducationLevelLookups(),
+              byKey: lookupId => this.apiClient.fetchEducationLevelLookupById(lookupId)
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: educationLookupId === undefined || educationLookupId === null || educationLookupId === "" ? null : educationLookupId,
+            text: educationLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              const nextEducationLookupId = event.itemData.id;
+              if (nextEducationLookupId === data.education_level_id) return;
+              try {
+                await this.apiClient.patchAudio(data.id, { education_level_id: nextEducationLookupId });
+                data.education_level_id = nextEducationLookupId;
+                data.education_level = event.itemData.name || data.education_level;
+                data.education_level_color = event.itemData.color || data.education_level_color;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
+              }
+            }
+          });
+        }
+        if (scienceDropdownHost) {
+          scienceDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("click", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(scienceDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchScienceLookups(),
+              byKey: lookupId => this.apiClient.fetchScienceLookupById(lookupId)
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: scienceLookupId === undefined || scienceLookupId === null || scienceLookupId === "" ? null : scienceLookupId,
+            text: scienceLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              const nextScienceLookupId = event.itemData.id;
+              if (nextScienceLookupId === data.science_id) return;
+              try {
+                await this.apiClient.patchAudio(data.id, { science_id: nextScienceLookupId });
+                data.science_id = nextScienceLookupId;
+                data.science = event.itemData.name || data.science;
+                data.science_color = event.itemData.color || data.science_color;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
+              }
+            }
+          });
+        }
+      }
+    });
+    this.audiosFeed = this.createFeed(this.audiosCardViewInstance, (search, offset, limit) => this.fetchAudiosFeedPage(search, offset, limit), this.translations.get("audios"));
   }
 
   ensureObjectsCardView() {
@@ -1402,9 +1598,26 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeDataCardView();
+    this.disposeAudiosCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
     this.ensureVideosCardView();
+  }
+
+  showAudiosCardView() {
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
+    this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
+    this.disposeDataCardView();
+    this.disposeVideosCardView();
+    this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
+    this.ensureAudiosCardView();
   }
 
   showDataCardView() {
@@ -1417,6 +1630,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
     this.ensureDataCardView();
@@ -1432,6 +1646,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeObjectsCardView();
     this.ensureCharacterCardView();
@@ -1447,6 +1662,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.ensureObjectsCardView();
@@ -1455,6 +1671,11 @@ class ModelsApp {
   renderVideos() {
     this.showVideosCardView();
     this.startFeed(this.videosFeed);
+  }
+
+  renderAudios() {
+    this.showAudiosCardView();
+    this.startFeed(this.audiosFeed);
   }
 
   renderDataSets() {
@@ -1504,6 +1725,21 @@ class ModelsApp {
       this.loadModels();
     } catch (error) {
       this.setStatus(error?.message || "Failed to delete video.", true);
+    }
+  }
+
+  async deleteAudioItem(audioData) {
+    const audioId = audioData && audioData.id;
+    if (!audioId) return;
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    this.setStatus("Deleting audio…");
+    try {
+      await this.apiClient.deleteAudio(audioId);
+      this.setStatus("Audio deleted.");
+      this.loadModels();
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to delete audio.", true);
     }
   }
 
@@ -1676,6 +1912,113 @@ class ModelsApp {
       visible: true,
       showTitle: true,
       title: "Edit Video",
+      width: 520,
+      height: "auto",
+      maxHeight: "90vh",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
+  }
+
+  showEditAudioPopup(audioData) {
+    let popupHost = document.getElementById("edit-audio-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="edit-audio-popup"></div>`);
+      popupHost = document.getElementById("edit-audio-popup");
+    }
+    this._editAudioThumbnailFile = null;
+    const formData = { title: audioData.title || "", description: audioData.description || "" };
+    const buildContent = contentElement => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      host.innerHTML = `<div id="edit-audio-form"></div>`;
+      const formHost = document.getElementById("edit-audio-form");
+      this._editAudioFormInstance = new DevExpress.ui.dxForm(formHost, {
+        formData,
+        colCount: 1,
+        items: [
+          {
+            label: { text: "Thumbnail" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              this._editAudioThumbnailControl = new ImageControl({
+                dropHint: "Drop new thumbnail image here",
+                imageSource: audioData.thumbnail_url || "",
+                onUploadFile: file => {
+                  this._editAudioThumbnailFile = file;
+                  return Promise.resolve(URL.createObjectURL(file));
+                },
+                onImageCleared: () => { this._editAudioThumbnailFile = null; }
+              });
+              itemHost.appendChild(this._editAudioThumbnailControl.createHost().get(0));
+            }
+          },
+          {
+            dataField: "title",
+            label: { text: "Title" },
+            validationRules: [{ type: "required" }],
+            editorOptions: { inputAttr: { style: "font-family: 'Atma', cursive; font-weight: 600;" } }
+          },
+          {
+            label: { text: "Description" },
+            template: async (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              itemHost.insertAdjacentHTML("beforeend", `
+                <div id="edit-audio-html-editor"></div>
+                <div id="edit-audio-html-toolbar" class="html-editor-toolbar"></div>
+              `);
+              const editorElement = document.getElementById("edit-audio-html-editor");
+              const toolbarElement = document.getElementById("edit-audio-html-toolbar");
+              this._editAudioHTMLEditor = new DevExpress.ui.dxHtmlEditor(editorElement, {
+                value: formData.description ? await Utils.toHtml(formData.description) : "",
+                valueType: "html",
+                height: 260,
+                toolbar: {
+                  container: toolbarElement,
+                  items: ["bold", "italic", "underline", "strike", "separator", "orderedList", "bulletList", "separator", "link", "separator", "undo", "redo"]
+                }
+              });
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "right",
+            buttonOptions: {
+              text: "Save",
+              type: "default",
+              onClick: async () => {
+                const result = this._editAudioFormInstance.validate();
+                if (!result.isValid) return;
+                const values = this._editAudioFormInstance.option("formData");
+                const rawDescription = this._editAudioHTMLEditor ? this._editAudioHTMLEditor.option("value") : (values.description || "");
+                const descriptionValue = rawDescription ? (await Utils.fromHtml(rawDescription)).trim() || null : null;
+                this.setStatus("Saving audio…");
+                try {
+                  await this.apiClient.patchAudio(audioData.id, { title: values.title, description: descriptionValue });
+                  if (this._editAudioThumbnailFile)
+                    await this.apiClient.uploadAudioThumbnail(audioData.id, this._editAudioThumbnailFile);
+                  this.setStatus("Audio saved.");
+                  this.editAudioPopupInstance.hide();
+                  this.loadModels();
+                } catch (error) {
+                  this.setStatus(error?.message || "Failed to save audio.", true);
+                }
+              }
+            }
+          }
+        ]
+      });
+    };
+    if (this.editAudioPopupInstance) {
+      buildContent(this.editAudioPopupInstance.content());
+      this.editAudioPopupInstance.show();
+      return;
+    }
+    this.editAudioPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: "Edit Audio",
       width: 520,
       height: "auto",
       maxHeight: "90vh",
@@ -2144,6 +2487,114 @@ class ModelsApp {
       visible: true,
       showTitle: true,
       title: "Upload Video",
+      width: 480,
+      height: "auto",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
+  }
+
+  showUploadAudioPopup() {
+    let popupHost = document.getElementById("upload-audio-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="upload-audio-popup"></div>`);
+      popupHost = document.getElementById("upload-audio-popup");
+    }
+    this._uploadAudioFile = null;
+    this._uploadAudioThumbnailFile = null;
+    const formData = {};
+    const buildContent = contentElement => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      host.innerHTML = `<div id="upload-audio-form"></div>`;
+      const formHost = document.getElementById("upload-audio-form");
+      this._uploadAudioFormInstance = new DevExpress.ui.dxForm(formHost, {
+        formData,
+        colCount: 1,
+        items: [
+          {
+            dataField: "title",
+            label: { text: "Title" },
+            validationRules: [{ type: "required" }],
+            editorOptions: { placeholder: "Audio title" }
+          },
+          {
+            dataField: "description",
+            label: { text: "Description" },
+            editorType: "dxTextArea",
+            editorOptions: { height: 80, placeholder: "Optional description" }
+          },
+          {
+            label: { text: "Audio File" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              itemHost.innerHTML = `<div class="upload-file-uploader-host"></div>`;
+              const uploaderHost = itemHost.querySelector(".upload-file-uploader-host");
+              new DevExpress.ui.dxFileUploader(uploaderHost, {
+                selectButtonText: "Select audio file",
+                labelText: "or drop audio here",
+                multiple: false,
+                uploadMode: "useForm",
+                accept: "audio/*",
+                onValueChanged: event => {
+                  this._uploadAudioFile = event.value?.[0] || null;
+                }
+              });
+            }
+          },
+          {
+            label: { text: "Thumbnail" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              this._uploadAudioThumbnailControl = new ImageControl({
+                dropHint: "Drop thumbnail image here",
+                onUploadFile: file => {
+                  this._uploadAudioThumbnailFile = file;
+                  return Promise.resolve(URL.createObjectURL(file));
+                },
+                onImageCleared: () => { this._uploadAudioThumbnailFile = null; }
+              });
+              itemHost.appendChild(this._uploadAudioThumbnailControl.createHost().get(0));
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "right",
+            buttonOptions: {
+              text: "Upload",
+              icon: "fa-light fa-upload",
+              type: "default",
+              onClick: async () => {
+                const result = this._uploadAudioFormInstance.validate();
+                if (!result.isValid) return;
+                const values = this._uploadAudioFormInstance.option("formData");
+                this.setStatus("Uploading audio…");
+                try {
+                  const created = await this.apiClient.createAudio({ title: values.title, description: values.description || "" }, this._uploadAudioFile);
+                  if (this._uploadAudioThumbnailFile && created?.id)
+                    await this.apiClient.uploadAudioThumbnail(created.id, this._uploadAudioThumbnailFile);
+                  this.setStatus("Audio uploaded.");
+                  this.uploadAudioPopupInstance.hide();
+                  this.loadModels();
+                } catch (error) {
+                  this.setStatus(error?.message || "Failed to upload audio.", true);
+                }
+              }
+            }
+          }
+        ]
+      });
+    };
+    if (this.uploadAudioPopupInstance) {
+      buildContent(this.uploadAudioPopupInstance.content());
+      this.uploadAudioPopupInstance.show();
+      return;
+    }
+    this.uploadAudioPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: "Upload Audio",
       width: 480,
       height: "auto",
       dragEnabled: true,
@@ -2722,6 +3173,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -2792,6 +3244,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -2820,6 +3273,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -2923,6 +3377,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -3364,6 +3819,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -3470,6 +3926,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -3704,6 +4161,12 @@ class ModelsApp {
       this.setStatus("");
       return;
     }
+    if (this.isAudioNodeId(this.state.selectedTreeNodeId)) {
+      this.audiosSource = { filter: this.resolveTaxonomyFilter(this.state.selectedTreeNodeId, "catalog-audio-education-item:", "catalog-audio-science-item:") };
+      this.renderAudios();
+      this.setStatus("");
+      return;
+    }
     if (this.isDataNodeId(this.state.selectedTreeNodeId)) {
       this.dataSetsSource = { filter: this.resolveTaxonomyFilter(this.state.selectedTreeNodeId, "catalog-data-education-item:", "catalog-data-science-item:") };
       this.renderDataSets();
@@ -3779,13 +4242,14 @@ class ModelsApp {
       this.apiClient.fetchEducationLevelLookups(),
       this.apiClient.fetchScienceLookups(),
       this.apiClient.fetchVideosFacets(),
+      this.apiClient.fetchAudiosFacets(),
       this.apiClient.fetchDataSetsFacets(),
       this.apiClient.fetchCharacterFacets(),
       this.apiClient.fetchObjectsFacets(),
       this.apiClient.fetchCharacterCategories(),
       isAuthenticated ? this.apiClient.fetchDeletedModels() : Promise.resolve([])
     ];
-    const [personalModelsResult, publicFacetsResult, sampleFacetsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videoFacetsResult, dataFacetsResult, characterFacetsResult, objectFacetsResult, characterCategoriesResult, deletedModelsResult] = await Promise.allSettled(requests);
+    const [personalModelsResult, publicFacetsResult, sampleFacetsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videoFacetsResult, audioFacetsResult, dataFacetsResult, characterFacetsResult, objectFacetsResult, characterCategoriesResult, deletedModelsResult] = await Promise.allSettled(requests);
     const personalModels = personalModelsResult.status === "fulfilled" ? personalModelsResult.value : [];
     if (publicFacetsResult.status !== "fulfilled")
       throw publicFacetsResult.reason;
@@ -3804,10 +4268,12 @@ class ModelsApp {
     this.personalModels = this.applyModelLookupLabels(personalModels);
     this.publicModels = [];
     this.videoFacets = videoFacetsResult.status === "fulfilled" ? videoFacetsResult.value : { education: [], sciences: [], total: 0 };
+    this.audioFacets = audioFacetsResult.status === "fulfilled" ? audioFacetsResult.value : { education: [], sciences: [], total: 0 };
     this.dataFacets = dataFacetsResult.status === "fulfilled" ? dataFacetsResult.value : { education: [], sciences: [], total: 0 };
     this.characterFacets = characterFacetsResult.status === "fulfilled" ? characterFacetsResult.value : { categories: [], uncategorized: 0, total: 0 };
     this.objectFacets = objectFacetsResult.status === "fulfilled" ? objectFacetsResult.value : { education: [], sciences: [], total: 0 };
     this.videosData = [];
+    this.audiosData = [];
     this.dataSetData = [];
     this.charactersData = [];
     const characterCategories = characterCategoriesResult.status === "fulfilled" ? characterCategoriesResult.value : [];
@@ -4075,7 +4541,7 @@ class ModelsApp {
   isModelsFeedNodeId(nodeId) {
     if (this.isMaintenanceNodeId(nodeId)) return false;
     if (nodeId === treeNodeIds.assets) return false;
-    return !this.isVideoNodeId(nodeId) && !this.isDataNodeId(nodeId) && !this.isCharacterNodeId(nodeId) && !this.isObjectNodeId(nodeId);
+    return !this.isVideoNodeId(nodeId) && !this.isAudioNodeId(nodeId) && !this.isDataNodeId(nodeId) && !this.isCharacterNodeId(nodeId) && !this.isObjectNodeId(nodeId);
   }
 
   setSortMode(sortMode) {
@@ -4260,6 +4726,12 @@ class ModelsApp {
       .then(result => ({ items: this.applyModelLookupLabels(result.items), total: result.total }));
   }
 
+  fetchAudiosFeedPage(search, offset, limit) {
+    const filter = this.audiosSource?.filter || {};
+    return this.apiClient.fetchAudiosPage({ search, educationLevelId: filter.educationLevelId, scienceId: filter.scienceId, offset, limit })
+      .then(result => ({ items: this.applyModelLookupLabels(result.items), total: result.total }));
+  }
+
   fetchDataSetsFeedPage(search, offset, limit) {
     const filter = this.dataSetsSource?.filter || {};
     return this.apiClient.fetchDataSetsPage({ search, educationLevelId: filter.educationLevelId, scienceId: filter.scienceId, offset, limit })
@@ -4280,16 +4752,17 @@ class ModelsApp {
 
   async getAssetsFeedTotals(search) {
     if (!search)
-      return { search, videos: this.videoFacets.total, data: this.dataFacets.total, characters: this.characterFacets.total, objects: this.objectFacets.total };
+      return { search, videos: this.videoFacets.total, audios: this.audioFacets.total, data: this.dataFacets.total, characters: this.characterFacets.total, objects: this.objectFacets.total };
     if (this.assetsFeedTotals?.search === search)
       return this.assetsFeedTotals;
-    const [videos, data, characters, objects] = await Promise.all([
+    const [videos, audios, data, characters, objects] = await Promise.all([
       this.apiClient.fetchVideosPage({ search, offset: 0, limit: 1 }),
+      this.apiClient.fetchAudiosPage({ search, offset: 0, limit: 1 }),
       this.apiClient.fetchDataSetsPage({ search, offset: 0, limit: 1 }),
       this.apiClient.fetchCharactersPage({ search, offset: 0, limit: 1 }),
       this.apiClient.fetchObjectsPage({ search, offset: 0, limit: 1 })
     ]);
-    this.assetsFeedTotals = { search, videos: videos.total, data: data.total, characters: characters.total, objects: objects.total };
+    this.assetsFeedTotals = { search, videos: videos.total, audios: audios.total, data: data.total, characters: characters.total, objects: objects.total };
     return this.assetsFeedTotals;
   }
 
@@ -4303,27 +4776,34 @@ class ModelsApp {
       items.push(...result.items.map(item => Object.assign({ asset_type: "video" }, item)));
       remaining -= result.items.length;
     }
-    const dataOffset = Math.max(0, offset - totals.videos);
+    const audioOffset = Math.max(0, offset - totals.videos);
+    if (remaining && audioOffset < totals.audios) {
+      const take = Math.min(remaining, totals.audios - audioOffset);
+      const result = await this.apiClient.fetchAudiosPage({ search, offset: audioOffset, limit: take });
+      items.push(...result.items.map(item => Object.assign({ asset_type: "audio" }, item)));
+      remaining -= result.items.length;
+    }
+    const dataOffset = Math.max(0, offset - totals.videos - totals.audios);
     if (remaining && dataOffset < totals.data) {
       const take = Math.min(remaining, totals.data - dataOffset);
       const result = await this.apiClient.fetchDataSetsPage({ search, offset: dataOffset, limit: take });
       items.push(...result.items.map(item => Object.assign({ asset_type: "data" }, item)));
       remaining -= result.items.length;
     }
-    const characterOffset = Math.max(0, offset - totals.videos - totals.data);
+    const characterOffset = Math.max(0, offset - totals.videos - totals.audios - totals.data);
     if (remaining && characterOffset < totals.characters) {
       const take = Math.min(remaining, totals.characters - characterOffset);
       const result = await this.apiClient.fetchCharactersPage({ search, offset: characterOffset, limit: take });
       items.push(...result.items.map(item => Object.assign({ asset_type: "character" }, item)));
       remaining -= result.items.length;
     }
-    const objectOffset = Math.max(0, offset - totals.videos - totals.data - totals.characters);
+    const objectOffset = Math.max(0, offset - totals.videos - totals.audios - totals.data - totals.characters);
     if (remaining && objectOffset < totals.objects) {
       const take = Math.min(remaining, totals.objects - objectOffset);
       const result = await this.apiClient.fetchObjectsPage({ search, offset: objectOffset, limit: take });
       items.push(...result.items.map(item => Object.assign({ asset_type: "object" }, item)));
     }
-    return { items, total: totals.videos + totals.data + totals.characters + totals.objects };
+    return { items, total: totals.videos + totals.audios + totals.data + totals.characters + totals.objects };
   }
 
   // Maps an education/science child node to a { educationLevelId | scienceId } filter.
@@ -4355,6 +4835,13 @@ class ModelsApp {
   isVideoNodeId(nodeId) {
     return nodeId === treeNodeIds.catalogVideos
       || (typeof nodeId === "string" && (nodeId.startsWith("catalog-video-education-item:") || nodeId.startsWith("catalog-video-science-item:")));
+  }
+
+  isAudioNodeId(nodeId) {
+    return nodeId === treeNodeIds.catalogAudios
+      || nodeId === treeNodeIds.catalogAudiosEducation
+      || nodeId === treeNodeIds.catalogAudiosSciences
+      || (typeof nodeId === "string" && (nodeId.startsWith("catalog-audio-education-item:") || nodeId.startsWith("catalog-audio-science-item:")));
   }
 
   isDataNodeId(nodeId) {
@@ -4444,6 +4931,10 @@ class ModelsApp {
     return this.buildGroupedPublicItems(type, { facets: this.videoFacets, prefixBase: "catalog-video" });
   }
 
+  buildGroupedAudiosItems(type) {
+    return this.buildGroupedPublicItems(type, { facets: this.audioFacets, prefixBase: "catalog-audio" });
+  }
+
   buildGroupedDataItems(type) {
     return this.buildGroupedPublicItems(type, { facets: this.dataFacets, prefixBase: "catalog-data" });
   }
@@ -4481,6 +4972,8 @@ class ModelsApp {
     const scienceItems = this.buildGroupedPublicItems("science");
     const videoEducationItems = this.buildGroupedVideosItems("education");
     const videoScienceItems = this.buildGroupedVideosItems("science");
+    const audioEducationItems = this.buildGroupedAudiosItems("education");
+    const audioScienceItems = this.buildGroupedAudiosItems("science");
     const dataEducationItems = this.buildGroupedDataItems("education");
     const dataScienceItems = this.buildGroupedDataItems("science");
     const characterCategoryItems = this.buildGroupedCharacterItems();
@@ -4489,10 +4982,11 @@ class ModelsApp {
     const publicModelsCount = this.publicFacets?.total || 0;
     const sampleModelsCount = this.sampleFacets?.total || 0;
     const videosCount = this.videoFacets?.total || 0;
+    const audiosCount = this.audioFacets?.total || 0;
     const dataCount = this.dataFacets?.total || 0;
     const charactersCount = this.characterFacets?.total || 0;
     const objectsCount = this.objectFacets?.total || 0;
-    const assetsCount = videosCount + dataCount + charactersCount + objectsCount;
+    const assetsCount = videosCount + audiosCount + dataCount + charactersCount + objectsCount;
     const sampleEducationItems = this.buildGroupedPublicItems("education", { facets: this.sampleFacets, prefixBase: "samples" });
     const sampleScienceItems = this.buildGroupedPublicItems("science", { facets: this.sampleFacets, prefixBase: "samples" });
     const treeData = [];
@@ -4670,6 +5164,34 @@ class ModelsApp {
                   iconColor: "#0ea5e9",
                   expanded: false,
                   items: videoScienceItems
+                }
+              ]
+            },
+            {
+              id: treeNodeIds.catalogAudios,
+              label: this.translations.get("Audios"),
+              text: `${this.translations.get("Audios")} (${audiosCount})`,
+              iconClass: "fa-light fa-waveform-lines",
+              iconColor: "#16a34a",
+              expanded: false,
+              items: [
+                {
+                  id: treeNodeIds.catalogAudiosEducation,
+                  label: this.translations.get("Education Levels"),
+                  text: `${this.translations.get("Education Levels")} (${audiosCount})`,
+                  iconClass: "fa-light fa-graduation-cap",
+                  iconColor: "#8b5cf6",
+                  expanded: false,
+                  items: audioEducationItems
+                },
+                {
+                  id: treeNodeIds.catalogAudiosSciences,
+                  label: this.translations.get("Sciences"),
+                  text: `${this.translations.get("Sciences")} (${audiosCount})`,
+                  iconClass: "fa-light fa-flask",
+                  iconColor: "#0ea5e9",
+                  expanded: false,
+                  items: audioScienceItems
                 }
               ]
             },
@@ -5561,6 +6083,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -5691,6 +6214,7 @@ class ModelsApp {
     this.disposeUsersGrid();
     this.disposeWhatsNewGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -5782,6 +6306,7 @@ class ModelsApp {
     this.disposeUsersGrid();
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
+    this.disposeAudiosCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();

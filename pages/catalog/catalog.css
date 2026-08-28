@@ -961,6 +961,9 @@ body {
 .media-thumb-placeholder.video-thumb {
   background: linear-gradient(135deg, #fce7f3, #fbcfe8);
 }
+.media-thumb-placeholder.audio-thumb {
+  background: linear-gradient(135deg, #ecfccb, #bbf7d0);
+}
 .media-thumb-placeholder.data-thumb {
   background: linear-gradient(135deg, #ecfdf5, #a7f3d0);
 }
