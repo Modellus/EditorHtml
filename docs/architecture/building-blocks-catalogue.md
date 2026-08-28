@@ -839,6 +839,10 @@ Capabilities: `memory`, `linear`
 | `shownRows` | number | 0 | min 0 |
 | `showPoints` | boolean | false |  |
 | `pointRadius` | number | 1.5 | min 0 |
+| `clipX` | number | 0 |  |
+| `clipY` | number | 0 |  |
+| `clipWidth` | number | 0 | min 0 |
+| `clipHeight` | number | 0 | min 0 |
 
 ### `mouse-tracker` — Mouse tracker
 

@@ -1333,3 +1333,47 @@ test('the side the model answers is left out of the columns the recording publis
     for (let index = 0; index < recorded.samples.length; index++)
         expect(model.perIteration[index].w).toBeCloseTo(recorded.samples[index].y ?? 0, 2);
 });
+
+// The recording keeps what the model answered, off the ends of the plot and all, so the drawing is
+// what has to be held to the plot: the line is cut to it and the marker reading a sample beyond it
+// is not drawn, the way the crosshair already drops itself when the point it reads is off the plot.
+test('what the model answers off the ends of the plot is not drawn outside it', async ({ page }) => {
+    await setupBoard(page);
+    await addComputedModel(page, 'w=3\\cdot px');
+    await addTracker(page, { xVariable: 'px', yVariable: 'w', maximumY: 10, perStep: true });
+    await dragAcross(page);
+    const recorded = await tracker(page);
+    expect(BlockMemoryValue(recorded.samples[recorded.samples.length - 1], 'y')).toBeGreaterThan(10);
+    // The pointer is taken off the shape and the player left at the last sample, so what the marker
+    // reads is the recording itself rather than where the pointer happens to be resting.
+    await page.mouse.move(10, 10);
+    await page.evaluate(count => {
+        shell.board.calculator.setIteration(count);
+        shell.board.markDirty(shell.board.shapes.getByName('Tracker'));
+        shell.board.draw();
+    }, recorded.samples.length);
+    await page.waitForTimeout(200);
+    const drawn = await page.evaluate(() => {
+        const plot = document.querySelector('[data-source-id="plot"]');
+        return {
+            polylines: Array.from(document.querySelectorAll('[data-source-component="memory-trace"] polyline')).map(node => node.getAttribute('points')),
+            marker: document.querySelector('[data-source-id="marker-dot"]') !== null,
+            left: Number(plot.getAttribute('x')),
+            top: Number(plot.getAttribute('y')),
+            right: Number(plot.getAttribute('x')) + Number(plot.getAttribute('width')),
+            bottom: Number(plot.getAttribute('y')) + Number(plot.getAttribute('height'))
+        };
+    });
+    const points = drawn.polylines.join(' ').trim().split(' ').map(pair => pair.split(',').map(Number));
+    expect(points.length).toBeGreaterThan(2);
+    // The line the pointer climbed is three times as steep as the plot can hold, so it leaves the top
+    // of it: what is drawn stops at the edge instead of running on over the rest of the shape.
+    for (const [x, y] of points) {
+        expect(x).toBeGreaterThanOrEqual(drawn.left - 0.001);
+        expect(x).toBeLessThanOrEqual(drawn.right + 0.001);
+        expect(y).toBeGreaterThanOrEqual(drawn.top - 0.001);
+        expect(y).toBeLessThanOrEqual(drawn.bottom + 0.001);
+    }
+    expect(points.length).toBeLessThan(recorded.samples.length);
+    expect(drawn.marker).toBe(false);
+});

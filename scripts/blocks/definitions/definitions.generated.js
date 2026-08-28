@@ -7775,6 +7775,22 @@ BlockDefinitionLoader.registerAll([
                 "formula": "originY+valueY\\cdot scaleY"
             },
             {
+                "id": "markerHeldX",
+                "formula": "\\max\\left(plotX,\\min\\left(plotRight,markerX\\right)\\right)"
+            },
+            {
+                "id": "markerHeldY",
+                "formula": "\\max\\left(plotY,\\min\\left(plotBottom,markerY\\right)\\right)"
+            },
+            {
+                "id": "markerOff",
+                "formula": "\\max\\left(markerX-markerHeldX,markerHeldX-markerX\\right)+\\max\\left(markerY-markerHeldY,markerHeldY-markerY\\right)"
+            },
+            {
+                "id": "markerInside",
+                "formula": "markerShown\\cdot\\left(1-sign\\left(markerOff\\right)\\right)"
+            },
+            {
                 "id": "markerSize",
                 "formula": "\\max\\left(12,\\min\\left(plotW,plotH\\right)\\cdot0.12\\right)"
             },
@@ -7948,7 +7964,19 @@ BlockDefinitionLoader.registerAll([
                         "color": {
                             "parameter": "traceColor"
                         },
-                        "lineWidth": 2
+                        "lineWidth": 2,
+                        "clipX": {
+                            "parameter": "plotX"
+                        },
+                        "clipY": {
+                            "parameter": "plotY"
+                        },
+                        "clipWidth": {
+                            "parameter": "plotW"
+                        },
+                        "clipHeight": {
+                            "parameter": "plotH"
+                        }
                     }
                 },
                 {
@@ -8108,7 +8136,7 @@ BlockDefinitionLoader.registerAll([
                         },
                         "then": 0,
                         "otherwise": {
-                            "parameter": "markerShown"
+                            "parameter": "markerInside"
                         }
                     },
                     "bindings": {
@@ -8134,7 +8162,7 @@ BlockDefinitionLoader.registerAll([
                             "parameter": "characterImage"
                         },
                         "then": {
-                            "parameter": "markerShown"
+                            "parameter": "markerInside"
                         },
                         "otherwise": 0
                     },

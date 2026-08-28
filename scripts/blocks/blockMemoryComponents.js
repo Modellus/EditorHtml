@@ -48,6 +48,77 @@ var BlockMemoryComponents = {
         if (behaviours.length > 0)
             behaviours.push({ type: "hoverable", cursor: "pointer" });
         return behaviours;
+    },
+
+    // The box the drawing is cut to, in the pixels the trace is drawn in. Left without a width or a
+    // height there is no box, and the whole path is drawn wherever it goes.
+    clipBox(parameters) {
+        const width = Number(parameters.clipWidth);
+        const height = Number(parameters.clipHeight);
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
+            return null;
+        const left = Number(parameters.clipX) || 0;
+        const top = Number(parameters.clipY) || 0;
+        return { left: left, top: top, right: left + width, bottom: top + height };
+    },
+
+    // A recording is not bound by the plot it is drawn on: an axis naming a term the model works out
+    // for itself answers whatever the definitions say, and the answer may lie off the ends of the
+    // scales. What was recorded is left as it stands — it is the model's, not the drawing's — and the
+    // line is cut to the plot instead, the way the crosshair drops itself when the point it reads is
+    // off the plot. A path that leaves the box and comes back is drawn as the pieces that are inside
+    // it, so what is shown outside the plot is nothing rather than a line across the shape.
+    clipPolyline(points, box) {
+        const runs = [];
+        let current = null;
+        for (let index = 1; index < points.length; index++) {
+            const piece = BlockMemoryComponents.clipLine(points[index - 1], points[index], box);
+            if (piece === null) {
+                current = null;
+                continue;
+            }
+            if (current === null) {
+                current = [piece.start];
+                runs.push(current);
+            }
+            current.push(piece.end);
+            if (piece.leaves)
+                current = null;
+        }
+        return runs.filter(run => run.length > 1);
+    },
+
+    // One piece of the path against the box, cut where it crosses an edge. The ends are given back
+    // as they came in where the piece is wholly inside, so a line that never leaves the plot is
+    // drawn through exactly the points that were recorded rather than through arithmetic on them.
+    clipLine(start, end, box) {
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        let entry = 0;
+        let exit = 1;
+        for (const [direction, distance] of [[-dx, start.x - box.left], [dx, box.right - start.x], [-dy, start.y - box.top], [dy, box.bottom - start.y]]) {
+            if (direction === 0) {
+                if (distance < 0)
+                    return null;
+                continue;
+            }
+            const crossing = distance / direction;
+            if (direction < 0 && crossing > entry)
+                entry = crossing;
+            if (direction > 0 && crossing < exit)
+                exit = crossing;
+            if (entry > exit)
+                return null;
+        }
+        return {
+            start: entry === 0 ? start : { x: start.x + dx * entry, y: start.y + dy * entry },
+            end: exit === 1 ? end : { x: start.x + dx * exit, y: start.y + dy * exit },
+            leaves: exit < 1
+        };
+    },
+
+    isInsideBox(point, box) {
+        return point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom;
     }
 };
 
@@ -195,7 +266,11 @@ var BlockMemoryComponents = {
             BlockMemoryComponents.parameter("opacity", "Opacity", "number", 1, { category: "style", minimum: 0, maximum: 1 }),
             BlockMemoryComponents.parameter("shownRows", "Rows drawn", "number", 0, { minimum: 0, description: "How many rows are drawn, counted from the oldest. Zero — the default — draws the whole memory; a count draws it up to that row, which is what following the model's own iteration comes to." }),
             BlockMemoryComponents.parameter("showPoints", "Show samples", "boolean", false),
-            BlockMemoryComponents.parameter("pointRadius", "Sample radius", "number", 1.5, { category: "style", minimum: 0 })
+            BlockMemoryComponents.parameter("pointRadius", "Sample radius", "number", 1.5, { category: "style", minimum: 0 }),
+            BlockMemoryComponents.parameter("clipX", "Drawing area X", "number", 0, { category: "layout", description: "The area the line is cut to, in the pixels the trace is drawn in. Left without a width or a height the line is drawn wherever the rows take it." }),
+            BlockMemoryComponents.parameter("clipY", "Drawing area Y", "number", 0, { category: "layout" }),
+            BlockMemoryComponents.parameter("clipWidth", "Drawing area width", "number", 0, { category: "layout", minimum: 0 }),
+            BlockMemoryComponents.parameter("clipHeight", "Drawing area height", "number", 0, { category: "layout", minimum: 0 })
         ],
         create: (parameters, context) => {
             const originX = Number(parameters.originX);
@@ -207,34 +282,40 @@ var BlockMemoryComponents = {
             // what was recorded in separate gestures is not joined across the gap between them.
             const segments = BlockMemory.toSegments(BlockMemoryComponents.takeRows(parameters.rows, parameters.shownRows)).map(segment => segment.map(toPixels));
             const points = segments.flat();
+            const box = BlockMemoryComponents.clipBox(parameters);
             const color = context.tokens.resolveValue(parameters.color);
             const children = [];
             for (let index = 0; index < segments.length; index++) {
                 if (segments[index].length < 2)
                     continue;
-                children.push({
-                    id: `path-${index}`,
-                    type: "polyline",
-                    properties: {
-                        points: segments[index],
-                        fill: "none",
-                        stroke: color,
-                        strokeWidth: Number(parameters.lineWidth),
-                        opacity: Number(parameters.opacity)
-                    }
-                });
+                const runs = box === null ? [segments[index]] : BlockMemoryComponents.clipPolyline(segments[index], box);
+                for (let runIndex = 0; runIndex < runs.length; runIndex++) {
+                    children.push({
+                        id: runs.length > 1 ? `path-${index}-${runIndex}` : `path-${index}`,
+                        type: "polyline",
+                        properties: {
+                            points: runs[runIndex],
+                            fill: "none",
+                            stroke: color,
+                            strokeWidth: Number(parameters.lineWidth),
+                            opacity: Number(parameters.opacity)
+                        }
+                    });
+                }
             }
+            // A sample off the plot is left undrawn for the same reason the line is cut to it.
+            const drawnPoints = box === null ? points : points.filter(point => BlockMemoryComponents.isInsideBox(point, box));
             // One marker per sample would outgrow the node budget on a long recording, so the
             // samples are thinned to a fixed number of them and the path keeps the whole run.
-            if (parameters.showPoints === true && points.length > 0) {
-                const step = Math.max(1, Math.ceil(points.length / BlockMemoryComponents.maxDrawnPoints));
-                for (let index = 0; index < points.length; index += step) {
+            if (parameters.showPoints === true && drawnPoints.length > 0) {
+                const step = Math.max(1, Math.ceil(drawnPoints.length / BlockMemoryComponents.maxDrawnPoints));
+                for (let index = 0; index < drawnPoints.length; index += step) {
                     children.push({
                         id: `sample-${index}`,
                         type: "circle",
                         properties: {
-                            centerX: points[index].x,
-                            centerY: points[index].y,
+                            centerX: drawnPoints[index].x,
+                            centerY: drawnPoints[index].y,
                             radius: Number(parameters.pointRadius),
                             fill: color,
                             stroke: "none",
