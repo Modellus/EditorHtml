@@ -118,6 +118,18 @@ test.describe('A table header tooltip is written as mathematics', () => {
         expect(written.asTermName).toContain('\\_');
     });
 
+    test('the definition is shown at the index it is written at', async ({ page }) => {
+        await setupEditor(page);
+        await setupModel(page, SEEDED_MODEL);
+        const written = await page.evaluate(() => ({
+            acceleration: shell.calculator.system.getTerm('a').expressionLatex,
+            position: shell.calculator.system.getTerm('x').expressionLatex
+        }));
+        expect(written.acceleration).toBe('a_{n}=\\frac{F_{n}}{m}');
+        expect(written.position).toBe('\\displaylines{x_{0}=1\\\\x_{n}=x_{n-1} + v_{n} \\cdot dt}');
+        expect(written.position).not.toContain('; ');
+    });
+
     test('the tooltip math field holds the expression and not an escaped copy of it', async ({ page }) => {
         await setupEditor(page);
         await setupModel(page, SEEDED_MODEL);
@@ -230,5 +242,96 @@ test.describe('The player end reads the term the player runs', () => {
             return { editor: shell.bottomToolbar.getPlayerTermEnd(), independentEnd: shell.calculator.properties.independent.end };
         });
         expect(end).toEqual({ editor: 4, independentEnd: 4 });
+    });
+});
+
+test.describe('The editor says what stops a model running', () => {
+    const CYCLIC_MODEL = '\\displaylines{x_{0}=1\\\\v_{0}=0\\\\F_{n}=-k\\cdot x_{n}-r\\cdot v_{n}\\\\a_{n}=\\frac{F_{n}}{m}\\\\v_{n}=v_{n-1}+a_{n}\\cdot dt\\\\x_{n}=x_{n-1}+v_{n}\\cdot dt}';
+    const INDEPENDENT_MODEL = `\\displaylines{t_{0}=0\\\\t_{n}=t_{n-1}+dt\\\\${RECURRENCE_MODEL.slice('\\displaylines{'.length)}`;
+
+    async function readFailingRows(page) {
+        return page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            shell.calculator.engine.reset();
+            shell.calculator.engine.iterate();
+            shape.refreshFailingRows();
+            return {
+                failingRows: shape.failingRowIndexes,
+                hasErrors: shell.hasExpressionErrors(),
+                cyclic: shell.calculator.getCyclicTermNames()
+            };
+        });
+    }
+
+    test('every row assigning to the independent term is marked, not just the first', async ({ page }) => {
+        await setupEditor(page);
+        await setupModel(page, INDEPENDENT_MODEL);
+        const state = await readFailingRows(page);
+        expect(state.failingRows).toEqual([0, 1]);
+        expect(state.hasErrors).toBe(true);
+    });
+
+    test('the message names the independent term and where its values come from', async ({ page }) => {
+        await setupEditor(page);
+        await setupModel(page, INDEPENDENT_MODEL);
+        const message = await page.evaluate(() => shell.calculator.findRowParseErrors(['t_{n}=t_{n-1}+dt'])[0]);
+        expect(message).toContain('independent variable');
+        expect(message).toContain('start and step');
+    });
+
+    test('the rows of a same-row cycle are marked and the seeds are left alone', async ({ page }) => {
+        await setupEditor(page);
+        await setupModel(page, CYCLIC_MODEL);
+        const state = await readFailingRows(page);
+        expect(state.cyclic).toEqual(['F', 'a', 'v', 'x']);
+        expect(state.failingRows).toEqual([2, 3, 4, 5]);
+        expect(state.hasErrors).toBe(true);
+    });
+
+    test('a model written from the previous step is not marked at all', async ({ page }) => {
+        await setupEditor(page);
+        await setupModel(page, SEEDED_MODEL);
+        const state = await readFailingRows(page);
+        expect(state.cyclic).toEqual([]);
+        expect(state.failingRows).toEqual([]);
+        expect(state.hasErrors).toBe(false);
+    });
+});
+
+test.describe('A subscript written without braces is read', () => {
+    const UNBRACED_MODEL = '\\displaylines{x_0=1\\\\v_0=0\\\\F_n=-k\\cdot x_{n-1}\\\\a_n=\\frac{F_n}{m}\\\\v_n=v_{n-1}+a_n\\cdot dt\\\\x_n=x_{n-1}+v_n\\cdot dt}';
+
+    test('a model spelled the way MathLive writes it parses and runs', async ({ page }) => {
+        await setupEditor(page);
+        await setupModel(page, UNBRACED_MODEL);
+        const state = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Expr1');
+            shape.refreshFailingRows();
+            for (const [name, value] of [['k', 0.1], ['m', 1], ['dt', 0.01]])
+                shell.calculator.setUserInput(name, value, 1, 1);
+            shell.calculator.engine.reset();
+            shell.calculator.engine.iterate();
+            return {
+                failingRows: shape.failingRowIndexes,
+                terms: shell.calculator.getTermsNames(),
+                force: shell.calculator.system.getByNameOnIteration(2, 'F')
+            };
+        });
+        expect(state.failingRows).toEqual([]);
+        expect(state.terms).toEqual(expect.arrayContaining(['F', 'a', 'v', 'x']));
+        expect(state.force).toBeCloseTo(-0.1, 6);
+    });
+
+    test('a named term part is still a name and not an index', async ({ page }) => {
+        await setupEditor(page);
+        await setupModel(page, SEEDED_MODEL);
+        const named = await page.evaluate(() => ({
+            error: shell.calculator.findRowParseErrors(['v_{\\!x}=3'])[0],
+            braced: shell.calculator.findRowParseErrors(['w_{n}=1'])[0],
+            unbraced: shell.calculator.findRowParseErrors(['w_n=1'])[0]
+        }));
+        expect(named.error).toBeNull();
+        expect(named.braced).toBeNull();
+        expect(named.unbraced).toBeNull();
     });
 });

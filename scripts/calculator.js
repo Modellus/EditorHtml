@@ -582,15 +582,17 @@ class Calculator extends EventTarget {
     // Rows are checked against a system of this call's own: parsing a name is what makes it a term, and a
     // row the user is still writing would otherwise leave the model holding terms it never asked for.
     findRowParseErrors(rowsLatex = []) {
-        const parser = new Modellus.Parser(new Modellus.System(this.properties.independent.name, this.properties.iterationTerm));
-        return rowsLatex.map(rowLatex => this.findRowParseError(parser, rowLatex));
+        const system = new Modellus.System(this.properties.independent.name, this.properties.iterationTerm);
+        const parser = new Modellus.Parser(system);
+        return rowsLatex.map(rowLatex => this.findRowParseError(parser, system, rowLatex));
     }
 
-    findRowParseError(parser, rowLatex = "") {
+    findRowParseError(parser, system, rowLatex = "") {
         const expressions = this.splitExpressions(this.normalizeExpressionText(rowLatex));
         for (let expressionIndex = 0; expressionIndex < expressions.length; expressionIndex++) {
             parser.hasErrors = false;
             parser.errors = [];
+            system.clearDiagnostics();
             try {
                 parser.parse(expressions[expressionIndex]);
             } catch (error) {
@@ -782,6 +784,10 @@ class Calculator extends EventTarget {
 
     isSeedTerm(name = "") {
         return this.system.getSeedRequiredNames().includes(name);
+    }
+
+    getCyclicTermNames() {
+        return this.system.getCyclicTermNames();
     }
 
     setUserInput(name = "", value = 0, iteration = 1, caseNumber = 1) {

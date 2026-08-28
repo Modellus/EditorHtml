@@ -255,7 +255,9 @@ declare enum DiagnosticCode {
     DOMAIN_ENUMERATION_LIMIT = "DOMAIN_ENUMERATION_LIMIT",
     DOMAIN_RANDOM_COUNT = "DOMAIN_RANDOM_COUNT",
     CATEGORICAL_ARITHMETIC = "CATEGORICAL_ARITHMETIC",
-    CATEGORICAL_LABEL_CONFLICT = "CATEGORICAL_LABEL_CONFLICT"
+    CATEGORICAL_LABEL_CONFLICT = "CATEGORICAL_LABEL_CONFLICT",
+    INDEPENDENT_ASSIGNED = "INDEPENDENT_ASSIGNED",
+    EXPRESSION_CYCLE = "EXPRESSION_CYCLE"
 }
 interface SourceLocation {
     line: number;
@@ -568,6 +570,8 @@ declare class System {
     private readonly literalIterationIndexesByName;
     /** Names written in terms of their own earlier value, `x_{n}=x_{n-1}+\dots`. */
     private readonly recurrenceNames;
+    /** Names whose statements read each other within one row, so none of them can be evaluated first. */
+    private cyclicTermNames;
     constructor(independent?: string, iterationTerm?: string, iterationTermStart?: number);
     get independent(): Term;
     set independent(name: string);
@@ -655,13 +659,17 @@ declare class System {
      * value supplied before the model produces anything at all.
      */
     getSeedRequiredNames(): string[];
-    storeExpressionTree(name: string, tree: Branch): void;
-    storeExpressionTreeWithCondition(name: string, expressionTree: Branch, conditionTree?: Branch): void;
+    private reportExpressionCycle;
+    /** The names caught in a same-row cycle the last evaluation could not order. */
+    getCyclicTermNames(): string[];
+    storeExpressionTree(name: string, tree: Branch, indexLatex?: string): void;
+    storeExpressionTreeWithCondition(name: string, expressionTree: Branch, conditionTree?: Branch, indexLatex?: string): void;
     getExpressionTree(name: string): Branch | undefined;
     getExpressionTrees(name: string): Branch[];
     getExpressionTreePairs(name: string): {
         expressionTree: Branch;
         conditionTree?: Branch;
+        indexLatex?: string;
     }[];
     getTerm(name: string): Term | undefined;
     isTerm(name: string): boolean;
@@ -795,6 +803,12 @@ declare class LatexVisitor {
     private readonly system;
     constructor(system: System);
     build(): void;
+    /**
+     * A name written at an index is shown at that index - `a_{n}=...`, and a name given both a first
+     * value and a rule as the two statements the reader wrote - rather than as a bare name followed by
+     * the branches run together, which is not a statement anybody could have written.
+     */
+    private buildIndexedLatex;
     private getTermLatexName;
     private buildConditionalLatex;
     private buildRegressionConditionalLatex;
@@ -2387,17 +2401,19 @@ declare class FunctionSubscriptDigitConditionalContext extends AssignmentContext
 }
 declare class FunctionSubscriptConditionalContext extends AssignmentContext {
     constructor(ctx: AssignmentContext);
-    name(): NameContext;
-    expression(): ExpressionContext;
+    name(): NameContext[];
+    name(i: number): NameContext | null;
     caseRow(): CaseRowContext[];
     caseRow(i: number): CaseRowContext | null;
+    expression(): ExpressionContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
 declare class FunctionSubscriptContext extends AssignmentContext {
     constructor(ctx: AssignmentContext);
-    name(): NameContext;
+    name(): NameContext[];
+    name(i: number): NameContext | null;
     expression(): ExpressionContext[];
     expression(i: number): ExpressionContext | null;
     enterRule(listener: LatexMathListener): void;
@@ -2821,8 +2837,9 @@ declare class SecantContext extends ExpressionContext {
 }
 declare class SubscriptContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
-    name(): NameContext;
-    expression(): ExpressionContext;
+    name(): NameContext[];
+    name(i: number): NameContext | null;
+    expression(): ExpressionContext | null;
     enterRule(listener: LatexMathListener): void;
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
@@ -4492,6 +4509,13 @@ declare class Visitor extends LatexMathVisitor<Branch> {
      * it, to read the target's domain; nothing else in the tree depends on the assignment target.
      */
     private withAssignmentTarget;
+    /**
+     * The independent term's values come from the run itself - its start and its step - so a statement
+     * assigning to it leaves two writers disagreeing over the same column.  It is reported rather than
+     * quietly accepted, because the run length still comes from the start and step while the values
+     * come from the statement.
+     */
+    private reportIndependentAssignment;
     private markLiteralIterationIndexText;
     visitStatement: (context: StatementContext) => Branch;
     /**

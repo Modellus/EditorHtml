@@ -251,13 +251,28 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         // Read from the stored expression rather than the field: a shape restored with the model is
         // checked before its mathfield has mounted, and an unmounted field reads back empty.
         const rows = ExpressionAlignment.readRows(this.properties.expression ?? "");
-        const rowErrors = this.board.calculator.findRowParseErrors(rows.map(row => row.cells.join("")));
+        const rowsLatex = rows.map(row => row.cells.join(""));
+        const rowErrors = this.board.calculator.findRowParseErrors(rowsLatex);
+        const cyclicTermNames = this.board.calculator.getCyclicTermNames();
         const failingRowIndexes = [];
         for (let rowIndex = 0; rowIndex < rowErrors.length; rowIndex++) {
-            if (rowErrors[rowIndex] !== null)
+            if (rowErrors[rowIndex] !== null || this.isCyclicRow(rowsLatex[rowIndex], cyclicTermNames))
                 failingRowIndexes.push(rowIndex);
         }
         this.setFailingRowIndexes(failingRowIndexes);
+    }
+
+    isCyclicRow(rowLatex, cyclicTermNames) {
+        if (cyclicTermNames.length === 0)
+            return false;
+        const relationIndex = ExpressionAlignment.findPrimaryRelationIndex(rowLatex);
+        if (relationIndex < 0)
+            return false;
+        const definedName = MathSemanticMetadata.readLeftHandSideTermName(rowLatex.substring(0, relationIndex));
+        const indexSuffix = `_${this.board.calculator.properties.iterationTerm}`;
+        if (!definedName.endsWith(indexSuffix))
+            return false;
+        return cyclicTermNames.includes(definedName.slice(0, -indexSuffix.length));
     }
 
     setFailingRowIndexes(failingRowIndexes) {
