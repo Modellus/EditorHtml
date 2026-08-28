@@ -29,12 +29,13 @@ class CasesTableShape extends BaseTableShape {
 
     getAutomaticColumnTerms() {
         const calculator = this.board.calculator;
-        const { derivatives, parameters } = calculator.getTermsByType();
-        return [...derivatives, ...parameters].filter(term => calculator.isUserInputTerm(term));
+        const { derivatives, seeds, parameters } = calculator.getTermsByType();
+        return [...derivatives, ...seeds, ...parameters].filter(term => calculator.isUserInputTerm(term));
     }
 
     isIntegratedTerm(term) {
-        return this.board.calculator.system.getTerm(term)?.type === Modellus.TermType.DIFFERENTIAL;
+        const calculator = this.board.calculator;
+        return calculator.system.getTerm(term)?.type === Modellus.TermType.DIFFERENTIAL || calculator.isSeedTerm(term);
     }
 
     createElement() {
@@ -196,14 +197,14 @@ class CasesTableShape extends BaseTableShape {
 
     getMomentValueForIteration(iteration) {
         if (this.getPlayerTerm() === "iteration")
-            return iteration;
+            return this.board.calculator.getIterationTermValue(iteration);
         const independent = this.board.calculator.properties.independent;
         return Utils.roundToPrecision(independent.start + (iteration - 1) * independent.step, this.board.calculator.getPrecision());
     }
 
     convertMomentValueToIteration(momentValue) {
         if (this.getPlayerTerm() === "iteration")
-            return Math.max(1, Math.floor(momentValue));
+            return Math.max(1, this.board.calculator.system.iterationTermValueToIteration(Math.floor(momentValue)));
         const independent = this.board.calculator.properties.independent;
         return Math.max(1, Math.round((momentValue - independent.start) / independent.step) + 1);
     }

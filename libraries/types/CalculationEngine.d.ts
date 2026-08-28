@@ -564,6 +564,10 @@ declare class System {
     private readonly indexedSources;
     private readonly resolvingElements;
     private indexedDependentNames;
+    /** Per name, the literal indexes it is assigned at - the `0` of `x_0=1` - so a seeded run is told apart. */
+    private readonly literalIterationIndexesByName;
+    /** Names written in terms of their own earlier value, `x_{n}=x_{n-1}+\dots`. */
+    private readonly recurrenceNames;
     constructor(independent?: string, iterationTerm?: string, iterationTermStart?: number);
     get independent(): Term;
     set independent(name: string);
@@ -643,6 +647,14 @@ declare class System {
      */
     invalidateTermExpressions(name: string): void;
     markAsPiecewise(name: string): void;
+    markLiteralIterationIndex(name: string, index: number): void;
+    markRecurrence(name: string): void;
+    /**
+     * The names written as a recurrence on their own earlier value with no statement giving the value
+     * the run starts from.  The first row has no earlier value to read, so each of these needs a first
+     * value supplied before the model produces anything at all.
+     */
+    getSeedRequiredNames(): string[];
     storeExpressionTree(name: string, tree: Branch): void;
     storeExpressionTreeWithCondition(name: string, expressionTree: Branch, conditionTree?: Branch): void;
     getExpressionTree(name: string): Branch | undefined;
@@ -4480,6 +4492,7 @@ declare class Visitor extends LatexMathVisitor<Branch> {
      * it, to read the target's domain; nothing else in the tree depends on the assignment target.
      */
     private withAssignmentTarget;
+    private markLiteralIterationIndexText;
     visitStatement: (context: StatementContext) => Branch;
     /**
      * `x \in {1,2,3}`: constrains an existing or newly created scalar term.  The statement never

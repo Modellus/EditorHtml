@@ -770,12 +770,18 @@ class Calculator extends EventTarget {
     isUserInputTerm(name = "") {
         if (!this.isTerm(name))
             return false;
+        if (name === this.properties.iterationTerm)
+            return false;
+        if (this.isSeedTerm(name))
+            return true;
         const type = this.system.getTerm(name)?.type;
         if (type === Modellus.TermType.FUNCTION || type === Modellus.TermType.INDEPENDENT || type === Modellus.TermType.PRELOADED)
             return false;
-        if (name === this.properties.iterationTerm)
-            return false;
         return this.isEditable(name);
+    }
+
+    isSeedTerm(name = "") {
+        return this.system.getSeedRequiredNames().includes(name);
     }
 
     setUserInput(name = "", value = 0, iteration = 1, caseNumber = 1) {
@@ -1035,9 +1041,11 @@ class Calculator extends EventTarget {
     getTermsByType() {
         const independentName = this.properties.independent.name;
         const iterationName = this.properties.iterationTerm;
+        const seedNames = this.system.getSeedRequiredNames();
         const derivatives = [];
         const functions = [];
         const parameters = [];
+        const seeds = [];
         const termNames = this.getTermsNames();
         for (let i = 0; i < termNames.length; i++) {
             const name = termNames[i];
@@ -1046,14 +1054,16 @@ class Calculator extends EventTarget {
             const term = this.system.getTerm(name);
             if (!term)
                 continue;
-            if (term.type === Modellus.TermType.DIFFERENTIAL)
+            if (seedNames.includes(name))
+                seeds.push(name);
+            else if (term.type === Modellus.TermType.DIFFERENTIAL)
                 derivatives.push(name);
             else if (term.type === Modellus.TermType.FUNCTION)
                 functions.push(name);
             else if (term.type === Modellus.TermType.PARAMETER)
                 parameters.push(name);
         }
-        return { derivatives, functions, parameters };
+        return { derivatives, functions, parameters, seeds };
     }
 
     getDefaultTerm() {

@@ -814,10 +814,21 @@ class Utils {
         return `<math-field read-only class=\"form-math-field\"${styleAttribute}>${Utils.formatMathTermName(mathText)}</math-field>`;
     }
 
+    static formatMathExpression(text) {
+        return Utils.writeTermNames(text);
+    }
+
     static setMathFieldValue(mathFieldElement, mathValue) {
+        Utils.writeMathField(mathFieldElement, Utils.formatMathTermName(mathValue));
+    }
+
+    static setMathFieldExpression(mathFieldElement, expressionLatex) {
+        Utils.writeMathField(mathFieldElement, Utils.formatMathExpression(expressionLatex));
+    }
+
+    static writeMathField(mathFieldElement, normalizedValue) {
         if (!mathFieldElement)
             return;
-        const normalizedValue = Utils.formatMathTermName(mathValue);
         if (typeof mathFieldElement.setValue === "function")
             mathFieldElement.setValue(normalizedValue);
         else

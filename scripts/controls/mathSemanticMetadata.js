@@ -65,9 +65,20 @@ class MathSemanticMetadata {
         if (this.isIterationIndexText(indexText))
             return MathSymbolRole.ITERATION_INDEX;
         const termName = MathSemanticMetadata.toPlainTermName(symbolName);
+        if (this.isMomentIndexText(indexText) && !this.termNames.includes(termName) && this.isKnownTermName(baseName))
+            return MathSymbolRole.ITERATION_INDEX;
         if (this.termNames.includes(termName) || this.definedTermNames.includes(termName))
             return MathSymbolRole.QUALIFIER_INDEX;
         return null;
+    }
+
+    isMomentIndexText(indexText) {
+        return /^[0-9]+$/.test(String(indexText ?? "").trim());
+    }
+
+    isKnownTermName(baseName) {
+        const termName = MathSemanticMetadata.toPlainTermName(baseName);
+        return this.termNames.includes(termName) || this.definedTermNames.includes(termName);
     }
 
     isIterationIndexText(indexText) {

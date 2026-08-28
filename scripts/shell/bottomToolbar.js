@@ -277,11 +277,11 @@ class BottomToolbar {
                 text: this.shell.board.translations.get("Independent.End"),
                 buildControl: $container => {
                     $('<div>').dxNumberBox({
-                        value: independent.end,
+                        value: this.getPlayerTermEnd(),
                         stylingMode: "filled",
                         disabled: independent.noLimit,
                         elementAttr: { class: "mdl-math-input" },
-                        onValueChanged: e => this.shell.setPropertyCommand("independent.end", e.value)
+                        onValueChanged: e => this.setPlayerTermEnd(e.value)
                     }).appendTo($container);
                     this._endEditor = $container.find(".dx-numberbox").dxNumberBox("instance");
                 }
@@ -321,6 +321,24 @@ class BottomToolbar {
             scrollingEnabled: false,
             itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
         });
+    }
+
+    getPlayerTermEnd() {
+        const calculator = this.shell.calculator;
+        if (this.getPlayerTerm() === "iteration")
+            return calculator.getIterationTermValue(calculator.getFinalIteration());
+        return calculator.properties.independent.end;
+    }
+
+    setPlayerTermEnd(value) {
+        if (this.getPlayerTerm() !== "iteration") {
+            this.shell.setPropertyCommand("independent.end", value);
+            return;
+        }
+        const independent = this.shell.calculator.properties.independent;
+        const finalIteration = Math.max(1, this.shell.calculator.system.iterationTermValueToIteration(Math.floor(value)));
+        const end = independent.start + (finalIteration - 1) * independent.step;
+        this.shell.setPropertyCommand("independent.end", Utils.roundToPrecision(end, Utils.getPrecision(independent.step)));
     }
 
     createGridDropDownButton(container) {

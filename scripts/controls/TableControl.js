@@ -1876,7 +1876,7 @@ class TableControl {
         const mathFieldElement = tooltipContentElement.querySelector("math-field");
         if (!mathFieldElement)
             return;
-        Utils.setMathFieldValue(mathFieldElement, this.headerTooltipLatex);
+        Utils.setMathFieldExpression(mathFieldElement, this.headerTooltipLatex);
     }
 
     scheduleHeaderTooltip(columnIndex, target) {
