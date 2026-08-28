@@ -1377,3 +1377,53 @@ test('what the model answers off the ends of the plot is not drawn outside it', 
     expect(points.length).toBeLessThan(recorded.samples.length);
     expect(drawn.marker).toBe(false);
 });
+
+// The eye every term on the board is shown with, on both of the tracker's rows: off to begin with,
+// and turned on it stands the term and its value in the plot, written by the shared term display —
+// so a recording is read in the same badge, figures and precision as every other term on the board.
+test('each variable carries the eye that shows it, and is read in the plot', async ({ page }) => {
+    await setupBoard(page);
+    await addModel(page);
+    await addTracker(page, { xVariable: 'px', yVariable: 'py' });
+    await dragAcross(page);
+    expect(await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        return [shape.properties.xVariableDisplayMode, shape.properties.yVariableDisplayMode, shape.termDisplayLayer?.textContent ?? ''];
+    })).toEqual(['none', 'none', '']);
+    await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Tracker')));
+    await page.waitForTimeout(300);
+    await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+    await page.waitForTimeout(400);
+    const eyes = page.locator('.mdl-shape-overlay-popup .term-packed-control .term-packed-checkbox');
+    await expect(eyes).toHaveCount(2);
+    await eyes.nth(0).click();
+    await eyes.nth(1).click();
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    const shown = await page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Tracker');
+        const plot = shape.element.querySelector('[data-source-id="plot"]');
+        const labels = Array.from(shape.termDisplayLayer.querySelectorAll('text'));
+        return {
+            modes: [shape.properties.xVariableDisplayMode, shape.properties.yVariableDisplayMode],
+            texts: labels.map(label => label.textContent),
+            ys: labels.map(label => Number(label.getAttribute('y'))),
+            xs: labels.map(label => Number(label.getAttribute('x'))),
+            values: ['px', 'py'].map(term => shell.board.calculator.getByName(term, 1)),
+            top: Number(plot.getAttribute('y')),
+            bottom: Number(plot.getAttribute('y')) + Number(plot.getAttribute('height')),
+            centerX: Number(plot.getAttribute('x')) + Number(plot.getAttribute('width')) / 2
+        };
+    });
+    expect(shown.modes).toEqual(['nameValue', 'nameValue']);
+    // The board's own reading of the term, in the model's precision, not a readout of the object's.
+    expect(shown.texts).toEqual([`px = ${shown.values[0].toFixed(2)}`, `py = ${shown.values[1].toFixed(2)}`]);
+    // The horizontal reading stands along the axis it is measured against, at the foot of the plot;
+    // the vertical one at the top, so the two never stand on one another.
+    expect(shown.xs).toEqual([shown.centerX, shown.centerX]);
+    expect(shown.ys[0]).toBeGreaterThan(shown.ys[1]);
+    for (const y of shown.ys) {
+        expect(y).toBeGreaterThan(shown.top);
+        expect(y).toBeLessThan(shown.bottom);
+    }
+});

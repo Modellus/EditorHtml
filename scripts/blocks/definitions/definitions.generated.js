@@ -7196,7 +7196,12 @@ BlockDefinitionLoader.registerAll([
                 "category": "model",
                 "colorParameter": "xValueColor",
                 "unitParameter": "xVariableUnit",
-                "description": "Model variable that takes the horizontal position of sample n at iteration n. Naming none the row holds the value itself: the recording stays with the object and the row reads the horizontal position the last gesture left it standing at."
+                "valueAnchor": {
+                    "node": "plot",
+                    "x": 0.5,
+                    "y": 0.94
+                },
+                "description": "Model variable that takes the horizontal position of sample n at iteration n. Naming none the row holds the value itself: the recording stays with the object and the row reads the horizontal position the last gesture left it standing at. Turning on the eye beside the row stands the term and its value in the plot, along the axis it is measured against, in the badge and the figures every other term on the board is read in."
             },
             {
                 "id": "yVariable",
@@ -7206,7 +7211,12 @@ BlockDefinitionLoader.registerAll([
                 "category": "model",
                 "colorParameter": "yValueColor",
                 "unitParameter": "yVariableUnit",
-                "description": "Model variable that takes the vertical position of sample n at iteration n. Naming none the row holds the value itself, the way the horizontal one does."
+                "valueAnchor": {
+                    "node": "plot",
+                    "x": 0.5,
+                    "y": 0.06
+                },
+                "description": "Model variable that takes the vertical position of sample n at iteration n. Naming none the row holds the value itself, the way the horizontal one does. It carries the same eye, and is read at the top of the plot so the two readings never stand on one another."
             },
             {
                 "id": "xVariableUnit",
