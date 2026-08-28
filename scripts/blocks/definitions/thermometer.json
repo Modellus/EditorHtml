@@ -5,8 +5,8 @@
     "displayName": "Thermometer",
     "description": "A temperature read as the height of a column: a bulb, a stem the liquid rises up, and a scale beside it marked every so many degrees. A dashed line carries the top of the column across to the scale, so the reading is placed against the marks the way a chart places a point against its axes. The column can be dragged to write the temperature back, and the marks and their numbers are the sizes the board's own axes are drawn to, so the scale stretches as the object is resized rather than the writing on it.",
     "icon": "fa-light fa-temperature-half",
-    "tags": ["object", "thermometer", "temperature", "column", "scale", "meter"],
-    "capabilities": ["linear", "scale", "reads-model", "interaction", "writes-model"],
+    "tags": ["object", "thermometer", "temperature", "column", "scale", "meter", "sound"],
+    "capabilities": ["linear", "scale", "reads-model", "interaction", "writes-model", "audible"],
     "preview": { "parameters": { "valueVariable": "62", "minimum": -50, "maximum": 150, "tickStep": 50 } },
     "parameters": [
         { "id": "valueVariable", "label": "Temperature", "valueType": "variable", "defaultValue": "0", "category": "model", "unitParameter": "unit", "colorParameter": "columnColor", "valueAnchor": { "node": "reading-anchor", "x": 0.5, "y": 0.5 }, "description": "The term the column stands at. Turning on the eye beside the row stands the term and its value out past the scale, level with the top of the column, in the badge and the figures every other term on the board is read in. Dragging the column writes it back, so a thermometer reading a term the model lets you set is also how that temperature is given — and one reading a computed term is read-only, as every other drawing of a computed term is." },
@@ -21,7 +21,8 @@
         { "id": "borderColor", "label": "Border colour", "valueType": "colour", "defaultValue": "token:stroke.default", "category": "style" },
         { "id": "scaleColor", "label": "Scale colour", "valueType": "colour", "defaultValue": "token:axis.color", "category": "style", "description": "The marks along the scale. They are drawn to the measurements the board's own axes are drawn to, so a thermometer beside a chart is read the same way." },
         { "id": "scaleLabelColor", "label": "Scale label colour", "valueType": "colour", "defaultValue": "token:axis.labelColor", "category": "style" },
-        { "id": "readoutColor", "label": "Reading colour", "valueType": "colour", "defaultValue": "token:text.primary", "category": "style" }
+        { "id": "readoutColor", "label": "Reading colour", "valueType": "colour", "defaultValue": "token:text.primary", "category": "style" },
+        { "id": "sound", "label": "Sound", "valueType": "audio", "defaultValue": "", "category": "sound", "valueParameter": "valueVariable", "minimumParameter": "minimum", "maximumParameter": "maximum", "description": "A sound the thermometer makes as the temperature moves. The clip is chosen from a file or from the catalogue's audios, and it is heard over the very ends the scale is marked between, so the coldest the thermometer can read is one end of the sound and the hottest the other. Beside it stands the choice of what the temperature does to the clip: heard as pitch it is played higher as the column rises, and heard as volume it is played louder. It is heard only while the temperature is changing, so a thermometer standing still is silent however long it stands there." }
     ],
     "locals": [
         { "id": "w", "value": { "parameter": "$width" } },

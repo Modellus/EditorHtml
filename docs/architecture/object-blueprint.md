@@ -121,10 +121,11 @@ zero, a phasor of length one); a clock does not need it.
 Each is `{ id, label, valueType, defaultValue, category }` plus any of `description`, `minimum`,
 `maximum`, `enumValues`, `enumIcons`, `unit`, `unitParameter`, `required`, `bindable`, `agentAccessible`,
 `userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`, `modeParameter`,
-`toolbarKey`, `toolbarTooltip`, `valueAnchor`, `visibleWhen`.
+`valueParameter`, `minimumParameter`, `maximumParameter`, `toolbarKey`, `toolbarTooltip`,
+`valueAnchor`, `visibleWhen`.
 
 `valueType` is one of `number`, `string`, `boolean`, `colour`, `variable`, `expression`, `memory`,
-`character`, `object`.
+`character`, `audio`, `object`.
 
 **A label names the thing, not the kind of thing.** A `variable` row stands in the variables menu, in
 a term selector, under a key that says so — so call it *Hour*, *Value*, *Time*, never *Hour variable*.

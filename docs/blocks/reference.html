@@ -1134,7 +1134,7 @@
         </table>
         <h3 id="block-speedometer"><code>speedometer</code> — Speedometer</h3>
         <p>Sweeping dial with a scale, a needle bound to a model variable and a numeric readout.</p>
-        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>reads-model</code> <code>scale</code></p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>reads-model</code> <code>scale</code> <code>audible</code></p>
         <table class="docs-table">
             <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
             <tbody>
@@ -1152,6 +1152,7 @@
                 <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
                 <tr><td><code>needleColor</code></td><td>colour</td><td><code>"token:stroke.warning"</code></td><td></td></tr>
                 <tr><td><code>labelColor</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+                <tr><td><code>sound</code></td><td>audio</td><td><code>""</code></td><td></td></tr>
             </tbody>
         </table>
         <h3 id="block-steering-wheel"><code>steering-wheel</code> — Steering wheel</h3>
@@ -1187,7 +1188,7 @@
         </table>
         <h3 id="block-thermometer"><code>thermometer</code> — Thermometer</h3>
         <p>A temperature read as the height of a column: a bulb, a stem the liquid rises up, and a scale beside it marked every so many degrees. A dashed line carries the top of the column across to the scale, so the reading is placed against the marks the way a chart places a point against its axes. The column can be dragged to write the temperature back, and the marks and their numbers are the sizes the board's own axes are drawn to, so the scale stretches as the object is resized rather than the writing on it.</p>
-        <p class="block-meta">Capabilities: <code>linear</code> <code>scale</code> <code>reads-model</code> <code>interaction</code> <code>writes-model</code></p>
+        <p class="block-meta">Capabilities: <code>linear</code> <code>scale</code> <code>reads-model</code> <code>interaction</code> <code>writes-model</code> <code>audible</code></p>
         <table class="docs-table">
             <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
             <tbody>
@@ -1204,6 +1205,7 @@
                 <tr><td><code>scaleColor</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
                 <tr><td><code>scaleLabelColor</code></td><td>colour</td><td><code>"token:axis.labelColor"</code></td><td></td></tr>
                 <tr><td><code>readoutColor</code></td><td>colour</td><td><code>"token:text.primary"</code></td><td></td></tr>
+                <tr><td><code>sound</code></td><td>audio</td><td><code>""</code></td><td></td></tr>
             </tbody>
         </table>
         <h3 id="block-tick-ring"><code>tick-ring</code> — Tick ring</h3>

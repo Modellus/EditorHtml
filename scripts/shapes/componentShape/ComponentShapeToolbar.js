@@ -12,6 +12,7 @@ var ComponentShapeToolbarMixin = {
         const items = resolveShapeToolbarBaseItems(this, ComponentShapeToolbarMixin.createToolbar);
         this._componentTermControls = {};
         this._componentTermsControls = {};
+        this._componentAudioControls = {};
         this._componentModeDropdownElements = {};
         items.push(
             {
@@ -319,7 +320,7 @@ var ComponentShapeToolbarMixin = {
             items.push({ text: "Horizontal", buildControl: $container => control.createRow("x").appendTo($container) });
             items.push({ text: "Vertical", buildControl: $container => control.createRow("y").appendTo($container) });
         }
-        for (const parameter of this.getParametersByCategory(["display", "scale", "interaction", "general"])) {
+        for (const parameter of this.getParametersByCategory(["display", "scale", "interaction", "sound", "general"])) {
             if (rangeParameters.includes(parameter.id))
                 continue;
             items.push({
@@ -393,6 +394,8 @@ var ComponentShapeToolbarMixin = {
             return this.createComponentNumberControl(parameter);
         if (parameter.valueType === "character")
             return this.createComponentCharacterControl(parameter);
+        if (parameter.valueType === "audio")
+            return this.createComponentAudioControl(parameter);
         if (parameter.enumValues)
             return this.createComponentEnumControl(parameter);
         return this.createComponentTextControl(parameter);
@@ -555,6 +558,28 @@ var ComponentShapeToolbarMixin = {
             onClick: () => this.showCharacterPickerPopup({ property: parameter.id })
         });
     },
+    // A definition that says the object makes a noise is offered the sound the way every shape that
+    // makes one is offered it: a clip chosen from a file or from the catalogue, and the choice of
+    // whether the value the definition points the clip at is heard as its pitch or as its loudness.
+    createComponentAudioControl(parameter) {
+        const modulationProperty = ComponentShape.getAudioModulationProperty(parameter.id);
+        this._componentAudioControls[parameter.id] = new AudioControl({
+            getUrl: () => this.properties[parameter.id],
+            setUrl: url => this.setPropertyCommand(parameter.id, url),
+            getModulation: () => this.properties[modulationProperty],
+            setModulation: modulation => this.setPropertyCommand(modulationProperty, modulation),
+            uploadFile: file => this.board.assetManager.uploadAsset(this.id, file, file.name),
+            showCatalog: () => {
+                this.getDropDownButtonInstance(this._componentSettingsDropdownElement)?.close();
+                this.showCatalogAudioPopup(audio => this.applyComponentCatalogAudio(parameter, audio));
+            }
+        });
+        return this._componentAudioControls[parameter.id].createHost();
+    },
+    applyComponentCatalogAudio(parameter, audio) {
+        this.setPropertyCommand(parameter.id, audio.asset_url);
+        this._componentAudioControls[parameter.id]?.refresh();
+    },
     createComponentTextControl(parameter) {
         return $('<div>').dxTextBox({
             value: String(this.properties[parameter.id] ?? ""),
@@ -578,6 +603,8 @@ var ComponentShapeToolbarMixin = {
             controls?.termControl?.refresh();
         for (const control of Object.values(this._componentTermsControls ?? {}))
             control.refresh();
+        for (const control of Object.values(this._componentAudioControls ?? {}))
+            control.refresh();
         this._axisRangeControl?.refresh();
     },
     // An object built from blocks is the one shape whose toolbar shows a value rather than only the
@@ -594,4 +621,4 @@ var ComponentShapeToolbarMixin = {
     }
 };
 
-if (typeof ComponentShape !== "undefined") Object.assign(ComponentShape.prototype, CharacterPickerMixin, ComponentShapeToolbarMixin);
+if (typeof ComponentShape !== "undefined") Object.assign(ComponentShape.prototype, CharacterPickerMixin, CatalogAudioPickerMixin, ComponentShapeToolbarMixin);

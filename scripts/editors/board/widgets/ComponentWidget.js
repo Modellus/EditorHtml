@@ -4,6 +4,15 @@ class ComponentShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, null, id);
         this._axisTickDrag = new AxisTickDrag();
+        this._componentAudioPlayers = {};
+        this._componentAudioValues = {};
+    }
+
+    // The choice that says what the value does to a clip is not a parameter a definition declares:
+    // it belongs to the audio row itself, the way the case a term is read in belongs to the term
+    // row, so a definition asking for a sound gets the choice with it and writes nothing for it.
+    static getAudioModulationProperty(parameterId) {
+        return `${parameterId}Modulation`;
     }
 
     static createInstanceProperties(componentType, name = null) {
@@ -355,6 +364,69 @@ class ComponentShape extends BaseShape {
         super.draw();
         this.applyComponentLayout();
         this.renderComponent();
+        this.updateComponentAudio();
+    }
+
+    // A definition that says the object makes a noise names the clip in a parameter of its own, and
+    // says which of its other parameters the clip follows. The clip is the object's sound wherever
+    // it came from — a file the reader picked or an entry in the catalogue — so this is all the
+    // shape holds for it: one address, and the choice of what the value does to it.
+    getComponentAudioParameters() {
+        return this.getEditableParameters()
+            .filter(parameter => parameter.valueType === "audio")
+            .filter(parameter => this.isComponentParameterOffered(parameter));
+    }
+
+    getComponentAudioPlayer(parameterId) {
+        this._componentAudioPlayers[parameterId] ??= new ShapeAudioPlayer();
+        return this._componentAudioPlayers[parameterId];
+    }
+
+    getComponentAudioModulation(parameter) {
+        const modulation = this.properties[ComponentShape.getAudioModulationProperty(parameter.id)];
+        return ShapeAudio.isVolumeModulation(modulation) ? "volume" : "pitch";
+    }
+
+    // The two ends the value is heard between. A definition names the parameters holding them, so an
+    // object whose scale the reader can move is heard over the scale it is showing rather than over
+    // the one it was written with; one that names neither is heard over the range every synthesised
+    // sound on the board is heard over.
+    getComponentAudioWindow(parameter) {
+        const minimum = parameter.minimumParameter ? this.properties[parameter.minimumParameter] : parameter.minimum;
+        const maximum = parameter.maximumParameter ? this.properties[parameter.maximumParameter] : parameter.maximum;
+        return { minimum: Number(minimum), maximum: Number(maximum) };
+    }
+
+    readComponentAudioValue(parameter) {
+        return this.getComponentCompiler().bindings.resolveTermValue(this.properties[parameter.valueParameter], this.getTermCaseNumber("caseNumber"));
+    }
+
+    updateComponentAudio() {
+        for (const parameter of this.getComponentAudioParameters()) {
+            const modulationProperty = ComponentShape.getAudioModulationProperty(parameter.id);
+            if (this.properties[modulationProperty] == null)
+                this.properties[modulationProperty] = "pitch";
+            const player = this.getComponentAudioPlayer(parameter.id);
+            player.setSource(String(this.properties[parameter.id] ?? ""));
+            this.updateComponentAudioValue(parameter, player);
+        }
+    }
+
+    // The object is heard only while the value it follows is moving: a change starts the clip and
+    // the changes after it steer the voice already sounding, so an object standing still goes quiet
+    // however long it stands there and a model that is not running makes no noise at all.
+    updateComponentAudioValue(parameter, player) {
+        const value = this.readComponentAudioValue(parameter);
+        if (!Number.isFinite(value)) {
+            this._componentAudioValues[parameter.id] = null;
+            return;
+        }
+        const previousValue = this._componentAudioValues[parameter.id];
+        this._componentAudioValues[parameter.id] = value;
+        if (player.url === "" || previousValue == null || previousValue === value)
+            return;
+        const window = this.getComponentAudioWindow(parameter);
+        player.play(value, this.getComponentAudioModulation(parameter), window.minimum, window.maximum);
     }
 
     // The labels are drawn over the object rather than under it, the way the chart draws the ones it
@@ -653,6 +725,8 @@ class ComponentShape extends BaseShape {
     onRemoved() {
         super.onRemoved();
         this.stopKeepingTime();
+        for (const player of Object.values(this._componentAudioPlayers))
+            player.stop();
     }
 
     // Where the pointer is, in the units the drawing is scaled in. It is answered while the model is

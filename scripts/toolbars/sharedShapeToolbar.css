@@ -806,3 +806,15 @@ math-field {
 .mdl-shape-overlay-popup .dx-list-item.dx-state-focused {
     background-color: transparent !important;
 }
+
+/* Where a shape's sound is set: the two ways of choosing a clip and the trash that takes it back,
+   then the choice of what the value does to it, kept apart from them by a gap of its own. */
+.mdl-audio-control {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.mdl-audio-control .mdl-audio-control-modulation {
+    margin-left: 6px;
+}

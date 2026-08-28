@@ -7,9 +7,6 @@ class ValueShape extends BaseShape {
         { value: "sawtooth", text: "Synth", icon: "fa-light fa-waveform-lines" }
     ];
 
-    static soundContext = null;
-    static soundGainNode = null;
-
     constructor(board, parent, id) {
         super(board, null, id);
         this.isEditingValue = this.isEditingValue ?? false;
@@ -24,6 +21,8 @@ class ValueShape extends BaseShape {
         this.previousSoundTerm = this.previousSoundTerm ?? "";
         this.previousSoundCaseNumber = this.previousSoundCaseNumber ?? 1;
         this.soundSelectBoxInstance = this.soundSelectBoxInstance ?? null;
+        this.audioControl = this.audioControl ?? null;
+        this.soundAudioPlayer = this.soundAudioPlayer ?? new ShapeAudioPlayer();
     }
 
     enterEditMode() {
@@ -72,8 +71,47 @@ class ValueShape extends BaseShape {
                     });
                     $p.append(selectHost);
                 }
+            },
+            {
+                text: "Audio",
+                buildControl: $p => $p.append(this.createSoundAudioControl())
             }
         );
+    }
+
+    // A chosen clip is the sound: the instrument beside it is what a value with no clip is heard in,
+    // and emptying the clip hands the value back to it. Either way the button group says what the
+    // value does to the sound — the pitch it is heard at, or how loud it is heard.
+    createSoundAudioControl() {
+        this.audioControl = new AudioControl({
+            getUrl: () => this.properties.soundAudio,
+            setUrl: url => this.setPropertyCommand("soundAudio", url),
+            getModulation: () => this.properties.soundAudioModulation,
+            setModulation: modulation => this.setPropertyCommand("soundAudioModulation", modulation),
+            uploadFile: file => this.board.assetManager.uploadAsset(this.id, file, file.name),
+            showCatalog: () => {
+                this.getDropDownButtonInstance(this._termsDropdownElement)?.close();
+                this.showCatalogAudioPopup(audio => this.applyCatalogAudio(audio));
+            }
+        });
+        return this.audioControl.createHost();
+    }
+
+    applyCatalogAudio(audio) {
+        this.setPropertyCommand("soundAudio", audio.asset_url);
+        this.audioControl?.refresh();
+    }
+
+    getSoundAudioUrl() {
+        return String(this.properties.soundAudio ?? "");
+    }
+
+    getSoundModulation() {
+        return ShapeAudio.isVolumeModulation(this.properties.soundAudioModulation) ? "volume" : "pitch";
+    }
+
+    hasSound() {
+        return this.getSoundAudioUrl() !== "" || this.getSoundInstrument() !== "none";
     }
 
     renderSoundOptionTemplate(itemData) {
@@ -172,6 +210,7 @@ class ValueShape extends BaseShape {
         this.termFormControls["term"]?.termControl?.refresh();
         this.termFormControls["fontSizeTerm"]?.termControl?.refresh();
         this.soundSelectBoxInstance?.option("value", this.getSoundInstrument());
+        this.audioControl?.refresh();
         this.refreshTermsToolbarControl();
         this.refreshFontToolbarControl();
         super.showContextToolbar();
@@ -203,6 +242,8 @@ class ValueShape extends BaseShape {
         this.properties.fontItalic = false;
         this.properties.termDisplayMode = "none";
         this.properties.soundInstrument = "none";
+        this.properties.soundAudio = "";
+        this.properties.soundAudioModulation = "pitch";
     }
 
     getNumericDisplayedValue(term, caseNumber) {
@@ -227,47 +268,40 @@ class ValueShape extends BaseShape {
         return 180 + normalizedValue * 900;
     }
 
-    ensureSoundContext() {
-        const AudioContextClass = window.AudioContext ?? window.webkitAudioContext;
-        if (!AudioContextClass)
-            return null;
-        if (!ValueShape.soundContext)
-            ValueShape.soundContext = new AudioContextClass();
-        if (!ValueShape.soundGainNode) {
-            ValueShape.soundGainNode = ValueShape.soundContext.createGain();
-            ValueShape.soundGainNode.gain.value = 0.05;
-            ValueShape.soundGainNode.connect(ValueShape.soundContext.destination);
-        }
-        return ValueShape.soundContext;
-    }
-
     playSoundForValue(value) {
+        const audioUrl = this.getSoundAudioUrl();
+        if (audioUrl !== "") {
+            this.soundAudioPlayer.setSource(audioUrl);
+            this.soundAudioPlayer.play(value, this.getSoundModulation(), null, null);
+            return;
+        }
         const instrument = this.getSoundInstrument();
         if (instrument === "none")
             return;
-        const context = this.ensureSoundContext();
+        const context = ShapeAudio.getContext();
         if (!context)
             return;
-        if (context.state === "suspended")
-            context.resume().catch(() => {});
         const oscillator = context.createOscillator();
         const gainNode = context.createGain();
         const currentTime = context.currentTime;
-        const frequency = this.getSoundFrequencyFromValue(value);
+        // Heard as pitch, the value is the note. Heard as volume it is how loud one note is, so the
+        // note itself is the middle of the range the pitches would have been spread over.
+        const isVolume = this.getSoundModulation() === "volume";
+        const frequency = this.getSoundFrequencyFromValue(isVolume ? 0 : value);
+        const peak = isVolume ? Math.max(0.002, ShapeAudio.getNormalizedValue(value, null, null) * 0.08) : 0.08;
         oscillator.type = instrument;
         oscillator.frequency.setValueAtTime(frequency, currentTime);
         gainNode.gain.setValueAtTime(0.001, currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.08, currentTime + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(peak, currentTime + 0.02);
         gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.26);
         oscillator.connect(gainNode);
-        gainNode.connect(ValueShape.soundGainNode);
+        gainNode.connect(ShapeAudio.getInstrumentGain());
         oscillator.start(currentTime);
         oscillator.stop(currentTime + 0.28);
     }
 
     updateValueSoundState(value, term, caseNumber) {
-        const instrument = this.getSoundInstrument();
-        if (instrument === "none") {
+        if (!this.hasSound()) {
             this.previousSoundValue = null;
             this.previousSoundTerm = term;
             this.previousSoundCaseNumber = caseNumber;
@@ -607,6 +641,11 @@ class ValueShape extends BaseShape {
     tick() {
         super.tick();
         this.board.markDirty(this);
+    }
+
+    onRemoved() {
+        super.onRemoved();
+        this.soundAudioPlayer.stop();
     }
 }
 

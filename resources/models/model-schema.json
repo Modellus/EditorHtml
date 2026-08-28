@@ -1339,6 +1339,17 @@
                   "enum": ["none", "triangle", "sine", "square", "sawtooth"],
                   "default": "none",
                   "description": "Web Audio oscillator type used to sonify the term value."
+                },
+                "soundAudio": {
+                  "type": "string",
+                  "default": "",
+                  "description": "URL of an audio clip played instead of the synthesised instrument. Set from a file or from a catalogue audio."
+                },
+                "soundAudioModulation": {
+                  "type": "string",
+                  "enum": ["pitch", "volume"],
+                  "default": "pitch",
+                  "description": "Whether the term value is heard as the pitch of the sound or as its volume."
                 }
               }
             }

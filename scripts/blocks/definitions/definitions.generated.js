@@ -9087,13 +9087,15 @@ BlockDefinitionLoader.registerAll([
             "speed",
             "dial",
             "meter",
-            "scale"
+            "scale",
+            "sound"
         ],
         "capabilities": [
             "radial",
             "angular",
             "reads-model",
-            "scale"
+            "scale",
+            "audible"
         ],
         "preview": {
             "parameters": {
@@ -9211,6 +9213,17 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "colour",
                 "defaultValue": "token:text.primary",
                 "category": "style"
+            },
+            {
+                "id": "sound",
+                "label": "Sound",
+                "valueType": "audio",
+                "defaultValue": "",
+                "category": "sound",
+                "valueParameter": "valueVariable",
+                "minimumParameter": "minimum",
+                "maximumParameter": "maximum",
+                "description": "A sound the speedometer makes as the needle moves — an engine note, most obviously. The clip is chosen from a file or from the catalogue's audios, and it is heard over the same two ends the dial is marked between, so a needle at rest is one end of the sound and a needle at full scale the other. Beside it stands the choice of what the speed does to the clip: heard as pitch it is played higher the faster the reading, and heard as volume it is played louder. It is heard only while the reading is changing, so a speedometer standing still is silent."
             }
         ],
         "locals": [
@@ -11647,14 +11660,16 @@ BlockDefinitionLoader.registerAll([
             "temperature",
             "column",
             "scale",
-            "meter"
+            "meter",
+            "sound"
         ],
         "capabilities": [
             "linear",
             "scale",
             "reads-model",
             "interaction",
-            "writes-model"
+            "writes-model",
+            "audible"
         ],
         "preview": {
             "parameters": {
@@ -11781,6 +11796,17 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "colour",
                 "defaultValue": "token:text.primary",
                 "category": "style"
+            },
+            {
+                "id": "sound",
+                "label": "Sound",
+                "valueType": "audio",
+                "defaultValue": "",
+                "category": "sound",
+                "valueParameter": "valueVariable",
+                "minimumParameter": "minimum",
+                "maximumParameter": "maximum",
+                "description": "A sound the thermometer makes as the temperature moves. The clip is chosen from a file or from the catalogue's audios, and it is heard over the very ends the scale is marked between, so the coldest the thermometer can read is one end of the sound and the hottest the other. Beside it stands the choice of what the temperature does to the clip: heard as pitch it is played higher as the column rises, and heard as volume it is played louder. It is heard only while the temperature is changing, so a thermometer standing still is silent however long it stands there."
             }
         ],
         "locals": [

@@ -5,8 +5,8 @@
     "displayName": "Speedometer",
     "description": "Sweeping dial with a scale, a needle bound to a model variable and a numeric readout.",
     "icon": "fa-light fa-gauge-high",
-    "tags": ["object", "gauge", "speed", "dial", "meter", "scale"],
-    "capabilities": ["radial", "angular", "reads-model", "scale"],
+    "tags": ["object", "gauge", "speed", "dial", "meter", "scale", "sound"],
+    "capabilities": ["radial", "angular", "reads-model", "scale", "audible"],
     "preview": { "parameters": { "valueVariable": "64", "unit": "km/h" } },
     "parameters": [
         { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model", "unitParameter": "unit" },
@@ -22,7 +22,8 @@
         { "id": "faceColor", "label": "Face colour", "valueType": "colour", "defaultValue": "token:surface.emphasis", "category": "style" },
         { "id": "borderColor", "label": "Border colour", "valueType": "colour", "defaultValue": "token:stroke.default", "category": "style" },
         { "id": "needleColor", "label": "Needle colour", "valueType": "colour", "defaultValue": "token:stroke.warning", "category": "style" },
-        { "id": "labelColor", "label": "Label colour", "valueType": "colour", "defaultValue": "token:text.primary", "category": "style" }
+        { "id": "labelColor", "label": "Label colour", "valueType": "colour", "defaultValue": "token:text.primary", "category": "style" },
+        { "id": "sound", "label": "Sound", "valueType": "audio", "defaultValue": "", "category": "sound", "valueParameter": "valueVariable", "minimumParameter": "minimum", "maximumParameter": "maximum", "description": "A sound the speedometer makes as the needle moves — an engine note, most obviously. The clip is chosen from a file or from the catalogue's audios, and it is heard over the same two ends the dial is marked between, so a needle at rest is one end of the sound and a needle at full scale the other. Beside it stands the choice of what the speed does to the clip: heard as pitch it is played higher the faster the reading, and heard as volume it is played louder. It is heard only while the reading is changing, so a speedometer standing still is silent." }
     ],
     "locals": [
         { "id": "w", "value": { "parameter": "$width" } },

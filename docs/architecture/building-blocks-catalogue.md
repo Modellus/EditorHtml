@@ -1070,7 +1070,7 @@ Capabilities: `sizable`, `textual`
 
 Sweeping dial with a scale, a needle bound to a model variable and a numeric readout.
 
-Capabilities: `radial`, `angular`, `reads-model`, `scale`
+Capabilities: `radial`, `angular`, `reads-model`, `scale`, `audible`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
@@ -1088,6 +1088,7 @@ Capabilities: `radial`, `angular`, `reads-model`, `scale`
 | `borderColor` | colour | "token:stroke.default" |  |
 | `needleColor` | colour | "token:stroke.warning" |  |
 | `labelColor` | colour | "token:text.primary" |  |
+| `sound` | audio | "" |  |
 
 ### `steering-wheel` — Steering wheel
 
@@ -1125,7 +1126,7 @@ Capabilities: `radial`, `angular`, `linear`, `reads-model`, `scale`, `interactio
 
 A temperature read as the height of a column: a bulb, a stem the liquid rises up, and a scale beside it marked every so many degrees. A dashed line carries the top of the column across to the scale, so the reading is placed against the marks the way a chart places a point against its axes. The column can be dragged to write the temperature back, and the marks and their numbers are the sizes the board's own axes are drawn to, so the scale stretches as the object is resized rather than the writing on it.
 
-Capabilities: `linear`, `scale`, `reads-model`, `interaction`, `writes-model`
+Capabilities: `linear`, `scale`, `reads-model`, `interaction`, `writes-model`, `audible`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
@@ -1142,6 +1143,7 @@ Capabilities: `linear`, `scale`, `reads-model`, `interaction`, `writes-model`
 | `scaleColor` | colour | "token:axis.color" |  |
 | `scaleLabelColor` | colour | "token:axis.labelColor" |  |
 | `readoutColor` | colour | "token:text.primary" |  |
+| `sound` | audio | "" |  |
 
 ### `tick-ring` — Tick ring
 
