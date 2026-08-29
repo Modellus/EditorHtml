@@ -722,7 +722,7 @@ class Calculator extends EventTarget {
                     continue;
                 if (this.system.getTerm(term)?.type === Modellus.TermType.PRELOADED)
                     continue;
-                const value = values[term];
+                const value = this.isSeedTerm(term) ? this.readSuppliedInitialValue(term, caseNumber) : values[term];
                 if (!Number.isFinite(value))
                     continue;
                 caseValuesEntries.push([term, value]);
@@ -731,6 +731,15 @@ class Calculator extends EventTarget {
                 initialValuesByCaseEntries.push([caseNumber, Object.fromEntries(caseValuesEntries)]);
         }
         return Object.fromEntries(initialValuesByCaseEntries);
+    }
+
+    // A seeded recurrence computes its first row from the value it is given - `t_{n}=t_{n-1}+dt` reads
+    // `t` before the run and lands on `t+dt` - so what is kept is the value that was supplied, never the
+    // one the row worked out, which would otherwise be read back in and grow on every reset.
+    readSuppliedInitialValue(term, caseNumber) {
+        if (!this.system.hasInitialValueForCase(term, 1, caseNumber))
+            return NaN;
+        return this.system.getInitialValueForCase(term, 1, caseNumber);
     }
 
     applyInitialValuesByCase(initialValuesByCase = {}) {

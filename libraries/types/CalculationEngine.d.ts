@@ -45,6 +45,12 @@ declare class Expression {
      * name has to be evaluated first regardless of the order the statements were written in.
      */
     currentIterationDependencies: string[];
+    /**
+     * True when the statement is pinned to a literal moment, the `x_0=1` of a first value, rather than
+     * to the iteration term.  Where both could produce the same row, the pinned one is the more specific
+     * of the two and is the one that answers for it.
+     */
+    hasLiteralIterationIndex: boolean;
     constructor(name: string, calculate: (input: {
         [name: string]: number;
     }) => number, type?: TermType, condition?: ((input: {
@@ -568,8 +574,8 @@ declare class System {
     private indexedDependentNames;
     /** Per name, the literal indexes it is assigned at - the `0` of `x_0=1` - so a seeded run is told apart. */
     private readonly literalIterationIndexesByName;
-    /** Names written in terms of their own earlier value, `x_{n}=x_{n-1}+\dots`. */
-    private readonly recurrenceNames;
+    /** Names read at a step before the row being built, `x_{n-1}`, whoever does the reading. */
+    private readonly previousStepNames;
     /** Names whose statements read each other within one row, so none of them can be evaluated first. */
     private cyclicTermNames;
     constructor(independent?: string, iterationTerm?: string, iterationTermStart?: number);
@@ -652,11 +658,21 @@ declare class System {
     invalidateTermExpressions(name: string): void;
     markAsPiecewise(name: string): void;
     markLiteralIterationIndex(name: string, index: number): void;
-    markRecurrence(name: string): void;
     /**
-     * The names written as a recurrence on their own earlier value with no statement giving the value
-     * the run starts from.  The first row has no earlier value to read, so each of these needs a first
-     * value supplied before the model produces anything at all.
+     * Takes the value a first value states as the value the term carries into the run.  `x_0=1` is a
+     * statement that answers for the first row, which leaves a read one step further back - the
+     * `x_{n-1}` of that same row - with nothing to resolve against but the term's initial value, zero
+     * unless something supplied one.  Adopting the stated value closes that gap, so a first value
+     * reads the same whether it is asked for at its own moment or from the step before it.  Only a
+     * right hand side that stands on its own can be taken this way: one reading other terms has no
+     * value yet at the time the model is read.
+     */
+    adoptLiteralStartValue(name: string, index: number, expression: Expression): void;
+    markPreviousStepRead(name: string): void;
+    /**
+     * The names some statement reads at an earlier step, with no statement giving the value the run
+     * starts from.  The first row has no earlier value to read, so each of these needs a first value
+     * supplied before the model produces anything at all.
      */
     getSeedRequiredNames(): string[];
     private reportExpressionCycle;
@@ -790,8 +806,8 @@ declare class System {
     assertCaseNumber(caseNumber: number): void;
     removeExpressionsByName(targetTermName: string): void;
     removeTermCompletely(termName: string): void;
-    private hasInitialValueForCase;
-    private getInitialValueForCase;
+    hasInitialValueForCase(name: string, iteration: number, caseNumber: number): boolean;
+    getInitialValueForCase(name: string, iteration: number, caseNumber: number): number;
     private getIterationKey;
     private indexIterationValue;
     private getIterationValue;
@@ -4516,6 +4532,13 @@ declare class Visitor extends LatexMathVisitor<Branch> {
      * come from the statement.
      */
     private reportIndependentAssignment;
+    /**
+     * An index that steps back from the row being built - `x_{n-1}` - reads a value the run does not
+     * hold yet when it is on its first row.  Who does the reading does not matter: `v_{n}=v_{n-1}+a_{n-1}`
+     * needs a first value for `a` exactly as much as `a` reading its own earlier value would.
+     */
+    private isPreviousStepIndex;
+    private isLiteralIndexText;
     private markLiteralIterationIndexText;
     visitStatement: (context: StatementContext) => Branch;
     /**

@@ -174,6 +174,72 @@ test.describe('A recurrence with no first value is offered in the scenarios', ()
         expect(listed.columns).toEqual(['k', 'r', 'm', 'dt']);
     });
 
+    test('a name another statement reads a step back is offered too', async ({ page }) => {
+        await setupEditor(page);
+        await setupModel(page, '\\displaylines{x_{0}=1\\\\v_{0}=0\\\\F_{n}=-k\\cdot x_{n-1}\\\\a_{n}=\\frac{F_{n}}{m}\\\\v_{n}=v_{n-1}+a_{n-1}\\cdot dt\\\\x_{n}=x_{n-1}+v_{n}\\cdot dt}');
+        const listed = await page.evaluate(() => {
+            modellus.shape.addCasesTable('Inputs1');
+            return {
+                seeds: shell.calculator.getTermsByType().seeds,
+                columns: shell.board.shapes.getByName('Inputs1').getSelectedColumns().map(column => column.term)
+            };
+        });
+        expect(listed.seeds).toEqual(['a']);
+        expect(listed.columns).toEqual(['a', 'k', 'm', 'dt']);
+    });
+
+    test('a seed keeps the value that was supplied, not the one the first row computes', async ({ page }) => {
+        await setupEditor(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Expr1');
+            shell.board.shapes.getByName('Expr1').properties.expression = '\\displaylines{dt=0.01\\\\t_{n}=t_{n-1}+dt}';
+            shell.setPropertyCommand('independent.name', '');
+            shell.setProperty('iterationTermStart', 0);
+            shell.setProperty('playerTerm', 'iteration');
+            shell.reset();
+        });
+        await page.waitForFunction(() => shell.calculator.getTermsNames().includes('t'), null, { timeout: 15000 });
+        const cycles = await page.evaluate(() => {
+            const calculator = shell.calculator;
+            calculator.setUserInput('dt', 0.01, 1, 1);
+            calculator.setUserInput('t', 5, 1, 1);
+            const stored = [];
+            for (let cycle = 0; cycle < 4; cycle++) {
+                const captured = calculator.getInitialValuesByCase();
+                calculator.applyInitialValuesByCase(captured);
+                calculator.engine.reset();
+                stored.push(captured[1].t);
+            }
+            return stored;
+        });
+        expect(cycles).toEqual([5, 5, 5, 5]);
+    });
+
+    test('a seed nobody supplied is not written into the model as a value', async ({ page }) => {
+        await setupEditor(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Expr1');
+            shell.board.shapes.getByName('Expr1').properties.expression = '\\displaylines{dt=0.01\\\\t_{n}=t_{n-1}+dt}';
+            shell.setPropertyCommand('independent.name', '');
+            shell.setProperty('iterationTermStart', 0);
+            shell.reset();
+        });
+        await page.waitForFunction(() => shell.calculator.getTermsNames().includes('t'), null, { timeout: 15000 });
+        const stored = await page.evaluate(() => {
+            const calculator = shell.calculator;
+            calculator.setUserInput('dt', 0.01, 1, 1);
+            const captured = [];
+            for (let cycle = 0; cycle < 4; cycle++) {
+                const values = calculator.getInitialValuesByCase();
+                calculator.applyInitialValuesByCase(values);
+                calculator.engine.reset();
+                captured.push(values[1].t);
+            }
+            return captured;
+        });
+        expect(stored).toEqual([undefined, undefined, undefined, undefined]);
+    });
+
     test('the independent term is never asked for, however the model writes it', async ({ page }) => {
         await setupEditor(page);
         await setupModel(page, `\\displaylines{t_{n}=t_{n-1}+dt\\\\${RECURRENCE_MODEL.slice('\\displaylines{'.length)}`);
@@ -333,5 +399,32 @@ test.describe('A subscript written without braces is read', () => {
         expect(named.error).toBeNull();
         expect(named.braced).toBeNull();
         expect(named.unbraced).toBeNull();
+    });
+});
+
+test.describe('A first value answers a read from the step before it', () => {
+    async function forceOnFirstRow(page, expression) {
+        await setupEditor(page);
+        await setupModel(page, expression);
+        return page.evaluate(() => {
+            for (const [name, value] of [['k', 0.1], ['r', 0], ['m', 1], ['dt', 0.01]])
+                shell.calculator.setUserInput(name, value, 1, 1);
+            shell.calculator.engine.reset();
+            return {
+                force: shell.calculator.system.getByNameOnIteration(1, 'F'),
+                position: shell.calculator.system.getByNameOnIteration(1, 'x')
+            };
+        });
+    }
+
+    test('a stated first value is what the first row reads one step back', async ({ page }) => {
+        const state = await forceOnFirstRow(page, SEEDED_MODEL);
+        expect(state.position).toBeCloseTo(1, 6);
+        expect(state.force).toBeCloseTo(-0.1, 6);
+    });
+
+    test('without a first value the read one step back stays at zero', async ({ page }) => {
+        const state = await forceOnFirstRow(page, RECURRENCE_MODEL);
+        expect(state.force).toBeCloseTo(0, 6);
     });
 });
