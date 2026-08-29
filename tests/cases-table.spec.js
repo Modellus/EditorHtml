@@ -124,6 +124,13 @@ async function dragColumnDivider(page, shapeName, columnIndex, rowIndex, deltaX)
     await page.mouse.up();
 }
 
+async function readSpanRowCaretX(page) {
+    return page.evaluate(() => {
+        const caretLines = Array.from(shell.board.shapes.getByName('Inputs1').table.overlayLayer.querySelectorAll('line'));
+        return Number(caretLines[caretLines.length - 1].getAttribute('x1'));
+    });
+}
+
 test.describe('Cases table', () => {
     test('base group: independent row followed by term rows, in a single flat color', async ({ page }) => {
         await setupEditor(page);
@@ -510,7 +517,7 @@ test.describe('Cases table', () => {
         const editorState = await page.evaluate(() => {
             const table = shell.board.shapes.getByName('Inputs1').table;
             return {
-                editingText: table.editingCell?.text,
+                editingText: table.editingCell?.editor.text,
                 editingColumnKey: table.options.columns[table.editingCell?.columnIndex]?.key,
                 overlayText: Array.from(table.overlayLayer.querySelectorAll('text')).map(t => t.textContent)
             };
@@ -519,17 +526,47 @@ test.describe('Cases table', () => {
         expect(editorState.editingText).toBe('0.00');
         expect(editorState.overlayText).toEqual(['t = 0.00']);
 
-        await page.keyboard.press('Delete');
+        for (let index = 0; index < 4; index++)
+            await page.keyboard.press('Backspace');
         await page.keyboard.type('5');
         const afterTyping = await page.evaluate(() => {
             const table = shell.board.shapes.getByName('Inputs1').table;
             return {
-                editingText: table.editingCell?.text,
+                editingText: table.editingCell?.editor.text,
                 overlayText: Array.from(table.overlayLayer.querySelectorAll('text')).map(t => t.textContent)
             };
         });
         expect(afterTyping.editingText).toBe('5');
         expect(afterTyping.overlayText).toEqual(['t = 5']);
+    });
+
+    test('the caret walks through a moment value with the arrow keys, and is drawn where it stands', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const point = await getTableRowPoint(page, 'Inputs1', 0, 8);
+        await page.mouse.dblclick(point.x, point.y);
+        await expect.poll(() => page.evaluate(() => {
+            const editor = shell.board.shapes.getByName('Inputs1').table.editingCell?.editor;
+            return editor ? { text: editor.text, caretIndex: editor.caretIndex } : null;
+        })).toEqual({ text: '0.00', caretIndex: 4 });
+
+        const caretAtEnd = await readSpanRowCaretX(page);
+        await page.keyboard.press('Home');
+        await page.keyboard.type('1');
+
+        const afterTyping = await page.evaluate(() => {
+            const table = shell.board.shapes.getByName('Inputs1').table;
+            return {
+                editingText: table.editingCell.editor.text,
+                caretIndex: table.editingCell.editor.caretIndex,
+                overlayText: Array.from(table.overlayLayer.querySelectorAll('text')).map(t => t.textContent)
+            };
+        });
+        expect(afterTyping.editingText).toBe('10.00');
+        expect(afterTyping.caretIndex).toBe(1);
+        expect(afterTyping.overlayText).toEqual(['t = 10.00']);
+        expect(await readSpanRowCaretX(page)).toBeLessThan(caretAtEnd);
     });
 
     test('clicking a base term row cell reveals a toolbar offering delete but no swap', async ({ page }) => {
@@ -883,7 +920,7 @@ test.describe('Cases table', () => {
             const rowIndex = table.rows.indexOf(row);
             const columnIndex = table.options.columns.indexOf(column);
             table.startEditing(rowIndex, columnIndex, null);
-            const editingText = table.editingCell?.text;
+            const editingText = table.editingCell?.editor.text;
             return { displayText, editingText };
         });
 
@@ -908,7 +945,7 @@ test.describe('Cases table', () => {
             return {
                 precision: shell.board.calculator.getPrecision(),
                 displayText: displayText,
-                editingText: table.editingCell?.text
+                editingText: table.editingCell?.editor.text
             };
         });
 

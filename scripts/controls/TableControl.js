@@ -15,6 +15,7 @@ class TableControl {
         this.nextFocusedRangeColorIndex = 0;
         this.regressionRangeOverlays = [];
         this.editingCell = null;
+        this.editingCaretMeasure = null;
         this.optionsCell = null;
         this.optionsPopover = null;
         this.optionsPopoverHost = null;
@@ -1235,6 +1236,7 @@ class TableControl {
     }
 
     renderEditingValue(layout, geometry) {
+        this.editingCaretMeasure = null;
         if (!this.editingCell)
             return;
         const row = this.rows[this.editingCell.rowIndex];
@@ -1261,30 +1263,22 @@ class TableControl {
         text.setAttribute("font-family", this.options.numberFontFamily);
         text.setAttribute("font-size", `${this.options.fontSize}`);
         text.setAttribute("fill", this.options.foregroundColor);
-        text.textContent = this.editingCell.text;
+        text.textContent = this.editingCell.editor.text;
         this.overlayLayer.appendChild(text);
-        const cursor = this.createSvgElement("line");
-        const cursorX = cell.x + cell.width - 5;
-        cursor.setAttribute("x1", `${cursorX}`);
-        cursor.setAttribute("y1", `${y + 5}`);
-        cursor.setAttribute("x2", `${cursorX}`);
-        cursor.setAttribute("y2", `${y + rowHeight - 5}`);
-        cursor.setAttribute("stroke", this.options.foregroundColor);
-        cursor.setAttribute("stroke-width", "1");
-        this.overlayLayer.appendChild(cursor);
+        this.editingCaretMeasure = { element: text, startIndex: 0 };
+        const caretX = CellTextEditor.getCharacterX(text, this.editingCell.editor.caretIndex, cell.x + cell.width - 5);
+        CellTextEditor.appendCaret(this.overlayLayer, caretX, y + 5, y + rowHeight - 5, this.options.foregroundColor);
     }
 
     renderSpanRowEditingValue(y, rowHeight, row) {
-        const text = this.appendSpanRowText(this.overlayLayer, y, rowHeight, row, this.editingCell.text);
-        const cursorX = this.getSpanRowTextX() + text.getComputedTextLength() + 1;
-        const cursor = this.createSvgElement("line");
-        cursor.setAttribute("x1", `${cursorX}`);
-        cursor.setAttribute("y1", `${y + 4}`);
-        cursor.setAttribute("x2", `${cursorX}`);
-        cursor.setAttribute("y2", `${y + rowHeight - 4}`);
-        cursor.setAttribute("stroke", this.getRowTextColor(row));
-        cursor.setAttribute("stroke-width", "1");
-        this.overlayLayer.appendChild(cursor);
+        const editingText = this.editingCell.editor.text;
+        const text = this.appendSpanRowText(this.overlayLayer, y, rowHeight, row, editingText);
+        const valueElement = Utils.getTermValueTspan(text);
+        const startIndex = valueElement.getNumberOfChars() - editingText.length;
+        const fallbackX = this.getSpanRowTextX() + text.getComputedTextLength() + 1;
+        this.editingCaretMeasure = { element: valueElement, startIndex: startIndex };
+        const caretX = CellTextEditor.getCharacterX(valueElement, startIndex + this.editingCell.editor.caretIndex, fallbackX);
+        CellTextEditor.appendCaret(this.overlayLayer, caretX, y + 4, y + rowHeight - 4, this.getRowTextColor(row));
     }
 
     convertClientPoint(event) {
@@ -1423,6 +1417,7 @@ class TableControl {
     onMouseDown(event) {
         if (this.verticalScrollbarDrag || this.horizontalScrollbarDrag || this.columnResizeDrag)
             return;
+        event.preventDefault();
         this.focus();
         const point = this.convertClientPoint(event);
         if (!point)
@@ -1471,6 +1466,12 @@ class TableControl {
             return;
         }
         const isSameCell = this.selectedCell && this.selectedCell.rowIndex === cell.rowIndex && this.selectedCell.columnIndex === cell.columnIndex;
+        if (this.isEditingCell(cell.rowIndex, cell.columnIndex) && event.detail < 2) {
+            event.preventDefault();
+            this.placeEditingCaret(point);
+            this.render();
+            return;
+        }
         if (this.editingCell && (!isSameCell || event.detail >= 2))
             this.commitEditing();
         if (event.shiftKey && this.selectedCell && this.canCreatePreloadedRangeSelection(this.selectedCell, cell)) {
@@ -1513,21 +1514,8 @@ class TableControl {
                 this.render();
                 return;
             }
-            if (key === "Backspace") {
+            if (this.editingCell.editor.handleKey(key, hasCommandModifier)) {
                 event.preventDefault();
-                this.removeEditingCharacter();
-                this.render();
-                return;
-            }
-            if (key === "Delete") {
-                event.preventDefault();
-                this.clearEditingCharacter();
-                this.render();
-                return;
-            }
-            if (!hasCommandModifier && this.isAcceptedEditKey(key)) {
-                event.preventDefault();
-                this.appendEditingCharacter(key);
                 this.render();
                 return;
             }
@@ -2317,13 +2305,15 @@ class TableControl {
             this.openCellOptions(rowIndex, columnIndex);
             return;
         }
-        let text = this.getCellEditText(row, column);
-        if (initialKey != null && this.isAcceptedEditKey(initialKey))
-            text = this.normalizeEditCharacter(initialKey);
+        const editor = new CellTextEditor(this.getCellEditText(row, column));
+        if (initialKey != null && editor.isAcceptedCharacter(initialKey)) {
+            editor.clear();
+            editor.insertCharacter(initialKey);
+        }
         this.editingCell = {
             rowIndex: rowIndex,
             columnIndex: columnIndex,
-            text: text
+            editor: editor
         };
         this.selectCell(rowIndex, columnIndex);
     }
@@ -2341,7 +2331,7 @@ class TableControl {
             this.editingCell = null;
             return false;
         }
-        const nextValue = Number(this.editingCell.text);
+        const nextValue = Number(this.editingCell.editor.text);
         if (!Number.isFinite(nextValue))
             return false;
         const oldValue = row[column.key];
@@ -2431,28 +2421,15 @@ class TableControl {
         return true;
     }
 
-    appendEditingCharacter(character) {
-        if (!this.editingCell)
-            return;
-        this.editingCell.text = `${this.editingCell.text}${this.normalizeEditCharacter(character)}`;
+    isEditingCell(rowIndex, columnIndex) {
+        return this.editingCell?.rowIndex === rowIndex && this.editingCell?.columnIndex === columnIndex;
     }
 
-    removeEditingCharacter() {
-        if (!this.editingCell)
+    placeEditingCaret(point) {
+        if (!this.editingCaretMeasure)
             return;
-        this.editingCell.text = this.editingCell.text.slice(0, -1);
-    }
-
-    clearEditingCharacter() {
-        if (!this.editingCell)
-            return;
-        this.editingCell.text = "";
-    }
-
-    normalizeEditCharacter(character) {
-        if (character === ",")
-            return ".";
-        return character;
+        const characterIndex = CellTextEditor.getCharacterIndexAtX(this.editingCaretMeasure.element, point.x);
+        this.editingCell.editor.setCaretIndex(characterIndex - this.editingCaretMeasure.startIndex);
     }
 
     handleNavigationKey(key) {
@@ -2468,7 +2445,7 @@ class TableControl {
     }
 
     isAcceptedEditKey(key) {
-        return /^[0-9eE+\-.,]$/.test(key);
+        return CellTextEditor.numericCharacterPattern.test(key);
     }
 
     getColumnByIndex(index) {

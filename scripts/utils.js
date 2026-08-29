@@ -645,15 +645,19 @@ class Utils {
     static buildTermValueTextHtml(termLatex, valueText, unitText = "") {
         const unitHtml = Utils.buildTermUnitsTextHtml(unitText, { followsValue: true });
         if (!termLatex)
-            return `<tspan font-family="Katex_Main" dominant-baseline="central">${Utils.escapeXmlText(valueText)}</tspan>${unitHtml}`;
+            return `<tspan font-family="Katex_Main" data-term-value dominant-baseline="central">${Utils.escapeXmlText(valueText)}</tspan>${unitHtml}`;
         const segments = Utils.splitTermNameSegments(termLatex);
         const pendingShift = segments.length > 0 && segments[segments.length - 1].isNamedIndex ? 0.25 : 0;
         const valueShiftAttribute = pendingShift === 0 ? "" : ` dy="${-pendingShift}em"`;
-        return `${Utils.buildTermTextHtml(termLatex)}<tspan font-family="Katex_Main"${valueShiftAttribute} dominant-baseline="central"> = ${Utils.escapeXmlText(valueText)}</tspan>${unitHtml}`;
+        return `${Utils.buildTermTextHtml(termLatex)}<tspan font-family="Katex_Main" data-term-value${valueShiftAttribute} dominant-baseline="central"> = ${Utils.escapeXmlText(valueText)}</tspan>${unitHtml}`;
     }
 
     static setTermValueTextContent(textElement, termLatex, valueText, unitText = "") {
         textElement.innerHTML = Utils.buildTermValueTextHtml(termLatex, valueText, unitText);
+    }
+
+    static getTermValueTspan(textElement) {
+        return textElement.querySelector("tspan[data-term-value]");
     }
 
     static buildIconValueTextHtml(iconGlyph, iconFontFamily, valueText) {

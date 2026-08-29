@@ -91,6 +91,24 @@ async function getCellClientPoint(page, rowIndex, columnIndex) {
     }, { rowIndex: rowIndex, columnIndex: columnIndex });
 }
 
+async function readEditingState(page) {
+    return page.evaluate(() => {
+        const editor = shell.board.shapes.getByName('Table1').table.editingCell?.editor;
+        return editor ? { text: editor.text, caretIndex: editor.caretIndex } : null;
+    });
+}
+
+async function readCaretGeometry(page) {
+    return page.evaluate(() => {
+        const table = shell.board.shapes.getByName('Table1').table;
+        const caretLines = Array.from(table.overlayLayer.querySelectorAll('line'));
+        const caret = caretLines[caretLines.length - 1];
+        const textElement = table.editingCaretMeasure.element;
+        const textBox = textElement.getBBox();
+        return { caretX: Number(caret.getAttribute('x1')), textLeft: textBox.x, textRight: textBox.x + textBox.width };
+    });
+}
+
 async function setupTenRowTable(page) {
     await page.evaluate(() => {
         shell.calculator.setProperties({ independent: { name: 't', start: 0, end: 9, step: 1 } });
@@ -267,6 +285,58 @@ test.describe('Table shape editing', () => {
         expect(state.editingCell).toEqual({ rowIndex: 0, columnIndex: 1 });
         expect(state.selectedShapeId).toBeNull();
         expect(state.selectedShapeId).not.toBe(state.tableShapeId);
+    });
+
+    test('the arrow keys walk the caret through the value being written, and a digit lands where the caret stands', async ({ page }) => {
+        await setupEditor(page);
+        await addTable(page, 'Table1');
+        await setupPreloadedTable(page);
+        const targetCellPoint = await getCellClientPoint(page, 0, 1);
+        await page.mouse.dblclick(targetCellPoint.x, targetCellPoint.y);
+        await expect.poll(() => readEditingState(page)).toEqual({ text: '10.00', caretIndex: 5 });
+
+        await page.keyboard.press('ArrowLeft');
+        await page.keyboard.press('ArrowLeft');
+        await page.keyboard.type('5');
+        expect(await readEditingState(page)).toEqual({ text: '10.500', caretIndex: 4 });
+
+        await page.keyboard.press('Home');
+        await page.keyboard.press('Delete');
+        expect(await readEditingState(page)).toEqual({ text: '0.500', caretIndex: 0 });
+
+        await page.keyboard.press('End');
+        await page.keyboard.press('Backspace');
+        expect(await readEditingState(page)).toEqual({ text: '0.50', caretIndex: 4 });
+
+        await page.keyboard.press('Enter');
+        const committedValue = await page.evaluate(() => shell.board.shapes.getByName('Table1').table.rows[0].column1);
+        expect(committedValue).toBe(0.5);
+    });
+
+    test('the caret is drawn where it stands in the value, and a click moves it there', async ({ page }) => {
+        await setupEditor(page);
+        await addTable(page, 'Table1');
+        await setupPreloadedTable(page);
+        const targetCellPoint = await getCellClientPoint(page, 0, 1);
+        await page.mouse.dblclick(targetCellPoint.x, targetCellPoint.y);
+        await expect.poll(() => readEditingState(page)).toEqual({ text: '10.00', caretIndex: 5 });
+
+        const atEnd = await readCaretGeometry(page);
+        expect(atEnd.caretX).toBeGreaterThan(atEnd.textRight - 2);
+
+        await page.keyboard.press('Home');
+        const atStart = await readCaretGeometry(page);
+        expect(atStart.caretX).toBeLessThan(atStart.textRight - 2);
+        expect(atStart.caretX).toBeGreaterThan(atStart.textLeft - 2);
+
+        await page.keyboard.press('End');
+        const textLeftPoint = await page.evaluate(() => {
+            const rect = shell.board.shapes.getByName('Table1').table.editingCaretMeasure.element.getBoundingClientRect();
+            return { x: rect.left + 1, y: rect.top + rect.height / 2 };
+        });
+        await page.mouse.click(textLeftPoint.x, textLeftPoint.y);
+        await page.keyboard.type('9');
+        expect(await readEditingState(page)).toEqual({ text: '910.00', caretIndex: 1 });
     });
 
     test('header names are positioned within the table bounds, not at the top-left of the page', async ({ page }) => {
