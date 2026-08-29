@@ -429,7 +429,20 @@ class CasesTableShape extends BaseTableShape {
         const roundedValue = this.roundTableCellValue(termName, numericValue);
         if (!calculator.setUserInput(termName, roundedValue, iteration, caseNumber))
             return false;
+        this.publishMomentChange(iteration);
+        return true;
+    }
+
+    // Every change to what a moment holds ends here. The shapes are told to read the model again,
+    // and a change made on a moment the run has already gone past takes the model back to the
+    // first moment, stopped: the run that went by cannot be reached, so the next one starts from
+    // the moment as it now stands.
+    publishMomentChange(...iterations) {
+        const calculator = this.board.calculator;
         calculator.emit("iterate", { calculator: calculator });
+        if (!iterations.some(iteration => calculator.hasMomentElapsed(iteration)))
+            return false;
+        this.board.shell?.resetToFirstMoment?.();
         return true;
     }
 
@@ -463,7 +476,7 @@ class CasesTableShape extends BaseTableShape {
             delete groupColors[fromIteration];
             this.setPropertyCommand("groupColors", groupColors);
         }
-        calculator.emit("iterate", { calculator: calculator });
+        this.publishMomentChange(fromIteration, toIteration);
         this.refreshTableRows();
         return true;
     }
@@ -474,7 +487,6 @@ class CasesTableShape extends BaseTableShape {
             return false;
         if (row.isIndependentRow)
             return this.removeGroup(row.iteration);
-        const calculator = this.board.calculator;
         const casesCount = this.getCasesCount();
         const termName = row.termName;
         const iteration = Math.floor(Number(row.iteration) || 0);
@@ -487,7 +499,7 @@ class CasesTableShape extends BaseTableShape {
             changed = this.clearTermAtIteration(termName, iteration, caseNumber) || changed;
         if (!changed)
             return false;
-        calculator.emit("iterate", { calculator: calculator });
+        this.publishMomentChange(iteration);
         return true;
     }
 
@@ -504,7 +516,6 @@ class CasesTableShape extends BaseTableShape {
         iteration = Math.floor(Number(iteration) || 0);
         if (iteration < 1)
             return false;
-        const calculator = this.board.calculator;
         const casesCount = this.getCasesCount();
         const terms = this.getSelectedTermNames();
         let changed = false;
@@ -518,19 +529,18 @@ class CasesTableShape extends BaseTableShape {
             delete groupColors[iteration];
             this.setPropertyCommand("groupColors", groupColors);
         }
-        calculator.emit("iterate", { calculator: calculator });
+        this.publishMomentChange(iteration);
         return true;
     }
 
     addGroup() {
-        const calculator = this.board.calculator;
         const terms = this.getSelectedTermNames();
         if (terms.length === 0)
             return false;
         const nextIteration = Math.max(...this.getGroupIterations()) + 1;
         for (let index = 0; index < terms.length; index++)
             this.seedTermAtIteration(terms[index], nextIteration);
-        calculator.emit("iterate", { calculator: calculator });
+        this.publishMomentChange(nextIteration);
         this.refreshTableRows();
         return true;
     }
@@ -543,8 +553,7 @@ class CasesTableShape extends BaseTableShape {
             return this.showBaseTerm(term);
         if (!this.seedTermAtIteration(term, iteration))
             return false;
-        const calculator = this.board.calculator;
-        calculator.emit("iterate", { calculator: calculator });
+        this.publishMomentChange(iteration);
         this.refreshTableRows();
         return true;
     }
@@ -569,7 +578,7 @@ class CasesTableShape extends BaseTableShape {
         }
         if (!swapped)
             return false;
-        calculator.emit("iterate", { calculator: calculator });
+        this.publishMomentChange(iteration);
         this.refreshTableRows();
         return true;
     }

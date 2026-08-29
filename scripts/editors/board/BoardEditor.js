@@ -391,8 +391,14 @@ class BoardEditor extends Workspace {
     }
     
     stopPressed() {
-        this.reparseAndCalculateWorkspace(() => this.reset());
+        this.resetToFirstMoment();
         this.broadcastPlayback("stop");
+    }
+
+    // What the stop button does, without telling anyone: the model is rebuilt from what it now
+    // holds, stopped, and standing on the first moment again.
+    resetToFirstMoment() {
+        this.reparseAndCalculateWorkspace(() => this.reset());
     }
 
     replayPressed() {

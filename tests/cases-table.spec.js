@@ -1303,6 +1303,99 @@ test.describe('Cases table', () => {
         expect(result.cell).toBeCloseTo(7, 8);
     });
 
+    test('a scenario changed on a moment the run has gone past stops the model back on the first moment', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.addGroup();
+            tableShape.moveGroupIteration(2, 20);
+            for (let index = 0; index < 40; index++)
+                shell.calculator.engine.iterate();
+            shell.calculator.setIteration(30);
+            shell.calculator.status = 0;
+            const row = tableShape.table.rows.find(r => r.key === 'v|20');
+            const column = tableShape.table.options.columns.find(c => c.key === 'case1');
+            const accepted = tableShape.onTableCellValueChanged({ row: row, column: column, value: 7 });
+            tableShape.refreshTableRows();
+            return {
+                accepted: accepted,
+                playing: shell.isCalculatorPlaying(),
+                iteration: shell.calculator.getIteration(),
+                lastCalculatedIteration: shell.calculator.getLastCalculatedIteration(),
+                recorded: shell.calculator.getUserInput('v', 20, 1),
+                cell: tableShape.table.rows.find(r => r.key === 'v|20')?.case1
+            };
+        });
+
+        expect(result.accepted).toBe(true);
+        expect(result.playing).toBe(false);
+        expect(result.iteration).toBe(1);
+        expect(result.lastCalculatedIteration).toBe(1);
+        expect(result.recorded).toBeCloseTo(7, 8);
+        expect(result.cell).toBeCloseTo(7, 8);
+    });
+
+    test('a scenario changed on a moment the run has not reached yet leaves the run where it stands', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.addGroup();
+            tableShape.moveGroupIteration(2, 20);
+            for (let index = 0; index < 9; index++)
+                shell.calculator.engine.iterate();
+            shell.calculator.status = 0;
+            const row = tableShape.table.rows.find(r => r.key === 'v|20');
+            const column = tableShape.table.options.columns.find(c => c.key === 'case1');
+            const accepted = tableShape.onTableCellValueChanged({ row: row, column: column, value: 7 });
+            return {
+                accepted: accepted,
+                playing: shell.isCalculatorPlaying(),
+                iteration: shell.calculator.getIteration(),
+                lastCalculatedIteration: shell.calculator.getLastCalculatedIteration(),
+                recorded: shell.calculator.getUserInput('v', 20, 1)
+            };
+        });
+
+        expect(result.accepted).toBe(true);
+        expect(result.playing).toBe(true);
+        expect(result.iteration).toBe(10);
+        expect(result.lastCalculatedIteration).toBe(10);
+        expect(result.recorded).toBeCloseTo(7, 8);
+    });
+
+    test('a moment deleted after the run has gone past it also takes the model back to the first moment', async ({ page }) => {
+        await setupEditor(page);
+        await setupModelWithCasesTable(page, 1);
+
+        const result = await page.evaluate(() => {
+            const tableShape = shell.board.shapes.getByName('Inputs1');
+            tableShape.addGroup();
+            tableShape.moveGroupIteration(2, 20);
+            for (let index = 0; index < 40; index++)
+                shell.calculator.engine.iterate();
+            shell.calculator.setIteration(30);
+            shell.calculator.status = 0;
+            const momentRow = tableShape.table.rows.find(r => r.key === 'independent|20');
+            const deleted = tableShape.onTableRowDeleteRequested({ row: momentRow });
+            tableShape.refreshTableRows();
+            return {
+                deleted: deleted,
+                playing: shell.isCalculatorPlaying(),
+                iteration: shell.calculator.getIteration(),
+                groupIterations: tableShape.getGroupIterations()
+            };
+        });
+
+        expect(result.deleted).toBe(true);
+        expect(result.playing).toBe(false);
+        expect(result.iteration).toBe(1);
+        expect(result.groupIterations).toEqual([1]);
+    });
+
     test('an interactive value change away from a moment stays transient', async ({ page }) => {
         await setupEditor(page);
         await setupModelWithCasesTable(page, 1);

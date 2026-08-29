@@ -922,6 +922,14 @@ class Calculator extends EventTarget {
         return false;
     }
 
+    // A moment has elapsed once the run has computed a row past it: what follows it is already
+    // worked out, so a value written into it now can no longer reach the run that went by. The
+    // moment the run is standing on has not elapsed - the rows after it are still to come.
+    hasMomentElapsed(iteration = 1) {
+        const normalizedIteration = Math.max(1, Math.floor(Number(iteration) || 1));
+        return this.getLastCalculatedIteration() > normalizedIteration;
+    }
+
     // Value changes the user drives from a shape are anchored to the moment they happen on, so the
     // scenarios shape mirrors them the same way it mirrors iteration 1. Moments are only ever
     // opened from the scenarios shape itself, so a change away from one stays transient.
