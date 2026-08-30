@@ -30,10 +30,34 @@ const topicDetail = {
   attachments: [{ id:'a1', topic_id:'t1', reply_id:null, filename:'cello.wav', content_type:'audio/wav', size_bytes:820000, uploaded_by:'u1', created_at:new Date().toISOString(), url:'https://example.com/att/a1' }]
 };
 
+const sciences = [
+  { id: 'sci_phys', name: 'Physics' },
+  { id: 'sci_chem', name: 'Chemistry' },
+  { id: 'sci_bio', name: 'Biology' }
+];
+
+const educationLevels = [
+  { id: 'lvl_pri', name: 'Primary' },
+  { id: 'lvl_sec', name: 'Secondary' },
+  { id: 'lvl_uni', name: 'University' }
+];
+
+const session = { token: 'test-token', userId: 'u1', name: 'Ana Silva', email: 'ana@example.com', exp: Math.floor(Date.now() / 1000) + 3600 };
+
 async function stubApi(page) {
   await page.route('**/forum/facets', route => route.fulfill({ json: facets }));
   await page.route('**/forum/topics?*', route => route.fulfill({ json: { items: topics, total: 42 } }));
   await page.route('**/forum/topics/t1', route => route.fulfill({ json: topicDetail }));
+  await page.route('**/sciences', route => route.fulfill({ json: sciences }));
+  await page.route('**/education-levels', route => route.fulfill({ json: educationLevels }));
+}
+
+async function signIn(page, flags = [{ id: 'f1', key: 'can_moderate_forum', name: 'Moderate', is_enabled: 0 }]) {
+  await page.addInitScript(s => {
+    localStorage.setItem('mp.session', JSON.stringify(s));
+    localStorage.setItem('mp.user', JSON.stringify({ id: s.userId, name: s.name }));
+  }, session);
+  await page.route('**/users/u1/feature-flags', route => route.fulfill({ json: flags }));
 }
 
 test('forum list renders with the docs chrome and escapes user text', async ({ page }) => {
@@ -42,6 +66,7 @@ test('forum list renders with the docs chrome and escapes user text', async ({ p
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   const dialogs = [];
   page.on('dialog', d => { dialogs.push(d.message()); d.dismiss(); });
+  await signIn(page);
   await stubApi(page);
   await page.goto(`${base}/pages/forum/index.html`);
 
@@ -70,6 +95,7 @@ test('forum list renders with the docs chrome and escapes user text', async ({ p
 });
 
 test('a facet click filters and shows a removable chip', async ({ page }) => {
+  await signIn(page);
   await stubApi(page);
   let lastUrl = '';
   await page.route('**/forum/topics?*', route => { lastUrl = route.request().url(); route.fulfill({ json: { items: topics, total: 7 } }); });
@@ -84,7 +110,9 @@ test('a facet click filters and shows a removable chip', async ({ page }) => {
 test('topic detail shows the thread, the accepted answer and a tombstone', async ({ page }) => {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
+  await signIn(page);
   await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
   await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
 
   await expect(page.locator('#forum-topic-view h1')).toHaveText('A cello note for the wave demo');
@@ -94,28 +122,20 @@ test('topic detail shows the thread, the accepted answer and a tombstone', async
   await expect(page.locator('.forum-post-text.is-removed')).toHaveText('This post was removed by a moderator.');
   await expect(page.locator('.forum-attachment')).toContainText('cello.wav');
   await expect(page.locator('.forum-attachment-size')).toHaveText('801 KB');
-  await expect(page.locator('.forum-signin-notice')).toContainText('Sign in');
+  await expect(page.locator('#forum-reply-body')).toBeVisible();
   await expect(page.locator('.forum-moderation')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
 test('the main page menu links to the forum', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
   await page.goto(`${base}/pages/home/home.html`);
   const link = page.locator('.navmenu a', { hasText: 'Forum' });
   await expect(link).toHaveCount(1);
   await link.click();
   await expect(page).toHaveURL(/\/pages\/forum\/index\.html$/);
 });
-
-const session = { token: 'test-token', userId: 'u1', name: 'Ana Silva', email: 'ana@example.com', exp: Math.floor(Date.now() / 1000) + 3600 };
-
-async function signIn(page, flags) {
-  await page.addInitScript(s => {
-    localStorage.setItem('mp.session', JSON.stringify(s));
-    localStorage.setItem('mp.user', JSON.stringify({ id: s.userId, name: s.name }));
-  }, session);
-  await page.route('**/users/u1/feature-flags', route => route.fulfill({ json: flags }));
-}
 
 test('a signed-in reader gets the reply form and can deep link to the composer', async ({ page }) => {
   const errors = [];
@@ -130,8 +150,29 @@ test('a signed-in reader gets the reply form and can deep link to the composer',
 
   await page.goto(`${base}/pages/forum/index.html#/new`);
   await expect(page.locator('#forum-compose-kind')).toBeVisible();
-  await expect(page.locator('#forum-compose-science option')).toHaveCount(2);
   expect(errors).toEqual([]);
+});
+
+test('the composer offers every catalogue science and education level', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await signIn(page);
+  await stubApi(page);
+  await page.goto(`${base}/pages/forum/index.html#/new`);
+
+  const scienceOptions = page.locator('#forum-compose-science option');
+  await expect(scienceOptions).toHaveCount(4);
+  await expect(scienceOptions).toHaveText(['Not specified', 'Biology', 'Chemistry', 'Physics']);
+  const educationOptions = page.locator('#forum-compose-education option');
+  await expect(educationOptions).toHaveCount(4);
+  await expect(educationOptions).toHaveText(['Not specified', 'Primary', 'Secondary', 'University']);
+  expect(errors).toEqual([]);
+});
+
+test('a signed-out visitor is sent to the login page', async ({ page }) => {
+  await stubApi(page);
+  await page.goto(`${base}/pages/forum/index.html`);
+  await expect(page).toHaveURL(/\/pages\/login\/index\.html$/);
 });
 
 test('a moderator gets the moderation bar', async ({ page }) => {
@@ -170,7 +211,9 @@ test('composing a topic posts the canonical payload', async ({ page }) => {
 });
 
 test('a promoted suggestion names the catalogue row it became', async ({ page }) => {
+  await signIn(page);
   await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
   await page.route('**/forum/topics/t1', route => route.fulfill({ json: { ...topicDetail, resolved_kind: 'audios', resolved_id: 'audio-9', status: 'accepted' } }));
   await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
   const banner = page.locator('.forum-resolved');

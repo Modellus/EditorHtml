@@ -60,6 +60,7 @@ class ForumPage {
         this.apiClient = new ModelsApiClient(apiBase, () => this.state.session, () => this.userSdk.getUserId(this.state.session));
         this.filters = { sort: "recent", offset: 0 };
         this.facets = null;
+        this.lookups = null;
         this.total = 0;
         this.canModerate = false;
         this.searchTimer = null;
@@ -127,12 +128,28 @@ class ForumPage {
         return this.userSdk.getUserId(this.state.session);
     }
 
-    async start() {
-        this.applySessionAction();
-        if (this.isSignedIn()) {
-            await this.userSdk.loadFeatureFlags(apiBase, this.state.session);
-            this.canModerate = this.userSdk.hasFeatureFlag(moderationFeatureFlagKey);
+    async ensureSignedIn() {
+        if (!this.isSignedIn())
+            await this.userSdk.refreshSession(apiBase);
+        this.userSdk.refreshState(this.state);
+        if (!this.isSignedIn()) {
+            this.userSdk.clearToken();
+            this.userSdk.clearRefreshToken();
+            this.userSdk.clearSession();
+            this.userSdk.clearUser();
+            this.userSdk.redirectToLogin();
+            return false;
         }
+        this.userSdk.startSessionRefresh(apiBase, () => this.userSdk.redirectToLogin());
+        return true;
+    }
+
+    async start() {
+        if (!await this.ensureSignedIn())
+            return;
+        this.applySessionAction();
+        await this.userSdk.loadFeatureFlags(apiBase, this.state.session);
+        this.canModerate = this.userSdk.hasFeatureFlag(moderationFeatureFlagKey);
         this.bindEvents();
         window.addEventListener("hashchange", () => this.route());
         await this.route();
@@ -211,6 +228,19 @@ class ForumPage {
         } catch (error) {
             this.setStatus(`Could not load the filters: ${error.message}`, true);
         }
+    }
+
+    async loadLookups() {
+        if (this.lookups)
+            return;
+        const [sciencesResult, educationResult] = await Promise.allSettled([
+            this.apiClient.fetchScienceLookups(),
+            this.apiClient.fetchEducationLevelLookups()
+        ]);
+        this.lookups = {
+            sciences: sciencesResult.status === "fulfilled" ? sciencesResult.value : [],
+            education: educationResult.status === "fulfilled" ? educationResult.value : []
+        };
     }
 
     renderSidebar() {
@@ -667,15 +697,20 @@ class ForumPage {
         await this.apiClient.promoteForumTopic(topic.id, resolvedKind, resolvedId);
     }
 
+    buildLookupOptions(options) {
+        return options.filter(option => option.id).map(option => `<option value="${ForumPage.escape(option.id)}">${ForumPage.escape(option.name)}</option>`).join("");
+    }
+
     async showCompose() {
         this.showSection("compose");
         window.scrollTo(0, 0);
         if (!this.facets)
             await this.loadFacets();
+        await this.loadLookups();
         this.elements.breadcrumb.innerHTML = `<a href="#/">Forum</a> <span class="sep">/</span> New topic`;
         const kindOptions = Object.keys(kindLabels).map(kind => `<option value="${kind}">${kindLabels[kind]}</option>`).join("");
-        const scienceOptions = this.facets.sciences.filter(science => science.id).map(science => `<option value="${ForumPage.escape(science.id)}">${ForumPage.escape(science.name)}</option>`).join("");
-        const educationOptions = this.facets.education.filter(level => level.id).map(level => `<option value="${ForumPage.escape(level.id)}">${ForumPage.escape(level.name)}</option>`).join("");
+        const scienceOptions = this.buildLookupOptions(this.lookups.sciences);
+        const educationOptions = this.buildLookupOptions(this.lookups.education);
         this.elements.composeView.innerHTML = `
             <a class="forum-link-button" href="#/"><i class="fa-light fa-arrow-left"></i> Back to all topics</a>
             <h1>New topic</h1>
