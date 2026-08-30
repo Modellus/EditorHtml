@@ -401,6 +401,8 @@ a.forum-topic-title:hover { color: var(--accent-color); }
     flex-shrink: 0;
 }
 
+img.forum-avatar { object-fit: cover; }
+
 .forum-author-name { font-weight: 600; color: var(--heading-color); }
 
 .forum-post-time { color: color-mix(in srgb, var(--default-color), transparent 50%); font-size: 12px; }

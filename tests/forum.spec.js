@@ -13,7 +13,7 @@ const facets = {
 const topics = [
   { id:'t1', kind:'audio', title:'A cello note for the wave demo', body:'A clean sustained note would help the standing-wave model a great deal.', tags:['sound','waves'], status:'open',
     is_pinned:1, is_locked:0, is_deleted:0, vote_count:4, reply_count:2, last_activity_at:new Date(Date.now()-3600e3).toISOString(),
-    created_by:'u1', created_at:new Date(Date.now()-86400e3).toISOString(), updated_at:new Date().toISOString(), author_name:'Ana Silva', has_voted:false, is_unread:true },
+    created_by:'u1', created_at:new Date(Date.now()-86400e3).toISOString(), updated_at:new Date().toISOString(), author_name:'Ana Silva', author_avatar:'https://example.com/ana.png', has_voted:false, is_unread:true },
   { id:'t2', kind:'bug', title:'Pendulum <script>alert(1)</script> drifts', body:'It drifts after a minute of running.', tags:['mechanics'], status:'answered',
     is_pinned:0, is_locked:1, is_deleted:0, vote_count:1, reply_count:1, last_activity_at:new Date(Date.now()-7200e3).toISOString(),
     created_by:'u2', created_at:new Date(Date.now()-172800e3).toISOString(), updated_at:new Date().toISOString(), author_name:'Bo Chen', has_voted:true, is_unread:false }
@@ -151,6 +151,18 @@ test('a signed-in reader gets the reply form and can deep link to the composer',
   await page.goto(`${base}/pages/forum/index.html#/new`);
   await expect(page.locator('#forum-compose-kind')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('a post shows the picture of its author, and initials when there is none', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+
+  const topicAvatar = page.locator('.forum-post').first().locator('.forum-avatar');
+  await expect(topicAvatar).toHaveAttribute('src', 'https://example.com/ana.png');
+  const replyAvatar = page.locator('.forum-post').nth(1).locator('.forum-avatar');
+  await expect(replyAvatar).toHaveText('BC');
 });
 
 test('the composer offers every catalogue science and education level', async ({ page }) => {

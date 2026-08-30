@@ -505,6 +505,12 @@ class ForumPage {
             </div>`;
     }
 
+    buildAvatar(name, avatarUrl) {
+        if (avatarUrl)
+            return `<img class="forum-avatar" src="${ForumPage.escape(avatarUrl)}" alt="" />`;
+        return `<span class="forum-avatar">${ForumPage.escape(ForumPage.initials(name))}</span>`;
+    }
+
     buildPost(topicId, post, attachments, isTopic, topic) {
         const isRemoved = post.is_deleted === 1 || post.is_deleted === true;
         const isPlaceholder = isRemoved && !this.canModerate;
@@ -522,7 +528,7 @@ class ForumPage {
                 </div>
                 <div class="forum-post-body">
                     <div class="forum-post-author">
-                        <span class="forum-avatar">${ForumPage.escape(ForumPage.initials(authorName))}</span>
+                        ${this.buildAvatar(authorName, isPlaceholder ? "" : post.author_avatar)}
                         <span class="forum-author-name">${ForumPage.escape(authorName)}</span>
                         <span class="forum-post-time">${ForumPage.relativeTime(post.created_at)}</span>
                         ${post.is_answer ? `<span class="forum-chip forum-chip-answered"><i class="fa-light fa-check"></i> Accepted answer</span>` : ""}
