@@ -1189,6 +1189,237 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Delete character animation frame failed (${response.status})`);
   }
 
+  async fetchForumTopicsPage(options = {}) {
+    const headers = this.buildAuthHeaders();
+    const url = new URL(`${this.apiBaseUrl}/forum/topics`);
+    url.searchParams.set("limit", String(options.limit || 20));
+    url.searchParams.set("offset", String(options.offset || 0));
+    if (options.search) url.searchParams.set("q", options.search);
+    if (options.kind) url.searchParams.set("kind", options.kind);
+    if (options.status) url.searchParams.set("status", options.status);
+    if (options.tag) url.searchParams.set("tag", options.tag);
+    if (options.scienceId) url.searchParams.set("science_id", options.scienceId);
+    if (options.educationLevelId) url.searchParams.set("education_level_id", options.educationLevelId);
+    if (options.modelId) url.searchParams.set("model_id", options.modelId);
+    if (options.createdBy) url.searchParams.set("created_by", options.createdBy);
+    if (options.unread) url.searchParams.set("unread", "true");
+    if (options.answered !== undefined) url.searchParams.set("answered", String(options.answered));
+    if (options.includeDeleted) url.searchParams.set("include_deleted", "true");
+    if (options.sort) url.searchParams.set("sort", options.sort);
+    const response = await fetch(url.toString(), { headers });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+    return { items: data.items, total: data.total };
+  }
+
+  async fetchForumFacets() {
+    const response = await fetch(`${this.apiBaseUrl}/forum/facets`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    return await response.json();
+  }
+
+  async fetchForumUnreadCount() {
+    const response = await fetch(`${this.apiBaseUrl}/forum/unread_count`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+    return data.count;
+  }
+
+  async fetchForumTopicById(topicId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    return await response.json();
+  }
+
+  async createForumTopic(payload, attachmentFile) {
+    const headers = this.buildAuthHeaders();
+    const options = { method: "POST", headers };
+    if (attachmentFile) {
+      const formData = new FormData();
+      formData.append("kind", payload.kind);
+      formData.append("title", payload.title);
+      formData.append("body", payload.body);
+      formData.append("tags", JSON.stringify(payload.tags));
+      if (payload.science_id) formData.append("science_id", payload.science_id);
+      if (payload.education_level_id) formData.append("education_level_id", payload.education_level_id);
+      if (payload.model_id) formData.append("model_id", payload.model_id);
+      formData.append("attachment", attachmentFile);
+      options.body = formData;
+    } else {
+      options.headers = { ...headers, "Content-Type": "application/json" };
+      options.body = JSON.stringify(payload);
+    }
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics`, options);
+    if (!response.ok) throw new Error(`Create forum topic failed (${response.status})`);
+    return await response.json();
+  }
+
+  async updateForumTopic(topicId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}`, {
+      method: "PATCH",
+      headers: { ...this.buildAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update forum topic failed (${response.status})`);
+    return await response.json();
+  }
+
+  async createForumReply(topicId, payload, attachmentFile) {
+    const headers = this.buildAuthHeaders();
+    const options = { method: "POST", headers };
+    if (attachmentFile) {
+      const formData = new FormData();
+      formData.append("body", payload.body);
+      if (payload.parent_reply_id) formData.append("parent_reply_id", payload.parent_reply_id);
+      formData.append("attachment", attachmentFile);
+      options.body = formData;
+    } else {
+      options.headers = { ...headers, "Content-Type": "application/json" };
+      options.body = JSON.stringify(payload);
+    }
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}/replies`, options);
+    if (!response.ok) throw new Error(`Create forum reply failed (${response.status})`);
+    return await response.json();
+  }
+
+  async updateForumReply(replyId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/replies/${encodeURIComponent(replyId)}`, {
+      method: "PATCH",
+      headers: { ...this.buildAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update forum reply failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteForumReply(replyId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/replies/${encodeURIComponent(replyId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete forum reply failed (${response.status})`);
+  }
+
+  async markForumTopicRead(topicId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}/read`, {
+      method: "POST",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Mark forum topic read failed (${response.status})`);
+  }
+
+  async voteForumTopic(topicId, hasVoted) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}/vote`, {
+      method: hasVoted ? "DELETE" : "POST",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Vote forum topic failed (${response.status})`);
+    return await response.json();
+  }
+
+  async voteForumReply(replyId, hasVoted) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/replies/${encodeURIComponent(replyId)}/vote`, {
+      method: hasVoted ? "DELETE" : "POST",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Vote forum reply failed (${response.status})`);
+    return await response.json();
+  }
+
+  async acceptForumAnswer(replyId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/replies/${encodeURIComponent(replyId)}/answer`, {
+      method: "POST",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Accept forum answer failed (${response.status})`);
+    return await response.json();
+  }
+
+  async retractForumAnswer(replyId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/replies/${encodeURIComponent(replyId)}/answer`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Retract forum answer failed (${response.status})`);
+  }
+
+  async setForumTopicStatus(topicId, status, duplicateOf) {
+    const payload = duplicateOf ? { status, duplicate_of: duplicateOf } : { status };
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}/status`, {
+      method: "PATCH",
+      headers: { ...this.buildAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Set forum topic status failed (${response.status})`);
+    return await response.json();
+  }
+
+  async setForumTopicPinned(topicId, isPinned) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}/pin`, {
+      method: "PATCH",
+      headers: { ...this.buildAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ is_pinned: isPinned })
+    });
+    if (!response.ok) throw new Error(`Pin forum topic failed (${response.status})`);
+    return await response.json();
+  }
+
+  async setForumTopicLocked(topicId, isLocked) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}/lock`, {
+      method: "PATCH",
+      headers: { ...this.buildAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ is_locked: isLocked })
+    });
+    if (!response.ok) throw new Error(`Lock forum topic failed (${response.status})`);
+    return await response.json();
+  }
+
+  async promoteForumTopic(topicId, resolvedKind, resolvedId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}/promote`, {
+      method: "POST",
+      headers: { ...this.buildAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ resolved_kind: resolvedKind, resolved_id: resolvedId })
+    });
+    if (!response.ok) throw new Error(`Promote forum topic failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteForumTopic(topicId, reason) {
+    const url = new URL(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}`);
+    if (reason) url.searchParams.set("reason", reason);
+    const response = await fetch(url.toString(), { method: "DELETE", headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Delete forum topic failed (${response.status})`);
+  }
+
+  async restoreForumTopic(topicId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}/restore`, {
+      method: "POST",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Restore forum topic failed (${response.status})`);
+    return await response.json();
+  }
+
+  async uploadForumAttachment(topicId, file) {
+    const formData = new FormData();
+    formData.append("attachment", file);
+    const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}/attachments`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Upload forum attachment failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteForumAttachment(attachmentId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/attachments/${encodeURIComponent(attachmentId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete forum attachment failed (${response.status})`);
+  }
+
   async fetchBackgrounds() {
     return BACKGROUNDS;
   }
