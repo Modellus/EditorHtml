@@ -80,6 +80,9 @@ test('forum list renders with the docs chrome and escapes user text', async ({ p
   await expect(page.locator('.forum-topic-row').first().locator('.forum-pin')).toBeVisible();
   await expect(page.locator('.forum-topic-row').nth(1).locator('.forum-lock')).toBeVisible();
 
+  await expect(page.locator('.forum-topic-row').first().locator('.forum-avatar')).toHaveAttribute('src', 'https://example.com/ana.png');
+  await expect(page.locator('.forum-topic-row').nth(1).locator('.forum-avatar')).toHaveText('BC');
+
   await expect(page.locator('.forum-topic-title').nth(1)).toHaveText('Pendulum <script>alert(1)</script> drifts');
   expect(dialogs).toEqual([]);
 

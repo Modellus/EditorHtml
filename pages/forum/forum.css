@@ -403,6 +403,10 @@ a.forum-topic-title:hover { color: var(--accent-color); }
 
 img.forum-avatar { object-fit: cover; }
 
+.forum-avatar.is-small { width: 18px; height: 18px; font-size: 8px; }
+
+.forum-topic-author { display: inline-flex; align-items: center; gap: 6px; }
+
 .forum-author-name { font-weight: 600; color: var(--heading-color); }
 
 .forum-post-time { color: color-mix(in srgb, var(--default-color), transparent 50%); font-size: 12px; }

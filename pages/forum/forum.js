@@ -388,7 +388,7 @@ class ForumPage {
                     </div>
                     <div class="forum-topic-excerpt">${ForumPage.escape(topic.body)}</div>
                     <div class="forum-topic-meta">
-                        <span><i class="fa-light fa-user"></i>${ForumPage.escape(topic.author_name)}</span>
+                        <span class="forum-topic-author">${this.buildAvatar(topic.author_name, topic.author_avatar, "is-small")}${ForumPage.escape(topic.author_name)}</span>
                         <span><i class="fa-light fa-clock"></i>${ForumPage.relativeTime(topic.last_activity_at)}</span>
                         <span><i class="fa-light fa-comment"></i>${topic.reply_count}</span>
                         ${tagChips}
@@ -505,10 +505,11 @@ class ForumPage {
             </div>`;
     }
 
-    buildAvatar(name, avatarUrl) {
+    buildAvatar(name, avatarUrl, modifierClass = "") {
+        const avatarClass = `forum-avatar${modifierClass ? ` ${modifierClass}` : ""}`;
         if (avatarUrl)
-            return `<img class="forum-avatar" src="${ForumPage.escape(avatarUrl)}" alt="" />`;
-        return `<span class="forum-avatar">${ForumPage.escape(ForumPage.initials(name))}</span>`;
+            return `<img class="${avatarClass}" src="${ForumPage.escape(avatarUrl)}" alt="" />`;
+        return `<span class="${avatarClass}">${ForumPage.escape(ForumPage.initials(name))}</span>`;
     }
 
     buildPost(topicId, post, attachments, isTopic, topic) {
