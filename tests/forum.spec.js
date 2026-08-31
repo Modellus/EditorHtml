@@ -106,6 +106,12 @@ async function dropFiles(page, selector, files) {
 
 const pngBody = 'PNG-BYTES';
 
+async function writeBody(page, selector, text) {
+  const content = page.locator(`${selector} .dx-htmleditor-content`);
+  await expect(content).toBeVisible();
+  await content.fill(text);
+}
+
 test('forum list renders with the docs chrome and escapes user text', async ({ page }) => {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -202,6 +208,144 @@ test('a signed-in reader gets the reply form and can deep link to the composer',
   expect(errors).toEqual([]);
 });
 
+test('the composer writes rich text with a simple toolbar and posts it as html', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await signIn(page);
+  await stubApi(page);
+  let posted = null;
+  await page.route('**/forum/topics', route => {
+    if (route.request().method() !== 'POST')
+      return route.fallback();
+    posted = JSON.parse(route.request().postData());
+    return route.fulfill({ status: 201, json: { ...topicDetail, id: 't9' } });
+  });
+  await page.goto(`${base}/pages/forum/index.html#/new`);
+
+  const toolbar = page.locator('#forum-compose-body .dx-htmleditor-toolbar');
+  await expect(toolbar.locator('.dx-icon-bold')).toHaveCount(1);
+  await expect(toolbar.locator('.dx-icon-italic')).toHaveCount(1);
+  await expect(toolbar.locator('.dx-icon-underline')).toHaveCount(1);
+  await expect(toolbar.locator('.dx-icon-orderedlist')).toHaveCount(1);
+  await expect(toolbar.locator('.dx-icon-bulletlist')).toHaveCount(1);
+  await expect(toolbar.locator('.dx-icon-link')).toHaveCount(0);
+  await expect(toolbar.locator('.dx-icon-clearformat')).toHaveCount(0);
+
+  await page.locator('#forum-compose-title').fill('A triangle wave sample');
+  await writeBody(page, '#forum-compose-body', 'Useful for the Fourier unit.');
+  await page.locator('#forum-compose-body .dx-htmleditor-content').press('ControlOrMeta+a');
+  await toolbar.locator('.dx-icon-bold').click();
+  await page.locator('#forum-compose-submit').click();
+
+  await expect.poll(() => posted).not.toBeNull();
+  expect(posted.body).toContain('<strong>Useful for the Fourier unit.</strong>');
+  expect(errors).toEqual([]);
+});
+
+test('a url typed into the composer is linked as it is written', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await signIn(page);
+  await stubApi(page);
+  let posted = null;
+  await page.route('**/forum/topics', route => {
+    if (route.request().method() !== 'POST')
+      return route.fallback();
+    posted = JSON.parse(route.request().postData());
+    return route.fulfill({ status: 201, json: { ...topicDetail, id: 't9' } });
+  });
+  await page.goto(`${base}/pages/forum/index.html#/new`);
+
+  const content = page.locator('#forum-compose-body .dx-htmleditor-content');
+  await content.click();
+  await page.keyboard.type('The write-up is at https://example.com/notes and a mirror at www.example.org/x too.');
+
+  const links = content.locator('a');
+  await expect(links).toHaveCount(2);
+  await expect(links.first()).toHaveText('https://example.com/notes');
+  await expect(links.first()).toHaveAttribute('href', 'https://example.com/notes');
+  await expect(links.nth(1)).toHaveText('www.example.org/x');
+  await expect(links.nth(1)).toHaveAttribute('href', 'https://www.example.org/x');
+  await expect(content).toContainText('and a mirror at');
+
+  await page.locator('#forum-compose-title').fill('Where the method is written up');
+  await page.locator('#forum-compose-submit').click();
+  await expect.poll(() => posted).not.toBeNull();
+  expect(posted.body).toContain('href="https://example.com/notes"');
+  expect(errors).toEqual([]);
+});
+
+test('a url left at the end of the writing is linked when the editor is left', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.goto(`${base}/pages/forum/index.html#/new`);
+
+  const content = page.locator('#forum-compose-body .dx-htmleditor-content');
+  await content.click();
+  await page.keyboard.type('The whole write-up is at https://example.com/notes');
+  await expect(content.locator('a')).toHaveCount(0);
+
+  await page.locator('#forum-compose-title').click();
+  await expect(content.locator('a')).toHaveCount(1);
+  await expect(content.locator('a')).toHaveAttribute('href', 'https://example.com/notes');
+});
+
+test('a link written in the composer is clickable and opens where it points', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.context().route('https://example.com/**', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<p>notes</p>' }));
+  await page.goto(`${base}/pages/forum/index.html#/new`);
+
+  const content = page.locator('#forum-compose-body .dx-htmleditor-content');
+  await content.click();
+  await page.keyboard.type('Read https://example.com/notes first.');
+  const link = content.locator('a');
+  await expect(link).toHaveCSS('text-decoration-line', 'underline');
+  const [opened] = await Promise.all([page.waitForEvent('popup'), link.click()]);
+  expect(opened.url()).toBe('https://example.com/notes');
+  await expect(page.locator('#forum-compose-view')).toBeVisible();
+});
+
+test('a bare url written in a post is shown as a link', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  await page.route('**/forum/topics/t1', route => route.fulfill({ json: { ...topicDetail,
+    body: 'The readings are at https://example.com/run-1.csv, and www.example.org/x has the write-up.' } }));
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+
+  const links = page.locator('.forum-post').first().locator('.forum-post-text a');
+  await expect(links).toHaveCount(2);
+  await expect(links.first()).toHaveAttribute('href', 'https://example.com/run-1.csv');
+  await expect(links.first()).toHaveAttribute('target', '_blank');
+  await expect(links.nth(1)).toHaveAttribute('href', 'https://www.example.org/x');
+  await expect(links.nth(1)).toHaveText('www.example.org/x');
+  await expect(page.locator('.forum-post').first().locator('.forum-post-text')).toContainText('has the write-up.');
+});
+
+test('a post renders its markup and drops what is unsafe', async ({ page }) => {
+  const dialogs = [];
+  page.on('dialog', d => { dialogs.push(d.message()); d.dismiss(); });
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  await page.route('**/forum/topics/t1', route => route.fulfill({ json: { ...topicDetail,
+    body: '<p>A <strong>clean</strong> note, see <a href="https://example.com/note">the sample</a>.<script>alert(1)</script><a href="javascript:alert(2)">bad</a></p><ul><li>sustained</li></ul>' } }));
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+
+  const postText = page.locator('.forum-post').first().locator('.forum-post-text');
+  await expect(postText.locator('strong')).toHaveText('clean');
+  await expect(postText.locator('li')).toHaveText('sustained');
+  const link = postText.locator('a[href]');
+  await expect(link).toHaveCount(1);
+  await expect(link).toHaveAttribute('href', 'https://example.com/note');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(postText.locator('script')).toHaveCount(0);
+  expect(dialogs).toEqual([]);
+  await expect(page.locator('#forum-topic-view')).not.toContainText('javascript:');
+});
+
 test('a post shows the picture of its author, and initials when there is none', async ({ page }) => {
   await signIn(page);
   await stubApi(page);
@@ -262,13 +406,14 @@ test('composing a topic posts the canonical payload', async ({ page }) => {
   await page.locator('#forum-new-button').click();
   await page.locator('#forum-compose-kind').selectOption('audio');
   await page.locator('#forum-compose-title').fill('A triangle wave sample');
-  await page.locator('#forum-compose-body').fill('Useful for the Fourier unit.');
+  await writeBody(page, '#forum-compose-body', 'Useful for the Fourier unit.');
   await page.locator('#forum-compose-tags').fill('sound, fourier ,, sound');
   await page.locator('#forum-compose-submit').click();
   await expect.poll(() => posted).not.toBeNull();
   expect(posted.kind).toBe('audio');
   expect(posted.title).toBe('A triangle wave sample');
   expect(posted.tags).toEqual(['sound', 'fourier', 'sound']);
+  expect(posted.body).toContain('Useful for the Fourier unit.');
 });
 
 test('a promoted suggestion names the catalogue row it became', async ({ page }) => {
@@ -367,7 +512,7 @@ test('posting a topic sends every attached file as its own part', async ({ page 
   await page.goto(`${base}/pages/forum/index.html#/new`);
   await page.locator('#forum-compose-kind').selectOption('data');
   await page.locator('#forum-compose-title').fill('Three runs of the same drop');
-  await page.locator('#forum-compose-body').fill('The readings and a photo of the rig.');
+  await writeBody(page, '#forum-compose-body', 'The readings and a photo of the rig.');
   await dropFiles(page, '#forum-compose-attachments .forum-dropzone', [
     { name: 'run-1.csv', type: 'text/csv', body: 'a,b' },
     { name: 'rig.png', type: 'image/png', body: pngBody }
@@ -381,6 +526,8 @@ test('posting a topic sends every attached file as its own part', async ({ page 
 });
 
 test('a reply sends the files dropped on its form', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
   await signIn(page);
   await stubApi(page);
   await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
@@ -392,7 +539,7 @@ test('a reply sends the files dropped on its form', async ({ page }) => {
   await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
 
   await expect(page.locator('#forum-reply-attachments .forum-dropzone')).toBeVisible();
-  await page.locator('#forum-reply-body').fill('Here are both traces.');
+  await writeBody(page, '#forum-reply-body', 'Here are both traces.');
   await dropFiles(page, '#forum-reply-attachments .forum-dropzone', [
     { name: 'trace-1.png', type: 'image/png', body: pngBody },
     { name: 'trace-2.png', type: 'image/png', body: pngBody }
@@ -403,6 +550,8 @@ test('a reply sends the files dropped on its form', async ({ page }) => {
   await expect.poll(() => body).not.toBe('');
   expect(body).toContain('filename="trace-1.png"');
   expect(body).toContain('filename="trace-2.png"');
+  await expect(page.locator('#forum-reply-body .dx-htmleditor-content')).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 test('an image attachment on a post is shown as a thumbnail', async ({ page }) => {
@@ -752,7 +901,7 @@ test('writing from inside a community files the topic into it', async ({ page })
 
   await expect(page.locator('#forum-compose-group')).toHaveValue('g1');
   await page.locator('#forum-compose-title').fill('Fringe spacing');
-  await page.locator('#forum-compose-body').fill('Why does it widen?');
+  await writeBody(page, '#forum-compose-body', 'Why does it widen?');
   await page.locator('#forum-compose-submit').click();
   await expect.poll(() => posted).not.toBeNull();
   expect(posted.group_id).toBe('g1');

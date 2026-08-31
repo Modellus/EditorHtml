@@ -414,8 +414,42 @@ img.forum-avatar { object-fit: cover; }
 .forum-post-text {
     font-size: 14.5px;
     line-height: 1.75;
-    white-space: pre-wrap;
     overflow-wrap: anywhere;
+}
+
+.forum-post-text p { margin: 0 0 10px; }
+
+.forum-post-text > :last-child { margin-bottom: 0; }
+
+.forum-post-text ul,
+.forum-post-text ol { margin: 0 0 10px; padding-left: 22px; }
+
+.forum-post-text a {
+    color: var(--accent-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.forum-post-text blockquote {
+    margin: 0 0 10px;
+    padding: 2px 0 2px 12px;
+    border-left: 3px solid color-mix(in srgb, var(--default-color), transparent 85%);
+    color: color-mix(in srgb, var(--default-color), transparent 25%);
+}
+
+.forum-post-text code {
+    font-size: 13px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--default-color), transparent 92%);
+}
+
+.forum-post-text pre {
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    background: color-mix(in srgb, var(--default-color), transparent 94%);
 }
 
 .forum-post-text.is-removed {
@@ -1127,3 +1161,44 @@ img.forum-group-avatar { object-fit: cover; }
 img.forum-group-avatar.is-small { background: none; }
 
 .docs-sidebar ul li a.active .forum-group-avatar.is-small { color: var(--accent-color); }
+
+.forum-rich-text.dx-htmleditor {
+    font-family: var(--default-font);
+    font-size: 14px;
+    color: var(--default-color);
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 85%);
+    border-radius: 8px;
+    background: var(--surface-color);
+    overflow: hidden;
+    transition: 0.2s;
+}
+
+.forum-rich-text.dx-htmleditor::before { display: none; }
+
+.forum-rich-text.dx-htmleditor.dx-state-focused {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 88%);
+}
+
+.forum-rich-text .dx-htmleditor-toolbar-wrapper {
+    border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+    background: color-mix(in srgb, var(--default-color), transparent 96%);
+    padding: 2px 4px;
+}
+
+.forum-rich-text .dx-htmleditor-content {
+    min-height: 160px;
+    padding: 10px 14px;
+    line-height: 1.7;
+}
+
+.forum-rich-text .dx-htmleditor-content p { margin: 0 0 10px; }
+
+.forum-rich-text .dx-htmleditor-content a {
+    color: var(--accent-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.forum-reply-form .forum-rich-text .dx-htmleditor-content { min-height: 120px; }

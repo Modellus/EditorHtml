@@ -3,6 +3,9 @@ import { UserSdk } from "../../sdk/userSdk.js";
 import { AttachmentPicker, attachmentIcon, escapeHtml, formatFileSize, isImageAttachment } from "./attachmentPicker.js";
 import { AttachmentPreview } from "./attachmentPreview.js";
 import { ImageDropTarget } from "./imageDropTarget.js";
+import { RichTextEditor, maxRichTextLength, richTextToPlainText, sanitizeRichText } from "./richText.js";
+
+DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjUyCn0=.WlJvwd9AewkKcLiqaZc3LVfKt9FGlzfDD16Zi6iEW4KIN+1MFccO3f68vdJoStCEqtYXdaUrX48WcQJMNg/7K+geEzM2ZVRCeJKxjXIi8OFVU8lXf6cvC+4b3MRFaijuN3c4ug==' });
 
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
 const sessionKey = window.modellus?.auth?.sessionKey || "mp.session";
@@ -427,7 +430,7 @@ class ForumPage {
                         ${ForumPage.buildGroupChip(topic)}
                         ${deletedMark}
                     </div>
-                    <div class="forum-topic-excerpt">${ForumPage.escape(topic.body)}</div>
+                    <div class="forum-topic-excerpt">${ForumPage.escape(richTextToPlainText(topic.body))}</div>
                     <div class="forum-topic-meta">
                         <span class="forum-topic-author">${this.buildAvatar(topic.author_name, topic.author_avatar, "is-small")}${ForumPage.escape(topic.author_name)}</span>
                         <span><i class="fa-light fa-clock"></i>${ForumPage.relativeTime(topic.last_activity_at)}</span>
@@ -583,11 +586,20 @@ class ForumPage {
                         <span class="forum-post-time">${ForumPage.relativeTime(post.created_at)}</span>
                         ${post.is_answer ? `<span class="forum-chip forum-chip-answered"><i class="fa-light fa-check"></i> Accepted answer</span>` : ""}
                     </div>
-                    <div class="forum-post-text${isPlaceholder ? " is-removed" : ""}">${ForumPage.escape(bodyText)}</div>
+                    <div class="forum-post-text${isPlaceholder ? " is-removed" : ""}">${sanitizeRichText(bodyText)}</div>
                     ${this.buildAttachments(attachments)}
                     ${this.buildPostActions(post, isTopic, isRemoved, topic)}
                 </div>
             </article>`;
+    }
+
+    createRichTextEditor(previous, containerId, placeholder) {
+        if (previous)
+            previous.dispose();
+        const container = document.getElementById(containerId);
+        if (!container)
+            return null;
+        return new RichTextEditor(container, placeholder);
     }
 
     createAttachmentPicker(previous, containerId, surfaceSelector) {
@@ -649,7 +661,7 @@ class ForumPage {
             <div class="forum-reply-form">
                 <h3>Your reply</h3>
                 <div class="forum-field">
-                    <textarea id="forum-reply-body" class="forum-textarea" placeholder="Share what you know, or add detail to the report."></textarea>
+                    <div id="forum-reply-body" class="forum-rich-text"></div>
                 </div>
                 <div class="forum-field">
                     <label>Attachments <span class="forum-field-hint">optional</span></label>
@@ -673,6 +685,7 @@ class ForumPage {
         const statusSelect = document.getElementById("forum-moderate-status");
         if (statusSelect)
             statusSelect.addEventListener("change", () => this.changeTopicStatus(topic, statusSelect.value));
+        this.replyEditor = this.createRichTextEditor(this.replyEditor, "forum-reply-body", "Share what you know, or add detail to the report.");
         this.replyAttachments = this.createAttachmentPicker(this.replyAttachments, "forum-reply-attachments", ".forum-reply-form");
         const replySubmit = document.getElementById("forum-reply-submit");
         if (replySubmit)
@@ -681,9 +694,8 @@ class ForumPage {
 
     startNestedReply(parentReplyId) {
         this.pendingParentReplyId = parentReplyId;
-        const replyBody = document.getElementById("forum-reply-body");
-        replyBody.focus();
-        replyBody.scrollIntoView({ behavior: "smooth", block: "center" });
+        this.replyEditor.focus();
+        document.getElementById("forum-reply-body").scrollIntoView({ behavior: "smooth", block: "center" });
         document.getElementById("forum-reply-status").textContent = "Replying to the selected post.";
     }
 
@@ -717,10 +729,9 @@ class ForumPage {
     }
 
     async submitReply(topicId) {
-        const replyBody = document.getElementById("forum-reply-body");
         const replyStatus = document.getElementById("forum-reply-status");
-        const body = replyBody.value.trim();
-        if (!body) {
+        const body = this.replyEditor.getValue();
+        if (this.replyEditor.isEmpty()) {
             replyStatus.textContent = "Write something before posting.";
             return;
         }
@@ -1222,8 +1233,8 @@ class ForumPage {
                     <input id="forum-compose-title" class="forum-input" type="text" maxlength="200" placeholder="Say in one line what this is about" />
                 </div>
                 <div class="forum-field">
-                    <label for="forum-compose-body">Details</label>
-                    <textarea id="forum-compose-body" class="forum-textarea" maxlength="20000" placeholder="Describe what you need, what you found, or what you are proposing."></textarea>
+                    <label>Details</label>
+                    <div id="forum-compose-body" class="forum-rich-text"></div>
                 </div>
                 <div class="forum-field-row">
                     <div class="forum-field">
@@ -1249,6 +1260,7 @@ class ForumPage {
                     <span id="forum-compose-status" class="forum-status"></span>
                 </div>
             </div>`;
+        this.composeEditor = this.createRichTextEditor(this.composeEditor, "forum-compose-body", "Describe what you need, what you found, or what you are proposing.");
         this.composeAttachments = this.createAttachmentPicker(this.composeAttachments, "forum-compose-attachments", ".forum-form");
         document.getElementById("forum-compose-submit").addEventListener("click", () => this.submitTopic());
     }
@@ -1256,9 +1268,13 @@ class ForumPage {
     async submitTopic() {
         const composeStatus = document.getElementById("forum-compose-status");
         const title = document.getElementById("forum-compose-title").value.trim();
-        const body = document.getElementById("forum-compose-body").value.trim();
-        if (!title || !body) {
+        const body = this.composeEditor.getValue();
+        if (!title || this.composeEditor.isEmpty()) {
             composeStatus.textContent = "A title and details are both required.";
+            return;
+        }
+        if (body.length > maxRichTextLength) {
+            composeStatus.textContent = "The details are longer than this board takes. Trim them a little.";
             return;
         }
         composeStatus.textContent = "Posting…";
