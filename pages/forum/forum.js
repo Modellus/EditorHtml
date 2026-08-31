@@ -1,5 +1,7 @@
 import { ModelsApiClient } from "../../sdk/modelsApiClient.js";
 import { UserSdk } from "../../sdk/userSdk.js";
+import { AttachmentPicker, attachmentIcon, escapeHtml, formatFileSize, isImageAttachment } from "./attachmentPicker.js";
+import { AttachmentPreview } from "./attachmentPreview.js";
 
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
 const sessionKey = window.modellus?.auth?.sessionKey || "mp.session";
@@ -83,10 +85,11 @@ class ForumPage {
             breadcrumb: document.getElementById("forum-breadcrumb"),
             sessionAction: document.getElementById("session-action")
         };
+        this.attachmentPreview = new AttachmentPreview(this.elements.topicView);
     }
 
     static escape(value) {
-        return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        return escapeHtml(value);
     }
 
     static initials(name) {
@@ -110,14 +113,6 @@ class ForumPage {
         if (elapsedSeconds < 2592000)
             return `${Math.floor(elapsedSeconds / 86400)}d ago`;
         return new Date(value).toLocaleDateString();
-    }
-
-    static fileSize(bytes) {
-        if (bytes < 1024)
-            return `${bytes} B`;
-        if (bytes < 1048576)
-            return `${(bytes / 1024).toFixed(0)} KB`;
-        return `${(bytes / 1048576).toFixed(1)} MB`;
     }
 
     isSignedIn() {
@@ -454,6 +449,7 @@ class ForumPage {
     }
 
     renderTopic(topic) {
+        this.attachmentPreview.hide();
         const attachments = topic.attachments.filter(attachment => !attachment.reply_id);
         this.elements.topicView.innerHTML = `
             <a class="forum-link-button" href="#/"><i class="fa-light fa-arrow-left"></i> Back to all topics</a>
@@ -541,14 +537,35 @@ class ForumPage {
             </article>`;
     }
 
+    createAttachmentPicker(previous, containerId, surfaceSelector) {
+        if (previous)
+            previous.dispose();
+        const container = document.getElementById(containerId);
+        if (!container)
+            return null;
+        return new AttachmentPicker(container, container.closest(surfaceSelector));
+    }
+
+    static buildAttachmentLink(attachment) {
+        return `href="${ForumPage.escape(attachment.url)}" download data-attachment-url="${ForumPage.escape(attachment.url)}" data-attachment-name="${ForumPage.escape(attachment.filename)}" data-attachment-type="${ForumPage.escape(attachment.content_type)}" data-attachment-size="${attachment.size_bytes}"`;
+    }
+
     buildAttachments(attachments) {
         if (attachments.length === 0)
             return "";
-        return `<div class="forum-attachments">${attachments.map(attachment => `
-            <a class="forum-attachment" href="${ForumPage.escape(attachment.url)}" download>
-                <i class="fa-light fa-paperclip"></i>
+        const images = attachments.filter(attachment => isImageAttachment(attachment.content_type));
+        const files = attachments.filter(attachment => !isImageAttachment(attachment.content_type));
+        const gallery = images.length === 0 ? "" : `<div class="forum-attachment-gallery">${images.map(attachment => `
+            <a class="forum-attachment-image" data-preview-placement="block" ${ForumPage.buildAttachmentLink(attachment)}>
+                <img src="${ForumPage.escape(attachment.url)}" alt="${ForumPage.escape(attachment.filename)}" loading="lazy" />
+                <span class="forum-attachment-image-name">${ForumPage.escape(attachment.filename)}</span>
+                <span class="forum-attachment-size">${formatFileSize(attachment.size_bytes)}</span>
+            </a>`).join("")}</div>`;
+        return `<div class="forum-attachments">${gallery}${files.map(attachment => `
+            <a class="forum-attachment" ${ForumPage.buildAttachmentLink(attachment)}>
+                <i class="${attachmentIcon(attachment.content_type)}"></i>
                 <span>${ForumPage.escape(attachment.filename)}</span>
-                <span class="forum-attachment-size">${ForumPage.fileSize(attachment.size_bytes)}</span>
+                <span class="forum-attachment-size">${formatFileSize(attachment.size_bytes)}</span>
             </a>`).join("")}</div>`;
     }
 
@@ -582,8 +599,8 @@ class ForumPage {
                     <textarea id="forum-reply-body" class="forum-textarea" placeholder="Share what you know, or add detail to the report."></textarea>
                 </div>
                 <div class="forum-field">
-                    <label for="forum-reply-attachment">Attachment <span class="forum-field-hint">optional, up to 10 MB</span></label>
-                    <input id="forum-reply-attachment" class="forum-input" type="file" />
+                    <label>Attachments <span class="forum-field-hint">optional</span></label>
+                    <div id="forum-reply-attachments"></div>
                 </div>
                 <div class="forum-form-actions">
                     <button type="button" id="forum-reply-submit" class="forum-button forum-button-primary">Post reply</button>
@@ -603,6 +620,7 @@ class ForumPage {
         const statusSelect = document.getElementById("forum-moderate-status");
         if (statusSelect)
             statusSelect.addEventListener("change", () => this.changeTopicStatus(topic, statusSelect.value));
+        this.replyAttachments = this.createAttachmentPicker(this.replyAttachments, "forum-reply-attachments", ".forum-reply-form");
         const replySubmit = document.getElementById("forum-reply-submit");
         if (replySubmit)
             replySubmit.addEventListener("click", () => this.submitReply(topic.id));
@@ -648,7 +666,6 @@ class ForumPage {
     async submitReply(topicId) {
         const replyBody = document.getElementById("forum-reply-body");
         const replyStatus = document.getElementById("forum-reply-status");
-        const attachmentInput = document.getElementById("forum-reply-attachment");
         const body = replyBody.value.trim();
         if (!body) {
             replyStatus.textContent = "Write something before posting.";
@@ -657,7 +674,7 @@ class ForumPage {
         replyStatus.textContent = "Posting…";
         try {
             const payload = this.pendingParentReplyId ? { body, parent_reply_id: this.pendingParentReplyId } : { body };
-            await this.apiClient.createForumReply(topicId, payload, attachmentInput.files[0]);
+            await this.apiClient.createForumReply(topicId, payload, this.replyAttachments.getFiles());
             this.pendingParentReplyId = undefined;
             await this.showTopic(topicId);
         } catch (error) {
@@ -750,8 +767,8 @@ class ForumPage {
                     <input id="forum-compose-tags" class="forum-input" type="text" placeholder="waves, sound, mechanics" />
                 </div>
                 <div class="forum-field">
-                    <label for="forum-compose-attachment">Attachment <span class="forum-field-hint">optional, up to 10 MB</span></label>
-                    <input id="forum-compose-attachment" class="forum-input" type="file" />
+                    <label>Attachments <span class="forum-field-hint">optional</span></label>
+                    <div id="forum-compose-attachments"></div>
                 </div>
                 <div class="forum-form-actions">
                     <button type="button" id="forum-compose-submit" class="forum-button forum-button-primary">Post topic</button>
@@ -759,6 +776,7 @@ class ForumPage {
                     <span id="forum-compose-status" class="forum-status"></span>
                 </div>
             </div>`;
+        this.composeAttachments = this.createAttachmentPicker(this.composeAttachments, "forum-compose-attachments", ".forum-form");
         document.getElementById("forum-compose-submit").addEventListener("click", () => this.submitTopic());
     }
 
@@ -781,7 +799,7 @@ class ForumPage {
             education_level_id: document.getElementById("forum-compose-education").value || null
         };
         try {
-            const created = await this.apiClient.createForumTopic(payload, document.getElementById("forum-compose-attachment").files[0]);
+            const created = await this.apiClient.createForumTopic(payload, this.composeAttachments.getFiles());
             window.location.hash = `#/topic/${encodeURIComponent(created.id)}`;
         } catch (error) {
             composeStatus.textContent = `Could not post the topic: ${error.message}`;

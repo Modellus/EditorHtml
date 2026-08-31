@@ -1231,10 +1231,10 @@ export class ModelsApiClient {
     return await response.json();
   }
 
-  async createForumTopic(payload, attachmentFile) {
+  async createForumTopic(payload, attachmentFiles = []) {
     const headers = this.buildAuthHeaders();
     const options = { method: "POST", headers };
-    if (attachmentFile) {
+    if (attachmentFiles.length > 0) {
       const formData = new FormData();
       formData.append("kind", payload.kind);
       formData.append("title", payload.title);
@@ -1243,7 +1243,7 @@ export class ModelsApiClient {
       if (payload.science_id) formData.append("science_id", payload.science_id);
       if (payload.education_level_id) formData.append("education_level_id", payload.education_level_id);
       if (payload.model_id) formData.append("model_id", payload.model_id);
-      formData.append("attachment", attachmentFile);
+      for (const file of attachmentFiles) formData.append("attachment", file);
       options.body = formData;
     } else {
       options.headers = { ...headers, "Content-Type": "application/json" };
@@ -1264,14 +1264,14 @@ export class ModelsApiClient {
     return await response.json();
   }
 
-  async createForumReply(topicId, payload, attachmentFile) {
+  async createForumReply(topicId, payload, attachmentFiles = []) {
     const headers = this.buildAuthHeaders();
     const options = { method: "POST", headers };
-    if (attachmentFile) {
+    if (attachmentFiles.length > 0) {
       const formData = new FormData();
       formData.append("body", payload.body);
       if (payload.parent_reply_id) formData.append("parent_reply_id", payload.parent_reply_id);
-      formData.append("attachment", attachmentFile);
+      for (const file of attachmentFiles) formData.append("attachment", file);
       options.body = formData;
     } else {
       options.headers = { ...headers, "Content-Type": "application/json" };
@@ -1400,9 +1400,9 @@ export class ModelsApiClient {
     return await response.json();
   }
 
-  async uploadForumAttachment(topicId, file) {
+  async uploadForumAttachments(topicId, attachmentFiles) {
     const formData = new FormData();
-    formData.append("attachment", file);
+    for (const file of attachmentFiles) formData.append("attachment", file);
     const response = await fetch(`${this.apiBaseUrl}/forum/topics/${encodeURIComponent(topicId)}/attachments`, {
       method: "POST",
       headers: this.buildAuthHeaders(),

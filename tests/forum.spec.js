@@ -60,6 +60,20 @@ async function signIn(page, flags = [{ id: 'f1', key: 'can_moderate_forum', name
   await page.route('**/users/u1/feature-flags', route => route.fulfill({ json: flags }));
 }
 
+async function dropFiles(page, selector, files) {
+  const dataTransfer = await page.evaluateHandle(items => {
+    const transfer = new DataTransfer();
+    for (const item of items)
+      transfer.items.add(new File([item.body], item.name, { type: item.type }));
+    return transfer;
+  }, files);
+  await page.dispatchEvent(selector, 'dragenter', { dataTransfer });
+  await page.dispatchEvent(selector, 'dragover', { dataTransfer });
+  await page.dispatchEvent(selector, 'drop', { dataTransfer });
+}
+
+const pngBody = 'PNG-BYTES';
+
 test('forum list renders with the docs chrome and escapes user text', async ({ page }) => {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -235,4 +249,267 @@ test('a promoted suggestion names the catalogue row it became', async ({ page })
   await expect(banner).toContainText('became a sound in the catalogue');
   await expect(banner.locator('code')).toHaveText('audio-9');
   await expect(banner.locator('a')).toHaveAttribute('href', '/pages/catalog/index.html');
+});
+
+test('the composer takes several dropped files and shows a thumbnail of each', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await signIn(page);
+  await stubApi(page);
+  await page.goto(`${base}/pages/forum/index.html#/new`);
+
+  const dropzone = page.locator('#forum-compose-attachments .forum-dropzone');
+  await expect(dropzone).toBeVisible();
+  await expect(dropzone).toContainText('Drag files here');
+  await expect(dropzone).toContainText('Up to 10 files, 10.0 MB each');
+
+  await dropFiles(page, '#forum-compose-attachments .forum-dropzone', [
+    { name: 'rig.png', type: 'image/png', body: pngBody },
+    { name: 'run-1.csv', type: 'text/csv', body: 'a,b' },
+    { name: 'note.wav', type: 'audio/wav', body: 'wav' }
+  ]);
+
+  const cards = page.locator('.forum-attachment-card');
+  await expect(cards).toHaveCount(3);
+  await expect(cards.nth(0).locator('img.forum-attachment-thumb')).toHaveAttribute('src', /^blob:/);
+  await expect(cards.nth(1).locator('.forum-attachment-thumb i')).toHaveClass(/fa-table/);
+  await expect(cards.nth(2).locator('.forum-attachment-thumb i')).toHaveClass(/fa-volume-high/);
+  await expect(cards.nth(1)).toContainText('run-1.csv');
+  await expect(cards.nth(1).locator('.forum-attachment-size')).toHaveText('3 B');
+
+  await cards.nth(1).locator('.forum-attachment-remove').click();
+  await expect(cards).toHaveCount(2);
+  await expect(page.locator('.forum-dropzone-files')).not.toContainText('run-1.csv');
+  expect(errors).toEqual([]);
+});
+
+test('dropping anywhere on the compose form highlights the drop zone', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.goto(`${base}/pages/forum/index.html#/new`);
+
+  const dataTransfer = await page.evaluateHandle(() => {
+    const transfer = new DataTransfer();
+    transfer.items.add(new File(['x'], 'x.png', { type: 'image/png' }));
+    return transfer;
+  });
+  await page.dispatchEvent('#forum-compose-body', 'dragenter', { dataTransfer });
+  await expect(page.locator('#forum-compose-attachments .forum-dropzone')).toHaveClass(/is-dragging/);
+  await page.dispatchEvent('#forum-compose-body', 'drop', { dataTransfer });
+  await expect(page.locator('.forum-attachment-card')).toHaveCount(1);
+  await expect(page.locator('#forum-compose-attachments .forum-dropzone')).not.toHaveClass(/is-dragging/);
+});
+
+test('a file past the size limit is refused by name', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.goto(`${base}/pages/forum/index.html#/new`);
+
+  await dropFiles(page, '#forum-compose-attachments .forum-dropzone', [
+    { name: 'huge.bin', type: 'application/octet-stream', body: 'x'.repeat(0) },
+    { name: 'small.csv', type: 'text/csv', body: 'a,b' }
+  ]);
+  await expect(page.locator('.forum-attachment-card')).toHaveCount(2);
+
+  await page.evaluate(() => {
+    const input = document.querySelector('#forum-compose-attachments .forum-dropzone-input');
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([new Uint8Array(11 * 1024 * 1024)], 'over.bin', { type: 'application/octet-stream' }));
+    input.files = transfer.files;
+    input.dispatchEvent(new Event('change'));
+  });
+  await expect(page.locator('.forum-dropzone-message')).toContainText('over.bin is larger than 10.0 MB');
+  await expect(page.locator('.forum-attachment-card')).toHaveCount(2);
+});
+
+test('posting a topic sends every attached file as its own part', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  let body = '';
+  await page.route('**/forum/topics', route => {
+    if (route.request().method() !== 'POST')
+      return route.fallback();
+    body = route.request().postData();
+    return route.fulfill({ status: 201, json: { ...topicDetail, id: 't9' } });
+  });
+  await page.goto(`${base}/pages/forum/index.html#/new`);
+  await page.locator('#forum-compose-kind').selectOption('data');
+  await page.locator('#forum-compose-title').fill('Three runs of the same drop');
+  await page.locator('#forum-compose-body').fill('The readings and a photo of the rig.');
+  await dropFiles(page, '#forum-compose-attachments .forum-dropzone', [
+    { name: 'run-1.csv', type: 'text/csv', body: 'a,b' },
+    { name: 'rig.png', type: 'image/png', body: pngBody }
+  ]);
+  await page.locator('#forum-compose-submit').click();
+
+  await expect.poll(() => body).not.toBe('');
+  expect(body).toContain('name="attachment"; filename="run-1.csv"');
+  expect(body).toContain('name="attachment"; filename="rig.png"');
+  expect(body).toContain('name="title"');
+});
+
+test('a reply sends the files dropped on its form', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  let body = '';
+  await page.route('**/forum/topics/t1/replies', route => {
+    body = route.request().postData();
+    return route.fulfill({ status: 201, json: { id: 'r9' } });
+  });
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+
+  await expect(page.locator('#forum-reply-attachments .forum-dropzone')).toBeVisible();
+  await page.locator('#forum-reply-body').fill('Here are both traces.');
+  await dropFiles(page, '#forum-reply-attachments .forum-dropzone', [
+    { name: 'trace-1.png', type: 'image/png', body: pngBody },
+    { name: 'trace-2.png', type: 'image/png', body: pngBody }
+  ]);
+  await expect(page.locator('#forum-reply-attachments .forum-attachment-card')).toHaveCount(2);
+  await page.locator('#forum-reply-submit').click();
+
+  await expect.poll(() => body).not.toBe('');
+  expect(body).toContain('filename="trace-1.png"');
+  expect(body).toContain('filename="trace-2.png"');
+});
+
+test('an image attachment on a post is shown as a thumbnail', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  await page.route('**/forum/topics/t1', route => route.fulfill({ json: { ...topicDetail, attachments: [
+    ...topicDetail.attachments,
+    { id:'a2', topic_id:'t1', reply_id:null, filename:'rig.png', content_type:'image/png', size_bytes:2048, uploaded_by:'u1', created_at:new Date().toISOString(), url:'https://example.com/att/a2' }
+  ] } }));
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+
+  const image = page.locator('.forum-attachment-gallery .forum-attachment-image');
+  await expect(image).toHaveCount(1);
+  await expect(image.locator('img')).toHaveAttribute('src', 'https://example.com/att/a2');
+  await expect(image).toContainText('rig.png');
+  await expect(page.locator('.forum-attachment')).toContainText('cello.wav');
+  await expect(page.locator('.forum-attachment i')).toHaveClass(/fa-volume-high/);
+});
+
+test('hovering an image attachment shows a preview and a download button', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  await page.route('**/att/a2', route => route.fulfill({ status: 200, contentType: 'image/png', headers: { 'content-disposition': 'attachment; filename="rig.png"' }, body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAFUlEQVR4nGP8//8/AzbAxIAHDDVJAM6cAwrqM3jzAAAAAElFTkSuQmCC', 'base64') }));
+  await page.route('**/forum/topics/t1', route => route.fulfill({ json: { ...topicDetail, attachments: [
+    { id:'a2', topic_id:'t1', reply_id:null, filename:'rig.png', content_type:'image/png', size_bytes:2048, uploaded_by:'u1', created_at:new Date().toISOString(), url:'https://example.com/att/a2' }
+  ] } }));
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+
+  const card = page.locator('.forum-preview-card');
+  await expect(card).toBeHidden();
+  await page.locator('.forum-attachment-image').hover();
+  await expect(card).toBeVisible();
+  await expect(card.locator('img.forum-preview-media')).toHaveAttribute('src', 'https://example.com/att/a2');
+  await expect(card.locator('.forum-preview-name')).toHaveText('rig.png');
+  const download = card.locator('.forum-preview-action[download]');
+  await expect(download).toHaveAttribute('href', 'https://example.com/att/a2');
+  const open = card.locator('.forum-preview-action[target="_blank"]');
+  await expect(open).toHaveText('Open');
+  await expect(open).toHaveAttribute('href', 'https://example.com/att/a2?inline=1');
+  await expect(open).toHaveAttribute('rel', 'noopener');
+
+  await download.hover();
+  await expect(card).toBeVisible();
+  await page.mouse.move(4, 4);
+  await expect(card).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('hovering a data file previews its first lines, and a sound gets a player', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  await page.route('**/att/csv', route => route.fulfill({ status: 200, contentType: 'text/csv', body: 't,x\n0,0\n1,4.9\n2,19.6\n' }));
+  await page.route('**/forum/topics/t1', route => route.fulfill({ json: { ...topicDetail, attachments: [
+    { id:'a3', topic_id:'t1', reply_id:null, filename:'run-1.csv', content_type:'text/csv', size_bytes:24, uploaded_by:'u1', created_at:new Date().toISOString(), url:'https://example.com/att/csv' },
+    ...topicDetail.attachments
+  ] } }));
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+
+  const card = page.locator('.forum-preview-card');
+  await page.locator('.forum-attachment', { hasText: 'run-1.csv' }).hover();
+  await expect(card.locator('.forum-preview-text')).toHaveText('t,x\n0,0\n1,4.9\n2,19.6');
+
+  await page.locator('.forum-attachment', { hasText: 'cello.wav' }).hover();
+  await expect(card.locator('audio.forum-preview-audio')).toHaveAttribute('src', 'https://example.com/att/a1');
+  await expect(card.locator('.forum-preview-name')).toHaveText('cello.wav');
+});
+
+test('an attachment with no preview names its kind, and Escape closes the card', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  await page.route('**/forum/topics/t1', route => route.fulfill({ json: { ...topicDetail, attachments: [
+    { id:'a4', topic_id:'t1', reply_id:null, filename:'rig.zip', content_type:'application/zip', size_bytes:99000, uploaded_by:'u1', created_at:new Date().toISOString(), url:'https://example.com/att/a4' }
+  ] } }));
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+
+  const card = page.locator('.forum-preview-card');
+  await page.locator('.forum-attachment').hover();
+  await expect(card.locator('.forum-preview-file')).toHaveText('Archive');
+  await expect(card.locator('.forum-attachment-size')).toHaveText('97 KB');
+  await expect(card.locator('.forum-preview-action[target="_blank"]')).toHaveCount(0);
+  await expect(card.locator('.forum-preview-action[download]')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(card).toBeHidden();
+});
+
+test('a preview leaves the attachments beside it reachable', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  await page.route('**/forum/topics/t1', route => route.fulfill({ json: { ...topicDetail, attachments: [
+    { id:'a2', topic_id:'t1', reply_id:null, filename:'rig.png', content_type:'image/png', size_bytes:2048, uploaded_by:'u1', created_at:new Date().toISOString(), url:'https://example.com/att/a2' },
+    ...topicDetail.attachments
+  ] } }));
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+  const card = page.locator('.forum-preview-card');
+
+  await page.locator('.forum-attachment', { hasText: 'cello.wav' }).hover();
+  await expect(card).toBeVisible();
+  const rowBox = await page.locator('.forum-attachment').boundingBox();
+  const besideRow = await card.boundingBox();
+  expect(besideRow.x).toBeGreaterThanOrEqual(rowBox.x + rowBox.width);
+
+  await page.locator('.forum-attachment-image').hover();
+  await expect(card.locator('img.forum-preview-media')).toBeVisible();
+  const imageBox = await page.locator('.forum-attachment-image').boundingBox();
+  const aboveImage = await card.boundingBox();
+  expect(aboveImage.y + aboveImage.height).toBeLessThanOrEqual(imageBox.y);
+});
+
+test('opening an attachment in a tab asks the API to render it rather than send it down', async ({ page, context }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  await page.route('**/att/a2*', route => route.fulfill({ status: 200, contentType: 'image/png', headers: { 'content-disposition': 'inline; filename="rig.png"' }, body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAFUlEQVR4nGP8//8/AzbAxIAHDDVJAM6cAwrqM3jzAAAAAElFTkSuQmCC', 'base64') }));
+  await page.route('**/forum/topics/t1', route => route.fulfill({ json: { ...topicDetail, attachments: [
+    { id:'a2', topic_id:'t1', reply_id:null, filename:'rig.png', content_type:'image/png', size_bytes:2048, uploaded_by:'u1', created_at:new Date().toISOString(), url:'https://example.com/att/a2' }
+  ] } }));
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+
+  await page.locator('.forum-attachment-image').hover();
+  const opened = await Promise.all([
+    context.waitForEvent('page'),
+    page.locator('.forum-preview-card .forum-preview-action[target="_blank"]').click()
+  ]);
+  expect(opened[0].url()).toBe('https://example.com/att/a2?inline=1');
+});
+
+test('the preview is wide enough to read the file it shows', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/topics/t1/read', route => route.fulfill({ status: 204, body: '' }));
+  await page.goto(`${base}/pages/forum/index.html#/topic/t1`);
+  await page.locator('.forum-attachment').hover();
+  const box = await page.locator('.forum-preview-card').boundingBox();
+  expect(box.width).toBe(640);
 });
