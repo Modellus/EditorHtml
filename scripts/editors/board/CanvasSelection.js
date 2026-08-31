@@ -357,6 +357,7 @@ class Selection {
         this.hoveredShape = shape;
         shape.createHandles();
         this.applyHighlight(shape);
+        shape.onHovered();
         this.resolveInteractionAdapter()?.onHoverShapeChanged?.(shape, previousHoveredShape, this);
     }
 
@@ -367,6 +368,7 @@ class Selection {
             this.removeHighlight(this.hoveredShape);
         }
         this.hoveredShape = null;
+        previousHoveredShape?.onUnhovered();
         this.resolveInteractionAdapter()?.onHoverShapeChanged?.(null, previousHoveredShape, this);
     }
 

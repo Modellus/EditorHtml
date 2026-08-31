@@ -2085,6 +2085,14 @@ class BaseShape {
     onRemoved() {
     }
 
+    // The board decides what hovering a shape means: its handles sit over the shape, so the shape
+    // itself never sees the pointer.
+    onHovered() {
+    }
+
+    onUnhovered() {
+    }
+
     getShapeNameColor() {
         return this.properties.nameColor ?? this.properties.foregroundColor ?? "#000000";
     }

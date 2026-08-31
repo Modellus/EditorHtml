@@ -818,3 +818,41 @@ math-field {
 .mdl-audio-control .mdl-audio-control-modulation {
     margin-left: 6px;
 }
+
+/* Why the engine refused a row, on the card the row was written in. */
+.mdl-expression-error-tooltip .dx-popup-content {
+    padding: 8px 10px;
+}
+
+.mdl-expression-error-title {
+    margin-bottom: 6px;
+    color: var(--math-error, #d32f2f);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+}
+
+.mdl-expression-error-row {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    text-align: left;
+    line-height: 1.35;
+}
+
+.mdl-expression-error-row + .mdl-expression-error-row {
+    margin-top: 6px;
+}
+
+.mdl-expression-error-row-label {
+    flex: 0 0 auto;
+    color: var(--math-error, #d32f2f);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mdl-expression-error-row-message {
+    min-width: 0;
+    font-size: 12px;
+}

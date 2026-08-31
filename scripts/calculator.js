@@ -596,12 +596,24 @@ class Calculator extends EventTarget {
             try {
                 parser.parse(expressions[expressionIndex]);
             } catch (error) {
-                return String(error?.message ?? error);
+                return { message: String(error?.message ?? error) };
             }
             if (parser.hasErrors)
-                return parser.errors[0] ?? "The expression could not be parsed.";
+                return this.readRowParseError(parser);
         }
         return null;
+    }
+
+    // A statement the domain layer rejected is reported as a diagnostic carrying a code and the names
+    // it read, so the editor can write the problem in the reader's language; a statement the grammar
+    // could not read at all leaves only the message the parser wrote.
+    readRowParseError(parser) {
+        const message = parser.errors[0] ?? "The expression could not be parsed.";
+        for (let diagnosticIndex = 0; diagnosticIndex < parser.diagnostics.length; diagnosticIndex++) {
+            if (parser.diagnostics[diagnosticIndex].message === message)
+                return parser.diagnostics[diagnosticIndex];
+        }
+        return { message };
     }
 
     getByName(name = "", caseNumber = 1) {

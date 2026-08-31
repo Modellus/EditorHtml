@@ -2,11 +2,14 @@ var ExpressionShape;
 if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape extends BaseShape {
     static failingBorderColor = "#d32f2f";
 
+    static errorTooltipDelay = 400;
+
     constructor(board, parent, id) {
         super(board, null, id);
         this.focusDispatchFrame = null;
         this.shortcutsHintShown = false;
         this.failingRowIndexes = [];
+        this.failingRows = [];
         this.toolbarAdapter = {
             pasteFromClipboard: shape => shape.pasteTextFromClipboard()
         };
@@ -76,7 +79,62 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         });
         this.container = this.expressionControl.create(containerElement);
         this.mathfield = this.expressionControl.mathfield;
+        this.createErrorTooltip();
         return group;
+    }
+
+    // The card carries the reason as well as the mark: the colour says which row the engine refused,
+    // and hovering the card says why, written in the language the rest of the editor is written in.
+    // The card is hovered through the handles the board lays over it, so the hover comes from the
+    // board rather than from the card's own pointer events.
+    createErrorTooltip() {
+        this.errorTooltipHost = $("<div>").appendTo("body");
+        this.errorTooltip = this.errorTooltipHost.dxTooltip({
+            target: this.container,
+            wrapperAttr: { class: "mdl-shape-overlay-popup mdl-expression-error-tooltip" },
+            contentTemplate: contentElement => contentElement.append($('<div class="tooltip mdl-expression-error"/>')),
+            onShowing: tooltipEvent => this.writeErrorTooltipContent(tooltipEvent.component.$content()[0]),
+            onShown: tooltipEvent => this.writeErrorTooltipContent(tooltipEvent.component.$content()[0]),
+            position: "top",
+            width: 340
+        }).dxTooltip("instance");
+    }
+
+    onHovered() {
+        this.showErrorTooltip();
+    }
+
+    onUnhovered() {
+        this.hideErrorTooltip();
+    }
+
+    showErrorTooltip() {
+        clearTimeout(this.errorTooltipTimer);
+        if (!this.hasFailingRows())
+            return;
+        this.errorTooltipTimer = setTimeout(() => this.errorTooltip.show(), ExpressionShape.errorTooltipDelay);
+    }
+
+    hideErrorTooltip() {
+        clearTimeout(this.errorTooltipTimer);
+        this.errorTooltip?.hide();
+    }
+
+    writeErrorTooltipContent(contentElement) {
+        const errorElement = contentElement.querySelector(".mdl-expression-error");
+        if (!errorElement)
+            return;
+        errorElement.innerHTML = this.buildErrorTooltipHtml();
+    }
+
+    buildErrorTooltipHtml() {
+        const translations = this.board.translations;
+        const rowsHtml = this.failingRows.map(failingRow => {
+            const label = translations.get("Expression Error Row").replace("{number}", failingRow.rowIndex + 1);
+            const message = MathErrorMessage.translate(failingRow.error, translations);
+            return `<div class="mdl-expression-error-row"><span class="mdl-expression-error-row-label">${Utils.escapeXmlText(label)}</span><span class="mdl-expression-error-row-message">${Utils.escapeXmlText(message)}</span></div>`;
+        }).join("");
+        return `<div class="mdl-expression-error-title">${Utils.escapeXmlText(translations.get("Expression Error Title"))}</div>${rowsHtml}`;
     }
 
     syncHandwrittenStyle() {
@@ -195,7 +253,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
             return;
         if (this.isClearedByAnUnfocusedMathfield(expression))
             return;
-        this.setFailingRowIndexes([]);
+        this.setFailingRows([]);
         if (this._committedExpression === undefined)
             this._committedExpression = this.properties.expression;
         this.properties.expression = expression;
@@ -254,12 +312,14 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         const rowsLatex = rows.map(row => row.cells.join(""));
         const rowErrors = this.board.calculator.findRowParseErrors(rowsLatex);
         const cyclicTermNames = this.board.calculator.getCyclicTermNames();
-        const failingRowIndexes = [];
+        const failingRows = [];
         for (let rowIndex = 0; rowIndex < rowErrors.length; rowIndex++) {
-            if (rowErrors[rowIndex] !== null || this.isCyclicRow(rowsLatex[rowIndex], cyclicTermNames))
-                failingRowIndexes.push(rowIndex);
+            if (rowErrors[rowIndex] !== null)
+                failingRows.push({ rowIndex, error: rowErrors[rowIndex] });
+            else if (this.isCyclicRow(rowsLatex[rowIndex], cyclicTermNames))
+                failingRows.push({ rowIndex, error: MathErrorMessage.cycleError(cyclicTermNames) });
         }
-        this.setFailingRowIndexes(failingRowIndexes);
+        this.setFailingRows(failingRows);
     }
 
     isCyclicRow(rowLatex, cyclicTermNames) {
@@ -275,10 +335,15 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         return cyclicTermNames.includes(definedName.slice(0, -indexSuffix.length));
     }
 
-    setFailingRowIndexes(failingRowIndexes) {
-        if (failingRowIndexes.join(",") === this.failingRowIndexes.join(","))
-            return;
+    setFailingRows(failingRows) {
+        const failingRowIndexes = failingRows.map(failingRow => failingRow.rowIndex);
+        const marksAreUnchanged = failingRowIndexes.join(",") === this.failingRowIndexes.join(",");
+        this.failingRows = failingRows;
         this.failingRowIndexes = failingRowIndexes;
+        if (!this.hasFailingRows())
+            this.hideErrorTooltip();
+        if (marksAreUnchanged)
+            return;
         this.expressionControl.semanticDecorator?.invalidate();
         this.expressionControl.scheduleSemanticColoring();
         this.update();
@@ -319,6 +384,16 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         clearTimeout(this._shortcutsHintTimer);
         this._shortcutsHint?.remove();
         this._shortcutsHint = null;
+    }
+
+    onRemoved() {
+        super.onRemoved();
+        this.hideShortcutsHint();
+        clearTimeout(this.errorTooltipTimer);
+        this.errorTooltip?.dispose();
+        this.errorTooltip = null;
+        this.errorTooltipHost?.remove();
+        this.errorTooltipHost = null;
     }
 
     enterEditMode() {

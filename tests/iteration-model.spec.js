@@ -340,9 +340,11 @@ test.describe('The editor says what stops a model running', () => {
     test('the message names the independent term and where its values come from', async ({ page }) => {
         await setupEditor(page);
         await setupModel(page, INDEPENDENT_MODEL);
-        const message = await page.evaluate(() => shell.calculator.findRowParseErrors(['t_{n}=t_{n-1}+dt'])[0]);
-        expect(message).toContain('independent variable');
-        expect(message).toContain('start and step');
+        const error = await page.evaluate(() => shell.calculator.findRowParseErrors(['t_{n}=t_{n-1}+dt'])[0]);
+        expect(error.code).toBe('INDEPENDENT_ASSIGNED');
+        expect(error.termName).toBe('t');
+        expect(error.message).toContain('independent variable');
+        expect(error.message).toContain('start and step');
     });
 
     test('the rows of a same-row cycle are marked and the seeds are left alone', async ({ page }) => {
