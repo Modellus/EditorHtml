@@ -1201,6 +1201,7 @@ export class ModelsApiClient {
     if (options.scienceId) url.searchParams.set("science_id", options.scienceId);
     if (options.educationLevelId) url.searchParams.set("education_level_id", options.educationLevelId);
     if (options.modelId) url.searchParams.set("model_id", options.modelId);
+    if (options.groupId) url.searchParams.set("group_id", options.groupId);
     if (options.createdBy) url.searchParams.set("created_by", options.createdBy);
     if (options.unread) url.searchParams.set("unread", "true");
     if (options.answered !== undefined) url.searchParams.set("answered", String(options.answered));
@@ -1210,6 +1211,108 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`API error ${response.status}`);
     const data = await response.json();
     return { items: data.items, total: data.total };
+  }
+
+  async fetchForumGroupsPage(options = {}) {
+    const url = new URL(`${this.apiBaseUrl}/forum/groups`);
+    url.searchParams.set("limit", String(options.limit || 24));
+    url.searchParams.set("offset", String(options.offset || 0));
+    if (options.search) url.searchParams.set("q", options.search);
+    if (options.scienceId) url.searchParams.set("science_id", options.scienceId);
+    if (options.educationLevelId) url.searchParams.set("education_level_id", options.educationLevelId);
+    if (options.memberId) url.searchParams.set("member_id", options.memberId);
+    if (options.mine) url.searchParams.set("mine", "true");
+    if (options.sort) url.searchParams.set("sort", options.sort);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    const data = await response.json();
+    return { items: data.items, total: data.total };
+  }
+
+  async fetchForumGroups(options = {}) {
+    const url = new URL(`${this.apiBaseUrl}/forum/groups`);
+    if (options.mine) url.searchParams.set("mine", "true");
+    if (options.sort) url.searchParams.set("sort", options.sort);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    return await response.json();
+  }
+
+  async fetchForumGroupById(groupId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    return await response.json();
+  }
+
+  async createForumGroup(payload) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups`, {
+      method: "POST",
+      headers: { ...this.buildAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Create forum group failed (${response.status})`);
+    return await response.json();
+  }
+
+  async updateForumGroup(groupId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}`, {
+      method: "PATCH",
+      headers: { ...this.buildAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update forum group failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteForumGroup(groupId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete forum group failed (${response.status})`);
+  }
+
+  async fetchForumGroupMembers(groupId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}/members`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`API error ${response.status}`);
+    return await response.json();
+  }
+
+  async joinForumGroup(groupId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}/members`, {
+      method: "POST",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Join forum group failed (${response.status})`);
+    return await response.json();
+  }
+
+  async addForumGroupMember(groupId, userId, role) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}/members`, {
+      method: "POST",
+      headers: { ...this.buildAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, role })
+    });
+    if (!response.ok) throw new Error(`Add forum group member failed (${response.status})`);
+    return await response.json();
+  }
+
+  async setForumGroupMemberRole(groupId, userId, role) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`, {
+      method: "PATCH",
+      headers: { ...this.buildAuthHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ role })
+    });
+    if (!response.ok) throw new Error(`Set forum group member role failed (${response.status})`);
+    return await response.json();
+  }
+
+  async leaveForumGroup(groupId, userId) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Leave forum group failed (${response.status})`);
   }
 
   async fetchForumFacets() {
@@ -1243,6 +1346,7 @@ export class ModelsApiClient {
       if (payload.science_id) formData.append("science_id", payload.science_id);
       if (payload.education_level_id) formData.append("education_level_id", payload.education_level_id);
       if (payload.model_id) formData.append("model_id", payload.model_id);
+      if (payload.group_id) formData.append("group_id", payload.group_id);
       for (const file of attachmentFiles) formData.append("attachment", file);
       options.body = formData;
     } else {

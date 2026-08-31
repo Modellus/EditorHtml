@@ -46,6 +46,12 @@ const statusLabels = {
     closed: "Closed"
 };
 
+const groupRoleLabels = {
+    owner: "Owner",
+    moderator: "Moderator",
+    member: "Member"
+};
+
 const resolvedKindLabels = {
     models: "model",
     characters: "character",
@@ -63,11 +69,16 @@ class ForumPage {
         this.filters = { sort: "recent", offset: 0 };
         this.facets = null;
         this.lookups = null;
+        this.myGroups = null;
+        this.activeGroup = null;
+        this.pendingGroupId = undefined;
+        this.groupSearchTimer = null;
         this.total = 0;
         this.canModerate = false;
         this.searchTimer = null;
         this.elements = {
             views: document.getElementById("forum-views"),
+            groups: document.getElementById("forum-groups"),
             kinds: document.getElementById("forum-kinds"),
             statuses: document.getElementById("forum-statuses"),
             sciences: document.getElementById("forum-sciences"),
@@ -80,8 +91,11 @@ class ForumPage {
             topics: document.getElementById("forum-topics"),
             pager: document.getElementById("forum-pager"),
             listView: document.getElementById("forum-list-view"),
+            listHeading: document.getElementById("forum-list-heading"),
+            groupBanner: document.getElementById("forum-group-banner"),
             topicView: document.getElementById("forum-topic-view"),
             composeView: document.getElementById("forum-compose-view"),
+            groupsView: document.getElementById("forum-groups-view"),
             breadcrumb: document.getElementById("forum-breadcrumb"),
             sessionAction: document.getElementById("session-action")
         };
@@ -186,6 +200,7 @@ class ForumPage {
             this.userSdk.redirectToLogin();
             return;
         }
+        this.pendingGroupId = this.activeGroup?.id;
         window.location.hash = "#/new";
     }
 
@@ -195,6 +210,14 @@ class ForumPage {
             await this.showTopic(decodeURIComponent(hash.slice("#/topic/".length)));
             return;
         }
+        if (hash.startsWith("#/group/")) {
+            await this.showGroup(decodeURIComponent(hash.slice("#/group/".length)));
+            return;
+        }
+        if (hash === "#/groups") {
+            await this.showGroupDirectory();
+            return;
+        }
         if (hash === "#/new") {
             await this.showCompose();
             return;
@@ -202,14 +225,24 @@ class ForumPage {
         await this.showList();
     }
 
+    leaveActiveGroup() {
+        if (this.filters.groupId === this.activeGroup?.id)
+            this.filters.groupId = undefined;
+        this.activeGroup = null;
+    }
+
     showSection(sectionName) {
         this.elements.listView.hidden = sectionName !== "list";
         this.elements.topicView.hidden = sectionName !== "topic";
         this.elements.composeView.hidden = sectionName !== "compose";
+        this.elements.groupsView.hidden = sectionName !== "groups";
     }
 
     async showList() {
         this.showSection("list");
+        this.leaveActiveGroup();
+        this.elements.groupBanner.hidden = true;
+        this.elements.listHeading.hidden = false;
         this.elements.breadcrumb.textContent = "Forum";
         window.scrollTo(0, 0);
         await this.loadFacets();
@@ -249,6 +282,9 @@ class ForumPage {
         this.elements.views.innerHTML = viewRows.map(row => `
             <li><a href="#" data-view="${row.key}" class="${this.filters.view === row.key || (!this.filters.view && row.key === "all") ? "active" : ""}"><i class="${row.icon}"></i> ${row.label}${row.extra}</a></li>
         `).join("");
+        this.elements.groups.innerHTML = this.facets.groups.map(group => `
+            <li><a href="${group.slug ? `#/group/${encodeURIComponent(group.slug)}` : "#"}" data-group="${ForumPage.escape(group.id ?? "none")}" class="${this.filters.groupId === (group.id ?? "none") ? "active" : ""}"><i class="fa-light fa-users"></i> ${ForumPage.escape(group.name)}<span class="forum-sidebar-count">${group.count}</span></a></li>
+        `).join("");
         this.elements.kinds.innerHTML = this.facets.kinds.map(kind => `
             <li><a href="#" data-kind="${kind.id}" class="${this.filters.kind === kind.id ? "active" : ""}"><i class="${kindIcons[kind.id]}"></i> ${kindLabels[kind.id]}<span class="forum-sidebar-count">${kind.count}</span></a></li>
         `).join("");
@@ -266,6 +302,7 @@ class ForumPage {
 
     bindSidebarEvents() {
         this.elements.views.querySelectorAll("a").forEach(link => link.addEventListener("click", event => this.onViewClick(event, link.dataset.view)));
+        this.elements.groups.querySelectorAll("a").forEach(link => link.addEventListener("click", event => this.onGroupFacetClick(event, link.dataset.group)));
         this.elements.kinds.querySelectorAll("a").forEach(link => link.addEventListener("click", event => this.onFacetClick(event, "kind", link.dataset.kind)));
         this.elements.statuses.querySelectorAll("a").forEach(link => link.addEventListener("click", event => this.onFacetClick(event, "status", link.dataset.status)));
         this.elements.sciences.querySelectorAll("a").forEach(link => link.addEventListener("click", event => this.onFacetClick(event, "scienceId", link.dataset.science)));
@@ -280,6 +317,11 @@ class ForumPage {
         this.filters.answered = viewKey === "unanswered" ? false : undefined;
         this.filters.offset = 0;
         this.goToList();
+    }
+
+    onGroupFacetClick(event, groupId) {
+        if (groupId === "none")
+            this.onFacetClick(event, "groupId", groupId);
     }
 
     onFacetClick(event, filterName, value) {
@@ -329,6 +371,8 @@ class ForumPage {
             chips.push({ name: "scienceId", label: this.facets?.sciences.find(science => (science.id ?? "none") === this.filters.scienceId)?.name });
         if (this.filters.educationLevelId)
             chips.push({ name: "educationLevelId", label: this.facets?.education.find(level => (level.id ?? "none") === this.filters.educationLevelId)?.name });
+        if (this.filters.groupId && !this.activeGroup)
+            chips.push({ name: "groupId", label: this.facets?.groups.find(group => (group.id ?? "none") === this.filters.groupId)?.name });
         if (this.filters.tag)
             chips.push({ name: "tag", label: `#${this.filters.tag}` });
         this.elements.activeFilters.innerHTML = chips.map(chip => `
@@ -379,6 +423,7 @@ class ForumPage {
                         ${lockMark}
                         <span class="forum-chip forum-chip-kind"><i class="${kindIcons[topic.kind]}"></i>${kindLabels[topic.kind]}</span>
                         <span class="forum-chip forum-chip-${topic.status}">${statusLabels[topic.status]}</span>
+                        ${ForumPage.buildGroupChip(topic)}
                         ${deletedMark}
                     </div>
                     <div class="forum-topic-excerpt">${ForumPage.escape(topic.body)}</div>
@@ -458,6 +503,7 @@ class ForumPage {
                 <div class="forum-topic-header-meta">
                     <span class="forum-chip forum-chip-kind"><i class="${kindIcons[topic.kind]}"></i>${kindLabels[topic.kind]}</span>
                     <span class="forum-chip forum-chip-${topic.status}">${statusLabels[topic.status]}</span>
+                    ${ForumPage.buildGroupChip(topic)}
                     ${topic.is_pinned ? `<span class="forum-chip"><i class="fa-solid fa-thumbtack"></i> Pinned</span>` : ""}
                     ${topic.is_locked ? `<span class="forum-chip"><i class="fa-light fa-lock"></i> Locked</span>` : ""}
                     <span><i class="fa-light fa-comment"></i> ${topic.reply_count} replies</span>
@@ -499,6 +545,12 @@ class ForumPage {
                     ? `<button type="button" class="forum-button" data-moderate="restore">Restore</button>`
                     : `<button type="button" class="forum-button forum-button-danger" data-moderate="delete">Remove</button>`}
             </div>`;
+    }
+
+    static buildGroupChip(topic) {
+        if (!topic.group_id)
+            return "";
+        return `<a class="forum-chip forum-chip-group" href="#/group/${encodeURIComponent(topic.group_slug)}"><i class="fa-light fa-users"></i>${ForumPage.escape(topic.group_name)}</a>`;
     }
 
     buildAvatar(name, avatarUrl, modifierClass = "") {
@@ -721,6 +773,303 @@ class ForumPage {
         await this.apiClient.promoteForumTopic(topic.id, resolvedKind, resolvedId);
     }
 
+    async loadMyGroups() {
+        if (this.myGroups)
+            return;
+        this.myGroups = await this.apiClient.fetchForumGroups({ mine: true });
+    }
+
+    async showGroup(groupIdOrSlug) {
+        this.showSection("list");
+        window.scrollTo(0, 0);
+        this.elements.listHeading.hidden = true;
+        this.elements.groupBanner.hidden = false;
+        this.elements.groupBanner.innerHTML = `<div class="forum-status">Loading group…</div>`;
+        try {
+            this.activeGroup = await this.apiClient.fetchForumGroupById(groupIdOrSlug);
+        } catch (error) {
+            this.elements.groupBanner.innerHTML = `<div class="forum-status is-error">Could not load this group: ${ForumPage.escape(error.message)}</div>`;
+            return;
+        }
+        this.elements.breadcrumb.innerHTML = `<a href="#/">Forum</a> <span class="sep">/</span> <a href="#/groups">Groups</a> <span class="sep">/</span> ${ForumPage.escape(this.activeGroup.name)}`;
+        this.filters.groupId = this.activeGroup.id;
+        this.filters.offset = 0;
+        await this.loadFacets();
+        this.renderGroupBanner();
+        await this.loadTopics();
+        await this.loadGroupMembers();
+    }
+
+    renderGroupBanner() {
+        const group = this.activeGroup;
+        const taxonomyChips = [
+            group.science_name ? `<span class="forum-chip"><i class="fa-light fa-flask"></i>${ForumPage.escape(group.science_name)}</span>` : "",
+            group.education_level_name ? `<span class="forum-chip"><i class="fa-light fa-graduation-cap"></i>${ForumPage.escape(group.education_level_name)}</span>` : ""
+        ].join("");
+        this.elements.groupBanner.innerHTML = `
+            <a class="forum-link-button" href="#/groups"><i class="fa-light fa-arrow-left"></i> All groups</a>
+            <div class="forum-group-header">
+                <span class="forum-group-avatar" ${ForumPage.groupColorStyle(group)}><i class="${ForumPage.groupIconClass(group)}"></i></span>
+                <div class="forum-group-heading">
+                    <h1>${ForumPage.escape(group.name)}</h1>
+                    <p class="page-desc">${ForumPage.escape(group.description ?? "")}</p>
+                    <div class="forum-group-meta">
+                        <span><i class="fa-light fa-user-group"></i> ${group.member_count} members</span>
+                        <span><i class="fa-light fa-comments"></i> ${group.topic_count} topics</span>
+                        ${taxonomyChips}
+                    </div>
+                </div>
+                <div class="forum-group-actions">
+                    ${this.buildMembershipButton(group)}
+                    ${ForumPage.canManageGroup(group) || this.canModerate ? `<button type="button" class="forum-button" data-edit-group><i class="fa-light fa-pen"></i> Edit</button>` : ""}
+                </div>
+            </div>
+            <div id="forum-group-members" class="forum-group-members"></div>
+            <div id="forum-group-status" class="forum-status"></div>`;
+        this.bindGroupBannerEvents();
+    }
+
+    static groupColorStyle(group) {
+        return group.color ? `style="background:${ForumPage.escape(group.color)}"` : "";
+    }
+
+    static groupIconClass(group) {
+        return ForumPage.escape(group.icon || "fa-light fa-users");
+    }
+
+    static canManageGroup(group) {
+        return group.viewer_role === "owner" || group.viewer_role === "moderator";
+    }
+
+    buildMembershipButton(group) {
+        if (!this.isSignedIn())
+            return `<a class="forum-button forum-button-primary" href="/pages/login/index.html">Sign in to join</a>`;
+        if (group.is_member)
+            return `<button type="button" class="forum-button" data-leave-group="${ForumPage.escape(group.id)}"><i class="fa-light fa-arrow-right-from-bracket"></i> Leave</button>`;
+        return `<button type="button" class="forum-button forum-button-primary" data-join-group="${ForumPage.escape(group.id)}"><i class="fa-light fa-user-plus"></i> Join</button>`;
+    }
+
+    bindGroupBannerEvents() {
+        this.elements.groupBanner.querySelectorAll("[data-join-group]").forEach(button => button.addEventListener("click", () => this.joinGroup(button.dataset.joinGroup)));
+        this.elements.groupBanner.querySelectorAll("[data-leave-group]").forEach(button => button.addEventListener("click", () => this.leaveGroup(button.dataset.leaveGroup)));
+        this.elements.groupBanner.querySelectorAll("[data-edit-group]").forEach(button => button.addEventListener("click", () => this.editGroup()));
+    }
+
+    async loadGroupMembers() {
+        const container = document.getElementById("forum-group-members");
+        let members;
+        try {
+            members = await this.apiClient.fetchForumGroupMembers(this.activeGroup.id);
+        } catch (error) {
+            document.getElementById("forum-group-status").textContent = `Could not load the members: ${error.message}`;
+            return;
+        }
+        container.innerHTML = members.map(member => `
+            <span class="forum-group-member" title="${ForumPage.escape(member.user_name)} — ${groupRoleLabels[member.role]}">
+                ${this.buildAvatar(member.user_name, member.user_avatar, "is-small")}
+                <span class="forum-group-member-name">${ForumPage.escape(member.user_name)}</span>
+                ${member.role === "member" ? "" : `<span class="forum-chip forum-chip-role">${groupRoleLabels[member.role]}</span>`}
+            </span>`).join("");
+    }
+
+    async joinGroup(groupId) {
+        if (!this.isSignedIn()) {
+            this.userSdk.redirectToLogin();
+            return;
+        }
+        await this.apiClient.joinForumGroup(groupId);
+        this.myGroups = null;
+        await this.refreshAfterMembershipChange(groupId);
+    }
+
+    async leaveGroup(groupId) {
+        await this.apiClient.leaveForumGroup(groupId, this.currentUserId());
+        this.myGroups = null;
+        await this.refreshAfterMembershipChange(groupId);
+    }
+
+    async refreshAfterMembershipChange(groupId) {
+        if (this.activeGroup?.id === groupId) {
+            await this.showGroup(groupId);
+            return;
+        }
+        await this.loadGroupDirectory();
+    }
+
+    async editGroup() {
+        const group = this.activeGroup;
+        const name = window.prompt("Group name", group.name);
+        if (name === null)
+            return;
+        const description = window.prompt("What is this community about?", group.description ?? "");
+        if (description === null)
+            return;
+        const status = document.getElementById("forum-group-status");
+        try {
+            await this.apiClient.updateForumGroup(group.id, { name, description });
+            await this.showGroup(group.id);
+        } catch (error) {
+            status.textContent = `Could not save the group: ${error.message}`;
+        }
+    }
+
+    async showGroupDirectory() {
+        this.showSection("groups");
+        window.scrollTo(0, 0);
+        this.leaveActiveGroup();
+        if (!this.facets)
+            await this.loadFacets();
+        this.elements.breadcrumb.innerHTML = `<a href="#/">Forum</a> <span class="sep">/</span> Groups`;
+        this.elements.groupsView.innerHTML = `
+            <a class="forum-link-button" href="#/"><i class="fa-light fa-arrow-left"></i> Back to all topics</a>
+            <h1>Groups</h1>
+            <p class="page-desc">Communities gather the people who care about a corner of the board and the topics that corner collects. Anyone can read one; join to post into it.</p>
+            <div class="forum-toolbar">
+                <div class="forum-search">
+                    <i class="fa-light fa-magnifying-glass" aria-hidden="true"></i>
+                    <input id="forum-group-search" type="search" placeholder="Search groups" autocomplete="off" />
+                </div>
+                <select id="forum-group-sort" class="forum-select" aria-label="Sort groups">
+                    <option value="name">Name</option>
+                    <option value="members">Most members</option>
+                    <option value="topics">Most topics</option>
+                    <option value="new">Newest</option>
+                </select>
+                <label class="forum-toggle"><input id="forum-group-mine" type="checkbox" /> My groups</label>
+                <button id="forum-group-new-button" class="forum-button forum-button-primary" type="button">
+                    <i class="fa-light fa-plus" aria-hidden="true"></i> New group
+                </button>
+            </div>
+            <div id="forum-group-form"></div>
+            <div id="forum-groups-status" class="forum-status"></div>
+            <div id="forum-group-cards" class="forum-group-cards"></div>`;
+        document.getElementById("forum-group-search").addEventListener("input", () => this.onGroupSearchInput());
+        document.getElementById("forum-group-sort").addEventListener("change", () => this.loadGroupDirectory());
+        document.getElementById("forum-group-mine").addEventListener("change", () => this.loadGroupDirectory());
+        document.getElementById("forum-group-new-button").addEventListener("click", () => this.openGroupForm());
+        await this.loadGroupDirectory();
+    }
+
+    onGroupSearchInput() {
+        window.clearTimeout(this.groupSearchTimer);
+        this.groupSearchTimer = window.setTimeout(() => this.loadGroupDirectory(), 250);
+    }
+
+    async loadGroupDirectory() {
+        const status = document.getElementById("forum-groups-status");
+        status.textContent = "Loading groups…";
+        status.classList.remove("is-error");
+        try {
+            const page = await this.apiClient.fetchForumGroupsPage({
+                search: document.getElementById("forum-group-search").value.trim(),
+                sort: document.getElementById("forum-group-sort").value,
+                mine: document.getElementById("forum-group-mine").checked,
+                limit: 48
+            });
+            status.textContent = "";
+            this.renderGroupCards(page.items);
+        } catch (error) {
+            document.getElementById("forum-group-cards").innerHTML = "";
+            status.textContent = `Could not load the groups: ${error.message}`;
+            status.classList.add("is-error");
+        }
+    }
+
+    renderGroupCards(groups) {
+        const container = document.getElementById("forum-group-cards");
+        if (groups.length === 0) {
+            container.innerHTML = `
+                <div class="forum-empty">
+                    <i class="fa-light fa-users"></i>
+                    <p>No groups match what you are looking for.</p>
+                </div>`;
+            return;
+        }
+        container.innerHTML = groups.map(group => `
+            <article class="forum-group-card">
+                <a class="forum-group-card-head" href="#/group/${encodeURIComponent(group.slug)}">
+                    <span class="forum-group-avatar" ${ForumPage.groupColorStyle(group)}><i class="${ForumPage.groupIconClass(group)}"></i></span>
+                    <span class="forum-group-card-name">${ForumPage.escape(group.name)}</span>
+                </a>
+                <p class="forum-group-card-description">${ForumPage.escape(group.description ?? "")}</p>
+                <div class="forum-group-meta">
+                    <span><i class="fa-light fa-user-group"></i> ${group.member_count}</span>
+                    <span><i class="fa-light fa-comments"></i> ${group.topic_count}</span>
+                    ${group.science_name ? `<span class="forum-chip"><i class="fa-light fa-flask"></i>${ForumPage.escape(group.science_name)}</span>` : ""}
+                </div>
+                <div class="forum-group-actions">${this.buildMembershipButton(group)}</div>
+            </article>`).join("");
+        container.querySelectorAll("[data-join-group]").forEach(button => button.addEventListener("click", () => this.joinGroup(button.dataset.joinGroup)));
+        container.querySelectorAll("[data-leave-group]").forEach(button => button.addEventListener("click", () => this.leaveGroup(button.dataset.leaveGroup)));
+    }
+
+    async openGroupForm() {
+        if (!this.isSignedIn()) {
+            this.userSdk.redirectToLogin();
+            return;
+        }
+        await this.loadLookups();
+        const scienceOptions = this.buildLookupOptions(this.lookups.sciences);
+        const educationOptions = this.buildLookupOptions(this.lookups.education);
+        document.getElementById("forum-group-form").innerHTML = `
+            <div class="forum-form">
+                <h3>New group</h3>
+                <div class="forum-field">
+                    <label for="forum-group-name">Name</label>
+                    <input id="forum-group-name" class="forum-input" type="text" maxlength="80" placeholder="Wave Optics" />
+                </div>
+                <div class="forum-field">
+                    <label for="forum-group-description">What is this community about? <span class="forum-field-hint">optional</span></label>
+                    <textarea id="forum-group-description" class="forum-textarea" maxlength="2000" placeholder="Interference, diffraction and everything that needs a wavefront to explain."></textarea>
+                </div>
+                <div class="forum-field-row">
+                    <div class="forum-field">
+                        <label for="forum-group-science">Science <span class="forum-field-hint">optional</span></label>
+                        <select id="forum-group-science" class="forum-select"><option value="">Not specified</option>${scienceOptions}</select>
+                    </div>
+                    <div class="forum-field">
+                        <label for="forum-group-education">Education level <span class="forum-field-hint">optional</span></label>
+                        <select id="forum-group-education" class="forum-select"><option value="">Not specified</option>${educationOptions}</select>
+                    </div>
+                </div>
+                <div class="forum-form-actions">
+                    <button type="button" id="forum-group-submit" class="forum-button forum-button-primary">Create group</button>
+                    <button type="button" id="forum-group-cancel" class="forum-button">Cancel</button>
+                    <span id="forum-group-form-status" class="forum-status"></span>
+                </div>
+            </div>`;
+        document.getElementById("forum-group-submit").addEventListener("click", () => this.submitGroup());
+        document.getElementById("forum-group-cancel").addEventListener("click", () => this.closeGroupForm());
+        document.getElementById("forum-group-name").focus();
+    }
+
+    closeGroupForm() {
+        document.getElementById("forum-group-form").innerHTML = "";
+    }
+
+    async submitGroup() {
+        const formStatus = document.getElementById("forum-group-form-status");
+        const name = document.getElementById("forum-group-name").value.trim();
+        if (!name) {
+            formStatus.textContent = "A name is required.";
+            return;
+        }
+        formStatus.textContent = "Creating…";
+        const payload = {
+            name,
+            description: document.getElementById("forum-group-description").value.trim() || null,
+            science_id: document.getElementById("forum-group-science").value || null,
+            education_level_id: document.getElementById("forum-group-education").value || null
+        };
+        try {
+            const created = await this.apiClient.createForumGroup(payload);
+            this.myGroups = null;
+            window.location.hash = `#/group/${encodeURIComponent(created.slug)}`;
+        } catch (error) {
+            formStatus.textContent = `Could not create the group: ${error.message}`;
+        }
+    }
+
     buildLookupOptions(options) {
         return options.filter(option => option.id).map(option => `<option value="${ForumPage.escape(option.id)}">${ForumPage.escape(option.name)}</option>`).join("");
     }
@@ -731,8 +1080,11 @@ class ForumPage {
         if (!this.facets)
             await this.loadFacets();
         await this.loadLookups();
+        await this.loadMyGroups();
         this.elements.breadcrumb.innerHTML = `<a href="#/">Forum</a> <span class="sep">/</span> New topic`;
         const kindOptions = Object.keys(kindLabels).map(kind => `<option value="${kind}">${kindLabels[kind]}</option>`).join("");
+        const groupOptions = this.myGroups.map(group => `<option value="${ForumPage.escape(group.id)}" ${this.pendingGroupId === group.id ? "selected" : ""}>${ForumPage.escape(group.name)}</option>`).join("");
+        this.pendingGroupId = undefined;
         const scienceOptions = this.buildLookupOptions(this.lookups.sciences);
         const educationOptions = this.buildLookupOptions(this.lookups.education);
         this.elements.composeView.innerHTML = `
@@ -743,6 +1095,10 @@ class ForumPage {
                 <div class="forum-field">
                     <label for="forum-compose-kind">Kind</label>
                     <select id="forum-compose-kind" class="forum-select">${kindOptions}</select>
+                </div>
+                <div class="forum-field">
+                    <label for="forum-compose-group">Group ${this.myGroups.length === 0 ? `<span class="forum-field-hint">join a group to post into one</span>` : `<span class="forum-field-hint">optional</span>`}</label>
+                    <select id="forum-compose-group" class="forum-select"><option value="">No group — the general board</option>${groupOptions}</select>
                 </div>
                 <div class="forum-field">
                     <label for="forum-compose-title">Title</label>
@@ -796,7 +1152,8 @@ class ForumPage {
             body,
             tags: tagsValue.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0),
             science_id: document.getElementById("forum-compose-science").value || null,
-            education_level_id: document.getElementById("forum-compose-education").value || null
+            education_level_id: document.getElementById("forum-compose-education").value || null,
+            group_id: document.getElementById("forum-compose-group").value || null
         };
         try {
             const created = await this.apiClient.createForumTopic(payload, this.composeAttachments.getFiles());

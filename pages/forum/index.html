@@ -43,6 +43,8 @@
     <aside class="docs-sidebar">
         <h5>Browse</h5>
         <ul id="forum-views"></ul>
+        <h5>Groups <a class="forum-sidebar-link" href="#/groups">Browse all</a></h5>
+        <ul id="forum-groups"></ul>
         <h5>Kind</h5>
         <ul id="forum-kinds"></ul>
         <h5>Status</h5>
@@ -61,8 +63,11 @@
         </div>
 
         <section id="forum-list-view">
-            <h1>Forum</h1>
-            <p class="page-desc">Ask a question, report a bug, or suggest a model, character, video, data file or sound for the catalogue. Accepted suggestions become catalogue entries.</p>
+            <div id="forum-list-heading">
+                <h1>Forum</h1>
+                <p class="page-desc">Ask a question, report a bug, or suggest a model, character, video, data file or sound for the catalogue. Accepted suggestions become catalogue entries.</p>
+            </div>
+            <div id="forum-group-banner" hidden></div>
 
             <div class="forum-toolbar">
                 <div class="forum-search">
@@ -89,6 +94,8 @@
         <section id="forum-topic-view" hidden></section>
 
         <section id="forum-compose-view" hidden></section>
+
+        <section id="forum-groups-view" hidden></section>
     </main>
 </div>
 
