@@ -1,8 +1,9 @@
 // The row a shape's sound is set on: where the audio comes from, and what the value it follows does
 // to it. A file on disk and an entry in the catalogue leave the same thing behind — an address the
-// shape plays — so the two ways of choosing sit side by side and the shape holds one property for
-// both. Beside them stands the choice that says whether the value is heard as the pitch of the clip
-// or as its loudness.
+// shape plays and the name it was chosen under — so the two ways of choosing sit side by side while
+// there is nothing to play. Once a sound is chosen the row says which one it is and offers the only
+// thing left to do with it: take it back, and the two ways of choosing come round again. Beside them
+// stands the choice that says whether the value is heard as the pitch of the clip or as its loudness.
 class AudioControl {
     static modulationItems = [
         { value: "pitch", icon: "fa-light fa-music", hint: "Pitch" },
@@ -12,7 +13,8 @@ class AudioControl {
     constructor(options = {}) {
         this.options = {
             getUrl: () => "",
-            setUrl: () => {},
+            getName: () => "",
+            setAudio: () => {},
             getModulation: () => "pitch",
             setModulation: () => {},
             uploadFile: null,
@@ -21,8 +23,7 @@ class AudioControl {
         };
         this.container = null;
         this.fileInputElement = null;
-        this.fileButtonInstance = null;
-        this.clearButtonInstance = null;
+        this.nameElement = null;
         this.modulationGroupInstance = null;
     }
 
@@ -32,15 +33,16 @@ class AudioControl {
             <input type="file" accept="audio/*" class="mdl-audio-control-input" style="display:none">
             <div class="mdl-audio-control-file"></div>
             <div class="mdl-audio-control-catalog"></div>
+            <span class="mdl-audio-control-name"></span>
             <div class="mdl-audio-control-clear"></div>
             <div class="mdl-audio-control-modulation"></div>`;
         this.fileInputElement = this.container.find(".mdl-audio-control-input")[0];
         this.fileInputElement.addEventListener("change", event => this.onFileInputChange(event));
+        this.nameElement = this.container.find(".mdl-audio-control-name")[0];
         this.container.find(".mdl-audio-control-file").dxButton({
             icon: "fa-light fa-file-music",
             hint: "Audio from a file",
-            stylingMode: this.hasAudio() ? "contained" : "text",
-            onInitialized: event => { this.fileButtonInstance = event.component; },
+            stylingMode: "text",
             onClick: () => this.fileInputElement.click()
         });
         this.container.find(".mdl-audio-control-catalog").dxButton({
@@ -51,11 +53,9 @@ class AudioControl {
         });
         this.container.find(".mdl-audio-control-clear").dxButton({
             icon: "fa-light fa-trash-can",
-            hint: "No audio",
+            hint: "Remove the audio",
             stylingMode: "text",
-            disabled: !this.hasAudio(),
-            onInitialized: event => { this.clearButtonInstance = event.component; },
-            onClick: () => this.setUrl("")
+            onClick: () => this.setAudio("", "")
         });
         this.container.find(".mdl-audio-control-modulation").dxButtonGroup({
             items: AudioControl.modulationItems,
@@ -71,11 +71,32 @@ class AudioControl {
             onContentReady: event => Utils.initPillButtonGroup(event.element[0]),
             onItemClick: event => this.options.setModulation(event.itemData.value)
         });
+        this.refresh();
         return this.container;
     }
 
     hasAudio() {
         return String(this.options.getUrl() ?? "") !== "";
+    }
+
+    // Whatever the sound was chosen as: the file it was taken from, or the title it stands under in
+    // the catalogue. A model saved before the name was kept has only the address, so the last part
+    // of the address stands in for it until the sound is chosen again.
+    getName() {
+        const name = String(this.options.getName() ?? "").trim();
+        if (name !== "")
+            return name;
+        return AudioControl.getNameFromUrl(this.options.getUrl());
+    }
+
+    static getNameFromUrl(url) {
+        const address = String(url ?? "").split(/[?#]/)[0];
+        const lastPart = address.split("/").filter(part => part !== "").pop() ?? "";
+        try {
+            return decodeURIComponent(lastPart);
+        } catch (error) {
+            return lastPart;
+        }
     }
 
     getModulation() {
@@ -94,17 +115,27 @@ class AudioControl {
         const url = await this.options.uploadFile(file);
         if (!url)
             return;
-        this.setUrl(url);
+        this.setAudio(url, file.name);
     }
 
-    setUrl(url) {
-        this.options.setUrl(url);
+    setAudio(url, name) {
+        this.options.setAudio(url, name);
         this.refresh();
     }
 
+    // The row shows one thing at a time: the choosing while there is nothing chosen, and the sound
+    // itself once there is.
     refresh() {
-        this.fileButtonInstance?.option("stylingMode", this.hasAudio() ? "contained" : "text");
-        this.clearButtonInstance?.option("disabled", !this.hasAudio());
+        if (!this.container)
+            return;
+        const hasAudio = this.hasAudio();
+        this.container.find(".mdl-audio-control-file").toggle(!hasAudio);
+        this.container.find(".mdl-audio-control-catalog").toggle(!hasAudio);
+        this.container.find(".mdl-audio-control-clear").toggle(hasAudio);
+        const name = hasAudio ? this.getName() : "";
+        this.nameElement.textContent = name;
+        this.nameElement.title = name;
+        $(this.nameElement).toggle(hasAudio);
         this.modulationGroupInstance?.option("selectedItemKeys", [this.getModulation()]);
     }
 }

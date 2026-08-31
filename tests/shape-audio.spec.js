@@ -157,10 +157,10 @@ test.describe('a shape heard as well as seen', () => {
         expect(events.filter(event => event.name === 'gain' && event.how === 'steer').map(event => event.value)).toEqual([1, 0.5]);
     });
 
-    test('a value shape plays its clip instead of the instrument, and says what the value does to it', async ({ page }) => {
+    test('a value shape plays the clip it was given, and says what the value does to it', async ({ page }) => {
         await setupBoard(page);
         await recordPlayedSounds(page);
-        await addValueShape(page, { term: 'x', soundInstrument: 'sine', soundAudio: CLIP_URL, soundAudioModulation: 'volume' });
+        await addValueShape(page, { term: 'x', soundAudio: CLIP_URL, soundAudioModulation: 'volume' });
         const sounds = await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Value1');
             shape.updateValueSoundState(2, 'x', 1);
@@ -170,25 +170,30 @@ test.describe('a shape heard as well as seen', () => {
         expect(sounds).toEqual([{ url: CLIP_URL, value: 6, modulation: 'volume', minimum: null, maximum: null }]);
     });
 
-    // A shape with no clip is still heard in the instrument it was given, which is what the sound has
-    // always been, and a shape with neither makes no noise at all.
-    test('a value shape with no clip falls back to its instrument, and one with no sound stays silent', async ({ page }) => {
+    // The clip is the whole of the sound now: a shape with none makes no noise however its value moves.
+    test('a value shape with no clip stays silent', async ({ page }) => {
         await setupBoard(page);
-        await addValueShape(page, { term: 'x', soundInstrument: 'sine' });
-        const heard = await page.evaluate(() => {
+        await addValueShape(page, { term: 'x' });
+        const played = await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Value1');
             const played = [];
             shape.playSoundForValue = value => played.push(value);
             shape.updateValueSoundState(2, 'x', 1);
             shape.updateValueSoundState(6, 'x', 1);
-            const withInstrument = played.slice();
-            shape.properties.soundInstrument = 'none';
-            shape.updateValueSoundState(2, 'x', 1);
-            shape.updateValueSoundState(6, 'x', 1);
-            return { withInstrument: withInstrument, silent: played.slice(withInstrument.length) };
+            return played;
         });
-        expect(heard.withInstrument).toEqual([6]);
-        expect(heard.silent).toEqual([]);
+        expect(played).toEqual([]);
+    });
+
+    // The menu no longer holds a choice of instrument: a value is heard in the clip chosen for it or
+    // not at all.
+    test('the terms menu offers the audio row and no instrument', async ({ page }) => {
+        await setupBoard(page, [AUDIO_ENTRY]);
+        await addValueShape(page, { term: 'x' });
+        await openValueTermsMenu(page);
+        await expect(page.locator('.mdl-value-sound-selectbox')).toHaveCount(0);
+        await expect(page.locator('.mdl-shape-overlay-popup .dx-list-item:has-text("Sound")')).toHaveCount(0);
+        await expect(page.locator('.mdl-shape-overlay-popup .dx-list-item:has-text("Audio")')).toHaveCount(1);
     });
 
     test('the sound row offers a file, the catalogue and the pitch-or-volume choice', async ({ page }) => {
@@ -199,15 +204,38 @@ test.describe('a shape heard as well as seen', () => {
         await expect(control.locator('.mdl-audio-control-input')).toHaveAttribute('accept', 'audio/*');
         await expect(control.locator('.mdl-audio-control-file')).toBeVisible();
         await expect(control.locator('.mdl-audio-control-catalog')).toBeVisible();
-        // Nothing to take back while nothing has been chosen.
-        await expect(control.locator('.mdl-audio-control-clear')).toHaveClass(/dx-state-disabled/);
+        // Nothing to take back, and nothing to name, while nothing has been chosen.
+        await expect(control.locator('.mdl-audio-control-clear')).toBeHidden();
+        await expect(control.locator('.mdl-audio-control-name')).toBeHidden();
         const modulation = control.locator('.mdl-audio-control-modulation .dx-buttongroup-item');
         await expect(modulation).toHaveCount(2);
         await modulation.nth(1).click();
         await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Value1').properties.soundAudioModulation)).toBe('volume');
     });
 
-    test('a catalogue audio picked on a value shape becomes the sound it plays', async ({ page }) => {
+    // A clip already chosen leaves nothing to choose: the row says which sound it is and offers the
+    // bin, and the bin hands the two ways of choosing back.
+    test('a chosen clip replaces the two ways of choosing with its name and the bin', async ({ page }) => {
+        await setupBoard(page, [AUDIO_ENTRY]);
+        await addValueShape(page, { term: 'x', soundAudio: CLIP_URL, soundAudioName: 'tone.mp3' });
+        await openValueTermsMenu(page);
+        const control = page.locator('.mdl-audio-control');
+        await expect(control.locator('.mdl-audio-control-name')).toHaveText('tone.mp3');
+        await expect(control.locator('.mdl-audio-control-file')).toBeHidden();
+        await expect(control.locator('.mdl-audio-control-catalog')).toBeHidden();
+        await control.locator('.mdl-audio-control-clear').click();
+        await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Value1').properties.soundAudio)).toBe('');
+        await expect(control.locator('.mdl-audio-control-file')).toBeVisible();
+        await expect(control.locator('.mdl-audio-control-catalog')).toBeVisible();
+        await expect(control.locator('.mdl-audio-control-name')).toBeHidden();
+        await expect(control.locator('.mdl-audio-control-clear')).toBeHidden();
+        // Taking the sound back is one step, so one undo has the clip and its name back together.
+        await page.evaluate(() => shell.board.invoker.undo());
+        await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Value1').properties.soundAudio)).toBe(CLIP_URL);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Value1').properties.soundAudioName)).toBe('tone.mp3');
+    });
+
+    test('a catalogue audio picked on a value shape becomes the sound it plays, under the title it was picked by', async ({ page }) => {
         await setupBoard(page, [AUDIO_ENTRY]);
         await addValueShape(page, { term: 'x' });
         await openValueTermsMenu(page);
@@ -217,6 +245,7 @@ test.describe('a shape heard as well as seen', () => {
         await page.click('.mdl-catalog-data-card');
         await page.click('.mdl-catalog-data-popup .dx-toolbar-after .dx-button:has-text("Select")');
         await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Value1').properties.soundAudio)).toBe(AUDIO_ENTRY.asset_url);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Value1').properties.soundAudioName)).toBe(AUDIO_ENTRY.title);
     });
 });
 
@@ -267,6 +296,26 @@ test.describe('an object definition that makes a noise', () => {
             return window.playedSounds;
         });
         expect(sounds).toEqual([]);
+    });
+
+    // The row is the one every sounding shape gets, so an object with a clip shows the name it was
+    // chosen under and the bin, and offers no way of choosing another until the bin is pressed.
+    test('an object with a clip shows its name and the bin in place of the choosing', async ({ page }) => {
+        await setupBoard(page, [AUDIO_ENTRY]);
+        await addSoundingDial(page, { engineSound: CLIP_URL, engineSoundName: 'tone.mp3' });
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Dial')));
+        await expect(page.locator('.shape-context-toolbar.visible')).toBeVisible();
+        await page.locator('.shape-context-toolbar.visible .mdl-component-settings-selector').click();
+        await page.waitForSelector('.mdl-audio-control');
+        const control = page.locator('.mdl-audio-control');
+        await expect(control.locator('.mdl-audio-control-name')).toHaveText('tone.mp3');
+        await expect(control.locator('.mdl-audio-control-file')).toBeHidden();
+        await expect(control.locator('.mdl-audio-control-catalog')).toBeHidden();
+        await control.locator('.mdl-audio-control-clear').click();
+        await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Dial').properties.engineSound)).toBe('');
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Dial').properties.engineSoundName)).toBe('');
+        await expect(control.locator('.mdl-audio-control-file')).toBeVisible();
+        await expect(control.locator('.mdl-audio-control-catalog')).toBeVisible();
     });
 
     test('the sound stands in the object settings menu with both ways of choosing it', async ({ page }) => {

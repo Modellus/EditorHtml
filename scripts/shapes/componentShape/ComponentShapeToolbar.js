@@ -563,9 +563,11 @@ var ComponentShapeToolbarMixin = {
     // whether the value the definition points the clip at is heard as its pitch or as its loudness.
     createComponentAudioControl(parameter) {
         const modulationProperty = ComponentShape.getAudioModulationProperty(parameter.id);
+        const nameProperty = ComponentShape.getAudioNameProperty(parameter.id);
         this._componentAudioControls[parameter.id] = new AudioControl({
             getUrl: () => this.properties[parameter.id],
-            setUrl: url => this.setPropertyCommand(parameter.id, url),
+            getName: () => this.properties[nameProperty],
+            setAudio: (url, name) => this.setPropertiesCommand({ [parameter.id]: url, [nameProperty]: name }),
             getModulation: () => this.properties[modulationProperty],
             setModulation: modulation => this.setPropertyCommand(modulationProperty, modulation),
             uploadFile: file => this.board.assetManager.uploadAsset(this.id, file, file.name),
@@ -577,8 +579,7 @@ var ComponentShapeToolbarMixin = {
         return this._componentAudioControls[parameter.id].createHost();
     },
     applyComponentCatalogAudio(parameter, audio) {
-        this.setPropertyCommand(parameter.id, audio.asset_url);
-        this._componentAudioControls[parameter.id]?.refresh();
+        this._componentAudioControls[parameter.id]?.setAudio(audio.asset_url, audio.title);
     },
     createComponentTextControl(parameter) {
         return $('<div>').dxTextBox({

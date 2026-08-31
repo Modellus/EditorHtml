@@ -1,12 +1,4 @@
 class ValueShape extends BaseShape {
-    static soundOptions = [
-        { value: "none", text: "No sound", icon: "fa-light fa-volume-slash" },
-        { value: "triangle", text: "Piano", icon: "fa-light fa-piano-keyboard" },
-        { value: "sine", text: "Flute", icon: "fa-light fa-flute" },
-        { value: "square", text: "Clarinet", icon: "fa-light fa-clarinet" },
-        { value: "sawtooth", text: "Synth", icon: "fa-light fa-waveform-lines" }
-    ];
-
     constructor(board, parent, id) {
         super(board, null, id);
         this.isEditingValue = this.isEditingValue ?? false;
@@ -20,7 +12,6 @@ class ValueShape extends BaseShape {
         this.previousSoundValue = this.previousSoundValue ?? null;
         this.previousSoundTerm = this.previousSoundTerm ?? "";
         this.previousSoundCaseNumber = this.previousSoundCaseNumber ?? 1;
-        this.soundSelectBoxInstance = this.soundSelectBoxInstance ?? null;
         this.audioControl = this.audioControl ?? null;
         this.soundAudioPlayer = this.soundAudioPlayer ?? new ShapeAudioPlayer();
     }
@@ -41,51 +32,21 @@ class ValueShape extends BaseShape {
         listItems.push(
             { text: "Term", buildControl: $p => $p.append(this._termControl) },
             {
-                text: "Sound",
-                buildControl: $p => {
-                    const selectHost = $('<div class="value-sound-selector"></div>');
-                    selectHost.dxSelectBox({
-                        dataSource: ValueShape.soundOptions,
-                        valueExpr: "value",
-                        displayExpr: "text",
-                        value: this.getSoundInstrument(),
-                        stylingMode: "filled",
-                        elementAttr: { class: "mdl-value-sound-selectbox" },
-                        inputAttr: { class: "mdl-value-sound-input" },
-                        fieldAddons: {
-                            before: data => this.renderSoundOptionFieldAddon(data),
-                            beforeTemplate: (data, container) => this.renderSoundOptionFieldAddonTemplate(data, container)
-                        },
-                        dropDownOptions: {
-                            container: document.body,
-                            wrapperAttr: this.getShapeNestedOverlayWrapperAttr("mdl-value-sound-popup")
-                        },
-                        itemTemplate: itemData => this.renderSoundOptionTemplate(itemData),
-                        onInitialized: event => {
-                            this.soundSelectBoxInstance = event.component;
-                        },
-                        onValueChanged: event => {
-                            if (event.event)
-                                this.setPropertyCommand("soundInstrument", event.value);
-                        }
-                    });
-                    $p.append(selectHost);
-                }
-            },
-            {
                 text: "Audio",
                 buildControl: $p => $p.append(this.createSoundAudioControl())
             }
         );
     }
 
-    // A chosen clip is the sound: the instrument beside it is what a value with no clip is heard in,
-    // and emptying the clip hands the value back to it. Either way the button group says what the
-    // value does to the sound — the pitch it is heard at, or how loud it is heard.
+    // The clip is the sound: a value shape is heard only once one has been chosen for it, from a file
+    // or from the catalogue. The address and the name it was chosen under are one choice, so they are
+    // written together and taken back together. Beside them the button group says what the value does
+    // to the sound — the pitch it is heard at, or how loud it is heard.
     createSoundAudioControl() {
         this.audioControl = new AudioControl({
             getUrl: () => this.properties.soundAudio,
-            setUrl: url => this.setPropertyCommand("soundAudio", url),
+            getName: () => this.properties.soundAudioName,
+            setAudio: (url, name) => this.setPropertiesCommand({ soundAudio: url, soundAudioName: name }),
             getModulation: () => this.properties.soundAudioModulation,
             setModulation: modulation => this.setPropertyCommand("soundAudioModulation", modulation),
             uploadFile: file => this.board.assetManager.uploadAsset(this.id, file, file.name),
@@ -98,8 +59,7 @@ class ValueShape extends BaseShape {
     }
 
     applyCatalogAudio(audio) {
-        this.setPropertyCommand("soundAudio", audio.asset_url);
-        this.audioControl?.refresh();
+        this.audioControl?.setAudio(audio.asset_url, audio.title);
     }
 
     getSoundAudioUrl() {
@@ -111,31 +71,7 @@ class ValueShape extends BaseShape {
     }
 
     hasSound() {
-        return this.getSoundAudioUrl() !== "" || this.getSoundInstrument() !== "none";
-    }
-
-    renderSoundOptionTemplate(itemData) {
-        if (!itemData)
-            return "";
-        return `<div class="mdl-dropdown-list-item mdl-value-sound-option"><i class="${itemData.icon} mdl-value-sound-icon"></i><span class="mdl-dropdown-list-label">${itemData.text}</span></div>`;
-    }
-
-    renderSoundOptionFieldAddon(data) {
-        const soundValue = data?.value ?? data?.selectedItem?.value ?? this.getSoundInstrument();
-        const soundOption = ValueShape.soundOptions.find(option => option.value === soundValue) ?? ValueShape.soundOptions[0];
-        return $(`<i class="${soundOption.icon} mdl-value-sound-icon"></i>`);
-    }
-
-    renderSoundOptionFieldAddonTemplate(data, container) {
-        const iconElement = this.renderSoundOptionFieldAddon(data);
-        $(container).empty().append(iconElement);
-    }
-
-    getSoundInstrument() {
-        const soundInstrument = this.properties.soundInstrument;
-        if (!ValueShape.soundOptions.some(option => option.value === soundInstrument))
-            return "none";
-        return soundInstrument;
+        return this.getSoundAudioUrl() !== "";
     }
 
     buildTermDisplayLabel(entry) {
@@ -209,7 +145,6 @@ class ValueShape extends BaseShape {
     showContextToolbar() {
         this.termFormControls["term"]?.termControl?.refresh();
         this.termFormControls["fontSizeTerm"]?.termControl?.refresh();
-        this.soundSelectBoxInstance?.option("value", this.getSoundInstrument());
         this.audioControl?.refresh();
         this.refreshTermsToolbarControl();
         this.refreshFontToolbarControl();
@@ -241,8 +176,8 @@ class ValueShape extends BaseShape {
         this.properties.fontBold = false;
         this.properties.fontItalic = false;
         this.properties.termDisplayMode = "none";
-        this.properties.soundInstrument = "none";
         this.properties.soundAudio = "";
+        this.properties.soundAudioName = "";
         this.properties.soundAudioModulation = "pitch";
     }
 
@@ -262,42 +197,9 @@ class ValueShape extends BaseShape {
         return numericValue;
     }
 
-    getSoundFrequencyFromValue(value) {
-        const clampedValue = Math.max(-200, Math.min(200, value));
-        const normalizedValue = (clampedValue + 200) / 400;
-        return 180 + normalizedValue * 900;
-    }
-
     playSoundForValue(value) {
-        const audioUrl = this.getSoundAudioUrl();
-        if (audioUrl !== "") {
-            this.soundAudioPlayer.setSource(audioUrl);
-            this.soundAudioPlayer.play(value, this.getSoundModulation(), null, null);
-            return;
-        }
-        const instrument = this.getSoundInstrument();
-        if (instrument === "none")
-            return;
-        const context = ShapeAudio.getContext();
-        if (!context)
-            return;
-        const oscillator = context.createOscillator();
-        const gainNode = context.createGain();
-        const currentTime = context.currentTime;
-        // Heard as pitch, the value is the note. Heard as volume it is how loud one note is, so the
-        // note itself is the middle of the range the pitches would have been spread over.
-        const isVolume = this.getSoundModulation() === "volume";
-        const frequency = this.getSoundFrequencyFromValue(isVolume ? 0 : value);
-        const peak = isVolume ? Math.max(0.002, ShapeAudio.getNormalizedValue(value, null, null) * 0.08) : 0.08;
-        oscillator.type = instrument;
-        oscillator.frequency.setValueAtTime(frequency, currentTime);
-        gainNode.gain.setValueAtTime(0.001, currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(peak, currentTime + 0.02);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, currentTime + 0.26);
-        oscillator.connect(gainNode);
-        gainNode.connect(ShapeAudio.getInstrumentGain());
-        oscillator.start(currentTime);
-        oscillator.stop(currentTime + 0.28);
+        this.soundAudioPlayer.setSource(this.getSoundAudioUrl());
+        this.soundAudioPlayer.play(value, this.getSoundModulation(), null, null);
     }
 
     updateValueSoundState(value, term, caseNumber) {

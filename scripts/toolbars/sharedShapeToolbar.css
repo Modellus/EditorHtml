@@ -807,12 +807,27 @@ math-field {
     background-color: transparent !important;
 }
 
-/* Where a shape's sound is set: the two ways of choosing a clip and the trash that takes it back,
-   then the choice of what the value does to it, kept apart from them by a gap of its own. */
+/* Where a shape's sound is set: the two ways of choosing a clip while there is none, and once one is
+   chosen the name it was chosen under with the trash that takes it back. The name gives way rather
+   than pushing the row wider than the menu holding it. Last comes the choice of what the value does
+   to the sound, kept apart from the rest by a gap of its own. */
 .mdl-audio-control {
     display: flex;
     align-items: center;
     gap: 2px;
+}
+
+.mdl-audio-control-name {
+    max-width: 140px;
+    padding: 0 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.mdl-audio-control-clear .dx-icon {
+    color: var(--math-error, #d32f2f);
 }
 
 .mdl-audio-control .mdl-audio-control-modulation {

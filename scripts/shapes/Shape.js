@@ -1400,7 +1400,13 @@ class BaseShape {
     }
 
     setPropertyCommand(name, value) {
-        const command = new SetShapePropertiesCommand(this.board, this, { [name]: value });
+        this.setPropertiesCommand({ [name]: value });
+    }
+
+    // Properties that are one choice rather than several are written together, so that taking the
+    // choice back takes all of them back at once.
+    setPropertiesCommand(properties) {
+        const command = new SetShapePropertiesCommand(this.board, this, properties);
         this.board.invoker.execute(command);
     }
 

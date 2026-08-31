@@ -5,10 +5,9 @@
 class ShapeAudio {
     static context = null;
     static masterGain = null;
-    static instrumentGain = null;
     static buffers = new Map();
-    // What a value is read against when nothing says otherwise, which is the window the synthesised
-    // instruments have always been heard over.
+    // What a value is read against when nothing says otherwise: a shape that names no scale of its
+    // own is heard over this one.
     static defaultWindow = 200;
     static lowestPlaybackRate = 0.5;
     static highestPlaybackRate = 2;
@@ -34,21 +33,6 @@ class ShapeAudio {
             ShapeAudio.masterGain.connect(context.destination);
         }
         return ShapeAudio.masterGain;
-    }
-
-    // A synthesised note is a bare oscillator and would be painfully loud at the level a recorded
-    // clip is played at, so the instruments are held well under it. A clip is heard at the level it
-    // was recorded at, which is the level whoever chose it heard when they picked it.
-    static getInstrumentGain() {
-        const context = ShapeAudio.getContext();
-        if (!context)
-            return null;
-        if (!ShapeAudio.instrumentGain) {
-            ShapeAudio.instrumentGain = context.createGain();
-            ShapeAudio.instrumentGain.gain.value = 0.05;
-            ShapeAudio.instrumentGain.connect(ShapeAudio.getMasterGain());
-        }
-        return ShapeAudio.instrumentGain;
     }
 
     // Null while the clip is still being read, and null for good if it could not be read at all: the

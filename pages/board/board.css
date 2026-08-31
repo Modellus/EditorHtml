@@ -1250,18 +1250,6 @@ svg:active.pan-available {
     font-style: italic;
 }
 
-.mdl-value-sound-selectbox .dx-texteditor-input,
-.mdl-value-sound-selectbox .dx-dropdowneditor-input-wrapper,
-.mdl-value-sound-popup .dx-list-item-content,
-.mdl-value-sound-popup .mdl-dropdown-list-label {
-    font-style: normal;
-}
-
-.mdl-value-sound-icon {
-    margin-right: 8px;
-    font-size: 14px;
-}
-
 .case-select {
     display: inline-flex;
     align-items: center;

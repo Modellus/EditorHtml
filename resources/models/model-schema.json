@@ -1334,16 +1334,15 @@
                   "default": "nameValue",
                   "description": "Controls which parts of the term (name, value, or both) are rendered."
                 },
-                "soundInstrument": {
-                  "type": "string",
-                  "enum": ["none", "triangle", "sine", "square", "sawtooth"],
-                  "default": "none",
-                  "description": "Web Audio oscillator type used to sonify the term value."
-                },
                 "soundAudio": {
                   "type": "string",
                   "default": "",
-                  "description": "URL of an audio clip played instead of the synthesised instrument. Set from a file or from a catalogue audio."
+                  "description": "URL of an audio clip sounded as the term value moves. Set from a file or from a catalogue audio."
+                },
+                "soundAudioName": {
+                  "type": "string",
+                  "default": "",
+                  "description": "Name the audio clip was chosen under: the file it was taken from, or its title in the catalogue."
                 },
                 "soundAudioModulation": {
                   "type": "string",

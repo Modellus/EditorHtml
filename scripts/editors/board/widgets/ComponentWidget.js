@@ -15,6 +15,12 @@ class ComponentShape extends BaseShape {
         return `${parameterId}Modulation`;
     }
 
+    // Nor is the name the clip was chosen under: it is what the row shows in place of the two ways of
+    // choosing once one of them has been taken, and it is kept beside the address for the same reason.
+    static getAudioNameProperty(parameterId) {
+        return `${parameterId}Name`;
+    }
+
     static createInstanceProperties(componentType, name = null) {
         const registration = BlockRegistry.get(componentType);
         if (!registration || registration.category !== "component")

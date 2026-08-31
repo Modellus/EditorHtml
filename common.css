@@ -34,13 +34,6 @@ input,
     font-family: "Atma", "Assistant", sans-serif !important;
 }
 
-.mdl-value-sound-selectbox .dx-texteditor-input,
-.mdl-value-sound-selectbox .dx-dropdowneditor-input-wrapper,
-.mdl-value-sound-popup .dx-list-item-content,
-.mdl-value-sound-popup .mdl-dropdown-list-label {
-    font-family: "Atma", "Assistant", sans-serif !important;
-}
-
 .feedback-toast .dx-toast-content {
     font-family: "Atma", sans-serif;
 }
