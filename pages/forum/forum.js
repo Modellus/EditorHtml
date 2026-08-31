@@ -792,6 +792,8 @@ class ForumPage {
             this.elements.groupBanner.innerHTML = `<div class="forum-status is-error">Could not load this group: ${ForumPage.escape(error.message)}</div>`;
             return;
         }
+        if (this.canEditGroup(this.activeGroup))
+            await this.loadLookups();
         this.elements.breadcrumb.innerHTML = `<a href="#/">Forum</a> <span class="sep">/</span> <a href="#/groups">Groups</a> <span class="sep">/</span> ${ForumPage.escape(this.activeGroup.name)}`;
         this.filters.groupId = this.activeGroup.id;
         this.filters.offset = 0;
@@ -803,32 +805,55 @@ class ForumPage {
 
     renderGroupBanner() {
         const group = this.activeGroup;
-        const taxonomyChips = [
-            group.science_name ? `<span class="forum-chip"><i class="fa-light fa-flask"></i>${ForumPage.escape(group.science_name)}</span>` : "",
-            group.education_level_name ? `<span class="forum-chip"><i class="fa-light fa-graduation-cap"></i>${ForumPage.escape(group.education_level_name)}</span>` : ""
-        ].join("");
         this.elements.groupBanner.innerHTML = `
             <a class="forum-link-button" href="#/groups"><i class="fa-light fa-arrow-left"></i> All groups</a>
             ${this.buildGroupBannerImage(group)}
             <div class="forum-group-header">
                 ${this.buildGroupIcon(group)}
                 <div class="forum-group-heading">
-                    <h1>${ForumPage.escape(group.name)}</h1>
-                    <p class="page-desc">${ForumPage.escape(group.description ?? "")}</p>
+                    <h1${this.inlineEditAttributes(group, "name", "Name this group")}>${ForumPage.escape(group.name)}</h1>
+                    <p class="page-desc${this.canEditGroup(group) ? " forum-inline-edit" : ""}"${this.inlineEditAttributes(group, "description", "What is this community about?")}>${ForumPage.escape(group.description ?? "")}</p>
                     <div class="forum-group-meta">
                         <span><i class="fa-light fa-user-group"></i> ${group.member_count} members</span>
                         <span><i class="fa-light fa-comments"></i> ${group.topic_count} topics</span>
-                        ${taxonomyChips}
+                        ${this.buildGroupTaxonomy(group)}
                     </div>
                 </div>
                 <div class="forum-group-actions">
                     ${this.buildMembershipButton(group)}
-                    ${ForumPage.canManageGroup(group) || this.canModerate ? `<button type="button" class="forum-button" data-edit-group><i class="fa-light fa-pen"></i> Edit</button>` : ""}
                 </div>
             </div>
             <div id="forum-group-members" class="forum-group-members"></div>
             <div id="forum-group-status" class="forum-status"></div>`;
         this.bindGroupBannerEvents();
+    }
+
+    inlineEditAttributes(group, field, placeholder) {
+        if (!this.canEditGroup(group))
+            return "";
+        return ` class="forum-inline-edit" contenteditable="plaintext-only" spellcheck="false" role="textbox" data-inline-edit="${field}" data-placeholder="${ForumPage.escape(placeholder)}" title="${ForumPage.escape(placeholder)}"`;
+    }
+
+    buildGroupTaxonomy(group) {
+        if (!this.canEditGroup(group))
+            return [
+                group.science_name ? `<span class="forum-chip"><i class="fa-light fa-flask"></i>${ForumPage.escape(group.science_name)}</span>` : "",
+                group.education_level_name ? `<span class="forum-chip"><i class="fa-light fa-graduation-cap"></i>${ForumPage.escape(group.education_level_name)}</span>` : ""
+            ].join("");
+        return [
+            ForumPage.buildTaxonomySelect("science_id", "fa-light fa-flask", "Add a science", this.lookups?.sciences ?? [], group.science_id, group.science_name),
+            ForumPage.buildTaxonomySelect("education_level_id", "fa-light fa-graduation-cap", "Add an education level", this.lookups?.education ?? [], group.education_level_id, group.education_level_name)
+        ].join("");
+    }
+
+    static buildTaxonomySelect(field, icon, placeholder, options, selectedId, selectedName) {
+        const isKnown = options.some(option => option.id === selectedId);
+        const rows = [
+            `<option value="">${ForumPage.escape(placeholder)}</option>`,
+            selectedId && !isKnown ? `<option value="${ForumPage.escape(selectedId)}" selected>${ForumPage.escape(selectedName ?? "")}</option>` : "",
+            ...options.filter(option => option.id).map(option => `<option value="${ForumPage.escape(option.id)}"${option.id === selectedId ? " selected" : ""}>${ForumPage.escape(option.name)}</option>`)
+        ].join("");
+        return `<label class="forum-chip forum-chip-select"><i class="${icon}"></i><select data-inline-select="${field}" aria-label="${ForumPage.escape(placeholder)}">${rows}</select></label>`;
     }
 
     static groupColorStyle(group) {
@@ -846,12 +871,12 @@ class ForumPage {
         return `<span class="${avatarClass}" ${ForumPage.groupColorStyle(group)}><i class="${ForumPage.groupIconClass(group)}"></i></span>`;
     }
 
-    canDressGroup(group) {
+    canEditGroup(group) {
         return this.isSignedIn() && (ForumPage.canManageGroup(group) || this.canModerate);
     }
 
     buildGroupBannerImage(group) {
-        const canDress = this.canDressGroup(group);
+        const canDress = this.canEditGroup(group);
         if (!group.banner_url && !canDress)
             return "";
         const clear = group.banner_url && canDress
@@ -865,7 +890,7 @@ class ForumPage {
     }
 
     buildGroupIcon(group) {
-        const canDress = this.canDressGroup(group);
+        const canDress = this.canEditGroup(group);
         const clear = group.icon_url && canDress
             ? `<button type="button" class="forum-image-clear" data-clear-image="icon" title="Remove the icon"><i class="fa-light fa-xmark"></i></button>`
             : "";
@@ -890,25 +915,29 @@ class ForumPage {
     bindGroupBannerEvents() {
         this.elements.groupBanner.querySelectorAll("[data-join-group]").forEach(button => button.addEventListener("click", () => this.joinGroup(button.dataset.joinGroup)));
         this.elements.groupBanner.querySelectorAll("[data-leave-group]").forEach(button => button.addEventListener("click", () => this.leaveGroup(button.dataset.leaveGroup)));
-        this.elements.groupBanner.querySelectorAll("[data-edit-group]").forEach(button => button.addEventListener("click", () => this.editGroup()));
+        this.elements.groupBanner.querySelectorAll("[data-inline-edit]").forEach(element => this.bindInlineEdit(element));
+        this.elements.groupBanner.querySelectorAll("[data-inline-select]").forEach(select => select.addEventListener("change", () => {
+            if (select.value !== (this.activeGroup[select.dataset.inlineSelect] ?? ""))
+                this.saveGroupField(select.dataset.inlineSelect, select.value);
+        }));
         this.elements.groupBanner.querySelectorAll("[data-clear-image]").forEach(button => button.addEventListener("click", () => this.clearGroupImage(button.dataset.clearImage)));
         this.imageDropTargets = Array.from(this.elements.groupBanner.querySelectorAll(".is-droppable[data-image-drop]"))
-            .map(element => new ImageDropTarget(element, file => this.setGroupImage(element.dataset.imageDrop, file), message => this.setGroupImageStatus(message)));
+            .map(element => new ImageDropTarget(element, file => this.setGroupImage(element.dataset.imageDrop, file), message => this.setGroupStatus(message)));
     }
 
-    setGroupImageStatus(message, isError = true) {
+    setGroupStatus(message, isError = true) {
         const status = document.getElementById("forum-group-status");
         status.textContent = message;
         status.classList.toggle("is-error", isError && message !== "");
     }
 
     async setGroupImage(slot, file) {
-        this.setGroupImageStatus(`Uploading the ${slot}…`, false);
+        this.setGroupStatus(`Uploading the ${slot}…`, false);
         try {
             await this.apiClient.setForumGroupImage(this.activeGroup.id, slot, file);
             await this.showGroup(this.activeGroup.id);
         } catch (error) {
-            this.setGroupImageStatus(`Could not set the ${slot}: ${error.message}`);
+            this.setGroupStatus(`Could not set the ${slot}: ${error.message}`);
         }
     }
 
@@ -917,7 +946,7 @@ class ForumPage {
             await this.apiClient.clearForumGroupImage(this.activeGroup.id, slot);
             await this.showGroup(this.activeGroup.id);
         } catch (error) {
-            this.setGroupImageStatus(`Could not remove the ${slot}: ${error.message}`);
+            this.setGroupStatus(`Could not remove the ${slot}: ${error.message}`);
         }
     }
 
@@ -962,20 +991,42 @@ class ForumPage {
         await this.loadGroupDirectory();
     }
 
-    async editGroup() {
+    bindInlineEdit(element) {
+        element.addEventListener("focus", () => { element.dataset.original = element.textContent; });
+        element.addEventListener("keydown", event => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                element.blur();
+                return;
+            }
+            if (event.key === "Escape") {
+                event.preventDefault();
+                element.textContent = element.dataset.original ?? "";
+                element.blur();
+            }
+        });
+        element.addEventListener("blur", () => this.saveGroupField(element.dataset.inlineEdit, element.textContent.trim(), element));
+    }
+
+    async saveGroupField(field, value, element = null) {
         const group = this.activeGroup;
-        const name = window.prompt("Group name", group.name);
-        if (name === null)
+        const original = element ? (element.dataset.original ?? "").trim() : null;
+        if (element && value === original)
             return;
-        const description = window.prompt("What is this community about?", group.description ?? "");
-        if (description === null)
+        if (field === "name" && !value) {
+            element.textContent = original;
+            this.setGroupStatus("A group needs a name.");
             return;
-        const status = document.getElementById("forum-group-status");
+        }
+        this.setGroupStatus("Saving…", false);
         try {
-            await this.apiClient.updateForumGroup(group.id, { name, description });
+            await this.apiClient.updateForumGroup(group.id, { [field]: value || null });
+            this.myGroups = null;
             await this.showGroup(group.id);
         } catch (error) {
-            status.textContent = `Could not save the group: ${error.message}`;
+            if (element)
+                element.textContent = original;
+            this.setGroupStatus(`Could not save the group: ${error.message}`);
         }
     }
 

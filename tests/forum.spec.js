@@ -955,3 +955,156 @@ test('a group with no banner offers its owner somewhere to drop one', async ({ p
   await expect(banner).not.toHaveClass(/has-image/);
   await expect(banner).toContainText('Drop a banner here');
 });
+
+async function patchRoute(page, capture) {
+  await page.route('**/forum/groups/g1', route => {
+    if (route.request().method() !== 'PATCH')
+      return route.fulfill({ json: groups[0] });
+    const body = JSON.parse(route.request().postData());
+    capture.push(body);
+    return route.fulfill({ json: { ...groups[0], ...body } });
+  });
+}
+
+test('the name is renamed in place, with no popup in the way', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  const patches = [];
+  await patchRoute(page, patches);
+  const dialogs = [];
+  page.on('dialog', d => { dialogs.push(d.message()); d.dismiss(); });
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  const heading = page.locator('#forum-group-banner h1');
+  await expect(heading).toHaveAttribute('contenteditable', 'plaintext-only');
+  await heading.click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('Wave Optics and Friends');
+  await page.keyboard.press('Enter');
+
+  await expect.poll(() => patches).toEqual([{ name: 'Wave Optics and Friends' }]);
+  expect(dialogs).toEqual([]);
+  await expect(page.locator('[data-edit-group]')).toHaveCount(0);
+});
+
+test('the description is written in the paragraph that shows it', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  const patches = [];
+  await patchRoute(page, patches);
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  const description = page.locator('.forum-group-heading .page-desc');
+  await description.click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('Wavefronts, and what they explain.');
+  await page.keyboard.press('Enter');
+
+  await expect.poll(() => patches).toEqual([{ description: 'Wavefronts, and what they explain.' }]);
+});
+
+test('a group with no description offers the paragraph as a place to write one', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/groups/wave-optics', route => route.fulfill({ json: { ...groups[0], description: null } }));
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  const description = page.locator('.forum-group-heading .page-desc');
+  await expect(description).toBeVisible();
+  await expect(description).toHaveAttribute('data-placeholder', 'What is this community about?');
+});
+
+test('the science is picked from the chip that shows it', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  const patches = [];
+  await patchRoute(page, patches);
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  const science = page.locator('.forum-group-meta [data-inline-select="science_id"]');
+  await expect(science.locator('option')).toHaveText(['Add a science', 'Biology', 'Chemistry', 'Physics']);
+  await expect(science).toHaveValue('sci_phys');
+  await science.selectOption('sci_chem');
+
+  await expect.poll(() => patches).toEqual([{ science_id: 'sci_chem' }]);
+});
+
+test('the education level is picked from its own chip, and can be cleared', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  const patches = [];
+  await patchRoute(page, patches);
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  await page.locator('.forum-group-meta [data-inline-select="education_level_id"]').selectOption('');
+
+  await expect.poll(() => patches).toEqual([{ education_level_id: null }]);
+});
+
+test('walking away from an unchanged name saves nothing, and Escape puts the old one back', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  const patches = [];
+  await patchRoute(page, patches);
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  const heading = page.locator('#forum-group-banner h1');
+  await heading.click();
+  await heading.blur();
+  await heading.click();
+  await page.keyboard.type('Nonsense');
+  await page.keyboard.press('Escape');
+
+  await expect(heading).toHaveText('Wave Optics');
+  expect(patches).toEqual([]);
+});
+
+test('a name emptied out is refused rather than saved', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  const patches = [];
+  await patchRoute(page, patches);
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  const heading = page.locator('#forum-group-banner h1');
+  await heading.click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.press('Enter');
+
+  await expect(page.locator('#forum-group-status')).toContainText('A group needs a name');
+  await expect(heading).toHaveText('Wave Optics');
+  expect(patches).toEqual([]);
+});
+
+test('a name that will not save is put back with the reason shown', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/groups/g1', route => {
+    if (route.request().method() !== 'PATCH')
+      return route.fulfill({ json: groups[0] });
+    return route.fulfill({ status: 500, json: { error: 'nope' } });
+  });
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  const heading = page.locator('#forum-group-banner h1');
+  await heading.click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('Something Else');
+  await page.keyboard.press('Enter');
+
+  await expect(page.locator('#forum-group-status')).toContainText('Could not save the group');
+  await expect(heading).toHaveText('Wave Optics');
+});
+
+test('a reader is offered no inline editing of a group they cannot manage', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/groups/wave-optics', route => route.fulfill({ json: { ...groups[0], viewer_role: 'member' } }));
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  await expect(page.locator('#forum-group-banner h1')).toHaveText('Wave Optics');
+  await expect(page.locator('[contenteditable]')).toHaveCount(0);
+  await expect(page.locator('[data-inline-select]')).toHaveCount(0);
+  await expect(page.locator('.forum-group-meta .forum-chip')).toHaveText(['Physics', 'Secondary']);
+});

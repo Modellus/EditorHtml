@@ -875,6 +875,42 @@ img.forum-avatar { object-fit: cover; }
 
 .forum-group-heading .page-desc:empty { display: none; }
 
+.forum-inline-edit {
+    cursor: text;
+    border-radius: 8px;
+    outline: 1px solid transparent;
+    outline-offset: 4px;
+    transition: background 0.15s ease, outline-color 0.15s ease;
+}
+
+.forum-inline-edit:hover { background: color-mix(in srgb, var(--default-color), transparent 95%); }
+
+.forum-inline-edit:focus { background: color-mix(in srgb, var(--default-color), transparent 96%); outline-color: var(--accent-color); }
+
+.forum-inline-edit:empty::before {
+    content: attr(data-placeholder);
+    color: color-mix(in srgb, var(--default-color), transparent 60%);
+}
+
+.forum-group-heading .page-desc.forum-inline-edit:empty { display: block; }
+
+.forum-chip-select { padding-right: 5px; }
+
+.forum-chip-select select {
+    appearance: none;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    padding: 0;
+    max-width: 190px;
+    cursor: pointer;
+}
+
+.forum-chip-select:hover { background: color-mix(in srgb, var(--accent-color), transparent 88%); }
+
+.forum-chip-select select:focus-visible { outline: 1px solid var(--accent-color); outline-offset: 2px; border-radius: 4px; }
+
 .forum-group-avatar {
     width: 52px;
     height: 52px;
