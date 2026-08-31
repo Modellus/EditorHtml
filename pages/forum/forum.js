@@ -2,6 +2,7 @@ import { ModelsApiClient } from "../../sdk/modelsApiClient.js";
 import { UserSdk } from "../../sdk/userSdk.js";
 import { AttachmentPicker, attachmentIcon, escapeHtml, formatFileSize, isImageAttachment } from "./attachmentPicker.js";
 import { AttachmentPreview } from "./attachmentPreview.js";
+import { ImageDropTarget } from "./imageDropTarget.js";
 
 const apiBase = "https://modellus-api.interactivebook.workers.dev";
 const sessionKey = window.modellus?.auth?.sessionKey || "mp.session";
@@ -283,7 +284,7 @@ class ForumPage {
             <li><a href="#" data-view="${row.key}" class="${this.filters.view === row.key || (!this.filters.view && row.key === "all") ? "active" : ""}"><i class="${row.icon}"></i> ${row.label}${row.extra}</a></li>
         `).join("");
         this.elements.groups.innerHTML = this.facets.groups.map(group => `
-            <li><a href="${group.slug ? `#/group/${encodeURIComponent(group.slug)}` : "#"}" data-group="${ForumPage.escape(group.id ?? "none")}" class="${this.filters.groupId === (group.id ?? "none") ? "active" : ""}"><i class="fa-light fa-users"></i> ${ForumPage.escape(group.name)}<span class="forum-sidebar-count">${group.count}</span></a></li>
+            <li><a href="${group.slug ? `#/group/${encodeURIComponent(group.slug)}` : "#"}" data-group="${ForumPage.escape(group.id ?? "none")}" class="${this.filters.groupId === (group.id ?? "none") ? "active" : ""}">${ForumPage.buildGroupAvatar(group, "is-small")} ${ForumPage.escape(group.name)}<span class="forum-sidebar-count">${group.count}</span></a></li>
         `).join("");
         this.elements.kinds.innerHTML = this.facets.kinds.map(kind => `
             <li><a href="#" data-kind="${kind.id}" class="${this.filters.kind === kind.id ? "active" : ""}"><i class="${kindIcons[kind.id]}"></i> ${kindLabels[kind.id]}<span class="forum-sidebar-count">${kind.count}</span></a></li>
@@ -808,8 +809,9 @@ class ForumPage {
         ].join("");
         this.elements.groupBanner.innerHTML = `
             <a class="forum-link-button" href="#/groups"><i class="fa-light fa-arrow-left"></i> All groups</a>
+            ${this.buildGroupBannerImage(group)}
             <div class="forum-group-header">
-                <span class="forum-group-avatar" ${ForumPage.groupColorStyle(group)}><i class="${ForumPage.groupIconClass(group)}"></i></span>
+                ${this.buildGroupIcon(group)}
                 <div class="forum-group-heading">
                     <h1>${ForumPage.escape(group.name)}</h1>
                     <p class="page-desc">${ForumPage.escape(group.description ?? "")}</p>
@@ -837,6 +839,42 @@ class ForumPage {
         return ForumPage.escape(group.icon || "fa-light fa-users");
     }
 
+    static buildGroupAvatar(group, modifierClass = "") {
+        const avatarClass = `forum-group-avatar${modifierClass ? ` ${modifierClass}` : ""}`;
+        if (group.icon_url)
+            return `<img class="${avatarClass}" src="${ForumPage.escape(group.icon_url)}" alt="" />`;
+        return `<span class="${avatarClass}" ${ForumPage.groupColorStyle(group)}><i class="${ForumPage.groupIconClass(group)}"></i></span>`;
+    }
+
+    canDressGroup(group) {
+        return this.isSignedIn() && (ForumPage.canManageGroup(group) || this.canModerate);
+    }
+
+    buildGroupBannerImage(group) {
+        const canDress = this.canDressGroup(group);
+        if (!group.banner_url && !canDress)
+            return "";
+        const clear = group.banner_url && canDress
+            ? `<button type="button" class="forum-image-clear" data-clear-image="banner" title="Remove the banner"><i class="fa-light fa-xmark"></i></button>`
+            : "";
+        const prompt = group.banner_url
+            ? ""
+            : `<span class="forum-image-prompt"><i class="fa-light fa-image"></i> Drop a banner here, or click to choose one</span>`;
+        const picture = group.banner_url ? `<img src="${ForumPage.escape(group.banner_url)}" alt="" />` : "";
+        return `<div class="forum-group-banner-image${canDress ? " is-droppable" : ""}${group.banner_url ? " has-image" : ""}" ${canDress ? `data-image-drop="banner"` : ""}>${picture}${prompt}${clear}</div>`;
+    }
+
+    buildGroupIcon(group) {
+        const canDress = this.canDressGroup(group);
+        const clear = group.icon_url && canDress
+            ? `<button type="button" class="forum-image-clear" data-clear-image="icon" title="Remove the icon"><i class="fa-light fa-xmark"></i></button>`
+            : "";
+        const prompt = canDress && !group.icon_url
+            ? `<span class="forum-image-prompt"><i class="fa-light fa-image"></i></span>`
+            : "";
+        return `<div class="forum-group-icon-slot${canDress ? " is-droppable" : ""}" ${canDress ? `data-image-drop="icon"` : ""}>${ForumPage.buildGroupAvatar(group)}${prompt}${clear}</div>`;
+    }
+
     static canManageGroup(group) {
         return group.viewer_role === "owner" || group.viewer_role === "moderator";
     }
@@ -853,6 +891,34 @@ class ForumPage {
         this.elements.groupBanner.querySelectorAll("[data-join-group]").forEach(button => button.addEventListener("click", () => this.joinGroup(button.dataset.joinGroup)));
         this.elements.groupBanner.querySelectorAll("[data-leave-group]").forEach(button => button.addEventListener("click", () => this.leaveGroup(button.dataset.leaveGroup)));
         this.elements.groupBanner.querySelectorAll("[data-edit-group]").forEach(button => button.addEventListener("click", () => this.editGroup()));
+        this.elements.groupBanner.querySelectorAll("[data-clear-image]").forEach(button => button.addEventListener("click", () => this.clearGroupImage(button.dataset.clearImage)));
+        this.imageDropTargets = Array.from(this.elements.groupBanner.querySelectorAll(".is-droppable[data-image-drop]"))
+            .map(element => new ImageDropTarget(element, file => this.setGroupImage(element.dataset.imageDrop, file), message => this.setGroupImageStatus(message)));
+    }
+
+    setGroupImageStatus(message, isError = true) {
+        const status = document.getElementById("forum-group-status");
+        status.textContent = message;
+        status.classList.toggle("is-error", isError && message !== "");
+    }
+
+    async setGroupImage(slot, file) {
+        this.setGroupImageStatus(`Uploading the ${slot}…`, false);
+        try {
+            await this.apiClient.setForumGroupImage(this.activeGroup.id, slot, file);
+            await this.showGroup(this.activeGroup.id);
+        } catch (error) {
+            this.setGroupImageStatus(`Could not set the ${slot}: ${error.message}`);
+        }
+    }
+
+    async clearGroupImage(slot) {
+        try {
+            await this.apiClient.clearForumGroupImage(this.activeGroup.id, slot);
+            await this.showGroup(this.activeGroup.id);
+        } catch (error) {
+            this.setGroupImageStatus(`Could not remove the ${slot}: ${error.message}`);
+        }
     }
 
     async loadGroupMembers() {
@@ -988,7 +1054,7 @@ class ForumPage {
         container.innerHTML = groups.map(group => `
             <article class="forum-group-card">
                 <a class="forum-group-card-head" href="#/group/${encodeURIComponent(group.slug)}">
-                    <span class="forum-group-avatar" ${ForumPage.groupColorStyle(group)}><i class="${ForumPage.groupIconClass(group)}"></i></span>
+                    ${ForumPage.buildGroupAvatar(group)}
                     <span class="forum-group-card-name">${ForumPage.escape(group.name)}</span>
                 </a>
                 <p class="forum-group-card-description">${ForumPage.escape(group.description ?? "")}</p>

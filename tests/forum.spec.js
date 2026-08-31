@@ -7,17 +7,19 @@ const facets = {
   statuses: [{id:'open',count:5},{id:'answered',count:1},{id:'planned',count:0},{id:'in_progress',count:0},{id:'accepted',count:1},{id:'declined',count:0},{id:'duplicate',count:0},{id:'closed',count:0}],
   education: [{id:'lvl_sec',name:'Secondary',count:4},{id:null,name:'Uncategorized',count:3}],
   sciences: [{id:'sci_phys',name:'Physics',count:5},{id:null,name:'Uncategorized',count:2}],
-  groups: [{id:'g1',slug:'wave-optics',name:'Wave Optics',count:2},{id:null,slug:null,name:'No group',count:5}],
+  groups: [{id:'g1',slug:'wave-optics',name:'Wave Optics',icon:null,icon_url:'https://example.com/g1-icon.png',count:2},{id:null,slug:null,name:'No group',icon:null,icon_url:null,count:5}],
   total: 7, unread: 2
 };
 
 const groups = [
   { id:'g1', slug:'wave-optics', name:'Wave Optics', description:'Interference, diffraction and everything that needs a wavefront.', icon:null, color:null,
+    icon_url:'https://example.com/g1-icon.png', banner_url:'https://example.com/g1-banner.png',
     science_id:'sci_phys', education_level_id:'lvl_sec', member_count:2, topic_count:2,
     created_by:'u1', created_at:new Date(Date.now()-864000e3).toISOString(), updated_at:new Date().toISOString(),
     science_name:'Physics', education_level_name:'Secondary', owner_name:'Ana Silva', owner_avatar:'https://example.com/ana.png',
     viewer_role:'owner', is_member:true },
   { id:'g2', slug:'sound-lab', name:'Sound <script>alert(1)</script> Lab', description:null, icon:null, color:null,
+    icon_url:null, banner_url:null,
     science_id:null, education_level_id:null, member_count:9, topic_count:0,
     created_by:'u2', created_at:new Date(Date.now()-172800e3).toISOString(), updated_at:new Date().toISOString(),
     science_name:null, education_level_name:null, owner_name:'Bo Chen', owner_avatar:null,
@@ -831,4 +833,125 @@ test('a group that is not there says so instead of showing an empty community', 
 
   await expect(page.locator('#forum-group-banner')).toContainText('Could not load this group');
   expect(errors).toEqual([]);
+});
+
+test('a group heads its page with the banner and wears its icon beside the name', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await signIn(page);
+  await stubApi(page);
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  const banner = page.locator('.forum-group-banner-image');
+  await expect(banner).toBeVisible();
+  await expect(banner.locator('img')).toHaveAttribute('src', 'https://example.com/g1-banner.png');
+  await expect(page.locator('.forum-group-icon-slot img.forum-group-avatar')).toHaveAttribute('src', 'https://example.com/g1-icon.png');
+  expect(errors).toEqual([]);
+});
+
+test('both lists show a group by its icon, and fall back to a glyph without one', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.goto(`${base}/pages/forum/index.html`);
+
+  await expect(page.locator('#forum-groups img.forum-group-avatar')).toHaveAttribute('src', 'https://example.com/g1-icon.png');
+  await expect(page.locator('#forum-groups a').nth(1).locator('span.forum-group-avatar i')).toHaveClass(/fa-users/);
+
+  await page.goto(`${base}/pages/forum/index.html#/groups`);
+  const cards = page.locator('.forum-group-card');
+  await expect(cards.first().locator('img.forum-group-avatar')).toHaveAttribute('src', 'https://example.com/g1-icon.png');
+  await expect(cards.nth(1).locator('span.forum-group-avatar i')).toHaveClass(/fa-users/);
+});
+
+test('dropping a picture on the banner posts it to the banner slot', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  let posted = null;
+  await page.route('**/forum/groups/g1/banner', route => {
+    posted = { method: route.request().method(), body: route.request().postData() };
+    return route.fulfill({ json: { ...groups[0], banner_url: 'https://example.com/new-banner.png' } });
+  });
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+  await dropFiles(page, '.forum-group-banner-image', [{ name: 'banner.png', type: 'image/png', body: pngBody }]);
+
+  await expect.poll(() => posted?.method).toBe('POST');
+  expect(posted.body).toContain('name="image"');
+  expect(posted.body).toContain('banner.png');
+});
+
+test('dropping a picture on the icon posts it to the icon slot', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  let posted = null;
+  await page.route('**/forum/groups/g1/icon', route => {
+    posted = route.request().method();
+    return route.fulfill({ json: groups[0] });
+  });
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+  await dropFiles(page, '.forum-group-icon-slot', [{ name: 'icon.png', type: 'image/png', body: pngBody }]);
+
+  await expect.poll(() => posted).toBe('POST');
+});
+
+test('a picture the group will not take is refused before it is sent', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  let posted = false;
+  await page.route('**/forum/groups/g1/banner', route => { posted = true; return route.fulfill({ json: groups[0] }); });
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+  await dropFiles(page, '.forum-group-banner-image', [{ name: 'diagram.svg', type: 'image/svg+xml', body: '<svg/>' }]);
+
+  await expect(page.locator('#forum-group-status')).toContainText('not a picture this takes');
+  expect(posted).toBe(false);
+});
+
+test('clearing a picture asks for it to be removed rather than uploading', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  let method = '';
+  await page.route('**/forum/groups/g1/banner', route => {
+    method = route.request().method();
+    return route.fulfill({ json: { ...groups[0], banner_url: null } });
+  });
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+  await page.locator('.forum-group-banner-image [data-clear-image="banner"]').click();
+
+  await expect.poll(() => method).toBe('DELETE');
+});
+
+test('someone who cannot edit the group is offered no way to dress it', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/groups/wave-optics', route => route.fulfill({ json: { ...groups[0], viewer_role: 'member', banner_url: null } }));
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  await expect(page.locator('#forum-group-banner h1')).toHaveText('Wave Optics');
+  await expect(page.locator('.forum-group-banner-image')).toHaveCount(0);
+  await expect(page.locator('.forum-group-icon-slot.is-droppable')).toHaveCount(0);
+  await expect(page.locator('[data-clear-image]')).toHaveCount(0);
+});
+
+test('a reader sees the banner of a group they cannot dress, and no way to change it', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/groups/wave-optics', route => route.fulfill({ json: { ...groups[0], viewer_role: 'member' } }));
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  const banner = page.locator('.forum-group-banner-image');
+  await expect(banner.locator('img')).toHaveAttribute('src', 'https://example.com/g1-banner.png');
+  await expect(banner).not.toHaveClass(/is-droppable/);
+  await expect(page.locator('[data-image-drop]')).toHaveCount(0);
+  await expect(page.locator('[data-clear-image]')).toHaveCount(0);
+});
+
+test('a group with no banner offers its owner somewhere to drop one', async ({ page }) => {
+  await signIn(page);
+  await stubApi(page);
+  await page.route('**/forum/groups/wave-optics', route => route.fulfill({ json: { ...groups[0], banner_url: null } }));
+  await page.goto(`${base}/pages/forum/index.html#/group/wave-optics`);
+
+  const banner = page.locator('.forum-group-banner-image');
+  await expect(banner).toHaveClass(/is-droppable/);
+  await expect(banner).not.toHaveClass(/has-image/);
+  await expect(banner).toContainText('Drop a banner here');
 });

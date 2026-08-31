@@ -1272,6 +1272,27 @@ export class ModelsApiClient {
     if (!response.ok) throw new Error(`Delete forum group failed (${response.status})`);
   }
 
+  async setForumGroupImage(groupId, slot, file) {
+    const formData = new FormData();
+    formData.append("image", file);
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}/${slot}`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Set forum group ${slot} failed (${response.status})`);
+    return await response.json();
+  }
+
+  async clearForumGroupImage(groupId, slot) {
+    const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}/${slot}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Clear forum group ${slot} failed (${response.status})`);
+    return await response.json();
+  }
+
   async fetchForumGroupMembers(groupId) {
     const response = await fetch(`${this.apiBaseUrl}/forum/groups/${encodeURIComponent(groupId)}/members`, { headers: this.buildAuthHeaders() });
     if (!response.ok) throw new Error(`API error ${response.status}`);
