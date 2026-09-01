@@ -38,7 +38,7 @@ test.describe('Mechanical wave object', () => {
     test('its parameter labels name the thing, not the kind of thing', async ({ page }) => {
         await setupBoard(page);
         const labels = await page.evaluate(() => BlockRegistry.get('mechanical-wave').parameters.map(parameter => parameter.label));
-        expect(labels).toEqual(expect.arrayContaining(['Amplitude', 'Frequency', 'Speed', 'Initial phase', 'Oscillators', 'Orientation']));
+        expect(labels).toEqual(expect.arrayContaining(['Amplitude', 'Frequency', 'Speed', 'Initial phase', 'Samples', 'Orientation']));
         // The row holding the term the wave is read from and published under is the wave itself, so
         // it is called that. What the object never does is prefix its own kind onto the other rows —
         // a wave's amplitude is "Amplitude", never "Wave amplitude".
@@ -48,11 +48,11 @@ test.describe('Mechanical wave object', () => {
 
     test('draws one oscillator per element and follows the count', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { elements: 11 });
+        await addWave(page, { samples: 11 });
         expect(await countOf(page, 'circle')).toBe(11);
         await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Wave');
-            shape.setProperties({ elements: 5 });
+            shape.setProperties({ samples: 5 });
             shape.draw();
         });
         expect(await countOf(page, 'circle')).toBe(5);
@@ -60,7 +60,7 @@ test.describe('Mechanical wave object', () => {
 
     test('spacing comes from the width, so the last oscillator sits on the far edge', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { elements: 11, width: 400 });
+        await addWave(page, { samples: 11, width: 400 });
         const positions = await page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cx'))));
         expect(positions[0]).toBeCloseTo(0, 3);
         expect(positions[10]).toBeCloseTo(400, 3);
@@ -69,9 +69,15 @@ test.describe('Mechanical wave object', () => {
 
     test('longitudinal draws bars instead of circles', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { elements: 11, orientation: 'longitudinal' });
+        await addWave(page, { samples: 11, orientation: 'longitudinal' });
         expect(await countOf(page, 'circle')).toBe(0);
-        expect(await countOf(page, 'rect')).toBe(11);
+        // The body the object is drawn on is a rect of its own, behind the eleven bars.
+        expect(await countOf(page, 'rect')).toBe(12);
+        const body = await page.evaluate(() => {
+            const rect = shell.board.shapes.getByName('Wave').contentGroup.querySelector('rect');
+            return { width: Number(rect.getAttribute('width')), height: Number(rect.getAttribute('height')) };
+        });
+        expect(body).toEqual({ width: 600, height: 160 });
     });
 
     // An oscillator is pushed from where it stands: it enters the wave at rest and swings from there,
@@ -79,7 +85,7 @@ test.describe('Mechanical wave object', () => {
     // wave reaches joins it from the line rather than appearing at the crest.
     test('the chain stands at rest until the run starts, the first oscillator included', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { elements: 11, wavefront: true, speed: '5', length: 20 });
+        await addWave(page, { samples: 11, wavefront: true, speed: '5', length: 20 });
         const readHeights = () => page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy'))));
         const atRest = await readHeights();
         const equilibrium = Number(await page.evaluate(() => shell.board.shapes.getByName('Wave').properties.height)) / 2;
@@ -89,7 +95,7 @@ test.describe('Mechanical wave object', () => {
 
     test('the wavefront holds the far oscillators at rest until the wave arrives', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { elements: 11, wavefront: true, speed: '5', length: 20 });
+        await addWave(page, { samples: 11, wavefront: true, speed: '5', length: 20 });
         // Far enough in for the near oscillators to be swinging and the far ones still untouched:
         // the wave covers one spacing every length/(gaps*speed) of the independent.
         await page.evaluate(() => shell.board.calculator.play());
@@ -107,7 +113,7 @@ test.describe('Mechanical wave object', () => {
 
     test('turning the wavefront off sets the whole chain oscillating at once', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { elements: 11, wavefront: false });
+        await addWave(page, { samples: 11, wavefront: false });
         const heights = await page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy'))));
         const equilibrium = await page.evaluate(() => Number(shell.board.shapes.getByName('Wave').properties.height) / 2);
         expect(heights[9]).not.toBeCloseTo(equilibrium, 3);
@@ -116,7 +122,7 @@ test.describe('Mechanical wave object', () => {
 
     test('the reference oscillator is drawn in its own colour', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { elements: 11, referenceIndex: 3, referenceColor: '#ff0000', waveColor: '#0000ff' });
+        await addWave(page, { samples: 11, referenceIndex: 3, referenceColor: '#ff0000', waveColor: '#0000ff' });
         const fills = await page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => node.getAttribute('fill')));
         expect(fills[2]).toBe('#ff0000');
         expect(fills[0]).toBe('#0000ff');
@@ -124,7 +130,7 @@ test.describe('Mechanical wave object', () => {
 
     test('velocity arrows and the connecting line follow their settings', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { elements: 11, showArrows: false, showLine: false });
+        await addWave(page, { samples: 11, showArrows: false, showLine: false });
         expect(await countOf(page, 'line')).toBe(0);
         await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Wave');
@@ -147,7 +153,7 @@ test.describe('Mechanical wave object', () => {
             modellus.shape.addExpression('Eq');
             shell.board.shapes.getByName('Eq').properties.expression = 'y\\left[i\\right]=2\\cdot\\cos\\left(i\\right)';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20 });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20 });
             shell.reset();
             shape.draw();
         });
@@ -172,7 +178,7 @@ test.describe('Mechanical wave object', () => {
             shell.board.shapes.getByName('Eq').properties.expression =
                 'A=2\\\\k=\\frac{\\pi}{6}\\\\w=1\\\\forward\\left[i\\right]=A\\cdot\\cos\\left(k\\cdot i-w\\cdot t\\right)\\\\back\\left[i\\right]=A\\cdot\\cos\\left(k\\cdot i+w\\cdot t\\right)\\\\standing=forward+back';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 220, elements: 9, wave: 'standing', length: 20 });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 220, samples: 9, wave: 'standing', length: 20 });
             shell.reset();
         });
         await page.evaluate(() => shell.board.calculator.play());
@@ -202,7 +208,7 @@ test.describe('Mechanical wave object', () => {
         await setupBoard(page);
         await page.evaluate(() => {
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
             shell.reset();
             shape.draw();
         });
@@ -234,7 +240,7 @@ test.describe('Mechanical wave object', () => {
             modellus.shape.addExpression('Eq');
             shell.board.shapes.getByName('Eq').properties.expression = 'z=y\\left[3\\right]';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
             shell.reset();
         });
         await page.evaluate(() => shell.board.calculator.play());
@@ -258,7 +264,7 @@ test.describe('Mechanical wave object', () => {
             modellus.shape.addExpression('Eq');
             shell.board.shapes.getByName('Eq').properties.expression = 'y\\left[i\\right]=7';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', amplitude: '2', length: 20 });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', amplitude: '2', length: 20 });
             shell.reset();
         });
         const element = await page.evaluate(() => {
@@ -274,7 +280,7 @@ test.describe('Mechanical wave object', () => {
             modellus.shape.addExpression('Eq');
             shell.board.shapes.getByName('Eq').properties.expression = 'k=3\\\\y=k';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'k', length: 20 });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'k', length: 20 });
             shell.reset();
         });
         expect(await page.evaluate(() => shell.board.calculator.isIndexedSource('k'))).toBe(false);
@@ -289,7 +295,7 @@ test.describe('Mechanical wave object', () => {
             modellus.shape.addExpression('Eq');
             shell.board.shapes.getByName('Eq').properties.expression = 'y=4';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20 });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20 });
             shell.reset();
         });
         expect(await page.evaluate(() => shell.board.calculator.isIndexedSource('y'))).toBe(false);
@@ -302,7 +308,7 @@ test.describe('Mechanical wave object', () => {
             shell.board.shapes.getByName('Eq').properties.expression = 'standing=forward+back';
             for (const [name, speed] of [['Forward', '5'], ['Back', '-5']]) {
                 const shape = shell.commands.addComponent('mechanical-wave', `Wave ${name}`);
-                shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: name.toLowerCase(), length: 20, amplitude: '2', frequency: '0.5', speed: speed, phase: '0', wavefront: false });
+                shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: name.toLowerCase(), length: 20, amplitude: '2', frequency: '0.5', speed: speed, phase: '0', wavefront: false });
             }
             shell.reset();
         });
@@ -323,7 +329,7 @@ test.describe('Mechanical wave object', () => {
 
     test('the wave it publishes is the wave it drew before, oscillator for oscillator', async ({ page }) => {
         await setupBoard(page);
-        const parameters = { x: 80, y: 80, width: 600, height: 200, elements: 11, length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: true };
+        const parameters = { x: 80, y: 80, width: 600, height: 200, samples: 11, length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: true };
         const heights = await page.evaluate(parameters => {
             const read = name => Array.from(shell.board.shapes.getByName(name).contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy')));
             const kept = shell.commands.addComponent('mechanical-wave', 'Kept');
@@ -344,7 +350,7 @@ test.describe('Mechanical wave object', () => {
         await setupBoard(page);
         await page.evaluate(() => {
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
             shell.reset();
         });
         const readElement = () => page.evaluate(() => {
@@ -371,7 +377,7 @@ test.describe('Mechanical wave object', () => {
         await setupBoard(page);
         await page.evaluate(() => {
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20 });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20 });
             shell.reset();
         });
         await page.evaluate(() => shell.board.calculator.play());
@@ -440,7 +446,7 @@ test.describe('Mechanical wave object', () => {
         const readingTheModel = await offered();
         for (const label of shaping)
             expect(readingTheModel).not.toContain(label);
-        expect(readingTheModel).toEqual(expect.arrayContaining(['Wave', 'Oscillators', 'Orientation']));
+        expect(readingTheModel).toEqual(expect.arrayContaining(['Wave', 'Samples', 'Orientation']));
     });
 
     // A file saved before the row was renamed still names its term, and reopening it is not the moment
@@ -462,12 +468,53 @@ test.describe('Mechanical wave object', () => {
         expect(carried).toEqual({ wave: 'y', old: undefined, indexed: true });
     });
 
+    // The two colours every shape carries: the background is the object's own row in its colour menu,
+    // the border is the row the shape menu already has for it.
+    test('the object is drawn on a body it paints and outlines', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, {});
+        const readBody = () => page.evaluate(() => {
+            const rect = shell.board.shapes.getByName('Wave').contentGroup.querySelector('rect');
+            return { fill: rect.getAttribute('fill'), stroke: rect.getAttribute('stroke') };
+        });
+        const painted = await readBody();
+        expect(painted.fill).toMatch(/^#[0-9a-f]{6}$/i);
+        expect(painted.stroke).toMatch(/^#[0-9a-f]{6}$/i);
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wave');
+            shape.setProperties({ backgroundColor: '#112233', borderColor: '#ff0000' });
+            shape.draw();
+        });
+        expect(await readBody()).toEqual({ fill: '#112233', stroke: '#ff0000' });
+        // The border is the shape's own row, so the object does not offer a second one beside it.
+        const offered = await page.evaluate(() => shell.board.shapes.getByName('Wave').getParametersByCategory(['style']).map(parameter => parameter.label));
+        expect(offered).toContain('Background');
+        expect(offered).not.toContain('Border');
+    });
+
+    test('a board saved before the count was renamed keeps it', async ({ page }) => {
+        await setupBoard(page);
+        const carried = await page.evaluate(() => {
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 400, height: 160, samples: 7 });
+            const saved = JSON.parse(JSON.stringify(shape.serialize()));
+            delete saved.properties.samples;
+            saved.properties.elements = 7;
+            shell.board.deserialize([saved]);
+            shell.reset();
+            const restored = shell.board.shapes.getByName('Wave');
+            restored.draw();
+            return { samples: restored.properties.samples, old: restored.properties.elements, drawn: restored.contentGroup.querySelectorAll('circle').length };
+        });
+        expect(carried).toEqual({ samples: 7, old: undefined, drawn: 7 });
+    });
+
     test('survives a serialize and deserialize round trip', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { elements: 17, orientation: 'longitudinal', referenceIndex: 4, showArrows: true, speed: '7' });
+        await addWave(page, { samples: 17, orientation: 'longitudinal', referenceIndex: 4, showArrows: true, speed: '7' });
         const serialized = await page.evaluate(() => JSON.parse(JSON.stringify(shell.board.shapes.getByName('Wave').serialize())));
         expect(serialized.type).toBe('ComponentShape');
-        expect(serialized.properties.elements).toBe(17);
+        expect(serialized.properties.samples).toBe(17);
         expect(serialized.properties.orientation).toBe('longitudinal');
         expect(serialized.properties.referenceIndex).toBe(4);
         expect(serialized.properties.speed).toBe('7');

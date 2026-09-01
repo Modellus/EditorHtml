@@ -142,10 +142,12 @@ class ComponentShape extends BaseShape {
         const componentType = this.getComponentType();
         if (!componentType || !BlockRegistry.has(componentType))
             return;
+        // What was saved under a parameter's old name is carried over before anything is filled in
+        // from the defaults: a row given its default first would have nothing left to carry into.
+        this.carryRenamedComponentProperties();
         const missing = BlockObjects.getMissingInstancePropertyDefaults(componentType, this.properties, this.properties.preset ?? "standard");
         if (Object.keys(missing).length > 0)
             Object.assign(this.properties, missing);
-        this.carryRenamedComponentProperties();
         this.backfillEmptyComponentValues();
     }
 
@@ -158,7 +160,8 @@ class ComponentShape extends BaseShape {
             const previousId = String(parameter.previousId ?? "");
             if (previousId === "" || this.properties[previousId] === undefined)
                 continue;
-            if (String(this.properties[parameter.id] ?? "") === "")
+            const current = this.properties[parameter.id];
+            if (current === undefined || current === null || current === "")
                 this.properties[parameter.id] = this.properties[previousId];
             delete this.properties[previousId];
         }

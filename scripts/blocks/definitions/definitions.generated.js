@@ -6053,7 +6053,7 @@ BlockDefinitionLoader.registerAll([
         "preview": {
             "parameters": {
                 "wavefront": false,
-                "elements": 24
+                "samples": 24
             }
         },
         "parameters": [
@@ -6123,14 +6123,16 @@ BlockDefinitionLoader.registerAll([
                 "description": "How long the chain is in model units. The spacing between oscillators follows from it."
             },
             {
-                "id": "elements",
-                "label": "Oscillators",
+                "id": "samples",
+                "previousId": "elements",
+                "label": "Samples",
                 "valueType": "number",
                 "defaultValue": 30,
                 "category": "display",
                 "minimum": 2,
                 "maximum": 200,
-                "bindable": false
+                "bindable": false,
+                "description": "How many oscillators the chain is drawn as, and so how far the index of the wave it publishes runs."
             },
             {
                 "id": "orientation",
@@ -6193,6 +6195,22 @@ BlockDefinitionLoader.registerAll([
                 "category": "display"
             },
             {
+                "id": "backgroundColor",
+                "label": "Background",
+                "valueType": "colour",
+                "defaultValue": "token:surface.default",
+                "category": "style"
+            },
+            {
+                "id": "borderColor",
+                "label": "Border",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.subtle",
+                "category": "style",
+                "userEditable": false,
+                "description": "The outline around the object. It is the shape's own border, edited on the row every shape has for it."
+            },
+            {
                 "id": "waveColor",
                 "label": "Colour",
                 "valueType": "colour",
@@ -6230,7 +6248,7 @@ BlockDefinitionLoader.registerAll([
                     "parameter": "length"
                 },
                 "N": {
-                    "formula": "\\max\\left(2,\\min\\left(200,round\\left(elements\\right)\\right)\\right)"
+                    "formula": "\\max\\left(2,\\min\\left(200,round\\left(samples\\right)\\right)\\right)"
                 },
                 "g": {
                     "parameter": "wavefront"
@@ -6251,6 +6269,12 @@ BlockDefinitionLoader.registerAll([
                 "id": "h",
                 "value": {
                     "parameter": "$height"
+                }
+            },
+            {
+                "id": "radiusLarge",
+                "value": {
+                    "token": "radius.large"
                 }
             },
             {
@@ -6303,7 +6327,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "count",
-                "formula": "\\max\\left(2,\\min\\left(200,round\\left(elements\\right)\\right)\\right)"
+                "formula": "\\max\\left(2,\\min\\left(200,round\\left(samples\\right)\\right)\\right)"
             },
             {
                 "id": "gaps",
@@ -6354,6 +6378,32 @@ BlockDefinitionLoader.registerAll([
             "id": "wave",
             "type": "group",
             "children": [
+                {
+                    "id": "body",
+                    "type": "rect",
+                    "bindings": {
+                        "width": {
+                            "parameter": "w"
+                        },
+                        "height": {
+                            "parameter": "h"
+                        },
+                        "cornerRadius": {
+                            "parameter": "radiusLarge"
+                        },
+                        "fill": {
+                            "parameter": "backgroundColor"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        }
+                    },
+                    "properties": {
+                        "x": 0,
+                        "y": 0,
+                        "strokeWidth": 1
+                    }
+                },
                 {
                     "id": "link",
                     "type": "line",

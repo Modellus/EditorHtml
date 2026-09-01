@@ -798,13 +798,15 @@ Capabilities: `reads-model`, `writes-model`, `oscillation`
 | `speed` | variable | "5" |  |
 | `phase` | variable | "0" |  |
 | `length` | number | 20 | min 0.001 |
-| `elements` | number | 30 | min 2, max 200 |
+| `samples` | number | 30 | min 2, max 200 |
 | `orientation` | string | "transverse" | transverse \| longitudinal |
 | `wavefront` | boolean | true |  |
 | `elementSize` | number | 4 | min 1, max 30 |
 | `referenceIndex` | number | 1 | min 0, max 200 |
 | `showArrows` | boolean | false |  |
 | `showLine` | boolean | false |  |
+| `backgroundColor` | colour | "token:surface.default" |  |
+| `borderColor` | colour | "token:stroke.subtle" |  |
 | `waveColor` | colour | "token:stroke.accent" |  |
 | `referenceColor` | colour | "token:stroke.strong" |  |
 
