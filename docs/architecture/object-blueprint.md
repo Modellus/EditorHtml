@@ -231,7 +231,7 @@ on this path.
 
 ### The tree — what is drawn
 
-Two node shapes, and only `group` accepts `children`:
+Two node shapes, and only `group` and `clip-box` accept `children`:
 
 ```json
 { "id": "…", "type": "<primitive>", "properties": {…}, "bindings": {…}, "modifiers": [], "behaviours": [], "children": [] }
@@ -276,12 +276,19 @@ Record where a drawing came from in `art`, so it can be imported again later:
 
 ### Primitives
 
-`arc` · `circle` · `ellipse` · `group` · `image` · `line` · `path` · `polygon` · `polyline` ·
-`rect` · `ring` · `text`
+`arc` · `circle` · `clip-box` · `ellipse` · `group` · `image` · `line` · `path` · `polygon` ·
+`polyline` · `rect` · `ring` · `text`
 
 All of them carry `fill`, `stroke`, `strokeWidth`, `strokeDash`, `strokeLinecap`, `opacity`,
 `visible`. `image` sources are restricted to `https:`, `data:image/` and relative paths; `path` data
 is restricted to the path grammar.
+
+**A drawing that can leave the body goes in a `clip-box`.** A value the reader sets — an amplitude, a
+range, a zoom — can carry a part past the edge of the object, and there it is drawn straight over
+whatever the board has beside it. A `clip-box` is a window of its own: give it the body's frame, put
+everything that moves inside it, and what leaves is cut at the edge. Leave the body itself outside
+it, or its own border is cut in half by the window it sets. A child inside keeps the coordinates it
+had outside, so nothing else about the tree changes — see `mechanical-wave.json`.
 
 ### Modifiers
 
@@ -291,7 +298,7 @@ is restricted to the path grammar.
 `repeat` is the one structural modifier: the compiler expands it first and exposes `$index` and
 `$count` to bindings inside the repeated subtree. `clip` points only at a clip path the host drawing
 declares; it is `agentAccessible: false`, which is why it is absent from the generated catalogue and
-why an ordinary object has no use for it.
+why an ordinary object clips with a `clip-box` instead.
 
 ### Behaviours
 

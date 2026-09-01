@@ -137,7 +137,7 @@
 <!-- generated:blocks-start -->
         <h2 id="primitives">Primitives</h2>
         <p>The blocks that draw. A node names one as its <code>type</code>, and sets these under <code>properties</code> as constants or under <code>bindings</code> as declarative values.</p>
-        <p class="block-index"><a href="#block-arc">arc</a> <a href="#block-circle">circle</a> <a href="#block-ellipse">ellipse</a> <a href="#block-group">group</a> <a href="#block-image">image</a> <a href="#block-line">line</a> <a href="#block-path">path</a> <a href="#block-polygon">polygon</a> <a href="#block-polyline">polyline</a> <a href="#block-rect">rect</a> <a href="#block-ring">ring</a> <a href="#block-text">text</a></p>
+        <p class="block-index"><a href="#block-arc">arc</a> <a href="#block-circle">circle</a> <a href="#block-clip-box">clip-box</a> <a href="#block-ellipse">ellipse</a> <a href="#block-group">group</a> <a href="#block-image">image</a> <a href="#block-line">line</a> <a href="#block-path">path</a> <a href="#block-polygon">polygon</a> <a href="#block-polyline">polyline</a> <a href="#block-rect">rect</a> <a href="#block-ring">ring</a> <a href="#block-text">text</a></p>
         <h3 id="block-arc"><code>arc</code> — Arc</h3>
         <p>Circular arc or annular sector measured clockwise from the start angle.</p>
         <p class="block-meta">Capabilities: <code>fillable</code> <code>strokable</code> <code>radial</code> <code>angular</code></p>
@@ -177,6 +177,26 @@
                 <tr><td><code>radius</code></td><td>number</td><td><code>40</code></td><td>min 0</td></tr>
             </tbody>
         </table>
+        <h3 id="block-clip-box"><code>clip-box</code> — Clip box</h3>
+        <p>Container showing only the part of its children that falls inside it.</p>
+        <p class="block-meta">Capabilities: <code>container</code> <code>sizable</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>fill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>stroke</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>strokeWidth</code></td><td>number</td><td><code>1</code></td><td>min 0, max 100</td></tr>
+                <tr><td><code>strokeDash</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>strokeLinecap</code></td><td>string</td><td><code>"round"</code></td><td>butt | round | square</td></tr>
+                <tr><td><code>opacity</code></td><td>number</td><td><code>1</code></td><td>min 0, max 1</td></tr>
+                <tr><td><code>visible</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>x</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>y</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>width</code></td><td>number</td><td><code>100</code></td><td>min 0</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>60</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <p class="block-meta">Accepts children.</p>
         <h3 id="block-ellipse"><code>ellipse</code> — Ellipse</h3>
         <p>Ellipse defined by a centre point and two radii.</p>
         <p class="block-meta">Capabilities: <code>fillable</code> <code>strokable</code> <code>radial</code></p>
@@ -874,7 +894,7 @@
                 <tr><td><code>phase</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
                 <tr><td><code>length</code></td><td>number</td><td><code>20</code></td><td>min 0.001</td></tr>
                 <tr><td><code>samples</code></td><td>number</td><td><code>30</code></td><td>min 2, max 200</td></tr>
-                <tr><td><code>orientation</code></td><td>string</td><td><code>"transverse"</code></td><td>transverse | longitudinal</td></tr>
+                <tr><td><code>orientation</code></td><td>string</td><td><code>"transverse"</code></td><td>transverse | longitudinal | radial</td></tr>
                 <tr><td><code>wavefront</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
                 <tr><td><code>elementSize</code></td><td>number</td><td><code>4</code></td><td>min 1, max 30</td></tr>
                 <tr><td><code>referenceIndex</code></td><td>number</td><td><code>1</code></td><td>min 0, max 200</td></tr>

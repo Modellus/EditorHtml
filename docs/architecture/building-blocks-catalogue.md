@@ -47,6 +47,28 @@ Capabilities: `fillable`, `strokable`, `radial`
 | `centerY` | number | 0 |  |
 | `radius` | number | 40 | min 0 |
 
+### `clip-box` — Clip box
+
+Container showing only the part of its children that falls inside it.
+
+Capabilities: `container`, `sizable`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `fill` | colour | "none" |  |
+| `stroke` | colour | "none" |  |
+| `strokeWidth` | number | 1 | min 0, max 100 |
+| `strokeDash` | string | "" |  |
+| `strokeLinecap` | string | "round" | butt \| round \| square |
+| `opacity` | number | 1 | min 0, max 1 |
+| `visible` | boolean | true |  |
+| `x` | number | 0 |  |
+| `y` | number | 0 |  |
+| `width` | number | 100 | min 0 |
+| `height` | number | 60 | min 0 |
+
+Accepts children.
+
 ### `ellipse` — Ellipse
 
 Ellipse defined by a centre point and two radii.
@@ -799,7 +821,7 @@ Capabilities: `reads-model`, `writes-model`, `oscillation`
 | `phase` | variable | "0" |  |
 | `length` | number | 20 | min 0.001 |
 | `samples` | number | 30 | min 2, max 200 |
-| `orientation` | string | "transverse" | transverse \| longitudinal |
+| `orientation` | string | "transverse" | transverse \| longitudinal \| radial |
 | `wavefront` | boolean | true |  |
 | `elementSize` | number | 4 | min 1, max 30 |
 | `referenceIndex` | number | 1 | min 0, max 200 |

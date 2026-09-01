@@ -6045,6 +6045,8 @@ BlockDefinitionLoader.registerAll([
             "oscillation",
             "transverse",
             "longitudinal",
+            "radial",
+            "ripple",
             "propagation"
         ],
         "capabilities": [
@@ -6144,8 +6146,10 @@ BlockDefinitionLoader.registerAll([
                 "category": "display",
                 "enumValues": [
                     "transverse",
-                    "longitudinal"
-                ]
+                    "longitudinal",
+                    "radial"
+                ],
+                "description": "Which way an oscillator moves against the way the wave travels. Across it the chain rides up and down; along it the chain is squeezed and stretched into the compressions a sound wave carries. Radial is the same displacement read outwards from a source in the middle, drawn as the rings a stone leaves on water: the crests spread as circles rather than travelling down a line. All three are drawn at the same scale, so a wave long enough to leave the body is cut off at its edges rather than drawn over the board."
             },
             {
                 "id": "wavefront",
@@ -6360,6 +6364,14 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\frac{h}{2}"
             },
             {
+                "id": "centerX",
+                "formula": "\\frac{w}{2}"
+            },
+            {
+                "id": "ringWidth",
+                "formula": "\\max\\left(1,\\frac{elementSize}{2}\\right)"
+            },
+            {
                 "id": "barHeight",
                 "formula": "h\\cdot0.6"
             },
@@ -6407,734 +6419,845 @@ BlockDefinitionLoader.registerAll([
                     }
                 },
                 {
-                    "id": "link",
-                    "type": "line",
-                    "when": {
-                        "choose": {
-                            "parameter": "orientation"
-                        },
-                        "equals": {
-                            "constant": "longitudinal"
-                        },
-                        "then": {
-                            "constant": 0
-                        },
-                        "otherwise": {
-                            "parameter": "showLine"
-                        }
-                    },
+                    "id": "medium",
+                    "type": "clip-box",
                     "bindings": {
-                        "x1": {
-                            "formula": "i\\cdot spacingPixels",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                }
-                            }
-                        },
-                        "y1": {
-                            "formula": "centerY-d\\cdot ppu",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                },
-                                "d": {
-                                    "choose": {
-                                        "parameter": "wave"
-                                    },
-                                    "then": {
-                                        "element": {
-                                            "parameter": "wave"
-                                        },
-                                        "index": {
-                                            "formula": "i+1",
-                                            "inputs": {
-                                                "i": {
-                                                    "parameter": "$index"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "otherwise": {
-                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                        "inputs": {
-                                            "i": {
-                                                "parameter": "$index"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "x2": {
-                            "formula": "\\left(i+1\\right)\\cdot spacingPixels",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                }
-                            }
-                        },
-                        "y2": {
-                            "formula": "centerY-d\\cdot ppu",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                },
-                                "d": {
-                                    "choose": {
-                                        "parameter": "wave"
-                                    },
-                                    "then": {
-                                        "element": {
-                                            "parameter": "wave"
-                                        },
-                                        "index": {
-                                            "formula": "i+2",
-                                            "inputs": {
-                                                "i": {
-                                                    "parameter": "$index"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "otherwise": {
-                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-\\left(i+1\\right)\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(\\left(i+1\\right)\\cdot delay-t\\right)\\right)\\right)",
-                                        "inputs": {
-                                            "i": {
-                                                "parameter": "$index"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "stroke": {
-                            "parameter": "waveColor"
-                        },
-                        "strokeWidth": {
-                            "token": "strokeWidth.hairline"
-                        }
-                    },
-                    "modifiers": [
-                        {
-                            "type": "repeat",
-                            "count": {
-                                "parameter": "gaps"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "id": "arrow-shaft",
-                    "type": "line",
-                    "when": {
-                        "choose": {
-                            "parameter": "orientation"
-                        },
-                        "equals": {
-                            "constant": "longitudinal"
-                        },
-                        "then": {
-                            "constant": 0
-                        },
-                        "otherwise": {
-                            "choose": {
-                                "parameter": "wave"
-                            },
-                            "then": {
-                                "constant": 0
-                            },
-                            "otherwise": {
-                                "parameter": "showArrows"
-                            }
-                        }
-                    },
-                    "bindings": {
-                        "x1": {
-                            "formula": "i\\cdot spacingPixels",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                }
-                            }
-                        },
-                        "y1": {
-                            "formula": "centerY-d\\cdot ppu",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                },
-                                "d": {
-                                    "choose": {
-                                        "parameter": "wave"
-                                    },
-                                    "then": {
-                                        "element": {
-                                            "parameter": "wave"
-                                        },
-                                        "index": {
-                                            "formula": "i+1",
-                                            "inputs": {
-                                                "i": {
-                                                    "parameter": "$index"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "otherwise": {
-                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                        "inputs": {
-                                            "i": {
-                                                "parameter": "$index"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "x2": {
-                            "formula": "i\\cdot spacingPixels",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                }
-                            }
-                        },
-                        "y2": {
-                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                },
-                                "d": {
-                                    "choose": {
-                                        "parameter": "wave"
-                                    },
-                                    "then": {
-                                        "element": {
-                                            "parameter": "wave"
-                                        },
-                                        "index": {
-                                            "formula": "i+1",
-                                            "inputs": {
-                                                "i": {
-                                                    "parameter": "$index"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "otherwise": {
-                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                        "inputs": {
-                                            "i": {
-                                                "parameter": "$index"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "stroke": {
-                            "choose": {
-                                "formula": "i+1",
-                                "inputs": {
-                                    "i": {
-                                        "parameter": "$index"
-                                    }
-                                }
-                            },
-                            "equals": {
-                                "parameter": "referenceIndex"
-                            },
-                            "then": {
-                                "parameter": "referenceColor"
-                            },
-                            "otherwise": {
-                                "parameter": "waveColor"
-                            }
-                        },
-                        "strokeWidth": {
-                            "token": "strokeWidth.hairline"
-                        }
-                    },
-                    "modifiers": [
-                        {
-                            "type": "repeat",
-                            "count": {
-                                "parameter": "count"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "id": "arrow-barb-left",
-                    "type": "line",
-                    "when": {
-                        "choose": {
-                            "parameter": "orientation"
-                        },
-                        "equals": {
-                            "constant": "longitudinal"
-                        },
-                        "then": {
-                            "constant": 0
-                        },
-                        "otherwise": {
-                            "choose": {
-                                "parameter": "wave"
-                            },
-                            "then": {
-                                "constant": 0
-                            },
-                            "otherwise": {
-                                "parameter": "showArrows"
-                            }
-                        }
-                    },
-                    "bindings": {
-                        "x1": {
-                            "formula": "i\\cdot spacingPixels",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                }
-                            }
-                        },
-                        "y1": {
-                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                },
-                                "d": {
-                                    "choose": {
-                                        "parameter": "wave"
-                                    },
-                                    "then": {
-                                        "element": {
-                                            "parameter": "wave"
-                                        },
-                                        "index": {
-                                            "formula": "i+1",
-                                            "inputs": {
-                                                "i": {
-                                                    "parameter": "$index"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "otherwise": {
-                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                        "inputs": {
-                                            "i": {
-                                                "parameter": "$index"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "x2": {
-                            "formula": "i\\cdot spacingPixels-headSize",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                }
-                            }
-                        },
-                        "y2": {
-                            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                },
-                                "d": {
-                                    "choose": {
-                                        "parameter": "wave"
-                                    },
-                                    "then": {
-                                        "element": {
-                                            "parameter": "wave"
-                                        },
-                                        "index": {
-                                            "formula": "i+1",
-                                            "inputs": {
-                                                "i": {
-                                                    "parameter": "$index"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "otherwise": {
-                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                        "inputs": {
-                                            "i": {
-                                                "parameter": "$index"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "stroke": {
-                            "choose": {
-                                "formula": "i+1",
-                                "inputs": {
-                                    "i": {
-                                        "parameter": "$index"
-                                    }
-                                }
-                            },
-                            "equals": {
-                                "parameter": "referenceIndex"
-                            },
-                            "then": {
-                                "parameter": "referenceColor"
-                            },
-                            "otherwise": {
-                                "parameter": "waveColor"
-                            }
-                        },
-                        "strokeWidth": {
-                            "token": "strokeWidth.hairline"
-                        }
-                    },
-                    "modifiers": [
-                        {
-                            "type": "repeat",
-                            "count": {
-                                "parameter": "count"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "id": "arrow-barb-right",
-                    "type": "line",
-                    "when": {
-                        "choose": {
-                            "parameter": "orientation"
-                        },
-                        "equals": {
-                            "constant": "longitudinal"
-                        },
-                        "then": {
-                            "constant": 0
-                        },
-                        "otherwise": {
-                            "choose": {
-                                "parameter": "wave"
-                            },
-                            "then": {
-                                "constant": 0
-                            },
-                            "otherwise": {
-                                "parameter": "showArrows"
-                            }
-                        }
-                    },
-                    "bindings": {
-                        "x1": {
-                            "formula": "i\\cdot spacingPixels",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                }
-                            }
-                        },
-                        "y1": {
-                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                },
-                                "d": {
-                                    "choose": {
-                                        "parameter": "wave"
-                                    },
-                                    "then": {
-                                        "element": {
-                                            "parameter": "wave"
-                                        },
-                                        "index": {
-                                            "formula": "i+1",
-                                            "inputs": {
-                                                "i": {
-                                                    "parameter": "$index"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "otherwise": {
-                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                        "inputs": {
-                                            "i": {
-                                                "parameter": "$index"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "x2": {
-                            "formula": "i\\cdot spacingPixels+headSize",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                }
-                            }
-                        },
-                        "y2": {
-                            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                },
-                                "d": {
-                                    "choose": {
-                                        "parameter": "wave"
-                                    },
-                                    "then": {
-                                        "element": {
-                                            "parameter": "wave"
-                                        },
-                                        "index": {
-                                            "formula": "i+1",
-                                            "inputs": {
-                                                "i": {
-                                                    "parameter": "$index"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "otherwise": {
-                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                        "inputs": {
-                                            "i": {
-                                                "parameter": "$index"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "stroke": {
-                            "choose": {
-                                "formula": "i+1",
-                                "inputs": {
-                                    "i": {
-                                        "parameter": "$index"
-                                    }
-                                }
-                            },
-                            "equals": {
-                                "parameter": "referenceIndex"
-                            },
-                            "then": {
-                                "parameter": "referenceColor"
-                            },
-                            "otherwise": {
-                                "parameter": "waveColor"
-                            }
-                        },
-                        "strokeWidth": {
-                            "token": "strokeWidth.hairline"
-                        }
-                    },
-                    "modifiers": [
-                        {
-                            "type": "repeat",
-                            "count": {
-                                "parameter": "count"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "id": "oscillator",
-                    "type": "circle",
-                    "when": {
-                        "choose": {
-                            "parameter": "orientation"
-                        },
-                        "equals": {
-                            "constant": "longitudinal"
-                        },
-                        "then": {
-                            "constant": 0
-                        },
-                        "otherwise": {
-                            "constant": 1
-                        }
-                    },
-                    "bindings": {
-                        "centerX": {
-                            "formula": "i\\cdot spacingPixels",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                }
-                            }
-                        },
-                        "centerY": {
-                            "formula": "centerY-d\\cdot ppu",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                },
-                                "d": {
-                                    "choose": {
-                                        "parameter": "wave"
-                                    },
-                                    "then": {
-                                        "element": {
-                                            "parameter": "wave"
-                                        },
-                                        "index": {
-                                            "formula": "i+1",
-                                            "inputs": {
-                                                "i": {
-                                                    "parameter": "$index"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "otherwise": {
-                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                        "inputs": {
-                                            "i": {
-                                                "parameter": "$index"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "radius": {
-                            "parameter": "elementSize"
-                        },
-                        "fill": {
-                            "choose": {
-                                "formula": "i+1",
-                                "inputs": {
-                                    "i": {
-                                        "parameter": "$index"
-                                    }
-                                }
-                            },
-                            "equals": {
-                                "parameter": "referenceIndex"
-                            },
-                            "then": {
-                                "parameter": "referenceColor"
-                            },
-                            "otherwise": {
-                                "parameter": "waveColor"
-                            }
-                        }
-                    },
-                    "properties": {
-                        "stroke": "none"
-                    },
-                    "modifiers": [
-                        {
-                            "type": "repeat",
-                            "count": {
-                                "parameter": "count"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "id": "bar",
-                    "type": "rect",
-                    "when": {
-                        "choose": {
-                            "parameter": "orientation"
-                        },
-                        "equals": {
-                            "constant": "longitudinal"
-                        },
-                        "then": {
-                            "constant": 1
-                        },
-                        "otherwise": {
-                            "constant": 0
-                        }
-                    },
-                    "bindings": {
-                        "x": {
-                            "formula": "i\\cdot spacingPixels+d\\cdot ppu-\\frac{elementSize}{2}",
-                            "inputs": {
-                                "i": {
-                                    "parameter": "$index"
-                                },
-                                "d": {
-                                    "choose": {
-                                        "parameter": "wave"
-                                    },
-                                    "then": {
-                                        "element": {
-                                            "parameter": "wave"
-                                        },
-                                        "index": {
-                                            "formula": "i+1",
-                                            "inputs": {
-                                                "i": {
-                                                    "parameter": "$index"
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "otherwise": {
-                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                        "inputs": {
-                                            "i": {
-                                                "parameter": "$index"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "y": {
-                            "parameter": "barTop"
-                        },
                         "width": {
-                            "parameter": "elementSize"
+                            "parameter": "w"
                         },
                         "height": {
-                            "parameter": "barHeight"
-                        },
-                        "fill": {
-                            "choose": {
-                                "formula": "i+1",
-                                "inputs": {
-                                    "i": {
-                                        "parameter": "$index"
-                                    }
-                                }
-                            },
-                            "equals": {
-                                "parameter": "referenceIndex"
-                            },
-                            "then": {
-                                "parameter": "referenceColor"
-                            },
-                            "otherwise": {
-                                "parameter": "waveColor"
-                            }
+                            "parameter": "h"
                         }
                     },
                     "properties": {
-                        "stroke": "none"
+                        "x": 0,
+                        "y": 0
                     },
-                    "modifiers": [
+                    "children": [
                         {
-                            "type": "repeat",
-                            "count": {
-                                "parameter": "count"
-                            }
+                            "id": "link",
+                            "type": "line",
+                            "when": {
+                                "choose": {
+                                    "parameter": "orientation"
+                                },
+                                "equals": {
+                                    "constant": "transverse"
+                                },
+                                "then": {
+                                    "parameter": "showLine"
+                                },
+                                "otherwise": {
+                                    "constant": 0
+                                }
+                            },
+                            "bindings": {
+                                "x1": {
+                                    "formula": "i\\cdot spacingPixels",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "y1": {
+                                    "formula": "centerY-d\\cdot ppu",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+1",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "x2": {
+                                    "formula": "\\left(i+1\\right)\\cdot spacingPixels",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "y2": {
+                                    "formula": "centerY-d\\cdot ppu",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+2",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-\\left(i+1\\right)\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(\\left(i+1\\right)\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "stroke": {
+                                    "parameter": "waveColor"
+                                },
+                                "strokeWidth": {
+                                    "token": "strokeWidth.hairline"
+                                }
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "gaps"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "arrow-shaft",
+                            "type": "line",
+                            "when": {
+                                "choose": {
+                                    "parameter": "orientation"
+                                },
+                                "equals": {
+                                    "constant": "transverse"
+                                },
+                                "then": {
+                                    "choose": {
+                                        "parameter": "wave"
+                                    },
+                                    "then": {
+                                        "constant": 0
+                                    },
+                                    "otherwise": {
+                                        "parameter": "showArrows"
+                                    }
+                                },
+                                "otherwise": {
+                                    "constant": 0
+                                }
+                            },
+                            "bindings": {
+                                "x1": {
+                                    "formula": "i\\cdot spacingPixels",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "y1": {
+                                    "formula": "centerY-d\\cdot ppu",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+1",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "x2": {
+                                    "formula": "i\\cdot spacingPixels",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "y2": {
+                                    "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+1",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "stroke": {
+                                    "choose": {
+                                        "formula": "i+1",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "equals": {
+                                        "parameter": "referenceIndex"
+                                    },
+                                    "then": {
+                                        "parameter": "referenceColor"
+                                    },
+                                    "otherwise": {
+                                        "parameter": "waveColor"
+                                    }
+                                },
+                                "strokeWidth": {
+                                    "token": "strokeWidth.hairline"
+                                }
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "count"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "arrow-barb-left",
+                            "type": "line",
+                            "when": {
+                                "choose": {
+                                    "parameter": "orientation"
+                                },
+                                "equals": {
+                                    "constant": "transverse"
+                                },
+                                "then": {
+                                    "choose": {
+                                        "parameter": "wave"
+                                    },
+                                    "then": {
+                                        "constant": 0
+                                    },
+                                    "otherwise": {
+                                        "parameter": "showArrows"
+                                    }
+                                },
+                                "otherwise": {
+                                    "constant": 0
+                                }
+                            },
+                            "bindings": {
+                                "x1": {
+                                    "formula": "i\\cdot spacingPixels",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "y1": {
+                                    "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+1",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "x2": {
+                                    "formula": "i\\cdot spacingPixels-headSize",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "y2": {
+                                    "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+1",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "stroke": {
+                                    "choose": {
+                                        "formula": "i+1",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "equals": {
+                                        "parameter": "referenceIndex"
+                                    },
+                                    "then": {
+                                        "parameter": "referenceColor"
+                                    },
+                                    "otherwise": {
+                                        "parameter": "waveColor"
+                                    }
+                                },
+                                "strokeWidth": {
+                                    "token": "strokeWidth.hairline"
+                                }
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "count"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "arrow-barb-right",
+                            "type": "line",
+                            "when": {
+                                "choose": {
+                                    "parameter": "orientation"
+                                },
+                                "equals": {
+                                    "constant": "transverse"
+                                },
+                                "then": {
+                                    "choose": {
+                                        "parameter": "wave"
+                                    },
+                                    "then": {
+                                        "constant": 0
+                                    },
+                                    "otherwise": {
+                                        "parameter": "showArrows"
+                                    }
+                                },
+                                "otherwise": {
+                                    "constant": 0
+                                }
+                            },
+                            "bindings": {
+                                "x1": {
+                                    "formula": "i\\cdot spacingPixels",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "y1": {
+                                    "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+1",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "x2": {
+                                    "formula": "i\\cdot spacingPixels+headSize",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "y2": {
+                                    "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+1",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "stroke": {
+                                    "choose": {
+                                        "formula": "i+1",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "equals": {
+                                        "parameter": "referenceIndex"
+                                    },
+                                    "then": {
+                                        "parameter": "referenceColor"
+                                    },
+                                    "otherwise": {
+                                        "parameter": "waveColor"
+                                    }
+                                },
+                                "strokeWidth": {
+                                    "token": "strokeWidth.hairline"
+                                }
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "count"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "oscillator",
+                            "type": "circle",
+                            "when": {
+                                "choose": {
+                                    "parameter": "orientation"
+                                },
+                                "equals": {
+                                    "constant": "transverse"
+                                },
+                                "then": {
+                                    "constant": 1
+                                },
+                                "otherwise": {
+                                    "constant": 0
+                                }
+                            },
+                            "bindings": {
+                                "centerX": {
+                                    "formula": "i\\cdot spacingPixels",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "centerY": {
+                                    "formula": "centerY-d\\cdot ppu",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+1",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "radius": {
+                                    "parameter": "elementSize"
+                                },
+                                "fill": {
+                                    "choose": {
+                                        "formula": "i+1",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "equals": {
+                                        "parameter": "referenceIndex"
+                                    },
+                                    "then": {
+                                        "parameter": "referenceColor"
+                                    },
+                                    "otherwise": {
+                                        "parameter": "waveColor"
+                                    }
+                                }
+                            },
+                            "properties": {
+                                "stroke": "none"
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "count"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "bar",
+                            "type": "rect",
+                            "when": {
+                                "choose": {
+                                    "parameter": "orientation"
+                                },
+                                "equals": {
+                                    "constant": "longitudinal"
+                                },
+                                "then": {
+                                    "constant": 1
+                                },
+                                "otherwise": {
+                                    "constant": 0
+                                }
+                            },
+                            "bindings": {
+                                "x": {
+                                    "formula": "i\\cdot spacingPixels+d\\cdot ppu-\\frac{elementSize}{2}",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+1",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "y": {
+                                    "parameter": "barTop"
+                                },
+                                "width": {
+                                    "parameter": "elementSize"
+                                },
+                                "height": {
+                                    "parameter": "barHeight"
+                                },
+                                "fill": {
+                                    "choose": {
+                                        "formula": "i+1",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "equals": {
+                                        "parameter": "referenceIndex"
+                                    },
+                                    "then": {
+                                        "parameter": "referenceColor"
+                                    },
+                                    "otherwise": {
+                                        "parameter": "waveColor"
+                                    }
+                                }
+                            },
+                            "properties": {
+                                "stroke": "none"
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "count"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "ripple",
+                            "type": "circle",
+                            "when": {
+                                "choose": {
+                                    "parameter": "orientation"
+                                },
+                                "equals": {
+                                    "constant": "radial"
+                                },
+                                "then": {
+                                    "constant": 1
+                                },
+                                "otherwise": {
+                                    "constant": 0
+                                }
+                            },
+                            "bindings": {
+                                "centerX": {
+                                    "parameter": "centerX"
+                                },
+                                "centerY": {
+                                    "parameter": "centerY"
+                                },
+                                "radius": {
+                                    "formula": "i\\cdot spacingPixels+d\\cdot ppu",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        },
+                                        "d": {
+                                            "choose": {
+                                                "parameter": "wave"
+                                            },
+                                            "then": {
+                                                "element": {
+                                                    "parameter": "wave"
+                                                },
+                                                "index": {
+                                                    "formula": "i+1",
+                                                    "inputs": {
+                                                        "i": {
+                                                            "parameter": "$index"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "otherwise": {
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "inputs": {
+                                                    "i": {
+                                                        "parameter": "$index"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "stroke": {
+                                    "choose": {
+                                        "formula": "i+1",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "equals": {
+                                        "parameter": "referenceIndex"
+                                    },
+                                    "then": {
+                                        "parameter": "referenceColor"
+                                    },
+                                    "otherwise": {
+                                        "parameter": "waveColor"
+                                    }
+                                },
+                                "strokeWidth": {
+                                    "parameter": "ringWidth"
+                                }
+                            },
+                            "properties": {
+                                "fill": "none"
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "count"
+                                    }
+                                }
+                            ]
                         }
                     ]
                 }

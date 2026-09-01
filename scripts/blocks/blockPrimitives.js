@@ -332,6 +332,45 @@ var BlockPrimitiveRenderers = {
         })
     });
 
+    // A window onto its children: it is a viewport of its own, so whatever a child draws beyond its
+    // edges is cut off there instead of spilling over the object it belongs to. Clipping by being a
+    // viewport is what lets a definition ask for it, since a clip path would need an id declared in
+    // the document holding the drawing and there is one drawing per object on the board. Its view
+    // box repeats its own frame, so a child inside it is placed in the same coordinates as a child
+    // outside it.
+    registry.register({
+        type: "clip-box",
+        category: "primitive",
+        displayName: "Clip box",
+        description: "Container showing only the part of its children that falls inside it.",
+        tags: ["container", "layout", "window", "clip"],
+        capabilities: ["container", "sizable"],
+        supportsChildren: true,
+        inputSchema: BlockPrimitiveSchemas.withStyle({
+            x: { valueType: "number", defaultValue: 0, label: "X" },
+            y: { valueType: "number", defaultValue: 0, label: "Y" },
+            width: { valueType: "number", defaultValue: 100, minimum: 0, label: "Width" },
+            height: { valueType: "number", defaultValue: 60, minimum: 0, label: "Height" }
+        }),
+        render: properties => {
+            const width = Math.max(0, Number(properties.width) || 0);
+            const height = Math.max(0, Number(properties.height) || 0);
+            const x = Number(properties.x) || 0;
+            const y = Number(properties.y) || 0;
+            return {
+                tag: "svg",
+                attributes: {
+                    x: x,
+                    y: y,
+                    width: width,
+                    height: height,
+                    viewBox: `${x} ${y} ${width} ${height}`,
+                    overflow: "hidden"
+                }
+            };
+        }
+    });
+
     registry.register({
         type: "group",
         category: "primitive",

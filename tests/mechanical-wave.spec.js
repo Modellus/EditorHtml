@@ -492,6 +492,124 @@ test.describe('Mechanical wave object', () => {
         expect(offered).not.toContain('Border');
     });
 
+
+    // A wave whose amplitude carries an oscillator past the body used to be drawn straight over
+    // whatever the board had there. Every part that moves is now drawn inside a window the body
+    // sets, so the wave is cut off at the edge it belongs to.
+    test('every moving part is drawn inside a window the size of the body', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, { samples: 11, showLine: true, showArrows: true });
+        const drawn = await page.evaluate(() => {
+            const group = shell.board.shapes.getByName('Wave').contentGroup.firstElementChild;
+            const window = group.querySelector('svg');
+            return {
+                // The body is drawn before the window and stays outside it, so its own border is
+                // not cut in half by the very window it sets.
+                order: Array.from(group.children).map(node => node.tagName),
+                frame: { width: Number(window.getAttribute('width')), height: Number(window.getAttribute('height')) },
+                overflow: window.getAttribute('overflow'),
+                loose: group.querySelectorAll(':scope > circle, :scope > line').length,
+                inside: window.querySelectorAll('circle, line').length
+            };
+        });
+        expect(drawn.order).toEqual(['rect', 'svg']);
+        expect(drawn.frame).toEqual({ width: 600, height: 160 });
+        expect(drawn.overflow).toBe('hidden');
+        expect(drawn.loose).toBe(0);
+        expect(drawn.inside).toBe(11 + 10 + 11 * 3);
+    });
+
+    // Reading the drawing tells us where an oscillator was put; only the board itself can say
+    // whether it was painted there, so each one is asked for at the point it stands on.
+    async function elementAtOscillator(page, index) {
+        return page.evaluate(index => {
+            const circle = shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')[index];
+            const box = circle.getBoundingClientRect();
+            const found = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+            return { height: Number(circle.getAttribute('cy')), painted: found?.getAttribute('data-source-id') ?? null };
+        }, index);
+    }
+
+    test('a transverse wave taller than its body is cut off at the edge', async ({ page }) => {
+        await setupBoard(page);
+        // Twenty units of amplitude over a body twenty pixels per unit high: the swing is four
+        // times the body, so most of the chain stands well outside it.
+        await addWave(page, { x: 100, y: 400, width: 400, height: 100, samples: 21, amplitude: '20', length: 20, wavefront: false });
+        const heights = await page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy'))));
+        const inside = heights.findIndex(height => height >= 0 && height <= 100);
+        const above = heights.findIndex(height => height < 0);
+        expect(inside).toBeGreaterThanOrEqual(0);
+        expect(above).toBeGreaterThanOrEqual(0);
+        expect((await elementAtOscillator(page, inside)).painted).toBe('oscillator');
+        expect((await elementAtOscillator(page, above)).painted).toBeNull();
+    });
+
+    test('a longitudinal wave pushed past the end of its body is cut off too', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, { x: 100, y: 400, width: 400, height: 100, samples: 21, amplitude: '20', length: 20, orientation: 'longitudinal', wavefront: false });
+        const painted = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wave');
+            const bars = Array.from(shape.contentGroup.querySelectorAll('rect')).slice(1);
+            const beyond = bars.find(bar => Number(bar.getAttribute('x')) > 400);
+            const box = beyond.getBoundingClientRect();
+            const found = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+            return { pushedTo: Number(beyond.getAttribute('x')), painted: found?.getAttribute('data-source-id') ?? null };
+        });
+        expect(painted.pushedTo).toBeGreaterThan(400);
+        expect(painted.painted).toBeNull();
+    });
+
+    test('radial draws a ring for each oscillator, all of them centred on the body', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, { samples: 11, orientation: 'radial', width: 400, height: 300 });
+        const rings = await page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => ({
+            x: Number(node.getAttribute('cx')),
+            y: Number(node.getAttribute('cy')),
+            fill: node.getAttribute('fill')
+        })));
+        expect(rings).toHaveLength(11);
+        for (const ring of rings) {
+            expect(ring.x).toBeCloseTo(200, 6);
+            expect(ring.y).toBeCloseTo(150, 6);
+            // A ripple is a ring, not a disc: what is drawn is the crest passing, not the water
+            // inside it.
+            expect(ring.fill).toBe('none');
+        }
+    });
+
+    // The ripples are the wave the object already had, read outwards from a source in the middle
+    // instead of along a line: an oscillator sits its own distance from the source and its
+    // displacement carries it in and out along that line, which is what bunches the rings.
+    test('a ripple stands as far from the middle as the same oscillator stands from the line', async ({ page }) => {
+        await setupBoard(page);
+        const parameters = { x: 80, y: 80, width: 600, height: 200, samples: 11, length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: false };
+        const drawn = await page.evaluate(parameters => {
+            const read = (name, attribute) => Array.from(shell.board.shapes.getByName(name).contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute(attribute)));
+            const chain = shell.commands.addComponent('mechanical-wave', 'Chain');
+            chain.setProperties(Object.assign({}, parameters, { orientation: 'transverse' }));
+            const rings = shell.commands.addComponent('mechanical-wave', 'Rings');
+            rings.setProperties(Object.assign({}, parameters, { orientation: 'radial' }));
+            shell.reset();
+            chain.draw();
+            rings.draw();
+            return { heights: read('Chain', 'cy'), radii: read('Rings', 'r') };
+        }, parameters);
+        const spacing = 600 / 10;
+        for (let index = 0; index < drawn.radii.length; index++) {
+            // The chain draws the displacement upwards from the middle of the body; the rings draw
+            // the same displacement outwards from where the oscillator rests.
+            const displacement = 100 - drawn.heights[index];
+            expect(drawn.radii[index]).toBeCloseTo(Math.max(0, index * spacing + displacement), 5);
+        }
+    });
+
+    test('the connecting line and the velocity arrows belong to the transverse chain alone', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, { samples: 11, orientation: 'radial', showLine: true, showArrows: true });
+        expect(await countOf(page, 'line')).toBe(0);
+        expect(await countOf(page, 'circle')).toBe(11);
+    });
+
     test('a board saved before the count was renamed keeps it', async ({ page }) => {
         await setupBoard(page);
         const carried = await page.evaluate(() => {
