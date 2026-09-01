@@ -121,11 +121,11 @@ zero, a phasor of length one); a clock does not need it.
 Each is `{ id, label, valueType, defaultValue, category }` plus any of `description`, `minimum`,
 `maximum`, `enumValues`, `enumIcons`, `unit`, `unitParameter`, `required`, `bindable`, `agentAccessible`,
 `userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`, `modeParameter`,
-`valueParameter`, `minimumParameter`, `maximumParameter`, `toolbarKey`, `toolbarTooltip`,
-`valueAnchor`, `visibleWhen`.
+`pairedField`, `modeField`, `valueParameter`, `minimumParameter`, `maximumParameter`, `toolbarKey`,
+`toolbarTooltip`, `valueAnchor`, `visibleWhen`.
 
-`valueType` is one of `number`, `string`, `boolean`, `colour`, `variable`, `expression`, `memory`,
-`character`, `audio`, `object`.
+`valueType` is one of `number`, `string`, `boolean`, `colour`, `variable`, `terms`, `expression`,
+`memory`, `character`, `audio`, `object`.
 
 **A label names the thing, not the kind of thing.** A `variable` row stands in the variables menu, in
 a term selector, under a key that says so — so call it *Hour*, *Value*, *Time*, never *Hour variable*.
@@ -161,11 +161,21 @@ choosing the orientation puts a second selector beside the first, and the key sh
 colour, if the row carries one, comes after them. The mode parameter is an ordinary `string`
 parameter with `"enumValues": ["angle", "orientation"]`; mark it `userEditable: false`, since the key
 in the toolbar is what edits it, and read it with a `choose` carrying an `equals`. A row of terms —
-a `terms` parameter with a second field, like the compass's `pointers` — offers the same two choices
-under the same two icons, but on the row itself rather than in the toolbar: the reader names as many
-pointers as they like and each carries its own choice, stored in the row's own `mode` field. A row
-that has never been given one is read as an orientation if it named a second term and as an angle
-otherwise, so a model saved before the choice existed still draws what it drew.
+a `terms` parameter naming a **`pairedField`** and a **`modeField`**, like the compass's `pointers` —
+offers the same two choices under the same two icons, but on the row itself rather than in the
+toolbar: the reader names as many pointers as they like and each carries its own choice, stored in
+the row's own field. A row that has never been given one is read as an orientation if it named a
+second term and as an angle otherwise, so a model saved before the choice existed still draws what it
+drew.
+
+**A `terms` parameter is a list the reader builds**, the way the chart builds the terms it plots: a
+row per term, dragged into the order they are drawn in, each with the case it is read in and a colour
+of its own, and a blank row kept at the end to type the next name into. Naming neither `pairedField`
+nor `modeField` makes it a plain list — the row names one term and nothing else, which is what a list
+of waves or of series wants. Read the rows with `termsRow` and count them with `termsCount`; both
+skip the blank row, so row 0 is the first name the reader gave. The toolbar key that reads the model
+names the first of them and counts the rest — `y +2` — and wears the faded word *Model* while the
+list is empty, since a key with nothing on it cannot be found.
 
 A fifth says where a value is read. A `variable` naming a **`valueAnchor`** — `{ "x": 0.25, "y": 0.07 }`,
 a point in the object's box as a fraction of its width and height — carries the eye every term on the
@@ -339,6 +349,8 @@ handles that rescale an axis.
 | `{ "memoryCount": "history" }` | how many rows it holds |
 | `{ "termUnit": { "parameter": "valueVariable" } }` | what the term a parameter names is measured in, as the model holds it |
 | `{ "element": <binding>, "index": <binding> }` | one element of a name the model defined over element indices with `y\left[i\right]=…`; the name comes from a binding, so an object points at whichever one the reader names |
+| `{ "termsRow": "waves", "row": <binding>, "field": "term" }` | one row of a `terms` list, by its place among the rows that name something; `field` is `term`, `case` or `color` — and a row that chose no colour is given the one its place in the list is drawn in, the colour its swatch in the menu shows |
+| `{ "termsCount": "waves" }` | how many rows of that list name something, which is what a `repeat` over the list counts |
 
 ### Colours, fonts and sizes are not the object's to invent
 
@@ -416,3 +428,6 @@ npx playwright test tests/object-picker.spec.js tests/component-blocks.spec.js
 | composed of several sub-objects | [`analogue-clock.json`](../../scripts/blocks/definitions/analogue-clock.json), [`orbit-system.json`](../../scripts/blocks/definitions/orbit-system.json) |
 | a keypad that keeps its working | [`calculator.json`](../../scripts/blocks/definitions/calculator.json) — `key-cap`, `remember`, `memory-list` |
 | a plot that records | [`mouse-tracker.json`](../../scripts/blocks/definitions/mouse-tracker.json) — the plot components over a `memory-trace` |
+| a wave the model defines over element indices | [`mechanical-wave.json`](../../scripts/blocks/definitions/mechanical-wave.json) — an `element` binding under a `repeat`, and an `indexedSource` that publishes the wave the object works out when the model leaves the name free |
+| an instrument reading such a wave | [`oscilloscope.json`](../../scripts/blocks/definitions/oscilloscope.json) — a `terms` list read with `termsRow`, drawn over `plot-grid`/`plot-axes`, with a `follow-pointer` cursor reading every wave where it stands and a `clickable` mark to measure the distance from |
+| a list of terms the reader adds to | [`oscilloscope.json`](../../scripts/blocks/definitions/oscilloscope.json) again — one `repeat` over `termsCount` for the readings and one over the rows times the samples for the traces, since a repeat inside a repeat would take the outer `$index` away |

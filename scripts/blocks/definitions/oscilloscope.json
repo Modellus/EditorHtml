@@ -1,0 +1,1235 @@
+{
+    "schemaVersion": "1.0.0",
+    "type": "oscilloscope",
+    "category": "component",
+    "displayName": "Oscilloscope",
+    "description": "A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.",
+    "icon": "fa-light fa-monitor-waveform",
+    "tags": [
+        "object",
+        "oscilloscope",
+        "wave",
+        "trace",
+        "screen",
+        "cursor",
+        "measure",
+        "chart",
+        "reads-model"
+    ],
+    "capabilities": [
+        "reads-model",
+        "linear",
+        "textual",
+        "interaction"
+    ],
+    "parameters": [
+        {
+            "id": "waves",
+            "label": "Waves",
+            "valueType": "terms",
+            "defaultValue": [],
+            "category": "model",
+            "description": "The waves on the screen, one row each, in the order they are drawn and each in a colour of its own. A row names something the model defined over element indices, as y\\left[i\\right]=... does, and the screen reads it element by element from the first."
+        },
+        {
+            "id": "spacing",
+            "label": "Element spacing",
+            "valueType": "number",
+            "defaultValue": 1,
+            "category": "scale",
+            "minimum": 1e-06,
+            "description": "How far apart two neighbouring elements stand, in model units. Left at 1 the screen reads in element numbers, so the first element stands at 0 and the tenth at 9; a chain 20 long drawn as 30 elements stands them 20/29 apart."
+        },
+        {
+            "id": "minimumX",
+            "label": "Minimum X",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "scale"
+        },
+        {
+            "id": "maximumX",
+            "label": "Maximum X",
+            "valueType": "number",
+            "defaultValue": 30,
+            "category": "scale"
+        },
+        {
+            "id": "minimumY",
+            "label": "Minimum Y",
+            "valueType": "number",
+            "defaultValue": -3,
+            "category": "scale"
+        },
+        {
+            "id": "maximumY",
+            "label": "Maximum Y",
+            "valueType": "number",
+            "defaultValue": 3,
+            "category": "scale"
+        },
+        {
+            "id": "samples",
+            "label": "Samples",
+            "valueType": "number",
+            "defaultValue": 200,
+            "category": "display",
+            "minimum": 2,
+            "maximum": 300,
+            "bindable": false,
+            "description": "The most points across the screen a wave is read at. A window holding fewer elements than that is drawn element by element, so the trace is the wave's own values; a window holding more is stepped through, the way a screen zoomed out past its own record is. Waves share the reading between them, so adding one costs the others some of their points."
+        },
+        {
+            "id": "ticks",
+            "label": "Axis ticks",
+            "valueType": "number",
+            "defaultValue": 5,
+            "category": "display",
+            "minimum": 2,
+            "maximum": 11
+        },
+        {
+            "id": "showGrid",
+            "label": "Show grid",
+            "valueType": "boolean",
+            "defaultValue": true,
+            "category": "display"
+        },
+        {
+            "id": "showTicks",
+            "label": "Show ticks",
+            "valueType": "boolean",
+            "defaultValue": true,
+            "category": "display",
+            "description": "Marks and numbers both axes. Turned off the screen is a bare graticule, and each axis is still rescaled by pulling where its ticks stand."
+        },
+        {
+            "id": "showLegend",
+            "label": "Show readings",
+            "valueType": "boolean",
+            "defaultValue": true,
+            "category": "display",
+            "description": "The strip under the screen: one row per wave, in the colour it is drawn in, reading what it is worth where the cursor stands."
+        },
+        {
+            "id": "showCursor",
+            "label": "Cursor",
+            "valueType": "boolean",
+            "defaultValue": true,
+            "category": "interaction",
+            "description": "Reads the waves where the pointer rests: a crosshair on the screen, and the value of every wave at that point in the strip below. The player has to be standing still for it — a screen is read once it has stopped moving."
+        },
+        {
+            "id": "showMark",
+            "label": "Mark",
+            "valueType": "boolean",
+            "defaultValue": false,
+            "category": "interaction",
+            "description": "A second line the cursor is measured against: clicking the screen moves it there, and the distance from it to the cursor is read out on the screen, along with what that distance is one of — the wavelength of a wave measured crest to crest, and the wavenumber that follows from it."
+        },
+        {
+            "id": "markX",
+            "label": "Mark position",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "interaction",
+            "visibleWhen": {
+                "parameter": "showMark"
+            },
+            "description": "Where the mark stands, in the units of the screen."
+        },
+        {
+            "id": "hoverX",
+            "label": "Pointer X",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "state",
+            "userEditable": false,
+            "agentAccessible": false
+        },
+        {
+            "id": "hoverY",
+            "label": "Pointer Y",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "state",
+            "userEditable": false,
+            "agentAccessible": false
+        },
+        {
+            "id": "hovering",
+            "label": "Pointer over the screen",
+            "valueType": "number",
+            "defaultValue": 0,
+            "category": "state",
+            "userEditable": false,
+            "agentAccessible": false
+        },
+        {
+            "id": "backgroundColor",
+            "label": "Background",
+            "valueType": "colour",
+            "defaultValue": "token:surface.default",
+            "category": "style"
+        },
+        {
+            "id": "screenColor",
+            "label": "Screen",
+            "valueType": "colour",
+            "defaultValue": "token:surface.emphasis",
+            "category": "style"
+        },
+        {
+            "id": "gridColor",
+            "label": "Grid",
+            "valueType": "colour",
+            "defaultValue": "token:grid.color",
+            "category": "style"
+        },
+        {
+            "id": "axisColor",
+            "label": "Axis",
+            "valueType": "colour",
+            "defaultValue": "token:axis.color",
+            "category": "style"
+        },
+        {
+            "id": "cursorColor",
+            "label": "Cursor",
+            "valueType": "colour",
+            "defaultValue": "token:stroke.default",
+            "category": "style",
+            "description": "The crosshair, the mark and the readings taken from them."
+        },
+        {
+            "id": "foregroundColor",
+            "label": "Foreground",
+            "valueType": "colour",
+            "defaultValue": "token:axis.labelColor",
+            "category": "style",
+            "userEditable": false,
+            "description": "The numbers written along both axes. It is the shape's own foreground, edited on the row every shape has for it."
+        },
+        {
+            "id": "borderColor",
+            "label": "Border",
+            "valueType": "colour",
+            "defaultValue": "token:stroke.subtle",
+            "category": "style",
+            "userEditable": false,
+            "description": "The outline around the object and around its screen. It is the shape's own border, edited on the row every shape has for it."
+        }
+    ],
+    "locals": [
+        {
+            "id": "w",
+            "value": {
+                "parameter": "$width"
+            }
+        },
+        {
+            "id": "h",
+            "value": {
+                "parameter": "$height"
+            }
+        },
+        {
+            "id": "pad",
+            "value": 10
+        },
+        {
+            "id": "tickFont",
+            "value": {
+                "token": "font.size.tick"
+            }
+        },
+        {
+            "id": "labelFont",
+            "formula": "\\max\\left(8,\\min\\left(tickFont,h\\cdot0.05\\right)\\right)"
+        },
+        {
+            "id": "lineHeight",
+            "formula": "labelFont\\cdot1.7"
+        },
+        {
+            "id": "ticksShown",
+            "value": {
+                "choose": {
+                    "parameter": "showTicks"
+                },
+                "then": 1,
+                "otherwise": 0
+            }
+        },
+        {
+            "id": "labelBandBottom",
+            "formula": "ticksShown\\cdot labelFont\\cdot2.2"
+        },
+        {
+            "id": "labelBandLeft",
+            "formula": "ticksShown\\cdot\\max\\left(20,labelFont\\cdot3.4\\right)"
+        },
+        {
+            "id": "waveCount",
+            "value": {
+                "termsCount": "waves"
+            }
+        },
+        {
+            "id": "legendHeight",
+            "formula": "waveCount\\cdot lineHeight"
+        },
+        {
+            "id": "legendBand",
+            "value": {
+                "choose": {
+                    "parameter": "showLegend"
+                },
+                "then": {
+                    "parameter": "legendHeight"
+                },
+                "otherwise": 0
+            }
+        },
+        {
+            "id": "plotX",
+            "formula": "pad+labelBandLeft"
+        },
+        {
+            "id": "plotY",
+            "formula": "pad+\\frac{labelFont}{2}"
+        },
+        {
+            "id": "plotW",
+            "formula": "\\max\\left(10,w-plotX-pad\\right)"
+        },
+        {
+            "id": "plotH",
+            "formula": "\\max\\left(10,h-plotY-pad-labelBandBottom-legendBand\\right)"
+        },
+        {
+            "id": "plotRight",
+            "formula": "plotX+plotW"
+        },
+        {
+            "id": "plotBottom",
+            "formula": "plotY+plotH"
+        },
+        {
+            "id": "spanX",
+            "formula": "\\max\\left(0.000001,maximumX-minimumX\\right)"
+        },
+        {
+            "id": "spanY",
+            "formula": "\\max\\left(0.000001,maximumY-minimumY\\right)"
+        },
+        {
+            "id": "scaleX",
+            "formula": "\\frac{plotW}{spanX}"
+        },
+        {
+            "id": "scaleY",
+            "formula": "-\\frac{plotH}{spanY}"
+        },
+        {
+            "id": "originX",
+            "formula": "plotX-minimumX\\cdot scaleX"
+        },
+        {
+            "id": "originY",
+            "formula": "plotBottom-minimumY\\cdot scaleY"
+        },
+        {
+            "id": "gap",
+            "formula": "\\max\\left(0.000001,spacing\\right)"
+        },
+        {
+            "id": "elements",
+            "formula": "round\\left(\\frac{spanX}{gap}\\right)+1"
+        },
+        {
+            "id": "budget",
+            "formula": "\\lfloor\\frac{600}{\\max\\left(1,waveCount\\right)}\\rfloor+1"
+        },
+        {
+            "id": "count",
+            "formula": "\\max\\left(2,\\min\\left(\\min\\left(300,round\\left(samples\\right)\\right),\\min\\left(elements,budget\\right)\\right)\\right)"
+        },
+        {
+            "id": "segments",
+            "formula": "count-1"
+        },
+        {
+            "id": "step",
+            "formula": "\\frac{spanX}{segments}"
+        },
+        {
+            "id": "traceSegments",
+            "formula": "waveCount\\cdot segments"
+        },
+        {
+            "id": "playing",
+            "value": {
+                "parameter": "$playing"
+            }
+        },
+        {
+            "id": "cursorOn",
+            "value": {
+                "choose": {
+                    "parameter": "showCursor"
+                },
+                "then": 1,
+                "otherwise": 0
+            }
+        },
+        {
+            "id": "markOn",
+            "value": {
+                "choose": {
+                    "parameter": "showMark"
+                },
+                "then": 1,
+                "otherwise": 0
+            }
+        },
+        {
+            "id": "captureShown",
+            "formula": "\\max\\left(cursorOn,markOn\\right)"
+        },
+        {
+            "id": "hoveringNow",
+            "formula": "cursorOn\\cdot hovering\\cdot\\left(1-playing\\right)"
+        },
+        {
+            "id": "cursorIndex",
+            "formula": "\\frac{hoverX}{gap}+1"
+        },
+        {
+            "id": "deltaValue",
+            "formula": "hoverX-markX"
+        },
+        {
+            "id": "inverseDelta",
+            "fallback": 0,
+            "formula": "\\frac{1}{deltaValue}"
+        },
+        {
+            "id": "deltaShown",
+            "formula": "hoveringNow\\cdot markOn"
+        },
+        {
+            "id": "readingsShown",
+            "value": {
+                "choose": {
+                    "parameter": "showLegend"
+                },
+                "then": {
+                    "parameter": "waveCount"
+                },
+                "otherwise": 0
+            }
+        },
+        {
+            "id": "dotsShown",
+            "formula": "hoveringNow\\cdot waveCount"
+        },
+        {
+            "id": "precision",
+            "value": {
+                "parameter": "$precision"
+            }
+        },
+        {
+            "id": "firstUnit",
+            "fallback": "",
+            "value": {
+                "termUnit": {
+                    "termsRow": "waves",
+                    "row": {
+                        "constant": 0
+                    },
+                    "field": "term"
+                }
+            }
+        },
+        {
+            "id": "legendTop",
+            "formula": "plotBottom+labelBandBottom"
+        },
+        {
+            "id": "swatchLength",
+            "formula": "labelFont\\cdot1.6"
+        },
+        {
+            "id": "labelX",
+            "formula": "plotX+swatchLength+labelFont\\cdot0.6"
+        },
+        {
+            "id": "readoutX",
+            "formula": "plotX+labelFont\\cdot0.5"
+        },
+        {
+            "id": "readoutY",
+            "formula": "plotY+labelFont\\cdot1.2"
+        },
+        {
+            "id": "dotRadius",
+            "formula": "\\max\\left(1.5,labelFont\\cdot0.22\\right)"
+        },
+        {
+            "id": "traceWidth",
+            "value": {
+                "token": "strokeWidth.strong"
+            }
+        },
+        {
+            "id": "hairline",
+            "value": {
+                "token": "strokeWidth.hairline"
+            }
+        },
+        {
+            "id": "radiusLarge",
+            "value": {
+                "token": "radius.large"
+            }
+        },
+        {
+            "id": "radiusSmall",
+            "value": {
+                "token": "radius.small"
+            }
+        },
+        {
+            "id": "dashPattern",
+            "value": {
+                "token": "crosshair.dash"
+            }
+        }
+    ],
+    "root": {
+        "id": "oscilloscope",
+        "type": "group",
+        "children": [
+            {
+                "id": "body",
+                "type": "rect",
+                "bindings": {
+                    "width": {
+                        "parameter": "w"
+                    },
+                    "height": {
+                        "parameter": "h"
+                    },
+                    "cornerRadius": {
+                        "parameter": "radiusLarge"
+                    },
+                    "fill": {
+                        "parameter": "backgroundColor"
+                    },
+                    "stroke": {
+                        "parameter": "borderColor"
+                    }
+                },
+                "properties": {
+                    "x": 0,
+                    "y": 0,
+                    "strokeWidth": 1
+                }
+            },
+            {
+                "id": "plot",
+                "type": "rect",
+                "bindings": {
+                    "x": {
+                        "parameter": "plotX"
+                    },
+                    "y": {
+                        "parameter": "plotY"
+                    },
+                    "width": {
+                        "parameter": "plotW"
+                    },
+                    "height": {
+                        "parameter": "plotH"
+                    },
+                    "cornerRadius": {
+                        "parameter": "radiusSmall"
+                    },
+                    "fill": {
+                        "parameter": "screenColor"
+                    }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "grid",
+                "type": "plot-grid",
+                "when": {
+                    "parameter": "showGrid"
+                },
+                "parameters": {
+                    "x": {
+                        "parameter": "plotX"
+                    },
+                    "y": {
+                        "parameter": "plotY"
+                    },
+                    "width": {
+                        "parameter": "plotW"
+                    },
+                    "height": {
+                        "parameter": "plotH"
+                    },
+                    "minimumX": {
+                        "parameter": "minimumX"
+                    },
+                    "maximumX": {
+                        "parameter": "maximumX"
+                    },
+                    "minimumY": {
+                        "parameter": "minimumY"
+                    },
+                    "maximumY": {
+                        "parameter": "maximumY"
+                    },
+                    "ticksX": {
+                        "parameter": "ticks"
+                    },
+                    "ticksY": {
+                        "parameter": "ticks"
+                    },
+                    "color": {
+                        "parameter": "gridColor"
+                    }
+                }
+            },
+            {
+                "id": "trace",
+                "type": "line",
+                "bindings": {
+                    "x1": {
+                        "formula": "originX+\\left(minimumX+\\left(i-\\lfloor\\frac{i}{segments}\\rfloor\\cdot segments\\right)\\cdot step\\right)\\cdot scaleX",
+                        "inputs": {
+                            "i": {
+                                "parameter": "$index"
+                            }
+                        }
+                    },
+                    "y1": {
+                        "formula": "\\max\\left(plotY,\\min\\left(plotBottom,originY+\\left(v\\right)\\cdot scaleY\\right)\\right)",
+                        "inputs": {
+                            "v": {
+                                "element": {
+                                    "termsRow": "waves",
+                                    "row": {
+                                        "formula": "\\lfloor\\frac{i}{segments}\\rfloor",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "field": "term"
+                                },
+                                "index": {
+                                    "formula": "\\frac{\\left(minimumX+\\left(i-\\lfloor\\frac{i}{segments}\\rfloor\\cdot segments\\right)\\cdot step\\right)}{gap}+1",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "case": {
+                                    "termsRow": "waves",
+                                    "row": {
+                                        "formula": "\\lfloor\\frac{i}{segments}\\rfloor",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "field": "case"
+                                }
+                            }
+                        }
+                    },
+                    "x2": {
+                        "formula": "originX+\\left(minimumX+\\left(\\left(i-\\lfloor\\frac{i}{segments}\\rfloor\\cdot segments\\right)+1\\right)\\cdot step\\right)\\cdot scaleX",
+                        "inputs": {
+                            "i": {
+                                "parameter": "$index"
+                            }
+                        }
+                    },
+                    "y2": {
+                        "formula": "\\max\\left(plotY,\\min\\left(plotBottom,originY+\\left(v\\right)\\cdot scaleY\\right)\\right)",
+                        "inputs": {
+                            "v": {
+                                "element": {
+                                    "termsRow": "waves",
+                                    "row": {
+                                        "formula": "\\lfloor\\frac{i}{segments}\\rfloor",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "field": "term"
+                                },
+                                "index": {
+                                    "formula": "\\frac{\\left(minimumX+\\left(\\left(i-\\lfloor\\frac{i}{segments}\\rfloor\\cdot segments\\right)+1\\right)\\cdot step\\right)}{gap}+1",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "case": {
+                                    "termsRow": "waves",
+                                    "row": {
+                                        "formula": "\\lfloor\\frac{i}{segments}\\rfloor",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "field": "case"
+                                }
+                            }
+                        }
+                    },
+                    "stroke": {
+                        "termsRow": "waves",
+                        "row": {
+                            "formula": "\\lfloor\\frac{i}{segments}\\rfloor",
+                            "inputs": {
+                                "i": {
+                                    "parameter": "$index"
+                                }
+                            }
+                        },
+                        "field": "color"
+                    },
+                    "strokeWidth": {
+                        "parameter": "traceWidth"
+                    }
+                },
+                "properties": {
+                    "strokeLinecap": "round"
+                },
+                "modifiers": [
+                    {
+                        "type": "repeat",
+                        "count": {
+                            "parameter": "traceSegments"
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "axes",
+                "type": "plot-axes",
+                "parameters": {
+                    "x": {
+                        "parameter": "plotX"
+                    },
+                    "y": {
+                        "parameter": "plotY"
+                    },
+                    "width": {
+                        "parameter": "plotW"
+                    },
+                    "height": {
+                        "parameter": "plotH"
+                    },
+                    "minimumX": {
+                        "parameter": "minimumX"
+                    },
+                    "maximumX": {
+                        "parameter": "maximumX"
+                    },
+                    "minimumY": {
+                        "parameter": "minimumY"
+                    },
+                    "maximumY": {
+                        "parameter": "maximumY"
+                    },
+                    "ticksX": {
+                        "parameter": "ticks"
+                    },
+                    "ticksY": {
+                        "parameter": "ticks"
+                    },
+                    "showTicks": {
+                        "parameter": "showTicks"
+                    },
+                    "showLabels": {
+                        "parameter": "showTicks"
+                    },
+                    "showBorder": true,
+                    "fontSize": {
+                        "parameter": "labelFont"
+                    },
+                    "color": {
+                        "parameter": "axisColor"
+                    },
+                    "labelColor": {
+                        "parameter": "foregroundColor"
+                    },
+                    "minimumXProperty": "minimumX",
+                    "maximumXProperty": "maximumX",
+                    "minimumYProperty": "minimumY",
+                    "maximumYProperty": "maximumY"
+                }
+            },
+            {
+                "id": "mark",
+                "type": "line",
+                "when": {
+                    "parameter": "showMark"
+                },
+                "bindings": {
+                    "x1": {
+                        "formula": "\\max\\left(plotX,\\min\\left(plotRight,originX+markX\\cdot scaleX\\right)\\right)"
+                    },
+                    "x2": {
+                        "formula": "\\max\\left(plotX,\\min\\left(plotRight,originX+markX\\cdot scaleX\\right)\\right)"
+                    },
+                    "y1": {
+                        "parameter": "plotY"
+                    },
+                    "y2": {
+                        "parameter": "plotBottom"
+                    },
+                    "stroke": {
+                        "parameter": "cursorColor"
+                    },
+                    "strokeDash": {
+                        "parameter": "dashPattern"
+                    },
+                    "strokeWidth": {
+                        "parameter": "hairline"
+                    }
+                },
+                "properties": {
+                    "strokeLinecap": "butt"
+                }
+            },
+            {
+                "id": "cursor",
+                "type": "plot-crosshair",
+                "when": {
+                    "parameter": "hoveringNow"
+                },
+                "parameters": {
+                    "x": {
+                        "parameter": "plotX"
+                    },
+                    "y": {
+                        "parameter": "plotY"
+                    },
+                    "width": {
+                        "parameter": "plotW"
+                    },
+                    "height": {
+                        "parameter": "plotH"
+                    },
+                    "minimumX": {
+                        "parameter": "minimumX"
+                    },
+                    "maximumX": {
+                        "parameter": "maximumX"
+                    },
+                    "minimumY": {
+                        "parameter": "minimumY"
+                    },
+                    "maximumY": {
+                        "parameter": "maximumY"
+                    },
+                    "valueX": {
+                        "parameter": "hoverX"
+                    },
+                    "valueY": {
+                        "parameter": "hoverY"
+                    },
+                    "digits": {
+                        "parameter": "precision"
+                    },
+                    "yUnit": {
+                        "parameter": "firstUnit"
+                    },
+                    "fontSize": {
+                        "parameter": "labelFont"
+                    },
+                    "color": {
+                        "parameter": "cursorColor"
+                    },
+                    "pointColor": {
+                        "parameter": "cursorColor"
+                    }
+                }
+            },
+            {
+                "id": "reading",
+                "type": "circle",
+                "bindings": {
+                    "centerX": {
+                        "formula": "originX+hoverX\\cdot scaleX"
+                    },
+                    "centerY": {
+                        "formula": "\\max\\left(plotY,\\min\\left(plotBottom,originY+\\left(v\\right)\\cdot scaleY\\right)\\right)",
+                        "inputs": {
+                            "v": {
+                                "element": {
+                                    "termsRow": "waves",
+                                    "row": {
+                                        "parameter": "$index"
+                                    },
+                                    "field": "term"
+                                },
+                                "index": {
+                                    "parameter": "cursorIndex"
+                                },
+                                "case": {
+                                    "termsRow": "waves",
+                                    "row": {
+                                        "parameter": "$index"
+                                    },
+                                    "field": "case"
+                                }
+                            }
+                        }
+                    },
+                    "radius": {
+                        "parameter": "dotRadius"
+                    },
+                    "fill": {
+                        "termsRow": "waves",
+                        "row": {
+                            "parameter": "$index"
+                        },
+                        "field": "color"
+                    }
+                },
+                "properties": {
+                    "stroke": "none"
+                },
+                "modifiers": [
+                    {
+                        "type": "repeat",
+                        "count": {
+                            "parameter": "dotsShown"
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "delta",
+                "type": "text",
+                "when": {
+                    "parameter": "deltaShown"
+                },
+                "bindings": {
+                    "x": {
+                        "parameter": "readoutX"
+                    },
+                    "y": {
+                        "parameter": "readoutY"
+                    },
+                    "text": {
+                        "concat": [
+                            "Δ = ",
+                            {
+                                "format": {
+                                    "parameter": "deltaValue"
+                                },
+                                "digits": {
+                                    "parameter": "precision"
+                                }
+                            }
+                        ]
+                    },
+                    "fontSize": {
+                        "parameter": "labelFont"
+                    },
+                    "fill": {
+                        "parameter": "cursorColor"
+                    }
+                },
+                "properties": {
+                    "textAnchor": "start",
+                    "baseline": "central",
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "inverse-delta",
+                "type": "text",
+                "when": {
+                    "parameter": "deltaShown"
+                },
+                "bindings": {
+                    "x": {
+                        "parameter": "readoutX"
+                    },
+                    "y": {
+                        "formula": "readoutY+lineHeight"
+                    },
+                    "text": {
+                        "concat": [
+                            "1/Δ = ",
+                            {
+                                "format": {
+                                    "parameter": "inverseDelta"
+                                },
+                                "digits": {
+                                    "parameter": "precision"
+                                }
+                            }
+                        ]
+                    },
+                    "fontSize": {
+                        "parameter": "labelFont"
+                    },
+                    "fill": {
+                        "parameter": "cursorColor"
+                    }
+                },
+                "properties": {
+                    "textAnchor": "start",
+                    "baseline": "central",
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "swatch",
+                "type": "line",
+                "bindings": {
+                    "x1": {
+                        "parameter": "plotX"
+                    },
+                    "x2": {
+                        "formula": "plotX+swatchLength"
+                    },
+                    "y1": {
+                        "formula": "legendTop+\\left(i+0.5\\right)\\cdot lineHeight",
+                        "inputs": {
+                            "i": {
+                                "parameter": "$index"
+                            }
+                        }
+                    },
+                    "y2": {
+                        "formula": "legendTop+\\left(i+0.5\\right)\\cdot lineHeight",
+                        "inputs": {
+                            "i": {
+                                "parameter": "$index"
+                            }
+                        }
+                    },
+                    "stroke": {
+                        "termsRow": "waves",
+                        "row": {
+                            "parameter": "$index"
+                        },
+                        "field": "color"
+                    },
+                    "strokeWidth": {
+                        "parameter": "traceWidth"
+                    }
+                },
+                "properties": {
+                    "strokeLinecap": "round"
+                },
+                "modifiers": [
+                    {
+                        "type": "repeat",
+                        "count": {
+                            "parameter": "readingsShown"
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "label",
+                "type": "text",
+                "bindings": {
+                    "x": {
+                        "parameter": "labelX"
+                    },
+                    "y": {
+                        "formula": "legendTop+\\left(i+0.5\\right)\\cdot lineHeight",
+                        "inputs": {
+                            "i": {
+                                "parameter": "$index"
+                            }
+                        }
+                    },
+                    "text": {
+                        "choose": {
+                            "parameter": "hoveringNow"
+                        },
+                        "then": {
+                            "concat": [
+                                {
+                                    "termsRow": "waves",
+                                    "row": {
+                                        "parameter": "$index"
+                                    },
+                                    "field": "term"
+                                },
+                                " = ",
+                                {
+                                    "format": {
+                                        "element": {
+                                            "termsRow": "waves",
+                                            "row": {
+                                                "parameter": "$index"
+                                            },
+                                            "field": "term"
+                                        },
+                                        "index": {
+                                            "parameter": "cursorIndex"
+                                        },
+                                        "case": {
+                                            "termsRow": "waves",
+                                            "row": {
+                                                "parameter": "$index"
+                                            },
+                                            "field": "case"
+                                        }
+                                    },
+                                    "digits": {
+                                        "parameter": "precision"
+                                    }
+                                }
+                            ]
+                        },
+                        "otherwise": {
+                            "termsRow": "waves",
+                            "row": {
+                                "parameter": "$index"
+                            },
+                            "field": "term"
+                        }
+                    },
+                    "unit": {
+                        "choose": {
+                            "parameter": "hoveringNow"
+                        },
+                        "then": {
+                            "termUnit": {
+                                "termsRow": "waves",
+                                "row": {
+                                    "parameter": "$index"
+                                },
+                                "field": "term"
+                            }
+                        },
+                        "otherwise": ""
+                    },
+                    "fontSize": {
+                        "parameter": "labelFont"
+                    },
+                    "fill": {
+                        "termsRow": "waves",
+                        "row": {
+                            "parameter": "$index"
+                        },
+                        "field": "color"
+                    }
+                },
+                "properties": {
+                    "textAnchor": "start",
+                    "baseline": "central",
+                    "stroke": "none"
+                },
+                "modifiers": [
+                    {
+                        "type": "repeat",
+                        "count": {
+                            "parameter": "readingsShown"
+                        }
+                    }
+                ]
+            },
+            {
+                "id": "capture",
+                "type": "rect",
+                "when": {
+                    "parameter": "captureShown"
+                },
+                "bindings": {
+                    "x": {
+                        "parameter": "plotX"
+                    },
+                    "y": {
+                        "parameter": "plotY"
+                    },
+                    "width": {
+                        "parameter": "plotW"
+                    },
+                    "height": {
+                        "parameter": "plotH"
+                    }
+                },
+                "properties": {
+                    "fill": "none",
+                    "stroke": "none"
+                },
+                "behaviours": [
+                    {
+                        "type": "follow-pointer",
+                        "when": {
+                            "parameter": "showCursor"
+                        },
+                        "xParameter": "hoverX",
+                        "yParameter": "hoverY",
+                        "activeParameter": "hovering",
+                        "originX": {
+                            "parameter": "originX"
+                        },
+                        "originY": {
+                            "parameter": "originY"
+                        },
+                        "scaleX": {
+                            "parameter": "scaleX"
+                        },
+                        "scaleY": {
+                            "parameter": "scaleY"
+                        },
+                        "minimumX": {
+                            "parameter": "minimumX"
+                        },
+                        "maximumX": {
+                            "parameter": "maximumX"
+                        },
+                        "minimumY": {
+                            "parameter": "minimumY"
+                        },
+                        "maximumY": {
+                            "parameter": "maximumY"
+                        }
+                    },
+                    {
+                        "type": "clickable",
+                        "when": {
+                            "parameter": "showMark"
+                        },
+                        "property": "markX",
+                        "value": {
+                            "parameter": "hoverX"
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -1,5 +1,5 @@
 class BlockBindings {
-    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "opaque", "termUnit", "element"];
+    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "opaque", "termUnit", "element", "termsRow", "termsCount"];
 
     static isBinding(value) {
         if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -32,6 +32,13 @@ class BlockBindings {
 
     static element(termBinding, indexBinding) {
         return { element: termBinding, index: indexBinding };
+    }
+
+    // One row of a list of terms the reader names for themselves, the way the chart's vertical terms
+    // are named. A row is read by its place among the rows that name something, so the blank row the
+    // editor keeps at the end of the list for the next name is not one of them.
+    static termsRow(parameterId, rowBinding, field = "term") {
+        return { termsRow: parameterId, row: rowBinding, field: field };
     }
 
     // Whether a colour paints anything at all. A part of a drawing is left out by being given no
@@ -202,7 +209,35 @@ class BlockBindings {
             return BlockMemory.count(BlockMemory.read(context.parameters, binding.memoryCount));
         if (kind === "termUnit")
             return this.resolveTermUnit(binding, context, fallbackValue);
+        if (kind === "termsRow")
+            return this.resolveTermsRow(binding, context, fallbackValue);
+        if (kind === "termsCount")
+            return BlockBindings.readNamedTerms(context.parameters, binding.termsCount).length;
         return fallbackValue;
+    }
+
+    // The rows of a list of terms that name something. The editor keeps a blank row at the end for
+    // the next name, so the list a drawing reads is shorter than the list the menu shows, and a
+    // drawing counting the rows it has would otherwise draw one wave too many.
+    static readNamedTerms(parameters, parameterId) {
+        return BlockMemory.read(parameters, parameterId).filter(row => String(row?.term ?? "") !== "");
+    }
+
+    // One field of one row. The colour is the one the row chose, or the one its place in the list is
+    // given — the same colour the swatch beside it in the menu shows, so the trace and its row cannot
+    // disagree about which wave is which.
+    resolveTermsRow(binding, context, fallbackValue) {
+        const rows = BlockBindings.readNamedTerms(context.parameters, binding.termsRow);
+        const index = Math.floor(this.resolveNumber(binding.row, context, NaN));
+        const row = rows[index];
+        if (!row)
+            return fallbackValue;
+        const field = String(binding.field ?? "term");
+        if (field === "color")
+            return String(row.color ?? "") === "" ? Utils.getColorByIndex(index) : context.tokens.resolveValue(String(row.color));
+        if (field === "case")
+            return this.getCaseNumber(row, context);
+        return String(row.term ?? fallbackValue);
     }
 
     // Reads one of the object's own memories: the whole list when nothing else is asked for, the
@@ -449,8 +484,10 @@ class BlockBindings {
         return `${prefix}${numeric.toFixed(digits)}${suffix}`;
     }
 
+    // The case a binding is read in. It is a binding like any other, so a row of a list of terms can
+    // hand the reading the case that row names rather than the one the whole drawing stands in.
     getCaseNumber(binding, context) {
-        const bindingCase = Number(binding.case);
+        const bindingCase = Number(BlockBindings.isBinding(binding.case) ? this.resolve(binding.case, context, NaN) : binding.case);
         if (Number.isFinite(bindingCase) && bindingCase >= 1)
             return Math.floor(bindingCase);
         const contextCase = Number(context?.caseNumber);
@@ -512,6 +549,10 @@ class BlockBindings {
             return { variables: [], parameters: [binding.memory] };
         if (kind === "memoryCount")
             return { variables: [], parameters: [binding.memoryCount] };
+        if (kind === "termsRow")
+            return { variables: [], parameters: [binding.termsRow] };
+        if (kind === "termsCount")
+            return { variables: [], parameters: [binding.termsCount] };
         if (kind === "independent")
             return { variables: [String(this.calculator?.properties?.independent?.name ?? "")].filter(name => name !== ""), parameters: [] };
         if (kind === "element") {

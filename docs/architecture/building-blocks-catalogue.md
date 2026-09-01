@@ -918,6 +918,39 @@ Capabilities: `radial`, `angular`, `reads-model`
 | `bodyColor` | colour | "token:stroke.accent" |  |
 | `orbitColor` | colour | "token:stroke.subtle" |  |
 
+### `oscilloscope` — Oscilloscope
+
+A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.
+
+Capabilities: `reads-model`, `linear`, `textual`, `interaction`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `waves` | terms | [] |  |
+| `spacing` | number | 1 | min 0.000001 |
+| `minimumX` | number | 0 |  |
+| `maximumX` | number | 30 |  |
+| `minimumY` | number | -3 |  |
+| `maximumY` | number | 3 |  |
+| `samples` | number | 200 | min 2, max 300 |
+| `ticks` | number | 5 | min 2, max 11 |
+| `showGrid` | boolean | true |  |
+| `showTicks` | boolean | true |  |
+| `showLegend` | boolean | true |  |
+| `showCursor` | boolean | true |  |
+| `showMark` | boolean | false |  |
+| `markX` | number | 0 |  |
+| `hoverX` | number | 0 |  |
+| `hoverY` | number | 0 |  |
+| `hovering` | number | 0 |  |
+| `backgroundColor` | colour | "token:surface.default" |  |
+| `screenColor` | colour | "token:surface.emphasis" |  |
+| `gridColor` | colour | "token:grid.color" |  |
+| `axisColor` | colour | "token:axis.color" |  |
+| `cursorColor` | colour | "token:stroke.default" |  |
+| `foregroundColor` | colour | "token:axis.labelColor" |  |
+| `borderColor` | colour | "token:stroke.subtle" |  |
+
 ### `piano` — Piano
 
 A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the wave of the chord it is holding.

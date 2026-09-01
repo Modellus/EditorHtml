@@ -14,7 +14,7 @@
     "parameters": [
         { "id": "headingVariable", "label": "Heading", "valueType": "variable", "defaultValue": "0", "category": "model" },
         { "id": "rotationVariable", "label": "Rose", "valueType": "variable", "defaultValue": "0", "category": "model", "unit": "deg", "description": "Turns the rose, its ticks and its labels clockwise. The needle keeps its own heading." },
-        { "id": "pointers", "label": "Pointers", "valueType": "terms", "defaultValue": [], "category": "model", "description": "Directions marked on the rim, one row each: a row points where its angle says, or where the pair it names points — how far east and how far north. An angle is measured from N and grows clockwise, so a marker stands where the tick for its direction stands and turns with the rose the way that tick does." },
+        { "id": "pointers", "label": "Pointers", "valueType": "terms", "defaultValue": [], "category": "model", "pairedField": "secondTerm", "modeField": "mode", "description": "Directions marked on the rim, one row each: a row points where its angle says, or where the pair it names points — how far east and how far north. An angle is measured from N and grows clockwise, so a marker stands where the tick for its direction stands and turns with the rose the way that tick does." },
         { "id": "showDegrees", "label": "Degrees", "valueType": "boolean", "defaultValue": false, "category": "display" },
         { "id": "faceColor", "label": "Face colour", "valueType": "colour", "defaultValue": "token:surface.default", "category": "style" },
         { "id": "borderColor", "label": "Border colour", "valueType": "colour", "defaultValue": "token:stroke.default", "category": "style" },

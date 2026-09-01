@@ -201,8 +201,7 @@ var ComponentShapeToolbarMixin = {
             this.setPropertyCommand(parameter.id, []);
         this.refreshModelData();
     },
-    // The key reads the model the object is bound to, which is the terms it names one by one. A list
-    // of terms is as long as the reader made it, so it is read in the menu rather than on the key. A
+    // The key reads the model the object is bound to, which is the terms it names one by one. A
     // row read as a pair names two, and shows both; read as a single value it shows the one.
     getComponentModelButtonProperties() {
         const properties = [];
@@ -213,16 +212,32 @@ var ComponentShapeToolbarMixin = {
         }
         return properties;
     },
+    // A list is as long as the reader made it, so the key names the first of its terms and counts the
+    // rest, the way the chart's own key reads the terms it plots.
+    getComponentModelButtonListTerms() {
+        const terms = [];
+        for (const parameter of this.getParametersByCategory(["model"]).filter(entry => entry.valueType === "terms"))
+            terms.push(...BlockBindings.readNamedTerms(this.properties, parameter.id).map(row => row.term));
+        return terms;
+    },
+    // An object that has been given no term yet has nothing to write on the key, and a key with
+    // nothing on it cannot be found: it wears the faded word instead, which is what says the object
+    // is waiting to be handed a term.
     renderComponentModelButtonTemplate(element) {
-        const modelProperties = this.getComponentModelButtonProperties();
-        if (modelProperties.length === 0) {
+        const listedTerms = this.getComponentModelButtonListTerms();
+        const markup = this.getComponentButtonTermValues(this.getComponentModelButtonProperties())
+            .concat(listedTerms.slice(0, 1))
+            .map(value => this.createNameButtonTermMarkup(this.formatTermForDisplay(value), value))
+            .filter(part => part !== "")
+            .join(`<i class="fa-light fa-grip-lines-vertical mdl-name-btn-separator"></i>`);
+        if (markup === "") {
             element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Model</span></span>`;
             return;
         }
-        element.innerHTML = this.getComponentButtonTermValues(modelProperties)
-            .map(value => this.createNameButtonTermMarkup(this.formatTermForDisplay(value), value))
-            .filter(markup => markup !== "")
-            .join(`<i class="fa-light fa-grip-lines-vertical mdl-name-btn-separator"></i>`);
+        const remaining = Math.max(0, listedTerms.length - 1);
+        element.innerHTML = remaining > 0
+            ? `${markup}<span class="mdl-name-btn-term"><span class="mdl-name-btn-extra">+${remaining}</span></span>`
+            : markup;
     },
     // Rows that have all been handed the same term by something other than themselves are reading
     // one thing between them, so the key names it once. Rows that each chose their own are listed
@@ -430,33 +445,49 @@ var ComponentShapeToolbarMixin = {
     },
     // A parameter that takes as many terms as the reader gives it is edited the way the chart edits
     // the terms it plots: a row per term, dragged into the order they are drawn in, with a colour of
-    // its own. A row may name a second term as well, and the pair is read as a pair of values.
+    // its own. A list whose rows name a direction says so — `pairedField` is where the second half of
+    // the pair is kept and `modeField` where the choice between an angle and an orientation is — and
+    // then each row carries both. A list that names neither is a plain list of terms, and its rows
+    // hold nothing but the term, the case it is read in and the colour it is drawn in.
     createComponentTermsControl(parameter) {
         this.normalizeComponentTerms(parameter.id);
-        this._componentTermsControls[parameter.id] = TermControl.createShapeTermsCollectionControl(this, parameter.id, {
+        this._componentTermsControls[parameter.id] = TermControl.createShapeTermsCollectionControl(this, parameter.id, Object.assign({
             hostClassName: "shape-terms-control component-terms-control",
             includeColor: true,
             allowNumericTermReference: true,
             termEditor: { acceptCustomValue: true },
-            extraTerm: { field: "secondTerm" },
-            mode: { field: "mode", items: TermControl.directionModes, pairValue: TermControl.directionPairValue },
             colorSelection: {
                 getValue: (item, index) => this.getComponentTermColor(item, index)
             },
-            normalizeItem: (sourceItem, normalizedItem) => this.normalizeComponentTermItem(sourceItem, normalizedItem),
+            normalizeItem: (sourceItem, normalizedItem) => this.normalizeComponentTermItem(parameter, sourceItem, normalizedItem),
             lock: null
-        });
+        }, this.getComponentTermsDirectionOptions(parameter)));
         return this._componentTermsControls[parameter.id].createHost();
     },
+    getComponentTermsDirectionOptions(parameter) {
+        const pairedField = String(parameter.pairedField ?? "");
+        const modeField = String(parameter.modeField ?? "");
+        if (pairedField === "")
+            return {};
+        return {
+            extraTerm: { field: pairedField },
+            mode: { field: modeField, items: TermControl.directionModes, pairValue: TermControl.directionPairValue }
+        };
+    },
     normalizeComponentTerms(parameterId) {
+        const parameter = this.getComponentParameter(parameterId);
         TermControl.normalizeShapeTermsCollection(this, parameterId, {
             includeColor: true,
-            normalizeItem: (sourceItem, normalizedItem) => this.normalizeComponentTermItem(sourceItem, normalizedItem)
+            normalizeItem: (sourceItem, normalizedItem) => this.normalizeComponentTermItem(parameter, sourceItem, normalizedItem)
         });
     },
-    normalizeComponentTermItem(sourceItem, normalizedItem) {
-        normalizedItem.secondTerm = TermControl.normalizeTermValue(sourceItem?.secondTerm);
-        normalizedItem.mode = TermControl.normalizeTermsCollectionMode(sourceItem?.mode, normalizedItem.secondTerm, { items: TermControl.directionModes, pairValue: TermControl.directionPairValue });
+    normalizeComponentTermItem(parameter, sourceItem, normalizedItem) {
+        const pairedField = String(parameter.pairedField ?? "");
+        const modeField = String(parameter.modeField ?? "");
+        if (pairedField === "")
+            return;
+        normalizedItem[pairedField] = TermControl.normalizeTermValue(sourceItem?.[pairedField]);
+        normalizedItem[modeField] = TermControl.normalizeTermsCollectionMode(sourceItem?.[modeField], normalizedItem[pairedField], { items: TermControl.directionModes, pairValue: TermControl.directionPairValue });
     },
     // A row that chose no colour is shown in the colour it is drawn in, which is the one its place in
     // the list is given.
