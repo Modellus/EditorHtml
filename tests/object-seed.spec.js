@@ -73,7 +73,7 @@ test.describe('seeding the bundled objects', () => {
         await openHarness(page);
         const seeding = await seed(page, readDefinitions(), { write: false });
         expect(seeding.results.map(result => result.type)).toEqual([
-            'calculator', 'circular-gauge', 'clock', 'compass', 'mechanical-wave', 'mouse-tracker', 'orbit-system', 'rotating-vector', 'speedometer', 'steering-wheel', 'thermometer'
+            'calculator', 'circular-gauge', 'clock', 'compass', 'mechanical-wave', 'mouse-tracker', 'orbit-system', 'piano', 'rotating-vector', 'speedometer', 'steering-wheel', 'thermometer'
         ]);
         expect(seeding.results.every(result => result.action === 'create')).toBe(true);
         expect(state.created).toHaveLength(0);
@@ -84,8 +84,8 @@ test.describe('seeding the bundled objects', () => {
         await stubObjectsApi(page, state);
         await openHarness(page);
         const seeding = await seed(page, readDefinitions(), { write: true });
-        expect(state.created).toHaveLength(11);
-        expect(seeding.results.map(result => result.id)).toEqual(['id-1', 'id-2', 'id-3', 'id-4', 'id-5', 'id-6', 'id-7', 'id-8', 'id-9', 'id-10', 'id-11']);
+        expect(state.created).toHaveLength(12);
+        expect(seeding.results.map(result => result.id)).toEqual(['id-1', 'id-2', 'id-3', 'id-4', 'id-5', 'id-6', 'id-7', 'id-8', 'id-9', 'id-10', 'id-11', 'id-12']);
         const clockBody = state.created[seeding.results.findIndex(result => result.type === 'clock')].body;
         expect(clockBody).toContain('name="title"');
         expect(clockBody).toContain('Clock');
@@ -101,7 +101,7 @@ test.describe('seeding the bundled objects', () => {
         const compass = seeding.results.find(result => result.type === 'compass');
         expect(compass.action).toBe('skip');
         expect(compass.id).toBe('obj-1');
-        expect(state.created).toHaveLength(10);
+        expect(state.created).toHaveLength(11);
         expect(state.updated).toHaveLength(0);
     });
 
@@ -126,7 +126,7 @@ test.describe('seeding the bundled objects', () => {
         const compass = seeding.results.find(result => result.type === 'compass');
         expect(compass.action).toBe('failed');
         expect(compass.error).toContain('that one is not allowed');
-        expect(state.created).toHaveLength(10);
+        expect(state.created).toHaveLength(11);
     });
 
     // A refused update says why: the catalogue answers with the reason it refused, and a seed run
@@ -142,7 +142,7 @@ test.describe('seeding the bundled objects', () => {
         expect(compass.action).toBe('failed');
         expect(compass.error).toContain('400');
         expect(compass.error).toContain('is not a registered building block');
-        expect(seeding.results.filter(result => result.action === 'create')).toHaveLength(10);
+        expect(seeding.results.filter(result => result.action === 'create')).toHaveLength(11);
     });
 
     test('a catalogue that cannot be listed stops a write but not a dry run', async ({ page }) => {
@@ -152,7 +152,7 @@ test.describe('seeding the bundled objects', () => {
         await openHarness(page);
         const dryRun = await seed(page, readDefinitions(), { write: false });
         expect(dryRun.catalogueProblem).toContain('Fetch objects failed (500)');
-        expect(dryRun.results).toHaveLength(11);
+        expect(dryRun.results).toHaveLength(12);
         const writeAttempt = await page.evaluate(async input => {
             const seeder = window.createObjectSeeder(input.apiBase, 'test-token');
             try {

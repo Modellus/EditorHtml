@@ -57,6 +57,9 @@ class BuildingBlockRegistry {
             supportedBindings: registration.supportedBindings ?? null,
             supportedBehaviours: registration.supportedBehaviours ?? null,
             capabilities: registration.capabilities ?? [],
+            // What a component publishes back to the model: the wave it draws, as a name defined over
+            // element indices. Nothing is published unless the definition says so.
+            indexedSource: registration.indexedSource ?? null,
             aliases: registration.aliases ?? [],
             agentAccessible: registration.agentAccessible !== false,
             deprecated: registration.deprecated === true,

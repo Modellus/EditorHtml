@@ -351,6 +351,80 @@ class BlockBindings {
         return result;
     }
 
+    // A definition that works a wave out for itself hands it to the model as a name defined over
+    // element indices: the formula is the displacement of one oscillator, and the index it is written
+    // over is bound here the way the model binds the index of `y\left[i\right]=...`.
+    //
+    // The row the engine is building is what the formula is read against, not the iteration on
+    // screen. A wave is asked for while a row is being worked out — a term superposing two of them is
+    // read exactly then — so the independent, and any parameter naming a term of the model, are taken
+    // from that row; everything else is a value of the object's own and is read once, here, because
+    // an object republishes whenever one of its parameters is edited.
+    buildElementResolver(declaration, context) {
+        const branch = this.parseLatex(declaration?.formula ?? "");
+        if (!branch)
+            return null;
+        const caseNumber = this.getCaseNumber(declaration, context);
+        const indexName = String(declaration.index ?? "n");
+        const independentName = String(this.calculator?.properties?.independent?.name ?? "");
+        const terms = this.buildElementTerms(declaration, context);
+        return (index, values) => {
+            let total = 0;
+            for (const term of terms) {
+                const frame = Object.assign({}, values, term.frame, { [indexName]: index });
+                for (const input of term.inputs)
+                    frame[input.name] = input.readsIndependent ? Number(values[independentName]) : this.coerceElementInput(input.value, values, caseNumber);
+                const result = Number(branch.calculate(frame));
+                if (!Number.isFinite(result))
+                    return NaN;
+                total += result;
+            }
+            return total;
+        };
+    }
+
+    // What the element is the sum of. A declaration that names no sum is one source, read once; one
+    // that sums over an index is that many, and each of them resolves its own inputs against the
+    // value the index has for it. They are worked out here rather than per element, because what the
+    // sources are is settled by the object's parameters and only the element moves between calls —
+    // which is what keeps a wave of twenty sources read over two hundred samples a loop rather than
+    // four thousand bindings.
+    buildElementTerms(declaration, context) {
+        const over = declaration?.over;
+        if (!over)
+            return [{ frame: {}, inputs: this.resolveElementInputs(declaration, context) }];
+        const overIndexName = String(over.index ?? "k");
+        const count = Math.floor(this.resolveNumber(over.count, context, 0));
+        const terms = [];
+        for (let position = 1; position <= count; position++) {
+            const frame = { [overIndexName]: position };
+            const overContext = Object.assign({}, context, { parameters: Object.assign({}, context.parameters, frame) });
+            terms.push({ frame: frame, inputs: this.resolveElementInputs(declaration, overContext) });
+        }
+        return terms;
+    }
+
+    resolveElementInputs(declaration, context) {
+        const inputs = [];
+        for (const [name, binding] of Object.entries(declaration.inputs ?? {})) {
+            const readsIndependent = BlockBindings.getKind(binding) === "independent" && binding.independent !== "name";
+            inputs.push({ name: name, readsIndependent: readsIndependent, value: readsIndependent ? null : this.resolve(binding, context, NaN) });
+        }
+        return inputs;
+    }
+
+    // A parameter pointing at a term reads it from the row in hand, so a wave whose amplitude is a
+    // term of the model is the amplitude that row holds rather than the one on screen. A row that
+    // does not carry the term — it is read before that row exists — falls back to the model's
+    // current value, which is what every other binding reads.
+    coerceElementInput(value, values, caseNumber) {
+        if (typeof value === "boolean")
+            return value ? 1 : 0;
+        if (typeof value === "string" && Number.isFinite(Number(values[value])))
+            return Number(values[value]);
+        return this.coerceFormulaInput(value, caseNumber);
+    }
+
     coerceFormulaInput(value, caseNumber) {
         if (typeof value === "number")
             return value;

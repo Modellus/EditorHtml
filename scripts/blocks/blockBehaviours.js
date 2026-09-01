@@ -180,6 +180,23 @@ var BlockBehaviours = {
     });
 
     registry.register({
+        type: "play-note",
+        category: "behaviour",
+        displayName: "Play a note",
+        description: "A key of an instrument: it sounds its own pitch for as long as it is held, and stops when it is let go. Several keys sound together, whether they are held by several fingers or by several computer keys at once, and sliding across them plays them in turn. The object reports the notes it is holding into a parameter of its own, so its drawing can show which keys are down and what it publishes can be worked out from the chord. Nothing is written down: a file remembers no note left sounding.",
+        tags: ["interaction", "press", "hold", "sound", "note", "music", "keyboard"],
+        capabilities: ["interaction", "sound"],
+        inputSchema: {
+            properties: {
+                frequency: { valueType: "number", defaultValue: 0, minimum: 0, label: "Frequency", unit: "Hz", description: "The pitch this key sounds. A key with no pitch is silent." },
+                note: { valueType: "number", defaultValue: 0, label: "Note", description: "What the object calls this key in the list of the notes it is holding, so its drawing can find the key a note belongs to." },
+                keyCode: { valueType: "string", defaultValue: "", label: "Computer key", bindable: false, description: "The physical key of the computer keyboard that plays this one, written as the code the browser reports it under — KeyZ, Digit2. Left empty the key answers the pointer alone. Letters typed into a field stay letters." },
+                notesParameter: { valueType: "string", defaultValue: "", label: "Notes parameter", bindable: false, description: "Parameter the notes being held are reported in, as a row per note carrying its pitch and its number." }
+            }
+        }
+    });
+
+    registry.register({
         type: "keep-time",
         category: "behaviour",
         displayName: "Keep time",

@@ -39,7 +39,11 @@ test.describe('Mechanical wave object', () => {
         await setupBoard(page);
         const labels = await page.evaluate(() => BlockRegistry.get('mechanical-wave').parameters.map(parameter => parameter.label));
         expect(labels).toEqual(expect.arrayContaining(['Amplitude', 'Frequency', 'Speed', 'Initial phase', 'Oscillators', 'Orientation']));
-        expect(labels.filter(label => /^wave\b/i.test(label))).toEqual([]);
+        // The row holding the term the wave is read from and published under is the wave itself, so
+        // it is called that. What the object never does is prefix its own kind onto the other rows —
+        // a wave's amplitude is "Amplitude", never "Wave amplitude".
+        expect(labels).toContain('Wave');
+        expect(labels.filter(label => /^wave\s+\S/i.test(label))).toEqual([]);
     });
 
     test('draws one oscillator per element and follows the count', async ({ page }) => {
@@ -70,16 +74,35 @@ test.describe('Mechanical wave object', () => {
         expect(await countOf(page, 'rect')).toBe(11);
     });
 
+    // An oscillator is pushed from where it stands: it enters the wave at rest and swings from there,
+    // so nothing has moved before the run starts and the chain is drawn flat, and each oscillator the
+    // wave reaches joins it from the line rather than appearing at the crest.
+    test('the chain stands at rest until the run starts, the first oscillator included', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, { elements: 11, wavefront: true, speed: '5', length: 20 });
+        const readHeights = () => page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy'))));
+        const atRest = await readHeights();
+        const equilibrium = Number(await page.evaluate(() => shell.board.shapes.getByName('Wave').properties.height)) / 2;
+        for (const height of atRest)
+            expect(height).toBeCloseTo(equilibrium, 6);
+    });
+
     test('the wavefront holds the far oscillators at rest until the wave arrives', async ({ page }) => {
         await setupBoard(page);
         await addWave(page, { elements: 11, wavefront: true, speed: '5', length: 20 });
-        const atRest = await page.evaluate(() => {
-            const nodes = Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle'));
-            return nodes.map(node => Number(node.getAttribute('cy')));
+        // Far enough in for the near oscillators to be swinging and the far ones still untouched:
+        // the wave covers one spacing every length/(gaps*speed) of the independent.
+        await page.evaluate(() => shell.board.calculator.play());
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 5, null, { timeout: 20000 });
+        const moving = await page.evaluate(() => {
+            shell.board.calculator.pause();
+            const shape = shell.board.shapes.getByName('Wave');
+            shape.draw();
+            return Array.from(shape.contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy')));
         });
-        const equilibrium = atRest[atRest.length - 1];
-        expect(atRest[0]).not.toBeCloseTo(equilibrium, 1);
-        expect(atRest[9]).toBeCloseTo(equilibrium, 6);
+        const equilibrium = Number(await page.evaluate(() => shell.board.shapes.getByName('Wave').properties.height)) / 2;
+        expect(moving[0]).not.toBeCloseTo(equilibrium, 1);
+        expect(moving[9]).toBeCloseTo(equilibrium, 6);
     });
 
     test('turning the wavefront off sets the whole chain oscillating at once', async ({ page }) => {
@@ -124,7 +147,7 @@ test.describe('Mechanical wave object', () => {
             modellus.shape.addExpression('Eq');
             shell.board.shapes.getByName('Eq').properties.expression = 'y\\left[i\\right]=2\\cdot\\cos\\left(i\\right)';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, displacement: 'y', length: 20 });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20 });
             shell.reset();
             shape.draw();
         });
@@ -149,7 +172,7 @@ test.describe('Mechanical wave object', () => {
             shell.board.shapes.getByName('Eq').properties.expression =
                 'A=2\\\\k=\\frac{\\pi}{6}\\\\w=1\\\\forward\\left[i\\right]=A\\cdot\\cos\\left(k\\cdot i-w\\cdot t\\right)\\\\back\\left[i\\right]=A\\cdot\\cos\\left(k\\cdot i+w\\cdot t\\right)\\\\standing=forward+back';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 220, elements: 9, displacement: 'standing', length: 20 });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 220, elements: 9, wave: 'standing', length: 20 });
             shell.reset();
         });
         await page.evaluate(() => shell.board.calculator.play());
@@ -173,6 +196,270 @@ test.describe('Mechanical wave object', () => {
         });
         expect(swing.node).toBeLessThan(1);
         expect(swing.antinode).toBeGreaterThan(50);
+    });
+
+    test('publishes its own wave under a name the model leaves free', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
+            shell.reset();
+            shape.draw();
+        });
+        const published = await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            const values = calculator.system.getIteration(calculator.getIteration(), 1);
+            return {
+                indexed: calculator.isIndexedSource('y'),
+                isTerm: calculator.isTerm('y'),
+                termNames: calculator.getTermsNames(),
+                elements: [1, 2, 3].map(index => calculator.system.getElementValue('y', index, values)),
+                independent: values[calculator.properties.independent.name]
+            };
+        });
+        expect(published.indexed).toBe(true);
+        // A wave the model cannot name is of no use in it: the name has to be a term, so the graphs,
+        // the tables and every list of terms offer it like any other.
+        expect(published.isTerm).toBe(true);
+        expect(published.termNames).toContain('y');
+        for (let element = 1; element <= 3; element++) {
+            const delay = (element - 1) * 20 / (8 * 5);
+            expect(published.elements[element - 1]).toBeCloseTo(2 * Math.sin(2 * Math.PI * 0.5 * (published.independent - delay)), 6);
+        }
+    });
+
+    test('the model reads the published wave at the row it is working on', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Eq');
+            shell.board.shapes.getByName('Eq').properties.expression = 'z=y\\left[3\\right]';
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
+            shell.reset();
+        });
+        await page.evaluate(() => shell.board.calculator.play());
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 20, null, { timeout: 20000 });
+        const readings = await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            calculator.pause();
+            const independentName = calculator.properties.independent.name;
+            return [5, 10, 20].map(iteration => {
+                const values = calculator.system.getIteration(iteration, 1);
+                return { t: values[independentName], z: values.z };
+            });
+        });
+        for (const reading of readings)
+            expect(reading.z).toBeCloseTo(2 * Math.sin(2 * Math.PI * 0.5 * (reading.t - 2 * 20 / (8 * 5))), 6);
+    });
+
+    test('the wave the model defines is left as the model defines it', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Eq');
+            shell.board.shapes.getByName('Eq').properties.expression = 'y\\left[i\\right]=7';
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', amplitude: '2', length: 20 });
+            shell.reset();
+        });
+        const element = await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            return calculator.system.getElementValue('y', 3, calculator.system.getIteration(calculator.getIteration(), 1));
+        });
+        expect(element).toBe(7);
+    });
+
+    test('a term the model already holds is left standing when the object stops publishing', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Eq');
+            shell.board.shapes.getByName('Eq').properties.expression = 'k=3\\\\y=k';
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'k', length: 20 });
+            shell.reset();
+        });
+        expect(await page.evaluate(() => shell.board.calculator.isIndexedSource('k'))).toBe(false);
+        expect(await page.evaluate(() => shell.board.calculator.isTerm('k'))).toBe(true);
+        await page.evaluate(() => shell.board.shapes.getByName('Wave').remove());
+        expect(await page.evaluate(() => ({ isTerm: shell.board.calculator.isTerm('k'), value: shell.board.calculator.getByName('k', 1) }))).toEqual({ isTerm: true, value: 3 });
+    });
+
+    test('a name the model works out for itself is read rather than written over', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Eq');
+            shell.board.shapes.getByName('Eq').properties.expression = 'y=4';
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20 });
+            shell.reset();
+        });
+        expect(await page.evaluate(() => shell.board.calculator.isIndexedSource('y'))).toBe(false);
+    });
+
+    test('two published waves superpose into a standing wave the model holds', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Eq');
+            shell.board.shapes.getByName('Eq').properties.expression = 'standing=forward+back';
+            for (const [name, speed] of [['Forward', '5'], ['Back', '-5']]) {
+                const shape = shell.commands.addComponent('mechanical-wave', `Wave ${name}`);
+                shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: name.toLowerCase(), length: 20, amplitude: '2', frequency: '0.5', speed: speed, phase: '0', wavefront: false });
+            }
+            shell.reset();
+        });
+        const sums = await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            const values = calculator.system.getIteration(calculator.getIteration(), 1);
+            return [1, 3, 5].map(index => ({
+                forward: calculator.system.getElementValue('forward', index, values),
+                back: calculator.system.getElementValue('back', index, values),
+                standing: calculator.system.getElementValue('standing', index, values)
+            }));
+        });
+        for (const sum of sums) {
+            expect(Number.isFinite(sum.standing)).toBe(true);
+            expect(sum.standing).toBeCloseTo(sum.forward + sum.back, 6);
+        }
+    });
+
+    test('the wave it publishes is the wave it drew before, oscillator for oscillator', async ({ page }) => {
+        await setupBoard(page);
+        const parameters = { x: 80, y: 80, width: 600, height: 200, elements: 11, length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: true };
+        const heights = await page.evaluate(parameters => {
+            const read = name => Array.from(shell.board.shapes.getByName(name).contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy')));
+            const kept = shell.commands.addComponent('mechanical-wave', 'Kept');
+            kept.setProperties(Object.assign({}, parameters, { wave: '' }));
+            const published = shell.commands.addComponent('mechanical-wave', 'Published');
+            published.setProperties(Object.assign({}, parameters, { wave: 'y' }));
+            shell.reset();
+            kept.draw();
+            published.draw();
+            return { kept: read('Kept'), published: read('Published') };
+        }, parameters);
+        expect(heights.published.length).toBe(11);
+        for (let index = 0; index < heights.kept.length; index++)
+            expect(heights.published[index]).toBeCloseTo(heights.kept[index], 6);
+    });
+
+    test('editing a parameter republishes the wave, and removing the object takes it back', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
+            shell.reset();
+        });
+        const readElement = () => page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            return calculator.system.getElementValue('y', 1, calculator.system.getIteration(calculator.getIteration(), 1));
+        });
+        const before = await readElement();
+        await page.evaluate(() => shell.board.shapes.getByName('Wave').setProperty('amplitude', '6'));
+        expect(await readElement()).toBeCloseTo(before * 3, 6);
+        await page.evaluate(() => shell.board.shapes.getByName('Wave').setProperty('wave', 'w'));
+        expect(await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            return { y: calculator.isIndexedSource('y'), w: calculator.isIndexedSource('w'), names: calculator.getTermsNames() };
+        })).toEqual({ y: false, w: true, names: expect.arrayContaining(['w']) });
+        expect(await page.evaluate(() => shell.board.calculator.isTerm('y'))).toBe(false);
+        await page.evaluate(() => shell.board.shapes.getByName('Wave').remove());
+        expect(await page.evaluate(() => ({
+            indexed: shell.board.calculator.isIndexedSource('w'),
+            isTerm: shell.board.calculator.isTerm('w')
+        }))).toEqual({ indexed: false, isTerm: false });
+    });
+
+    test('repainting an oscillator leaves the run it has already worked through standing', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, elements: 9, wave: 'y', length: 20 });
+            shell.reset();
+        });
+        await page.evaluate(() => shell.board.calculator.play());
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 20, null, { timeout: 20000 });
+        const worked = await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            calculator.pause();
+            const before = calculator.getLastCalculatedIteration();
+            shell.board.shapes.getByName('Wave').setProperty('waveColor', '#ff0000');
+            return { before: before, after: calculator.getLastCalculatedIteration() };
+        });
+        expect(worked.after).toBe(worked.before);
+    });
+
+    // The name is written in the object, not in the model, so the row that takes it has to invite a
+    // name the model has never held — the list below it can only offer the terms that already exist.
+    test('a name of the reader\'s own can be written into the wave row from the toolbar', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 400, height: 160 });
+            shape.draw();
+            shell.board.selection.select(shape);
+        });
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.locator('.mdl-shape-overlay-popup .dx-dropdownbox').first().click();
+        const customValue = page.locator('.mdl-term-tree-custom-input input').first();
+        await expect(customValue).toHaveAttribute('placeholder', 'Name a new term');
+        await customValue.fill('y');
+        await customValue.press('Enter');
+        await expect.poll(() => page.evaluate(() => shell.board.calculator.isIndexedSource('y'))).toBe(true);
+        const written = await page.evaluate(() => ({
+            wave: shell.board.shapes.getByName('Wave').properties.wave,
+            isTerm: shell.board.calculator.isTerm('y'),
+            marked: document.querySelectorAll('.mdl-missing-term').length
+        }));
+        // A name the object defines is not a term that has gone missing, so nothing is marked as one.
+        expect(written).toEqual({ wave: 'y', isTerm: true, marked: 0 });
+    });
+
+    // A row that governs nothing is not offered: reading a wave the model defines leaves the object
+    // nothing to shape, while a wave of its own — kept to itself or published — is shaped by all four.
+    test('the settings that shape a wave are offered only where they shape one', async ({ page }) => {
+        await setupBoard(page);
+        const offered = () => page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wave');
+            return shape.getParametersByCategory(['model', 'display']).map(parameter => parameter.label);
+        });
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Eq');
+            shell.board.shapes.getByName('Eq').properties.expression = 'm\\left[i\\right]=\\cos\\left(i\\right)';
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 400, height: 160 });
+            shell.reset();
+        });
+        const shaping = ['Amplitude', 'Frequency', 'Speed', 'Initial phase', 'Wavefront'];
+        expect(await offered()).toEqual(expect.arrayContaining(shaping));
+
+        // A name of the object's own: it works the wave out and publishes it, so it still shapes it.
+        await page.evaluate(() => shell.board.shapes.getByName('Wave').setProperty('wave', 'own'));
+        expect(await page.evaluate(() => shell.board.calculator.isIndexedSource('own'))).toBe(true);
+        expect(await offered()).toEqual(expect.arrayContaining(shaping));
+
+        // A name the model defines over element indices: the object only draws what it is given.
+        await page.evaluate(() => shell.board.shapes.getByName('Wave').setProperty('wave', 'm'));
+        const readingTheModel = await offered();
+        for (const label of shaping)
+            expect(readingTheModel).not.toContain(label);
+        expect(readingTheModel).toEqual(expect.arrayContaining(['Wave', 'Oscillators', 'Orientation']));
+    });
+
+    // A file saved before the row was renamed still names its term, and reopening it is not the moment
+    // to lose it.
+    test('a wave saved under the old parameter name keeps the term it was reading', async ({ page }) => {
+        await setupBoard(page);
+        const carried = await page.evaluate(() => {
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 400, height: 160 });
+            const saved = JSON.parse(JSON.stringify(shape.serialize()));
+            delete saved.properties.wave;
+            saved.properties.displacement = 'y';
+            // Reopened the way a file is, through the board rather than shape by shape.
+            shell.board.deserialize([saved]);
+            shell.reset();
+            const restored = shell.board.shapes.getByName('Wave');
+            return { wave: restored.properties.wave, old: restored.properties.displacement, indexed: shell.board.calculator.isIndexedSource('y') };
+        });
+        expect(carried).toEqual({ wave: 'y', old: undefined, indexed: true });
     });
 
     test('survives a serialize and deserialize round trip', async ({ page }) => {

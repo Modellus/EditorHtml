@@ -18,6 +18,8 @@ class Calculator extends EventTarget {
         this.userInputsByCase = {};
         /** @type {Map<string, { names: string[], values: number[][] }>} */
         this.dataSources = new Map();
+        /** @type {Map<string, { name: string, resolver: (index: number, values: { [name: string]: number }) => number }>} */
+        this.indexedSources = new Map();
         this.setDefaults();
     }
 
@@ -178,6 +180,7 @@ class Calculator extends EventTarget {
     reset() {
         this.system.clear();
         this.dataSources.clear();
+        this.indexedSources.clear();
         this.system.independent = this.properties.independent.name;
         this.system.setInitialIndependent(this.properties.independent.start);
         this.system.step = this.properties.independent.step;
@@ -238,6 +241,56 @@ class Calculator extends EventTarget {
 
     isIndexedSource(name) {
         return this.system.isIndexedSource(name);
+    }
+
+    // A name a shape stands for many values under — the oscillators of a wave an object works out
+    // for itself — is held here under the id of what publishes it, the way a data source is. The
+    // system drops every registration when the model is cleared, so what publishes registers again
+    // whenever the model is reset, and this map is emptied with it. Publishing a different name
+    // under the same id takes the old name back out of the model rather than leaving both standing.
+    setIndexedSource(sourceId, name, resolver) {
+        const published = this.indexedSources.get(sourceId);
+        if (published && published.name !== name)
+            this.withdrawIndexedSource(published);
+        if (String(name) === "" || typeof resolver !== "function") {
+            this.indexedSources.delete(sourceId);
+            return published !== undefined;
+        }
+        // A wave has to be a term of the model to be of any use in it: the parser adds the name as a
+        // parameter before it registers `y\left[i\right]=...`, and a name an object publishes is
+        // added the same way, so everything that works from the list of terms — the graphs, the units,
+        // the tables, the tools the agent writes models with — offers it like any other name.
+        // Whether the term was this source's to add is settled the first time it publishes under the
+        // name: republishing under the same name finds the term it added itself standing there, and
+        // would otherwise read it as the model's and leave it behind.
+        const addedTerm = published?.name === String(name) ? published.addedTerm : !this.system.isTerm(String(name));
+        this.system.addTermByName(String(name), Modellus.TermType.PARAMETER);
+        this.indexedSources.set(sourceId, { name: String(name), resolver: resolver, addedTerm: addedTerm });
+        this.system.registerIndexedSource(String(name), resolver);
+        return true;
+    }
+
+    removeIndexedSource(sourceId) {
+        const published = this.indexedSources.get(sourceId);
+        if (!published)
+            return false;
+        this.withdrawIndexedSource(published);
+        this.indexedSources.delete(sourceId);
+        return true;
+    }
+
+    // A name taken back out of the model takes the term that was added for it with it. A term that
+    // was already there is left standing: it is the model's own, or another object is publishing
+    // under it, and neither is this one's to remove.
+    withdrawIndexedSource(published) {
+        this.system.removeIndexedSource(published.name);
+        if (!published.addedTerm || this.system.isIndexedSource(published.name) || this.system.getExpressionTree(published.name))
+            return;
+        this.system.removeTermCompletely(published.name);
+    }
+
+    getIndexedSourceName(sourceId) {
+        return this.indexedSources.get(sourceId)?.name ?? "";
     }
 
     applyDataSources() {

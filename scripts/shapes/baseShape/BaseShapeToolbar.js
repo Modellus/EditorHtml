@@ -385,6 +385,7 @@ var BaseShapeToolbarMixin = {
         const extraTermProperty = options.extraTermProperty ?? "";
         return this.createTermSelectorControl(mockFormInstance, termProperty, caseProperty, options.allowTypedValue === true, displayModeProperty, showVisibilityToggle, {
             exactTypedValue: options.allowTypedValue === true,
+            customValuePlaceholder: options.customValuePlaceholder ?? "",
             disabled: options.disabled === true,
             blank: options.blank === true,
             colorProperty: options.colorProperty ?? "",

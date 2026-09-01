@@ -86,6 +86,76 @@ class ShapeAudio {
     }
 }
 
+// A note the board makes for itself, where a clip would be the wrong instrument: a struck string is
+// not a single tone — it sounds its own pitch loudest, a handful of harmonics above it, and it fades
+// from the moment the hammer leaves it. One oscillator carrying that harmonic recipe, under an
+// envelope that decays while the key is still held, is what makes the ear hear an instrument rather
+// than a test tone. It goes through the board's one audio graph, like every clip does.
+class ShapeTone {
+    static harmonicGains = [1, 0.42, 0.28, 0.16, 0.09, 0.05, 0.03, 0.02];
+    static attackSeconds = 0.006;
+    static decayTimeConstant = 0.3;
+    static sustainRatio = 0.32;
+    static releaseSeconds = 0.35;
+    // Ten fingers down at once still have to leave the sum inside the graph's headroom.
+    static peakGain = 0.16;
+    static periodicWave = null;
+    static periodicWaveContext = null;
+
+    static getPeriodicWave(context) {
+        if (ShapeTone.periodicWaveContext === context && ShapeTone.periodicWave)
+            return ShapeTone.periodicWave;
+        const real = new Float32Array(ShapeTone.harmonicGains.length + 1);
+        const imaginary = new Float32Array(ShapeTone.harmonicGains.length + 1);
+        for (let harmonic = 0; harmonic < ShapeTone.harmonicGains.length; harmonic++)
+            imaginary[harmonic + 1] = ShapeTone.harmonicGains[harmonic];
+        ShapeTone.periodicWaveContext = context;
+        ShapeTone.periodicWave = context.createPeriodicWave(real, imaginary);
+        return ShapeTone.periodicWave;
+    }
+
+    constructor() {
+        this.oscillator = null;
+        this.gainNode = null;
+    }
+
+    start(frequency) {
+        const context = ShapeAudio.getContext();
+        const masterGain = ShapeAudio.getMasterGain();
+        if (!context || !masterGain || this.oscillator || !(frequency > 0))
+            return;
+        const now = context.currentTime;
+        this.gainNode = context.createGain();
+        this.gainNode.gain.setValueAtTime(0, now);
+        this.gainNode.gain.linearRampToValueAtTime(ShapeTone.peakGain, now + ShapeTone.attackSeconds);
+        this.gainNode.gain.setTargetAtTime(ShapeTone.peakGain * ShapeTone.sustainRatio, now + ShapeTone.attackSeconds, ShapeTone.decayTimeConstant);
+        this.gainNode.connect(masterGain);
+        this.oscillator = context.createOscillator();
+        this.oscillator.setPeriodicWave(ShapeTone.getPeriodicWave(context));
+        this.oscillator.frequency.value = frequency;
+        this.oscillator.connect(this.gainNode);
+        this.oscillator.start(now);
+    }
+
+    // Letting go damps the string rather than cutting it off, so the note is ramped down and the
+    // oscillator is only taken out of the graph once it has gone quiet.
+    stop() {
+        if (!this.oscillator)
+            return;
+        const context = ShapeAudio.getContext();
+        const oscillator = this.oscillator;
+        const gainNode = this.gainNode;
+        this.oscillator = null;
+        this.gainNode = null;
+        const now = context.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+        gainNode.gain.linearRampToValueAtTime(0, now + ShapeTone.releaseSeconds);
+        oscillator.onended = () => gainNode.disconnect();
+        oscillator.stop(now + ShapeTone.releaseSeconds);
+    }
+}
+
 // One clip sounding for one shape. The value moves on every iteration of the model, and a fresh
 // voice on each of them would pile the clip on top of itself; so the first move starts it and the
 // moves after it steer the voice already sounding. The clip is heard afresh once it has run out,

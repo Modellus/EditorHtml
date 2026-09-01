@@ -1,11 +1,19 @@
 class ComponentShape extends BaseShape {
     static defaultComponentType = "analogue-clock";
+    // The instrument the computer keyboard plays when more than one is on the board: the last one
+    // touched keeps the keys until another is selected or played.
+    static noteKeyboardTarget = null;
 
     constructor(board, parent, id) {
         super(board, null, id);
         this._axisTickDrag = new AxisTickDrag();
         this._componentAudioPlayers = {};
         this._componentAudioValues = {};
+        this._noteHolders = new Map();
+        this._noteVoices = new Map();
+        this._notePointers = new Map();
+        this._noteKeys = new Map();
+        this._notesParameter = "";
     }
 
     // The choice that says what the value does to a clip is not a parameter a definition declares:
@@ -110,7 +118,7 @@ class ComponentShape extends BaseShape {
             this.backfillComponentProperties();
         if (!properties.definition && Object.keys(properties).some(name => this.isComponentParameter(name)))
             BlockObjects.markEdited(this.properties.definition);
-        if (Object.keys(properties).some(name => this.isMemoryDataProperty(name)))
+        if (Object.keys(properties).some(name => this.isMemoryDataProperty(name) || this.isIndexedSourceProperty(name)))
             this.refreshModelData();
     }
 
@@ -122,6 +130,8 @@ class ComponentShape extends BaseShape {
         // through once, when the recording ends.
         if (this.isMemoryDataProperty(name))
             this.publishModelData();
+        else if (this.isIndexedSourceProperty(name))
+            this.refreshModelData();
     }
 
     // A shape saved before a parameter was added carries no value for it, and the definition it was
@@ -135,7 +145,23 @@ class ComponentShape extends BaseShape {
         const missing = BlockObjects.getMissingInstancePropertyDefaults(componentType, this.properties, this.properties.preset ?? "standard");
         if (Object.keys(missing).length > 0)
             Object.assign(this.properties, missing);
+        this.carryRenamedComponentProperties();
         this.backfillEmptyComponentValues();
+    }
+
+    // A parameter that has been renamed says what it used to be called, and a file saved before the
+    // rename is read under the old name and written back under the new one — the same courtesy the
+    // registry pays a block that has been renamed. A model is not reopened to be told that the term
+    // its wave was reading no longer exists.
+    carryRenamedComponentProperties() {
+        for (const parameter of BlockObjects.getComponentParameters(this.getComponentType())) {
+            const previousId = String(parameter.previousId ?? "");
+            if (previousId === "" || this.properties[previousId] === undefined)
+                continue;
+            if (String(this.properties[parameter.id] ?? "") === "")
+                this.properties[parameter.id] = this.properties[previousId];
+            delete this.properties[previousId];
+        }
     }
 
     // A row naming no term holds the number itself, so one saved holding nothing at all is given the
@@ -211,9 +237,9 @@ class ComponentShape extends BaseShape {
         const character = this.getComponentCharacterValues();
         const range = this.getAxisRangeValues();
         const resting = this.getOrientationRestingValues();
-        if (!character && !this._pointerValues && !this._keptTimeValues && !range && !resting)
+        if (!character && !this._pointerValues && !this._keptTimeValues && !this._noteValues && !range && !resting)
             return this.properties;
-        return Object.assign({}, this.properties, character, this._pointerValues, this._keptTimeValues, range, resting);
+        return Object.assign({}, this.properties, character, this._pointerValues, this._keptTimeValues, this._noteValues, range, resting);
     }
 
     // A pair at rest points nowhere: both halves are zero, and the angle worked out from them is
@@ -483,9 +509,28 @@ class ComponentShape extends BaseShape {
 
     isComponentConditionMet(condition) {
         const value = this.properties[condition.parameter];
+        // A condition may ask what the model makes of the name a row holds rather than what the row
+        // holds. A wave the model works out for itself leaves the object nothing to work out: the
+        // rows that would have shaped one are not the object's to offer, so they are left out.
+        if (condition.modelDefines !== undefined)
+            return this.modelDefinesTerm(String(value ?? "")) === (condition.modelDefines !== false);
         if (condition.equals === undefined)
             return BlockBindings.isTruthy(value);
         return String(value ?? "") === String(condition.equals);
+    }
+
+    // A name the model works out for itself: one it assigns, one it defines over element indices, or
+    // one a column of measurements stands under. A name this object publishes is the object's own
+    // and not the model's, and a name the model has never held is nobody's.
+    modelDefinesTerm(name) {
+        if (!this.namesTerm(name))
+            return false;
+        const calculator = this.board.calculator;
+        if (calculator.getIndexedSourceName(this.getIndexedSourceId()) === name)
+            return false;
+        if (calculator.isIndexedSource(name) || !calculator.isEditable(name))
+            return true;
+        return calculator.system.getTerm(name)?.type === Modellus.TermType.PRELOADED;
     }
 
     getTermEntryLabelPosition(entry) {
@@ -548,7 +593,12 @@ class ComponentShape extends BaseShape {
             this._lastInteractionState = interactionState;
             this.contentGroup._blockMarkupSignature = null;
         }
-        BlockRenderer.render(this.contentGroup, this.lastCompilation.nodes, this);
+        // Which computer key plays which note is read off the keys as they are attached, so a
+        // drawing that was not rewritten keeps the mapping it already had rather than losing it.
+        const attachedNoteKeys = this._noteKeys;
+        this._noteKeys = new Map();
+        if (!BlockRenderer.render(this.contentGroup, this.lastCompilation.nodes, this))
+            this._noteKeys = attachedNoteKeys;
     }
 
     tick() {
@@ -573,6 +623,8 @@ class ComponentShape extends BaseShape {
             this.attachTrackPointerBehaviour(element, behaviour.input);
         if (behaviour.type === "drag-axis-tick")
             this.attachAxisTickDragBehaviour(element, behaviour.input);
+        if (behaviour.type === "play-note")
+            this.attachPlayNoteBehaviour(element, behaviour.input);
         if (behaviour.type === "follow-pointer")
             this.attachFollowPointerBehaviour(element, behaviour.input);
         if (behaviour.type === "keep-time")
@@ -730,9 +782,196 @@ class ComponentShape extends BaseShape {
 
     onRemoved() {
         super.onRemoved();
+        // An object taken off the board takes the wave it published with it, so a name it stood for
+        // stops answering rather than going on drawing from an object that is no longer there.
+        if (this.board.calculator.removeIndexedSource(this.getIndexedSourceId()))
+            this.board.calculator.refreshDataSources();
         this.stopKeepingTime();
+        this.removeNoteListeners();
+        for (const note of Array.from(this._noteVoices.keys()))
+            this.stopNoteVoice(note);
+        this._noteHolders.clear();
+        this._notePointers.clear();
+        if (ComponentShape.noteKeyboardTarget === this)
+            ComponentShape.noteKeyboardTarget = null;
         for (const player of Object.values(this._componentAudioPlayers))
             player.stop();
+    }
+
+    // A key of an instrument sounds while it is held and stops when it is let go, so nothing about it
+    // is a click: the press starts a voice and the release damps it. Several keys sound together, and
+    // a key held by a finger and by a computer key at once only stops when the last of them lets go.
+    // Nothing is written down — the notes are handed to the next drawing and forgotten — so playing
+    // leaves no edit, no undo and no dirty file.
+    attachPlayNoteBehaviour(element, input) {
+        this._notesParameter = String(input.notesParameter ?? "");
+        if (!this.isInteractable() || this.isLocked())
+            return;
+        if (String(input.keyCode ?? "") !== "")
+            this._noteKeys.set(String(input.keyCode), input);
+        this.ensureNoteListeners();
+        element.setAttribute("pointer-events", "all");
+        element.style.cursor = "pointer";
+        element.addEventListener("pointerdown", event => this.onPlayNotePointerDown(event, input));
+        element.addEventListener("pointerenter", event => this.onPlayNotePointerEnter(event, input));
+    }
+
+    ensureNoteListeners() {
+        if (this._noteKeyDownListener)
+            return;
+        this._noteKeyDownListener = event => this.onNoteKeyDown(event);
+        this._noteKeyUpListener = event => this.onNoteKeyUp(event);
+        this._notePointerReleaseListener = event => this.setPointerNote(event.pointerId, null);
+        this._noteBlurListener = () => this.releaseAllNotes();
+        window.addEventListener("keydown", this._noteKeyDownListener);
+        window.addEventListener("keyup", this._noteKeyUpListener);
+        window.addEventListener("pointerup", this._notePointerReleaseListener);
+        window.addEventListener("pointercancel", this._notePointerReleaseListener);
+        window.addEventListener("blur", this._noteBlurListener);
+    }
+
+    removeNoteListeners() {
+        if (!this._noteKeyDownListener)
+            return;
+        window.removeEventListener("keydown", this._noteKeyDownListener);
+        window.removeEventListener("keyup", this._noteKeyUpListener);
+        window.removeEventListener("pointerup", this._notePointerReleaseListener);
+        window.removeEventListener("pointercancel", this._notePointerReleaseListener);
+        window.removeEventListener("blur", this._noteBlurListener);
+        this._noteKeyDownListener = null;
+    }
+
+    // Typing is typing: a name being written into a term box, an expression being edited, a search
+    // being filled in are all letters meant for the field holding the caret, never notes.
+    static isNoteTypingTarget() {
+        const active = document.activeElement;
+        if (!active)
+            return false;
+        if (active.isContentEditable)
+            return true;
+        return ["INPUT", "TEXTAREA", "SELECT", "MATH-FIELD"].includes(active.tagName);
+    }
+
+    // Which instrument the letters reach: the one being edited, else the one last played, else the
+    // only one there is. A board carrying several of them, none of them chosen, is not played blind.
+    static getNoteKeyboardTarget(board) {
+        const players = board.shapes.shapes.filter(shape => shape._noteKeys?.size > 0);
+        if (players.length === 0)
+            return null;
+        if (players.includes(board.selection.selectedShape))
+            return board.selection.selectedShape;
+        if (players.includes(ComponentShape.noteKeyboardTarget))
+            return ComponentShape.noteKeyboardTarget;
+        return players.length === 1 ? players[0] : null;
+    }
+
+    onNoteKeyDown(event) {
+        if (event.repeat || event.ctrlKey || event.metaKey || event.altKey)
+            return;
+        if (ComponentShape.isNoteTypingTarget())
+            return;
+        const input = this._noteKeys.get(event.code);
+        if (!input)
+            return;
+        if (ComponentShape.getNoteKeyboardTarget(this.board) !== this)
+            return;
+        event.preventDefault();
+        this.pressNote(`key:${event.code}`, input);
+    }
+
+    // A key that went down on this object comes up on it too, whatever has the keyboard by then, so
+    // selecting something else mid-chord cannot leave a note sounding for ever.
+    onNoteKeyUp(event) {
+        const input = this._noteKeys.get(event.code);
+        if (input)
+            this.releaseNote(`key:${event.code}`, Number(input.note));
+    }
+
+    onPlayNotePointerDown(event, input) {
+        event.preventDefault();
+        ComponentShape.noteKeyboardTarget = this;
+        this.selectFromGrab();
+        this.setPointerNote(event.pointerId, input);
+    }
+
+    // Sliding off one key and onto the next is a glissando: a finger sounds whichever key it is over,
+    // one at a time, and each finger on the keyboard sounds its own.
+    onPlayNotePointerEnter(event, input) {
+        if (this._notePointers.has(event.pointerId))
+            this.setPointerNote(event.pointerId, input);
+    }
+
+    setPointerNote(pointerId, input) {
+        const previous = this._notePointers.get(pointerId);
+        const note = input === null ? null : Number(input.note);
+        if (previous === note)
+            return;
+        if (previous !== undefined) {
+            this._notePointers.delete(pointerId);
+            this.releaseNote(`pointer:${pointerId}`, previous);
+        }
+        if (input === null)
+            return;
+        this._notePointers.set(pointerId, note);
+        this.pressNote(`pointer:${pointerId}`, input);
+    }
+
+    pressNote(holder, input) {
+        const note = Number(input.note);
+        const held = this._noteHolders.get(note);
+        if (held) {
+            held.holders.add(holder);
+            return;
+        }
+        this._noteHolders.set(note, { frequency: Number(input.frequency), holders: new Set([holder]) });
+        const voice = new ShapeTone();
+        this._noteVoices.set(note, voice);
+        voice.start(Number(input.frequency));
+        this.onHeldNotesChanged();
+    }
+
+    releaseNote(holder, note) {
+        const held = this._noteHolders.get(note);
+        if (!held || !held.holders.delete(holder) || held.holders.size > 0)
+            return;
+        this._noteHolders.delete(note);
+        this.stopNoteVoice(note);
+        this.onHeldNotesChanged();
+    }
+
+    releaseAllNotes() {
+        if (this._noteHolders.size === 0)
+            return;
+        this._notePointers.clear();
+        for (const note of Array.from(this._noteHolders.keys())) {
+            this._noteHolders.delete(note);
+            this.stopNoteVoice(note);
+        }
+        this.onHeldNotesChanged();
+    }
+
+    stopNoteVoice(note) {
+        const voice = this._noteVoices.get(note);
+        if (!voice)
+            return;
+        this._noteVoices.delete(note);
+        voice.stop();
+    }
+
+    getHeldNoteRows() {
+        return Array.from(this._noteHolders.entries())
+            .sort((first, second) => first[0] - second[0])
+            .map(([note, held]) => BlockMemory.createRow("", held.frequency, note));
+    }
+
+    // The chord is what the object is holding now, so the drawing is worked out again and so is
+    // whatever it publishes from it. The model is worked through where it stands rather than reset:
+    // a note pressed mid-run is a different wave from here on, not a different model.
+    onHeldNotesChanged() {
+        this._noteValues = this._notesParameter === "" ? null : { [this._notesParameter]: this.getHeldNoteRows() };
+        if (this.publishIndexedSource())
+            this.board.calculator.calculate();
+        this.board.markDirty(this);
     }
 
     // Where the pointer is, in the units the drawing is scaled in. It is answered while the model is
@@ -1097,13 +1336,75 @@ class ComponentShape extends BaseShape {
     }
 
     publishModelData() {
-        let feedsModel = false;
+        let feedsModel = this.publishIndexedSource();
         for (const parameter of this.getMemoryParameters()) {
             const series = this.buildMemorySeries(parameter);
             this.board.calculator.setDataSource(this.getMemorySourceId(parameter.id), series.names, series.values);
             feedsModel = feedsModel || series.names.length > 0;
         }
         return feedsModel;
+    }
+
+    // A definition saying its drawing is a wave can hand that wave to the model rather than keeping
+    // it to itself: the name the reader wrote in the parameter that would otherwise point at a term
+    // becomes a name defined over element indices, so the wave can be plotted, read one oscillator at
+    // a time, and superposed with another. The object goes on drawing what it publishes, because the
+    // drawing reads the name like any other.
+    getIndexedSourceDeclaration() {
+        return this.getComponentRegistration()?.indexedSource ?? null;
+    }
+
+    // Whether this parameter is the one the object publishes its wave under, which is what makes a
+    // name the model does not hold yet a reasonable thing to write in it.
+    publishesParameter(parameterId) {
+        return String(this.getIndexedSourceDeclaration()?.name?.parameter ?? "") === String(parameterId);
+    }
+
+    getIndexedSourceId() {
+        return `elements:${this.id}`;
+    }
+
+    // The model has the last word on a name it works out itself: a term it assigns, one it already
+    // defines over element indices, and a column of measurements are all read rather than written
+    // over. A row standing at a plain number names nothing to publish under.
+    canPublishIndexedSource(name) {
+        return this.namesTerm(name) && !this.modelDefinesTerm(name);
+    }
+
+    publishIndexedSource() {
+        const declaration = this.getIndexedSourceDeclaration();
+        const sourceId = this.getIndexedSourceId();
+        if (!declaration)
+            return this.board.calculator.removeIndexedSource(sourceId);
+        const context = this.getCompilationContext();
+        const bindings = this.getComponentCompiler().bindings;
+        const name = String(bindings.resolve(declaration.name, context, "") ?? "").trim();
+        if (!this.canPublishIndexedSource(name))
+            return this.board.calculator.setIndexedSource(sourceId, "", null);
+        return this.board.calculator.setIndexedSource(sourceId, name, bindings.buildElementResolver(declaration, context));
+    }
+
+    // The wave an object publishes is worked out from its parameters, so editing one of them is the
+    // model holding a different wave and everything reading it is worked through again. Only the
+    // parameters the wave is worked out from count: a colour is not one of them, and a run is not
+    // thrown away to repaint an oscillator.
+    getIndexedSourceParameters() {
+        const componentType = this.getComponentType();
+        if (this._indexedSourceParameters?.type === componentType)
+            return this._indexedSourceParameters.names;
+        const declaration = this.getIndexedSourceDeclaration();
+        const bindings = this.getComponentCompiler().bindings;
+        const names = declaration
+            ? bindings.getBindingDependencies(declaration).parameters
+                .concat(bindings.getBindingDependencies(declaration.name).parameters)
+                .concat(bindings.getBindingDependencies(declaration.over?.count).parameters)
+            : [];
+        this._indexedSourceParameters = { type: componentType, names: names };
+        return names;
+    }
+
+    isIndexedSourceProperty(name) {
+        return this.getIndexedSourceParameters().includes(name);
     }
 
     // The editing path: the model is holding different measurements now, so it works them through

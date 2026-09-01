@@ -31,6 +31,12 @@ class BlockDefinitionLoader {
         const scope = BlockDefinitionLoader.buildScope(document);
         const locals = BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.locals ?? []), scope);
         const root = BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.root), scope);
+        // What the object hands back to the model is bound here too, so the wave it publishes reads
+        // the same parameters its drawing does rather than a scope of its own — with the index it
+        // sums over added to that scope, since inside the declaration it is a name like any other.
+        const indexedSource = document.indexedSource
+            ? BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.indexedSource), BlockDefinitionLoader.buildIndexedScope(document, scope))
+            : null;
         BlockDefinitionLoader.documents.set(document.type, BlockMigrations.clone(document));
         return registry.register({
             type: document.type,
@@ -44,6 +50,7 @@ class BlockDefinitionLoader {
             aliases: document.aliases ?? [],
             parameters: (document.parameters ?? []).map(parameter => BlockDefinitionLoader.normalizeParameter(parameter)),
             agentAccessible: document.agentAccessible !== false,
+            indexedSource: indexedSource,
             create: (parameters, context) => {
                 BlockDefinitionLoader.applyLocals(locals, parameters, context);
                 return BlockDefinitionLoader.pruneNode(BlockMigrations.clone(root), context);
@@ -62,6 +69,15 @@ class BlockDefinitionLoader {
         for (const local of document.locals ?? [])
             scope[local.id] = { parameter: local.id };
         return scope;
+    }
+
+    // A declaration summing over an index reads that index in its own formulas, so it is supplied
+    // like a parameter rather than falling through to a model term of that name.
+    static buildIndexedScope(document, scope) {
+        const overIndex = String(document.indexedSource?.over?.index ?? "");
+        if (overIndex === "")
+            return scope;
+        return Object.assign({}, scope, { [overIndex]: { parameter: overIndex } });
     }
 
     // The names a formula reads, found lexically: the four functions spelled in plain letters go
@@ -192,6 +208,27 @@ class BlockDefinitionLoader {
         }
         if (document.root)
             BlockDefinitionLoader.findUnknownNames(document.root, declared, "root", problems);
+        // The index a published wave is written over is a name of the declaration's own, bound by it
+        // the way an assignment binds the index of `y\left[i\right]=...`, so it is declared here
+        // rather than being reported as a name the definition never supplies.
+        if (document.indexedSource) {
+            const indexName = String(document.indexedSource.index ?? "");
+            if (indexName === "")
+                problems.push("An indexed source needs the name of the index it is written over.");
+            if (typeof document.indexedSource.formula !== "string")
+                problems.push("An indexed source needs a formula for the value of one element.");
+            if (document.indexedSource.name === undefined)
+                problems.push("An indexed source needs a binding saying which term it publishes.");
+            // An element that is the sum of many sources says what it sums over and how many of them
+            // there are; the index it sums over is bound by the declaration, like the element's own.
+            const over = document.indexedSource.over;
+            const overIndex = String(over?.index ?? "");
+            if (over && overIndex === "")
+                problems.push("A summed indexed source needs the name of the index it sums over.");
+            if (over && over.count === undefined)
+                problems.push("A summed indexed source needs a binding saying how many sources it sums.");
+            BlockDefinitionLoader.findUnknownNames(document.indexedSource, new Set([...declared, indexName, overIndex]), "indexedSource", problems);
+        }
         return problems;
     }
 }

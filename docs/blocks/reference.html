@@ -474,7 +474,7 @@
         </table>
         <h2 id="behaviours">Behaviours</h2>
         <p>What the reader can do to a node, and what that writes. Listed on the node under <code>behaviours</code>.</p>
-        <p class="block-index"><a href="#block-clickable">clickable</a> <a href="#block-drag-angle">drag-angle</a> <a href="#block-drag-axis-tick">drag-axis-tick</a> <a href="#block-drag-rotate">drag-rotate</a> <a href="#block-draggable">draggable</a> <a href="#block-follow-pointer">follow-pointer</a> <a href="#block-forget">forget</a> <a href="#block-hoverable">hoverable</a> <a href="#block-keep-time">keep-time</a> <a href="#block-press-and-slide">press-and-slide</a> <a href="#block-remember">remember</a> <a href="#block-resizable">resizable</a> <a href="#block-respond-to-simulation">respond-to-simulation</a> <a href="#block-rotatable">rotatable</a> <a href="#block-selectable">selectable</a> <a href="#block-tooltip">tooltip</a> <a href="#block-track-pointer">track-pointer</a></p>
+        <p class="block-index"><a href="#block-clickable">clickable</a> <a href="#block-drag-angle">drag-angle</a> <a href="#block-drag-axis-tick">drag-axis-tick</a> <a href="#block-drag-rotate">drag-rotate</a> <a href="#block-draggable">draggable</a> <a href="#block-follow-pointer">follow-pointer</a> <a href="#block-forget">forget</a> <a href="#block-hoverable">hoverable</a> <a href="#block-keep-time">keep-time</a> <a href="#block-play-note">play-note</a> <a href="#block-press-and-slide">press-and-slide</a> <a href="#block-remember">remember</a> <a href="#block-resizable">resizable</a> <a href="#block-respond-to-simulation">respond-to-simulation</a> <a href="#block-rotatable">rotatable</a> <a href="#block-selectable">selectable</a> <a href="#block-tooltip">tooltip</a> <a href="#block-track-pointer">track-pointer</a></p>
         <h3 id="block-clickable"><code>clickable</code> — Clickable</h3>
         <p>Writes a value into a model variable or into a component parameter when the node is clicked. The value is a binding like any other, so a key can write what the model or the object itself currently holds rather than only a constant.</p>
         <p class="block-meta">Capabilities: <code>interaction</code> <code>writes-model</code></p>
@@ -601,6 +601,18 @@
                 <tr><td><code>intervalMs</code></td><td>number</td><td><code>33</code></td><td>min 10, max 1000</td></tr>
             </tbody>
         </table>
+        <h3 id="block-play-note"><code>play-note</code> — Play a note</h3>
+        <p>A key of an instrument: it sounds its own pitch for as long as it is held, and stops when it is let go. Several keys sound together, whether they are held by several fingers or by several computer keys at once, and sliding across them plays them in turn. The object reports the notes it is holding into a parameter of its own, so its drawing can show which keys are down and what it publishes can be worked out from the chord. Nothing is written down: a file remembers no note left sounding.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>sound</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>frequency</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
+                <tr><td><code>note</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>keyCode</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>notesParameter</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+            </tbody>
+        </table>
         <h3 id="block-press-and-slide"><code>press-and-slide</code> — Press and slide</h3>
         <p>A control the reader holds down: pressing keeps the value where it is, sliding the pointer up raises it and down lowers it, by however far it travelled, and letting go lets the value fall back to its resting value a step at a time. It is what a pedal or a throttle needs — nothing is written by pressing alone, and the whole gesture, the fall back included, is one edit.</p>
         <p class="block-meta">Capabilities: <code>interaction</code> <code>linear</code> <code>writes-model</code></p>
@@ -684,7 +696,7 @@
         </table>
         <h2 id="components">Components</h2>
         <p>Ready-made assemblies. A node names one as its <code>type</code> and sets these under <code>parameters</code>.</p>
-        <p class="block-index"><a href="#block-calculator">calculator</a> <a href="#block-circular-gauge">circular-gauge</a> <a href="#block-clock">clock</a> <a href="#block-compass">compass</a> <a href="#block-dial-face">dial-face</a> <a href="#block-key-cap">key-cap</a> <a href="#block-label-ring">label-ring</a> <a href="#block-mechanical-wave">mechanical-wave</a> <a href="#block-memory-list">memory-list</a> <a href="#block-memory-trace">memory-trace</a> <a href="#block-mouse-tracker">mouse-tracker</a> <a href="#block-orbit-system">orbit-system</a> <a href="#block-plot-axes">plot-axes</a> <a href="#block-plot-crosshair">plot-crosshair</a> <a href="#block-plot-grid">plot-grid</a> <a href="#block-pointer-hand">pointer-hand</a> <a href="#block-pointer-ring">pointer-ring</a> <a href="#block-rotating-vector">rotating-vector</a> <a href="#block-seven-segment-display">seven-segment-display</a> <a href="#block-speedometer">speedometer</a> <a href="#block-steering-wheel">steering-wheel</a> <a href="#block-thermometer">thermometer</a> <a href="#block-tick-ring">tick-ring</a></p>
+        <p class="block-index"><a href="#block-calculator">calculator</a> <a href="#block-circular-gauge">circular-gauge</a> <a href="#block-clock">clock</a> <a href="#block-compass">compass</a> <a href="#block-dial-face">dial-face</a> <a href="#block-key-cap">key-cap</a> <a href="#block-label-ring">label-ring</a> <a href="#block-mechanical-wave">mechanical-wave</a> <a href="#block-memory-list">memory-list</a> <a href="#block-memory-trace">memory-trace</a> <a href="#block-mouse-tracker">mouse-tracker</a> <a href="#block-orbit-system">orbit-system</a> <a href="#block-piano">piano</a> <a href="#block-piano-keyboard">piano-keyboard</a> <a href="#block-plot-axes">plot-axes</a> <a href="#block-plot-crosshair">plot-crosshair</a> <a href="#block-plot-grid">plot-grid</a> <a href="#block-pointer-hand">pointer-hand</a> <a href="#block-pointer-ring">pointer-ring</a> <a href="#block-rotating-vector">rotating-vector</a> <a href="#block-seven-segment-display">seven-segment-display</a> <a href="#block-speedometer">speedometer</a> <a href="#block-steering-wheel">steering-wheel</a> <a href="#block-thermometer">thermometer</a> <a href="#block-tick-ring">tick-ring</a></p>
         <h3 id="block-calculator"><code>calculator</code> — Calculator</h3>
         <p>Calculator whose working is held by the object itself: four functions on a narrow one, and a scientific pad of powers, roots, trigonometry and logarithms beside the digits once it is wide enough to hold one. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.</p>
         <p class="block-meta">Capabilities: <code>interaction</code> <code>textual</code> <code>reads-model</code> <code>writes-model</code> <code>memory</code></p>
@@ -851,11 +863,11 @@
         </table>
         <h3 id="block-mechanical-wave"><code>mechanical-wave</code> — Mechanical wave</h3>
         <p>A mechanical wave drawn as a chain of oscillators, each receiving the disturbance with the delay of its distance from the source.</p>
-        <p class="block-meta">Capabilities: <code>reads-model</code> <code>oscillation</code></p>
+        <p class="block-meta">Capabilities: <code>reads-model</code> <code>writes-model</code> <code>oscillation</code></p>
         <table class="docs-table">
             <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
             <tbody>
-                <tr><td><code>displacement</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>wave</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>amplitude</code></td><td>variable</td><td><code>"2"</code></td><td></td></tr>
                 <tr><td><code>frequency</code></td><td>variable</td><td><code>"0.5"</code></td><td></td></tr>
                 <tr><td><code>speed</code></td><td>variable</td><td><code>"5"</code></td><td></td></tr>
@@ -974,6 +986,43 @@
                 <tr><td><code>starColor</code></td><td>colour</td><td><code>"#f08c02"</code></td><td></td></tr>
                 <tr><td><code>bodyColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
                 <tr><td><code>orbitColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-piano"><code>piano</code> — Piano</h3>
+        <p>A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the wave of the chord it is holding.</p>
+        <p class="block-meta">Capabilities: <code>writes-model</code> <code>interaction</code> <code>sound</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>wave</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>amplitude</code></td><td>variable</td><td><code>"1"</code></td><td></td></tr>
+                <tr><td><code>samples</code></td><td>number</td><td><code>30</code></td><td>min 2, max 2000</td></tr>
+                <tr><td><code>duration</code></td><td>number</td><td><code>0.02</code></td><td>min 0.001</td></tr>
+                <tr><td><code>firstOctave</code></td><td>number</td><td><code>4</code></td><td>min 0, max 8</td></tr>
+                <tr><td><code>octaves</code></td><td>number</td><td><code>2</code></td><td>min 1, max 4</td></tr>
+                <tr><td><code>notes</code></td><td>object</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>whiteColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>blackColor</code></td><td>colour</td><td><code>"token:stroke.strong"</code></td><td></td></tr>
+                <tr><td><code>pressedColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-piano-keyboard"><code>piano-keyboard</code> — Piano keyboard</h3>
+        <p>A run of piano keys, drawn and tuned from the note each one carries: the naturals share the width between them and the sharps ride over the seams. Every key sounds its own pitch while it is held, by pointer or by the computer key that plays it, and the keys that are down are drawn lit. Nothing is written on a key: a keyboard is read by where a key sits, not by a letter painted on it.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>sound</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>width</code></td><td>number</td><td><code>420</code></td><td>min 1</td></tr>
+                <tr><td><code>height</code></td><td>number</td><td><code>120</code></td><td>min 1</td></tr>
+                <tr><td><code>firstOctave</code></td><td>number</td><td><code>4</code></td><td>min 0, max 8</td></tr>
+                <tr><td><code>octaves</code></td><td>number</td><td><code>2</code></td><td>min 1, max 4</td></tr>
+                <tr><td><code>notes</code></td><td>object</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>notesParameter</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>whiteColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>blackColor</code></td><td>colour</td><td><code>"token:stroke.strong"</code></td><td></td></tr>
+                <tr><td><code>pressedColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
             </tbody>
         </table>
         <h3 id="block-plot-axes"><code>plot-axes</code> — Plot axes</h3>

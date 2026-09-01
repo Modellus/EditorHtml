@@ -6047,6 +6047,7 @@ BlockDefinitionLoader.registerAll([
         ],
         "capabilities": [
             "reads-model",
+            "writes-model",
             "oscillation"
         ],
         "preview": {
@@ -6057,12 +6058,13 @@ BlockDefinitionLoader.registerAll([
         },
         "parameters": [
             {
-                "id": "displacement",
-                "label": "Displacement",
+                "id": "wave",
+                "previousId": "displacement",
+                "label": "Wave",
                 "valueType": "variable",
                 "defaultValue": "",
                 "category": "model",
-                "description": "A name the model defined over element indices, as y\\left[i\\right]=... does. The first oscillator is element 1. Left empty, the object works the wave out itself from the amplitude, frequency, speed and phase below."
+                "description": "A name the model defined over element indices, as y\\left[i\\right]=... does. The first oscillator is element 1. A name the model leaves free goes the other way: the object works its wave out from the amplitude, frequency, speed and phase below and hands it to the model under that name, so it can be plotted, read one oscillator at a time and superposed with another wave. Left empty, the object keeps the wave to itself."
             },
             {
                 "id": "amplitude",
@@ -6070,6 +6072,10 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "variable",
                 "defaultValue": "2",
                 "category": "model",
+                "visibleWhen": {
+                    "parameter": "wave",
+                    "modelDefines": false
+                },
                 "description": "Greatest displacement of an oscillator."
             },
             {
@@ -6077,7 +6083,11 @@ BlockDefinitionLoader.registerAll([
                 "label": "Frequency",
                 "valueType": "variable",
                 "defaultValue": "0.5",
-                "category": "model"
+                "category": "model",
+                "visibleWhen": {
+                    "parameter": "wave",
+                    "modelDefines": false
+                }
             },
             {
                 "id": "speed",
@@ -6085,6 +6095,10 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "variable",
                 "defaultValue": "5",
                 "category": "model",
+                "visibleWhen": {
+                    "parameter": "wave",
+                    "modelDefines": false
+                },
                 "description": "Propagation speed. A negative speed sends the wave the other way."
             },
             {
@@ -6093,7 +6107,11 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "variable",
                 "defaultValue": "0",
                 "category": "model",
-                "description": "Phase of the first oscillator at the start of the run, in radians."
+                "visibleWhen": {
+                    "parameter": "wave",
+                    "modelDefines": false
+                },
+                "description": "Phase of the first oscillator at the start of the run, in radians. At zero it stands at rest and swings from there, which is where a chain at rest starts."
             },
             {
                 "id": "length",
@@ -6131,6 +6149,10 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "boolean",
                 "defaultValue": true,
                 "category": "display",
+                "visibleWhen": {
+                    "parameter": "wave",
+                    "modelDefines": false
+                },
                 "description": "Holds each oscillator at rest until the wave reaches it. Turned off, the whole chain is already oscillating."
             },
             {
@@ -6157,7 +6179,11 @@ BlockDefinitionLoader.registerAll([
                 "label": "Velocity arrows",
                 "valueType": "boolean",
                 "defaultValue": false,
-                "category": "display"
+                "category": "display",
+                "visibleWhen": {
+                    "parameter": "wave",
+                    "equals": ""
+                }
             },
             {
                 "id": "showLine",
@@ -6181,6 +6207,39 @@ BlockDefinitionLoader.registerAll([
                 "category": "style"
             }
         ],
+        "indexedSource": {
+            "name": {
+                "parameter": "wave"
+            },
+            "index": "n",
+            "formula": "A\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(t-\\frac{\\left(n-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}\\right)+p\\right)\\cdot\\left(1-g\\cdot\\max\\left(0,sign\\left(\\frac{\\left(n-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}-t\\right)\\right)\\right)",
+            "inputs": {
+                "A": {
+                    "parameter": "amplitude"
+                },
+                "f": {
+                    "parameter": "frequency"
+                },
+                "v": {
+                    "parameter": "speed"
+                },
+                "p": {
+                    "parameter": "phase"
+                },
+                "L": {
+                    "parameter": "length"
+                },
+                "N": {
+                    "formula": "\\max\\left(2,\\min\\left(200,round\\left(elements\\right)\\right)\\right)"
+                },
+                "g": {
+                    "parameter": "wavefront"
+                },
+                "t": {
+                    "independent": "value"
+                }
+            }
+        },
         "locals": [
             {
                 "id": "w",
@@ -6329,11 +6388,11 @@ BlockDefinitionLoader.registerAll([
                                 },
                                 "d": {
                                     "choose": {
-                                        "parameter": "displacement"
+                                        "parameter": "wave"
                                     },
                                     "then": {
                                         "element": {
-                                            "parameter": "displacement"
+                                            "parameter": "wave"
                                         },
                                         "index": {
                                             "formula": "i+1",
@@ -6345,7 +6404,7 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "otherwise": {
-                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
@@ -6371,11 +6430,11 @@ BlockDefinitionLoader.registerAll([
                                 },
                                 "d": {
                                     "choose": {
-                                        "parameter": "displacement"
+                                        "parameter": "wave"
                                     },
                                     "then": {
                                         "element": {
-                                            "parameter": "displacement"
+                                            "parameter": "wave"
                                         },
                                         "index": {
                                             "formula": "i+2",
@@ -6387,7 +6446,7 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "otherwise": {
-                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-\\left(i+1\\right)\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(\\left(i+1\\right)\\cdot delay-t\\right)\\right)\\right)",
+                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-\\left(i+1\\right)\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(\\left(i+1\\right)\\cdot delay-t\\right)\\right)\\right)",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
@@ -6428,7 +6487,7 @@ BlockDefinitionLoader.registerAll([
                         },
                         "otherwise": {
                             "choose": {
-                                "parameter": "displacement"
+                                "parameter": "wave"
                             },
                             "then": {
                                 "constant": 0
@@ -6455,11 +6514,11 @@ BlockDefinitionLoader.registerAll([
                                 },
                                 "d": {
                                     "choose": {
-                                        "parameter": "displacement"
+                                        "parameter": "wave"
                                     },
                                     "then": {
                                         "element": {
-                                            "parameter": "displacement"
+                                            "parameter": "wave"
                                         },
                                         "index": {
                                             "formula": "i+1",
@@ -6471,7 +6530,7 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "otherwise": {
-                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
@@ -6490,18 +6549,18 @@ BlockDefinitionLoader.registerAll([
                             }
                         },
                         "y2": {
-                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
                             "inputs": {
                                 "i": {
                                     "parameter": "$index"
                                 },
                                 "d": {
                                     "choose": {
-                                        "parameter": "displacement"
+                                        "parameter": "wave"
                                     },
                                     "then": {
                                         "element": {
-                                            "parameter": "displacement"
+                                            "parameter": "wave"
                                         },
                                         "index": {
                                             "formula": "i+1",
@@ -6513,7 +6572,7 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "otherwise": {
-                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
@@ -6570,7 +6629,7 @@ BlockDefinitionLoader.registerAll([
                         },
                         "otherwise": {
                             "choose": {
-                                "parameter": "displacement"
+                                "parameter": "wave"
                             },
                             "then": {
                                 "constant": 0
@@ -6590,18 +6649,18 @@ BlockDefinitionLoader.registerAll([
                             }
                         },
                         "y1": {
-                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
                             "inputs": {
                                 "i": {
                                     "parameter": "$index"
                                 },
                                 "d": {
                                     "choose": {
-                                        "parameter": "displacement"
+                                        "parameter": "wave"
                                     },
                                     "then": {
                                         "element": {
-                                            "parameter": "displacement"
+                                            "parameter": "wave"
                                         },
                                         "index": {
                                             "formula": "i+1",
@@ -6613,7 +6672,7 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "otherwise": {
-                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
@@ -6632,18 +6691,18 @@ BlockDefinitionLoader.registerAll([
                             }
                         },
                         "y2": {
-                            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+                            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
                             "inputs": {
                                 "i": {
                                     "parameter": "$index"
                                 },
                                 "d": {
                                     "choose": {
-                                        "parameter": "displacement"
+                                        "parameter": "wave"
                                     },
                                     "then": {
                                         "element": {
-                                            "parameter": "displacement"
+                                            "parameter": "wave"
                                         },
                                         "index": {
                                             "formula": "i+1",
@@ -6655,7 +6714,7 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "otherwise": {
-                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
@@ -6712,7 +6771,7 @@ BlockDefinitionLoader.registerAll([
                         },
                         "otherwise": {
                             "choose": {
-                                "parameter": "displacement"
+                                "parameter": "wave"
                             },
                             "then": {
                                 "constant": 0
@@ -6732,18 +6791,18 @@ BlockDefinitionLoader.registerAll([
                             }
                         },
                         "y1": {
-                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
                             "inputs": {
                                 "i": {
                                     "parameter": "$index"
                                 },
                                 "d": {
                                     "choose": {
-                                        "parameter": "displacement"
+                                        "parameter": "wave"
                                     },
                                     "then": {
                                         "element": {
-                                            "parameter": "displacement"
+                                            "parameter": "wave"
                                         },
                                         "index": {
                                             "formula": "i+1",
@@ -6755,7 +6814,7 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "otherwise": {
-                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
@@ -6774,18 +6833,18 @@ BlockDefinitionLoader.registerAll([
                             }
                         },
                         "y2": {
-                            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+                            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
                             "inputs": {
                                 "i": {
                                     "parameter": "$index"
                                 },
                                 "d": {
                                     "choose": {
-                                        "parameter": "displacement"
+                                        "parameter": "wave"
                                     },
                                     "then": {
                                         "element": {
-                                            "parameter": "displacement"
+                                            "parameter": "wave"
                                         },
                                         "index": {
                                             "formula": "i+1",
@@ -6797,7 +6856,7 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "otherwise": {
-                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
@@ -6873,11 +6932,11 @@ BlockDefinitionLoader.registerAll([
                                 },
                                 "d": {
                                     "choose": {
-                                        "parameter": "displacement"
+                                        "parameter": "wave"
                                     },
                                     "then": {
                                         "element": {
-                                            "parameter": "displacement"
+                                            "parameter": "wave"
                                         },
                                         "index": {
                                             "formula": "i+1",
@@ -6889,7 +6948,7 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "otherwise": {
-                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
@@ -6960,11 +7019,11 @@ BlockDefinitionLoader.registerAll([
                                 },
                                 "d": {
                                     "choose": {
-                                        "parameter": "displacement"
+                                        "parameter": "wave"
                                     },
                                     "then": {
                                         "element": {
-                                            "parameter": "displacement"
+                                            "parameter": "wave"
                                         },
                                         "index": {
                                             "formula": "i+1",
@@ -6976,7 +7035,7 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "otherwise": {
-                                        "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                        "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
@@ -8774,6 +8833,201 @@ BlockDefinitionLoader.registerAll([
                     }
                 }
             ]
+        }
+    },
+    {
+        "schemaVersion": "1.0.0",
+        "type": "piano",
+        "category": "component",
+        "displayName": "Piano",
+        "description": "A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the wave of the chord it is holding.",
+        "icon": "fa-light fa-piano-keyboard",
+        "tags": [
+            "object",
+            "sound",
+            "wave",
+            "music",
+            "superposition",
+            "harmony"
+        ],
+        "capabilities": [
+            "writes-model",
+            "interaction",
+            "sound"
+        ],
+        "preview": {
+            "parameters": {
+                "octaves": 1
+            }
+        },
+        "parameters": [
+            {
+                "id": "wave",
+                "label": "Wave",
+                "valueType": "variable",
+                "defaultValue": "",
+                "category": "model",
+                "description": "A name the model leaves free: the piano works the sound of the chord it is holding out over a window of samples and hands it to the model under that name, defined over sample indices as y\\left[n\\right]=... is, so it can be plotted, read one sample at a time and superposed with another wave. Sample n is the sum, over every key being held, of its own sine. Left empty, the piano keeps its wave to itself."
+            },
+            {
+                "id": "amplitude",
+                "label": "Amplitude",
+                "valueType": "variable",
+                "defaultValue": "1",
+                "category": "model",
+                "description": "Amplitude of each note in the sum, so a chord of three notes reaches three times this far where they agree."
+            },
+            {
+                "id": "samples",
+                "label": "Samples",
+                "valueType": "number",
+                "defaultValue": 30,
+                "category": "scale",
+                "minimum": 2,
+                "maximum": 2000,
+                "description": "How many samples the published wave holds, and so how far its index runs: y\\left[1\\right] is the wave at the start of the window and y\\left[samples\\right] the wave at the end of it."
+            },
+            {
+                "id": "duration",
+                "label": "Duration",
+                "valueType": "number",
+                "defaultValue": 0.02,
+                "category": "scale",
+                "minimum": 0.001,
+                "description": "Seconds of sound the samples span. Two hundredths of a second is about five cycles of middle C, which is enough of the wave to see its shape."
+            },
+            {
+                "id": "firstOctave",
+                "label": "First octave",
+                "valueType": "number",
+                "defaultValue": 4,
+                "category": "display",
+                "minimum": 0,
+                "maximum": 8,
+                "bindable": false,
+                "description": "Octave of the leftmost key. Four starts the keyboard at middle C."
+            },
+            {
+                "id": "octaves",
+                "label": "Octaves",
+                "valueType": "number",
+                "defaultValue": 2,
+                "category": "display",
+                "minimum": 1,
+                "maximum": 4,
+                "bindable": false
+            },
+            {
+                "id": "notes",
+                "label": "Notes held",
+                "valueType": "object",
+                "defaultValue": null,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false,
+                "bindable": false,
+                "description": "The notes the piano is holding, kept while the board is open. It is what draws a key lit and what the wave is summed over, and it is never written down: a file remembers no note left sounding."
+            },
+            {
+                "id": "whiteColor",
+                "label": "Natural keys",
+                "valueType": "colour",
+                "defaultValue": "token:surface.default",
+                "category": "style"
+            },
+            {
+                "id": "blackColor",
+                "label": "Sharp keys",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.strong",
+                "category": "style"
+            },
+            {
+                "id": "pressedColor",
+                "label": "Held keys",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.accent",
+                "category": "style"
+            },
+            {
+                "id": "borderColor",
+                "label": "Border",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.default",
+                "category": "style"
+            }
+        ],
+        "indexedSource": {
+            "name": {
+                "parameter": "wave"
+            },
+            "index": "n",
+            "over": {
+                "index": "k",
+                "count": {
+                    "memoryCount": "notes"
+                }
+            },
+            "formula": "amplitude\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(n-1\\right)\\cdot\\frac{duration}{samples-1}\\right)",
+            "inputs": {
+                "f": {
+                    "memory": "notes",
+                    "row": {
+                        "formula": "k-1"
+                    },
+                    "field": "x"
+                }
+            }
+        },
+        "locals": [
+            {
+                "id": "w",
+                "value": {
+                    "parameter": "$width"
+                }
+            },
+            {
+                "id": "h",
+                "value": {
+                    "parameter": "$height"
+                }
+            }
+        ],
+        "root": {
+            "id": "piano",
+            "type": "piano-keyboard",
+            "parameters": {
+                "width": {
+                    "parameter": "w"
+                },
+                "height": {
+                    "parameter": "h"
+                },
+                "firstOctave": {
+                    "parameter": "firstOctave"
+                },
+                "octaves": {
+                    "parameter": "octaves"
+                },
+                "notes": {
+                    "parameter": "notes"
+                },
+                "notesParameter": {
+                    "constant": "notes"
+                },
+                "whiteColor": {
+                    "parameter": "whiteColor"
+                },
+                "blackColor": {
+                    "parameter": "blackColor"
+                },
+                "pressedColor": {
+                    "parameter": "pressedColor"
+                },
+                "borderColor": {
+                    "parameter": "borderColor"
+                }
+            }
         }
     },
     {

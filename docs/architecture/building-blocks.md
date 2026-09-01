@@ -20,13 +20,13 @@ Primitives   circle, rect, ellipse, line, polyline, polygon, arc, ring, path, te
 Modifiers    translate, rotate, scale, mirror, opacity, visibility, stroke, fill, z-order, repeat
 Behaviours   selectable, draggable, resizable, rotatable, hoverable, tooltip, drag-angle,
              drag-rotate, drag-axis-tick, follow-pointer, clickable, press-and-slide,
-             keep-time, remember, forget, track-pointer, …
+             play-note, keep-time, remember, forget, track-pointer, …
 Bindings     constant | parameter | variable | expression | formula | token | format | memory
 Components   dial-face, tick-ring, label-ring, pointer-hand, pointer-ring, seven-segment-display,
-             plot-grid, plot-axes, plot-crosshair, memory-list, memory-trace,
+             piano-keyboard, plot-grid, plot-axes, plot-crosshair, memory-list, memory-trace,
              analogue-clock, compass, speedometer,
              circular-gauge, rotating-vector, orbit-system, steering-wheel,
-             thermometer, calculator, mouse-tracker, + custom components
+             thermometer, calculator, mouse-tracker, piano, + custom components
 ```
 
 ### How a drawing is made
@@ -108,6 +108,7 @@ Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
 | --- | --- | --- |
 | `scripts/blocks/designTokens.js` | `BlockTokens` | the board's visual language: colours, font, axis, grid, crosshair, and the five presets |
 | `scripts/blocks/blockGeometry.js` | `BlockGeometry` | polar points, arcs, rings, tick rings, needles |
+| `scripts/blocks/blockKeyboard.js` | `BlockKeyboard` | the musical keyboard: its notes, their pitches, the keys that play them |
 | `scripts/blocks/blockMemory.js` | `BlockMemory` | the rows an object remembers, and the columns they make |
 | `scripts/blocks/blockBindings.js` | `BlockBindings` | declarative value resolution |
 | `scripts/blocks/blockRegistry.js` | `BlockRegistry` | the one catalogue |
@@ -252,7 +253,7 @@ values through the context helpers:
 
 Give a component the tag `object` if it should appear in the board's Components palette;
 low-level components (`dial-face`, `tick-ring`, `label-ring`, `pointer-hand`, `pointer-ring`,
-`seven-segment-display`)
+`seven-segment-display`, `piano-keyboard`)
 deliberately do not have it.
 
 ### Components defined as JSON
@@ -261,7 +262,8 @@ A component that only composes other blocks does not need a `create` function at
 JSON document in `scripts/blocks/definitions/`, registered by `BlockDefinitionLoader`. Every
 component in the Components palette — analogue clock, compass, speedometer, circular gauge,
 rotating vector, orbit system, steering wheel — is defined this way. Only
-`dial-face`, `tick-ring`, `label-ring`, `pointer-hand`, `pointer-ring` and `seven-segment-display`
+`dial-face`, `tick-ring`, `label-ring`, `pointer-hand`, `pointer-ring`, `seven-segment-display` and
+`piano-keyboard`
 stay in code, because they generate geometry per index or per character rather than compose.
 
 ```json
@@ -299,6 +301,41 @@ stay in code, because they generate geometry per index or per character rather t
 * **`concat`** joins resolved parts into one string, so the gauge readouts build
   `"64 km/h"` from a `format` binding and their own `unit` parameter. `format` resolves its
   `digits`, `prefix` and `suffix` as bindings too.
+* **`indexedSource`** hands what the object draws back to the model, as a name defined over element
+  indices — the third index space, `y\left[3\right]`, that the engine reads through
+  `System.getElementValue`. The declaration names the term it publishes under (`name`, a binding, so
+  the reader chooses the name), the index the formula is written over (`index`, bound by the
+  declaration the way an assignment binds the `i` of `y\left[i\right]=…`), and a `formula` for the
+  displacement of one element, with its `inputs` bound like any other formula. The Mechanical wave
+  publishes this way: name a term the model leaves free in its *Wave* row and the wave it works
+  out from its own amplitude, frequency, speed and phase becomes a name the model can plot, read one
+  element at a time and superpose. Publishing adds the name to the system as a parameter term, exactly as the parser
+  does before registering `y\left[i\right]=…`, so the name is offered wherever terms are listed; it is
+  withdrawn again with the source, unless the term was already the model's. The model has the last
+  word — a name it assigns, one it already defines over element indices, and a column of measurements
+  are read rather than written over — and
+  the formula is evaluated against the row the engine is building, so the independent and any
+  parameter naming a term are the ones that row holds. The row that names it is an ordinary term
+  selector — it offers every term the model holds — with one difference: its custom-value box invites
+  a name of the reader's own, because the name a wave is published under is written in the object
+  rather than picked from a model that has never held it.
+* **An element may be a sum.** A wave with one source is one formula; a wave with many is that same
+  formula added up over them, which is what superposition is. `"over": { "index": "k", "count": … }`
+  says how many sources there are and what the declaration calls the one it is working on, and every
+  input is resolved once per source — so the piano's wave is `sin` of one note, summed over the notes
+  being held, with the pitch of source `k` read out of the list the object is holding. The count is a
+  binding like any other, so it may be a parameter, a formula or the length of a memory; nothing held
+  is a sum of nothing, which reads as zero. The sources are worked out when the object publishes and
+  not per element, which is what keeps a wave of twenty notes read over two hundred samples a loop
+  rather than four thousand bindings.
+* **`visibleWhen`/`disabledWhen`** may ask what the model makes of the name a row holds rather than
+  what the row holds: `{ "parameter": "wave", "modelDefines": false }`. A wave the model works out for
+  itself leaves the object nothing to shape, so the wave's amplitude, frequency, speed, phase and
+  wavefront are not offered at all while it is reading one — and are offered again the moment the name
+  is the object's own, kept to itself or published.
+* **`previousId`** on a parameter is the name it used to be called. A file saved before the rename
+  is read under the old name and written back under the new one, the same courtesy the registry pays
+  a block that has been renamed; the wave's `wave` parameter carries `displacement` this way.
 * **`art`** names the drawing files a definition's imported nodes came from, so a redrawn file can be
   imported again over the same document. It is provenance only — nothing reads it at runtime, and the
   nodes it produced are in `root` like any others.
@@ -417,6 +454,18 @@ both axes, its height on the left in the colour of the run it belongs to and its
 on the axis below. Every one of those readouts is rounded to `$precision`, the reserved parameter
 carrying the decimals the model is read to, so a value beside a drawing reads the way the same value
 reads everywhere else on the board.
+
+**A key of an instrument is `play-note`.** It is not a click and not a drag: it sounds a pitch for as
+long as it is held and damps it when it is let go, so what a node carrying it needs to say is the
+frequency it sounds, the note it is called in the list of what is being held, and — where the
+instrument has one — the physical computer key that plays it alongside the pointer. Several keys
+sound together, whether they are held by several fingers or several computer keys, and a note held by
+both only stops when the last of them lets go; sliding across a row of them plays them in turn. The
+sound is the board's own — `ShapeTone` in `shapeAudio.js`, an oscillator carrying a harmonic recipe
+under a struck envelope, through the one audio graph every clip on the board goes through — so an
+instrument needs no clip to be an instrument. The object reports what it is holding into a parameter
+of its own and writes nothing down: the drawing lights the keys that are down from that parameter,
+the wave it publishes is summed over it, and a file remembers no note left sounding.
 
 **A control the reader holds down is `press-and-slide`.** A pedal is not turned and not pointed at:
 it is held, and how far it is pressed is how far the foot has moved it from where it took hold.

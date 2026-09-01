@@ -1,0 +1,195 @@
+{
+  "schemaVersion": "1.0.0",
+  "type": "piano",
+  "category": "component",
+  "displayName": "Piano",
+  "description": "A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the wave of the chord it is holding.",
+  "icon": "fa-light fa-piano-keyboard",
+  "tags": [
+    "object",
+    "sound",
+    "wave",
+    "music",
+    "superposition",
+    "harmony"
+  ],
+  "capabilities": [
+    "writes-model",
+    "interaction",
+    "sound"
+  ],
+  "preview": {
+    "parameters": {
+      "octaves": 1
+    }
+  },
+  "parameters": [
+    {
+      "id": "wave",
+      "label": "Wave",
+      "valueType": "variable",
+      "defaultValue": "",
+      "category": "model",
+      "description": "A name the model leaves free: the piano works the sound of the chord it is holding out over a window of samples and hands it to the model under that name, defined over sample indices as y\\left[n\\right]=... is, so it can be plotted, read one sample at a time and superposed with another wave. Sample n is the sum, over every key being held, of its own sine. Left empty, the piano keeps its wave to itself."
+    },
+    {
+      "id": "amplitude",
+      "label": "Amplitude",
+      "valueType": "variable",
+      "defaultValue": "1",
+      "category": "model",
+      "description": "Amplitude of each note in the sum, so a chord of three notes reaches three times this far where they agree."
+    },
+    {
+      "id": "samples",
+      "label": "Samples",
+      "valueType": "number",
+      "defaultValue": 30,
+      "category": "scale",
+      "minimum": 2,
+      "maximum": 2000,
+      "description": "How many samples the published wave holds, and so how far its index runs: y\\left[1\\right] is the wave at the start of the window and y\\left[samples\\right] the wave at the end of it."
+    },
+    {
+      "id": "duration",
+      "label": "Duration",
+      "valueType": "number",
+      "defaultValue": 0.02,
+      "category": "scale",
+      "minimum": 0.001,
+      "description": "Seconds of sound the samples span. Two hundredths of a second is about five cycles of middle C, which is enough of the wave to see its shape."
+    },
+    {
+      "id": "firstOctave",
+      "label": "First octave",
+      "valueType": "number",
+      "defaultValue": 4,
+      "category": "display",
+      "minimum": 0,
+      "maximum": 8,
+      "bindable": false,
+      "description": "Octave of the leftmost key. Four starts the keyboard at middle C."
+    },
+    {
+      "id": "octaves",
+      "label": "Octaves",
+      "valueType": "number",
+      "defaultValue": 2,
+      "category": "display",
+      "minimum": 1,
+      "maximum": 4,
+      "bindable": false
+    },
+    {
+      "id": "notes",
+      "label": "Notes held",
+      "valueType": "object",
+      "defaultValue": null,
+      "category": "state",
+      "userEditable": false,
+      "agentAccessible": false,
+      "bindable": false,
+      "description": "The notes the piano is holding, kept while the board is open. It is what draws a key lit and what the wave is summed over, and it is never written down: a file remembers no note left sounding."
+    },
+    {
+      "id": "whiteColor",
+      "label": "Natural keys",
+      "valueType": "colour",
+      "defaultValue": "token:surface.default",
+      "category": "style"
+    },
+    {
+      "id": "blackColor",
+      "label": "Sharp keys",
+      "valueType": "colour",
+      "defaultValue": "token:stroke.strong",
+      "category": "style"
+    },
+    {
+      "id": "pressedColor",
+      "label": "Held keys",
+      "valueType": "colour",
+      "defaultValue": "token:stroke.accent",
+      "category": "style"
+    },
+    {
+      "id": "borderColor",
+      "label": "Border",
+      "valueType": "colour",
+      "defaultValue": "token:stroke.default",
+      "category": "style"
+    }
+  ],
+  "indexedSource": {
+    "name": {
+      "parameter": "wave"
+    },
+    "index": "n",
+    "over": {
+      "index": "k",
+      "count": {
+        "memoryCount": "notes"
+      }
+    },
+    "formula": "amplitude\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(n-1\\right)\\cdot\\frac{duration}{samples-1}\\right)",
+    "inputs": {
+      "f": {
+        "memory": "notes",
+        "row": {
+          "formula": "k-1"
+        },
+        "field": "x"
+      }
+    }
+  },
+  "locals": [
+    {
+      "id": "w",
+      "value": {
+        "parameter": "$width"
+      }
+    },
+    {
+      "id": "h",
+      "value": {
+        "parameter": "$height"
+      }
+    }
+  ],
+  "root": {
+    "id": "piano",
+    "type": "piano-keyboard",
+    "parameters": {
+      "width": {
+        "parameter": "w"
+      },
+      "height": {
+        "parameter": "h"
+      },
+      "firstOctave": {
+        "parameter": "firstOctave"
+      },
+      "octaves": {
+        "parameter": "octaves"
+      },
+      "notes": {
+        "parameter": "notes"
+      },
+      "notesParameter": {
+        "constant": "notes"
+      },
+      "whiteColor": {
+        "parameter": "whiteColor"
+      },
+      "blackColor": {
+        "parameter": "blackColor"
+      },
+      "pressedColor": {
+        "parameter": "pressedColor"
+      },
+      "borderColor": {
+        "parameter": "borderColor"
+      }
+    }
+  }
+}

@@ -339,7 +339,8 @@
             </tbody>
         </table>
         <p>This is a third index space beside the two above: <code>y_3</code> reads y at iteration 3 and <code>y\left(3\right)</code> reads it at independent value 3, while only the square brackets read an element. An indexed term holds no single value, so it is read for its elements rather than shown as a number.</p>
-        <p>A Mechanical wave object draws one: name the indexed term in its <em>Displacement</em> and it shows an oscillator per element. Two travelling waves added this way — one with <code>-\omega\cdot t</code>, one with <code>+\omega\cdot t</code> — give a standing wave with fixed nodes.</p>
+        <p>A Mechanical wave object draws one: name the indexed term in its <em>Wave</em> and it shows an oscillator per element. Two travelling waves added this way — one with <code>-\omega\cdot t</code>, one with <code>+\omega\cdot t</code> — give a standing wave with fixed nodes.</p>
+        <p>The object goes the other way too. Write a name the model does not define — nothing in the model assigns it — in its <em>Wave</em> row, and the object works its own wave out from its amplitude, frequency, speed and phase and hands it to the model under that name. The name becomes a term of the model — it is in every list of terms, the way a name the model assigns is — and reads like any indexed term: <code>y\left[3\right]</code> for one oscillator, <code>s=y+z</code> to superpose two objects into a standing wave, and a graph of either. A name the model does define is the model's own — an assignment, over time or over element indices, is read rather than written over — and an object taken off the board takes its wave with it.</p>
 
         <h3>Units Annotation</h3>
         <p>Append display-only units after any statement:</p>

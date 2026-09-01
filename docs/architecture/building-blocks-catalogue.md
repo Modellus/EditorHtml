@@ -501,6 +501,19 @@ Capabilities: `interaction`, `writes-model`
 | `runningParameter` | string | "" |  |
 | `intervalMs` | number | 33 | min 10, max 1000 |
 
+### `play-note` — Play a note
+
+A key of an instrument: it sounds its own pitch for as long as it is held, and stops when it is let go. Several keys sound together, whether they are held by several fingers or by several computer keys at once, and sliding across them plays them in turn. The object reports the notes it is holding into a parameter of its own, so its drawing can show which keys are down and what it publishes can be worked out from the chord. Nothing is written down: a file remembers no note left sounding.
+
+Capabilities: `interaction`, `sound`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `frequency` | number | 0 | min 0 |
+| `note` | number | 0 |  |
+| `keyCode` | string | "" |  |
+| `notesParameter` | string | "" |  |
+
 ### `press-and-slide` — Press and slide
 
 A control the reader holds down: pressing keeps the value where it is, sliding the pointer up raises it and down lowers it, by however far it travelled, and letting go lets the value fall back to its resting value a step at a time. It is what a pedal or a throttle needs — nothing is written by pressing alone, and the whole gesture, the fall back included, is one edit.
@@ -775,11 +788,11 @@ Capabilities: `radial`, `angular`, `textual`
 
 A mechanical wave drawn as a chain of oscillators, each receiving the disturbance with the delay of its distance from the source.
 
-Capabilities: `reads-model`, `oscillation`
+Capabilities: `reads-model`, `writes-model`, `oscillation`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
-| `displacement` | variable | "" |  |
+| `wave` | variable | "" |  |
 | `amplitude` | variable | "2" |  |
 | `frequency` | variable | "0.5" |  |
 | `speed` | variable | "5" |  |
@@ -902,6 +915,45 @@ Capabilities: `radial`, `angular`, `reads-model`
 | `starColor` | colour | "#f08c02" |  |
 | `bodyColor` | colour | "token:stroke.accent" |  |
 | `orbitColor` | colour | "token:stroke.subtle" |  |
+
+### `piano` — Piano
+
+A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the wave of the chord it is holding.
+
+Capabilities: `writes-model`, `interaction`, `sound`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `wave` | variable | "" |  |
+| `amplitude` | variable | "1" |  |
+| `samples` | number | 30 | min 2, max 2000 |
+| `duration` | number | 0.02 | min 0.001 |
+| `firstOctave` | number | 4 | min 0, max 8 |
+| `octaves` | number | 2 | min 1, max 4 |
+| `notes` | object | null |  |
+| `whiteColor` | colour | "token:surface.default" |  |
+| `blackColor` | colour | "token:stroke.strong" |  |
+| `pressedColor` | colour | "token:stroke.accent" |  |
+| `borderColor` | colour | "token:stroke.default" |  |
+
+### `piano-keyboard` — Piano keyboard
+
+A run of piano keys, drawn and tuned from the note each one carries: the naturals share the width between them and the sharps ride over the seams. Every key sounds its own pitch while it is held, by pointer or by the computer key that plays it, and the keys that are down are drawn lit. Nothing is written on a key: a keyboard is read by where a key sits, not by a letter painted on it.
+
+Capabilities: `interaction`, `sound`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `width` | number | 420 | min 1 |
+| `height` | number | 120 | min 1 |
+| `firstOctave` | number | 4 | min 0, max 8 |
+| `octaves` | number | 2 | min 1, max 4 |
+| `notes` | object | null |  |
+| `notesParameter` | string | "" |  |
+| `whiteColor` | colour | "token:surface.default" |  |
+| `blackColor` | colour | "token:stroke.strong" |  |
+| `pressedColor` | colour | "token:stroke.accent" |  |
+| `borderColor` | colour | "token:stroke.default" |  |
 
 ### `plot-axes` — Plot axes
 

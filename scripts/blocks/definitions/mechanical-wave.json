@@ -15,6 +15,7 @@
   ],
   "capabilities": [
     "reads-model",
+    "writes-model",
     "oscillation"
   ],
   "preview": {
@@ -25,12 +26,13 @@
   },
   "parameters": [
     {
-      "id": "displacement",
-      "label": "Displacement",
+      "id": "wave",
+      "previousId": "displacement",
+      "label": "Wave",
       "valueType": "variable",
       "defaultValue": "",
       "category": "model",
-      "description": "A name the model defined over element indices, as y\\left[i\\right]=... does. The first oscillator is element 1. Left empty, the object works the wave out itself from the amplitude, frequency, speed and phase below."
+      "description": "A name the model defined over element indices, as y\\left[i\\right]=... does. The first oscillator is element 1. A name the model leaves free goes the other way: the object works its wave out from the amplitude, frequency, speed and phase below and hands it to the model under that name, so it can be plotted, read one oscillator at a time and superposed with another wave. Left empty, the object keeps the wave to itself."
     },
     {
       "id": "amplitude",
@@ -38,6 +40,10 @@
       "valueType": "variable",
       "defaultValue": "2",
       "category": "model",
+      "visibleWhen": {
+        "parameter": "wave",
+        "modelDefines": false
+      },
       "description": "Greatest displacement of an oscillator."
     },
     {
@@ -45,7 +51,11 @@
       "label": "Frequency",
       "valueType": "variable",
       "defaultValue": "0.5",
-      "category": "model"
+      "category": "model",
+      "visibleWhen": {
+        "parameter": "wave",
+        "modelDefines": false
+      }
     },
     {
       "id": "speed",
@@ -53,6 +63,10 @@
       "valueType": "variable",
       "defaultValue": "5",
       "category": "model",
+      "visibleWhen": {
+        "parameter": "wave",
+        "modelDefines": false
+      },
       "description": "Propagation speed. A negative speed sends the wave the other way."
     },
     {
@@ -61,7 +75,11 @@
       "valueType": "variable",
       "defaultValue": "0",
       "category": "model",
-      "description": "Phase of the first oscillator at the start of the run, in radians."
+      "visibleWhen": {
+        "parameter": "wave",
+        "modelDefines": false
+      },
+      "description": "Phase of the first oscillator at the start of the run, in radians. At zero it stands at rest and swings from there, which is where a chain at rest starts."
     },
     {
       "id": "length",
@@ -99,6 +117,10 @@
       "valueType": "boolean",
       "defaultValue": true,
       "category": "display",
+      "visibleWhen": {
+        "parameter": "wave",
+        "modelDefines": false
+      },
       "description": "Holds each oscillator at rest until the wave reaches it. Turned off, the whole chain is already oscillating."
     },
     {
@@ -125,7 +147,11 @@
       "label": "Velocity arrows",
       "valueType": "boolean",
       "defaultValue": false,
-      "category": "display"
+      "category": "display",
+      "visibleWhen": {
+        "parameter": "wave",
+        "equals": ""
+      }
     },
     {
       "id": "showLine",
@@ -149,6 +175,39 @@
       "category": "style"
     }
   ],
+  "indexedSource": {
+    "name": {
+      "parameter": "wave"
+    },
+    "index": "n",
+    "formula": "A\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(t-\\frac{\\left(n-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}\\right)+p\\right)\\cdot\\left(1-g\\cdot\\max\\left(0,sign\\left(\\frac{\\left(n-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}-t\\right)\\right)\\right)",
+    "inputs": {
+      "A": {
+        "parameter": "amplitude"
+      },
+      "f": {
+        "parameter": "frequency"
+      },
+      "v": {
+        "parameter": "speed"
+      },
+      "p": {
+        "parameter": "phase"
+      },
+      "L": {
+        "parameter": "length"
+      },
+      "N": {
+        "formula": "\\max\\left(2,\\min\\left(200,round\\left(elements\\right)\\right)\\right)"
+      },
+      "g": {
+        "parameter": "wavefront"
+      },
+      "t": {
+        "independent": "value"
+      }
+    }
+  },
   "locals": [
     {
       "id": "w",
@@ -297,11 +356,11 @@
               },
               "d": {
                 "choose": {
-                  "parameter": "displacement"
+                  "parameter": "wave"
                 },
                 "then": {
                   "element": {
-                    "parameter": "displacement"
+                    "parameter": "wave"
                   },
                   "index": {
                     "formula": "i+1",
@@ -313,7 +372,7 @@
                   }
                 },
                 "otherwise": {
-                  "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                  "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                   "inputs": {
                     "i": {
                       "parameter": "$index"
@@ -339,11 +398,11 @@
               },
               "d": {
                 "choose": {
-                  "parameter": "displacement"
+                  "parameter": "wave"
                 },
                 "then": {
                   "element": {
-                    "parameter": "displacement"
+                    "parameter": "wave"
                   },
                   "index": {
                     "formula": "i+2",
@@ -355,7 +414,7 @@
                   }
                 },
                 "otherwise": {
-                  "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-\\left(i+1\\right)\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(\\left(i+1\\right)\\cdot delay-t\\right)\\right)\\right)",
+                  "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-\\left(i+1\\right)\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(\\left(i+1\\right)\\cdot delay-t\\right)\\right)\\right)",
                   "inputs": {
                     "i": {
                       "parameter": "$index"
@@ -396,7 +455,7 @@
           },
           "otherwise": {
             "choose": {
-              "parameter": "displacement"
+              "parameter": "wave"
             },
             "then": {
               "constant": 0
@@ -423,11 +482,11 @@
               },
               "d": {
                 "choose": {
-                  "parameter": "displacement"
+                  "parameter": "wave"
                 },
                 "then": {
                   "element": {
-                    "parameter": "displacement"
+                    "parameter": "wave"
                   },
                   "index": {
                     "formula": "i+1",
@@ -439,7 +498,7 @@
                   }
                 },
                 "otherwise": {
-                  "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                  "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                   "inputs": {
                     "i": {
                       "parameter": "$index"
@@ -458,18 +517,18 @@
             }
           },
           "y2": {
-            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
             "inputs": {
               "i": {
                 "parameter": "$index"
               },
               "d": {
                 "choose": {
-                  "parameter": "displacement"
+                  "parameter": "wave"
                 },
                 "then": {
                   "element": {
-                    "parameter": "displacement"
+                    "parameter": "wave"
                   },
                   "index": {
                     "formula": "i+1",
@@ -481,7 +540,7 @@
                   }
                 },
                 "otherwise": {
-                  "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                  "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                   "inputs": {
                     "i": {
                       "parameter": "$index"
@@ -538,7 +597,7 @@
           },
           "otherwise": {
             "choose": {
-              "parameter": "displacement"
+              "parameter": "wave"
             },
             "then": {
               "constant": 0
@@ -558,18 +617,18 @@
             }
           },
           "y1": {
-            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
             "inputs": {
               "i": {
                 "parameter": "$index"
               },
               "d": {
                 "choose": {
-                  "parameter": "displacement"
+                  "parameter": "wave"
                 },
                 "then": {
                   "element": {
-                    "parameter": "displacement"
+                    "parameter": "wave"
                   },
                   "index": {
                     "formula": "i+1",
@@ -581,7 +640,7 @@
                   }
                 },
                 "otherwise": {
-                  "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                  "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                   "inputs": {
                     "i": {
                       "parameter": "$index"
@@ -600,18 +659,18 @@
             }
           },
           "y2": {
-            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
             "inputs": {
               "i": {
                 "parameter": "$index"
               },
               "d": {
                 "choose": {
-                  "parameter": "displacement"
+                  "parameter": "wave"
                 },
                 "then": {
                   "element": {
-                    "parameter": "displacement"
+                    "parameter": "wave"
                   },
                   "index": {
                     "formula": "i+1",
@@ -623,7 +682,7 @@
                   }
                 },
                 "otherwise": {
-                  "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                  "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                   "inputs": {
                     "i": {
                       "parameter": "$index"
@@ -680,7 +739,7 @@
           },
           "otherwise": {
             "choose": {
-              "parameter": "displacement"
+              "parameter": "wave"
             },
             "then": {
               "constant": 0
@@ -700,18 +759,18 @@
             }
           },
           "y1": {
-            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+            "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
             "inputs": {
               "i": {
                 "parameter": "$index"
               },
               "d": {
                 "choose": {
-                  "parameter": "displacement"
+                  "parameter": "wave"
                 },
                 "then": {
                   "element": {
-                    "parameter": "displacement"
+                    "parameter": "wave"
                   },
                   "index": {
                     "formula": "i+1",
@@ -723,7 +782,7 @@
                   }
                 },
                 "otherwise": {
-                  "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                  "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                   "inputs": {
                     "i": {
                       "parameter": "$index"
@@ -742,18 +801,18 @@
             }
           },
           "y2": {
-            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(-amp\\cdot omega\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+            "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
             "inputs": {
               "i": {
                 "parameter": "$index"
               },
               "d": {
                 "choose": {
-                  "parameter": "displacement"
+                  "parameter": "wave"
                 },
                 "then": {
                   "element": {
-                    "parameter": "displacement"
+                    "parameter": "wave"
                   },
                   "index": {
                     "formula": "i+1",
@@ -765,7 +824,7 @@
                   }
                 },
                 "otherwise": {
-                  "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                  "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                   "inputs": {
                     "i": {
                       "parameter": "$index"
@@ -841,11 +900,11 @@
               },
               "d": {
                 "choose": {
-                  "parameter": "displacement"
+                  "parameter": "wave"
                 },
                 "then": {
                   "element": {
-                    "parameter": "displacement"
+                    "parameter": "wave"
                   },
                   "index": {
                     "formula": "i+1",
@@ -857,7 +916,7 @@
                   }
                 },
                 "otherwise": {
-                  "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                  "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                   "inputs": {
                     "i": {
                       "parameter": "$index"
@@ -928,11 +987,11 @@
               },
               "d": {
                 "choose": {
-                  "parameter": "displacement"
+                  "parameter": "wave"
                 },
                 "then": {
                   "element": {
-                    "parameter": "displacement"
+                    "parameter": "wave"
                   },
                   "index": {
                     "formula": "i+1",
@@ -944,7 +1003,7 @@
                   }
                 },
                 "otherwise": {
-                  "formula": "amp\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                  "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                   "inputs": {
                     "i": {
                       "parameter": "$index"

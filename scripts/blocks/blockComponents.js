@@ -1003,6 +1003,63 @@ var BlockComponentHelpers = {
         }
     });
 
+    registry.register({
+        type: "piano-keyboard",
+        category: "component",
+        displayName: "Piano keyboard",
+        description: "A run of piano keys, drawn and tuned from the note each one carries: the naturals share the width between them and the sharps ride over the seams. Every key sounds its own pitch while it is held, by pointer or by the computer key that plays it, and the keys that are down are drawn lit. Nothing is written on a key: a keyboard is read by where a key sits, not by a letter painted on it.",
+        tags: ["keyboard", "keys", "music", "sound", "input"],
+        capabilities: ["interaction", "sound"],
+        parameters: [
+            BlockComponentHelpers.parameter("width", "Width", "number", 420, { minimum: 1 }),
+            BlockComponentHelpers.parameter("height", "Height", "number", 120, { minimum: 1 }),
+            BlockComponentHelpers.parameter("firstOctave", "First octave", "number", 4, { minimum: 0, maximum: 8, bindable: false }),
+            BlockComponentHelpers.parameter("octaves", "Octaves", "number", 2, { minimum: 1, maximum: 4, bindable: false }),
+            BlockComponentHelpers.parameter("notes", "Notes held", "object", null, { bindable: true, agentAccessible: false, userEditable: false, description: "The notes the object is holding, a row per note. The keys they belong to are drawn lit." }),
+            BlockComponentHelpers.parameter("notesParameter", "Notes parameter", "string", "", { bindable: false, agentAccessible: false, userEditable: false, description: "Parameter the keys report what is being held into." }),
+            BlockComponentHelpers.parameter("whiteColor", "Natural keys", "colour", "token:surface.default"),
+            BlockComponentHelpers.parameter("blackColor", "Sharp keys", "colour", "token:stroke.strong"),
+            BlockComponentHelpers.parameter("pressedColor", "Held keys", "colour", "token:stroke.accent"),
+            BlockComponentHelpers.parameter("borderColor", "Border", "colour", "token:stroke.default")
+        ],
+        create: (parameters, context) => {
+            const whiteColor = context.tokens.resolveValue(parameters.whiteColor);
+            const blackColor = context.tokens.resolveValue(parameters.blackColor);
+            const pressedColor = context.tokens.resolveValue(parameters.pressedColor);
+            const borderColor = context.tokens.resolveValue(parameters.borderColor);
+            const width = Number(parameters.width) || 0;
+            const height = Number(parameters.height) || 0;
+            const keys = BlockKeyboard.buildKeys(parameters.firstOctave, parameters.octaves, width, height);
+            const heldNotes = BlockMemory.read(parameters, "notes").map(row => BlockMemory.readField(row, "y"));
+            const notesParameter = String(parameters.notesParameter ?? "");
+            // The sharps are drawn after every natural, because each of them overlaps the two keys it
+            // sits between and would otherwise be painted over by the one on its right.
+            const ordered = keys.filter(key => !key.black).concat(keys.filter(key => key.black));
+            const children = ordered.map(key => ({
+                id: `key-${key.noteNumber}`,
+                type: "rect",
+                properties: {
+                    x: key.x,
+                    y: key.y,
+                    width: key.width,
+                    height: key.height,
+                    cornerRadius: 2,
+                    fill: heldNotes.includes(key.noteNumber) ? pressedColor : (key.black ? blackColor : whiteColor),
+                    stroke: borderColor,
+                    strokeWidth: 1
+                },
+                behaviours: [{
+                    type: "play-note",
+                    frequency: key.frequency,
+                    note: key.noteNumber,
+                    keyCode: key.computerKeyCode,
+                    notesParameter: notesParameter
+                }]
+            }));
+            return { id: "piano-keyboard", type: "group", children: children };
+        }
+    });
+
 })(BlockRegistry);
 
 if (typeof module !== "undefined" && module.exports)

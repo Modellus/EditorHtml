@@ -457,6 +457,7 @@ class TermControl {
             },
             termEditor: {
                 acceptCustomValue: isEditable,
+                customValuePlaceholder: options.customValuePlaceholder ?? "",
                 disabled: options.disabled === true,
                 onOpened: _ => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl),
                 onCustomItemCreating: event => {
@@ -1484,7 +1485,10 @@ class TermControl {
             const customInputHost = $('<div class="mdl-term-tree-custom-input">');
             $('<div>').dxTextBox({
                 value: currentTermValue || "",
-                placeholder: "Custom value",
+                // A row that only reads the model takes a term or a plain number. A row that would
+                // define the term it names says so instead, because a name the model has never held
+                // is not offered anywhere in the list below and would otherwise look like a mistake.
+                placeholder: String(this.options.termEditor?.customValuePlaceholder ?? "") || "Custom value",
                 stylingMode: "filled",
                 onEnterKey: e => {
                     const customValue = e.component.option("value");
