@@ -6294,6 +6294,20 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "handleRoom",
+                "value": {
+                    "token": "spacing.medium"
+                }
+            },
+            {
+                "id": "bodyW",
+                "formula": "\\max\\left(10,w-2\\cdot handleRoom\\right)"
+            },
+            {
+                "id": "bodyH",
+                "formula": "\\max\\left(10,h-2\\cdot handleRoom\\right)"
+            },
+            {
                 "id": "t",
                 "value": {
                     "independent": "value"
@@ -6387,19 +6401,19 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "plotX",
-                "formula": "bandLeft"
+                "formula": "handleRoom+bandLeft"
             },
             {
                 "id": "plotY",
-                "formula": "axisShown\\cdot\\frac{labelFont}{2}"
+                "formula": "handleRoom+axisShown\\cdot\\frac{labelFont}{2}"
             },
             {
                 "id": "plotW",
-                "formula": "\\max\\left(10,w-plotX-axisShown\\cdot pad\\right)"
+                "formula": "\\max\\left(10,w-plotX-handleRoom-axisShown\\cdot pad\\right)"
             },
             {
                 "id": "plotH",
-                "formula": "\\max\\left(10,h-plotY-bandBottom\\right)"
+                "formula": "\\max\\left(10,h-plotY-handleRoom-bandBottom\\right)"
             },
             {
                 "id": "spacingPixels",
@@ -6513,10 +6527,10 @@ BlockDefinitionLoader.registerAll([
                     "type": "rect",
                     "bindings": {
                         "width": {
-                            "parameter": "w"
+                            "parameter": "bodyW"
                         },
                         "height": {
-                            "parameter": "h"
+                            "parameter": "bodyH"
                         },
                         "cornerRadius": {
                             "parameter": "radiusLarge"
@@ -6526,11 +6540,15 @@ BlockDefinitionLoader.registerAll([
                         },
                         "stroke": {
                             "parameter": "borderColor"
+                        },
+                        "x": {
+                            "parameter": "handleRoom"
+                        },
+                        "y": {
+                            "parameter": "handleRoom"
                         }
                     },
                     "properties": {
-                        "x": 0,
-                        "y": 0,
                         "strokeWidth": 1
                     }
                 },

@@ -2,6 +2,10 @@ const { test, expect } = require('@playwright/test');
 
 const BOARD_URL = '/pages/board/index.html';
 
+// The room the object leaves around its drawing, on every side, so the handles the shape is dragged
+// and resized by have somewhere to stand: `spacing.medium`.
+const HANDLE_ROOM = 8;
+
 async function setupBoard(page) {
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
@@ -83,9 +87,10 @@ test.describe('Mechanical wave object', () => {
         await setupBoard(page);
         await addWave(page, { samples: 11, width: 400 });
         const positions = await page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cx'))));
-        expect(positions[0]).toBeCloseTo(0, 3);
-        expect(positions[10]).toBeCloseTo(400, 3);
-        expect(positions[1] - positions[0]).toBeCloseTo(40, 3);
+        const across = 400 - 2 * HANDLE_ROOM;
+        expect(positions[0]).toBeCloseTo(HANDLE_ROOM, 3);
+        expect(positions[10]).toBeCloseTo(HANDLE_ROOM + across, 3);
+        expect(positions[1] - positions[0]).toBeCloseTo(across / 10, 3);
     });
 
     test('longitudinal draws bars instead of circles', async ({ page }) => {
@@ -98,7 +103,7 @@ test.describe('Mechanical wave object', () => {
             const rect = shell.board.shapes.getByName('Wave').contentGroup.querySelector('rect');
             return { width: Number(rect.getAttribute('width')), height: Number(rect.getAttribute('height')) };
         });
-        expect(body).toEqual({ width: 600, height: 160 });
+        expect(body).toEqual({ width: 600 - 2 * HANDLE_ROOM, height: 160 - 2 * HANDLE_ROOM });
     });
 
     // An oscillator is pushed from where it stands: it enters the wave at rest and swings from there,
@@ -252,8 +257,9 @@ test.describe('Mechanical wave object', () => {
             expect(large.heights[index]).toBeCloseTo(small.heights[index], 3);
         // A hundred pixels of body for the greatest swing the term has shown, less the margin a chart
         // leaves around its data: the newest oscillator stands at what the term is worth on that scale.
-        expect(small.heights[0]).toBeCloseTo(100 - (small.now / small.swing) * (100 / 1.08), 3);
-        expect(large.heights[0]).toBeCloseTo(100 - (large.now / large.swing) * (100 / 1.08), 3);
+        const halfBody = (200 - 2 * HANDLE_ROOM) / 2;
+        expect(small.heights[0]).toBeCloseTo(100 - (small.now / small.swing) * (halfBody / 1.08), 3);
+        expect(large.heights[0]).toBeCloseTo(100 - (large.now / large.swing) * (halfBody / 1.08), 3);
     });
 
     test('the scale is the reader\'s once the wave is not fitted to the body', async ({ page }) => {
@@ -266,10 +272,10 @@ test.describe('Mechanical wave object', () => {
                 first: shell.board.calculator.getIteration()
             };
         });
-        // Four units of displacement over a hundred pixels of half-body: twenty-five to the unit,
-        // and the wave swinging two reaches half way to the edge rather than filling the body.
+        // Four units of displacement over the half-body left between the handles, and the wave
+        // swinging two reaches half way to the edge rather than filling the body.
         const swing = Math.max(...drawn.heights.map(height => Math.abs(height - 100)));
-        expect(swing).toBeCloseTo(2 * 25, 3);
+        expect(swing).toBeCloseTo(2 * ((200 - 2 * HANDLE_ROOM) / 2 / 4), 3);
     });
 
     // The axes are the object's own scale written down: displacement up the side, and along the
@@ -290,9 +296,9 @@ test.describe('Mechanical wave object', () => {
                 labels: Array.from(shape.contentGroup.querySelectorAll('text')).map(node => node.textContent)
             };
         });
-        expect(shown.wholeBody[0]).toBeCloseTo(0, 6);
-        // Room down the side for the numbers, so the chain no longer starts on the edge of the body.
-        expect(shown.inset[0]).toBeGreaterThan(10);
+        expect(shown.wholeBody[0]).toBeCloseTo(HANDLE_ROOM, 6);
+        // Room down the side for the numbers, so the chain no longer starts at the edge of the body.
+        expect(shown.inset[0]).toBeGreaterThan(HANDLE_ROOM + 10);
         // The wave is fitted to its own amplitude, and the chain is spread over the twenty units of
         // medium it is drawn on.
         expect(shown.labels).toContain('20');
@@ -373,7 +379,7 @@ test.describe('Mechanical wave object', () => {
                 centre: Number(shape.properties.height) / 2,
                 // Fitted to the amplitude the object works its own wave out from, with the margin a
                 // chart leaves around its data.
-                pixelsPerUnit: Number(shape.properties.height) / 2 / (Number(shape.properties.amplitude) * 1.08)
+                pixelsPerUnit: (Number(shape.properties.height) - 16) / 2 / (Number(shape.properties.amplitude) * 1.08)
             };
         });
         expect(read.drawn).toBeCloseTo(read.centre - read.handed * read.pixelsPerUnit, 6);
@@ -608,6 +614,31 @@ test.describe('Mechanical wave object', () => {
         expect(carried).toEqual({ wave: 'y', old: undefined, isTerm: true });
     });
 
+    // A shape is dragged by a handle covering the whole of it, and the only thing telling the reader
+    // so is the cursor. A part of a drawing that asks for no cursor of its own is not something to
+    // work — it is the object, and the object is there to be dragged — so the move cursor stands over
+    // it, and the object leaves room at its edge for the handles it is resized by.
+    test('the pointer says the object can be dragged, and its edge leaves room for the handles', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, { x: 100, y: 300, width: 400, height: 200, samples: 11 });
+        const body = await page.evaluate(() => {
+            const rect = shell.board.shapes.getByName('Wave').contentGroup.querySelector('rect');
+            return { x: Number(rect.getAttribute('x')), y: Number(rect.getAttribute('y')), width: Number(rect.getAttribute('width')), height: Number(rect.getAttribute('height')) };
+        });
+        expect(body).toEqual({ x: HANDLE_ROOM, y: HANDLE_ROOM, width: 400 - 2 * HANDLE_ROOM, height: 200 - 2 * HANDLE_ROOM });
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wave')));
+        const middle = await page.evaluate(() => {
+            const box = shell.board.shapes.getByName('Wave').element.getBoundingClientRect();
+            return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+        });
+        await page.mouse.move(middle.x, middle.y);
+        await expect.poll(() => page.evaluate(point => window.getComputedStyle(document.elementFromPoint(point.x, point.y)).cursor, middle)).toBe('move');
+        await page.mouse.down();
+        await page.mouse.move(middle.x + 60, middle.y + 40, { steps: 8 });
+        await page.mouse.up();
+        expect(await page.evaluate(() => ({ x: shell.board.shapes.getByName('Wave').properties.x, y: shell.board.shapes.getByName('Wave').properties.y }))).toEqual({ x: 160, y: 340 });
+    });
+
     // The two colours every shape carries: the background is the object's own row in its colour menu,
     // the border is the row the shape menu already has for it.
     test('the object is drawn on a body it paints and outlines', async ({ page }) => {
@@ -653,7 +684,7 @@ test.describe('Mechanical wave object', () => {
             };
         });
         expect(drawn.order).toEqual(['rect', 'svg']);
-        expect(drawn.frame).toEqual({ width: 600, height: 160 });
+        expect(drawn.frame).toEqual({ width: 600 - 2 * HANDLE_ROOM, height: 160 - 2 * HANDLE_ROOM });
         expect(drawn.overflow).toBe('hidden');
         expect(drawn.loose).toBe(0);
         expect(drawn.inside).toBe(11 + 10 + 11 * 3);
@@ -734,7 +765,7 @@ test.describe('Mechanical wave object', () => {
             rings.draw();
             return { heights: read('Chain', 'cy'), radii: read('Rings', 'r') };
         }, parameters);
-        const spacing = 600 / 10;
+        const spacing = (600 - 2 * HANDLE_ROOM) / 10;
         for (let index = 0; index < drawn.radii.length; index++) {
             // The chain draws the displacement upwards from the middle of the body; the rings draw
             // the same displacement outwards from where the oscillator rests.

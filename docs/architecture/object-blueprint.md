@@ -290,6 +290,13 @@ everything that moves inside it, and what leaves is cut at the edge. Leave the b
 it, or its own border is cut in half by the window it sets. A child inside keeps the coordinates it
 had outside, so nothing else about the tree changes — see `mechanical-wave.json`.
 
+**Leave the edge of the box to the handles.** A shape is dragged by a handle covering it and resized
+by handles standing on its corners and sides, and an object drawn right up to the edge of its box
+leaves them nowhere to be seen. Inset the body by `spacing.medium` and work the drawing out from
+there, the way `mechanical-wave.json` does. The cursor is answered for you: the move handle mirrors
+whatever is under the pointer only where that part asks for a cursor of its own — a knob to turn, a
+key to press — so everywhere else the reader is told the object can be dragged.
+
 ### Modifiers
 
 `translate` · `rotate` · `scale` · `mirror` · `opacity` · `visibility` · `stroke` · `fill` ·

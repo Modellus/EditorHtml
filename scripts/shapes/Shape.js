@@ -840,6 +840,17 @@ class BaseShape {
         return "move";
     }
 
+    // What the pointer says it is standing on. A part of a drawing that asks for no cursor of its own
+    // is not something to work — it is the object itself, and the object is there to be dragged — so
+    // the handle keeps the move cursor its own class gives it. Only a part that says what it is, a
+    // knob to turn or a key to press, takes the cursor over.
+    static getDeclaredCursor(element) {
+        if (!element)
+            return "";
+        const cursor = window.getComputedStyle(element).cursor;
+        return cursor === "auto" || cursor === "default" ? "" : cursor;
+    }
+
     onHandlePointerMove = (event, handle) => {
         if (this.draggedHandle)
             return;
@@ -850,10 +861,7 @@ class BaseShape {
             return;
         }
         const underlying = this.getElementUnderMoveHandle(handle, event);
-        if (underlying)
-            handle.style.cursor = window.getComputedStyle(underlying).cursor;
-        else
-            handle.style.cursor = "";
+        handle.style.cursor = BaseShape.getDeclaredCursor(underlying);
         if (underlying !== this._lastUnderlyingMoveElement) {
             if (this._lastUnderlyingMoveElement)
                 this._lastUnderlyingMoveElement.dispatchEvent(new PointerEvent("pointerleave", event));
