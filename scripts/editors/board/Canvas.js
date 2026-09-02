@@ -33,7 +33,10 @@ class Canvas {
 
     clear() {
         this.deselect();
-        this.shapes.shapes.forEach(shape => shape.hideContextToolbar?.());
+        this.shapes.shapes.forEach(shape => {
+            shape.hideContextToolbar?.();
+            shape.onRemoved();
+        });
         while (this.svg.firstChild)
             this.svg.removeChild(this.svg.firstChild);
         while (this.motionLayer.firstChild)

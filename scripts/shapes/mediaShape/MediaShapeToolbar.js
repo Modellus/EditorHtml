@@ -49,6 +49,22 @@ var MediaShapeToolbarMixin = {
         });
         this._mediaSettingsDropdownElement.appendTo(container);
     },
+    buildEmbedLinkMenuItem() {
+        return {
+            text: "Link",
+            buildControl: $container => {
+                $('<div>').appendTo($container).dxTextBox({
+                    value: this.properties.embedUrl ?? "",
+                    placeholder: "Notion, YouTube or Vimeo link",
+                    stylingMode: "filled",
+                    width: 220,
+                    showClearButton: true,
+                    onInitialized: e => { this._embedLinkBoxInstance = e.component; },
+                    onValueChanged: e => this.applyEmbedLink(e.value)
+                });
+            }
+        };
+    },
     buildMediaSettingsMenuContent(contentElement) {
         const listItems = [
             {
@@ -116,6 +132,8 @@ var MediaShapeToolbarMixin = {
                 }
             }
         ];
+        if (this.applyEmbedLink)
+            listItems.splice(1, 0, this.buildEmbedLinkMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 350, scrollContent => {
             $('<div>').appendTo(scrollContent).dxList({
                 dataSource: listItems,

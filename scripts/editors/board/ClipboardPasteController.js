@@ -7,6 +7,8 @@ class ClipboardPasteController {
         this.mediaHeight = 200;
         this.embedWidth = 400;
         this.embedHeight = 225;
+        this.notionWidth = 560;
+        this.notionHeight = 700;
         this.dataTableWidth = 400;
         this.dataTableHeight = 300;
         this.textWidth = 400;
@@ -127,23 +129,7 @@ class ClipboardPasteController {
     }
 
     getEmbedUrl(url) {
-        const youtubeId = this.getYoutubeVideoId(url);
-        if (youtubeId)
-            return `https://www.youtube.com/embed/${youtubeId}`;
-        const vimeoId = url.match(/^https?:\/\/(?:www\.)?vimeo\.com\/(\d+)/i)?.[1];
-        if (vimeoId)
-            return `https://player.vimeo.com/video/${vimeoId}`;
-        return null;
-    }
-
-    getYoutubeVideoId(url) {
-        const shortMatch = url.match(/^https?:\/\/(?:www\.)?youtu\.be\/([\w-]+)/i);
-        if (shortMatch)
-            return shortMatch[1];
-        const longMatch = url.match(/^https?:\/\/(?:www\.)?youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/)([\w-]+)/i);
-        if (longMatch)
-            return longMatch[1];
-        return null;
+        return MediaShape.toEmbedUrl(url);
     }
 
     getUrlKindFromExtension(url) {
@@ -224,10 +210,21 @@ class ClipboardPasteController {
         this.addTextShape(`<a href="${escapedUrl}">${escapedUrl}</a>`, this.centerPosition(point, this.textWidth, this.textHeight));
     }
 
+    isNotionEmbedUrl(url) {
+        return url.includes(".notion.site/ebd/");
+    }
+
+    getMediaSize(url, kind) {
+        if (kind !== "embed")
+            return { width: this.mediaWidth, height: this.mediaHeight };
+        if (this.isNotionEmbedUrl(url))
+            return { width: this.notionWidth, height: this.notionHeight };
+        return { width: this.embedWidth, height: this.embedHeight };
+    }
+
     addMediaShape(url, kind, point, id) {
         const isEmbed = kind === "embed";
-        const width = isEmbed ? this.embedWidth : this.mediaWidth;
-        const height = isEmbed ? this.embedHeight : this.mediaHeight;
+        const { width, height } = this.getMediaSize(url, kind);
         const position = this.centerPosition(point, width, height);
         const shape = this.board.createShape("MediaShape", null, id);
         const properties = {
