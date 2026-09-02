@@ -20,6 +20,8 @@ class Calculator extends EventTarget {
         this.dataSources = new Map();
         /** @type {Map<string, { name: string, resolver: (index: number, values: { [name: string]: number }) => number }>} */
         this.indexedSources = new Map();
+        /** @type {Map<string, { name: string, addedTerm: boolean }>} */
+        this.valueSources = new Map();
         this.setDefaults();
     }
 
@@ -114,6 +116,14 @@ class Calculator extends EventTarget {
     }
 
     calculate(iteration = this.system.iteration) {
+        this.recalculate(iteration);
+        this.emit("iterate", { calculator: this });
+    }
+
+    // The row worked through again without saying so. A value written while the model is already
+    // telling everything that it has iterated still has to reach the terms defined from it on that
+    // row, and announcing a second iteration from inside the first is how a redraw becomes a loop.
+    recalculate(iteration = this.system.iteration) {
         const normalizedIteration = Math.max(1, Math.min(Math.floor(Number(iteration) || 1), this.system.lastIteration));
         this.recalculationRevision = (this.recalculationRevision ?? 0) + 1;
         this.recalculatedIteration = normalizedIteration;
@@ -123,7 +133,6 @@ class Calculator extends EventTarget {
             this.system.calculateFunctions();
         else
             /** @type {any} */ (this.system).calculateFunctionsOnIteration(normalizedIteration);
-        this.emit("iterate", { calculator: this });
     }
 
     play() {
@@ -181,6 +190,7 @@ class Calculator extends EventTarget {
         this.system.clear();
         this.dataSources.clear();
         this.indexedSources.clear();
+        this.valueSources.clear();
         this.system.independent = this.properties.independent.name;
         this.system.setInitialIndependent(this.properties.independent.start);
         this.system.step = this.properties.independent.step;
@@ -291,6 +301,48 @@ class Calculator extends EventTarget {
 
     getIndexedSourceName(sourceId) {
         return this.indexedSources.get(sourceId)?.name ?? "";
+    }
+
+    // A name an object stands for one value under — the oscillator a wave reads itself back on — is
+    // held here under the id of whatever writes it, the way an indexed source is. The name is added
+    // to the system as a term so everything working from the list of terms offers it, and writing
+    // under a different name takes the old one back out rather than leaving both standing.
+    setValueSource(sourceId, name) {
+        const termName = String(name);
+        const published = this.valueSources.get(sourceId);
+        if (published?.name === termName)
+            return false;
+        if (published)
+            this.withdrawValueSource(published);
+        if (termName === "") {
+            this.valueSources.delete(sourceId);
+            return published !== undefined;
+        }
+        const addedTerm = !this.system.isTerm(termName);
+        this.system.addTermByName(termName, Modellus.TermType.PARAMETER);
+        this.valueSources.set(sourceId, { name: termName, addedTerm: addedTerm });
+        return true;
+    }
+
+    removeValueSource(sourceId) {
+        const published = this.valueSources.get(sourceId);
+        if (!published)
+            return false;
+        this.withdrawValueSource(published);
+        this.valueSources.delete(sourceId);
+        return true;
+    }
+
+    // A name taken back out of the model takes the term that was added for it with it. A term that
+    // was already there is the model's own, or another object's, and neither is this one's to remove.
+    withdrawValueSource(published) {
+        if (!published.addedTerm || this.system.isIndexedSource(published.name) || this.system.getExpressionTree(published.name))
+            return;
+        this.system.removeTermCompletely(published.name);
+    }
+
+    getValueSourceName(sourceId) {
+        return this.valueSources.get(sourceId)?.name ?? "";
     }
 
     applyDataSources() {

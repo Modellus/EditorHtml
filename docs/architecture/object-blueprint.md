@@ -355,7 +355,11 @@ handles that rescale an axis.
 | `{ "memory": "history", "row": …, "field": "x", "from": "end" }` | a memory, a row, or a field |
 | `{ "memoryCount": "history" }` | how many rows it holds |
 | `{ "termUnit": { "parameter": "valueVariable" } }` | what the term a parameter names is measured in, as the model holds it |
+| `{ "independent": "step" }` | how much of the independent one row of the run is worth, which is what an object reading a term row by row measures its drawing in; `"value"` and `"name"` are the other two |
 | `{ "element": <binding>, "index": <binding> }` | one element of a name the model defined over element indices with `y\left[i\right]=…`; the name comes from a binding, so an object points at whichever one the reader names |
+| `{ "past": <binding>, "ago": <binding> }` | what a name was worth `ago` earlier in the run, in the units of the model's own clock; a moment between two rows is read between them, and a moment before the run began reads as 0 |
+| `{ "swing": <binding> }` | the greatest distance from zero a name has reached on any row worked through so far, which is what an object fits a drawing to |
+| `{ "defines": <binding> }` | 1 where the model works that name out for itself — an assignment, a name defined over element indices, another object's wave, a column of measurements — and 0 where it leaves the name free |
 | `{ "termsRow": "waves", "row": <binding>, "field": "term" }` | one row of a `terms` list, by its place among the rows that name something; `field` is `term`, `case` or `color` — and a row that chose no colour is given the one its place in the list is drawn in, the colour its swatch in the menu shows |
 | `{ "termsCount": "waves" }` | how many rows of that list name something, which is what a `repeat` over the list counts |
 
@@ -435,6 +439,7 @@ npx playwright test tests/object-picker.spec.js tests/component-blocks.spec.js
 | composed of several sub-objects | [`analogue-clock.json`](../../scripts/blocks/definitions/analogue-clock.json), [`orbit-system.json`](../../scripts/blocks/definitions/orbit-system.json) |
 | a keypad that keeps its working | [`calculator.json`](../../scripts/blocks/definitions/calculator.json) — `key-cap`, `remember`, `memory-list` |
 | a plot that records | [`mouse-tracker.json`](../../scripts/blocks/definitions/mouse-tracker.json) — the plot components over a `memory-trace` |
-| a wave the model defines over element indices | [`mechanical-wave.json`](../../scripts/blocks/definitions/mechanical-wave.json) — an `element` binding under a `repeat`, and an `indexedSource` that publishes the wave the object works out when the model leaves the name free |
+| a wave built out of what a term has been doing | [`mechanical-wave.json`](../../scripts/blocks/definitions/mechanical-wave.json) — a `past` binding under a `repeat`, chosen by `defines` against the object's own formula, a `swing` binding fitting the drawing to what the run has shown, and a `valueSource` that hands the model its reference oscillator when the model leaves the name free |
+| a wave the model defines over element indices | [`piano.json`](../../scripts/blocks/definitions/piano.json) — an `indexedSource` summed `over` the notes being held |
 | an instrument reading such a wave | [`oscilloscope.json`](../../scripts/blocks/definitions/oscilloscope.json) — a `terms` list read with `termsRow`, drawn over `plot-grid`/`plot-axes`, with a `follow-pointer` cursor reading every wave where it stands and a `clickable` mark to measure the distance from |
 | a list of terms the reader adds to | [`oscilloscope.json`](../../scripts/blocks/definitions/oscilloscope.json) again — one `repeat` over `termsCount` for the readings and one over the rows times the samples for the traces, since a repeat inside a repeat would take the outer `$index` away |

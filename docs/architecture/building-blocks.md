@@ -306,10 +306,9 @@ stay in code, because they generate geometry per index or per character rather t
   `System.getElementValue`. The declaration names the term it publishes under (`name`, a binding, so
   the reader chooses the name), the index the formula is written over (`index`, bound by the
   declaration the way an assignment binds the `i` of `y\left[i\right]=…`), and a `formula` for the
-  displacement of one element, with its `inputs` bound like any other formula. The Mechanical wave
-  publishes this way: name a term the model leaves free in its *Wave* row and the wave it works
-  out from its own amplitude, frequency, speed and phase becomes a name the model can plot, read one
-  element at a time and superpose. Publishing adds the name to the system as a parameter term, exactly as the parser
+  displacement of one element, with its `inputs` bound like any other formula. The piano publishes
+  this way: the chord it is holding becomes a name the model can plot, read one element at a time and
+  superpose. Publishing adds the name to the system as a parameter term, exactly as the parser
   does before registering `y\left[i\right]=…`, so the name is offered wherever terms are listed; it is
   withdrawn again with the source, unless the term was already the model's. The model has the last
   word — a name it assigns, one it already defines over element indices, and a column of measurements
@@ -319,6 +318,23 @@ stay in code, because they generate geometry per index or per character rather t
   selector — it offers every term the model holds — with one difference: its custom-value box invites
   a name of the reader's own, because the name a wave is published under is written in the object
   rather than picked from a model that has never held it.
+* **`valueSource`** is the same bargain for one reading rather than a whole wave: `name`, a binding
+  saying which term to write under, and a `formula` for the value, with its `inputs` bound like any
+  other. The Mechanical wave writes this way — what the reference oscillator of the wave it works out
+  for itself is doing, handed to the model under a name the model leaves free, so it can be plotted
+  against time, read in a definition and added to another object's reading. The value is written on
+  the row the model is showing, as the run reaches it, and the row is worked through again after the
+  write, so a definition reading the name is answered on that row rather than a step behind. The name
+  is added to the system and withdrawn with the source exactly as an indexed one is, and the model has
+  the same last word: a name it works out for itself is read, never written over. The row naming it
+  invites a name of the reader's own for the same reason.
+* **An object may fit what it draws to what the run has shown.** `swing` reads the greatest distance
+  from zero a name has reached on any row worked through, so a drawing scaled by it fills its body
+  whatever the term is worth — a hundredth and a hundred are drawn alike — and stops moving once the
+  first swing is over. It is the whole run rather than the part on screen for that reason, and
+  because a wave dying away should be drawn dying away rather than filling the body again. The
+  Mechanical wave fits its chain this way while `autoScale` is on, and reads its own
+  `displacementScale` row while it is off.
 * **An element may be a sum.** A wave with one source is one formula; a wave with many is that same
   formula added up over them, which is what superposition is. `"over": { "index": "k", "count": … }`
   says how many sources there are and what the declaration calls the one it is working on, and every
@@ -330,9 +346,10 @@ stay in code, because they generate geometry per index or per character rather t
   rather than four thousand bindings.
 * **`visibleWhen`/`disabledWhen`** may ask what the model makes of the name a row holds rather than
   what the row holds: `{ "parameter": "wave", "modelDefines": false }`. A wave the model works out for
-  itself leaves the object nothing to shape, so the wave's amplitude, frequency, speed, phase and
-  wavefront are not offered at all while it is reading one — and are offered again the moment the name
-  is the object's own, kept to itself or published.
+  itself leaves the object nothing to shape, so the wave's amplitude, frequency, speed, phase,
+  length and wavefront are not offered at all while it is repeating one — a chain repeating the model
+  is spread over the run's own clock, an oscillator to an iteration — and they are offered again the
+  moment the name is the object's own, kept to itself or handed over.
 * **`previousId`** on a parameter is the name it used to be called. A file saved before the rename
   is read under the old name and written back under the new one, the same courtesy the registry pays
   a block that has been renamed; the wave's `wave` parameter carries `displacement` this way.

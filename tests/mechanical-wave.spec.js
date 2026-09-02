@@ -19,6 +19,27 @@ async function addWave(page, parameters = {}) {
     await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Wave')?.contentGroup?.children.length ?? 0)).toBeGreaterThan(0);
 }
 
+// The chain as it stands on one row of the run, read back off the drawing.
+async function readChainAt(page, iteration) {
+    return page.evaluate(iteration => {
+        const calculator = shell.board.calculator;
+        calculator.pause();
+        calculator.setIteration(iteration);
+        const shape = shell.board.shapes.getByName('Wave');
+        shape.draw();
+        return {
+            t: calculator.getIndependentValue(),
+            heights: Array.from(shape.contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy')))
+        };
+    }, iteration);
+}
+
+// What the third oscillator of a nine-oscillator chain twenty units long is doing at five units a
+// second: two spacings from the source, so two delays behind it.
+function referenceDisplacement(t) {
+    return 2 * Math.sin(2 * Math.PI * 0.5 * (t - 2 * 20 / (8 * 5)));
+}
+
 function countOf(page, selector) {
     return page.evaluate(selector => shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll(selector).length, selector);
 }
@@ -147,68 +168,166 @@ test.describe('Mechanical wave object', () => {
     });
 
 
-    test('draws a wave the model defined over element indices', async ({ page }) => {
+    // A wave is one motion travelling: what the source did a moment ago is what the oscillator a
+    // moment further along is doing now. The model works the source out — y = t is a ramp, so what
+    // each oscillator reads back can be named exactly — and the chain hands it along at the speed the
+    // object is set to.
+    // A wave is one motion travelling: the source moves, and a moment later the oscillator beside it
+    // is doing what the source was doing. Every iteration hands the chain the term's next value and
+    // moves the one before it along, so the chain at one row is the chain at the row before, shifted
+    // by an oscillator.
+    test('each iteration hands the chain the next value of the term', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => {
             modellus.shape.addExpression('Eq');
-            shell.board.shapes.getByName('Eq').properties.expression = 'y\\left[i\\right]=2\\cdot\\cos\\left(i\\right)';
+            shell.board.shapes.getByName('Eq').properties.expression = 'y=\\sin\\left(t\\right)';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20 });
-            shell.reset();
-            shape.draw();
-        });
-        const drawn = await page.evaluate(() => {
-            const shape = shell.board.shapes.getByName('Wave');
-            const heights = Array.from(shape.contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy')));
-            const centre = Number(shape.properties.height) / 2;
-            const pixelsPerUnit = Number(shape.properties.width) / Number(shape.properties.length);
-            return { heights, centre, pixelsPerUnit, indexed: shell.board.calculator.isIndexedSource('y') };
-        });
-        expect(drawn.indexed).toBe(true);
-        for (let index = 0; index < drawn.heights.length; index++) {
-            const expected = drawn.centre - 2 * Math.cos(index + 1) * drawn.pixelsPerUnit;
-            expect(drawn.heights[index]).toBeCloseTo(expected, 6);
-        }
-    });
-
-    test('superposing two model waves stands one oscillator still while another swings', async ({ page }) => {
-        await setupBoard(page);
-        await page.evaluate(() => {
-            modellus.shape.addExpression('Eq');
-            shell.board.shapes.getByName('Eq').properties.expression =
-                'A=2\\\\k=\\frac{\\pi}{6}\\\\w=1\\\\forward\\left[i\\right]=A\\cdot\\cos\\left(k\\cdot i-w\\cdot t\\right)\\\\back\\left[i\\right]=A\\cdot\\cos\\left(k\\cdot i+w\\cdot t\\right)\\\\standing=forward+back';
-            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 220, samples: 9, wave: 'standing', length: 20 });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y' });
             shell.reset();
         });
         await page.evaluate(() => shell.board.calculator.play());
-        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 60, null, { timeout: 20000 });
-        const swing = await page.evaluate(async () => {
-            const shape = shell.board.shapes.getByName('Wave');
-            const calculator = shell.board.calculator;
-            calculator.pause();
-            const extremes = { node: { low: Infinity, high: -Infinity }, antinode: { low: Infinity, high: -Infinity } };
-            for (let iteration = 1; iteration <= 60; iteration++) {
-                calculator.setIteration(iteration);
-                calculator.calculate(iteration);
-                shape.draw();
-                const heights = Array.from(shape.contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy')));
-                for (const [key, index] of [['node', 2], ['antinode', 5]]) {
-                    extremes[key].low = Math.min(extremes[key].low, heights[index]);
-                    extremes[key].high = Math.max(extremes[key].high, heights[index]);
-                }
-            }
-            return { node: extremes.node.high - extremes.node.low, antinode: extremes.antinode.high - extremes.antinode.low };
-        });
-        expect(swing.node).toBeLessThan(1);
-        expect(swing.antinode).toBeGreaterThan(50);
+        // Past the first crest, so the swing the drawing is fitted to has settled and the two rows
+        // are drawn on the same scale.
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 45, null, { timeout: 20000 });
+        const before = await readChainAt(page, 40);
+        const after = await readChainAt(page, 41);
+        expect(after.t - before.t).toBeCloseTo(0.1, 6);
+        for (let index = 0; index < before.heights.length - 1; index++)
+            expect(after.heights[index + 1]).toBeCloseTo(before.heights[index], 6);
     });
 
-    test('publishes its own wave under a name the model leaves free', async ({ page }) => {
+    // The chain holds one value per oscillator, so what it reaches back over is its own count of
+    // steps of the run — nine oscillators of a run stepping by a tenth hold the last eight tenths.
+    test('the chain reaches back one step of the run for each oscillator', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Eq');
+            shell.board.shapes.getByName('Eq').properties.expression = 'y=t';
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y' });
+            shell.reset();
+        });
+        await page.evaluate(() => shell.board.calculator.play());
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 10, null, { timeout: 20000 });
+        const drawn = await readChainAt(page, 6);
+        // y = t rises by a tenth every row, so the five oscillators the run has reached stand evenly
+        // stepped down from the newest, and the ones it has not reached yet stand at rest.
+        const rest = 100;
+        const stepDown = drawn.heights[1] - drawn.heights[0];
+        expect(stepDown).toBeGreaterThan(0);
+        for (let index = 1; index < 5; index++)
+            expect(drawn.heights[index] - drawn.heights[index - 1]).toBeCloseTo(stepDown, 6);
+        for (let index = 5; index < 9; index++)
+            expect(drawn.heights[index]).toBeCloseTo(rest, 6);
+    });
+
+    // The chain is drawn against the greatest swing the term has shown, the way a chart fits its axes
+    // to what it is plotting, so a term worth a hundredth and a term worth a hundred are drawn alike.
+    test('the wave is fitted to the body, whatever the term is worth', async ({ page }) => {
+        await setupBoard(page);
+        const readFor = async definition => {
+            await page.evaluate(definition => {
+                shell.board.shapes.getByName('Eq').properties.expression = definition;
+                shell.reset();
+            }, definition);
+            await page.evaluate(() => shell.board.calculator.play());
+            await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 70, null, { timeout: 20000 });
+            const drawn = await readChainAt(page, 70);
+            return Object.assign(drawn, await page.evaluate(() => {
+                const calculator = shell.board.calculator;
+                let swing = 0;
+                for (let iteration = 1; iteration <= calculator.getIteration(); iteration++)
+                    swing = Math.max(swing, Math.abs(calculator.system.getByNameOnIteration(iteration, 'y', 1)));
+                return { now: calculator.getByName('y', 1), swing: swing };
+            }));
+        };
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Eq');
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y' });
+        });
+        const small = await readFor('y=0.01\\cdot\\sin\\left(t\\right)');
+        const large = await readFor('y=100\\cdot\\sin\\left(t\\right)');
+        for (let index = 0; index < small.heights.length; index++)
+            expect(large.heights[index]).toBeCloseTo(small.heights[index], 3);
+        // A hundred pixels of body for the greatest swing the term has shown, less the margin a chart
+        // leaves around its data: the newest oscillator stands at what the term is worth on that scale.
+        expect(small.heights[0]).toBeCloseTo(100 - (small.now / small.swing) * (100 / 1.08), 3);
+        expect(large.heights[0]).toBeCloseTo(100 - (large.now / large.swing) * (100 / 1.08), 3);
+    });
+
+    test('the scale is the reader\'s once the wave is not fitted to the body', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, { width: 600, height: 200, samples: 9, amplitude: '2', wavefront: false, autoScale: false, displacementScale: 4 });
+        const drawn = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wave');
+            return {
+                heights: Array.from(shape.contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy'))),
+                first: shell.board.calculator.getIteration()
+            };
+        });
+        // Four units of displacement over a hundred pixels of half-body: twenty-five to the unit,
+        // and the wave swinging two reaches half way to the edge rather than filling the body.
+        const swing = Math.max(...drawn.heights.map(height => Math.abs(height - 100)));
+        expect(swing).toBeCloseTo(2 * 25, 3);
+    });
+
+    // The axes are the object's own scale written down: displacement up the side, and along the
+    // bottom whatever the chain is spread over. They are not drawn until they are asked for, and the
+    // chain gives them room when they are.
+    test('the axes are hidden until they are asked for, and then they read the scale', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, { width: 600, height: 200, samples: 9, length: 20, amplitude: '2', wavefront: false });
+        expect(await countOf(page, 'text')).toBe(0);
+        const shown = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wave');
+            const wholeBody = Array.from(shape.contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cx')));
+            shape.setProperties({ showAxes: true });
+            shape.draw();
+            return {
+                wholeBody: wholeBody,
+                inset: Array.from(shape.contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cx'))),
+                labels: Array.from(shape.contentGroup.querySelectorAll('text')).map(node => node.textContent)
+            };
+        });
+        expect(shown.wholeBody[0]).toBeCloseTo(0, 6);
+        // Room down the side for the numbers, so the chain no longer starts on the edge of the body.
+        expect(shown.inset[0]).toBeGreaterThan(10);
+        // The wave is fitted to its own amplitude, and the chain is spread over the twenty units of
+        // medium it is drawn on.
+        expect(shown.labels).toContain('20');
+        expect(shown.labels).toContain('2');
+        expect(shown.labels).toContain('-2');
+    });
+
+    test('a chain repeating the model is spread over the run\'s own clock', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Eq');
+            shell.board.shapes.getByName('Eq').properties.expression = 'y=\\sin\\left(t\\right)';
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 21, wave: 'y', length: 20, showAxes: true });
+            shell.reset();
+        });
+        await page.evaluate(() => shell.board.calculator.play());
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 45, null, { timeout: 20000 });
+        const labels = await page.evaluate(() => {
+            shell.board.calculator.pause();
+            const shape = shell.board.shapes.getByName('Wave');
+            shape.draw();
+            return Array.from(shape.contentGroup.querySelectorAll('text')).map(node => node.textContent);
+        });
+        // Twenty-one oscillators of a run stepping by a tenth: two seconds of it, not the twenty
+        // units of medium a wave of the object's own is drawn over.
+        expect(labels).toContain('2');
+        expect(labels).not.toContain('20');
+    });
+
+    test('hands the model the reference oscillator under a name the model leaves free', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => {
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false, referenceIndex: 3 });
             shell.reset();
             shape.draw();
         });
@@ -216,31 +335,57 @@ test.describe('Mechanical wave object', () => {
             const calculator = shell.board.calculator;
             const values = calculator.system.getIteration(calculator.getIteration(), 1);
             return {
-                indexed: calculator.isIndexedSource('y'),
                 isTerm: calculator.isTerm('y'),
+                indexed: calculator.isIndexedSource('y'),
                 termNames: calculator.getTermsNames(),
-                elements: [1, 2, 3].map(index => calculator.system.getElementValue('y', index, values)),
+                y: values.y,
                 independent: values[calculator.properties.independent.name]
             };
         });
-        expect(published.indexed).toBe(true);
-        // A wave the model cannot name is of no use in it: the name has to be a term, so the graphs,
-        // the tables and every list of terms offer it like any other.
+        // A reading is one value, not a name standing for every oscillator at once.
+        expect(published.indexed).toBe(false);
+        // A reading the model cannot name is of no use in it: the name has to be a term, so the
+        // graphs, the tables and every list of terms offer it like any other.
         expect(published.isTerm).toBe(true);
         expect(published.termNames).toContain('y');
-        for (let element = 1; element <= 3; element++) {
-            const delay = (element - 1) * 20 / (8 * 5);
-            expect(published.elements[element - 1]).toBeCloseTo(2 * Math.sin(2 * Math.PI * 0.5 * (published.independent - delay)), 6);
-        }
+        expect(published.y).toBeCloseTo(referenceDisplacement(published.independent), 6);
     });
 
-    test('the model reads the published wave at the row it is working on', async ({ page }) => {
+    // The number the model is handed and the oscillator it was read from are the same thing, so the
+    // two can be put side by side: the reading is where the reference oscillator is drawn.
+    test('what the model is handed is where the reference oscillator is drawn', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: false, referenceIndex: 3 });
+            shell.reset();
+        });
+        await page.evaluate(() => shell.board.calculator.play());
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 12, null, { timeout: 20000 });
+        const read = await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            calculator.pause();
+            const shape = shell.board.shapes.getByName('Wave');
+            shape.draw();
+            return {
+                handed: calculator.getByName('y', 1),
+                drawn: Number(shape.contentGroup.querySelectorAll('circle')[2].getAttribute('cy')),
+                centre: Number(shape.properties.height) / 2,
+                // Fitted to the amplitude the object works its own wave out from, with the margin a
+                // chart leaves around its data.
+                pixelsPerUnit: Number(shape.properties.height) / 2 / (Number(shape.properties.amplitude) * 1.08)
+            };
+        });
+        expect(read.drawn).toBeCloseTo(read.centre - read.handed * read.pixelsPerUnit, 6);
+    });
+
+    test('a definition reading the name is answered on the row the object wrote', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => {
             modellus.shape.addExpression('Eq');
-            shell.board.shapes.getByName('Eq').properties.expression = 'z=y\\left[3\\right]';
+            shell.board.shapes.getByName('Eq').properties.expression = 'z=2\\cdot y';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false, referenceIndex: 3 });
             shell.reset();
         });
         await page.evaluate(() => shell.board.calculator.play());
@@ -251,27 +396,25 @@ test.describe('Mechanical wave object', () => {
             const independentName = calculator.properties.independent.name;
             return [5, 10, 20].map(iteration => {
                 const values = calculator.system.getIteration(iteration, 1);
-                return { t: values[independentName], z: values.z };
+                return { t: values[independentName], y: values.y, z: values.z };
             });
         });
-        for (const reading of readings)
-            expect(reading.z).toBeCloseTo(2 * Math.sin(2 * Math.PI * 0.5 * (reading.t - 2 * 20 / (8 * 5))), 6);
+        for (const reading of readings) {
+            expect(reading.y).toBeCloseTo(referenceDisplacement(reading.t), 6);
+            expect(reading.z).toBeCloseTo(2 * reading.y, 6);
+        }
     });
 
-    test('the wave the model defines is left as the model defines it', async ({ page }) => {
+    test('the term the model defines is left as the model defines it', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => {
             modellus.shape.addExpression('Eq');
-            shell.board.shapes.getByName('Eq').properties.expression = 'y\\left[i\\right]=7';
+            shell.board.shapes.getByName('Eq').properties.expression = 'y=7';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
             shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', amplitude: '2', length: 20 });
             shell.reset();
         });
-        const element = await page.evaluate(() => {
-            const calculator = shell.board.calculator;
-            return calculator.system.getElementValue('y', 3, calculator.system.getIteration(calculator.getIteration(), 1));
-        });
-        expect(element).toBe(7);
+        expect(await page.evaluate(() => shell.board.calculator.getByName('y', 1))).toBe(7);
     });
 
     test('a term the model already holds is left standing when the object stops publishing', async ({ page }) => {
@@ -298,36 +441,39 @@ test.describe('Mechanical wave object', () => {
             shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20 });
             shell.reset();
         });
-        expect(await page.evaluate(() => shell.board.calculator.isIndexedSource('y'))).toBe(false);
+        await page.evaluate(() => shell.board.calculator.play());
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 10, null, { timeout: 20000 });
+        expect(await page.evaluate(() => {
+            shell.board.calculator.pause();
+            return shell.board.calculator.getByName('y', 1);
+        })).toBe(4);
     });
 
-    test('two published waves superpose into a standing wave the model holds', async ({ page }) => {
+    test('two objects reading their own oscillators are added up by the model', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => {
             modellus.shape.addExpression('Eq');
-            shell.board.shapes.getByName('Eq').properties.expression = 'standing=forward+back';
+            shell.board.shapes.getByName('Eq').properties.expression = 'both=forward+back';
             for (const [name, speed] of [['Forward', '5'], ['Back', '-5']]) {
                 const shape = shell.commands.addComponent('mechanical-wave', `Wave ${name}`);
-                shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: name.toLowerCase(), length: 20, amplitude: '2', frequency: '0.5', speed: speed, phase: '0', wavefront: false });
+                shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: name.toLowerCase(), length: 20, amplitude: '2', frequency: '0.5', speed: speed, phase: '0', wavefront: false, referenceIndex: 3 });
             }
             shell.reset();
         });
-        const sums = await page.evaluate(() => {
+        await page.evaluate(() => shell.board.calculator.play());
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 20, null, { timeout: 20000 });
+        const rows = await page.evaluate(() => {
             const calculator = shell.board.calculator;
-            const values = calculator.system.getIteration(calculator.getIteration(), 1);
-            return [1, 3, 5].map(index => ({
-                forward: calculator.system.getElementValue('forward', index, values),
-                back: calculator.system.getElementValue('back', index, values),
-                standing: calculator.system.getElementValue('standing', index, values)
-            }));
+            calculator.pause();
+            return [5, 10, 20].map(iteration => calculator.system.getIteration(iteration, 1));
         });
-        for (const sum of sums) {
-            expect(Number.isFinite(sum.standing)).toBe(true);
-            expect(sum.standing).toBeCloseTo(sum.forward + sum.back, 6);
+        for (const row of rows) {
+            expect(Number.isFinite(row.both)).toBe(true);
+            expect(row.both).toBeCloseTo(row.forward + row.back, 6);
         }
     });
 
-    test('the wave it publishes is the wave it drew before, oscillator for oscillator', async ({ page }) => {
+    test('the wave it hands the model is the wave it drew before, oscillator for oscillator', async ({ page }) => {
         await setupBoard(page);
         const parameters = { x: 80, y: 80, width: 600, height: 200, samples: 11, length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: true };
         const heights = await page.evaluate(parameters => {
@@ -346,31 +492,24 @@ test.describe('Mechanical wave object', () => {
             expect(heights.published[index]).toBeCloseTo(heights.kept[index], 6);
     });
 
-    test('editing a parameter republishes the wave, and removing the object takes it back', async ({ page }) => {
+    test('editing a parameter changes what the model is handed, and removing the object takes it back', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => {
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
-            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false });
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false, referenceIndex: 3 });
             shell.reset();
         });
-        const readElement = () => page.evaluate(() => {
-            const calculator = shell.board.calculator;
-            return calculator.system.getElementValue('y', 1, calculator.system.getIteration(calculator.getIteration(), 1));
-        });
-        const before = await readElement();
+        const readValue = name => page.evaluate(name => shell.board.calculator.getByName(name, 1), name);
+        const before = await readValue('y');
+        expect(before).not.toBe(0);
         await page.evaluate(() => shell.board.shapes.getByName('Wave').setProperty('amplitude', '6'));
-        expect(await readElement()).toBeCloseTo(before * 3, 6);
+        expect(await readValue('y')).toBeCloseTo(before * 3, 6);
         await page.evaluate(() => shell.board.shapes.getByName('Wave').setProperty('wave', 'w'));
-        expect(await page.evaluate(() => {
-            const calculator = shell.board.calculator;
-            return { y: calculator.isIndexedSource('y'), w: calculator.isIndexedSource('w'), names: calculator.getTermsNames() };
-        })).toEqual({ y: false, w: true, names: expect.arrayContaining(['w']) });
-        expect(await page.evaluate(() => shell.board.calculator.isTerm('y'))).toBe(false);
+        expect(await page.evaluate(() => ({ y: shell.board.calculator.isTerm('y'), w: shell.board.calculator.isTerm('w'), names: shell.board.calculator.getTermsNames() })))
+            .toEqual({ y: false, w: true, names: expect.arrayContaining(['w']) });
+        expect(await readValue('w')).toBeCloseTo(before * 3, 6);
         await page.evaluate(() => shell.board.shapes.getByName('Wave').remove());
-        expect(await page.evaluate(() => ({
-            indexed: shell.board.calculator.isIndexedSource('w'),
-            isTerm: shell.board.calculator.isTerm('w')
-        }))).toEqual({ indexed: false, isTerm: false });
+        expect(await page.evaluate(() => shell.board.calculator.isTerm('w'))).toBe(false);
     });
 
     test('repainting an oscillator leaves the run it has already worked through standing', async ({ page }) => {
@@ -408,7 +547,7 @@ test.describe('Mechanical wave object', () => {
         await expect(customValue).toHaveAttribute('placeholder', 'Name a new term');
         await customValue.fill('y');
         await customValue.press('Enter');
-        await expect.poll(() => page.evaluate(() => shell.board.calculator.isIndexedSource('y'))).toBe(true);
+        await expect.poll(() => page.evaluate(() => shell.board.calculator.isTerm('y'))).toBe(true);
         const written = await page.evaluate(() => ({
             wave: shell.board.shapes.getByName('Wave').properties.wave,
             isTerm: shell.board.calculator.isTerm('y'),
@@ -418,8 +557,9 @@ test.describe('Mechanical wave object', () => {
         expect(written).toEqual({ wave: 'y', isTerm: true, marked: 0 });
     });
 
-    // A row that governs nothing is not offered: reading a wave the model defines leaves the object
-    // nothing to shape, while a wave of its own — kept to itself or published — is shaped by all four.
+    // A row that governs nothing is not offered: a chain repeating what the model works out is spread
+    // over the run's own clock, one oscillator to an iteration, so none of the rows that shape a wave
+    // of the object's own — kept to itself or handed over — has anything to say about it.
     test('the settings that shape a wave are offered only where they shape one', async ({ page }) => {
         await setupBoard(page);
         const offered = () => page.evaluate(() => {
@@ -428,7 +568,7 @@ test.describe('Mechanical wave object', () => {
         });
         await page.evaluate(() => {
             modellus.shape.addExpression('Eq');
-            shell.board.shapes.getByName('Eq').properties.expression = 'm\\left[i\\right]=\\cos\\left(i\\right)';
+            shell.board.shapes.getByName('Eq').properties.expression = 'm=\\cos\\left(t\\right)';
             const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
             shape.setProperties({ x: 80, y: 80, width: 400, height: 160 });
             shell.reset();
@@ -436,12 +576,12 @@ test.describe('Mechanical wave object', () => {
         const shaping = ['Amplitude', 'Frequency', 'Speed', 'Initial phase', 'Wavefront'];
         expect(await offered()).toEqual(expect.arrayContaining(shaping));
 
-        // A name of the object's own: it works the wave out and publishes it, so it still shapes it.
+        // A name of the object's own: it works the wave out and hands it over, so it still shapes it.
         await page.evaluate(() => shell.board.shapes.getByName('Wave').setProperty('wave', 'own'));
-        expect(await page.evaluate(() => shell.board.calculator.isIndexedSource('own'))).toBe(true);
+        expect(await page.evaluate(() => shell.board.calculator.isTerm('own'))).toBe(true);
         expect(await offered()).toEqual(expect.arrayContaining(shaping));
 
-        // A name the model defines over element indices: the object only draws what it is given.
+        // A name the model works out for itself: the object only draws what it is given.
         await page.evaluate(() => shell.board.shapes.getByName('Wave').setProperty('wave', 'm'));
         const readingTheModel = await offered();
         for (const label of shaping)
@@ -463,9 +603,9 @@ test.describe('Mechanical wave object', () => {
             shell.board.deserialize([saved]);
             shell.reset();
             const restored = shell.board.shapes.getByName('Wave');
-            return { wave: restored.properties.wave, old: restored.properties.displacement, indexed: shell.board.calculator.isIndexedSource('y') };
+            return { wave: restored.properties.wave, old: restored.properties.displacement, isTerm: shell.board.calculator.isTerm('y') };
         });
-        expect(carried).toEqual({ wave: 'y', old: undefined, indexed: true });
+        expect(carried).toEqual({ wave: 'y', old: undefined, isTerm: true });
     });
 
     // The two colours every shape carries: the background is the object's own row in its colour menu,
@@ -532,9 +672,9 @@ test.describe('Mechanical wave object', () => {
 
     test('a transverse wave taller than its body is cut off at the edge', async ({ page }) => {
         await setupBoard(page);
-        // Twenty units of amplitude over a body twenty pixels per unit high: the swing is four
+        // A body set to show two units of displacement, with a wave swinging twenty: the swing is ten
         // times the body, so most of the chain stands well outside it.
-        await addWave(page, { x: 100, y: 400, width: 400, height: 100, samples: 21, amplitude: '20', length: 20, wavefront: false });
+        await addWave(page, { x: 100, y: 400, width: 400, height: 100, samples: 21, amplitude: '20', length: 20, wavefront: false, autoScale: false, displacementScale: 2 });
         const heights = await page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy'))));
         const inside = heights.findIndex(height => height >= 0 && height <= 100);
         const above = heights.findIndex(height => height < 0);
@@ -546,7 +686,7 @@ test.describe('Mechanical wave object', () => {
 
     test('a longitudinal wave pushed past the end of its body is cut off too', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { x: 100, y: 400, width: 400, height: 100, samples: 21, amplitude: '20', length: 20, orientation: 'longitudinal', wavefront: false });
+        await addWave(page, { x: 100, y: 400, width: 400, height: 100, samples: 21, amplitude: '20', length: 20, orientation: 'longitudinal', wavefront: false, autoScale: false, displacementScale: 2 });
         const painted = await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Wave');
             const bars = Array.from(shape.contentGroup.querySelectorAll('rect')).slice(1);

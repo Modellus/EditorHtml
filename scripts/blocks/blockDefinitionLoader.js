@@ -37,6 +37,9 @@ class BlockDefinitionLoader {
         const indexedSource = document.indexedSource
             ? BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.indexedSource), BlockDefinitionLoader.buildIndexedScope(document, scope))
             : null;
+        const valueSource = document.valueSource
+            ? BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.valueSource), scope)
+            : null;
         BlockDefinitionLoader.documents.set(document.type, BlockMigrations.clone(document));
         return registry.register({
             type: document.type,
@@ -51,6 +54,7 @@ class BlockDefinitionLoader {
             parameters: (document.parameters ?? []).map(parameter => BlockDefinitionLoader.normalizeParameter(parameter)),
             agentAccessible: document.agentAccessible !== false,
             indexedSource: indexedSource,
+            valueSource: valueSource,
             create: (parameters, context) => {
                 BlockDefinitionLoader.applyLocals(locals, parameters, context);
                 return BlockDefinitionLoader.pruneNode(BlockMigrations.clone(root), context);
@@ -228,6 +232,15 @@ class BlockDefinitionLoader {
             if (over && over.count === undefined)
                 problems.push("A summed indexed source needs a binding saying how many sources it sums.");
             BlockDefinitionLoader.findUnknownNames(document.indexedSource, new Set([...declared, indexName, overIndex]), "indexedSource", problems);
+        }
+        // A value source is the other half of the same bargain: one reading, written under a name the
+        // model leaves free, rather than a name standing for every element of a wave.
+        if (document.valueSource) {
+            if (typeof document.valueSource.formula !== "string")
+                problems.push("A value source needs a formula for the value it writes.");
+            if (document.valueSource.name === undefined)
+                problems.push("A value source needs a binding saying which term it writes.");
+            BlockDefinitionLoader.findUnknownNames(document.valueSource, declared, "valueSource", problems);
         }
         return problems;
     }

@@ -808,7 +808,7 @@ Capabilities: `radial`, `angular`, `textual`
 
 ### `mechanical-wave` — Mechanical wave
 
-A mechanical wave drawn as a chain of oscillators, each receiving the disturbance with the delay of its distance from the source.
+A mechanical wave drawn as a chain of oscillators, each taking up the motion of the source as late as its distance from it. It repeats what a term of the model has been doing, one oscillator to each iteration of the run, or works its own wave out and hands the model the oscillator it is read at.
 
 Capabilities: `reads-model`, `writes-model`, `oscillation`
 
@@ -820,6 +820,8 @@ Capabilities: `reads-model`, `writes-model`, `oscillation`
 | `speed` | variable | "5" |  |
 | `phase` | variable | "0" |  |
 | `length` | number | 20 | min 0.001 |
+| `autoScale` | boolean | true |  |
+| `displacementScale` | number | 2 | min 0.000001 |
 | `samples` | number | 30 | min 2, max 200 |
 | `orientation` | string | "transverse" | transverse \| longitudinal \| radial |
 | `wavefront` | boolean | true |  |
@@ -827,10 +829,12 @@ Capabilities: `reads-model`, `writes-model`, `oscillation`
 | `referenceIndex` | number | 1 | min 0, max 200 |
 | `showArrows` | boolean | false |  |
 | `showLine` | boolean | false |  |
+| `showAxes` | boolean | false |  |
 | `backgroundColor` | colour | "token:surface.default" |  |
 | `borderColor` | colour | "token:stroke.subtle" |  |
 | `waveColor` | colour | "token:stroke.accent" |  |
 | `referenceColor` | colour | "token:stroke.strong" |  |
+| `axisColor` | colour | "token:axis.color" |  |
 
 ### `memory-list` — Memory list
 

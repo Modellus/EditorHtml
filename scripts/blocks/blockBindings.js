@@ -1,5 +1,5 @@
 class BlockBindings {
-    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "opaque", "termUnit", "element", "termsRow", "termsCount"];
+    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "opaque", "termUnit", "element", "past", "defines", "swing", "termsRow", "termsCount"];
 
     static isBinding(value) {
         if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -32,6 +32,28 @@ class BlockBindings {
 
     static element(termBinding, indexBinding) {
         return { element: termBinding, index: indexBinding };
+    }
+
+    // What a name was worth earlier in the run, `ago` being how far back in the units of the model's
+    // own clock. The model keeps every row it has worked through, so the history of a term is already
+    // there to be read: an object showing what a value has been doing reads it back rather than
+    // recording a second copy of it.
+    static past(termBinding, agoBinding) {
+        return { past: termBinding, ago: agoBinding };
+    }
+
+    // Whether the model works a name out for itself rather than leaving it to whoever names it. It is
+    // what tells an object reading a term from an object writing one, and it is the same question the
+    // rows of the menu ask through `visibleWhen`.
+    static defines(termBinding) {
+        return { defines: termBinding };
+    }
+
+    // How far a name has swung from rest so far in the run: the greatest distance from zero it has
+    // reached on any row worked through. It is what an object fits a wave to, the way a chart fits
+    // its axes to the data it is plotting.
+    static swing(termBinding) {
+        return { swing: termBinding };
     }
 
     // One row of a list of terms the reader names for themselves, the way the chart's vertical terms
@@ -187,6 +209,12 @@ class BlockBindings {
             return this.resolveIndependent(binding, fallbackValue);
         if (kind === "element")
             return this.resolveElement(binding, context, fallbackValue);
+        if (kind === "past")
+            return this.resolvePast(binding, context, fallbackValue);
+        if (kind === "defines")
+            return this.definesTerm(String(this.resolve(binding.defines, context, ""))) ? 1 : 0;
+        if (kind === "swing")
+            return this.resolveSwing(binding, context, fallbackValue);
         if (kind === "opaque")
             return BlockBindings.isOpaqueColour(this.resolve(binding.opaque, context, "")) ? 1 : 0;
         if (kind === "expression")
@@ -351,10 +379,72 @@ class BlockBindings {
         return Number.isFinite(value) ? value : fallbackValue;
     }
 
+    // A name read at an earlier moment of the run. The row the moment falls between is read between
+    // the two rows around it, so a chain handing a value along at a speed of its own is not tied to
+    // the step the model runs in. A moment before the run began has nothing to read: what has not
+    // happened yet cannot have reached anything, so it reads as 0 — a chain the wave has not arrived
+    // at is at rest.
+    resolvePast(binding, context, fallbackValue) {
+        const termName = String(this.resolve(binding.past, context, "")).trim();
+        const ago = Number(this.resolve(binding.ago, context, NaN));
+        if (termName === "" || !this.isModelTerm(termName) || !Number.isFinite(ago))
+            return fallbackValue;
+        const step = Number(this.calculator.getStep());
+        const current = this.calculator.getIteration();
+        const moment = Math.min(current, current - (Number.isFinite(step) && step !== 0 ? ago / step : 0));
+        if (moment < 1)
+            return 0;
+        const caseNumber = this.getCaseNumber(binding, context);
+        const earlier = this.readIterationValue(termName, Math.floor(moment), caseNumber);
+        const later = this.readIterationValue(termName, Math.min(current, Math.ceil(moment)), caseNumber);
+        if (!Number.isFinite(earlier) || !Number.isFinite(later))
+            return fallbackValue;
+        return earlier + (later - earlier) * (moment - Math.floor(moment));
+    }
+
+    readIterationValue(termName, iteration, caseNumber) {
+        return Number(this.calculator.system.getByNameOnIteration(Math.max(1, iteration), termName, caseNumber));
+    }
+
+    // The greatest distance from rest a name has reached so far. Every row the model has worked
+    // through is read, so the scale an object fits to it stops moving once the first swing is over —
+    // and a wave dying away is drawn dying away rather than filling the body again.
+    resolveSwing(binding, context, fallbackValue) {
+        const termName = String(this.resolve(binding.swing, context, "")).trim();
+        if (termName === "" || !this.isModelTerm(termName))
+            return fallbackValue;
+        const caseNumber = this.getCaseNumber(binding, context);
+        const last = Math.min(this.calculator.getIteration(), this.calculator.getLastCalculatedIteration());
+        let greatest = 0;
+        for (let iteration = 1; iteration <= last; iteration++) {
+            const value = Math.abs(this.readIterationValue(termName, iteration, caseNumber));
+            if (Number.isFinite(value) && value > greatest)
+                greatest = value;
+        }
+        return greatest;
+    }
+
+    // A name the model has values of its own for: one it assigns, one it defines over element
+    // indices, one another object publishes and a column of measurements. Everything else is a name
+    // whoever writes it is free to write into.
+    definesTerm(name) {
+        if (!this.calculator || !this.calculator.isTerm(name))
+            return false;
+        if (this.calculator.isIndexedSource(name) || !this.calculator.isEditable(name))
+            return true;
+        return this.calculator.system.getTerm(name)?.type === Modellus.TermType.PRELOADED;
+    }
+
     resolveIndependent(binding, fallbackValue) {
         const name = String(this.calculator?.properties?.independent?.name ?? "");
         if (binding.independent === "name")
             return name;
+        // The step is how much of the independent one row of the run is worth, which is what an
+        // object reading a term row by row measures its own drawing in.
+        if (binding.independent === "step") {
+            const step = Number(this.calculator?.getStep?.());
+            return Number.isFinite(step) ? step : fallbackValue;
+        }
         const value = Number(this.calculator?.getIndependentValue?.());
         return Number.isFinite(value) ? value : fallbackValue;
     }
@@ -563,6 +653,18 @@ class BlockBindings {
                 parameters: termDependencies.parameters.concat(indexDependencies.parameters)
             };
         }
+        if (kind === "past") {
+            const termDependencies = this.getBindingDependencies(binding.past);
+            const agoDependencies = this.getBindingDependencies(binding.ago);
+            return {
+                variables: termDependencies.variables.concat(agoDependencies.variables),
+                parameters: termDependencies.parameters.concat(agoDependencies.parameters)
+            };
+        }
+        if (kind === "defines")
+            return this.getBindingDependencies(binding.defines);
+        if (kind === "swing")
+            return this.getBindingDependencies(binding.swing);
         if (kind === "opaque")
             return this.getBindingDependencies(binding.opaque);
         return { variables: [], parameters: [] };

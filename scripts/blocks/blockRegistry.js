@@ -60,6 +60,9 @@ class BuildingBlockRegistry {
             // What a component publishes back to the model: the wave it draws, as a name defined over
             // element indices. Nothing is published unless the definition says so.
             indexedSource: registration.indexedSource ?? null,
+            // And what it hands back as one value: the reading an object takes of the wave it works
+            // out for itself, written under a name the model leaves free.
+            valueSource: registration.valueSource ?? null,
             aliases: registration.aliases ?? [],
             agentAccessible: registration.agentAccessible !== false,
             deprecated: registration.deprecated === true,

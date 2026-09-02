@@ -118,7 +118,7 @@ class ComponentShape extends BaseShape {
             this.backfillComponentProperties();
         if (!properties.definition && Object.keys(properties).some(name => this.isComponentParameter(name)))
             BlockObjects.markEdited(this.properties.definition);
-        if (Object.keys(properties).some(name => this.isMemoryDataProperty(name) || this.isIndexedSourceProperty(name)))
+        if (Object.keys(properties).some(name => this.isMemoryDataProperty(name) || this.isModelSourceProperty(name)))
             this.refreshModelData();
     }
 
@@ -130,7 +130,7 @@ class ComponentShape extends BaseShape {
         // through once, when the recording ends.
         if (this.isMemoryDataProperty(name))
             this.publishModelData();
-        else if (this.isIndexedSourceProperty(name))
+        else if (this.isModelSourceProperty(name))
             this.refreshModelData();
     }
 
@@ -528,12 +528,9 @@ class ComponentShape extends BaseShape {
     modelDefinesTerm(name) {
         if (!this.namesTerm(name))
             return false;
-        const calculator = this.board.calculator;
-        if (calculator.getIndexedSourceName(this.getIndexedSourceId()) === name)
+        if (this.board.calculator.getIndexedSourceName(this.getIndexedSourceId()) === name)
             return false;
-        if (calculator.isIndexedSource(name) || !calculator.isEditable(name))
-            return true;
-        return calculator.system.getTerm(name)?.type === Modellus.TermType.PRELOADED;
+        return this.getComponentCompiler().bindings.definesTerm(name);
     }
 
     getTermEntryLabelPosition(entry) {
@@ -606,6 +603,7 @@ class ComponentShape extends BaseShape {
 
     tick() {
         super.tick();
+        this.writeValueSource();
         this.board.markDirty(this);
     }
 
@@ -787,7 +785,9 @@ class ComponentShape extends BaseShape {
         super.onRemoved();
         // An object taken off the board takes the wave it published with it, so a name it stood for
         // stops answering rather than going on drawing from an object that is no longer there.
-        if (this.board.calculator.removeIndexedSource(this.getIndexedSourceId()))
+        const withdrewWave = this.board.calculator.removeIndexedSource(this.getIndexedSourceId());
+        const withdrewReading = this.board.calculator.removeValueSource(this.getValueSourceId());
+        if (withdrewWave || withdrewReading)
             this.board.calculator.refreshDataSources();
         this.stopKeepingTime();
         this.removeNoteListeners();
@@ -1340,6 +1340,7 @@ class ComponentShape extends BaseShape {
 
     publishModelData() {
         let feedsModel = this.publishIndexedSource();
+        feedsModel = this.publishValueSource() || feedsModel;
         for (const parameter of this.getMemoryParameters()) {
             const series = this.buildMemorySeries(parameter);
             this.board.calculator.setDataSource(this.getMemorySourceId(parameter.id), series.names, series.values);
@@ -1357,10 +1358,20 @@ class ComponentShape extends BaseShape {
         return this.getComponentRegistration()?.indexedSource ?? null;
     }
 
-    // Whether this parameter is the one the object publishes its wave under, which is what makes a
-    // name the model does not hold yet a reasonable thing to write in it.
+    // A definition may hand the model one value instead of a whole wave: the reading the object takes
+    // of what it is drawing, written under the name the reader wrote in the row that would otherwise
+    // point at a term. The object goes on drawing its own wave — what it publishes is what it draws,
+    // read at one element of it — so nothing about the drawing depends on the model taking it.
+    getValueSourceDeclaration() {
+        return this.getComponentRegistration()?.valueSource ?? null;
+    }
+
+    // Whether this parameter is the one the object publishes under, which is what makes a name the
+    // model does not hold yet a reasonable thing to write in it.
     publishesParameter(parameterId) {
-        return String(this.getIndexedSourceDeclaration()?.name?.parameter ?? "") === String(parameterId);
+        const id = String(parameterId);
+        return String(this.getIndexedSourceDeclaration()?.name?.parameter ?? "") === id
+            || String(this.getValueSourceDeclaration()?.name?.parameter ?? "") === id;
     }
 
     getIndexedSourceId() {
@@ -1408,6 +1419,68 @@ class ComponentShape extends BaseShape {
 
     isIndexedSourceProperty(name) {
         return this.getIndexedSourceParameters().includes(name);
+    }
+
+    getValueSourceId() {
+        return `value:${this.id}`;
+    }
+
+    // The model has the last word on a name it works out itself: a term it assigns, one it defines
+    // over element indices, one another object publishes and a column of measurements are all read
+    // rather than written over. A row standing at a plain number names nothing to write under.
+    canPublishValueSource(name) {
+        return this.namesTerm(name) && !this.modelDefinesTerm(name);
+    }
+
+    publishValueSource() {
+        const declaration = this.getValueSourceDeclaration();
+        const sourceId = this.getValueSourceId();
+        if (!declaration)
+            return this.board.calculator.removeValueSource(sourceId);
+        const name = String(this.getComponentCompiler().bindings.resolve(declaration.name, this.getCompilationContext(), "") ?? "").trim();
+        if (!this.canPublishValueSource(name))
+            return this.board.calculator.setValueSource(sourceId, "");
+        return this.board.calculator.setValueSource(sourceId, name);
+    }
+
+    // What the object is reading now, written on the row the model is showing. The row is worked
+    // through again after it, so a definition reading the name is answered on the same row rather
+    // than a step behind the object it reads.
+    writeValueSource() {
+        const declaration = this.getValueSourceDeclaration();
+        const name = this.board.calculator.getValueSourceName(this.getValueSourceId());
+        if (!declaration || name === "")
+            return;
+        const value = Number(this.getComponentCompiler().bindings.resolve(declaration, this.getCompilationContext(), NaN));
+        if (!Number.isFinite(value))
+            return;
+        const calculator = this.board.calculator;
+        const iteration = calculator.getIteration();
+        calculator.setTermValueOnIteration(name, value, iteration, this.getTermCaseNumber("caseNumber"));
+        calculator.recalculate(iteration);
+    }
+
+    // What the object writes is worked out from its parameters, so editing one of them is the model
+    // holding a different reading and everything working from it is worked through again.
+    getValueSourceParameters() {
+        const componentType = this.getComponentType();
+        if (this._valueSourceParameters?.type === componentType)
+            return this._valueSourceParameters.names;
+        const declaration = this.getValueSourceDeclaration();
+        const bindings = this.getComponentCompiler().bindings;
+        const names = declaration
+            ? bindings.getBindingDependencies(declaration).parameters.concat(bindings.getBindingDependencies(declaration.name).parameters)
+            : [];
+        this._valueSourceParameters = { type: componentType, names: names };
+        return names;
+    }
+
+    isValueSourceProperty(name) {
+        return this.getValueSourceParameters().includes(name);
+    }
+
+    isModelSourceProperty(name) {
+        return this.isIndexedSourceProperty(name) || this.isValueSourceProperty(name);
     }
 
     // The editing path: the model is holding different measurements now, so it works them through

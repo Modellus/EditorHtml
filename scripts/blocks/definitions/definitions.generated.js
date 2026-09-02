@@ -6037,7 +6037,7 @@ BlockDefinitionLoader.registerAll([
         "type": "mechanical-wave",
         "category": "component",
         "displayName": "Mechanical wave",
-        "description": "A mechanical wave drawn as a chain of oscillators, each receiving the disturbance with the delay of its distance from the source.",
+        "description": "A mechanical wave drawn as a chain of oscillators, each taking up the motion of the source as late as its distance from it. It repeats what a term of the model has been doing, one oscillator to each iteration of the run, or works its own wave out and hands the model the oscillator it is read at.",
         "icon": "fa-light fa-wave-sine",
         "tags": [
             "object",
@@ -6068,7 +6068,7 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "variable",
                 "defaultValue": "",
                 "category": "model",
-                "description": "A name the model defined over element indices, as y\\left[i\\right]=... does. The first oscillator is element 1. A name the model leaves free goes the other way: the object works its wave out from the amplitude, frequency, speed and phase below and hands it to the model under that name, so it can be plotted, read one oscillator at a time and superposed with another wave. Left empty, the object keeps the wave to itself."
+                "description": "The model's part in the wave, named. A name the model works out for itself — y=A\\cdot\\sin\\left(\\omega\\cdot t\\right) — is the source the chain repeats: every iteration hands the first oscillator the value the term has just taken and moves the one before it along, so the chain is the last values of the term, oldest at the far end, travelling as the run goes. A name the model leaves free goes the other way: the object works its wave out from the amplitude, frequency, speed and phase below and hands the model what the reference oscillator is doing under that name, so it can be plotted, read and used in a definition like any other term. Left empty, the object keeps the wave to itself."
             },
             {
                 "id": "amplitude",
@@ -6099,11 +6099,11 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "variable",
                 "defaultValue": "5",
                 "category": "model",
+                "description": "Propagation speed. A negative speed sends the wave the other way.",
                 "visibleWhen": {
                     "parameter": "wave",
                     "modelDefines": false
-                },
-                "description": "Propagation speed. A negative speed sends the wave the other way."
+                }
             },
             {
                 "id": "phase",
@@ -6124,7 +6124,32 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": 20,
                 "category": "scale",
                 "minimum": 0.001,
-                "description": "How long the chain is in model units. The spacing between oscillators follows from it."
+                "description": "How long the chain is in model units, which is what the spacing between oscillators and the delay from one to the next follow from. A chain repeating a term of the model is spread over the run's own clock instead, one iteration to each oscillator.",
+                "visibleWhen": {
+                    "parameter": "wave",
+                    "modelDefines": false
+                }
+            },
+            {
+                "id": "autoScale",
+                "label": "Auto scale",
+                "valueType": "boolean",
+                "defaultValue": true,
+                "category": "scale",
+                "description": "Fits the wave to the body: the greatest displacement it has shown in the run reaches the edge, with the margin a chart leaves around its data. Turned off, the scale below says what the edge stands for, and a wave carried past it is cut off there."
+            },
+            {
+                "id": "displacementScale",
+                "label": "Greatest displacement",
+                "valueType": "number",
+                "defaultValue": 2,
+                "category": "scale",
+                "minimum": 0.000001,
+                "visibleWhen": {
+                    "parameter": "autoScale",
+                    "equals": false
+                },
+                "description": "The displacement the edge of the body stands for while the wave is not fitted to it."
             },
             {
                 "id": "samples",
@@ -6136,7 +6161,7 @@ BlockDefinitionLoader.registerAll([
                 "minimum": 2,
                 "maximum": 200,
                 "bindable": false,
-                "description": "How many oscillators the chain is drawn as, and so how far the index of the wave it publishes runs."
+                "description": "How many oscillators the chain is drawn as. Repeating a term of the model, it is also how many of the term's values the chain holds, and so how far back it reaches."
             },
             {
                 "id": "orientation",
@@ -6180,7 +6205,7 @@ BlockDefinitionLoader.registerAll([
                 "category": "display",
                 "minimum": 0,
                 "maximum": 200,
-                "description": "The oscillator drawn in its own colour, so one of them can be followed. Zero marks none."
+                "description": "The oscillator drawn in its own colour, so one of them can be followed. It is also the one the object reads: a wave handed to the model under a name the model leaves free is handed what this oscillator is doing. Zero marks none, and the first oscillator is read instead."
             },
             {
                 "id": "showArrows",
@@ -6190,7 +6215,7 @@ BlockDefinitionLoader.registerAll([
                 "category": "display",
                 "visibleWhen": {
                     "parameter": "wave",
-                    "equals": ""
+                    "modelDefines": false
                 }
             },
             {
@@ -6199,6 +6224,14 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "boolean",
                 "defaultValue": false,
                 "category": "display"
+            },
+            {
+                "id": "showAxes",
+                "label": "Show axes",
+                "valueType": "boolean",
+                "defaultValue": false,
+                "category": "display",
+                "description": "Draws and numbers the two axes the wave is drawn on, and leaves them room: displacement up the side, and across the bottom what the chain is spread over — its length in model units, or the run's own clock while it is repeating a term of the model."
             },
             {
                 "id": "backgroundColor",
@@ -6229,41 +6262,18 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "colour",
                 "defaultValue": "token:stroke.strong",
                 "category": "style"
-            }
-        ],
-        "indexedSource": {
-            "name": {
-                "parameter": "wave"
             },
-            "index": "n",
-            "formula": "A\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(t-\\frac{\\left(n-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}\\right)+p\\right)\\cdot\\left(1-g\\cdot\\max\\left(0,sign\\left(\\frac{\\left(n-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}-t\\right)\\right)\\right)",
-            "inputs": {
-                "A": {
-                    "parameter": "amplitude"
-                },
-                "f": {
-                    "parameter": "frequency"
-                },
-                "v": {
-                    "parameter": "speed"
-                },
-                "p": {
-                    "parameter": "phase"
-                },
-                "L": {
-                    "parameter": "length"
-                },
-                "N": {
-                    "formula": "\\max\\left(2,\\min\\left(200,round\\left(samples\\right)\\right)\\right)"
-                },
-                "g": {
-                    "parameter": "wavefront"
-                },
-                "t": {
-                    "independent": "value"
+            {
+                "id": "axisColor",
+                "label": "Axis",
+                "valueType": "colour",
+                "defaultValue": "token:axis.color",
+                "category": "style",
+                "visibleWhen": {
+                    "parameter": "showAxes"
                 }
             }
-        },
+        ],
         "locals": [
             {
                 "id": "w",
@@ -6340,16 +6350,64 @@ BlockDefinitionLoader.registerAll([
                 "formula": "count-1"
             },
             {
+                "id": "pad",
+                "value": 6
+            },
+            {
+                "id": "axisFont",
+                "value": {
+                    "token": "font.size.tick"
+                }
+            },
+            {
+                "id": "labelFont",
+                "formula": "\\max\\left(8,\\min\\left(axisFont,h\\cdot0.05\\right)\\right)"
+            },
+            {
+                "id": "axisShown",
+                "value": {
+                    "choose": {
+                        "parameter": "showAxes"
+                    },
+                    "then": {
+                        "constant": 1
+                    },
+                    "otherwise": {
+                        "constant": 0
+                    }
+                }
+            },
+            {
+                "id": "bandLeft",
+                "formula": "axisShown\\cdot\\left(pad+labelFont\\cdot3.4\\right)"
+            },
+            {
+                "id": "bandBottom",
+                "formula": "axisShown\\cdot\\left(pad+labelFont\\cdot2.2\\right)"
+            },
+            {
+                "id": "plotX",
+                "formula": "bandLeft"
+            },
+            {
+                "id": "plotY",
+                "formula": "axisShown\\cdot\\frac{labelFont}{2}"
+            },
+            {
+                "id": "plotW",
+                "formula": "\\max\\left(10,w-plotX-axisShown\\cdot pad\\right)"
+            },
+            {
+                "id": "plotH",
+                "formula": "\\max\\left(10,h-plotY-bandBottom\\right)"
+            },
+            {
                 "id": "spacingPixels",
-                "formula": "\\frac{w}{gaps}"
+                "formula": "\\frac{plotW}{gaps}"
             },
             {
                 "id": "spacing",
                 "formula": "\\frac{length}{gaps}"
-            },
-            {
-                "id": "ppu",
-                "formula": "\\frac{w}{length}"
             },
             {
                 "id": "omega",
@@ -6360,12 +6418,70 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\frac{spacing}{spd}"
             },
             {
+                "id": "stepTime",
+                "value": {
+                    "independent": "step"
+                }
+            },
+            {
+                "id": "fitted",
+                "value": {
+                    "choose": {
+                        "defines": {
+                            "parameter": "wave"
+                        }
+                    },
+                    "then": {
+                        "swing": {
+                            "parameter": "wave"
+                        }
+                    },
+                    "otherwise": {
+                        "parameter": "amp"
+                    }
+                }
+            },
+            {
+                "id": "reach",
+                "value": {
+                    "choose": {
+                        "parameter": "autoScale"
+                    },
+                    "then": {
+                        "formula": "\\max\\left(0.000001,fitted\\cdot1.08\\right)"
+                    },
+                    "otherwise": {
+                        "formula": "\\max\\left(0.000001,displacementScale\\right)"
+                    }
+                }
+            },
+            {
+                "id": "ppy",
+                "formula": "\\frac{plotH}{2\\cdot reach}"
+            },
+            {
                 "id": "centerY",
-                "formula": "\\frac{h}{2}"
+                "formula": "plotY+\\frac{plotH}{2}"
             },
             {
                 "id": "centerX",
-                "formula": "\\frac{w}{2}"
+                "formula": "plotX+\\frac{plotW}{2}"
+            },
+            {
+                "id": "spanX",
+                "value": {
+                    "choose": {
+                        "defines": {
+                            "parameter": "wave"
+                        }
+                    },
+                    "then": {
+                        "formula": "gaps\\cdot stepTime"
+                    },
+                    "otherwise": {
+                        "parameter": "length"
+                    }
+                }
             },
             {
                 "id": "ringWidth",
@@ -6373,7 +6489,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "barHeight",
-                "formula": "h\\cdot0.6"
+                "formula": "plotH\\cdot0.6"
             },
             {
                 "id": "barTop",
@@ -6423,16 +6539,19 @@ BlockDefinitionLoader.registerAll([
                     "type": "clip-box",
                     "bindings": {
                         "width": {
-                            "parameter": "w"
+                            "parameter": "plotW"
                         },
                         "height": {
-                            "parameter": "h"
+                            "parameter": "plotH"
+                        },
+                        "x": {
+                            "parameter": "plotX"
+                        },
+                        "y": {
+                            "parameter": "plotY"
                         }
                     },
-                    "properties": {
-                        "x": 0,
-                        "y": 0
-                    },
+                    "properties": {},
                     "children": [
                         {
                             "id": "link",
@@ -6453,7 +6572,7 @@ BlockDefinitionLoader.registerAll([
                             },
                             "bindings": {
                                 "x1": {
-                                    "formula": "i\\cdot spacingPixels",
+                                    "formula": "plotX+i\\cdot spacingPixels",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
@@ -6461,32 +6580,34 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y1": {
-                                    "formula": "centerY-d\\cdot ppu",
+                                    "formula": "centerY-d\\cdot ppy",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
                                             "choose": {
-                                                "parameter": "wave"
+                                                "defines": {
+                                                    "parameter": "wave"
+                                                }
                                             },
                                             "then": {
-                                                "element": {
+                                                "past": {
                                                     "parameter": "wave"
                                                 },
-                                                "index": {
-                                                    "formula": "i+1",
+                                                "ago": {
+                                                    "formula": "el\\cdot stepTime",
                                                     "inputs": {
-                                                        "i": {
+                                                        "el": {
                                                             "parameter": "$index"
                                                         }
                                                     }
                                                 }
                                             },
                                             "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
                                                 "inputs": {
-                                                    "i": {
+                                                    "el": {
                                                         "parameter": "$index"
                                                     }
                                                 }
@@ -6495,7 +6616,7 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "x2": {
-                                    "formula": "\\left(i+1\\right)\\cdot spacingPixels",
+                                    "formula": "plotX+\\left(i+1\\right)\\cdot spacingPixels",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
@@ -6503,33 +6624,45 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y2": {
-                                    "formula": "centerY-d\\cdot ppu",
+                                    "formula": "centerY-d\\cdot ppy",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
                                             "choose": {
-                                                "parameter": "wave"
+                                                "defines": {
+                                                    "parameter": "wave"
+                                                }
                                             },
                                             "then": {
-                                                "element": {
+                                                "past": {
                                                     "parameter": "wave"
                                                 },
-                                                "index": {
-                                                    "formula": "i+2",
+                                                "ago": {
+                                                    "formula": "el\\cdot stepTime",
                                                     "inputs": {
-                                                        "i": {
-                                                            "parameter": "$index"
+                                                        "el": {
+                                                            "formula": "i+1",
+                                                            "inputs": {
+                                                                "i": {
+                                                                    "parameter": "$index"
+                                                                }
+                                                            }
                                                         }
                                                     }
                                                 }
                                             },
                                             "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-\\left(i+1\\right)\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(\\left(i+1\\right)\\cdot delay-t\\right)\\right)\\right)",
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
                                                 "inputs": {
-                                                    "i": {
-                                                        "parameter": "$index"
+                                                    "el": {
+                                                        "formula": "i+1",
+                                                        "inputs": {
+                                                            "i": {
+                                                                "parameter": "$index"
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
@@ -6564,7 +6697,9 @@ BlockDefinitionLoader.registerAll([
                                 },
                                 "then": {
                                     "choose": {
-                                        "parameter": "wave"
+                                        "defines": {
+                                            "parameter": "wave"
+                                        }
                                     },
                                     "then": {
                                         "constant": 0
@@ -6579,7 +6714,7 @@ BlockDefinitionLoader.registerAll([
                             },
                             "bindings": {
                                 "x1": {
-                                    "formula": "i\\cdot spacingPixels",
+                                    "formula": "plotX+i\\cdot spacingPixels",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
@@ -6587,41 +6722,23 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y1": {
-                                    "formula": "centerY-d\\cdot ppu",
+                                    "formula": "centerY-d\\cdot ppy",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "choose": {
-                                                "parameter": "wave"
-                                            },
-                                            "then": {
-                                                "element": {
-                                                    "parameter": "wave"
-                                                },
-                                                "index": {
-                                                    "formula": "i+1",
-                                                    "inputs": {
-                                                        "i": {
-                                                            "parameter": "$index"
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                                "inputs": {
-                                                    "i": {
-                                                        "parameter": "$index"
-                                                    }
+                                            "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
                                                 }
                                             }
                                         }
                                     }
                                 },
                                 "x2": {
-                                    "formula": "i\\cdot spacingPixels",
+                                    "formula": "plotX+i\\cdot spacingPixels",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
@@ -6629,34 +6746,16 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y2": {
-                                    "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                                    "formula": "\\left(centerY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "choose": {
-                                                "parameter": "wave"
-                                            },
-                                            "then": {
-                                                "element": {
-                                                    "parameter": "wave"
-                                                },
-                                                "index": {
-                                                    "formula": "i+1",
-                                                    "inputs": {
-                                                        "i": {
-                                                            "parameter": "$index"
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                                "inputs": {
-                                                    "i": {
-                                                        "parameter": "$index"
-                                                    }
+                                            "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
                                                 }
                                             }
                                         }
@@ -6706,7 +6805,9 @@ BlockDefinitionLoader.registerAll([
                                 },
                                 "then": {
                                     "choose": {
-                                        "parameter": "wave"
+                                        "defines": {
+                                            "parameter": "wave"
+                                        }
                                     },
                                     "then": {
                                         "constant": 0
@@ -6721,7 +6822,7 @@ BlockDefinitionLoader.registerAll([
                             },
                             "bindings": {
                                 "x1": {
-                                    "formula": "i\\cdot spacingPixels",
+                                    "formula": "plotX+i\\cdot spacingPixels",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
@@ -6729,34 +6830,16 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y1": {
-                                    "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                                    "formula": "\\left(centerY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "choose": {
-                                                "parameter": "wave"
-                                            },
-                                            "then": {
-                                                "element": {
-                                                    "parameter": "wave"
-                                                },
-                                                "index": {
-                                                    "formula": "i+1",
-                                                    "inputs": {
-                                                        "i": {
-                                                            "parameter": "$index"
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                                "inputs": {
-                                                    "i": {
-                                                        "parameter": "$index"
-                                                    }
+                                            "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
                                                 }
                                             }
                                         }
@@ -6771,34 +6854,16 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y2": {
-                                    "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+                                    "formula": "\\left(\\left(centerY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "choose": {
-                                                "parameter": "wave"
-                                            },
-                                            "then": {
-                                                "element": {
-                                                    "parameter": "wave"
-                                                },
-                                                "index": {
-                                                    "formula": "i+1",
-                                                    "inputs": {
-                                                        "i": {
-                                                            "parameter": "$index"
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                                "inputs": {
-                                                    "i": {
-                                                        "parameter": "$index"
-                                                    }
+                                            "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
                                                 }
                                             }
                                         }
@@ -6848,7 +6913,9 @@ BlockDefinitionLoader.registerAll([
                                 },
                                 "then": {
                                     "choose": {
-                                        "parameter": "wave"
+                                        "defines": {
+                                            "parameter": "wave"
+                                        }
                                     },
                                     "then": {
                                         "constant": 0
@@ -6863,7 +6930,7 @@ BlockDefinitionLoader.registerAll([
                             },
                             "bindings": {
                                 "x1": {
-                                    "formula": "i\\cdot spacingPixels",
+                                    "formula": "plotX+i\\cdot spacingPixels",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
@@ -6871,34 +6938,16 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y1": {
-                                    "formula": "\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale",
+                                    "formula": "\\left(centerY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "choose": {
-                                                "parameter": "wave"
-                                            },
-                                            "then": {
-                                                "element": {
-                                                    "parameter": "wave"
-                                                },
-                                                "index": {
-                                                    "formula": "i+1",
-                                                    "inputs": {
-                                                        "i": {
-                                                            "parameter": "$index"
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                                "inputs": {
-                                                    "i": {
-                                                        "parameter": "$index"
-                                                    }
+                                            "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
                                                 }
                                             }
                                         }
@@ -6913,34 +6962,16 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y2": {
-                                    "formula": "\\left(\\left(centerY-d\\cdot ppu\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppu\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+                                    "formula": "\\left(\\left(centerY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "choose": {
-                                                "parameter": "wave"
-                                            },
-                                            "then": {
-                                                "element": {
-                                                    "parameter": "wave"
-                                                },
-                                                "index": {
-                                                    "formula": "i+1",
-                                                    "inputs": {
-                                                        "i": {
-                                                            "parameter": "$index"
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
-                                                "inputs": {
-                                                    "i": {
-                                                        "parameter": "$index"
-                                                    }
+                                            "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "inputs": {
+                                                "i": {
+                                                    "parameter": "$index"
                                                 }
                                             }
                                         }
@@ -6997,7 +7028,7 @@ BlockDefinitionLoader.registerAll([
                             },
                             "bindings": {
                                 "centerX": {
-                                    "formula": "i\\cdot spacingPixels",
+                                    "formula": "plotX+i\\cdot spacingPixels",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
@@ -7005,32 +7036,34 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "centerY": {
-                                    "formula": "centerY-d\\cdot ppu",
+                                    "formula": "centerY-d\\cdot ppy",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
                                             "choose": {
-                                                "parameter": "wave"
+                                                "defines": {
+                                                    "parameter": "wave"
+                                                }
                                             },
                                             "then": {
-                                                "element": {
+                                                "past": {
                                                     "parameter": "wave"
                                                 },
-                                                "index": {
-                                                    "formula": "i+1",
+                                                "ago": {
+                                                    "formula": "el\\cdot stepTime",
                                                     "inputs": {
-                                                        "i": {
+                                                        "el": {
                                                             "parameter": "$index"
                                                         }
                                                     }
                                                 }
                                             },
                                             "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
                                                 "inputs": {
-                                                    "i": {
+                                                    "el": {
                                                         "parameter": "$index"
                                                     }
                                                 }
@@ -7092,32 +7125,34 @@ BlockDefinitionLoader.registerAll([
                             },
                             "bindings": {
                                 "x": {
-                                    "formula": "i\\cdot spacingPixels+d\\cdot ppu-\\frac{elementSize}{2}",
+                                    "formula": "plotX+i\\cdot spacingPixels+d\\cdot ppy-\\frac{elementSize}{2}",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
                                             "choose": {
-                                                "parameter": "wave"
+                                                "defines": {
+                                                    "parameter": "wave"
+                                                }
                                             },
                                             "then": {
-                                                "element": {
+                                                "past": {
                                                     "parameter": "wave"
                                                 },
-                                                "index": {
-                                                    "formula": "i+1",
+                                                "ago": {
+                                                    "formula": "el\\cdot stepTime",
                                                     "inputs": {
-                                                        "i": {
+                                                        "el": {
                                                             "parameter": "$index"
                                                         }
                                                     }
                                                 }
                                             },
                                             "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
                                                 "inputs": {
-                                                    "i": {
+                                                    "el": {
                                                         "parameter": "$index"
                                                     }
                                                 }
@@ -7191,32 +7226,34 @@ BlockDefinitionLoader.registerAll([
                                     "parameter": "centerY"
                                 },
                                 "radius": {
-                                    "formula": "i\\cdot spacingPixels+d\\cdot ppu",
+                                    "formula": "i\\cdot spacingPixels+d\\cdot ppy",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
                                             "choose": {
-                                                "parameter": "wave"
+                                                "defines": {
+                                                    "parameter": "wave"
+                                                }
                                             },
                                             "then": {
-                                                "element": {
+                                                "past": {
                                                     "parameter": "wave"
                                                 },
-                                                "index": {
-                                                    "formula": "i+1",
+                                                "ago": {
+                                                    "formula": "el\\cdot stepTime",
                                                     "inputs": {
-                                                        "i": {
+                                                        "el": {
                                                             "parameter": "$index"
                                                         }
                                                     }
                                                 }
                                             },
                                             "otherwise": {
-                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                                "formula": "amp\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
                                                 "inputs": {
-                                                    "i": {
+                                                    "el": {
                                                         "parameter": "$index"
                                                     }
                                                 }
@@ -7260,8 +7297,99 @@ BlockDefinitionLoader.registerAll([
                             ]
                         }
                     ]
+                },
+                {
+                    "id": "axes",
+                    "type": "plot-axes",
+                    "when": {
+                        "parameter": "showAxes"
+                    },
+                    "parameters": {
+                        "x": {
+                            "parameter": "plotX"
+                        },
+                        "y": {
+                            "parameter": "plotY"
+                        },
+                        "width": {
+                            "parameter": "plotW"
+                        },
+                        "height": {
+                            "parameter": "plotH"
+                        },
+                        "minimumX": {
+                            "constant": 0
+                        },
+                        "maximumX": {
+                            "parameter": "spanX"
+                        },
+                        "minimumY": {
+                            "formula": "0-reach"
+                        },
+                        "maximumY": {
+                            "parameter": "reach"
+                        },
+                        "ticksX": {
+                            "constant": 5
+                        },
+                        "ticksY": {
+                            "constant": 5
+                        },
+                        "fontSize": {
+                            "parameter": "labelFont"
+                        },
+                        "color": {
+                            "parameter": "axisColor"
+                        },
+                        "labelColor": {
+                            "token": "axis.labelColor"
+                        }
+                    }
                 }
             ]
+        },
+        "valueSource": {
+            "name": {
+                "parameter": "wave"
+            },
+            "formula": "A\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(t-\\frac{\\left(r-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}\\right)+p\\right)\\cdot\\left(1-g\\cdot\\max\\left(0,sign\\left(\\frac{\\left(r-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}-t\\right)\\right)\\right)",
+            "inputs": {
+                "A": {
+                    "parameter": "amplitude"
+                },
+                "f": {
+                    "parameter": "frequency"
+                },
+                "v": {
+                    "parameter": "speed"
+                },
+                "p": {
+                    "parameter": "phase"
+                },
+                "L": {
+                    "parameter": "length"
+                },
+                "N": {
+                    "formula": "\\max\\left(2,\\min\\left(200,round\\left(samples\\right)\\right)\\right)"
+                },
+                "r": {
+                    "formula": "\\max\\left(1,\\min\\left(\\max\\left(2,\\min\\left(200,round\\left(samples\\right)\\right)\\right),round\\left(referenceIndex\\right)\\right)\\right)"
+                },
+                "g": {
+                    "choose": {
+                        "parameter": "wavefront"
+                    },
+                    "then": {
+                        "constant": 1
+                    },
+                    "otherwise": {
+                        "constant": 0
+                    }
+                },
+                "t": {
+                    "independent": "value"
+                }
+            }
         }
     },
     {
