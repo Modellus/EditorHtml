@@ -398,8 +398,7 @@ class ExpressionControl {
             this._applyParenthesisFunctionShortcuts();
             return;
         }
-        if (this._handleTermNamedIndexKeydown(keydownEvent))
-            return;
+        this._startTermNamedIndexOnKeydown(keydownEvent);
         if (this._handleSpaceKeydown(keydownEvent))
             return;
         if (this.mathliveController?.handleBackspaceKeydown(keydownEvent))
@@ -408,30 +407,22 @@ class ExpressionControl {
     }
 
     // A dot after a name starts a named part of that name (`v.x`), written as a subscript marked with
-    // '\!' so the parser tells it apart from an index and restores the dot.  A dot anywhere else, a
-    // decimal separator in particular, is left to Mathlive.
-    _handleTermNamedIndexKeydown(keydownEvent) {
-        if (keydownEvent.key !== "." || keydownEvent.altKey || keydownEvent.ctrlKey || keydownEvent.metaKey)
-            return false;
-        if (!this._canStartTermNamedIndex())
-            return false;
-        keydownEvent.preventDefault();
-        keydownEvent.stopImmediatePropagation();
+    // '\!' so the parser tells it apart from an index and restores the dot.  Only the character after
+    // the dot says which of the two dots was typed - a named part is spelled with letters, a decimal
+    // separator carries digits - so the dot is written as it was typed and the named part is opened
+    // around it when a letter follows.  `x1.5` stays the number it reads as, `Body1.vx` still names
+    // the whole term.  The name is looked for in the group holding the caret, so a dot typed at the
+    // start of a group does not reach for the name written in the group before it.
+    _startTermNamedIndexOnKeydown(keydownEvent) {
+        if (keydownEvent.altKey || keydownEvent.ctrlKey || keydownEvent.metaKey)
+            return;
+        if (!/^[A-Za-z]$/.test(keydownEvent.key))
+            return;
+        if (!Utils.endsWithTermNameDot(this._getGroupLatexBeforeCaret()))
+            return;
+        this.mathfield.executeCommand("deleteBackward");
         this.mathfield.executeCommand("moveToSubscript");
         this.mathfield.executeCommand("insert", Utils.termNamedIndexMarker);
-        return true;
-    }
-
-    // The name being named is looked for in the group holding the caret, so a dot typed at the start of
-    // a group does not reach for the name written in the group before it.
-    _canStartTermNamedIndex() {
-        const groupLatexBeforeCaret = this._getGroupLatexBeforeCaret();
-        if (groupLatexBeforeCaret === null)
-            return false;
-        // Mathlive keeps a single subscript per name, so a name already being named cannot take another one.
-        if (Utils.endsWithOpenTermNamedIndex(groupLatexBeforeCaret))
-            return false;
-        return Utils.endsWithTermName(groupLatexBeforeCaret);
     }
 
     // A named part of a name is made of name characters only, so anything else closes it and carries

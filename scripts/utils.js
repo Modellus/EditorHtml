@@ -237,9 +237,11 @@ class Utils {
     // index and restores the dot, and so the name reads as a subscript everywhere it is shown.
     static termNamedIndexMarker = "\\!";
     static termNamedIndexPattern = /_\{\\!([A-Za-z0-9]+)\}/g;
-    static termNamePartPattern = /\.([A-Za-z0-9]+)/g;
-    static dottedTermNamePattern = /(\\[A-Za-z]+|[A-Za-zΑ-ω][A-Za-z0-9]*)((?:\.[A-Za-z0-9]+)+)/g;
-    static termNameEndPattern = /(\\[A-Za-z]+|[A-Za-zΑ-ω][A-Za-z0-9]*)$/;
+    // A named part is spelled like a name and so begins with a letter: the dot of `x1.5` separates the
+    // digits of a number and never names anything.
+    static termNamePartPattern = /\.([A-Za-z][A-Za-z0-9]*)/g;
+    static dottedTermNamePattern = /(\\[A-Za-z]+|[A-Za-zΑ-ω][A-Za-z0-9]*)((?:\.[A-Za-z][A-Za-z0-9]*)+)/g;
+    static termNameDotEndPattern = /(\\[A-Za-z]+|[A-Za-zΑ-ω][A-Za-z0-9]*)\.$/;
     // Mathlive writes the latex up to the caret with the enclosing groups left open, so a named part
     // still being written ends with its marker followed by the name characters typed so far.
     static openTermNamedIndexPattern = /\\!\s*[A-Za-z0-9]*$/;
@@ -314,8 +316,8 @@ class Utils {
         return joinedText;
     }
 
-    static endsWithTermName(text) {
-        return Utils.termNameEndPattern.test(String(text ?? ""));
+    static endsWithTermNameDot(text) {
+        return Utils.termNameDotEndPattern.test(String(text ?? ""));
     }
 
     static endsWithOpenTermNamedIndex(text) {
@@ -1237,7 +1239,10 @@ class Utils {
             return;
         }
         const iconMarkup = data.icon ? `<i class="dx-icon ${data.icon}"></i>` : "";
-        host.innerHTML = `<div class="mdl-dropdown-list-item">${iconMarkup}<span class="mdl-dropdown-list-label">${data.text}</span><span class="mdl-dropdown-list-control"></span></div>`;
+        // A row that is not called anything is its control and nothing else: the empty label is left
+        // out rather than written blank, so the control stands where the whole row does.
+        const labelMarkup = String(data.text ?? "") === "" ? "" : `<span class="mdl-dropdown-list-label">${data.text}</span>`;
+        host.innerHTML = `<div class="mdl-dropdown-list-item">${iconMarkup}${labelMarkup}<span class="mdl-dropdown-list-control"></span></div>`;
         data.buildControl($(host).find(".mdl-dropdown-list-control"));
     }
 

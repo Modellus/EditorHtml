@@ -62,6 +62,17 @@ test.describe('Named term parts', () => {
         expect(value).not.toContain('\\!');
     });
 
+    test('typing a dot before digits writes a decimal number and not an index', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('y=x1.25', { delay: 60 });
+        await page.waitForTimeout(300);
+        const value = await getExpressionValue(page, 'Expr1');
+        expect(value).toBe('y=x1.25');
+        expect(value).not.toContain('\\!');
+    });
+
     test('typing a dot after a name with digits names the whole term', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
@@ -162,6 +173,7 @@ test.describe('Named term parts', () => {
             writtenInExpression: Utils.writeTermNames('a=v.x \\cdot 2'),
             writtenGreek: Utils.writeTermNames('\\omega.x'),
             writtenDecimal: Utils.writeTermNames('a=2.5'),
+            writtenDecimalAfterName: Utils.writeTermNames('a=x1.25'),
             writtenTwice: Utils.writeTermNames(Utils.writeTermNames('v.x'))
         }));
         expect(result.written).toBe('v_{\\!x}');
@@ -169,6 +181,7 @@ test.describe('Named term parts', () => {
         expect(result.writtenInExpression).toBe('a=v_{\\!x} \\cdot 2');
         expect(result.writtenGreek).toBe('\\omega_{\\!x}');
         expect(result.writtenDecimal).toBe('a=2.5');
+        expect(result.writtenDecimalAfterName).toBe('a=x1.25');
         expect(result.writtenTwice).toBe('v_{\\!x}');
     });
 
