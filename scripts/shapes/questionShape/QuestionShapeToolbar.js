@@ -90,11 +90,25 @@ var QuestionShapeToolbarMixin = {
                     $(contentElement).empty();
                     const container = $('<div class="mdl-question-image-dropdown">');
                     container.append(this.createImageDropZoneEditor());
+                    container.append(this.createCatalogImageButton());
                     $(contentElement).append(container);
                 }
             }
         });
         this._imageDropdownElement.appendTo(itemElement);
+    },
+    createCatalogImageButton() {
+        const $host = $('<div class="mdl-question-catalog-image">');
+        $host.dxButton({
+            icon: "fa-light fa-images",
+            text: this.board.translations.get("Catalog Image") ?? "Catalog Image",
+            stylingMode: "text",
+            onClick: () => {
+                this._imageDropdownElement.dxDropDownButton("instance").close();
+                this.showCatalogImagePopup();
+            }
+        });
+        return $host;
     },
     questionImageButtonIcon() {
         return this.getImageSource() ? "fa-solid fa-image" : "fa-light fa-image";
@@ -149,4 +163,4 @@ var QuestionShapeToolbarMixin = {
         this._scoringDropdownElement.appendTo(itemElement);
     }
 };
-if (typeof QuestionShape !== "undefined") Object.assign(QuestionShape.prototype, QuestionShapeToolbarMixin);
+if (typeof QuestionShape !== "undefined") Object.assign(QuestionShape.prototype, CatalogAssetPickerMixin, QuestionShapeToolbarMixin);

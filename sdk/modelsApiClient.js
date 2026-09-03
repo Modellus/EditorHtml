@@ -819,6 +819,67 @@ export class ModelsApiClient {
     });
     if (!response.ok) throw new Error(`Delete audio thumbnail failed (${response.status})`);
   }
+  async fetchImagesPage(options = {}) {
+    const url = new URL(`${this.apiBaseUrl}/images`);
+    url.searchParams.set("limit", String(options.limit || 20));
+    url.searchParams.set("offset", String(options.offset || 0));
+    if (options.search) url.searchParams.set("q", options.search);
+    if (options.educationLevelId) url.searchParams.set("education_level_id", options.educationLevelId);
+    if (options.scienceId) url.searchParams.set("science_id", options.scienceId);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch images failed (${response.status})`);
+    return this.parsePagedResponse(await response.json());
+  }
+
+  async fetchImagesFacets() {
+    const response = await fetch(`${this.apiBaseUrl}/images/facets`, { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch image facets failed (${response.status})`);
+    return this.parseTaxonomyFacets(await response.json());
+  }
+
+  async fetchImages(filters = {}) {
+    const url = new URL(`${this.apiBaseUrl}/images`);
+    if (filters.science_id) url.searchParams.set("science_id", filters.science_id);
+    if (filters.education_level_id) url.searchParams.set("education_level_id", filters.education_level_id);
+    const response = await fetch(url.toString(), { headers: this.buildAuthHeaders() });
+    if (!response.ok) throw new Error(`Fetch images failed (${response.status})`);
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  }
+
+  async createImage(payload, assetFile) {
+    const formData = new FormData();
+    formData.append("title", payload.title);
+    if (payload.description) formData.append("description", payload.description);
+    if (payload.science_id) formData.append("science_id", payload.science_id);
+    if (payload.education_level_id) formData.append("education_level_id", payload.education_level_id);
+    if (assetFile) formData.append("asset", assetFile);
+    const response = await fetch(`${this.apiBaseUrl}/images`, {
+      method: "POST",
+      headers: this.buildAuthHeaders(),
+      body: formData
+    });
+    if (!response.ok) throw new Error(`Create image failed (${response.status})`);
+    return await response.json();
+  }
+
+  async patchImage(imageId, payload) {
+    const response = await fetch(`${this.apiBaseUrl}/images/${encodeURIComponent(imageId)}`, {
+      method: "PUT",
+      headers: Object.assign({ "Content-Type": "application/json" }, this.buildAuthHeaders()),
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`Update image failed (${response.status})`);
+    return await response.json();
+  }
+
+  async deleteImage(imageId) {
+    const response = await fetch(`${this.apiBaseUrl}/images/${encodeURIComponent(imageId)}`, {
+      method: "DELETE",
+      headers: this.buildAuthHeaders()
+    });
+    if (!response.ok) throw new Error(`Delete image failed (${response.status})`);
+  }
 
   async fetchDataSetsPage(options = {}) {
     const url = new URL(`${this.apiBaseUrl}/data`);

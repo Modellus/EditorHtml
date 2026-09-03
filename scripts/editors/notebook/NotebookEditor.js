@@ -160,18 +160,19 @@ class NotebookEditor extends Workspace {
             [sliderDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(sliderDescriptor)],
             [GaugeNotebookShape, GaugeShapeToolbarMixin],
             [ValueNotebookShape, ValueShapeToolbarMixin],
-            [MediaNotebookShape, MediaShapeToolbarMixin],
+            [MediaNotebookShape, CatalogAssetPickerMixin, MediaShapeToolbarMixin],
             [ReferentialNotebookShape, ReferentialShapeToolbarMixin],
             [QuestionNotebookShape, QuestionShapeToolbarMixin],
             [RulerNotebookShape, RulerShapeToolbarMixin],
             [ProtractorNotebookShape, ProtractorShapeToolbarMixin],
             [SlopeNotebookShape, SlopeShapeToolbarMixin]
         ];
-        for (const [shapeClass, toolbarMixin] of bindings) {
-            if (!shapeClass || !toolbarMixin)
+        for (const [shapeClass, ...toolbarMixins] of bindings) {
+            const mixins = toolbarMixins.filter(Boolean);
+            if (!shapeClass || !mixins.length)
                 continue;
             shapeClass.prototype.toolbarAdapter = toolbarAdapter;
-            Object.assign(shapeClass.prototype, toolbarMixin);
+            Object.assign(shapeClass.prototype, ...mixins);
         }
         window.__shapeToolbarBindingsApplied = true;
     }

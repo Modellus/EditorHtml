@@ -11,6 +11,7 @@ class AssetPreview {
     static previewRowCount = 12;
     static previewColumnCount = 8;
     static videoPopupSize = { width: 800, height: 520, maxHeight: "90vh" };
+    static imagePopupSize = { width: 800, height: 560, maxHeight: "90vh" };
     static dataPopupSize = { width: 620, height: "auto", maxHeight: "80vh" };
 
     constructor(wrapElement, kind, options) {
@@ -42,6 +43,10 @@ class AssetPreview {
         return options.assetUrl ? new AssetPreview(wrapElement, "video", options) : null;
     }
 
+    static image(wrapElement, options) {
+        return options.assetUrl ? new AssetPreview(wrapElement, "image", options) : null;
+    }
+
     static data(wrapElement, options) {
         return options.assetUrl ? new AssetPreview(wrapElement, "data", options) : null;
     }
@@ -55,7 +60,11 @@ class AssetPreview {
     }
 
     get idleIconClass() {
-        return this.kind === "data" ? "fa-solid fa-table-list" : "fa-solid fa-play";
+        if (this.kind === "data")
+            return "fa-solid fa-table-list";
+        if (this.kind === "image")
+            return "fa-solid fa-magnifying-glass-plus";
+        return "fa-solid fa-play";
     }
 
     get playingIconClass() {
@@ -69,6 +78,8 @@ class AssetPreview {
             return this.translations.get("Watch this video");
         if (this.kind === "data")
             return this.translations.get("Preview this data");
+        if (this.kind === "image")
+            return this.translations.get("See this image");
         return this.translations.get("Play this animation");
     }
 
@@ -100,6 +111,10 @@ class AssetPreview {
         }
         if (this.kind === "data") {
             this.showDataPopup();
+            return;
+        }
+        if (this.kind === "image") {
+            this.showImagePopup();
             return;
         }
         if (this.isPlaying)
@@ -234,6 +249,11 @@ class AssetPreview {
     showVideoPopup() {
         AssetPreview.stopActive();
         AssetPreview.showPopup(this.options.title, `<video class="mdl-asset-preview-video" src="${AssetPreview.escape(this.options.assetUrl)}" controls autoplay playsinline></video>`, this.options.popupWrapperClass, AssetPreview.videoPopupSize);
+    }
+
+    showImagePopup() {
+        AssetPreview.stopActive();
+        AssetPreview.showPopup(this.options.title, `<img class="mdl-asset-preview-image" src="${AssetPreview.escape(this.options.assetUrl)}" alt="${AssetPreview.escape(this.options.title)}">`, this.options.popupWrapperClass, AssetPreview.imagePopupSize);
     }
 
     showDataPopup() {

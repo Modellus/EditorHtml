@@ -72,6 +72,19 @@ var MediaShapeToolbarMixin = {
                 buildControl: $container => $container.append(this.createImageDropZoneEditor())
             },
             {
+                text: "Catalog Image",
+                buildControl: $container => {
+                    $('<div>').appendTo($container).dxButton({
+                        icon: "fa-light fa-image",
+                        stylingMode: "text",
+                        onClick: () => {
+                            this._mediaSettingsDropdownElement.dxDropDownButton("instance").close();
+                            this.showCatalogImagePopup();
+                        }
+                    });
+                }
+            },
+            {
                 text: "Catalog Audio",
                 buildControl: $container => {
                     $('<div>').appendTo($container).dxButton({

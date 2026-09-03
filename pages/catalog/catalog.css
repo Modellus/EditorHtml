@@ -967,6 +967,17 @@ body {
 .media-thumb-placeholder.data-thumb {
   background: linear-gradient(135deg, #ecfdf5, #a7f3d0);
 }
+.media-thumb-placeholder.image-thumb {
+  background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+}
+.edit-image-preview {
+  width: 100%;
+  max-height: 200px;
+  border-radius: 10px;
+  border: 1px solid var(--c-border);
+  object-fit: contain;
+  background: var(--c-surface-muted, #f8fafc);
+}
 .media-thumb-icon {
   font-size: 2rem;
   color: #9ca3af;

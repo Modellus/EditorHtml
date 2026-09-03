@@ -1476,14 +1476,8 @@ svg:active.pan-available {
 }
 
 .term-packed-control__select .dx-texteditor {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
+    border-radius: 4px;
     margin: 0;
-}
-
-.term-packed-control--no-visibility .term-packed-control__select .dx-texteditor {
-    border-top-left-radius: 4px;
-    border-bottom-left-radius: 4px;
 }
 
 .term-packed-control--physical {
@@ -2195,6 +2189,12 @@ svg:active.pan-available {
 .mdl-question-image-dropdown {
     padding: 8px;
     box-sizing: border-box;
+}
+
+.mdl-question-catalog-image {
+    margin-top: 6px;
+    display: flex;
+    justify-content: center;
 }
 
 .mdl-question-section {

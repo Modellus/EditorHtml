@@ -98,6 +98,13 @@
     object-fit: contain;
 }
 
+.mdl-asset-preview-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    object-fit: contain;
+}
+
 .mdl-asset-preview-status {
     display: flex;
     align-items: center;

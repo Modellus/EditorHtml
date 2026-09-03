@@ -96,6 +96,13 @@ class MediaShape extends BaseShape {
         this.onImageControlChanged(videoUrl, "video/*");
     }
 
+    applyCatalogImage(image) {
+        const imageUrl = image?.asset_url;
+        if (!imageUrl)
+            return;
+        this.onImageControlChanged(imageUrl, "image/*");
+    }
+
     static toEmbedUrl(url) {
         const notionEmbedUrl = MediaShape.toNotionEmbedUrl(url);
         if (notionEmbedUrl)

@@ -383,6 +383,14 @@ class BodyShape extends ChildShape {
                             stylingMode: "text",
                             onClick: _ => this.openImageFileDialog()
                         }).appendTo($p)
+                    },
+                    {
+                        text: "Catalog Image",
+                        buildControl: $p => $('<div>').dxButton({
+                            icon: "fa-light fa-images",
+                            stylingMode: "text",
+                            onClick: _ => this.showCatalogImagePopup()
+                        }).appendTo($p)
                     }
                 ]
             }
@@ -540,6 +548,13 @@ class BodyShape extends ChildShape {
     onImageControlChanged(imageSource) {
         this.properties.imageBase64 = "";
         this.setPropertyCommand("imageUrl", imageSource);
+    }
+
+    applyCatalogImage(image) {
+        const imageUrl = image?.asset_url;
+        if (!imageUrl)
+            return;
+        this.onImageControlChanged(imageUrl);
     }
 
     onImageControlCleared() {

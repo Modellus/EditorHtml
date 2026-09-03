@@ -26,6 +26,9 @@ const treeNodeIds = {
   catalogAudios: "catalog-audios",
   catalogAudiosEducation: "catalog-audios-education",
   catalogAudiosSciences: "catalog-audios-sciences",
+  catalogImages: "catalog-images",
+  catalogImagesEducation: "catalog-images-education",
+  catalogImagesSciences: "catalog-images-sciences",
   catalogData: "catalog-data",
   catalogDataEducation: "catalog-data-education",
   catalogDataSciences: "catalog-data-sciences",
@@ -121,6 +124,7 @@ class ModelsApp {
     this.modelsSource = { kind: "remote", filter: {} };
     this.videosSource = { filter: {} };
     this.audiosSource = { filter: {} };
+    this.imagesSource = { filter: {} };
     this.dataSetsSource = { filter: {} };
     this.charactersSource = { filter: {} };
     this.objectsSource = { filter: {} };
@@ -129,11 +133,13 @@ class ModelsApp {
     this.sampleFacets = { education: [], sciences: [], total: 0 };
     this.videoFacets = { education: [], sciences: [], total: 0 };
     this.audioFacets = { education: [], sciences: [], total: 0 };
+    this.imageFacets = { education: [], sciences: [], total: 0 };
     this.dataFacets = { education: [], sciences: [], total: 0 };
     this.characterFacets = { categories: [], uncategorized: 0, total: 0 };
     this.objectFacets = { education: [], sciences: [], total: 0 };
     this.videosData = [];
     this.audiosData = [];
+    this.imagesData = [];
     this.dataSetData = [];
     this.educationLookupOptions = [];
     this.scienceLookupOptions = [];
@@ -157,11 +163,13 @@ class ModelsApp {
     this.modelCardMenuHost = null;
     this.videosCardViewInstance = null;
     this.audiosCardViewInstance = null;
+    this.imagesCardViewInstance = null;
     this.dataCardViewInstance = null;
     this.characterCardViewInstance = null;
     this.modelsFeed = null;
     this.videosFeed = null;
     this.audiosFeed = null;
+    this.imagesFeed = null;
     this.dataSetsFeed = null;
     this.charactersFeed = null;
     this.drawerInstance = null;
@@ -180,12 +188,15 @@ class ModelsApp {
     this.notificationsGridInstance = null;
     this.uploadVideoPopupInstance = null;
     this.uploadAudioPopupInstance = null;
+    this.uploadImagePopupInstance = null;
     this.dataPopupInstance = null;
     this.editVideoPopupInstance = null;
     this.editAudioPopupInstance = null;
+    this.editImagePopupInstance = null;
     this.characterPopupInstance = null;
     this._uploadVideoFile = null;
     this._uploadAudioFile = null;
+    this._uploadImageFile = null;
     this._dataFile = null;
     this._characterAssetFile = null;
     this._uploadVideoThumbnailFile = null;
@@ -195,6 +206,7 @@ class ModelsApp {
     this._editAudioThumbnailFile = null;
     this._editVideoHTMLEditor = null;
     this._editAudioHTMLEditor = null;
+    this._editImageHTMLEditor = null;
     this._editDataHTMLEditor = null;
     this._editCharacterHTMLEditor = null;
     this._charEditorCharacter = null;
@@ -276,6 +288,7 @@ class ModelsApp {
     return [
       { id: "upload-video", text: this.translations.get("Upload Video"), icon: "fa-light fa-video", iconColor: "#e11d48", action: () => this.showUploadVideoPopup() },
       { id: "upload-audio", text: this.translations.get("Upload Audio"), icon: "fa-light fa-waveform-lines", iconColor: "#16a34a", action: () => this.showUploadAudioPopup() },
+      { id: "upload-image", text: this.translations.get("Upload Image"), icon: "fa-light fa-image", iconColor: "#0ea5e9", action: () => this.showUploadImagePopup() },
       { id: "upload-data", text: this.translations.get("Upload Data"), icon: "fa-light fa-table", iconColor: "#d97706", action: () => this.showDataPopup() },
       { id: "add-character", text: this.translations.get("Add Character"), icon: "fa-light fa-person-running", iconColor: "#7c3aed", action: () => this.showCharacterPopup() },
       { id: "add-object", text: this.translations.get("Add Object"), icon: "fa-light fa-shapes", iconColor: "#0891b2", action: () => this.showObjectPopup() }
@@ -775,6 +788,13 @@ class ModelsApp {
     this.audiosFeed = null;
   }
 
+  disposeImagesCardView() {
+    if (!this.imagesCardViewInstance) return;
+    this.imagesCardViewInstance.dispose();
+    this.imagesCardViewInstance = null;
+    this.imagesFeed = null;
+  }
+
   disposeDataCardView() {
     if (!this.dataCardViewInstance) return;
     this.dataCardViewInstance.dispose();
@@ -804,6 +824,8 @@ class ModelsApp {
     const options = { assetUrl: data.asset_url, characterId: data.id, apiClient: this.apiClient, title: data.title, translations: this.translations };
     if (assetType === "audio")
       AssetPreview.audio(wrapElement, options);
+    else if (assetType === "image")
+      AssetPreview.image(wrapElement, options);
     else if (assetType === "video")
       AssetPreview.video(wrapElement, options);
     else if (assetType === "data")
@@ -845,14 +867,14 @@ class ModelsApp {
       cardTemplate: (cardData, cardElement) => {
         const host = cardElement.get(0);
         const data = cardData.card.data;
-        const assetUrl = data.thumbnail_url || "";
+        const assetUrl = data.thumbnail_url || (data.asset_type === "image" ? data.asset_url : "");
         const descriptionLabel = this.escapeHtml(data.description || "");
         const createdDate = this.formatShortDate(data.created_at);
         const currentUserId = this.userSdk.getUserId(this.state.session);
         const isAssetsView = this.state.selectedTreeNodeId === treeNodeIds.assets;
         const canEdit = !isAssetsView && (this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId));
-        const assetIcon = data.asset_type === "video" ? "fa-light fa-video" : data.asset_type === "audio" ? "fa-light fa-waveform-lines" : data.asset_type === "data" ? "fa-light fa-table" : data.asset_type === "object" ? "fa-light fa-shapes" : "fa-light fa-person-running";
-        const assetLabel = data.asset_type === "video" ? this.translations.get("Videos") : data.asset_type === "audio" ? this.translations.get("Audios") : data.asset_type === "data" ? this.translations.get("Data") : data.asset_type === "object" ? this.translations.get("Objects") : this.translations.get("Characters");
+        const assetIcon = data.asset_type === "video" ? "fa-light fa-video" : data.asset_type === "audio" ? "fa-light fa-waveform-lines" : data.asset_type === "image" ? "fa-light fa-image" : data.asset_type === "data" ? "fa-light fa-table" : data.asset_type === "object" ? "fa-light fa-shapes" : "fa-light fa-person-running";
+        const assetLabel = data.asset_type === "video" ? this.translations.get("Videos") : data.asset_type === "audio" ? this.translations.get("Audios") : data.asset_type === "image" ? this.translations.get("Images") : data.asset_type === "data" ? this.translations.get("Data") : data.asset_type === "object" ? this.translations.get("Objects") : this.translations.get("Characters");
         const thumbContent = assetUrl
           ? `<img class="card-thumb character-card-thumb" src="${this.escapeHtml(assetUrl)}" alt="${this.escapeHtml(data.title || "")}">`
           : `<div class="media-thumb-placeholder character-thumb"><i class="${assetIcon} media-thumb-icon" aria-hidden="true"></i></div>`;
@@ -1259,6 +1281,181 @@ class ModelsApp {
     this.audiosFeed = this.createFeed(this.audiosCardViewInstance, (search, offset, limit) => this.fetchAudiosFeedPage(search, offset, limit), this.translations.get("audios"));
   }
 
+  ensureImagesCardView() {
+    if (this.imagesCardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
+    const CardView = DevExpress.ui.dxCardView;
+    this.elements.cardView.innerHTML = "";
+    this.imagesCardViewInstance = new CardView(this.elements.cardView, {
+      onContentReady: () => this.bindFeedScroll(this.imagesFeed),
+      dataSource: [],
+      height: "100%",
+      repaintChangesOnly: true,
+      scrolling: { mode: "virtual" },
+      paging: { enabled: false },
+      pager: { visible: false },
+      noDataText: this.translations.get("No models found."),
+      showBorders: false,
+      focusStateEnabled: false,
+      hoverStateEnabled: false,
+      allowColumnReordering: false,
+      allowColumnResizing: false,
+      columnHidingEnabled: true,
+      headerPanel: { visible: false },
+      groupPanel: { visible: false },
+      searchPanel: { visible: false },
+      grouping: { autoExpandAll: false, contextMenuEnabled: false },
+      sorting: { mode: "none" },
+      cardsPerRow: this.getCardsPerRow(),
+      cardMinWidth: 125,
+      columns: [
+        { dataField: "title", caption: this.translations.get("Title") },
+        { dataField: "description", caption: this.translations.get("Description") }
+      ],
+      cardTemplate: (cardData, cardElement) => {
+        const host = cardElement.get(0);
+        const data = cardData.card.data;
+        const thumbnailUrl = data.thumbnail_url || data.asset_url;
+        const educationLookupId = data.education_level_id;
+        const scienceLookupId = data.science_id;
+        const educationLabel = this.educationLookupNameById.get(educationLookupId) || data.education_level || this.translations.get("Uncategorized");
+        const scienceLabel = this.scienceLookupNameById.get(scienceLookupId) || data.science || this.translations.get("Uncategorized");
+        const educationColor = this.educationLookupColorById.get(educationLookupId) || "#8b5cf6";
+        const scienceColor = this.scienceLookupColorById.get(scienceLookupId) || "#0ea5e9";
+        const escapedEducationLabel = this.escapeHtml(educationLabel);
+        const escapedScienceLabel = this.escapeHtml(scienceLabel);
+        const descriptionLabel = this.escapeHtml(data.description || "");
+        const createdDate = this.formatShortDate(data.created_at);
+        const currentUserId = this.userSdk.getUserId(this.state.session);
+        const canEdit = this.canAccessMaintenance() || (currentUserId && data.created_by === currentUserId);
+        const taxonomyMarkup = `
+          <div class="card-thumb-dropdowns">
+            <div class="card-thumb-dropdown education-dropdown-host" data-lookup-id="${educationLookupId}">${escapedEducationLabel}</div>
+            <div class="card-thumb-dropdown science-dropdown-host" data-lookup-id="${scienceLookupId}">${escapedScienceLabel}</div>
+          </div>
+        `;
+        const thumbContent = thumbnailUrl
+          ? `<img class="card-thumb" src="${this.escapeHtml(thumbnailUrl)}" alt="${this.escapeHtml(data.title || "")}">`
+          : `<div class="media-thumb-placeholder image-thumb"><i class="fa-light fa-image media-thumb-icon" aria-hidden="true"></i></div>`;
+        const cardMarkup = `
+          <div class="card-tile" data-item-id="${this.escapeHtml(data.id || "")}">
+            <div class="card-thumb-wrap">${thumbContent}${taxonomyMarkup}</div>
+            <div class="card-actions">
+              ${canEdit ? `<button class="edit-button" aria-label="Edit image"><i class="fa-light fa-pen" aria-hidden="true"></i></button>` : ""}
+              ${canEdit ? `<button class="delete-button" aria-label="Delete image"><i class="fa-light fa-trash-can trash" aria-hidden="true"></i><i class="fa-solid fa-trash-can trash-hover" aria-hidden="true"></i></button>` : ""}
+            </div>
+            <div class="card-body">
+              <h3 class="card-title">${this.escapeHtml(data.title) || "Untitled"}</h3>
+              <p class="card-desc">${descriptionLabel}</p>
+              <div class="card-meta">
+                <div class="card-dates">
+                  ${createdDate ? `<span class="card-date"><i class="fa-light fa-calendar-plus" aria-hidden="true"></i>${createdDate}</span>` : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        host.innerHTML = cardMarkup;
+        this.bindCardAssetPreview(host, data, "image");
+        const cardDescElement = host.querySelector(".card-desc");
+        const editButton = host.querySelector(".edit-button");
+        const deleteButton = host.querySelector(".delete-button");
+        const educationDropdownHost = host.querySelector(".education-dropdown-host");
+        const scienceDropdownHost = host.querySelector(".science-dropdown-host");
+        if (educationDropdownHost) educationDropdownHost.style.setProperty("--pill-color", educationColor);
+        if (scienceDropdownHost) scienceDropdownHost.style.setProperty("--pill-color", scienceColor);
+        if (cardDescElement && (data.title || data.description)) {
+          $('<div>').appendTo('body').dxTooltip({
+            target: cardDescElement,
+            contentTemplate: contentElement => {
+              contentElement.append($('<div class="card-desc-tooltip">').html(`<strong>${this.escapeHtml(data.title || "")}</strong>${data.description ? `<p>${this.escapeHtml(data.description)}</p>` : ""}`) );
+            },
+            showEvent: { delay: 600, name: 'mouseenter' },
+            hideEvent: 'mouseleave',
+            position: 'bottom',
+            maxWidth: 300
+          });
+        }
+        if (editButton)
+          editButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.showEditImagePopup(data);
+          });
+        if (deleteButton)
+          deleteButton.addEventListener("click", event => {
+            event.stopPropagation();
+            this.deleteImageItem(data);
+          });
+        if (educationDropdownHost) {
+          educationDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("click", event => event.stopPropagation());
+          educationDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(educationDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchEducationLevelLookups(),
+              byKey: lookupId => this.apiClient.fetchEducationLevelLookupById(lookupId)
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: educationLookupId === undefined || educationLookupId === null || educationLookupId === "" ? null : educationLookupId,
+            text: educationLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              const nextEducationLookupId = event.itemData.id;
+              if (nextEducationLookupId === data.education_level_id) return;
+              try {
+                await this.apiClient.patchImage(data.id, { education_level_id: nextEducationLookupId });
+                data.education_level_id = nextEducationLookupId;
+                data.education_level = event.itemData.name || data.education_level;
+                data.education_level_color = event.itemData.color || data.education_level_color;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
+              }
+            }
+          });
+        }
+        if (scienceDropdownHost) {
+          scienceDropdownHost.addEventListener("mousedown", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("click", event => event.stopPropagation());
+          scienceDropdownHost.addEventListener("dblclick", event => event.stopPropagation());
+          $(scienceDropdownHost).dxDropDownButton({
+            dataSource: new DevExpress.data.CustomStore({
+              key: "id",
+              load: () => this.apiClient.fetchScienceLookups(),
+              byKey: lookupId => this.apiClient.fetchScienceLookupById(lookupId)
+            }),
+            keyExpr: "id",
+            displayExpr: "name",
+            itemTemplate: (itemData, itemIndex, itemElement) => this.renderLookupDropdownOption(itemData, itemElement),
+            stylingMode: "contained",
+            useSelectMode: true,
+            selectedItemKey: scienceLookupId === undefined || scienceLookupId === null || scienceLookupId === "" ? null : scienceLookupId,
+            text: scienceLabel,
+            dropDownOptions: { minWidth: 170, maxWidth: 240 },
+            onItemClick: async event => {
+              const nextScienceLookupId = event.itemData.id;
+              if (nextScienceLookupId === data.science_id) return;
+              try {
+                await this.apiClient.patchImage(data.id, { science_id: nextScienceLookupId });
+                data.science_id = nextScienceLookupId;
+                data.science = event.itemData.name || data.science;
+                data.science_color = event.itemData.color || data.science_color;
+                this.loadModels(this.state.selectedTreeNodeId);
+              } catch (error) {
+                this.setStatus(error?.message || this.translations.get("Failed to update model metadata."), true);
+              }
+            }
+          });
+        }
+      }
+    });
+    this.imagesFeed = this.createFeed(this.imagesCardViewInstance, (search, offset, limit) => this.fetchImagesFeedPage(search, offset, limit), this.translations.get("images"));
+  }
+
   ensureObjectsCardView() {
     if (this.objectsCardViewInstance || !this.elements.cardView || !window.DevExpress || !DevExpress.ui || !DevExpress.ui.dxCardView) return;
     const CardView = DevExpress.ui.dxCardView;
@@ -1619,6 +1816,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeDataCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
     this.ensureVideosCardView();
@@ -1640,6 +1838,23 @@ class ModelsApp {
     this.ensureAudiosCardView();
   }
 
+  showImagesCardView() {
+    this.disposeCardView();
+    this.disposeMaintenanceGrid();
+    this.disposeMaintenanceModelsGrid();
+    this.disposeSystemTemplatesGrid();
+    this.disposeNotificationsGrid();
+    this.disposeUsersGrid();
+    this.disposeWhatsNewGrid();
+    this.disposeCharacterCategoriesGrid();
+    this.disposeDataCardView();
+    this.disposeVideosCardView();
+    this.disposeAudiosCardView();
+    this.disposeCharacterCardView();
+    this.disposeObjectsCardView();
+    this.ensureImagesCardView();
+  }
+
   showDataCardView() {
     this.disposeCardView();
     this.disposeMaintenanceGrid();
@@ -1651,6 +1866,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
     this.ensureDataCardView();
@@ -1667,6 +1883,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeObjectsCardView();
     this.ensureCharacterCardView();
@@ -1683,6 +1900,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.ensureObjectsCardView();
@@ -1696,6 +1914,11 @@ class ModelsApp {
   renderAudios() {
     this.showAudiosCardView();
     this.startFeed(this.audiosFeed);
+  }
+
+  renderImages() {
+    this.showImagesCardView();
+    this.startFeed(this.imagesFeed);
   }
 
   renderDataSets() {
@@ -1760,6 +1983,21 @@ class ModelsApp {
       this.loadModels();
     } catch (error) {
       this.setStatus(error?.message || "Failed to delete audio.", true);
+    }
+  }
+
+  async deleteImageItem(imageData) {
+    const imageId = imageData && imageData.id;
+    if (!imageId) return;
+    const confirmed = await this.confirmDelete();
+    if (!confirmed) return;
+    this.setStatus("Deleting image…");
+    try {
+      await this.apiClient.deleteImage(imageId);
+      this.setStatus("Image deleted.");
+      this.loadModels();
+    } catch (error) {
+      this.setStatus(error?.message || "Failed to delete image.", true);
     }
   }
 
@@ -2039,6 +2277,101 @@ class ModelsApp {
       visible: true,
       showTitle: true,
       title: "Edit Audio",
+      width: 520,
+      height: "auto",
+      maxHeight: "90vh",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
+  }
+
+  showEditImagePopup(imageData) {
+    let popupHost = document.getElementById("edit-image-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="edit-image-popup"></div>`);
+      popupHost = document.getElementById("edit-image-popup");
+    }
+    const formData = { title: imageData.title || "", description: imageData.description || "" };
+    const buildContent = contentElement => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      host.innerHTML = `<div id="edit-image-form"></div>`;
+      const formHost = document.getElementById("edit-image-form");
+      this._editImageFormInstance = new DevExpress.ui.dxForm(formHost, {
+        formData,
+        colCount: 1,
+        items: [
+          {
+            label: { text: "Image" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              itemHost.innerHTML = `<img class="edit-image-preview" src="${this.escapeHtml(imageData.asset_url)}" alt="${this.escapeHtml(imageData.title || "")}">`;
+            }
+          },
+          {
+            dataField: "title",
+            label: { text: "Title" },
+            validationRules: [{ type: "required" }],
+            editorOptions: { inputAttr: { style: "font-family: 'Atma', cursive; font-weight: 600;" } }
+          },
+          {
+            label: { text: "Description" },
+            template: async (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              itemHost.insertAdjacentHTML("beforeend", `
+                <div id="edit-image-html-editor"></div>
+                <div id="edit-image-html-toolbar" class="html-editor-toolbar"></div>
+              `);
+              const editorElement = document.getElementById("edit-image-html-editor");
+              const toolbarElement = document.getElementById("edit-image-html-toolbar");
+              this._editImageHTMLEditor = new DevExpress.ui.dxHtmlEditor(editorElement, {
+                value: formData.description ? await Utils.toHtml(formData.description) : "",
+                valueType: "html",
+                height: 260,
+                toolbar: {
+                  container: toolbarElement,
+                  items: ["bold", "italic", "underline", "strike", "separator", "orderedList", "bulletList", "separator", "link", "separator", "undo", "redo"]
+                }
+              });
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "right",
+            buttonOptions: {
+              text: "Save",
+              type: "default",
+              onClick: async () => {
+                const result = this._editImageFormInstance.validate();
+                if (!result.isValid) return;
+                const values = this._editImageFormInstance.option("formData");
+                const rawDescription = this._editImageHTMLEditor ? this._editImageHTMLEditor.option("value") : (values.description || "");
+                const descriptionValue = rawDescription ? (await Utils.fromHtml(rawDescription)).trim() || null : null;
+                this.setStatus("Saving image…");
+                try {
+                  await this.apiClient.patchImage(imageData.id, { title: values.title, description: descriptionValue });
+                  this.setStatus("Image saved.");
+                  this.editImagePopupInstance.hide();
+                  this.loadModels();
+                } catch (error) {
+                  this.setStatus(error?.message || "Failed to save image.", true);
+                }
+              }
+            }
+          }
+        ]
+      });
+    };
+    if (this.editImagePopupInstance) {
+      buildContent(this.editImagePopupInstance.content());
+      this.editImagePopupInstance.show();
+      return;
+    }
+    this.editImagePopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: "Edit Image",
       width: 520,
       height: "auto",
       maxHeight: "90vh",
@@ -2624,6 +2957,96 @@ class ModelsApp {
     });
   }
 
+  showUploadImagePopup() {
+    let popupHost = document.getElementById("upload-image-popup");
+    if (!popupHost) {
+      document.body.insertAdjacentHTML("beforeend", `<div id="upload-image-popup"></div>`);
+      popupHost = document.getElementById("upload-image-popup");
+    }
+    this._uploadImageFile = null;
+    const formData = {};
+    const buildContent = contentElement => {
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
+      host.innerHTML = `<div id="upload-image-form"></div>`;
+      const formHost = document.getElementById("upload-image-form");
+      this._uploadImageFormInstance = new DevExpress.ui.dxForm(formHost, {
+        formData,
+        colCount: 1,
+        items: [
+          {
+            dataField: "title",
+            label: { text: "Title" },
+            validationRules: [{ type: "required" }],
+            editorOptions: { placeholder: "Image title" }
+          },
+          {
+            dataField: "description",
+            label: { text: "Description" },
+            editorType: "dxTextArea",
+            editorOptions: { height: 80, placeholder: "Optional description" }
+          },
+          {
+            label: { text: "Image File" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              itemHost.innerHTML = `<div class="upload-file-uploader-host"></div>`;
+              const uploaderHost = itemHost.querySelector(".upload-file-uploader-host");
+              new DevExpress.ui.dxFileUploader(uploaderHost, {
+                selectButtonText: "Select image file",
+                labelText: "or drop image here",
+                multiple: false,
+                uploadMode: "useForm",
+                accept: "image/*",
+                onValueChanged: event => {
+                  this._uploadImageFile = event.value?.[0] || null;
+                }
+              });
+            }
+          },
+          {
+            itemType: "button",
+            horizontalAlignment: "right",
+            buttonOptions: {
+              text: "Upload",
+              icon: "fa-light fa-upload",
+              type: "default",
+              onClick: async () => {
+                const result = this._uploadImageFormInstance.validate();
+                if (!result.isValid) return;
+                const values = this._uploadImageFormInstance.option("formData");
+                this.setStatus("Uploading image…");
+                try {
+                  await this.apiClient.createImage({ title: values.title, description: values.description || "" }, this._uploadImageFile);
+                  this.setStatus("Image uploaded.");
+                  this.uploadImagePopupInstance.hide();
+                  this.loadModels();
+                } catch (error) {
+                  this.setStatus(error?.message || "Failed to upload image.", true);
+                }
+              }
+            }
+          }
+        ]
+      });
+    };
+    if (this.uploadImagePopupInstance) {
+      buildContent(this.uploadImagePopupInstance.content());
+      this.uploadImagePopupInstance.show();
+      return;
+    }
+    this.uploadImagePopupInstance = new DevExpress.ui.dxPopup(popupHost, {
+      visible: true,
+      showTitle: true,
+      title: "Upload Image",
+      width: 480,
+      height: "auto",
+      dragEnabled: true,
+      closeOnOutsideClick: true,
+      showCloseButton: true,
+      contentTemplate: contentElement => buildContent(contentElement)
+    });
+  }
+
   async showCharacterPopup(characterData = null) {
     let popupHost = document.getElementById("character-popup");
     if (!popupHost) {
@@ -3194,6 +3617,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -3265,6 +3689,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -3294,6 +3719,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -3398,6 +3824,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -3840,6 +4267,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -3947,6 +4375,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -4187,6 +4616,12 @@ class ModelsApp {
       this.setStatus("");
       return;
     }
+    if (this.isImageNodeId(this.state.selectedTreeNodeId)) {
+      this.imagesSource = { filter: this.resolveTaxonomyFilter(this.state.selectedTreeNodeId, "catalog-image-education-item:", "catalog-image-science-item:") };
+      this.renderImages();
+      this.setStatus("");
+      return;
+    }
     if (this.isDataNodeId(this.state.selectedTreeNodeId)) {
       this.dataSetsSource = { filter: this.resolveTaxonomyFilter(this.state.selectedTreeNodeId, "catalog-data-education-item:", "catalog-data-science-item:") };
       this.renderDataSets();
@@ -4263,13 +4698,14 @@ class ModelsApp {
       this.apiClient.fetchScienceLookups(),
       this.apiClient.fetchVideosFacets(),
       this.apiClient.fetchAudiosFacets(),
+      this.apiClient.fetchImagesFacets(),
       this.apiClient.fetchDataSetsFacets(),
       this.apiClient.fetchCharacterFacets(),
       this.apiClient.fetchObjectsFacets(),
       this.apiClient.fetchCharacterCategories(),
       isAuthenticated ? this.apiClient.fetchDeletedModels() : Promise.resolve([])
     ];
-    const [personalModelsResult, publicFacetsResult, sampleFacetsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videoFacetsResult, audioFacetsResult, dataFacetsResult, characterFacetsResult, objectFacetsResult, characterCategoriesResult, deletedModelsResult] = await Promise.allSettled(requests);
+    const [personalModelsResult, publicFacetsResult, sampleFacetsResult, educationLookupOptionsResult, scienceLookupOptionsResult, videoFacetsResult, audioFacetsResult, imageFacetsResult, dataFacetsResult, characterFacetsResult, objectFacetsResult, characterCategoriesResult, deletedModelsResult] = await Promise.allSettled(requests);
     const personalModels = personalModelsResult.status === "fulfilled" ? personalModelsResult.value : [];
     if (publicFacetsResult.status !== "fulfilled")
       throw publicFacetsResult.reason;
@@ -4289,11 +4725,13 @@ class ModelsApp {
     this.publicModels = [];
     this.videoFacets = videoFacetsResult.status === "fulfilled" ? videoFacetsResult.value : { education: [], sciences: [], total: 0 };
     this.audioFacets = audioFacetsResult.status === "fulfilled" ? audioFacetsResult.value : { education: [], sciences: [], total: 0 };
+    this.imageFacets = imageFacetsResult.status === "fulfilled" ? imageFacetsResult.value : { education: [], sciences: [], total: 0 };
     this.dataFacets = dataFacetsResult.status === "fulfilled" ? dataFacetsResult.value : { education: [], sciences: [], total: 0 };
     this.characterFacets = characterFacetsResult.status === "fulfilled" ? characterFacetsResult.value : { categories: [], uncategorized: 0, total: 0 };
     this.objectFacets = objectFacetsResult.status === "fulfilled" ? objectFacetsResult.value : { education: [], sciences: [], total: 0 };
     this.videosData = [];
     this.audiosData = [];
+    this.imagesData = [];
     this.dataSetData = [];
     this.charactersData = [];
     const characterCategories = characterCategoriesResult.status === "fulfilled" ? characterCategoriesResult.value : [];
@@ -4561,7 +4999,7 @@ class ModelsApp {
   isModelsFeedNodeId(nodeId) {
     if (this.isMaintenanceNodeId(nodeId)) return false;
     if (nodeId === treeNodeIds.assets) return false;
-    return !this.isVideoNodeId(nodeId) && !this.isAudioNodeId(nodeId) && !this.isDataNodeId(nodeId) && !this.isCharacterNodeId(nodeId) && !this.isObjectNodeId(nodeId);
+    return !this.isVideoNodeId(nodeId) && !this.isAudioNodeId(nodeId) && !this.isImageNodeId(nodeId) && !this.isDataNodeId(nodeId) && !this.isCharacterNodeId(nodeId) && !this.isObjectNodeId(nodeId);
   }
 
   setSortMode(sortMode) {
@@ -4752,6 +5190,12 @@ class ModelsApp {
       .then(result => ({ items: this.applyModelLookupLabels(result.items), total: result.total }));
   }
 
+  fetchImagesFeedPage(search, offset, limit) {
+    const filter = this.imagesSource?.filter || {};
+    return this.apiClient.fetchImagesPage({ search, educationLevelId: filter.educationLevelId, scienceId: filter.scienceId, offset, limit })
+      .then(result => ({ items: this.applyModelLookupLabels(result.items), total: result.total }));
+  }
+
   fetchDataSetsFeedPage(search, offset, limit) {
     const filter = this.dataSetsSource?.filter || {};
     return this.apiClient.fetchDataSetsPage({ search, educationLevelId: filter.educationLevelId, scienceId: filter.scienceId, offset, limit })
@@ -4772,17 +5216,18 @@ class ModelsApp {
 
   async getAssetsFeedTotals(search) {
     if (!search)
-      return { search, videos: this.videoFacets.total, audios: this.audioFacets.total, data: this.dataFacets.total, characters: this.characterFacets.total, objects: this.objectFacets.total };
+      return { search, videos: this.videoFacets.total, audios: this.audioFacets.total, images: this.imageFacets.total, data: this.dataFacets.total, characters: this.characterFacets.total, objects: this.objectFacets.total };
     if (this.assetsFeedTotals?.search === search)
       return this.assetsFeedTotals;
-    const [videos, audios, data, characters, objects] = await Promise.all([
+    const [videos, audios, images, data, characters, objects] = await Promise.all([
       this.apiClient.fetchVideosPage({ search, offset: 0, limit: 1 }),
       this.apiClient.fetchAudiosPage({ search, offset: 0, limit: 1 }),
+      this.apiClient.fetchImagesPage({ search, offset: 0, limit: 1 }),
       this.apiClient.fetchDataSetsPage({ search, offset: 0, limit: 1 }),
       this.apiClient.fetchCharactersPage({ search, offset: 0, limit: 1 }),
       this.apiClient.fetchObjectsPage({ search, offset: 0, limit: 1 })
     ]);
-    this.assetsFeedTotals = { search, videos: videos.total, audios: audios.total, data: data.total, characters: characters.total, objects: objects.total };
+    this.assetsFeedTotals = { search, videos: videos.total, audios: audios.total, images: images.total, data: data.total, characters: characters.total, objects: objects.total };
     return this.assetsFeedTotals;
   }
 
@@ -4803,27 +5248,34 @@ class ModelsApp {
       items.push(...result.items.map(item => Object.assign({ asset_type: "audio" }, item)));
       remaining -= result.items.length;
     }
-    const dataOffset = Math.max(0, offset - totals.videos - totals.audios);
+    const imageOffset = Math.max(0, offset - totals.videos - totals.audios);
+    if (remaining && imageOffset < totals.images) {
+      const take = Math.min(remaining, totals.images - imageOffset);
+      const result = await this.apiClient.fetchImagesPage({ search, offset: imageOffset, limit: take });
+      items.push(...result.items.map(item => Object.assign({ asset_type: "image" }, item)));
+      remaining -= result.items.length;
+    }
+    const dataOffset = Math.max(0, offset - totals.videos - totals.audios - totals.images);
     if (remaining && dataOffset < totals.data) {
       const take = Math.min(remaining, totals.data - dataOffset);
       const result = await this.apiClient.fetchDataSetsPage({ search, offset: dataOffset, limit: take });
       items.push(...result.items.map(item => Object.assign({ asset_type: "data" }, item)));
       remaining -= result.items.length;
     }
-    const characterOffset = Math.max(0, offset - totals.videos - totals.audios - totals.data);
+    const characterOffset = Math.max(0, offset - totals.videos - totals.audios - totals.images - totals.data);
     if (remaining && characterOffset < totals.characters) {
       const take = Math.min(remaining, totals.characters - characterOffset);
       const result = await this.apiClient.fetchCharactersPage({ search, offset: characterOffset, limit: take });
       items.push(...result.items.map(item => Object.assign({ asset_type: "character" }, item)));
       remaining -= result.items.length;
     }
-    const objectOffset = Math.max(0, offset - totals.videos - totals.audios - totals.data - totals.characters);
+    const objectOffset = Math.max(0, offset - totals.videos - totals.audios - totals.images - totals.data - totals.characters);
     if (remaining && objectOffset < totals.objects) {
       const take = Math.min(remaining, totals.objects - objectOffset);
       const result = await this.apiClient.fetchObjectsPage({ search, offset: objectOffset, limit: take });
       items.push(...result.items.map(item => Object.assign({ asset_type: "object" }, item)));
     }
-    return { items, total: totals.videos + totals.audios + totals.data + totals.characters + totals.objects };
+    return { items, total: totals.videos + totals.audios + totals.images + totals.data + totals.characters + totals.objects };
   }
 
   // Maps an education/science child node to a { educationLevelId | scienceId } filter.
@@ -4862,6 +5314,13 @@ class ModelsApp {
       || nodeId === treeNodeIds.catalogAudiosEducation
       || nodeId === treeNodeIds.catalogAudiosSciences
       || (typeof nodeId === "string" && (nodeId.startsWith("catalog-audio-education-item:") || nodeId.startsWith("catalog-audio-science-item:")));
+  }
+
+  isImageNodeId(nodeId) {
+    return nodeId === treeNodeIds.catalogImages
+      || nodeId === treeNodeIds.catalogImagesEducation
+      || nodeId === treeNodeIds.catalogImagesSciences
+      || (typeof nodeId === "string" && (nodeId.startsWith("catalog-image-education-item:") || nodeId.startsWith("catalog-image-science-item:")));
   }
 
   isDataNodeId(nodeId) {
@@ -4955,6 +5414,10 @@ class ModelsApp {
     return this.buildGroupedPublicItems(type, { facets: this.audioFacets, prefixBase: "catalog-audio" });
   }
 
+  buildGroupedImagesItems(type) {
+    return this.buildGroupedPublicItems(type, { facets: this.imageFacets, prefixBase: "catalog-image" });
+  }
+
   buildGroupedDataItems(type) {
     return this.buildGroupedPublicItems(type, { facets: this.dataFacets, prefixBase: "catalog-data" });
   }
@@ -4994,6 +5457,8 @@ class ModelsApp {
     const videoScienceItems = this.buildGroupedVideosItems("science");
     const audioEducationItems = this.buildGroupedAudiosItems("education");
     const audioScienceItems = this.buildGroupedAudiosItems("science");
+    const imageEducationItems = this.buildGroupedImagesItems("education");
+    const imageScienceItems = this.buildGroupedImagesItems("science");
     const dataEducationItems = this.buildGroupedDataItems("education");
     const dataScienceItems = this.buildGroupedDataItems("science");
     const characterCategoryItems = this.buildGroupedCharacterItems();
@@ -5003,10 +5468,11 @@ class ModelsApp {
     const sampleModelsCount = this.sampleFacets?.total || 0;
     const videosCount = this.videoFacets?.total || 0;
     const audiosCount = this.audioFacets?.total || 0;
+    const imagesCount = this.imageFacets?.total || 0;
     const dataCount = this.dataFacets?.total || 0;
     const charactersCount = this.characterFacets?.total || 0;
     const objectsCount = this.objectFacets?.total || 0;
-    const assetsCount = videosCount + audiosCount + dataCount + charactersCount + objectsCount;
+    const assetsCount = videosCount + audiosCount + imagesCount + dataCount + charactersCount + objectsCount;
     const sampleEducationItems = this.buildGroupedPublicItems("education", { facets: this.sampleFacets, prefixBase: "samples" });
     const sampleScienceItems = this.buildGroupedPublicItems("science", { facets: this.sampleFacets, prefixBase: "samples" });
     const treeData = [];
@@ -5212,6 +5678,34 @@ class ModelsApp {
                   iconColor: "#0ea5e9",
                   expanded: false,
                   items: audioScienceItems
+                }
+              ]
+            },
+            {
+              id: treeNodeIds.catalogImages,
+              label: this.translations.get("Images"),
+              text: `${this.translations.get("Images")} (${imagesCount})`,
+              iconClass: "fa-light fa-image",
+              iconColor: "#0ea5e9",
+              expanded: false,
+              items: [
+                {
+                  id: treeNodeIds.catalogImagesEducation,
+                  label: this.translations.get("Education Levels"),
+                  text: `${this.translations.get("Education Levels")} (${imagesCount})`,
+                  iconClass: "fa-light fa-graduation-cap",
+                  iconColor: "#8b5cf6",
+                  expanded: false,
+                  items: imageEducationItems
+                },
+                {
+                  id: treeNodeIds.catalogImagesSciences,
+                  label: this.translations.get("Sciences"),
+                  text: `${this.translations.get("Sciences")} (${imagesCount})`,
+                  iconClass: "fa-light fa-flask",
+                  iconColor: "#0ea5e9",
+                  expanded: false,
+                  items: imageScienceItems
                 }
               ]
             },
@@ -6104,6 +6598,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -6235,6 +6730,7 @@ class ModelsApp {
     this.disposeWhatsNewGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();
@@ -6327,6 +6823,7 @@ class ModelsApp {
     this.disposeCharacterCategoriesGrid();
     this.disposeVideosCardView();
     this.disposeAudiosCardView();
+    this.disposeImagesCardView();
     this.disposeDataCardView();
     this.disposeCharacterCardView();
     this.disposeObjectsCardView();

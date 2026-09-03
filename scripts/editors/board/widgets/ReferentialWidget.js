@@ -125,6 +125,13 @@ class ReferentialShape extends BaseShape {
         sections[0].items.push({
             text: "Background Image",
             buildControl: $p => $p.append(this.createBackgroundImageDropZoneEditor())
+        }, {
+            text: "Catalog Image",
+            buildControl: $p => $('<div>').dxButton({
+                icon: "fa-light fa-images",
+                stylingMode: "text",
+                onClick: () => this.showCatalogImagePopup()
+            }).appendTo($p)
         });
     }
 

@@ -217,6 +217,14 @@ var ReferentialShapeToolbarMixin = {
             onImageCleared: () => this.setPropertyCommand("backgroundImageUrl", "")
         });
         return this._backgroundImageDropZoneControl.createHost();
+    },
+    applyCatalogImage(image) {
+        const imageUrl = image?.asset_url;
+        if (!imageUrl)
+            return;
+        this._backgroundImageVersion = Date.now();
+        this._backgroundImageDropZoneControl?.setImageSource(`${imageUrl}?_v=${this._backgroundImageVersion}`);
+        this.setPropertyCommand("backgroundImageUrl", imageUrl);
     }
 };
-if (typeof ReferentialShape !== "undefined") Object.assign(ReferentialShape.prototype, ReferentialShapeToolbarMixin);
+if (typeof ReferentialShape !== "undefined") Object.assign(ReferentialShape.prototype, CatalogAssetPickerMixin, ReferentialShapeToolbarMixin);

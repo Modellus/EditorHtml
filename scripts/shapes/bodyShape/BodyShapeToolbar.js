@@ -61,4 +61,4 @@ var BodyShapeToolbarMixin = {
         return this.imageDropZoneControl.createHost();
     }
 };
-if (typeof BodyShape !== "undefined") Object.assign(BodyShape.prototype, CharacterPickerMixin, BodyShapeToolbarMixin);
+if (typeof BodyShape !== "undefined") Object.assign(BodyShape.prototype, CharacterPickerMixin, CatalogAssetPickerMixin, BodyShapeToolbarMixin);

@@ -103,6 +103,13 @@ class QuestionShape extends BaseShape {
         this.setPropertyCommand("imageUrl", imageSource);
     }
 
+    applyCatalogImage(image) {
+        const imageUrl = image?.asset_url;
+        if (!imageUrl)
+            return;
+        this.onImageControlChanged(imageUrl);
+    }
+
     onImageControlCleared() {
         this.setPropertyCommand("imageUrl", "");
     }

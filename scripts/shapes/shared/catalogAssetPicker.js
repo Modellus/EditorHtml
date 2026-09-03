@@ -1,10 +1,12 @@
-// The audios and videos the catalogue offers, picked the same way wherever a shape takes one. A
-// shape already takes a file dropped on it or chosen from disk; this picks one that is already
-// published instead, and the entry's asset URL is what the shape plays — the same URL an upload
-// would have left behind, so playing a picked asset and playing an uploaded one are the same thing.
+// The images, audios and videos the catalogue offers, picked the same way wherever a shape takes
+// one. A shape already takes a file dropped on it or chosen from disk; this picks one that is
+// already published instead, and the entry's asset URL is what the shape shows — the same URL an
+// upload would have left behind, so showing a picked asset and showing an uploaded one are the
+// same thing.
 //
 // A title over a thumbnail says nothing about a sound and little about a film, so every card here
-// plays what it offers before it is chosen.
+// plays what it offers before it is chosen. A picture is its own thumbnail, and the preview opens
+// it at the size it was published at.
 var CatalogAssetPickerMixin = {
     showCatalogAudioPopup(onAudioSelected = audio => this.applyCatalogAudio(audio)) {
         this.showCatalogAssetPopup({
@@ -13,8 +15,21 @@ var CatalogAssetPickerMixin = {
             emptyText: this.board.translations.get("No audio available") ?? "No audio available",
             errorText: this.board.translations.get("Failed to load audios") ?? "Failed to load audios",
             placeholderIcon: "fa-light fa-waveform-lines",
+            resolveThumbnailUrl: entry => entry.thumbnail_url,
             fetchEntries: apiClient => apiClient.fetchAudios(),
             onSelected: onAudioSelected
+        });
+    },
+    showCatalogImagePopup(onImageSelected = image => this.applyCatalogImage(image)) {
+        this.showCatalogAssetPopup({
+            kind: "image",
+            title: this.board.translations.get("Catalog Image") ?? "Catalog Image",
+            emptyText: this.board.translations.get("No image available") ?? "No image available",
+            errorText: this.board.translations.get("Failed to load images") ?? "Failed to load images",
+            placeholderIcon: "fa-light fa-image",
+            resolveThumbnailUrl: entry => entry.thumbnail_url || entry.asset_url,
+            fetchEntries: apiClient => apiClient.fetchImages(),
+            onSelected: onImageSelected
         });
     },
     showCatalogVideoPopup(onVideoSelected = video => this.applyCatalogVideo(video)) {
@@ -24,6 +39,7 @@ var CatalogAssetPickerMixin = {
             emptyText: this.board.translations.get("No video available") ?? "No video available",
             errorText: this.board.translations.get("Failed to load videos") ?? "Failed to load videos",
             placeholderIcon: "fa-light fa-video",
+            resolveThumbnailUrl: entry => entry.thumbnail_url,
             fetchEntries: apiClient => apiClient.fetchVideos(),
             onSelected: onVideoSelected
         });
@@ -105,8 +121,9 @@ var CatalogAssetPickerMixin = {
             this.appendCatalogAssetCard(grid, entry, options);
     },
     appendCatalogAssetCard(grid, entry, options) {
-        const thumbHtml = entry.thumbnail_url
-            ? `<img class="mdl-catalog-data-thumb" src="${this.escapeCatalogAssetHtml(entry.thumbnail_url)}" alt="">`
+        const thumbnailUrl = options.resolveThumbnailUrl(entry);
+        const thumbHtml = thumbnailUrl
+            ? `<img class="mdl-catalog-data-thumb" src="${this.escapeCatalogAssetHtml(thumbnailUrl)}" alt="">`
             : `<div class="mdl-catalog-data-thumb-placeholder"><i class="${options.placeholderIcon}"></i></div>`;
         grid.insertAdjacentHTML("beforeend", `
             <div class="mdl-catalog-data-card" data-id="${this.escapeCatalogAssetHtml(entry.id ?? "")}">
@@ -144,6 +161,8 @@ var CatalogAssetPickerMixin = {
         };
         if (kind === "audio")
             AssetPreview.audio(wrapElement, previewOptions);
+        else if (kind === "image")
+            AssetPreview.image(wrapElement, previewOptions);
         else
             AssetPreview.video(wrapElement, previewOptions);
     },
