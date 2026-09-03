@@ -9162,7 +9162,7 @@ BlockDefinitionLoader.registerAll([
         "type": "oscilloscope",
         "category": "component",
         "displayName": "Oscilloscope",
-        "description": "A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. A row naming a term the model holds no elements of — one an object writes a point at a time — is read over the run instead, a point to each iteration, so a term that was never a wave is drawn as the wave its points make. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.",
+        "description": "A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. A row naming a term the model holds no elements of — one an object writes a point at a time — is read over the run instead, a point to each row: the trace fills the screen from the left as the run goes, and once the run has passed the right-hand edge the screen travels with it, so a term that was never a wave is drawn as the wave its points make and goes on being drawn where the model has got to. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.",
         "icon": "fa-light fa-monitor-waveform",
         "tags": [
             "object",
@@ -9188,43 +9188,34 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "terms",
                 "defaultValue": [],
                 "category": "model",
-                "description": "The waves on the screen, one row each, in the order they are drawn and each in a colour of its own. A row names something the model defined over element indices, as y\\left[i\\right]=... does, and the screen reads it element by element from the first. A row naming a term the model holds no elements of — one an object writes a point at a time, or a column of measurements — is read over the run instead: element i is what the name was worth on iteration i, and the trace is the wave those points make. The run has not reached the rest of the screen yet, so it lies at rest there."
-            },
-            {
-                "id": "spacing",
-                "label": "Element spacing",
-                "valueType": "number",
-                "defaultValue": 1,
-                "category": "scale",
-                "minimum": 0.000001,
-                "description": "How far apart two neighbouring elements stand, in model units. Left at 1 the screen reads in element numbers, so the first element stands at 0 and the tenth at 9; a chain 20 long drawn as 30 elements stands them 20/29 apart."
+                "description": "The waves on the screen, one row each, in the order they are drawn and each in a colour of its own. A row names something the model defined over element indices, as y\\left[i\\right]=... does, and the screen reads it element by element from the first. A row naming a term the model holds no elements of — one an object writes a point at a time, or a column of measurements — is read over the run instead: the rows of the run are laid across the screen from the left, and once the run has gone past the right-hand edge the screen follows it, the row it stands on at that edge and the rows behind it filling the screen back to the left. The run has not reached the rest of the screen yet, so it lies at rest there."
             },
             {
                 "id": "minimumX",
                 "label": "Minimum X",
                 "valueType": "number",
-                "defaultValue": 0,
+                "defaultValue": -5,
                 "category": "scale"
             },
             {
                 "id": "maximumX",
                 "label": "Maximum X",
                 "valueType": "number",
-                "defaultValue": 30,
+                "defaultValue": 5,
                 "category": "scale"
             },
             {
                 "id": "minimumY",
                 "label": "Minimum Y",
                 "valueType": "number",
-                "defaultValue": -3,
+                "defaultValue": -5,
                 "category": "scale"
             },
             {
                 "id": "maximumY",
                 "label": "Maximum Y",
                 "valueType": "number",
-                "defaultValue": 3,
+                "defaultValue": 5,
                 "category": "scale"
             },
             {
@@ -9242,41 +9233,26 @@ BlockDefinitionLoader.registerAll([
                 "id": "ticks",
                 "label": "Axis ticks",
                 "valueType": "number",
-                "defaultValue": 5,
+                "defaultValue": 10,
                 "category": "display",
                 "minimum": 2,
-                "maximum": 11
+                "maximum": 11,
+                "description": "How many divisions the screen is ruled into, on both axes. It is a target rather than a count: the lines land on round numbers, so a screen running from -5 to 5 asked for ten of them is ruled every unit."
             },
             {
                 "id": "showGrid",
-                "label": "Show grid",
+                "label": "Grid",
                 "valueType": "boolean",
                 "defaultValue": true,
                 "category": "display"
             },
             {
                 "id": "showTicks",
-                "label": "Show ticks",
+                "label": "Ticks",
                 "valueType": "boolean",
                 "defaultValue": true,
                 "category": "display",
                 "description": "Marks and numbers both axes. Turned off the screen is a bare graticule, and each axis is still rescaled by pulling where its ticks stand."
-            },
-            {
-                "id": "showLegend",
-                "label": "Show readings",
-                "valueType": "boolean",
-                "defaultValue": true,
-                "category": "display",
-                "description": "The strip under the screen: one row per wave, in the colour it is drawn in, reading what it is worth where the cursor stands."
-            },
-            {
-                "id": "showCursor",
-                "label": "Cursor",
-                "valueType": "boolean",
-                "defaultValue": true,
-                "category": "interaction",
-                "description": "Reads the waves where the pointer rests: a crosshair on the screen, and the value of every wave at that point in the strip below. The player has to be standing still for it — a screen is read once it has stopped moving."
             },
             {
                 "id": "showMark",
@@ -9328,29 +9304,39 @@ BlockDefinitionLoader.registerAll([
                 "id": "backgroundColor",
                 "label": "Background",
                 "valueType": "colour",
-                "defaultValue": "token:surface.default",
+                "defaultValue": "#e0e0e0",
                 "category": "style"
             },
             {
                 "id": "screenColor",
                 "label": "Screen",
                 "valueType": "colour",
-                "defaultValue": "token:surface.emphasis",
+                "defaultValue": "#a5d6a7",
                 "category": "style"
             },
             {
                 "id": "gridColor",
                 "label": "Grid",
                 "valueType": "colour",
-                "defaultValue": "token:grid.color",
-                "category": "style"
+                "defaultValue": "#ffffff",
+                "category": "style",
+                "description": "The graticule inside the screen. A line standing on a whole division is drawn full and the ones between them fainter, so the divisions are read first and the finer lines only where the eye is already resting."
             },
             {
                 "id": "axisColor",
                 "label": "Axis",
                 "valueType": "colour",
-                "defaultValue": "token:axis.color",
-                "category": "style"
+                "defaultValue": "#000000",
+                "category": "style",
+                "description": "The lines the screen is read against: the frame around it and the marks along both axes. The two lines standing at zero have a colour of their own."
+            },
+            {
+                "id": "originColor",
+                "label": "Origin",
+                "valueType": "colour",
+                "defaultValue": "#000000",
+                "category": "style",
+                "description": "The two lines crossing at zero, which is where the screen is read from. They are the origin rather than the frame around it, so they are coloured on their own; a screen whose range does not cross zero has neither of them to draw."
             },
             {
                 "id": "cursorColor",
@@ -9439,18 +9425,6 @@ BlockDefinitionLoader.registerAll([
                 "formula": "waveCount\\cdot lineHeight"
             },
             {
-                "id": "legendBand",
-                "value": {
-                    "choose": {
-                        "parameter": "showLegend"
-                    },
-                    "then": {
-                        "parameter": "legendHeight"
-                    },
-                    "otherwise": 0
-                }
-            },
-            {
                 "id": "plotX",
                 "formula": "pad+labelBandLeft"
             },
@@ -9464,7 +9438,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "plotH",
-                "formula": "\\max\\left(10,h-plotY-pad-labelBandBottom-legendBand\\right)"
+                "formula": "\\max\\left(10,h-plotY-pad-labelBandBottom-legendHeight\\right)"
             },
             {
                 "id": "plotRight",
@@ -9499,12 +9473,8 @@ BlockDefinitionLoader.registerAll([
                 "formula": "plotBottom-minimumY\\cdot scaleY"
             },
             {
-                "id": "gap",
-                "formula": "\\max\\left(0.000001,spacing\\right)"
-            },
-            {
                 "id": "elements",
-                "formula": "round\\left(\\frac{spanX}{gap}\\right)+1"
+                "formula": "round\\left(spanX\\right)+1"
             },
             {
                 "id": "budget",
@@ -9533,16 +9503,6 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
-                "id": "cursorOn",
-                "value": {
-                    "choose": {
-                        "parameter": "showCursor"
-                    },
-                    "then": 1,
-                    "otherwise": 0
-                }
-            },
-            {
                 "id": "markOn",
                 "value": {
                     "choose": {
@@ -9553,16 +9513,16 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
-                "id": "captureShown",
-                "formula": "\\max\\left(cursorOn,markOn\\right)"
-            },
-            {
                 "id": "hoveringNow",
-                "formula": "cursorOn\\cdot hovering\\cdot\\left(1-playing\\right)"
+                "formula": "hovering\\cdot\\left(1-playing\\right)"
             },
             {
                 "id": "cursorIndex",
-                "formula": "\\frac{hoverX}{gap}+1"
+                "formula": "hoverX+1"
+            },
+            {
+                "id": "nowIndex",
+                "formula": "maximumX+1"
             },
             {
                 "id": "deltaValue",
@@ -9579,15 +9539,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "readingsShown",
-                "value": {
-                    "choose": {
-                        "parameter": "showLegend"
-                    },
-                    "then": {
-                        "parameter": "waveCount"
-                    },
-                    "otherwise": 0
-                }
+                "formula": "waveCount"
             },
             {
                 "id": "dotsShown",
@@ -9795,12 +9747,15 @@ BlockDefinitionLoader.registerAll([
                                         "field": "term"
                                     },
                                     "index": {
-                                        "formula": "\\frac{\\left(minimumX+\\left(i-\\lfloor\\frac{i}{segments}\\rfloor\\cdot segments\\right)\\cdot step\\right)}{gap}+1",
+                                        "formula": "minimumX+\\left(i-\\lfloor\\frac{i}{segments}\\rfloor\\cdot segments\\right)\\cdot step+1",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
                                             }
                                         }
+                                    },
+                                    "now": {
+                                        "parameter": "nowIndex"
                                     },
                                     "case": {
                                         "termsRow": "waves",
@@ -9842,12 +9797,15 @@ BlockDefinitionLoader.registerAll([
                                         "field": "term"
                                     },
                                     "index": {
-                                        "formula": "\\frac{\\left(minimumX+\\left(\\left(i-\\lfloor\\frac{i}{segments}\\rfloor\\cdot segments\\right)+1\\right)\\cdot step\\right)}{gap}+1",
+                                        "formula": "minimumX+\\left(\\left(i-\\lfloor\\frac{i}{segments}\\rfloor\\cdot segments\\right)+1\\right)\\cdot step+1",
                                         "inputs": {
                                             "i": {
                                                 "parameter": "$index"
                                             }
                                         }
+                                    },
+                                    "now": {
+                                        "parameter": "nowIndex"
                                     },
                                     "case": {
                                         "termsRow": "waves",
@@ -9938,6 +9896,9 @@ BlockDefinitionLoader.registerAll([
                         },
                         "color": {
                             "parameter": "axisColor"
+                        },
+                        "zeroColor": {
+                            "parameter": "originColor"
                         },
                         "labelColor": {
                             "parameter": "foregroundColor"
@@ -10055,6 +10016,9 @@ BlockDefinitionLoader.registerAll([
                                     },
                                     "index": {
                                         "parameter": "cursorIndex"
+                                    },
+                                    "now": {
+                                        "parameter": "nowIndex"
                                     },
                                     "case": {
                                         "termsRow": "waves",
@@ -10257,6 +10221,9 @@ BlockDefinitionLoader.registerAll([
                                             "index": {
                                                 "parameter": "cursorIndex"
                                             },
+                                            "now": {
+                                                "parameter": "nowIndex"
+                                            },
                                             "case": {
                                                 "termsRow": "waves",
                                                 "row": {
@@ -10322,9 +10289,6 @@ BlockDefinitionLoader.registerAll([
                 {
                     "id": "capture",
                     "type": "rect",
-                    "when": {
-                        "parameter": "captureShown"
-                    },
                     "bindings": {
                         "x": {
                             "parameter": "plotX"
@@ -10346,9 +10310,6 @@ BlockDefinitionLoader.registerAll([
                     "behaviours": [
                         {
                             "type": "follow-pointer",
-                            "when": {
-                                "parameter": "showCursor"
-                            },
                             "xParameter": "hoverX",
                             "yParameter": "hoverY",
                             "activeParameter": "hovering",

@@ -30,8 +30,13 @@ class BlockBindings {
         return { independent: field };
     }
 
-    static element(termBinding, indexBinding) {
-        return { element: termBinding, index: indexBinding };
+    // One element of a name. `now` says which element index the row the run stands on is drawn at, for
+    // the sake of a name the model holds no elements of and reads over the run instead; a drawing
+    // that leaves it out reads element i on row i.
+    static element(termBinding, indexBinding, nowBinding = undefined) {
+        return nowBinding === undefined
+            ? { element: termBinding, index: indexBinding }
+            : { element: termBinding, index: indexBinding, now: nowBinding };
     }
 
     // What a name was worth earlier in the run, `ago` being how far back in the units of the model's
@@ -378,21 +383,28 @@ class BlockBindings {
         const value = Number(this.calculator?.system?.getElementValue(termName, index, this.getModelValues(caseNumber)));
         if (Number.isFinite(value))
             return value;
-        const point = this.resolveRunPoint(termName, index, caseNumber);
+        const point = this.resolveRunPoint(termName, index, caseNumber, Number(this.resolve(binding.now, context, NaN)));
         return Number.isFinite(point) ? point : fallbackValue;
     }
 
     // A name the model holds no elements of — one an object writes a point at a time, rather than one
     // defined over element indices — has nothing to answer element i with. What it has is a value on
-    // every row of the run, so it is read there instead: element i is what the name was worth on
-    // iteration i, which is how a term handed over a point at a time is drawn as the wave those
-    // points make without the name ever being one. A row the run has not reached holds nothing yet
-    // and reads as 0, the way a moment before the run began does.
-    resolveRunPoint(termName, index, caseNumber) {
+    // every row of the run, so it is read there instead, which is how a term handed over a point at a
+    // time is drawn as the wave those points make without the name ever being one.
+    //
+    // Which row element i stands for is the object's to say, through `now`: the element index the row
+    // the run is standing on is drawn at. The run fills the elements before it in order, and once it
+    // has passed the last of them the whole lot moves along with it, so a screen goes on showing what
+    // the model is doing now rather than freezing on the opening rows of a run that has left them far
+    // behind. An object naming no such element reads element i on row i, the run's own numbering. A
+    // row the run has not reached, and one it left behind the first element, hold nothing yet and read
+    // as 0, the way a moment before the run began does.
+    resolveRunPoint(termName, index, caseNumber, nowIndex = NaN) {
         if (!this.isModelTerm(termName))
             return NaN;
-        const iteration = Math.round(index);
         const last = Math.min(this.calculator.getIteration(), this.calculator.getLastCalculatedIteration());
+        const elapsed = Number.isFinite(nowIndex) ? Math.max(0, last - Math.round(nowIndex)) : 0;
+        const iteration = Math.round(index) + elapsed;
         if (iteration < 1 || iteration > last)
             return 0;
         return this.readIterationValue(termName, iteration, caseNumber);
@@ -703,9 +715,10 @@ class BlockBindings {
         if (kind === "element") {
             const termDependencies = this.getBindingDependencies(binding.element);
             const indexDependencies = this.getBindingDependencies(binding.index);
+            const nowDependencies = this.getBindingDependencies(binding.now);
             return {
-                variables: termDependencies.variables.concat(indexDependencies.variables),
-                parameters: termDependencies.parameters.concat(indexDependencies.parameters)
+                variables: termDependencies.variables.concat(indexDependencies.variables, nowDependencies.variables),
+                parameters: termDependencies.parameters.concat(indexDependencies.parameters, nowDependencies.parameters)
             };
         }
         if (kind === "past") {

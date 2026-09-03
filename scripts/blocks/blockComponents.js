@@ -700,6 +700,10 @@ var BlockComponentHelpers = {
             BlockComponentHelpers.parameter("minimumYProperty", "Vertical minimum property", "string", ""),
             BlockComponentHelpers.parameter("maximumYProperty", "Vertical maximum property", "string", ""),
             BlockComponentHelpers.parameter("color", "Axis colour", "colour", "token:axis.color", { category: "style" }),
+            // The two lines standing at zero are the origin the plot is read from rather than the box
+            // it is drawn in, so an object may colour them apart from its frame and its ticks. Left
+            // unset they are the axis colour, which is what they have always been.
+            BlockComponentHelpers.parameter("zeroColor", "Zero line colour", "colour", "", { category: "style", description: "Colour of the two lines standing at zero. Left unset they are drawn in the axis colour, along with the frame and the marks." }),
             BlockComponentHelpers.parameter("labelColor", "Label colour", "colour", "token:axis.labelColor", { category: "style" }),
             BlockComponentHelpers.parameter("fontFamily", "Font family", "string", "token:font.family", { category: "style" }),
             BlockComponentHelpers.parameter("fontSize", "Label size", "number", "token:font.size.tick", { category: "style", minimum: 1 }),
@@ -722,10 +726,11 @@ var BlockComponentHelpers = {
                 children.push(BlockComponentHelpers.strokeLine("border-top", box.left, box.top, box.right, box.top, color, parameters.lineWidth));
                 children.push(BlockComponentHelpers.strokeLine("border-right", box.right, box.top, box.right, box.bottom, color, parameters.lineWidth));
             }
+            const zeroColor = context.tokens.resolveValue(parameters.zeroColor || parameters.color);
             if (parameters.showZeroLines === true && Number(parameters.minimumX) < 0 && Number(parameters.maximumX) > 0)
-                children.push(BlockComponentHelpers.strokeLine("zero-y", box.toX(0), box.top, box.toX(0), box.bottom, color, parameters.lineWidth));
+                children.push(BlockComponentHelpers.strokeLine("zero-y", box.toX(0), box.top, box.toX(0), box.bottom, zeroColor, parameters.lineWidth));
             if (parameters.showZeroLines === true && Number(parameters.minimumY) < 0 && Number(parameters.maximumY) > 0)
-                children.push(BlockComponentHelpers.strokeLine("zero-x", box.left, box.toY(0), box.right, box.toY(0), color, parameters.lineWidth));
+                children.push(BlockComponentHelpers.strokeLine("zero-x", box.left, box.toY(0), box.right, box.toY(0), zeroColor, parameters.lineWidth));
             const ticks = BlockComponentHelpers.plotTicks(parameters, box);
             // The ticks are worked out whether or not they are drawn: an axis whose marks are hidden is
             // still rescaled by pulling where they stand.

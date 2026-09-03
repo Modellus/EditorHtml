@@ -364,11 +364,17 @@ stay in code, because they generate geometry per index or per character rather t
   is still handed over as a wave — the run walks the window, a sample to each row.
 * **A term that is not a wave is read over the run.** An `element` binding asks the model for element
   `i` of a name. A name the model holds no elements of — one an object writes a point at a time, or a
-  column of measurements — has nothing to answer with, so it is read on row `i` of the run instead,
+  column of measurements — has nothing to answer with, so it is read over the rows of the run instead,
   and a row the run has not reached lies at rest. That is the whole of what makes the Oscilloscope
   draw the Piano's chord as the wave its points make, without the name ever being one. A name the
   model *does* assign answers for every element, so it is read as it always was: `y\left[i\right]=…`
   element by element, and a plain `y=…` as the one value it is worth on the row on screen.
+* **The run is followed rather than watched from its start.** `now` on an `element` binding is the
+  element index the row the run stands on is drawn at — the Oscilloscope's right-hand edge. The rows
+  fill the elements before it in order, and once the run has passed the last of them the whole window
+  moves along with it, so a screen goes on showing the chord being held now instead of freezing on
+  the opening rows a long run left behind. A binding that names no `now` reads element `i` on row
+  `i`, which is the run's own numbering and what a drawing of the whole of a short run wants.
 * **`visibleWhen`/`disabledWhen`** may ask what the model makes of the name a row holds rather than
   what the row holds: `{ "parameter": "wave", "modelDefines": false }`. A wave the model works out for
   itself leaves the object nothing to shape, so the wave's amplitude, frequency, speed, phase,

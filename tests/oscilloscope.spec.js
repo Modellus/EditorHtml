@@ -71,7 +71,7 @@ test.describe('Oscilloscope object', () => {
     test('its parameter labels name the thing, not the kind of thing', async ({ page }) => {
         await setupBoard(page);
         const labels = await page.evaluate(() => BlockRegistry.get('oscilloscope').parameters.map(parameter => parameter.label));
-        expect(labels).toEqual(expect.arrayContaining(['Waves', 'Element spacing', 'Samples', 'Cursor', 'Mark']));
+        expect(labels).toEqual(expect.arrayContaining(['Waves', 'Samples', 'Grid', 'Ticks', 'Mark']));
         expect(labels.filter(label => /variable$/i.test(label))).toEqual([]);
     });
 
@@ -98,12 +98,15 @@ test.describe('Oscilloscope object', () => {
         await addScope(page, { waves: waveRows('y'), minimumX: 0, maximumX: 12, minimumY: -3, maximumY: 3, showLegend: false, showTicks: false });
         await page.evaluate(() => shell.board.calculator.play());
         await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 13, null, { timeout: 20000 });
+        // The run standing on the thirteenth row is the screen filled to its right-hand edge and no
+        // further, which is where the rows and the elements are the same thing.
         await page.evaluate(() => {
             const calculator = shell.board.calculator;
             calculator.pause();
             calculator.system.addTermByName('y', Modellus.TermType.PARAMETER);
             for (let iteration = 1; iteration <= 13; iteration++)
                 calculator.setTermValueOnIteration('y', 2 * Math.sin(Math.PI * iteration / 6), iteration, 1);
+            calculator.setIteration(13);
             shell.board.shapes.getByName('Scope').draw();
         });
         const segments = await readNodes(page, 'trace');
@@ -111,6 +114,37 @@ test.describe('Oscilloscope object', () => {
         expect(segments).toHaveLength(12);
         for (let index = 0; index < segments.length; index++) {
             const value = 2 * Math.sin(Math.PI * (index + 1) / 6);
+            expect(segments[index].y1).toBeCloseTo(plot.y + plot.height * (1 - (value + 3) / 6), 4);
+        }
+    });
+
+    // The screen follows the run rather than watching it from where it began: the row the model
+    // stands on is the right-hand edge, and the rows behind it fill the screen back to the left. A
+    // chord struck after the opening rows had already been worked out would otherwise never reach a
+    // screen that goes on reading those rows for ever.
+    test('a term written a row at a time follows the run once it has passed the screen', async ({ page }) => {
+        await setupBoard(page);
+        await addScope(page, { waves: waveRows('y'), minimumX: 0, maximumX: 12, minimumY: -3, maximumY: 3, showLegend: false, showTicks: false });
+        await page.evaluate(() => shell.board.calculator.play());
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 40, null, { timeout: 20000 });
+        // Nothing was written while the run went by, so only the rows written now — long past the
+        // thirteen the screen holds — have anything on them to read.
+        const current = await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            calculator.pause();
+            calculator.system.addTermByName('y', Modellus.TermType.PARAMETER);
+            const iteration = calculator.getIteration();
+            for (let row = iteration - 12; row <= iteration; row++)
+                calculator.setTermValueOnIteration('y', 2 * Math.sin(Math.PI * row / 6), row, 1);
+            shell.board.shapes.getByName('Scope').draw();
+            return iteration;
+        });
+        expect(current).toBeGreaterThan(13);
+        const segments = await readNodes(page, 'trace');
+        const plot = await readPlotBox(page);
+        expect(segments).toHaveLength(12);
+        for (let index = 0; index < segments.length; index++) {
+            const value = 2 * Math.sin(Math.PI * (current - 12 + index) / 6);
             expect(segments[index].y1).toBeCloseTo(plot.y + plot.height * (1 - (value + 3) / 6), 4);
         }
     });
@@ -158,15 +192,24 @@ test.describe('Oscilloscope object', () => {
         expect((await readNodes(page, 'swatch')).map(swatch => swatch.stroke)).toEqual([palette, '#123456']);
     });
 
-    test('the spacing says how far apart two elements stand, so the screen reads in model units', async ({ page }) => {
+    // The screen reads in element numbers: the element standing at 4 is the fifth, counted from the
+    // one that stands at 0.
+    test('the screen reads in element numbers, one to each unit across it', async ({ page }) => {
         await setupBoard(page);
-        // Thirty elements over a chain twenty long stand 20/29 apart, which is how the mechanical
-        // wave lays out the one it publishes.
-        await addScope(page, { waves: waveRows('y'), spacing: 20 / 29, minimumX: 0, maximumX: 20, showTicks: false }, 'y\\left[i\\right]=i');
-        expect(await readNodes(page, 'trace')).toHaveLength(29);
-        // The fifth element stands four spacings along, and reads as the fifth.
-        await hover(page, 20 / 29 * 4, 0);
+        await addScope(page, { waves: waveRows('y'), minimumX: 0, maximumX: 20, showTicks: false }, 'y\\left[i\\right]=i');
+        expect(await readNodes(page, 'trace')).toHaveLength(20);
+        await hover(page, 4, 0);
         expect(await readTexts(page)).toContain('y = 5.00');
+    });
+
+    // The lines crossing at zero are where the screen is read from, not the box it is drawn in, so
+    // they are coloured apart from the frame and the marks along the axes.
+    test('the origin lines carry a colour of their own, apart from the axis around them', async ({ page }) => {
+        await setupBoard(page);
+        await addScope(page, { waves: waveRows('y'), axisColor: '#123456', originColor: '#ff00ff' }, 'y\\left[i\\right]=i');
+        const lines = await page.evaluate(() => Object.fromEntries(['zero-x', 'zero-y', 'axis-x', 'axis-y']
+            .map(id => [id, shell.board.shapes.getByName('Scope').contentGroup.querySelector(`[data-source-id="${id}"]`)?.getAttribute('stroke') ?? null])));
+        expect(lines).toEqual({ 'zero-x': '#ff00ff', 'zero-y': '#ff00ff', 'axis-x': '#123456', 'axis-y': '#123456' });
     });
 
     test('the cursor reads every wave where it stands, and only while the run is stopped', async ({ page }) => {
@@ -242,13 +285,15 @@ test.describe('Oscilloscope object', () => {
 
     // An object waiting to be given a term has nothing to write on its key, and a key with nothing
     // on it cannot be found: it wears the faded word instead, the way the chart's own key does.
-    test('the model key names the first wave and counts the rest, and reads Model while there are none', async ({ page }) => {
+    test('the model key names the first wave and counts the rest, and wears the empty mark while there are none', async ({ page }) => {
         await setupBoard(page);
         await addScope(page, {}, 'y\\left[i\\right]=i\\\\z\\left[i\\right]=2\\cdot i\\\\q\\left[i\\right]=3');
         await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Scope')));
         const key = page.locator('.shape-context-toolbar.visible .mdl-component-model-selector');
         await expect(key).toBeVisible();
-        await expect(key).toHaveText('Model');
+        // A key holding no term wears the mark that stands between two of them rather than a word.
+        await expect(key).toHaveText('');
+        expect(await key.innerHTML()).toContain('fa-grip-lines-vertical');
         await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Scope');
             shape.setProperties({ waves: ['y', 'z', 'q'].map(term => ({ term: term, case: 1, color: '' })).concat([{ term: '', case: 1, color: '' }]) });
@@ -257,6 +302,26 @@ test.describe('Oscilloscope object', () => {
         await expect.poll(() => key.innerHTML()).toContain('+2');
         await expect.poll(() => key.innerHTML()).toContain('math-field');
         expect(await key.innerHTML()).not.toContain('mdl-missing-term');
+    });
+
+    // A menu holding nothing but a list of waves is that list. Its rows name the terms themselves, so
+    // a label written over them would only repeat the key they already hang under.
+    test('the waves stand in the model menu with no label written over them', async ({ page }) => {
+        await setupBoard(page);
+        await addScope(page, { waves: waveRows('y') }, 'y\\left[i\\right]=i');
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Scope')));
+        await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
+        await page.waitForTimeout(400);
+        const menu = await page.evaluate(() => {
+            const popups = document.querySelectorAll('.mdl-shape-overlay-popup');
+            const last = popups[popups.length - 1];
+            return {
+                labels: Array.from(last.querySelectorAll('.mdl-dropdown-list-label')).map(node => node.textContent.trim()),
+                rows: last.querySelectorAll('.shape-term-row').length
+            };
+        });
+        expect(menu.labels).toEqual([]);
+        expect(menu.rows).toBeGreaterThan(0);
     });
 
     // A list of waves is a plain list of terms: the rows name one term each, and none of them is

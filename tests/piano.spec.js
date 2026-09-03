@@ -305,16 +305,18 @@ test.describe('Piano object', () => {
             shape.draw();
             const plot = shape.contentGroup.querySelector('[data-source-id="plot"]');
             return {
+                iteration: shell.board.calculator.getIteration(),
                 segments: Array.from(shape.contentGroup.querySelectorAll('[data-source-id="trace"]')).map(node => Number(node.getAttribute('y1'))),
                 y: Number(plot.getAttribute('y')),
                 height: Number(plot.getAttribute('height'))
             };
         });
         expect(drawn.segments).toHaveLength(12);
-        // The screen reads element i on row i of the run, so segment i stands where the chord stood
-        // when the run worked that row out.
+        // The screen follows the run: the row it stands on is the right-hand edge, and the twelve
+        // rows behind it fill the screen back to the left, each standing where the chord stood when
+        // the run worked that row out.
         drawn.segments.forEach((drawnY, index) => {
-            const value = chordAt(index + 1, [261.6255653005986, 391.99543598174927]);
+            const value = chordAt(drawn.iteration - 12 + index, [261.6255653005986, 391.99543598174927]);
             expect(drawnY).toBeCloseTo(drawn.y + drawn.height * (1 - (value + 4) / 8), 3);
         });
         await page.keyboard.up('z');

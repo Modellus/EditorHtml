@@ -348,6 +348,14 @@ math-field {
     margin: 0 4px;
 }
 
+/* The mark a key wears while it is waiting to be handed a term: the same one that stands between two
+   of them, standing alone where a name will go, and faded the way the word it replaced was. */
+.mdl-name-btn-empty {
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0.5;
+}
+
 .mdl-name-btn-term-text {
     font-family: KaTeX_Math, serif;
     font-style: italic;

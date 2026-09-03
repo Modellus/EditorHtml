@@ -946,33 +946,31 @@ Capabilities: `radial`, `angular`, `reads-model`
 
 ### `oscilloscope` — Oscilloscope
 
-A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. A row naming a term the model holds no elements of — one an object writes a point at a time — is read over the run instead, a point to each iteration, so a term that was never a wave is drawn as the wave its points make. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.
+A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. A row naming a term the model holds no elements of — one an object writes a point at a time — is read over the run instead, a point to each row: the trace fills the screen from the left as the run goes, and once the run has passed the right-hand edge the screen travels with it, so a term that was never a wave is drawn as the wave its points make and goes on being drawn where the model has got to. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.
 
 Capabilities: `reads-model`, `linear`, `textual`, `interaction`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
 | `waves` | terms | [] |  |
-| `spacing` | number | 1 | min 0.000001 |
-| `minimumX` | number | 0 |  |
-| `maximumX` | number | 30 |  |
-| `minimumY` | number | -3 |  |
-| `maximumY` | number | 3 |  |
+| `minimumX` | number | -5 |  |
+| `maximumX` | number | 5 |  |
+| `minimumY` | number | -5 |  |
+| `maximumY` | number | 5 |  |
 | `samples` | number | 200 | min 2, max 300 |
-| `ticks` | number | 5 | min 2, max 11 |
+| `ticks` | number | 10 | min 2, max 11 |
 | `showGrid` | boolean | true |  |
 | `showTicks` | boolean | true |  |
-| `showLegend` | boolean | true |  |
-| `showCursor` | boolean | true |  |
 | `showMark` | boolean | false |  |
 | `markX` | number | 0 |  |
 | `hoverX` | number | 0 |  |
 | `hoverY` | number | 0 |  |
 | `hovering` | number | 0 |  |
-| `backgroundColor` | colour | "token:surface.default" |  |
-| `screenColor` | colour | "token:surface.emphasis" |  |
-| `gridColor` | colour | "token:grid.color" |  |
-| `axisColor` | colour | "token:axis.color" |  |
+| `backgroundColor` | colour | "#e0e0e0" |  |
+| `screenColor` | colour | "#a5d6a7" |  |
+| `gridColor` | colour | "#ffffff" |  |
+| `axisColor` | colour | "#000000" |  |
+| `originColor` | colour | "#000000" |  |
 | `cursorColor` | colour | "token:stroke.default" |  |
 | `foregroundColor` | colour | "token:axis.labelColor" |  |
 | `borderColor` | colour | "token:stroke.subtle" |  |
@@ -1043,6 +1041,7 @@ Capabilities: `layout`, `textual`
 | `minimumYProperty` | string | "" |  |
 | `maximumYProperty` | string | "" |  |
 | `color` | colour | "token:axis.color" |  |
+| `zeroColor` | colour | "" |  |
 | `labelColor` | colour | "token:axis.labelColor" |  |
 | `fontFamily` | string | "token:font.family" |  |
 | `fontSize` | number | "token:font.size.tick" | min 1 |

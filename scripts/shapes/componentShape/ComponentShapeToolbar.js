@@ -221,8 +221,9 @@ var ComponentShapeToolbarMixin = {
         return terms;
     },
     // An object that has been given no term yet has nothing to write on the key, and a key with
-    // nothing on it cannot be found: it wears the faded word instead, which is what says the object
-    // is waiting to be handed a term.
+    // nothing on it cannot be found: it wears the mark that stands between two terms instead — the
+    // place a name goes, with no name in it yet — which is what says the object is waiting to be
+    // handed one.
     renderComponentModelButtonTemplate(element) {
         const listedTerms = this.getComponentModelButtonListTerms();
         const markup = this.getComponentButtonTermValues(this.getComponentModelButtonProperties())
@@ -231,7 +232,7 @@ var ComponentShapeToolbarMixin = {
             .filter(part => part !== "")
             .join(`<i class="fa-light fa-grip-lines-vertical mdl-name-btn-separator"></i>`);
         if (markup === "") {
-            element.innerHTML = `<span class="mdl-name-btn-term"><span class="mdl-name-btn-term-text" style="opacity:0.5">Model</span></span>`;
+            element.innerHTML = `<span class="mdl-name-btn-term"><i class="fa-light fa-grip-lines-vertical mdl-name-btn-empty"></i></span>`;
             return;
         }
         const remaining = Math.max(0, listedTerms.length - 1);
@@ -378,8 +379,12 @@ var ComponentShapeToolbarMixin = {
         });
     },
     buildComponentParameterMenu(contentElement, parameters) {
+        // A menu holding nothing but a list of terms is that list. Its rows name the terms
+        // themselves, so a label over them would only repeat the key they hang under; a list
+        // standing beside other rows keeps its label, because there it says which of them it is.
+        const unlabelled = parameters.length === 1 && parameters[0].valueType === "terms";
         const items = parameters.map(parameter => ({
-            text: parameter.label,
+            text: unlabelled ? "" : parameter.label,
             buildControl: $container => $container.append(this.createComponentParameterControl(parameter))
         }));
         // A menu carrying a list of terms is as wide as that list, so every other row is widened to
