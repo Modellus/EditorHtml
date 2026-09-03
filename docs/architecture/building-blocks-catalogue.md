@@ -1142,9 +1142,9 @@ Capabilities: `radial`, `angular`, `reads-model`
 
 ### `rotating-vector` — Rotating vector
 
-Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections.
+Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow can be dragged round its origin to write the angle back, so the direction it shows is the direction the reader points it in.
 
-Capabilities: `angular`, `reads-model`, `vector`
+Capabilities: `angular`, `reads-model`, `vector`, `interaction`, `writes-model`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |

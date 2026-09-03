@@ -1279,6 +1279,123 @@ test.describe('compass component', () => {
     });
 });
 
+test.describe('rotating vector component', () => {
+    async function addVectorModel(page, expression = '\\displaylines{v_x=v\\cdot\\cos\\left(\\theta\\right)\\\\v_y=v\\cdot\\sin\\left(\\theta\\right)}') {
+        await page.evaluate(() => modellus.shape.addExpression('Vector equations'));
+        await page.waitForTimeout(300);
+        await page.evaluate(expression => {
+            shell.setProperty('angleUnit', 'degrees');
+            shell.board.shapes.getByName('Vector equations').properties.expression = expression;
+            shell.reset();
+        }, expression);
+        await page.waitForTimeout(400);
+        await page.evaluate(() => {
+            shell.board.calculator.setTermValue('v', 3, 1, 1);
+            shell.board.calculator.setTermValue('\\theta', 20, 1, 1);
+            shell.board.calculator.calculate();
+        });
+        await page.waitForTimeout(200);
+    }
+
+    async function addRotatingVector(page, overrides = { angleVariable: '\\theta', lengthVariable: 'v' }) {
+        await page.evaluate(overrides => {
+            const shape = shell.commands.addComponent('rotating-vector', 'Speed and direction');
+            shape.setProperties(Object.assign({ x: 240, y: 160, width: 200, height: 200, lengthScale: 20 }, overrides));
+            shape.draw();
+        }, overrides);
+        await page.waitForTimeout(300);
+    }
+
+    // The vector is 200 by 200, so the arm the drag covers reaches 92 from the origin. Points are
+    // given as a radius and an angle counter-clockwise from the positive x axis, the way the
+    // component reads its own angle.
+    async function dragOnVector(page, from, to) {
+        const points = await page.evaluate(([from, to]) => {
+            const shape = shell.board.shapes.getByName('Speed and direction');
+            const matrix = shell.board.svg.getScreenCTM();
+            const origin = { x: shape.properties.x + shape.properties.width / 2, y: shape.properties.y + shape.properties.height / 2 };
+            const place = point => {
+                const radians = point.degrees * Math.PI / 180;
+                const screen = new DOMPoint(origin.x + point.radius * Math.cos(radians), origin.y - point.radius * Math.sin(radians)).matrixTransform(matrix);
+                return { x: screen.x, y: screen.y };
+            };
+            return [place(from), place(to)];
+        }, [from, to]);
+        await page.mouse.move(points[0].x, points[0].y);
+        await page.mouse.down();
+        await page.mouse.move(points[1].x, points[1].y, { steps: 8 });
+        await page.mouse.up();
+        await page.waitForTimeout(300);
+    }
+
+    async function readVectorTerms(page) {
+        return page.evaluate(() => ({
+            angle: shell.board.calculator.getByName('\\theta', 1),
+            length: shell.board.calculator.getByName('v', 1)
+        }));
+    }
+
+    async function readVectorAffordance(page) {
+        return page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Speed and direction');
+            const grab = document.getElementById(shape.id).querySelector('[data-source-id="vector-grab"]');
+            return { cursor: grab.style.cursor, pointerEvents: grab.getAttribute('pointer-events') };
+        });
+    }
+
+    test('drags the arrow round to the direction it is pointed at', async ({ page }) => {
+        await setupBoard(page);
+        await addVectorModel(page);
+        await addRotatingVector(page);
+        expect((await readVectorTerms(page)).angle).toBe(20);
+        expect((await readVectorAffordance(page)).cursor).toBe('grab');
+        await dragOnVector(page, { radius: 50, degrees: 20 }, { radius: 60, degrees: 135 });
+        const terms = await readVectorTerms(page);
+        expect(terms.angle).toBeCloseTo(135, 1);
+        expect(terms.length).toBe(3);
+    });
+
+    // The arrow is turned, not stretched: how fast is the slider's business and the pedal's, so a
+    // drag that points the car somewhere else leaves the speed it is going at alone.
+    test('turns the arrow without changing the length it shows', async ({ page }) => {
+        await setupBoard(page);
+        await addVectorModel(page);
+        await addRotatingVector(page);
+        await dragOnVector(page, { radius: 30, degrees: 20 }, { radius: 88, degrees: 270 });
+        const terms = await readVectorTerms(page);
+        expect(terms.angle).toBeCloseTo(270, 1);
+        expect(terms.length).toBe(3);
+    });
+
+    // A vector straight from the palette shows plain numbers, so dragging it edits the object's own
+    // angle, and that edit belongs in the undo history the way any other property edit does.
+    test('drags a vector holding a plain number, writing the property itself', async ({ page }) => {
+        await setupBoard(page);
+        await addVectorModel(page);
+        await addRotatingVector(page, { angleVariable: '30', lengthVariable: '2' });
+        await dragOnVector(page, { radius: 40, degrees: 30 }, { radius: 60, degrees: 90 });
+        const angleOf = () => page.evaluate(() => Number(shell.board.shapes.getByName('Speed and direction').properties.angleVariable));
+        expect(await angleOf()).toBeCloseTo(90, 1);
+        await page.evaluate(() => shell.commands.undo());
+        await page.waitForTimeout(300);
+        expect(await angleOf()).toBe(30);
+        await page.evaluate(() => shell.commands.redo());
+        await page.waitForTimeout(300);
+        expect(await angleOf()).toBeCloseTo(90, 1);
+    });
+
+    // An angle the model works out for itself can never be written, and saying so with the cursor a
+    // locked handle uses beats an arrow that quietly refuses to move.
+    test('refuses the drag when the model works the angle out for itself', async ({ page }) => {
+        await setupBoard(page);
+        await addVectorModel(page, '\\displaylines{\\theta=45\\\\v_x=v\\cdot\\cos\\left(\\theta\\right)}');
+        await addRotatingVector(page);
+        expect((await readVectorAffordance(page)).cursor).toBe('not-allowed');
+        await dragOnVector(page, { radius: 50, degrees: 45 }, { radius: 60, degrees: 135 });
+        expect((await readVectorTerms(page)).angle).toBe(45);
+    });
+});
+
 test.describe('component variable inputs', () => {
     async function addCompass(page) {
         await page.evaluate(() => {

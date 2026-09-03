@@ -10555,7 +10555,7 @@ BlockDefinitionLoader.registerAll([
         "type": "rotating-vector",
         "category": "component",
         "displayName": "Rotating vector",
-        "description": "Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections.",
+        "description": "Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow can be dragged round its origin to write the angle back, so the direction it shows is the direction the reader points it in.",
         "icon": "fa-light fa-arrow-right-long",
         "tags": [
             "object",
@@ -10568,7 +10568,9 @@ BlockDefinitionLoader.registerAll([
         "capabilities": [
             "angular",
             "reads-model",
-            "vector"
+            "vector",
+            "interaction",
+            "writes-model"
         ],
         "preview": {
             "parameters": {
@@ -10691,6 +10693,14 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "pointerAngle",
                 "formula": "90-angle"
+            },
+            {
+                "id": "grabTipX",
+                "formula": "cx+maxRadius\\cdot\\cos\\left(\\frac{angle\\cdot\\pi}{180}\\right)"
+            },
+            {
+                "id": "grabTipY",
+                "formula": "cy-maxRadius\\cdot\\sin\\left(\\frac{angle\\cdot\\pi}{180}\\right)"
             },
             {
                 "id": "hairline",
@@ -10825,6 +10835,46 @@ BlockDefinitionLoader.registerAll([
                         },
                         "style": "arrow"
                     }
+                },
+                {
+                    "id": "vector-grab",
+                    "type": "line",
+                    "bindings": {
+                        "x1": {
+                            "parameter": "cx"
+                        },
+                        "y1": {
+                            "parameter": "cy"
+                        },
+                        "x2": {
+                            "parameter": "grabTipX"
+                        },
+                        "y2": {
+                            "parameter": "grabTipY"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "transparent",
+                        "strokeWidth": 20
+                    },
+                    "behaviours": [
+                        {
+                            "type": "drag-angle",
+                            "variable": {
+                                "parameter": "angleVariable"
+                            },
+                            "property": "angleVariable",
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            },
+                            "degreesPerUnit": -1,
+                            "offsetDegrees": 90,
+                            "wrapAt": 360
+                        }
+                    ]
                 },
                 {
                     "id": "origin",

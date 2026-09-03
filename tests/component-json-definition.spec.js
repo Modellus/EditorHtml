@@ -31,6 +31,9 @@ const BOARD_URL = '/pages/board/index.html';
 // The four clock entries were re-recorded when the face stopped being switched on and off by flags
 // and started being unpainted instead: the ticks now follow the analogue face itself, the numbers
 // follow the colour they are written in, and the hands carry the drag that makes them turnable.
+// The five rotating vector entries were re-recorded when the arrow became turnable: the arm the
+// pointer grabs draws in transparent ink, so the drawing is the captured one with an invisible line
+// laid over it, and the behaviour that line carries stands beside the signature.
 const BASELINES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'coded-component-baselines.json'), 'utf8'));
 
 const cases = [
