@@ -138,16 +138,21 @@ math-field {
     align-items: center;
 }
 
-.mdl-dropdown-list-control .term-packed-control {
-    width: 212px;
+/* A term standing alone and a list of terms are given the same room, so a chip reads the same
+   wherever it is: one control's width, whether the row holds one of them or a list. */
+.mdl-dropdown-list-control .term-packed-control,
+.mdl-dropdown-list-control .shape-terms-control {
+    width: 240px;
+}
+
+/* The list spends that width on its rows rather than on padding of its own. What the handle and the
+   bin take is theirs; nothing else is held back from the chip. */
+.shape-terms-list .dx-list-item-content {
+    padding-right: 0;
 }
 
 .mdl-dropdown-list-control .shape-image-dropzone {
     width: 212px;
-}
-
-.mdl-dropdown-list-control .term-packed-control--pair {
-    width: 320px;
 }
 
 .mdl-wide-terms-menu .mdl-dropdown-list-control {
@@ -155,7 +160,8 @@ math-field {
     justify-content: flex-end;
 }
 
-.mdl-wide-terms-menu .mdl-dropdown-list-control .term-packed-control {
+.mdl-wide-terms-menu .mdl-dropdown-list-control .term-packed-control,
+.mdl-wide-terms-menu .mdl-dropdown-list-control .shape-terms-control {
     width: 100%;
 }
 
@@ -168,7 +174,7 @@ math-field {
 }
 
 .mdl-frequency-terms-menu .mdl-dropdown-list-control .term-packed-control,
-.mdl-frequency-terms-menu .mdl-dropdown-list-control .frequency-series-control {
+.mdl-frequency-terms-menu .mdl-dropdown-list-control .shape-terms-control {
     width: 100%;
 }
 
@@ -209,15 +215,12 @@ math-field {
     background: transparent;
 }
 
-.mdl-dropdown-list-control .component-terms-control {
-    width: 320px;
-}
-
 .mdl-component-terms-menu .mdl-dropdown-list-control {
     width: 320px;
 }
 
-.mdl-component-terms-menu .mdl-dropdown-list-control .term-packed-control {
+.mdl-component-terms-menu .mdl-dropdown-list-control .term-packed-control,
+.mdl-component-terms-menu .mdl-dropdown-list-control .shape-terms-control {
     width: 100%;
 }
 
@@ -372,6 +375,146 @@ math-field {
     margin-left: 2px;
 }
 
+
+/* One term reads as one thing: the colour it is drawn in, its name, the unit it is measured in and
+   the case it is read from, gathered into a single field. Nothing in the row competes with the name
+   for room, so a term is legible whatever else the row happens to carry. */
+.mdl-term-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: middle;
+    pointer-events: none;
+}
+
+.mdl-term-chip__color {
+    flex: none;
+    width: 13px;
+    height: 13px;
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+.mdl-term-chip .mdl-term-editor-math-field,
+.mdl-term-chip .mdl-term-editor-value {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* The unit follows the name behind a faded slash, the way a term carries its unit on a label or a
+   readout everywhere else here, so it can never be mistaken for a second name. */
+.mdl-term-chip__unit {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex: none;
+    opacity: 0.55;
+}
+
+.mdl-term-chip__slash {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.mdl-term-chip__pair {
+    flex: none;
+    opacity: 0.55;
+    margin-left: -2px;
+}
+
+.mdl-term-chip__case {
+    display: flex;
+    align-items: center;
+    flex: none;
+}
+
+/* The editor's own input is kept — it carries the placeholder and the typing — but it is not
+   allowed to take the room the chip is drawn in. */
+.mdl-term-chip-editor .dx-texteditor-input {
+    width: 0;
+    min-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* Under the list of terms, behind a rule: what the term is measured in, which case it is read from
+   and what it is drawn in, each one named by a label of its own. */
+.mdl-term-editor-rows {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 236px;
+    padding: 12px;
+}
+
+.mdl-term-editor-row-label {
+    white-space: nowrap;
+    font-size: 13px;
+    opacity: 0.75;
+}
+
+.mdl-term-editor-row-control {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.mdl-term-editor-row-control.shape-term-units,
+.mdl-term-editor-row-control.shape-term-term-row,
+.mdl-term-editor-row-control.shape-term-extra-term {
+    width: 100%;
+}
+
+.mdl-term-editor-row-control.shape-term-units .dx-widget,
+.mdl-term-editor-row-control.shape-term-term-row .dx-widget,
+.mdl-term-editor-row-control.shape-term-extra-term .dx-widget {
+    width: 100%;
+}
+
+/* The case and the colour were centred when they stood in a cell of their own; standing in a row
+   under a label they line up with the unit above them. */
+.mdl-term-editor-row-control .dx-button-content {
+    justify-content: flex-start;
+}
+
+.mdl-term-editor-row-control .shape-term-secondary-button,
+.mdl-term-editor-row-control .mdl-color-picker-button-template {
+    justify-content: flex-start;
+    padding-left: 9px;
+}
+
+/* The eye and the lock are switches rather than fields, so they stand where the fields above them
+   begin rather than centred in a box of their own. */
+.mdl-term-editor-row-control.shape-term-visibility,
+.mdl-term-editor-row-control.shape-term-lock {
+    justify-content: flex-start;
+}
+
+.mdl-term-editor-toggle.dx-checkbox .dx-checkbox-icon {
+    width: auto;
+    height: auto;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.mdl-term-editor-toggle .dx-checkbox-icon::before,
+.mdl-term-editor-toggle .dx-checkbox-icon::after {
+    display: none;
+}
+
+.mdl-term-editor-toggle-icon {
+    font-size: 15px;
+    line-height: 1;
+    color: #4d4d4d;
+    cursor: pointer;
+}
+
 .term-packed-control {
     display: flex;
     width: 100%;
@@ -505,14 +648,8 @@ math-field {
 }
 
 .term-packed-control__select .dx-texteditor {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
+    border-radius: 4px;
     margin: 0;
-}
-
-.term-packed-control--no-visibility .term-packed-control__select .dx-texteditor {
-    border-top-left-radius: 4px;
-    border-bottom-left-radius: 4px;
 }
 
 .term-packed-control--physical {

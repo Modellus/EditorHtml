@@ -333,7 +333,7 @@ test.describe('Oscilloscope object', () => {
         await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
         const rows = page.locator('.mdl-shape-overlay-popup').last().locator('.component-terms-control .shape-term-row');
         await expect(rows).toHaveCount(2);
-        await expect(rows.nth(0).locator('.shape-term-color')).toHaveCount(1);
+        await expect(rows.nth(0).locator('.mdl-term-chip__color')).toHaveCount(1);
         await expect(rows.nth(0).locator('.shape-term-mode .dx-button')).toHaveCount(0);
         await expect(rows.nth(0).locator('.shape-term-extra-term')).toHaveCount(0);
     });

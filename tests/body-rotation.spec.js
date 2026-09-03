@@ -223,25 +223,33 @@ test.describe('Body character rotation', () => {
         await page.waitForTimeout(300);
         await page.locator('.shape-context-toolbar.visible .mdl-terms-selector').click();
         await page.waitForTimeout(400);
-        const rowLayout = await page.evaluate(() => {
-            const row = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item')).find(item => item.querySelector('.mdl-dropdown-list-label')?.textContent === 'Orientation');
-            return {
-                selectors: row.querySelectorAll('.dx-dropdowneditor').length,
-                colors: row.querySelectorAll('.mdl-color-picker').length
-            };
-        });
-        expect(rowLayout.selectors).toBe(2);
-        expect(rowLayout.colors).toBe(0);
-        // The menu is as wide as the pair, so every other row fills the same space after its label.
+        // Every row is one chip, so the menu's rows are all the same width whatever they name.
         const controlWidths = await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-control')).map(control => Math.round(control.getBoundingClientRect().width)));
         expect(controlWidths.length).toBeGreaterThan(1);
         expect(new Set(controlWidths).size).toBe(1);
+        // The pair is named inside the chip: a selector for each half of it, and no colour to choose.
         await page.evaluate(() => {
             const row = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item')).find(item => item.querySelector('.mdl-dropdown-list-label')?.textContent === 'Orientation');
-            DevExpress.ui.dxDropDownBox.getInstance(row.querySelectorAll('.dx-dropdowneditor')[1]).open();
+            DevExpress.ui.dxDropDownBox.getInstance(row.querySelector('.shape-term-term')).open();
+        });
+        await page.waitForTimeout(500);
+        const panel = await page.evaluate(() => {
+            const rows = Array.from(document.querySelectorAll('.mdl-term-editor-rows')).find(element => element.offsetParent !== null);
+            return {
+                labels: Array.from(rows.querySelectorAll('.mdl-term-editor-row-label')).map(label => label.textContent),
+                selectors: rows.querySelectorAll('.dx-dropdowneditor').length,
+                colors: rows.querySelectorAll('.mdl-color-picker').length
+            };
+        });
+        expect(panel.labels).toEqual(['Term', 'Paired term']);
+        expect(panel.selectors).toBe(2);
+        expect(panel.colors).toBe(0);
+        await page.evaluate(() => {
+            const rows = Array.from(document.querySelectorAll('.mdl-term-editor-rows')).find(element => element.offsetParent !== null);
+            DevExpress.ui.dxDropDownBox.getInstance(rows.querySelector('.shape-term-extra-term .dx-dropdowneditor')).open();
         });
         await page.waitForTimeout(400);
-        await page.locator('.mdl-nested-dropdown-popup .mdl-term-tree-custom-input input').fill('4');
+        await page.locator('.mdl-term-tree-popup .mdl-term-tree-custom-input input').fill('4');
         await page.keyboard.press('Enter');
         await page.waitForTimeout(300);
         // The value typed into the second selector belongs to the second selector alone.

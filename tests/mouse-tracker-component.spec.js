@@ -2,6 +2,32 @@ const { test, expect } = require('@playwright/test');
 
 const BOARD_URL = '/pages/board/index.html';
 
+// Everything a term is read with — the term itself, the pair it may name, its unit, case and colour,
+// whether it is shown — is written inside the chip that names it, so the chip is opened first. A menu
+// may carry chips above a list of them, so the scope says which set the index counts within.
+async function openTermChip(page, index = 0, scope = '.mdl-shape-overlay-popup') {
+    await page.evaluate(([index, scope]) => $([...document.querySelectorAll(`${scope} .shape-term-term`)][index]).dxDropDownBox('instance').open(), [index, scope]);
+    await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(1);
+}
+
+async function closeTermChip(page, index = 0, scope = '.mdl-shape-overlay-popup') {
+    await page.evaluate(([index, scope]) => $([...document.querySelectorAll(`${scope} .shape-term-term`)][index]).dxDropDownBox('instance').close(), [index, scope]);
+    await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(0);
+}
+
+function termChipPanel(page) {
+    return page.locator('.mdl-term-chip-popup .mdl-term-editor-rows');
+}
+
+async function readTermChipRows(page, index, scope = '.mdl-shape-overlay-popup') {
+    await openTermChip(page, index, scope);
+    const labels = await page.evaluate(() => Array.from([...document.querySelectorAll('.mdl-term-editor-rows')]
+        .find(rows => rows.offsetParent !== null).querySelectorAll('.mdl-term-editor-row-label')).map(label => label.textContent));
+    await closeTermChip(page, index, scope);
+    return labels;
+}
+
+
 async function setupBoard(page) {
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
@@ -798,11 +824,11 @@ test('each variable carries its colour on its own row in the model menu', async 
     await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
     await page.waitForTimeout(400);
     const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item')).map(row => {
-        const swatch = row.querySelector('.mdl-dropdown-list-control .shape-term-color .mdl-color-picker-button-icon');
+        const swatch = row.querySelector('.mdl-dropdown-list-control .mdl-term-chip__color');
         return {
             text: row.querySelector('.mdl-dropdown-list-label').textContent,
             hasColorSwatch: swatch !== null,
-            swatch: swatch ? Utils.toHexColor(getComputedStyle(swatch).color) : null
+            swatch: swatch ? Utils.toHexColor(getComputedStyle(swatch).backgroundColor) : null
         };
     }));
     // The colours are not rows of their own here either: they ride on the two variables, on rows
@@ -886,9 +912,10 @@ test('a row naming a term keeps the name the gesture cannot write over', async (
     })).toEqual({ x: 'px', y: 'py', lastIteration: recorded.samples.length });
 });
 
-// The row is the whole control every other term is named on: the term, the unit it is measured in,
-// the case it is read in and the colour it is answered in, all on the one row.
-test('each variable is named on the full term control, units and cases and all', async ({ page }) => {
+// The chip is the whole control every other term is named on: the term, the unit it is measured in,
+// the case it is read in and the colour it is answered in, gathered into one field, and all three of
+// them written where the term itself is chosen.
+test('each variable is named on one chip carrying its unit, case and colour', async ({ page }) => {
     await setupBoard(page);
     await addModel(page);
     await page.evaluate(() => { shell.board.calculator.properties.casesCount = 3; shell.reset(); });
@@ -898,11 +925,18 @@ test('each variable is named on the full term control, units and cases and all',
     await page.waitForTimeout(300);
     await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
     await page.waitForTimeout(400);
-    const rows = await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .shape-term-row'))
-        .map(row => Array.from(row.children).map(child => child.className.split(' ').find(name => name.startsWith('shape-term-')) ?? '')));
-    expect(rows).toHaveLength(2);
-    for (const row of rows)
-        expect(row).toEqual(expect.arrayContaining(['shape-term-term', 'shape-term-units', 'shape-term-secondary', 'shape-term-color']));
+    const chips = await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .shape-term-row .mdl-term-chip')).map(chip => ({
+        name: chip.querySelector('.mdl-term-editor-math-field')?.value ?? '',
+        hasColour: chip.querySelector('.mdl-term-chip__color') !== null,
+        hasCase: chip.querySelector('.mdl-term-chip__case') !== null
+    })));
+    expect(chips.map(chip => chip.name)).toEqual(['px', 'py']);
+    expect(chips.map(chip => chip.hasColour)).toEqual([true, true]);
+    expect(chips.map(chip => chip.hasCase)).toEqual([true, true]);
+    await page.evaluate(() => $(document.querySelector('.mdl-shape-overlay-popup .shape-term-term')).dxDropDownBox('instance').open());
+    await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(1);
+    expect(await page.evaluate(() => Array.from([...document.querySelectorAll('.mdl-term-editor-rows')].find(rows => rows.offsetParent !== null).querySelectorAll('.mdl-term-editor-row-label')).map(label => label.textContent)))
+        .toEqual(['Show', 'Term', 'Unit', 'Case', 'Colour', 'Locked']);
 });
 
 // A value the object worked out for itself is read in what it is measured in, the way every other
@@ -935,8 +969,9 @@ test('the values are read in the unit their row is given', async ({ page }) => {
     expect(await page.evaluate(() => shell.board.shapes.getByName('Tracker').properties.xVariableUnit)).toBe('m');
 });
 
-// The unit is chosen beside the value it measures, on the row itself, the way a colour is.
-test('the unit is picked on the row the value stands on', async ({ page }) => {
+// The unit is chosen inside the chip that names the value it measures, the way the colour and the
+// case are, and it is written on the chip after the value it belongs to.
+test('the unit is picked inside the chip the value stands in', async ({ page }) => {
     await setupBoard(page);
     await addModel(page);
     await addTracker(page, { xVariableUnit: 'm', yVariableUnit: 's' });
@@ -944,8 +979,17 @@ test('the unit is picked on the row the value stands on', async ({ page }) => {
     await page.waitForTimeout(300);
     await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
     await page.waitForTimeout(400);
-    expect(await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .shape-term-units input')).map(input => input.value)))
-        .toEqual(expect.arrayContaining(['m', 's']));
+    expect(await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-term-chip__unit math-field')).map(field => field.textContent.trim())))
+        .toEqual(['\\mathrm{m}', '\\mathrm{s}']);
+    const written = [];
+    for (const index of [0, 1]) {
+        await page.evaluate(index => $(document.querySelectorAll('.mdl-shape-overlay-popup .shape-term-term')[index]).dxDropDownBox('instance').open(), index);
+        await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(1);
+        written.push(await page.evaluate(() => [...document.querySelectorAll('.mdl-term-editor-rows')].find(rows => rows.offsetParent !== null).querySelector('.shape-term-units input').value));
+        await page.evaluate(index => $(document.querySelectorAll('.mdl-shape-overlay-popup .shape-term-term')[index]).dxDropDownBox('instance').close(), index);
+        await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(0);
+    }
+    expect(written).toEqual(['m', 's']);
 });
 
 // A tracker saved before a parameter existed carries no value for it. The drawing falls back to the
@@ -1394,10 +1438,11 @@ test('each variable carries the eye that shows it, and is read in the plot', asy
     await page.waitForTimeout(300);
     await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
     await page.waitForTimeout(400);
-    const eyes = page.locator('.mdl-shape-overlay-popup .term-packed-control .term-packed-checkbox');
-    await expect(eyes).toHaveCount(2);
-    await eyes.nth(0).click();
-    await eyes.nth(1).click();
+    for (const index of [0, 1]) {
+        await openTermChip(page, index);
+        await termChipPanel(page).locator('.shape-term-visibility').click();
+        await closeTermChip(page, index);
+    }
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
     const shown = await page.evaluate(() => {

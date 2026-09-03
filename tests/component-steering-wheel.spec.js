@@ -2,6 +2,32 @@ const { test, expect } = require('@playwright/test');
 
 const BOARD_URL = '/pages/board/index.html';
 
+// Everything a term is read with — the term itself, the pair it may name, its unit, case and colour,
+// whether it is shown — is written inside the chip that names it, so the chip is opened first. A menu
+// may carry chips above a list of them, so the scope says which set the index counts within.
+async function openTermChip(page, index = 0, scope = '.mdl-shape-overlay-popup') {
+    await page.evaluate(([index, scope]) => $([...document.querySelectorAll(`${scope} .shape-term-term`)][index]).dxDropDownBox('instance').open(), [index, scope]);
+    await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(1);
+}
+
+async function closeTermChip(page, index = 0, scope = '.mdl-shape-overlay-popup') {
+    await page.evaluate(([index, scope]) => $([...document.querySelectorAll(`${scope} .shape-term-term`)][index]).dxDropDownBox('instance').close(), [index, scope]);
+    await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(0);
+}
+
+function termChipPanel(page) {
+    return page.locator('.mdl-term-chip-popup .mdl-term-editor-rows');
+}
+
+async function readTermChipRows(page, index, scope = '.mdl-shape-overlay-popup') {
+    await openTermChip(page, index, scope);
+    const labels = await page.evaluate(() => Array.from([...document.querySelectorAll('.mdl-term-editor-rows')]
+        .find(rows => rows.offsetParent !== null).querySelectorAll('.mdl-term-editor-row-label')).map(label => label.textContent));
+    await closeTermChip(page, index, scope);
+    return labels;
+}
+
+
 async function setupBoard(page) {
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
@@ -283,9 +309,10 @@ test.describe('steering wheel component', () => {
         expect(await modeKey.locator('.dx-icon').first().getAttribute('class')).toContain('fa-arrow-up-right');
         await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
         await page.waitForTimeout(500);
-        const popup = page.locator('.mdl-shape-overlay-popup').last();
-        await expect(popup.locator('.shape-term-mode')).toHaveCount(0);
-        await expect(popup.locator('.shape-term-extra-term')).toHaveCount(1);
+        await openTermChip(page);
+        await expect(termChipPanel(page).locator('.shape-term-mode')).toHaveCount(0);
+        await expect(termChipPanel(page).locator('.shape-term-extra-term')).toHaveCount(1);
+        await closeTermChip(page);
         await page.keyboard.press('Escape');
         await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Wheel')));
         await page.waitForTimeout(400);
@@ -296,7 +323,8 @@ test.describe('steering wheel component', () => {
         expect(await page.evaluate(() => shell.board.shapes.getByName('Wheel').properties.turnedBy)).toBe('angle');
         await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
         await page.waitForTimeout(500);
-        await expect(page.locator('.mdl-shape-overlay-popup').last().locator('.shape-term-extra-term')).toHaveCount(0);
+        await openTermChip(page);
+        await expect(termChipPanel(page).locator('.shape-term-extra-term')).toHaveCount(0);
     });
 
     test('the toolbar reads one value as an angle and both as an orientation', async ({ page }) => {
@@ -356,7 +384,7 @@ test.describe('steering wheel component', () => {
         expect(wheel.background).toBe('rgba(0, 0, 0, 0)');
     });
 
-    test('the row carries the colour of the mark, and every part of it sits on one line', async ({ page }) => {
+    test('the chip carries the colour of the mark, and every part of it sits on one line', async ({ page }) => {
         await setupBoard(page);
         await addSteeringModel(page);
         await addSteeringWheel(page, 'car');
@@ -366,17 +394,25 @@ test.describe('steering wheel component', () => {
         await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
         await page.waitForTimeout(600);
         const popup = page.locator('.mdl-shape-overlay-popup').last();
-        await expect(popup.locator('.shape-term-color')).toHaveCount(1);
+        await expect(popup.locator('.mdl-term-chip__color')).toHaveCount(1);
         const row = await page.evaluate(() => {
-            const parts = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .shape-term-row > *'));
+            const parts = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-term-chip > *'));
             const centres = parts.map(part => {
                 const rect = part.getBoundingClientRect();
                 return Math.round(rect.top + rect.height / 2);
             });
-            const swatch = document.querySelector('.mdl-shape-overlay-popup .shape-term-color .mdl-color-picker-button-icon');
-            return { classes: parts.map(part => part.className.split(' ')[0]), centres: centres, swatchColour: getComputedStyle(swatch).color };
+            const swatch = document.querySelector('.mdl-shape-overlay-popup .mdl-term-chip__color');
+            return {
+                cells: Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .shape-term-row > *')).map(cell => cell.className.split(' ')[0]),
+                classes: parts.map(part => part.className.split(' ')[0]),
+                centres: centres,
+                swatchColour: getComputedStyle(swatch).backgroundColor
+            };
         });
-        expect(row.classes).toEqual(['shape-term-term', 'shape-term-units', 'shape-term-color']);
+        expect(row.cells).toEqual(['shape-term-term']);
+        // A term carrying no unit is written with no unit: there is no empty box left standing beside
+        // the name for the reader to wonder about.
+        expect(row.classes).toEqual(['mdl-term-chip__color', 'form-math-field']);
         expect(Math.max(...row.centres) - Math.min(...row.centres)).toBeLessThanOrEqual(1);
         expect(row.swatchColour).toBe('rgb(0, 165, 255)');
     });

@@ -2,6 +2,32 @@ const { test, expect } = require('@playwright/test');
 
 const BOARD_URL = '/pages/board/index.html';
 
+// Everything a term is read with — the term itself, the pair it may name, its unit, case and colour,
+// whether it is shown — is written inside the chip that names it, so the chip is opened first. A menu
+// may carry chips above a list of them, so the scope says which set the index counts within.
+async function openTermChip(page, index = 0, scope = '.mdl-shape-overlay-popup') {
+    await page.evaluate(([index, scope]) => $([...document.querySelectorAll(`${scope} .shape-term-term`)][index]).dxDropDownBox('instance').open(), [index, scope]);
+    await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(1);
+}
+
+async function closeTermChip(page, index = 0, scope = '.mdl-shape-overlay-popup') {
+    await page.evaluate(([index, scope]) => $([...document.querySelectorAll(`${scope} .shape-term-term`)][index]).dxDropDownBox('instance').close(), [index, scope]);
+    await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(0);
+}
+
+function termChipPanel(page) {
+    return page.locator('.mdl-term-chip-popup .mdl-term-editor-rows');
+}
+
+async function readTermChipRows(page, index, scope = '.mdl-shape-overlay-popup') {
+    await openTermChip(page, index, scope);
+    const labels = await page.evaluate(() => Array.from([...document.querySelectorAll('.mdl-term-editor-rows')]
+        .find(rows => rows.offsetParent !== null).querySelectorAll('.mdl-term-editor-row-label')).map(label => label.textContent));
+    await closeTermChip(page, index, scope);
+    return labels;
+}
+
+
 async function setupBoard(page) {
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
@@ -1267,8 +1293,10 @@ test.describe('component variable inputs', () => {
     async function typeIntoHeading(page, text) {
         await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
         await page.waitForTimeout(400);
-        const input = page.locator('.mdl-shape-overlay-popup').last().locator('.dx-texteditor-input').first();
-        await input.click();
+        await openTermChip(page, 0);
+        await termChipPanel(page).locator('.shape-term-term-row').click();
+        await page.waitForSelector('.mdl-term-tree-custom-input input');
+        const input = page.locator('.mdl-term-tree-custom-input input').last();
         await input.fill(text);
         await input.press('Enter');
         await page.waitForTimeout(400);
@@ -1360,8 +1388,9 @@ test.describe('component variable inputs', () => {
         await addCompass(page);
         await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
         await page.waitForTimeout(400);
-        const input = page.locator('.mdl-shape-overlay-popup').last().locator('.dx-texteditor-input').first();
-        await input.click();
+        await openTermChip(page, 0);
+        await termChipPanel(page).locator('.shape-term-term-row').click();
+        await page.waitForSelector('.mdl-term-tree-view');
         await page.waitForTimeout(400);
         const listed = await page.$$eval('.dx-list-item, .dx-item-content', elements => elements.map(element => element.textContent.trim()));
         expect(listed.join('|')).toContain('heading');
@@ -1415,11 +1444,14 @@ test.describe('compass pointers', () => {
         await openPointersMenu(page);
         const rows = page.locator('.mdl-shape-overlay-popup').last().locator('.component-terms-control .shape-term-row');
         await expect(rows).toHaveCount(3);
-        await expect(rows.nth(0).locator('.shape-term-mode .dx-button')).toHaveCount(2);
-        await expect(rows.nth(0).locator('.shape-term-extra-term')).toHaveCount(0);
-        await expect(rows.nth(0).locator('.shape-term-color')).toHaveCount(1);
-        await expect(rows.nth(1).locator('.shape-term-extra-term')).toHaveCount(1);
-        await expect(rows.nth(2).locator('.shape-term-extra-term')).toHaveCount(0);
+        await expect(rows.nth(0).locator('.mdl-term-chip__color')).toHaveCount(1);
+        await openTermChip(page, 0, '.component-terms-control');
+        await expect(termChipPanel(page).locator('.shape-term-mode .dx-button')).toHaveCount(2);
+        await expect(termChipPanel(page).locator('.shape-term-extra-term')).toHaveCount(0);
+        await closeTermChip(page, 0, '.component-terms-control');
+        // The row naming a pair is the one that offers the second term; the empty row at the end is not.
+        expect(await readTermChipRows(page, 1, '.component-terms-control')).toContain('Paired term');
+        expect(await readTermChipRows(page, 2, '.component-terms-control')).not.toContain('Paired term');
     });
 
     test('a row turns into an orientation from its own buttons, and back again', async ({ page }) => {
@@ -1427,17 +1459,17 @@ test.describe('compass pointers', () => {
         await addClockEquations(page, 'heading=120\\\\east=3\\\\north=4');
         await addCompassWithPointers(page, [{ term: 'heading', case: 1, color: '', secondTerm: '' }]);
         await openPointersMenu(page);
-        const firstRow = () => page.locator('.mdl-shape-overlay-popup').last().locator('.component-terms-control .shape-term-row').first();
-        await firstRow().locator('.shape-term-mode .dx-button').nth(1).click();
+        await openTermChip(page, 0, '.component-terms-control');
+        await termChipPanel(page).locator('.shape-term-mode .dx-button').nth(1).click();
         await page.waitForTimeout(500);
         expect((await page.evaluate(() => shell.board.shapes.getByName('Compass').properties.pointers))[0].mode).toBe('orientation');
-        await expect(firstRow().locator('.shape-term-extra-term')).toHaveCount(1);
-        await firstRow().locator('.shape-term-mode .dx-button').nth(0).click();
+        await expect(termChipPanel(page).locator('.shape-term-extra-term')).toHaveCount(1);
+        await termChipPanel(page).locator('.shape-term-mode .dx-button').nth(0).click();
         await page.waitForTimeout(500);
         const pointers = await page.evaluate(() => shell.board.shapes.getByName('Compass').properties.pointers);
         expect(pointers[0].mode).toBe('angle');
         expect(pointers[0].secondTerm).toBe('');
-        await expect(firstRow().locator('.shape-term-extra-term')).toHaveCount(0);
+        await expect(termChipPanel(page).locator('.shape-term-extra-term')).toHaveCount(0);
     });
 
     // The menu is as wide as the list of pointers, so the two selectors above it are as wide as the
@@ -1471,10 +1503,10 @@ test.describe('compass pointers', () => {
         await addCompassWithPointers(page, [{ term: 'east', case: 1, color: '', secondTerm: '' }]);
         expect((await readPointerDegrees(page))[0]).toBeCloseTo(3, 3);
         await openPointersMenu(page);
-        const popup = page.locator('.mdl-shape-overlay-popup').last();
-        await popup.locator('.component-terms-control .shape-term-row .shape-term-mode .dx-button').nth(1).click();
+        await openTermChip(page, 0, '.component-terms-control');
+        await termChipPanel(page).locator('.shape-term-mode .dx-button').nth(1).click();
         await page.waitForTimeout(500);
-        await page.locator('.mdl-shape-overlay-popup').last().locator('.component-terms-control .shape-term-row .shape-term-extra-term').first().click();
+        await termChipPanel(page).locator('.shape-term-extra-term').first().click();
         await page.waitForTimeout(400);
         const customInput = page.locator('.mdl-nested-dropdown-popup .mdl-term-tree-custom-input input').last();
         await customInput.fill('north');
@@ -1490,8 +1522,8 @@ test.describe('compass pointers', () => {
         await addClockEquations(page, 'heading=120\\\\east=3\\\\north=4');
         await addCompassWithPointers(page, []);
         await openPointersMenu(page);
-        const popup = page.locator('.mdl-shape-overlay-popup').last();
-        await popup.locator('.component-terms-control .shape-term-row .shape-term-term').first().click();
+        await openTermChip(page, 0, '.component-terms-control');
+        await termChipPanel(page).locator('.shape-term-term-row').click();
         await page.waitForTimeout(400);
         const customInput = page.locator('.mdl-nested-dropdown-popup .mdl-term-tree-custom-input input').last();
         await customInput.fill('heading');

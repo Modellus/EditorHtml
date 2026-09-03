@@ -64,7 +64,7 @@ var FrequencyChartShapeToolbarMixin = {
             normalizeItem: (sourceItem, normalizedItem) => normalizeFrequencySeriesItem(sourceItem, normalizedItem),
             createEmptyItem: () => getFrequencySeriesDefaults(),
             lock: {
-                width: "auto",
+                label: "Series",
                 editorType: "dxDropDownButton",
                 getValue: item => FrequencyAggregation.normalize(item?.aggregate),
                 getItems: () => [],

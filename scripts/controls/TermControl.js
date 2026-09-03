@@ -303,7 +303,6 @@ class TermControl {
         if (!colorProperty)
             return null;
         return {
-            width: "42px",
             control: baseShape.getColorControl(),
             show: () => true,
             getValue: () => TermControl.normalizeColorValue(baseShape.properties[colorProperty]),
@@ -319,7 +318,6 @@ class TermControl {
     // toolbar that borrows this control gets the choice without asking for it.
     static createTermUnitsSelection(board, valueUnits = null) {
         return {
-            width: "58px",
             getValue: termName => board.calculator.getTermUnit(termName),
             isTerm: termName => board.calculator.isTerm(termName),
             onValueChanged: (termName, unitText) => board.shell.setTermUnitCommand(termName, unitText),
@@ -407,21 +405,7 @@ class TermControl {
         if (includeLock && baseShape.properties[lockedProperty] == null)
             baseShape.properties[lockedProperty] = false;
         const control = $("<div>").addClass("term-packed-control");
-        if (extraTermProperty)
-            control.addClass("term-packed-control--pair");
         const selectHost = $("<div>").addClass("term-packed-control__select");
-        const displayModeValue = baseShape.properties[displayModeProperty] ?? "none";
-        const isVisible = displayModeValue !== false && displayModeValue !== "none";
-        let visibilityCheckbox = null;
-        if (showVisibilityToggle) {
-            const buttonHost = $("<div>").addClass("term-packed-control__button");
-            control.append(buttonHost);
-            visibilityCheckbox = TermControl.createVisibilityCheckbox(buttonHost, isVisible, value => {
-                baseShape.setPropertyCommand(displayModeProperty, value ? "nameValue" : "none");
-                baseShape.board.markDirty(baseShape);
-            });
-        } else
-            control.addClass("term-packed-control--no-visibility");
         control.append(selectHost);
         let termControl = null;
         const caseVisibility = TermControl.getBaseShapeCaseVisibilityConfig(baseShape);
@@ -471,8 +455,17 @@ class TermControl {
                     baseShape.board.markDirty(baseShape);
                 }
             },
+            visibility: showVisibilityToggle ? {
+                getValue: () => {
+                    const displayModeValue = baseShape.properties[displayModeProperty] ?? "none";
+                    return displayModeValue !== false && displayModeValue !== "none";
+                },
+                onValueChanged: (_, value) => {
+                    baseShape.setPropertyCommand(displayModeProperty, value ? "nameValue" : "none");
+                    baseShape.board.markDirty(baseShape);
+                }
+            } : null,
             secondary: {
-                width: "42px",
                 editorType: "dxDropDownButton",
                 caseVisibility: caseVisibility,
                 getValue: item => TermControl.getBaseShapeCaseNumber(baseShape, item?.term, item?.case ?? baseShape.properties[caseProperty] ?? 1),
@@ -489,7 +482,6 @@ class TermControl {
                 }
             },
             lock: includeLock ? {
-                width: "28px",
                 getValue: item => item?.locked === true,
                 onValueChanged: (_, value) => {
                     formInstance.updateData(lockedProperty, value);
@@ -499,7 +491,7 @@ class TermControl {
         });
         const termControlHost = termControl.createHost();
         selectHost.append(termControlHost);
-        return { control: control, termControl: termControl, visibilityCheckbox: visibilityCheckbox };
+        return { control: control, termControl: termControl };
     }
 
     static getShapeCaseVisibilityConfig(shape, normalizeTermValue = value => TermControl.normalizeTermValue(value)) {
@@ -729,7 +721,6 @@ class TermControl {
             onChanged: options.onChanged
         };
         const lockOptions = options.lock !== undefined ? options.lock : {
-            width: "28px",
             getValue: item => item?.locked === true,
             onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                 if (!items[index])
@@ -770,7 +761,6 @@ class TermControl {
                     items[index].color = normalizeColorValue(items[index].color);
             }),
             secondary: options.includeCase === false ? null : {
-                width: "42px",
                 editorType: "dxDropDownButton",
                 caseVisibility: caseVisibility,
                 getValue: item => TermControl.getShapeCaseNumber(shape, item?.term, item?.case ?? 1, normalizeTermValue),
@@ -785,7 +775,6 @@ class TermControl {
                 })
             },
             colorSelection: includeColor ? {
-                width: configuredColorSelection.width ?? "42px",
                 show: configuredColorSelection.show ?? (item => normalizeTermValue(item?.term) !== ""),
                 getValue: configuredColorSelection.getValue ?? (item => normalizeColorValue(item?.color)),
                 onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
@@ -813,7 +802,6 @@ class TermControl {
             // A row that names a pair rather than a single term carries the second one in a field of
             // its own, edited by a selector beside the first and read in the same case.
             extraTerm: options.extraTerm ? {
-                width: options.extraTerm.width,
                 show: options.extraTerm.show,
                 getValue: item => normalizeTermValue(item?.[options.extraTerm.field]),
                 getTermItems: item => TermControl.buildShapeTermsCollectionTermItems(shape, item?.[options.extraTerm.field], normalizeTermValue),
@@ -824,7 +812,6 @@ class TermControl {
                 })
             } : null,
             visibility: options.includeVisibility ? {
-                width: "24px",
                 getValue: item => item?.showLabel === true,
                 onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                     if (!items[index])
@@ -842,6 +829,11 @@ class TermControl {
         this.host = null;
         this.stateKey = null;
         this.secondaryColorSelector = null;
+        this.openEditorIndex = null;
+        this.openEditorRowSignature = "";
+        this.pendingRender = false;
+        this.termChipEditors = {};
+        this.termChipContents = {};
         this.initializeColorSelectionControl();
     }
 
@@ -861,10 +853,24 @@ class TermControl {
         this.render(this.host);
     }
 
+    // The unit, the case and the colour are written from inside the chip's own drop down, and each
+    // of them asks for the list to be drawn again. Redrawing it would take the drop down being
+    // written in with it, so while one is open the row is left standing and only the chip it belongs
+    // to is brought up to date; the list is drawn again once the drop down closes.
     render(host = this.host) {
         if (!host)
             return;
+        if (this.hasOpenTermEditor()) {
+            this.pendingRender = true;
+            this.stateKey = this.getStateKey();
+            this.refreshOpenTermEditor();
+            return;
+        }
+        this.openEditorIndex = null;
+        this.pendingRender = false;
         this.host = host;
+        this.termChipEditors = {};
+        this.termChipContents = {};
         this.host.empty();
         const listHost = $("<div>").addClass(this.getListClassName());
         const allowItemDeleting = this.shouldAllowItemDeleting();
@@ -926,20 +932,6 @@ class TermControl {
 
     getDragHandleClassName() {
         return this.options.dragHandleClassName ?? "shape-term-drag-handle";
-    }
-
-    getSecondaryWidth() {
-        const secondary = this.options.secondary;
-        if (secondary?.width)
-            return secondary.width;
-        return "42px";
-    }
-
-    getColorSelectionWidth() {
-        const colorSelection = this.getColorSelectionOptions();
-        if (colorSelection?.width)
-            return colorSelection.width;
-        return "100px";
     }
 
     shouldAllowItemDeleting() {
@@ -1033,10 +1025,6 @@ class TermControl {
         return true;
     }
 
-    getModeWidth() {
-        return this.options.mode.width ?? "auto";
-    }
-
     getModeValue(item, index) {
         return String(this.options.mode.getValue(item, index) ?? this.options.mode.items[0].value);
     }
@@ -1086,10 +1074,6 @@ class TermControl {
         return this.normalizeTermValue(item?.term) !== "";
     }
 
-    getExtraTermWidth() {
-        return this.options.extraTerm.width ?? "minmax(0, 1fr)";
-    }
-
     getExtraTermValue(item, index) {
         const value = this.normalizeTermValue(this.options.extraTerm.getValue(item, index));
         if (value === "")
@@ -1112,13 +1096,6 @@ class TermControl {
         if (lock.show)
             return lock.show(item, index);
         return this.normalizeTermValue(item?.term) !== "";
-    }
-
-    getLockWidth() {
-        const lock = this.options.lock;
-        if (lock?.width)
-            return lock.width;
-        return "28px";
     }
 
     getLockValue(item, index) {
@@ -1229,42 +1206,30 @@ class TermControl {
         this.render();
     }
 
-    getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle = true, showTermEditor = true, showLock = false, showExtraTerm = false) {
+    // The row holds the name and the keys that say how the row itself is put together; the unit, the
+    // case and the colour are the term's own and are carried by the chip. Nothing but the chips is
+    // allowed to grow, so the name can never be squeezed out by what stands beside it.
+    getRowTemplateColumns(item, index, showDragHandle = true, showTermEditor = true) {
         if (this.options.getRowTemplateColumns)
-            return this.options.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor, showLock, showExtraTerm);
+            return this.options.getRowTemplateColumns(item, index, showDragHandle, showTermEditor);
         const columns = [];
         if (showDragHandle)
             columns.push("24px");
-        if (this.shouldShowModeSelector(item, index))
-            columns.push(this.getModeWidth());
         if (showTermEditor)
             columns.push("minmax(0, 1fr)");
-        if (showExtraTerm)
-            columns.push(this.getExtraTermWidth());
-        if (this.shouldShowUnitsEditor(item, index))
-            columns.push(this.getUnitsWidth());
-        if (showSecondary)
-            columns.push(this.getSecondaryWidth());
-        if (showColor)
-            columns.push(this.getColorSelectionWidth());
-        if (showLock)
-            columns.push(this.getLockWidth());
         if (columns.length == 0)
             return "minmax(0, 1fr)";
         return columns.join(" ");
     }
 
+    // The row is the chip and, in a list, the handle it is dragged by. Everything else the term is
+    // read with is inside the chip, so a row looks the same whatever the shape holding it asks of it.
     renderListItem(item, index, element) {
-        const showSecondary = this.shouldShowSecondaryEditor(item, index);
-        const showColor = this.shouldShowColorEditor(item, index);
         const showDragHandle = this.shouldShowDragHandle();
         const showTermEditor = this.shouldShowTermEditor(item, index);
-        const showVisibility = this.shouldShowVisibility(item, index);
-        const showLock = this.shouldShowLockEditor(item, index);
-        const showExtraTerm = this.shouldShowExtraTermEditor(item, index);
         const row = $("<div>").addClass(this.getRowClassName()).css({
             display: "grid",
-            gridTemplateColumns: this.getRowTemplateColumns(showSecondary, showColor, item, index, showDragHandle, showTermEditor, showLock, showExtraTerm),
+            gridTemplateColumns: this.getRowTemplateColumns(item, index, showDragHandle, showTermEditor),
             alignItems: "center",
             gap: this.getRowGap(),
             marginBottom: this.getRowMarginBottom()
@@ -1274,58 +1239,12 @@ class TermControl {
             $("<i>").addClass("dx-icon dx-icon-dragvertical").appendTo(dragHandleHost);
             row.append(dragHandleHost);
         }
-        let modeHost = null;
-        if (this.shouldShowModeSelector(item, index)) {
-            modeHost = $("<div>").addClass("shape-term-mode");
-            row.append(modeHost);
-            this.renderModeSelector(modeHost, item, index);
-        }
         if (showTermEditor) {
-            if (showVisibility) {
-                const termWrapper = $("<div>").addClass("term-packed-control");
-                const buttonHost = $("<div>").addClass("term-packed-control__button");
-                termWrapper.append(buttonHost);
-                TermControl.createVisibilityCheckbox(buttonHost, this.getVisibilityValue(item), value => {
-                    this.options.visibility.onValueChanged(index, value);
-                });
-                const selectHost = $("<div>").addClass("term-packed-control__select");
-                selectHost.dxDropDownBox(this.getTermEditorOptions(item, index));
-                termWrapper.append(selectHost);
-                row.append(termWrapper);
-            } else {
-                const termHost = $("<div>").addClass("shape-term-term");
-                row.append(termHost);
-                termHost.dxDropDownBox(this.getTermEditorOptions(item, index));
-            }
-        }
-        if (showExtraTerm) {
-            const extraTermHost = $("<div>").addClass("shape-term-term shape-term-extra-term");
-            row.append(extraTermHost);
-            extraTermHost.dxDropDownBox(this.getExtraTermEditorOptions(item, index));
-        }
-        if (this.shouldShowUnitsEditor(item, index)) {
-            const unitsHost = $("<div>").addClass("shape-term-units");
-            row.append(unitsHost);
-            this.renderUnitsEditor(unitsHost, item, index);
-        }
-        if (showSecondary) {
-            const secondaryHost = $("<div>").addClass("shape-term-secondary");
-            row.append(secondaryHost);
-            this.renderSecondaryEditor(secondaryHost, item, index);
-        }
-        if (showColor) {
-            const colorHost = $("<div>").addClass("shape-term-color");
-            row.append(colorHost);
-            this.renderColorEditor(colorHost, item, index);
-        }
-        if (showLock) {
-            const lockHost = $("<div>").addClass("shape-term-lock");
-            row.append(lockHost);
-            this.renderLockEditor(lockHost, item, index);
+            const termHost = $("<div>").addClass("shape-term-term");
+            row.append(termHost);
+            termHost.dxDropDownBox(this.getTermChipEditorOptions(item, index));
         }
         element.append(row);
-        if (modeHost)
-            requestAnimationFrame(() => Utils.movePillButtonGroup(modeHost[0]));
     }
 
     renderSecondaryEditor(host, item, index) {
@@ -1440,10 +1359,6 @@ class TermControl {
         return this.options.units.valueUnits != null;
     }
 
-    getUnitsWidth() {
-        return this.options.units.width ?? "58px";
-    }
-
     renderUnitsEditor(host, item, index) {
         TermControl.renderTermUnitsEditor(host, this.normalizeTermValue(this.getTermValue(item, index)), this.options.units, item, index);
     }
@@ -1492,11 +1407,11 @@ class TermControl {
                 stylingMode: "filled",
                 onEnterKey: e => {
                     const customValue = e.component.option("value");
+                    closeDropdown?.();
                     if (onCustomItemCreating)
                         onCustomItemCreating({ text: customValue, customItem: null, item: item, index: index, component: editorInstance });
                     else
                         onChanged(customValue);
-                    closeDropdown?.();
                 }
             }).appendTo(customInputHost);
             dropdownContent.append(customInputHost);
@@ -1516,8 +1431,8 @@ class TermControl {
             height: "auto",
             onItemClick: e => {
                 if (e.itemData.term !== undefined) {
-                    onChanged(e.itemData.term);
                     closeDropdown?.();
+                    onChanged(e.itemData.term);
                 }
             },
             onContentReady: e => {
@@ -1530,6 +1445,78 @@ class TermControl {
             onItemExpanded: e => TermControl.fitTermTreeHeight(e.component),
             onItemCollapsed: e => TermControl.fitTermTreeHeight(e.component)
         }).appendTo(dropdownContent);
+    }
+
+    // Everything a term is read with stands here under a label of its own: the term itself, the pair
+    // it may name, what it is measured in, which case it is read from, what it is drawn in, whether
+    // its label is shown, and whatever the shape hangs on the row besides — a chart's type, a lock.
+    // Nothing has to be guessed from a box with nothing written on it.
+    renderTermEditorRows(contentElement, item, index) {
+        const rows = this.buildTermEditorRowDescriptors(item, index);
+        if (rows.length === 0)
+            return;
+        const translations = this.options.getBoard?.()?.translations;
+        const grid = $('<div class="mdl-term-editor-rows">').appendTo(contentElement);
+        for (const row of rows) {
+            grid.append(`<span class="mdl-term-editor-row-label">${translations?.get(row.text) ?? row.text}</span>`);
+            const host = $("<div>").addClass(`mdl-term-editor-row-control ${row.className}`);
+            grid.append(host);
+            row.buildControl(host);
+        }
+        const modeHost = grid.find(".shape-term-mode")[0];
+        if (modeHost)
+            requestAnimationFrame(() => Utils.movePillButtonGroup(modeHost));
+    }
+
+    buildTermEditorRowDescriptors(item, index) {
+        const rows = [];
+        // Whether the term is shown at all comes before what it is shown as.
+        if (this.shouldShowVisibility(item, index))
+            rows.push({ text: this.getVisibilityRowLabel(), className: "shape-term-visibility", buildControl: host => this.renderVisibilityEditor(host, item, index) });
+        if (this.shouldShowTermEditor(item, index))
+            rows.push({ text: this.getTermRowLabel(), className: "shape-term-term-row", buildControl: host => $("<div>").appendTo(host).dxDropDownBox(this.getTermSelectorOptions(item, index)) });
+        if (this.shouldShowModeSelector(item, index))
+            rows.push({ text: this.getModeRowLabel(), className: "shape-term-mode", buildControl: host => this.renderModeSelector(host, item, index) });
+        if (this.shouldShowExtraTermEditor(item, index))
+            rows.push({ text: this.getExtraTermRowLabel(), className: "shape-term-extra-term", buildControl: host => $("<div>").appendTo(host).dxDropDownBox(this.getExtraTermSelectorOptions(item, index)) });
+        if (this.shouldShowUnitsEditor(item, index))
+            rows.push({ text: "Unit", className: "shape-term-units", buildControl: host => this.renderUnitsEditor(host, item, index) });
+        if (this.shouldShowSecondaryEditor(item, index))
+            rows.push({ text: "Case", className: "shape-term-secondary", buildControl: host => this.renderSecondaryEditor(host, item, index) });
+        if (this.shouldShowColorEditor(item, index))
+            rows.push({ text: "Colour", className: "shape-term-color", buildControl: host => this.renderColorEditor(host, item, index) });
+        if (this.shouldShowLockEditor(item, index))
+            rows.push({ text: this.getLockRowLabel(), className: "shape-term-lock", buildControl: host => this.renderLockEditor(host, item, index) });
+        return rows;
+    }
+
+    getTermRowLabel() {
+        return this.options.termEditor?.label ?? "Term";
+    }
+
+    getModeRowLabel() {
+        return this.options.mode.label ?? "Direction";
+    }
+
+    getExtraTermRowLabel() {
+        return this.options.extraTerm.label ?? "Paired term";
+    }
+
+    getVisibilityRowLabel() {
+        return this.options.visibility.label ?? "Show";
+    }
+
+    getLockRowLabel() {
+        return this.options.lock.label ?? "Locked";
+    }
+
+    // The eye was dressed to butt against the field it stood beside; standing on a row of its own it
+    // is a plain toggle like the lock under it.
+    renderVisibilityEditor(host, item, index) {
+        TermControl.createVisibilityCheckbox(host, this.getVisibilityValue(item), value => this.options.visibility.onValueChanged(index, value), {
+            checkboxClassName: "mdl-term-editor-toggle",
+            iconClassName: "mdl-term-editor-toggle-icon"
+        });
     }
 
     // The wheel inside an overlay is only given to a scroll view, so the list keeps the tree's own
@@ -1595,46 +1582,175 @@ class TermControl {
         return componentElement?.find?.(".dx-texteditor-container")?.first?.();
     }
 
-    syncTermEditorMathField(component, fallbackValue, system) {
+    // The chip is the whole of what the row shows: the colour the term is drawn in, its name, the
+    // unit it is measured in behind a faded slash — the way a term is written on a label anywhere
+    // else here — and the case it is read from. The editor's own input is left underneath so the
+    // placeholder still shows through a chip with no term in it yet.
+    syncTermEditorMathField(component, fallbackValue, system, item = null, index = 0, isPrimary = true) {
         const selectedValue = component.option("value") ?? fallbackValue;
         const inputContainer = this.getTermEditorInputContainer(component);
         if (!inputContainer?.length)
             return;
-        const hideInput = () => inputContainer.find(".dx-texteditor-input").css({ color: "transparent", caretColor: "transparent", opacity: 0, textShadow: "none" });
-        if (TermControl.isPlainValue(selectedValue)) {
-            inputContainer.find(".mdl-term-editor-math-field").remove();
-            const displayedText = String(Utils.getDisplayedTerm(selectedValue, system));
-            let valueLabel = inputContainer.find(".mdl-term-editor-value").first();
-            if (!valueLabel.length) {
-                valueLabel = TermControl.createPlainValueLabel("", "mdl-term-editor-value");
-                inputContainer.prepend(valueLabel);
-            }
-            valueLabel.text(displayedText);
-            hideInput();
+        inputContainer.find(".dx-texteditor-input").css({ color: "transparent", caretColor: "transparent", opacity: 0, textShadow: "none" });
+        let chip = inputContainer.find(".mdl-term-chip").first();
+        if (!chip.length) {
+            inputContainer.prepend('<span class="mdl-term-chip"></span>');
+            chip = inputContainer.find(".mdl-term-chip").first();
+        }
+        chip.empty();
+        // A row that has been given no colour is written without one rather than with an empty square
+        // where a colour would be; the picker inside the chip is still there to give it one.
+        const colorValue = isPrimary && this.shouldShowColorEditor(item, index) ? this.getColorValue(item, index) : "";
+        if (colorValue !== "")
+            chip.append($('<span class="mdl-term-chip__color">').css("background", colorValue));
+        this.appendTermChipName(chip, selectedValue, system);
+        if (!isPrimary)
             return;
+        if (this.shouldShowExtraTermEditor(item, index)) {
+            const pairedValue = this.getExtraTermValue(item, index);
+            if (pairedValue != null) {
+                chip.append('<span class="mdl-term-chip__pair">,</span>');
+                this.appendTermChipName(chip, pairedValue, system);
+            }
         }
-        inputContainer.find(".mdl-term-editor-value").remove();
-        const selectedText = Utils.formatMathTermName(String(Utils.getDisplayedTerm(selectedValue, system)));
-        let mathFieldElement = inputContainer.find(".mdl-term-editor-math-field").first()[0];
-        if (!mathFieldElement) {
-            inputContainer.prepend("<math-field read-only class='form-math-field mdl-term-editor-math-field' style='height:auto;width:auto;display:inline-block'></math-field>");
-            mathFieldElement = inputContainer.find(".mdl-term-editor-math-field").first()[0];
+        const unitText = this.getTermChipUnitText(item, index);
+        if (unitText !== "") {
+            const unitHost = $('<span class="mdl-term-chip__unit"><span class="mdl-term-chip__slash">/</span></span>').appendTo(chip);
+            unitHost.append(Utils.buildUnitsMathFieldMarkup(unitText, "height:auto;width:auto;display:inline-block"));
         }
-        this.setMathFieldValue(mathFieldElement, selectedText);
-        hideInput();
+        if (this.shouldShowSecondaryEditor(item, index))
+            chip.append($('<span class="mdl-term-chip__case">').append(TermControl.createCaseIcon(this.options.secondary.getValue(item, index), "mdl-term-chip__case-icon")));
     }
 
-    getTermEditorOptions(item, index) {
-        return this.buildTermEditorOptions(item, index, this.getTermValue(item, index), this.getTermItems(item, index), value => this.onTermChanged(index, value), this.options.termEditor?.onCustomItemCreating);
+    appendTermChipName(chip, selectedValue, system) {
+        const displayedText = String(Utils.getDisplayedTerm(selectedValue, system));
+        if (displayedText === "")
+            return;
+        if (TermControl.isPlainValue(selectedValue))
+            return chip.append(TermControl.createPlainValueLabel(displayedText, "mdl-term-editor-value"));
+        chip.append("<math-field read-only class='form-math-field mdl-term-editor-math-field' style='height:auto;width:auto;display:inline-block'></math-field>");
+        this.setMathFieldValue(chip.find(".mdl-term-editor-math-field").last()[0], Utils.formatMathTermName(displayedText));
+    }
+
+    // A term the model knows is measured in the unit the model keeps for it; a plain value written
+    // into the row is measured in the one the surface keeps beside that value.
+    getTermChipUnitText(item, index) {
+        if (!this.shouldShowUnitsEditor(item, index))
+            return "";
+        const termName = this.normalizeTermValue(this.getTermValue(item, index));
+        const units = this.options.units;
+        if (units.isTerm(termName) === true)
+            return Utils.getUnitsPlainText(units.getValue(termName) ?? "");
+        return Utils.getUnitsPlainText(units.valueUnits.getValue(item, index) ?? "");
+    }
+
+    // A chip carried off with the menu it stood in is never told it closed, so the guard asks the
+    // editor whether it is still standing and still open rather than trusting the flag alone.
+    hasOpenTermEditor() {
+        if (this.openEditorIndex === null)
+            return false;
+        const editor = this.termChipEditors[this.openEditorIndex];
+        if (!editor || !document.body.contains(editor.element()[0]))
+            return false;
+        return editor.option("opened") === true;
+    }
+
+    // The chip reads its own value before the one it was built with, so the term it names is written
+    // into it before the face is drawn again — otherwise a chip keeps the name it opened on.
+    refreshOpenTermChip() {
+        const index = this.openEditorIndex;
+        const editor = this.termChipEditors[index];
+        if (!editor)
+            return;
+        const item = this.getItems()[index];
+        const termValue = this.getTermValue(item, index);
+        editor.option("value", termValue);
+        this.syncTermEditorMathField(editor, termValue, this.getSystem(), item, index, true);
+    }
+
+    // What the chip shows is written again on every change. The rows behind it are only built again
+    // when the set of them has moved — naming a term brings a unit and a case with it — so choosing a
+    // colour does not take the picker apart under the hand that chose it.
+    refreshOpenTermEditor() {
+        this.refreshOpenTermChip();
+        const index = this.openEditorIndex;
+        const signature = this.getTermEditorRowSignature(index);
+        if (signature === this.openEditorRowSignature)
+            return;
+        this.openEditorRowSignature = signature;
+        requestAnimationFrame(() => this.rebuildOpenTermEditorRows(index));
+    }
+
+    getTermEditorRowSignature(index) {
+        const item = this.getItems()[index];
+        const terms = [this.getTermValue(item, index), this.hasExtraTerm() ? this.getExtraTermValue(item, index) : null];
+        return [...terms, ...this.buildTermEditorRowDescriptors(item, index).map(row => row.text)].join("|");
+    }
+
+    rebuildOpenTermEditorRows(index) {
+        const contentElement = this.termChipContents[index];
+        if (!contentElement || this.openEditorIndex !== index)
+            return;
+        contentElement.empty();
+        this.renderTermEditorRows(contentElement, this.getItems()[index], index);
+    }
+
+    // The chip opens on everything the term is read with rather than straight onto the list of terms:
+    // the list is one row inside it, standing under its own label the way the unit and the colour do.
+    getTermChipEditorOptions(item, index) {
+        const termValue = this.getTermValue(item, index);
+        const calculator = this.getCalculator();
+        const isMissingTerm = calculator ? TermControl.isMissingTermReference(calculator, termValue, this.options.allowNumericTermReference === true) : false;
+        const system = this.getSystem();
+        return {
+            value: termValue || null,
+            disabled: this.isTermEditorDisabled(item, index),
+            inputAttr: { class: "mdl-variable-selector" },
+            stylingMode: "filled",
+            elementAttr: {
+                class: isMissingTerm ? "mdl-term-chip-editor mdl-variable-selector mdl-missing-term" : "mdl-term-chip-editor mdl-variable-selector",
+                title: isMissingTerm ? `Term “${termValue}” no longer exists` : ""
+            },
+            onInitialized: e => {
+                this.termChipEditors[index] = e.component;
+                this.syncTermEditorMathField(e.component, termValue, system, item, index, true);
+            },
+            onContentReady: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, true),
+            onValueChanged: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, true),
+            contentTemplate: (component, contentElement) => this.renderTermChipContent($(contentElement), item, index),
+            dropDownOptions: {
+                container: document.body,
+                width: "auto",
+                wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup mdl-term-chip-popup")
+            },
+            onOpened: e => this.onTermEditorOpened(e, index),
+            onClosed: () => this.onTermEditorClosed()
+        };
+    }
+
+    renderTermChipContent(contentElement, item, index) {
+        this.termChipContents[index] = contentElement;
+        this.renderTermEditorRows(contentElement, item, index);
+    }
+
+    isTermEditorDisabled(item, index) {
+        const providedOptions = this.options.termEditor ?? {};
+        if (typeof providedOptions.disabled === "function")
+            return providedOptions.disabled(item, index) === true;
+        return providedOptions.disabled === true;
+    }
+
+    getTermSelectorOptions(item, index) {
+        return this.buildTermSelectorOptions(item, index, this.getTermValue(item, index), this.getTermItems(item, index), value => this.onTermChanged(index, value), this.options.termEditor?.onCustomItemCreating);
     }
 
     // The typed value belongs to the selector it was typed into, so the second one writes the field
     // it edits rather than the one the row is named by.
-    getExtraTermEditorOptions(item, index) {
-        return this.buildTermEditorOptions(item, index, this.getExtraTermValue(item, index), this.getExtraTermItems(item, index), value => this.onExtraTermChanged(index, value), this.options.extraTerm.onCustomItemCreating);
+    getExtraTermSelectorOptions(item, index) {
+        return this.buildTermSelectorOptions(item, index, this.getExtraTermValue(item, index), this.getExtraTermItems(item, index), value => this.onExtraTermChanged(index, value), this.options.extraTerm.onCustomItemCreating);
     }
 
-    buildTermEditorOptions(item, index, termValue, flatItems, onChanged, onCustomItemCreating) {
+    buildTermSelectorOptions(item, index, termValue, flatItems, onChanged, onCustomItemCreating) {
         const providedOptions = this.options.termEditor ?? {};
         const acceptCustomValue = typeof providedOptions.acceptCustomValue === "function"
             ? providedOptions.acceptCustomValue(item, index) === true
@@ -1661,25 +1777,15 @@ class TermControl {
             inputAttr: { class: "mdl-variable-selector" },
             stylingMode: "filled",
             elementAttr: {
-                class: isMissingTerm ? "mdl-variable-selector mdl-missing-term" : "mdl-variable-selector",
+                class: isMissingTerm ? "mdl-term-chip-editor mdl-variable-selector mdl-missing-term" : "mdl-term-chip-editor mdl-variable-selector",
                 title: isMissingTerm ? `Term “${termValue}” no longer exists` : ""
-            },
-            fieldAddons: {
-                before: data => {
-                    const displayedText = this.resolveTermEditorDisplayedText(data, termValue, system);
-                    if (TermControl.isPlainValue(this.resolveTermEditorSelectedValue(data, termValue)))
-                        return TermControl.createPlainValueLabel(displayedText, "mdl-term-editor-value");
-                    const mathField = $("<math-field read-only class='form-math-field' style='height:auto;width:auto;display:inline-block'></math-field>");
-                    this.setMathFieldValue(mathField[0], Utils.formatMathTermName(displayedText));
-                    return mathField;
-                }
             },
             onInitialized: e => {
                 dropDownBoxInstance = e.component;
-                this.syncTermEditorMathField(e.component, termValue, system);
+                this.syncTermEditorMathField(e.component, termValue, system, item, index, false);
             },
-            onContentReady: e => this.syncTermEditorMathField(e.component, termValue, system),
-            onValueChanged: e => this.syncTermEditorMathField(e.component, termValue, system),
+            onContentReady: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, false),
+            onValueChanged: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, false),
             contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), item, index, treeItems, acceptCustomValue, termValue, () => dropDownBoxInstance?.close(), onChanged, onCustomItemCreating, dropDownBoxInstance),
             dropDownOptions: {
                 container: document.body,
@@ -1689,6 +1795,20 @@ class TermControl {
             },
             ...(providedOptions.onOpened ? { onOpened: providedOptions.onOpened } : {})
         };
+    }
+
+    onTermEditorOpened(event, index) {
+        this.openEditorIndex = index;
+        this.openEditorRowSignature = this.getTermEditorRowSignature(index);
+        this.options.termEditor?.onOpened?.(event);
+    }
+
+    onTermEditorClosed() {
+        this.openEditorIndex = null;
+        if (!this.pendingRender)
+            return;
+        this.pendingRender = false;
+        this.render();
     }
 
     createDefaultTermItemTemplate() {
@@ -1771,10 +1891,14 @@ class TermControl {
         };
     }
 
+    // The picker is opened from inside the chip's own drop down now, so its menu is raised to the
+    // level the other nested menus stand at; left where it was it would open behind the drop down
+    // that asked for it.
     renderColorSecondaryEditor(host, item, index) {
         const colorSelection = this.getColorSelectionOptions();
         const colorValue = this.getColorValue(item, index);
-        const editor = this.secondaryColorSelector.createEditor(colorValue, value => this.onColorValueChanged(index, value), colorSelection?.editorOptions);
+        const editorOptions = { menuClassName: "mdl-color-picker-menu mdl-shape-overlay-popup-nested mdl-nested-dropdown-popup", ...colorSelection?.editorOptions };
+        const editor = this.secondaryColorSelector.createEditor(colorValue, value => this.onColorValueChanged(index, value), editorOptions);
         editor.css("width", "100%");
         host.append(editor);
     }

@@ -2,6 +2,32 @@ const { test, expect } = require('@playwright/test');
 
 const EDITOR_URL = '/pages/board/index.html';
 
+// Everything a term is read with — the term itself, the pair it may name, its unit, case and colour,
+// whether it is shown — is written inside the chip that names it, so the chip is opened first. A menu
+// may carry chips above a list of them, so the scope says which set the index counts within.
+async function openTermChip(page, index = 0, scope = '.mdl-shape-overlay-popup') {
+    await page.evaluate(([index, scope]) => $([...document.querySelectorAll(`${scope} .shape-term-term`)][index]).dxDropDownBox('instance').open(), [index, scope]);
+    await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(1);
+}
+
+async function closeTermChip(page, index = 0, scope = '.mdl-shape-overlay-popup') {
+    await page.evaluate(([index, scope]) => $([...document.querySelectorAll(`${scope} .shape-term-term`)][index]).dxDropDownBox('instance').close(), [index, scope]);
+    await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(0);
+}
+
+function termChipPanel(page) {
+    return page.locator('.mdl-term-chip-popup .mdl-term-editor-rows');
+}
+
+async function readTermChipRows(page, index, scope = '.mdl-shape-overlay-popup') {
+    await openTermChip(page, index, scope);
+    const labels = await page.evaluate(() => Array.from([...document.querySelectorAll('.mdl-term-editor-rows')]
+        .find(rows => rows.offsetParent !== null).querySelectorAll('.mdl-term-editor-row-label')).map(label => label.textContent));
+    await closeTermChip(page, index, scope);
+    return labels;
+}
+
+
 async function setupEditor(page) {
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
@@ -50,8 +76,9 @@ async function openTermsMenu(page) {
 
 async function openSeriesMenu(page) {
     await openTermsMenu(page);
-    await page.locator('.shape-term-lock-dropdown').first().click();
-    return page.locator('.mdl-nested-dropdown-popup');
+    await openTermChip(page, 0, '.frequency-series-control');
+    await termChipPanel(page).locator('.shape-term-lock-dropdown').first().click();
+    return page.locator('.mdl-nested-dropdown-popup:not(.mdl-term-chip-popup)');
 }
 
 function readChart(page) {

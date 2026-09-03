@@ -1162,23 +1162,9 @@ class BaseShape {
         this.contextToolbarInstance = $(toolbarHost).dxToolbar("instance");
     }
 
-    refreshTermControlVisibilities() {
-        for (const term of Object.keys(this.termFormControls)) {
-            const checkbox = this.termFormControls[term]?.visibilityCheckbox;
-            if (!checkbox)
-                continue;
-            const displayModeProperty = this.getTermDisplayModeProperty(term);
-            const displayModeValue = this.properties[displayModeProperty] ?? "none";
-            const isVisible = displayModeValue !== false && displayModeValue !== "none";
-            checkbox.option("value", isVisible);
-            TermControl.updateVisibilityCheckboxIcon(checkbox);
-        }
-    }
-
     showContextToolbar() {
         this.refreshNameToolbarControl();
         this.refreshShapeColorToolbarControl();
-        this.refreshTermControlVisibilities();
         if (this.contextToolbar)
             this.contextToolbar.classList.add("visible");
         requestAnimationFrame(() => requestAnimationFrame(() => this.positionContextToolbar()));
@@ -2296,7 +2282,7 @@ class BaseShape {
 
     createTermSelectorControl(instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle = true, options = {}) {
         const descriptor = TermControl.createBaseShapeTermFormControl(this, instance, term, caseProperty, isEditable, displayModeProperty, showVisibilityToggle, options);
-        this.termFormControls[term] = { termControl: descriptor.termControl, visibilityCheckbox: descriptor.visibilityCheckbox };
+        this.termFormControls[term] = { termControl: descriptor.termControl };
         return descriptor.control;
     }
 

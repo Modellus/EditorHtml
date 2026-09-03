@@ -191,7 +191,7 @@ test('the model menu labels the key rows without the word term and offers a colo
             text: label.textContent,
             labelLeftOfControl: labelRect.right <= controlRect.left + 1,
             sameRow: Math.abs((labelRect.top + labelRect.height / 2) - (controlRect.top + controlRect.height / 2)) < 12,
-            hasColorSwatch: control.querySelector('.shape-term-color') !== null
+            hasColorSwatch: control.querySelector('.mdl-term-chip__color') !== null
         };
     }));
     expect(rows.map(row => row.text)).toEqual(['Key 1', 'Key 2', 'Key 3', 'Key 4', 'Result']);

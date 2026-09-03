@@ -152,7 +152,6 @@ var ShapeContextToolbarMixin = {
         this.refreshNameToolbarControl?.();
         this.refreshShapeColorToolbarControl?.();
         this.refreshActionsMenuFlipIcons?.();
-        this.refreshTermControlVisibilities?.();
         if (this.contextToolbar)
             this.contextToolbar.classList.add("visible");
         requestAnimationFrame(() => requestAnimationFrame(() => this.positionContextToolbar()));

@@ -44,13 +44,13 @@ var ChartShapeToolbarMixin = {
             normalizeItem: (sourceItem, normalizedItem) => normalizeChartYTermItem(this, sourceItem, normalizedItem),
             createEmptyItem: () => ({ chartTypes: getChartYTermDefaultTypes(this) }),
             lock: {
-                width: "auto",
+                label: "Type",
                 editorType: "dxDropDownButton",
                 valueExpr: "value",
                 getValue: item => item?.chartTypes ?? getChartYTermDefaultTypes(this),
                 getItems: () => getChartYTermTypeItems(),
                 buttonTemplate: element => {
-                    $(element).empty().append(`<div class="shape-term-secondary-button" style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fa-light fa-chart-mixed shape-term-secondary-icon"></i></div>`);
+                    $(element).empty().append(`<div class="shape-term-secondary-button" style="display:flex;align-items:center;height:100%;"><i class="fa-light fa-chart-mixed shape-term-secondary-icon"></i></div>`);
                 },
                 itemTemplate: (itemData, itemIndex, element, item) => {
                     const selectedTypes = item?.chartTypes ?? getChartYTermDefaultTypes(this);

@@ -67,6 +67,13 @@ async function openValueTermSelector(page) {
     await page.waitForTimeout(400);
 }
 
+// The unit, the case and the colour of a term are written from inside the chip that names it, so the
+// chip is opened before any of them can be reached.
+async function openTermChip(page) {
+    await page.evaluate(() => $([...document.querySelectorAll('.shape-term-term')].find(element => element.offsetParent !== null)).dxDropDownBox('instance').open());
+    await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(1);
+}
+
 test.describe('Term units', () => {
     test('the Units menu option opens a grid with a name and a unit column, one row per term', async ({ page }) => {
         await setupEditor(page);
@@ -173,6 +180,7 @@ test.describe('Term units', () => {
         await setupEditor(page);
         await addModelTerms(page);
         await openValueTermSelector(page);
+        await openTermChip(page);
         await page.locator('.shape-term-units').first().click();
         await page.waitForSelector('.mdl-units-dropdown .mdl-units-item');
         await page.waitForTimeout(400);
@@ -201,6 +209,7 @@ test.describe('Term units', () => {
         await setupEditor(page);
         await addModelTerms(page);
         await openValueTermSelector(page);
+        await openTermChip(page);
         await page.locator('.shape-term-units').first().click();
         await page.waitForSelector('.mdl-units-dropdown .mdl-units-item');
         await page.waitForTimeout(400);
@@ -223,6 +232,7 @@ test.describe('Term units', () => {
         await setupEditor(page);
         await addModelTerms(page);
         await openValueTermSelector(page);
+        await openTermChip(page);
         await page.locator('.shape-term-units').first().click();
         await page.waitForSelector('.mdl-units-dropdown .mdl-units-item');
         await page.waitForTimeout(400);
@@ -263,24 +273,39 @@ test.describe('Term units', () => {
         expect(await page.evaluate(() => document.querySelectorAll('.mdl-independent-dropdown').length)).toBe(1);
     });
 
+    // The row names the term and nothing else. The unit follows the name inside the chip, behind a
+    // faded slash, and it is written where the term itself is chosen.
     test('the term selector of a shape toolbar carries the unit of the term it names', async ({ page }) => {
         await setupEditor(page);
         await addModelTerms(page);
         await openValueTermSelector(page);
-        const row = await page.evaluate(() => ({
+        const chip = await page.evaluate(() => ({
             cells: [...document.querySelector('.shape-term-row').children].map(cell => cell.className.split(' ')[0]),
-            typeset: document.querySelector('.shape-term-units .mdl-units-editor-math-field').value,
-            value: $('.shape-term-units .mdl-units-editor').dxDropDownBox('instance').option('value')
+            name: document.querySelector('.mdl-term-chip .mdl-term-editor-math-field').value,
+            slash: document.querySelector('.mdl-term-chip__slash').textContent,
+            unit: document.querySelector('.mdl-term-chip__unit math-field').textContent.trim()
         }));
-        expect(row.cells).toContain('shape-term-units');
-        expect(row.value).toBe('m');
-        expect(row.typeset).toBe('\\mathrm{m}');
+        expect(chip.cells).toContain('shape-term-term');
+        expect(chip.cells).not.toContain('shape-term-units');
+        expect(chip.name).toBe('x');
+        expect(chip.slash).toBe('/');
+        expect(chip.unit).toBe('\\mathrm{m}');
+        await openTermChip(page);
+        const editor = await page.evaluate(() => ({
+            labels: [...document.querySelectorAll('.mdl-term-editor-row-label')].map(label => label.textContent),
+            typeset: document.querySelector('.mdl-term-editor-rows .shape-term-units .mdl-units-editor-math-field').value,
+            value: $('.mdl-term-editor-rows .shape-term-units .mdl-units-editor').dxDropDownBox('instance').option('value')
+        }));
+        expect(editor.labels).toContain('Unit');
+        expect(editor.value).toBe('m');
+        expect(editor.typeset).toBe('\\mathrm{m}');
     });
 
     test('choosing a unit in a shape toolbar sets it on the term, and the shape shows it', async ({ page }) => {
         await setupEditor(page);
         await addModelTerms(page);
         await openValueTermSelector(page);
+        await openTermChip(page);
         await page.locator('.shape-term-units').first().click();
         await page.waitForSelector('.mdl-units-dropdown .mdl-units-item');
         await page.waitForTimeout(400);
@@ -298,6 +323,7 @@ test.describe('Term units', () => {
         await setupEditor(page);
         await addModelTerms(page);
         await openValueTermSelector(page);
+        await openTermChip(page);
         await page.locator('.shape-term-units').first().click();
         await page.waitForSelector('.mdl-units-dropdown .mdl-units-item');
         await page.waitForTimeout(400);
@@ -320,6 +346,7 @@ test.describe('Term units', () => {
         await setupEditor(page);
         await addModelTerms(page);
         await openValueTermSelector(page);
+        await openTermChip(page);
         await page.locator('.shape-term-units').first().click();
         await page.waitForSelector('.mdl-units-dropdown .mdl-units-item');
         await page.waitForTimeout(400);
@@ -341,6 +368,7 @@ test.describe('Term units', () => {
         });
         expect(built.items).toBe(await page.evaluate(() => Utils.isoUnits.length));
         expect(built.warmed).toBe('mdl-units-warm-host');
+        await openTermChip(page);
         await page.locator('.shape-term-units').first().click();
         await page.waitForSelector('.mdl-units-dropdown .mdl-units-item');
         await page.waitForTimeout(300);
@@ -589,6 +617,7 @@ test.describe('Term units', () => {
         await page.evaluate(() => shell.board.shapes.getByName('Value1')._termsDropdownElement.dxDropDownButton('instance').open());
         await page.waitForSelector('.shape-term-row');
         await page.waitForTimeout(500);
+        await openTermChip(page);
         expect(await page.evaluate(() => [...document.querySelectorAll('.shape-term-units')].filter(host => host.offsetParent !== null).length)).toBe(1);
         await page.evaluate(() => {
             const host = [...document.querySelectorAll('.shape-term-units')].find(element => element.offsetParent !== null);
@@ -619,6 +648,7 @@ test.describe('Term units', () => {
         await page.evaluate(() => shell.board.shapes.getByName('Thermometer')._componentModelDropdownElement.dxDropDownButton('instance').open());
         await page.waitForTimeout(600);
         const readout = () => page.evaluate(() => shell.board.shapes.getByName('Thermometer').element.querySelector('[data-source-id="readout"]').textContent);
+        await openTermChip(page);
         expect(await page.evaluate(() => [...document.querySelectorAll('.shape-term-units')].filter(host => host.offsetParent !== null).length)).toBe(1);
         expect(await readout()).toBe('20.0 °C');
         await page.evaluate(() => {

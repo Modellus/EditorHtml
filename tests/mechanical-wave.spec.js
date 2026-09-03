@@ -548,7 +548,9 @@ test.describe('Mechanical wave object', () => {
             shell.board.selection.select(shape);
         });
         await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
-        await page.locator('.mdl-shape-overlay-popup .dx-dropdownbox').first().click();
+        // The name is written where the term is chosen, which is a row inside the chip that names it.
+        await page.locator('.mdl-shape-overlay-popup .shape-term-term').first().click();
+        await page.locator('.mdl-term-editor-rows:visible .shape-term-term-row').click();
         const customValue = page.locator('.mdl-term-tree-custom-input input').first();
         await expect(customValue).toHaveAttribute('placeholder', 'Name a new term');
         await customValue.fill('y');

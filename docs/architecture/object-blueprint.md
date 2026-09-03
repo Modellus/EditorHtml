@@ -93,10 +93,18 @@ that directory: it would become a component in the palette.
 Fill it in in that order — identity, parameters, locals, tree — because each section may only read
 what the ones above it declare.
 
-A `variable` parameter may name a `unitParameter`: the row where the reader picks the term is also
+A `variable` parameter may name a `unitParameter`: the chip where the reader picks the term is also
 where its unit is picked, and when the row holds a plain number rather than a term — a thermometer
 standing at 20 rather than at T — that is where the picked unit is written, since a plain number has
 no term to carry one.
+
+**A term is read on a chip, and written behind it.** Every surface that names a term shows one chip:
+the colour it is drawn in as a rounded square, the name, the unit after it behind a faded `/`, the
+case it is read from as a badge, and the pair it may name written after the first term. Opening the
+chip gives the whole of it, each thing under a label of its own — `Term`, `Direction` and `Paired
+term` where the row names a pair, `Unit`, `Case`, `Colour`, `Show`, and whatever else the shape hangs
+on a row: a chart's `Type`, a frequency chart's `Series`, a lock. The row around the chip holds
+nothing but the handle it is dragged by, so a row looks the same whatever the shape asks of it.
 
 **A reading names its unit, it does not spell it out.** Never concatenate a unit into the text: give
 the `text` node a `unit` of its own, and the board writes it the way it writes every unit after a
@@ -145,11 +153,11 @@ shared `AxisRangeControl` rows instead of four number boxes, and adding `autoSca
 gets the chart's own two switches. Naming colours `backgroundColor`, `dataAreaColor` and `axisColor`
 gets the chart's colour menu.
 
-Four more are free controls. A `variable` naming `colorParameter` carries that colour's swatch on
-its own row. A `variable` naming `pairedParameter` gets a second selector beside the first, so the
-row names a pair — how far across and how far up — the way a marker on a compass names the pair it
+Four more are free controls. A `variable` naming `colorParameter` carries that colour as the swatch on
+the chip that names the term, picked inside the chip beside the unit and the case. A `variable` naming `pairedParameter` gets a second selector inside the chip, so the
+chip names a pair — how far across and how far up — the way a marker on a compass names the pair it
 points along; read it with a `direction` binding and leave the paired parameter `userEditable: false`,
-since the row it belongs to already edits it. A parameter with `enumValues` and an `enumIcons` of the
+since the chip it belongs to already edits it. A parameter with `enumValues` and an `enumIcons` of the
 same length is chosen from a single-selection `dxButtonGroup` of those icons instead of a drop-down —
 what the steering wheel picks its three wheels with.
 
