@@ -46,6 +46,9 @@ class BlockCompiler {
             width: Number(context.width) || tokens.getNumber("size.default.width", 180),
             height: Number(context.height) || tokens.getNumber("size.default.height", 180),
             caseNumber: Number(context.caseNumber) || 1,
+            // Which writing on the board belongs to the object being drawn, so a name it hands the
+            // model itself is not read back as a name the model works out for it.
+            valueSourceId: String(context.valueSourceId ?? ""),
             iteration: Number(context.iteration) || 1,
             playing: context.playing === true,
             precision: Number.isFinite(Number(context.precision)) ? Number(context.precision) : 2,

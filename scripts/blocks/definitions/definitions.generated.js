@@ -7370,6 +7370,7 @@ BlockDefinitionLoader.registerAll([
             "name": {
                 "parameter": "wave"
             },
+            "whenNameIsFree": true,
             "formula": "A\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(t-\\frac{\\left(r-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}\\right)+p\\right)\\cdot\\left(1-g\\cdot\\max\\left(0,sign\\left(\\frac{\\left(r-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}-t\\right)\\right)\\right)",
             "inputs": {
                 "A": {
@@ -9161,7 +9162,7 @@ BlockDefinitionLoader.registerAll([
         "type": "oscilloscope",
         "category": "component",
         "displayName": "Oscilloscope",
-        "description": "A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.",
+        "description": "A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. A row naming a term the model holds no elements of — one an object writes a point at a time — is read over the run instead, a point to each iteration, so a term that was never a wave is drawn as the wave its points make. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.",
         "icon": "fa-light fa-monitor-waveform",
         "tags": [
             "object",
@@ -9187,7 +9188,7 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "terms",
                 "defaultValue": [],
                 "category": "model",
-                "description": "The waves on the screen, one row each, in the order they are drawn and each in a colour of its own. A row names something the model defined over element indices, as y\\left[i\\right]=... does, and the screen reads it element by element from the first."
+                "description": "The waves on the screen, one row each, in the order they are drawn and each in a colour of its own. A row names something the model defined over element indices, as y\\left[i\\right]=... does, and the screen reads it element by element from the first. A row naming a term the model holds no elements of — one an object writes a point at a time, or a column of measurements — is read over the run instead: element i is what the name was worth on iteration i, and the trace is the wave those points make. The run has not reached the rest of the screen yet, so it lies at rest there."
             },
             {
                 "id": "spacing",
@@ -10396,7 +10397,7 @@ BlockDefinitionLoader.registerAll([
         "type": "piano",
         "category": "component",
         "displayName": "Piano",
-        "description": "A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the wave of the chord it is holding.",
+        "description": "A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the sound of the chord it is holding, a point of it on every row of the run.",
         "icon": "fa-light fa-piano-keyboard",
         "tags": [
             "object",
@@ -10423,7 +10424,7 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "variable",
                 "defaultValue": "",
                 "category": "model",
-                "description": "A name the model leaves free: the piano works the sound of the chord it is holding out over a window of samples and hands it to the model under that name, defined over sample indices as y\\left[n\\right]=... is, so it can be plotted, read one sample at a time and superposed with another wave. Sample n is the sum, over every key being held, of its own sine. Left empty, the piano keeps its wave to itself."
+                "description": "A name the model leaves free: the piano works out the sound of the chord it is holding and writes a point of it under that name on every row of the run, so the model reads it like any other term — plotted against time, read row by row, used in a definition. The name stands for one value, not for a wave: the wave is the shape its points make once the run has laid enough of them down. Every point is the sum, over every key being held, of its own sine. Left empty, the piano keeps its sound to itself."
             },
             {
                 "id": "amplitude",
@@ -10441,7 +10442,7 @@ BlockDefinitionLoader.registerAll([
                 "category": "scale",
                 "minimum": 2,
                 "maximum": 2000,
-                "description": "How many samples the published wave holds, and so how far its index runs: y\\left[1\\right] is the wave at the start of the window and y\\left[samples\\right] the wave at the end of it."
+                "description": "How many samples the piano's window holds, and so, with the duration below, how far apart two of them stand. The run walks the window a sample to each iteration: after this many iterations it has covered the duration below, and it goes on along the same wave from there."
             },
             {
                 "id": "duration",
@@ -10513,11 +10514,10 @@ BlockDefinitionLoader.registerAll([
                 "category": "style"
             }
         ],
-        "indexedSource": {
+        "valueSource": {
             "name": {
                 "parameter": "wave"
             },
-            "index": "n",
             "over": {
                 "index": "k",
                 "count": {
@@ -10526,6 +10526,9 @@ BlockDefinitionLoader.registerAll([
             },
             "formula": "amplitude\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(n-1\\right)\\cdot\\frac{duration}{samples-1}\\right)",
             "inputs": {
+                "n": {
+                    "independent": "iteration"
+                },
                 "f": {
                     "memory": "notes",
                     "row": {

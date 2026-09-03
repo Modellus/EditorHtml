@@ -946,7 +946,7 @@ Capabilities: `radial`, `angular`, `reads-model`
 
 ### `oscilloscope` — Oscilloscope
 
-A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.
+A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. A row naming a term the model holds no elements of — one an object writes a point at a time — is read over the run instead, a point to each iteration, so a term that was never a wave is drawn as the wave its points make. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.
 
 Capabilities: `reads-model`, `linear`, `textual`, `interaction`
 
@@ -979,7 +979,7 @@ Capabilities: `reads-model`, `linear`, `textual`, `interaction`
 
 ### `piano` — Piano
 
-A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the wave of the chord it is holding.
+A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the sound of the chord it is holding, a point of it on every row of the run.
 
 Capabilities: `writes-model`, `interaction`, `sound`
 

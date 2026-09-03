@@ -3,7 +3,7 @@
   "type": "piano",
   "category": "component",
   "displayName": "Piano",
-  "description": "A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the wave of the chord it is holding.",
+  "description": "A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the sound of the chord it is holding, a point of it on every row of the run.",
   "icon": "fa-light fa-piano-keyboard",
   "tags": [
     "object",
@@ -30,7 +30,7 @@
       "valueType": "variable",
       "defaultValue": "",
       "category": "model",
-      "description": "A name the model leaves free: the piano works the sound of the chord it is holding out over a window of samples and hands it to the model under that name, defined over sample indices as y\\left[n\\right]=... is, so it can be plotted, read one sample at a time and superposed with another wave. Sample n is the sum, over every key being held, of its own sine. Left empty, the piano keeps its wave to itself."
+      "description": "A name the model leaves free: the piano works out the sound of the chord it is holding and writes a point of it under that name on every row of the run, so the model reads it like any other term — plotted against time, read row by row, used in a definition. The name stands for one value, not for a wave: the wave is the shape its points make once the run has laid enough of them down. Every point is the sum, over every key being held, of its own sine. Left empty, the piano keeps its sound to itself."
     },
     {
       "id": "amplitude",
@@ -48,7 +48,7 @@
       "category": "scale",
       "minimum": 2,
       "maximum": 2000,
-      "description": "How many samples the published wave holds, and so how far its index runs: y\\left[1\\right] is the wave at the start of the window and y\\left[samples\\right] the wave at the end of it."
+      "description": "How many samples the piano's window holds, and so, with the duration below, how far apart two of them stand. The run walks the window a sample to each iteration: after this many iterations it has covered the duration below, and it goes on along the same wave from there."
     },
     {
       "id": "duration",
@@ -120,11 +120,10 @@
       "category": "style"
     }
   ],
-  "indexedSource": {
+  "valueSource": {
     "name": {
       "parameter": "wave"
     },
-    "index": "n",
     "over": {
       "index": "k",
       "count": {
@@ -133,6 +132,9 @@
     },
     "formula": "amplitude\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(n-1\\right)\\cdot\\frac{duration}{samples-1}\\right)",
     "inputs": {
+      "n": {
+        "independent": "iteration"
+      },
       "f": {
         "memory": "notes",
         "row": {

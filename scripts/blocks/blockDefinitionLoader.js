@@ -35,10 +35,10 @@ class BlockDefinitionLoader {
         // the same parameters its drawing does rather than a scope of its own — with the index it
         // sums over added to that scope, since inside the declaration it is a name like any other.
         const indexedSource = document.indexedSource
-            ? BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.indexedSource), BlockDefinitionLoader.buildIndexedScope(document, scope))
+            ? BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.indexedSource), BlockDefinitionLoader.buildSumScope(document.indexedSource, scope))
             : null;
         const valueSource = document.valueSource
-            ? BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.valueSource), scope)
+            ? BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.valueSource), BlockDefinitionLoader.buildSumScope(document.valueSource, scope))
             : null;
         BlockDefinitionLoader.documents.set(document.type, BlockMigrations.clone(document));
         return registry.register({
@@ -76,9 +76,11 @@ class BlockDefinitionLoader {
     }
 
     // A declaration summing over an index reads that index in its own formulas, so it is supplied
-    // like a parameter rather than falling through to a model term of that name.
-    static buildIndexedScope(document, scope) {
-        const overIndex = String(document.indexedSource?.over?.index ?? "");
+    // like a parameter rather than falling through to a model term of that name. A wave published
+    // over element indices and a value written a row at a time sum the same way, so both are given
+    // the same scope.
+    static buildSumScope(declaration, scope) {
+        const overIndex = String(declaration?.over?.index ?? "");
         if (overIndex === "")
             return scope;
         return Object.assign({}, scope, { [overIndex]: { parameter: overIndex } });
@@ -223,14 +225,7 @@ class BlockDefinitionLoader {
                 problems.push("An indexed source needs a formula for the value of one element.");
             if (document.indexedSource.name === undefined)
                 problems.push("An indexed source needs a binding saying which term it publishes.");
-            // An element that is the sum of many sources says what it sums over and how many of them
-            // there are; the index it sums over is bound by the declaration, like the element's own.
-            const over = document.indexedSource.over;
-            const overIndex = String(over?.index ?? "");
-            if (over && overIndex === "")
-                problems.push("A summed indexed source needs the name of the index it sums over.");
-            if (over && over.count === undefined)
-                problems.push("A summed indexed source needs a binding saying how many sources it sums.");
+            const overIndex = BlockDefinitionLoader.checkSum(document.indexedSource, "indexed", problems);
             BlockDefinitionLoader.findUnknownNames(document.indexedSource, new Set([...declared, indexName, overIndex]), "indexedSource", problems);
         }
         // A value source is the other half of the same bargain: one reading, written under a name the
@@ -240,9 +235,25 @@ class BlockDefinitionLoader {
                 problems.push("A value source needs a formula for the value it writes.");
             if (document.valueSource.name === undefined)
                 problems.push("A value source needs a binding saying which term it writes.");
-            BlockDefinitionLoader.findUnknownNames(document.valueSource, declared, "valueSource", problems);
+            const overIndex = BlockDefinitionLoader.checkSum(document.valueSource, "value", problems);
+            BlockDefinitionLoader.findUnknownNames(document.valueSource, new Set([...declared, overIndex]), "valueSource", problems);
         }
         return problems;
+    }
+
+    // A source that is the sum of many of the object's own things — one oscillator of a wave, one
+    // note of a chord — says what it sums over and how many of them there are; the index it sums
+    // over is bound by the declaration, like the element index is.
+    static checkSum(declaration, kind, problems) {
+        const over = declaration.over;
+        if (!over)
+            return "";
+        const overIndex = String(over.index ?? "");
+        if (overIndex === "")
+            problems.push(`A summed ${kind} source needs the name of the index it sums over.`);
+        if (over.count === undefined)
+            problems.push(`A summed ${kind} source needs a binding saying how many sources it sums.`);
+        return overIndex;
     }
 }
 

@@ -90,6 +90,49 @@ test.describe('Oscilloscope object', () => {
         }
     });
 
+    // A name the model holds no elements of — one an object writes a point at a time — has nothing to
+    // answer element i with. What it has is a value on every row of the run, and those points make a
+    // wave: that is how a term that never was one is read on a screen.
+    test('a term written a row at a time is read over the run, so its points make the wave', async ({ page }) => {
+        await setupBoard(page);
+        await addScope(page, { waves: waveRows('y'), minimumX: 0, maximumX: 12, minimumY: -3, maximumY: 3, showLegend: false, showTicks: false });
+        await page.evaluate(() => shell.board.calculator.play());
+        await page.waitForFunction(() => shell.board.calculator.getLastCalculatedIteration() > 13, null, { timeout: 20000 });
+        await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            calculator.pause();
+            calculator.system.addTermByName('y', Modellus.TermType.PARAMETER);
+            for (let iteration = 1; iteration <= 13; iteration++)
+                calculator.setTermValueOnIteration('y', 2 * Math.sin(Math.PI * iteration / 6), iteration, 1);
+            shell.board.shapes.getByName('Scope').draw();
+        });
+        const segments = await readNodes(page, 'trace');
+        const plot = await readPlotBox(page);
+        expect(segments).toHaveLength(12);
+        for (let index = 0; index < segments.length; index++) {
+            const value = 2 * Math.sin(Math.PI * (index + 1) / 6);
+            expect(segments[index].y1).toBeCloseTo(plot.y + plot.height * (1 - (value + 3) / 6), 4);
+        }
+    });
+
+    // The screen is the run as far as it has got: a row it has not reached holds nothing yet, and
+    // nothing is at rest, so the trace lies on the zero line rather than guessing ahead.
+    test('a term written a row at a time lies at rest where the run has not reached', async ({ page }) => {
+        await setupBoard(page);
+        await addScope(page, { waves: waveRows('y'), minimumX: 0, maximumX: 12, minimumY: -3, maximumY: 3, showLegend: false, showTicks: false });
+        await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            calculator.system.addTermByName('y', Modellus.TermType.PARAMETER);
+            calculator.setTermValueOnIteration('y', 2, 1, 1);
+            shell.board.shapes.getByName('Scope').draw();
+        });
+        const segments = await readNodes(page, 'trace');
+        const plot = await readPlotBox(page);
+        const rest = plot.y + plot.height / 2;
+        expect(segments[0].y1).toBeCloseTo(plot.y + plot.height * (1 - 5 / 6), 4);
+        expect(segments.slice(1).map(segment => segment.y1)).toEqual(segments.slice(1).map(() => expect.closeTo(rest, 4)));
+    });
+
     // The list the reader builds always keeps a blank row at the end to type the next name into, and
     // that row is not a wave: a screen naming two waves draws two.
     test('draws one trace per named row and none for the empty one at the end', async ({ page }) => {

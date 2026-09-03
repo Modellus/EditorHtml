@@ -345,6 +345,17 @@ class Calculator extends EventTarget {
         return this.valueSources.get(sourceId)?.name ?? "";
     }
 
+    // Whether anything is writing under this name. A name one object writes is not a name another is
+    // free to write too: the second would only overwrite the first, row by row, and the model would
+    // hold whichever of them happened to be told last.
+    isValueSourceName(name) {
+        for (const published of this.valueSources.values()) {
+            if (published.name === String(name))
+                return true;
+        }
+        return false;
+    }
+
     applyDataSources() {
         const merged = Calculator.mergeDataSources(Array.from(this.dataSources.values()));
         this.system.loadTerms(merged.names, merged.values);

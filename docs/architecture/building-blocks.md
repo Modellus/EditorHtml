@@ -306,9 +306,10 @@ stay in code, because they generate geometry per index or per character rather t
   `System.getElementValue`. The declaration names the term it publishes under (`name`, a binding, so
   the reader chooses the name), the index the formula is written over (`index`, bound by the
   declaration the way an assignment binds the `i` of `y\left[i\right]=…`), and a `formula` for the
-  displacement of one element, with its `inputs` bound like any other formula. The piano publishes
-  this way: the chord it is holding becomes a name the model can plot, read one element at a time and
-  superpose. Publishing adds the name to the system as a parameter term, exactly as the parser
+  displacement of one element, with its `inputs` bound like any other formula. It is how an object
+  hands over a name that stands for a whole wave at once rather than for one value — the same thing
+  the parser makes of `y\left[i\right]=…` when the model writes the wave itself.
+  Publishing adds the name to the system as a parameter term, exactly as the parser
   does before registering `y\left[i\right]=…`, so the name is offered wherever terms are listed; it is
   withdrawn again with the source, unless the term was already the model's. The model has the last
   word — a name it assigns, one it already defines over element indices, and a column of measurements
@@ -320,14 +321,25 @@ stay in code, because they generate geometry per index or per character rather t
   rather than picked from a model that has never held it.
 * **`valueSource`** is the same bargain for one reading rather than a whole wave: `name`, a binding
   saying which term to write under, and a `formula` for the value, with its `inputs` bound like any
-  other. The Mechanical wave writes this way — what the reference oscillator of the wave it works out
-  for itself is doing, handed to the model under a name the model leaves free, so it can be plotted
-  against time, read in a definition and added to another object's reading. The value is written on
+  other, and an optional `over` summing it the way an element is summed. The Mechanical wave writes
+  this way — what the reference oscillator of the wave it works out for itself is doing, handed to the
+  model under a name the model leaves free, so it can be plotted against time, read in a definition
+  and added to another object's reading. So does the Piano: the sound of the chord it is holding,
+  summed over the notes down, written on every row of the run. A name written a point at a time is
+  never a wave, but the points make one — which is what the Oscilloscope draws them as. The value is written on
   the row the model is showing, as the run reaches it, and the row is worked through again after the
   write, so a definition reading the name is answered on that row rather than a step behind. The name
   is added to the system and withdrawn with the source exactly as an indexed one is, and the model has
   the same last word: a name it works out for itself is read, never written over. The row naming it
   invites a name of the reader's own for the same reason.
+* **A name another object writes is one the model holds.** Two objects writing the same name row by
+  row would only overwrite each other, so a name one of them writes reads as defined to all the
+  others — its own writing excepted, or a wave handing over its reference oscillator would read that
+  back and repeat itself. `"whenNameIsFree": true` on a `valueSource` says the object writes only
+  while no other object writes that name: the Mechanical wave carries the Piano's chord rather than
+  fighting it for the name, while the Piano, which has nothing to read, writes whatever else is on the
+  board. The board is asked rather than the registrations, so which of the two was laid down first
+  does not decide which of them the model reads.
 * **An object may fit what it draws to what the run has shown.** `swing` reads the greatest distance
   from zero a name has reached on any row worked through, so a drawing scaled by it fills its body
   whatever the term is worth — a hundredth and a hundred are drawn alike — and stops moving once the
@@ -335,15 +347,28 @@ stay in code, because they generate geometry per index or per character rather t
   because a wave dying away should be drawn dying away rather than filling the body again. The
   Mechanical wave fits its chain this way while `autoScale` is on, and reads its own
   `displacementScale` row while it is off.
-* **An element may be a sum.** A wave with one source is one formula; a wave with many is that same
+* **A source may be a sum.** A wave with one source is one formula; a wave with many is that same
   formula added up over them, which is what superposition is. `"over": { "index": "k", "count": … }`
   says how many sources there are and what the declaration calls the one it is working on, and every
-  input is resolved once per source — so the piano's wave is `sin` of one note, summed over the notes
-  being held, with the pitch of source `k` read out of the list the object is holding. The count is a
-  binding like any other, so it may be a parameter, a formula or the length of a memory; nothing held
-  is a sum of nothing, which reads as zero. The sources are worked out when the object publishes and
-  not per element, which is what keeps a wave of twenty notes read over two hundred samples a loop
-  rather than four thousand bindings.
+  input is resolved once per source — so the piano's reading is `sin` of one note, summed over the
+  notes being held, with the pitch of source `k` read out of the list the object is holding. The count
+  is a binding like any other, so it may be a parameter, a formula or the length of a memory; nothing
+  held is a sum of nothing, which reads as zero. An `indexedSource` and a `valueSource` sum the same
+  way; the indexed one works its sources out when the object publishes and not per element, which is
+  what keeps a wave of twenty notes read over two hundred samples a loop rather than four thousand
+  bindings.
+* **An object may count the rows of the run.** `{ "independent": "iteration" }` is which row the model
+  stands on, beside the `"value"` and `"step"` the same binding already gives. It is what lets an
+  object hand the model a window of its own a point at a time: the Piano's samples are spaced by its
+  own duration rather than by the model's step, so a note far too fast for the step the model runs in
+  is still handed over as a wave — the run walks the window, a sample to each row.
+* **A term that is not a wave is read over the run.** An `element` binding asks the model for element
+  `i` of a name. A name the model holds no elements of — one an object writes a point at a time, or a
+  column of measurements — has nothing to answer with, so it is read on row `i` of the run instead,
+  and a row the run has not reached lies at rest. That is the whole of what makes the Oscilloscope
+  draw the Piano's chord as the wave its points make, without the name ever being one. A name the
+  model *does* assign answers for every element, so it is read as it always was: `y\left[i\right]=…`
+  element by element, and a plain `y=…` as the one value it is worth on the row on screen.
 * **`visibleWhen`/`disabledWhen`** may ask what the model makes of the name a row holds rather than
   what the row holds: `{ "parameter": "wave", "modelDefines": false }`. A wave the model works out for
   itself leaves the object nothing to shape, so the wave's amplitude, frequency, speed, phase,

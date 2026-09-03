@@ -212,7 +212,7 @@ class BlockBindings {
         if (kind === "past")
             return this.resolvePast(binding, context, fallbackValue);
         if (kind === "defines")
-            return this.definesTerm(String(this.resolve(binding.defines, context, ""))) ? 1 : 0;
+            return this.definesTerm(String(this.resolve(binding.defines, context, "")), context) ? 1 : 0;
         if (kind === "swing")
             return this.resolveSwing(binding, context, fallbackValue);
         if (kind === "opaque")
@@ -374,9 +374,28 @@ class BlockBindings {
         const index = Number(this.resolve(binding.index, context, NaN));
         if (termName === "" || !Number.isFinite(index))
             return fallbackValue;
-        const values = this.getModelValues(this.getCaseNumber(binding, context));
-        const value = Number(this.calculator?.system?.getElementValue(termName, index, values));
-        return Number.isFinite(value) ? value : fallbackValue;
+        const caseNumber = this.getCaseNumber(binding, context);
+        const value = Number(this.calculator?.system?.getElementValue(termName, index, this.getModelValues(caseNumber)));
+        if (Number.isFinite(value))
+            return value;
+        const point = this.resolveRunPoint(termName, index, caseNumber);
+        return Number.isFinite(point) ? point : fallbackValue;
+    }
+
+    // A name the model holds no elements of — one an object writes a point at a time, rather than one
+    // defined over element indices — has nothing to answer element i with. What it has is a value on
+    // every row of the run, so it is read there instead: element i is what the name was worth on
+    // iteration i, which is how a term handed over a point at a time is drawn as the wave those
+    // points make without the name ever being one. A row the run has not reached holds nothing yet
+    // and reads as 0, the way a moment before the run began does.
+    resolveRunPoint(termName, index, caseNumber) {
+        if (!this.isModelTerm(termName))
+            return NaN;
+        const iteration = Math.round(index);
+        const last = Math.min(this.calculator.getIteration(), this.calculator.getLastCalculatedIteration());
+        if (iteration < 1 || iteration > last)
+            return 0;
+        return this.readIterationValue(termName, iteration, caseNumber);
     }
 
     // A name read at an earlier moment of the run. The row the moment falls between is read between
@@ -427,10 +446,16 @@ class BlockBindings {
     // A name the model has values of its own for: one it assigns, one it defines over element
     // indices, one another object publishes and a column of measurements. Everything else is a name
     // whoever writes it is free to write into.
-    definesTerm(name) {
+    definesTerm(name, context) {
         if (!this.calculator || !this.calculator.isTerm(name))
             return false;
         if (this.calculator.isIndexedSource(name) || !this.calculator.isEditable(name))
+            return true;
+        // A name another object writes is one the model holds, as far as this object is concerned:
+        // the piano's chord is not a name a wave is free to work out for itself, it is one to repeat.
+        // The object's own writing is not — a wave handing the model its own reference oscillator
+        // would otherwise read that back and repeat itself.
+        if (this.calculator.isValueSourceName(name) && this.calculator.getValueSourceName(context?.valueSourceId ?? "") !== name)
             return true;
         return this.calculator.system.getTerm(name)?.type === Modellus.TermType.PRELOADED;
     }
@@ -444,6 +469,13 @@ class BlockBindings {
         if (binding.independent === "step") {
             const step = Number(this.calculator?.getStep?.());
             return Number.isFinite(step) ? step : fallbackValue;
+        }
+        // Which row of the run the model stands on, counted from one. It is what an object handing
+        // the model a point at a time counts its own points by: a sample to each row, so a window of
+        // its own is walked along as the run goes rather than tied to the step the model runs in.
+        if (binding.independent === "iteration") {
+            const iteration = Number(this.calculator?.getIteration?.());
+            return Number.isFinite(iteration) ? iteration : fallbackValue;
         }
         const value = Number(this.calculator?.getIndependentValue?.());
         return Number.isFinite(value) ? value : fallbackValue;
@@ -506,6 +538,29 @@ class BlockBindings {
             }
             return total;
         };
+    }
+
+    // A declaration handing the model one value may be the sum of several of the object's own things
+    // — one note of a held chord each — the way a wave published over element indices is. The sum is
+    // read here at the moment the run stands on rather than at an element index, so the formula is
+    // written once and the frames it is read over are the same ones. A sum over nothing is 0: a
+    // keyboard holding no note is silence, not an absence.
+    resolveSum(declaration, context, fallbackValue) {
+        const over = declaration?.over;
+        if (!over)
+            return this.resolve(declaration, context, fallbackValue);
+        const overIndexName = String(over.index ?? "k");
+        const count = Math.floor(this.resolveNumber(over.count, context, 0));
+        let total = 0;
+        for (let position = 1; position <= count; position++) {
+            const frame = { [overIndexName]: position };
+            const overContext = Object.assign({}, context, { parameters: Object.assign({}, context.parameters, frame) });
+            const value = Number(this.resolve(declaration, overContext, NaN));
+            if (!Number.isFinite(value))
+                return fallbackValue;
+            total += value;
+        }
+        return total;
     }
 
     // What the element is the sum of. A declaration that names no sum is one source, read once; one

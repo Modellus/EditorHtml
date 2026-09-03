@@ -226,6 +226,9 @@ class ComponentShape extends BaseShape {
             height: Number(this.properties.height) || 180,
             parameters: this.getCompilationParameters(),
             caseNumber: this.getTermCaseNumber("caseNumber"),
+            // Which writing on the board is this object's own, so a name it hands the model itself is
+            // not read back as a name the model works out.
+            valueSourceId: this.getValueSourceId(),
             iteration: this.board.calculator.getIteration(),
             playing: this.board.calculator.isPlaying(),
             precision: this.board.calculator.getPrecision(),
@@ -522,15 +525,18 @@ class ComponentShape extends BaseShape {
         return String(value ?? "") === String(condition.equals);
     }
 
-    // A name the model works out for itself: one it assigns, one it defines over element indices, or
-    // one a column of measurements stands under. A name this object publishes is the object's own
-    // and not the model's, and a name the model has never held is nobody's.
+    // A name the model works out for itself: one it assigns, one it defines over element indices, one
+    // a column of measurements stands under, or one another object on the board writes. A name this
+    // object publishes is the object's own and not the model's, and a name the model has never held
+    // is nobody's.
     modelDefinesTerm(name) {
         if (!this.namesTerm(name))
             return false;
         if (this.board.calculator.getIndexedSourceName(this.getIndexedSourceId()) === name)
             return false;
-        return this.getComponentCompiler().bindings.definesTerm(name);
+        if (this.board.calculator.getValueSourceName(this.getValueSourceId()) === name)
+            return false;
+        return this.getComponentCompiler().bindings.definesTerm(name, this.getCompilationContext());
     }
 
     getTermEntryLabelPosition(entry) {
@@ -968,12 +974,13 @@ class ComponentShape extends BaseShape {
     }
 
     // The chord is what the object is holding now, so the drawing is worked out again and so is
-    // whatever it publishes from it. The model is worked through where it stands rather than reset:
-    // a note pressed mid-run is a different wave from here on, not a different model.
+    // whatever it hands the model from it: the sound of the chord on the row the run stands on,
+    // written there straight away. The model is worked through where it stands rather than reset —
+    // a note pressed mid-run is a different sound from here on, not a different model — and the rows
+    // already behind it keep the chord that was held while they were worked out.
     onHeldNotesChanged() {
         this._noteValues = this._notesParameter === "" ? null : { [this._notesParameter]: this.getHeldNoteRows() };
-        if (this.publishIndexedSource())
-            this.board.calculator.calculate();
+        this.writeValueSource();
         this.board.markDirty(this);
     }
 
@@ -1438,9 +1445,30 @@ class ComponentShape extends BaseShape {
         if (!declaration)
             return this.board.calculator.removeValueSource(sourceId);
         const name = String(this.getComponentCompiler().bindings.resolve(declaration.name, this.getCompilationContext(), "") ?? "").trim();
-        if (!this.canPublishValueSource(name))
+        if (!this.canPublishValueSource(name) || !this.isValueSourceNameFreeEnough(declaration, name))
             return this.board.calculator.setValueSource(sourceId, "");
         return this.board.calculator.setValueSource(sourceId, name);
+    }
+
+    // A definition may say it writes only while the name is nobody else's: the Mechanical wave works
+    // its own wave out when the name is free and repeats what it finds under it when it is not, so a
+    // piano sounding a chord under that name is a wave for the chain to carry rather than a name to
+    // fight over. The board is asked rather than the registrations, because which of the two shapes
+    // was laid down first is no reason for one of them to go quiet.
+    isValueSourceNameFreeEnough(declaration, name) {
+        if (declaration.whenNameIsFree !== true || name === "")
+            return true;
+        return !this.board.shapes.shapes.some(shape => shape !== this && shape.writesValueSourceName?.(name) === true);
+    }
+
+    // Whether this object writes under that name whatever else is on the board. An object that only
+    // writes while the name is free is not one the others have to give way to, so two of them naming
+    // the same term do not both fall silent waiting for the other.
+    writesValueSourceName(name) {
+        const declaration = this.getValueSourceDeclaration();
+        if (!declaration || declaration.whenNameIsFree === true)
+            return false;
+        return String(this.getComponentCompiler().bindings.resolve(declaration.name, this.getCompilationContext(), "") ?? "").trim() === String(name);
     }
 
     // What the object is reading now, written on the row the model is showing. The row is worked
@@ -1451,7 +1479,7 @@ class ComponentShape extends BaseShape {
         const name = this.board.calculator.getValueSourceName(this.getValueSourceId());
         if (!declaration || name === "")
             return;
-        const value = Number(this.getComponentCompiler().bindings.resolve(declaration, this.getCompilationContext(), NaN));
+        const value = Number(this.getComponentCompiler().bindings.resolveSum(declaration, this.getCompilationContext(), NaN));
         if (!Number.isFinite(value))
             return;
         const calculator = this.board.calculator;
@@ -1469,7 +1497,9 @@ class ComponentShape extends BaseShape {
         const declaration = this.getValueSourceDeclaration();
         const bindings = this.getComponentCompiler().bindings;
         const names = declaration
-            ? bindings.getBindingDependencies(declaration).parameters.concat(bindings.getBindingDependencies(declaration.name).parameters)
+            ? bindings.getBindingDependencies(declaration).parameters
+                .concat(bindings.getBindingDependencies(declaration.name).parameters)
+                .concat(bindings.getBindingDependencies(declaration.over?.count).parameters)
             : [];
         this._valueSourceParameters = { type: componentType, names: names };
         return names;

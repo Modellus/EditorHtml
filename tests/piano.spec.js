@@ -49,12 +49,26 @@ function litKeyCount(page) {
     });
 }
 
-function readElements(page, indices) {
-    return page.evaluate(indices => {
+// What the model was handed on each of those rows of the run, which is where a wave written a point
+// at a time lives: the term holds one value per iteration, not one per element.
+function readRows(page, iterations) {
+    return page.evaluate(iterations => {
         const calculator = shell.board.calculator;
-        const values = calculator.system.getIteration(calculator.getIteration(), 1);
-        return indices.map(index => calculator.system.getElementValue('y', index, values));
-    }, indices);
+        return iterations.map(iteration => calculator.system.getIteration(iteration, 1).y);
+    }, iterations);
+}
+
+// The chord's own window: sample n stands (n - 1) spacings into it, and the run walks it a sample to
+// each row, so the value on row n is the wave at that sample.
+function chordAt(iteration, frequencies, amplitude = 2, samples = 64, duration = 0.02) {
+    const time = (iteration - 1) * duration / (samples - 1);
+    return frequencies.reduce((total, frequency) => total + amplitude * Math.sin(2 * Math.PI * frequency * time), 0);
+}
+
+async function runTo(page, iteration) {
+    await page.evaluate(() => shell.board.calculator.play());
+    await page.waitForFunction(iteration => shell.board.calculator.getLastCalculatedIteration() > iteration, iteration, { timeout: 20000 });
+    await page.evaluate(() => shell.board.calculator.pause());
 }
 
 test.describe('Piano object', () => {
@@ -208,40 +222,47 @@ test.describe('Piano object', () => {
         expect(await page.evaluate(() => shell.board.shapes.getByName('Piano')._noteVoices.size)).toBe(0);
     });
 
-    test('publishes the chord it is holding as a wave over sample indices', async ({ page }) => {
+    // The name the piano writes under stands for one value, not for a whole wave: the model reads it
+    // like any other term, and the wave is the shape its points make once the run has laid them down.
+    test('hands the model the sound of the chord it is holding, a point to each row of the run', async ({ page }) => {
         await setupBoard(page);
         await addPiano(page, { wave: 'y', samples: 64, duration: 0.02, amplitude: '2' });
         const published = await page.evaluate(() => {
             const calculator = shell.board.calculator;
             return { indexed: calculator.isIndexedSource('y'), isTerm: calculator.isTerm('y'), termNames: calculator.getTermsNames() };
         });
-        // A wave the model cannot name is of no use in it: the name has to be a term, so the graphs,
+        // A sound the model cannot name is of no use in it: the name has to be a term, so the graphs,
         // the tables and every list of terms offer it like any other.
-        expect(published.indexed).toBe(true);
+        expect(published.indexed).toBe(false);
         expect(published.isTerm).toBe(true);
         expect(published.termNames).toContain('y');
-        expect(await readElements(page, [1, 17])).toEqual([0, 0]);
         await page.keyboard.down('z');
         await page.keyboard.down('b');
-        const samples = await readElements(page, [1, 2, 17, 64]);
-        const step = 0.02 / 63;
-        // The wave of a chord is the wave of each note added together, which is what makes a fifth
+        await runTo(page, 20);
+        const rows = [1, 2, 5, 17];
+        const written = await readRows(page, rows);
+        // The sound of a chord is the sound of each note added together, which is what makes a fifth
         // read as a repeating shape and two neighbours read as beats.
-        [1, 2, 17, 64].forEach((index, position) => {
-            const time = (index - 1) * step;
-            const expected = 2 * Math.sin(2 * Math.PI * 261.6255653005986 * time) + 2 * Math.sin(2 * Math.PI * 391.99543598174927 * time);
-            expect(samples[position]).toBeCloseTo(expected, 6);
+        rows.forEach((iteration, position) => {
+            expect(written[position]).toBeCloseTo(chordAt(iteration, [261.6255653005986, 391.99543598174927]), 6);
         });
         await page.keyboard.up('z');
         await page.keyboard.up('b');
-        expect(await readElements(page, [1, 17])).toEqual([0, 0]);
     });
 
-    test('the model reads the piano wave a sample at a time, like any other term', async ({ page }) => {
+    // A keyboard holding no note is silence, which is a value the model can read, not an absence.
+    test('a keyboard holding nothing writes silence', async ({ page }) => {
+        await setupBoard(page);
+        await addPiano(page, { wave: 'y', samples: 64, duration: 0.02, amplitude: '2' });
+        await runTo(page, 12);
+        expect(await readRows(page, [1, 5, 10])).toEqual([0, 0, 0]);
+    });
+
+    test('the model reads what the piano writes, like any other term', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => {
             modellus.shape.addExpression('Eq');
-            shell.board.shapes.getByName('Eq').properties.expression = 'z=y\\left[3\\right]';
+            shell.board.shapes.getByName('Eq').properties.expression = 'z=2\\cdot y';
             shell.reset();
         });
         await addPiano(page, { wave: 'y', samples: 64, duration: 0.02, amplitude: '1' });
@@ -249,14 +270,99 @@ test.describe('Piano object', () => {
         // letters: the piano is played once the caret is out of it.
         await page.evaluate(() => document.activeElement?.blur());
         await page.keyboard.down('n');
-        const reading = await page.evaluate(() => {
-            const calculator = shell.board.calculator;
-            return calculator.system.getIteration(calculator.getIteration(), 1).z;
+        await runTo(page, 12);
+        const readings = await page.evaluate(() => [3, 7].map(iteration => {
+            const values = shell.board.calculator.system.getIteration(iteration, 1);
+            return { y: values.y, z: values.z };
+        }));
+        // N is the A above middle C, and row 3 is two samples into the window.
+        [3, 7].forEach((iteration, position) => {
+            expect(readings[position].y).toBeCloseTo(chordAt(iteration, [440], 1), 6);
+            expect(readings[position].z).toBeCloseTo(2 * readings[position].y, 6);
         });
-        // N is the A above middle C, and sample 3 is two steps into the window.
-        expect(reading).toBeCloseTo(Math.sin(2 * Math.PI * 440 * 2 * 0.02 / 63), 6);
         await page.keyboard.up('n');
     });
+
+    // The whole of what the name is for: a term the piano writes a point at a time is not a wave, and
+    // an oscilloscope reading it over the run draws the wave those points make.
+    test('the points it writes are drawn as a wave on an oscilloscope reading the same name', async ({ page }) => {
+        await setupBoard(page);
+        await addPiano(page, { wave: 'y', samples: 64, duration: 0.02, amplitude: '2' });
+        await page.evaluate(() => {
+            const scope = shell.commands.addComponent('oscilloscope', 'Scope');
+            scope.setProperties({
+                x: 60, y: 260, width: 460, height: 300, showLegend: false, showTicks: false,
+                minimumX: 0, maximumX: 12, minimumY: -4, maximumY: 4,
+                waves: [{ term: 'y', case: 1, color: '' }, { term: '', case: 1, color: '' }]
+            });
+            scope.draw();
+        });
+        await page.keyboard.down('z');
+        await page.keyboard.down('b');
+        await runTo(page, 20);
+        const drawn = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Scope');
+            shape.draw();
+            const plot = shape.contentGroup.querySelector('[data-source-id="plot"]');
+            return {
+                segments: Array.from(shape.contentGroup.querySelectorAll('[data-source-id="trace"]')).map(node => Number(node.getAttribute('y1'))),
+                y: Number(plot.getAttribute('y')),
+                height: Number(plot.getAttribute('height'))
+            };
+        });
+        expect(drawn.segments).toHaveLength(12);
+        // The screen reads element i on row i of the run, so segment i stands where the chord stood
+        // when the run worked that row out.
+        drawn.segments.forEach((drawnY, index) => {
+            const value = chordAt(index + 1, [261.6255653005986, 391.99543598174927]);
+            expect(drawnY).toBeCloseTo(drawn.y + drawn.height * (1 - (value + 4) / 8), 3);
+        });
+        await page.keyboard.up('z');
+        await page.keyboard.up('b');
+    });
+
+    // A chord written under a name is a wave for a chain to carry, not a name for the chain to work
+    // out for itself: the object reading it repeats what the piano has been writing, and lets the
+    // piano keep the name rather than writing over it row by row. Which of the two was laid down
+    // first is no reason for either of them to go quiet, so the board is built both ways round.
+    for (const waveFirst of [false, true]) {
+        test(`a wave object reading the same name repeats the chord rather than writing over it (wave first: ${waveFirst})`, async ({ page }) => {
+            await setupBoard(page);
+            await page.evaluate(waveFirst => {
+                const addPiano = () => shell.commands.addComponent('piano', 'Piano')
+                    .setProperties({ x: 60, y: 60, width: 460, height: 130, wave: 'y', samples: 64, duration: 0.02, amplitude: '2' });
+                const addWave = () => shell.commands.addComponent('mechanical-wave', 'Wave')
+                    .setProperties({ x: 60, y: 260, width: 600, height: 200, samples: 24, wave: 'y', length: 20 });
+                if (waveFirst) {
+                    addWave();
+                    addPiano();
+                } else {
+                    addPiano();
+                    addWave();
+                }
+                shell.reset();
+            }, waveFirst);
+            const claimed = await page.evaluate(() => {
+                const calculator = shell.board.calculator;
+                return {
+                    piano: calculator.getValueSourceName(shell.board.shapes.getByName('Piano').getValueSourceId()),
+                    wave: calculator.getValueSourceName(shell.board.shapes.getByName('Wave').getValueSourceId()),
+                    waveReads: shell.board.shapes.getByName('Wave').modelDefinesTerm('y')
+                };
+            });
+            expect(claimed).toEqual({ piano: 'y', wave: '', waveReads: true });
+            await page.keyboard.down('z');
+            await page.keyboard.down('b');
+            await runTo(page, 20);
+            const rows = [2, 5, 17];
+            const written = await readRows(page, rows);
+            rows.forEach((iteration, position) => {
+                expect(written[position]).toBeCloseTo(chordAt(iteration, [261.6255653005986, 391.99543598174927]), 6);
+            });
+            await page.keyboard.up('z');
+            await page.keyboard.up('b');
+        });
+    }
 
     test('a name the model works out for itself is read rather than written over', async ({ page }) => {
         await setupBoard(page);
@@ -266,18 +372,20 @@ test.describe('Piano object', () => {
             shell.reset();
         });
         await addPiano(page, { wave: 'y' });
-        expect(await page.evaluate(() => shell.board.calculator.isIndexedSource('y'))).toBe(false);
+        await page.evaluate(() => document.activeElement?.blur());
+        await page.keyboard.down('z');
+        expect(await page.evaluate(() => shell.board.calculator.getValueSourceName(shell.board.shapes.getByName('Piano').getValueSourceId()))).toBe('');
         expect(await page.evaluate(() => shell.board.calculator.getByName('y', 1))).toBe(3);
+        await page.keyboard.up('z');
     });
 
     test('taking the piano off the board takes its wave and its sound with it', async ({ page }) => {
         await setupBoard(page);
         await addPiano(page, { wave: 'y' });
-        expect(await page.evaluate(() => shell.board.calculator.isIndexedSource('y'))).toBe(true);
+        expect(await page.evaluate(() => shell.board.calculator.isTerm('y'))).toBe(true);
         await page.keyboard.down('z');
         expect(await heldNotes(page)).toEqual([60]);
         await page.evaluate(() => shell.board.removeShape(shell.board.shapes.getByName('Piano')));
-        expect(await page.evaluate(() => shell.board.calculator.isIndexedSource('y'))).toBe(false);
         expect(await page.evaluate(() => shell.board.calculator.isTerm('y'))).toBe(false);
         expect(await page.evaluate(() => window.stoppedNotes.length)).toBe(1);
         await page.keyboard.up('z');
@@ -313,9 +421,9 @@ test.describe('Piano object', () => {
                 octaves: shape.properties.octaves,
                 keys: shape.contentGroup.querySelectorAll('rect').length,
                 held: shape._noteHolders.size,
-                indexed: shell.board.calculator.isIndexedSource('y')
+                writes: shell.board.calculator.getValueSourceName(shape.getValueSourceId())
             };
         }, saved);
-        expect(restored).toEqual({ wave: 'y', octaves: 3, keys: 37, held: 0, indexed: true });
+        expect(restored).toEqual({ wave: 'y', octaves: 3, keys: 37, held: 0, writes: 'y' });
     });
 });
