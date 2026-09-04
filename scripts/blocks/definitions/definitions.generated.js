@@ -3975,6 +3975,10 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\max\\left(0,independentValue\\right)"
             },
             {
+                "id": "modelMilliseconds",
+                "formula": "\\lfloor modelSeconds\\cdot1000\\rfloor"
+            },
+            {
                 "id": "hourParts",
                 "value": {
                     "parameter": "hourVariable",
@@ -4020,19 +4024,19 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "hours",
-                "formula": "readsParts\\cdot hourHeld+readsIndependent\\cdot\\lfloor\\frac{modelSeconds}{3600}\\rfloor"
+                "formula": "readsParts\\cdot hourHeld+readsIndependent\\cdot\\lfloor\\frac{modelMilliseconds}{3600000}\\rfloor"
             },
             {
                 "id": "minutes",
-                "formula": "readsParts\\cdot minuteHeld+readsIndependent\\cdot\\mod\\left(\\lfloor\\frac{modelSeconds}{60}\\rfloor,60\\right)"
+                "formula": "readsParts\\cdot minuteHeld+readsIndependent\\cdot\\mod\\left(\\lfloor\\frac{modelMilliseconds}{60000}\\rfloor,60\\right)"
             },
             {
                 "id": "seconds",
-                "formula": "readsParts\\cdot secondHeld+readsIndependent\\cdot\\mod\\left(\\lfloor modelSeconds\\rfloor,60\\right)"
+                "formula": "readsParts\\cdot secondHeld+readsIndependent\\cdot\\mod\\left(\\lfloor\\frac{modelMilliseconds}{1000}\\rfloor,60\\right)"
             },
             {
                 "id": "milliseconds",
-                "formula": "readsParts\\cdot millisecondHeld+readsIndependent\\cdot\\lfloor\\mod\\left(modelSeconds,1\\right)\\cdot1000\\rfloor"
+                "formula": "readsParts\\cdot millisecondHeld+readsIndependent\\cdot\\mod\\left(modelMilliseconds,1000\\right)"
             },
             {
                 "id": "shownAsFace",

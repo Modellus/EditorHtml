@@ -697,6 +697,46 @@ test.describe('clock component', () => {
         expect(await readClockDigits(page)).toBe('01:02:05.500');
     });
 
+    // A run adds its step up row by row, so the moment called ten arrives as 9.99999999999998. The
+    // parts are read off one count of thousandths taken from that, rather than a whole second taken
+    // one way and the remainder another: read apart, the seconds round up to ten while the remainder
+    // stays a whole thousand, and the hand stands a second past the mark the readout names.
+    test('the hands land on the mark at a whole second the run has added up to', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, '\\frac{dx}{dt}=0');
+        await page.evaluate(() => {
+            Object.assign(shell.board.calculator.properties.independent, { start: 0, end: 10, step: 0.1 });
+            shell.reset();
+        });
+        await page.waitForTimeout(400);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('clock', 'Clock');
+            shape.setProperties({ x: 240, y: 160, width: 220, height: 220, syncedWithPlayer: true, millisecondColor: '#1871c2' });
+            shape.draw();
+        });
+        await page.waitForTimeout(300);
+        const independent = await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            for (let step = 1; step <= 100; step++)
+                calculator.engine.iterate();
+            shell.board.forceRefresh();
+            return calculator.getIndependentValue();
+        });
+        expect(independent).not.toBe(10);
+        expect(independent).toBeCloseTo(10, 9);
+        await page.waitForTimeout(300);
+        const hands = await readClockHands(page);
+        expect(readRotation(hands[2])).toBeCloseTo(60, 3);
+        expect(readRotation(hands[3])).toBeCloseTo(0, 3);
+        await page.evaluate(() => {
+            shell.board.shapes.getByName('Clock').setProperties({ shownAs: 'digital' });
+            shell.board.shapes.getByName('Clock').draw();
+            shell.board.forceRefresh();
+        });
+        await page.waitForTimeout(300);
+        expect(await readClockDigits(page)).toBe('00:00:10.000');
+    });
+
     // The rows are the other way of reading the time, so they are not worth offering while the model
     // is what the clock is reading.
     // The rows stay whichever way the clock is reading the time. A clock the model moves still has
