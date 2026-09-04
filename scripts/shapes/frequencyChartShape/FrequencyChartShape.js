@@ -67,6 +67,12 @@ if (typeof BaseShape !== "undefined") FrequencyChartShape = class FrequencyChart
         this.update();
     }
 
+    // The chart paints its own frame in its background layer, so the fade goes on the chart's
+    // layers instead of the group they sit in.
+    getOpacityPaintControl() {
+        return this.chart ?? null;
+    }
+
     createElement() {
         const element = this.board.createSvgElement("g");
         this.chartRows = [];

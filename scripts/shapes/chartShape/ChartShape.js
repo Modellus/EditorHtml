@@ -167,6 +167,12 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         return BlockRenderer.toStandaloneSvg(compilation.nodes, width, height, "none");
     }
 
+    // The chart paints its own frame in its background layer, so the fade goes on the chart's
+    // layers instead of the group they sit in.
+    getOpacityPaintControl() {
+        return this.chart ?? null;
+    }
+
     createElement() {
         const element = this.board.createSvgElement("g");
         this.chartRows = [];

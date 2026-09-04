@@ -149,6 +149,11 @@ class BaseShape {
         this.pulseExpiryByTerm = new Map();
         this.pulsingElements = new Set();
         this.pulseStartedAt = null;
+        this.frameElements = new WeakSet();
+        this.cssBorderWidth = null;
+        this.shapeFrameOverlay = null;
+        this.renderedOpacity = 1;
+        this.appliedInheritedOpacity = 1;
         this.setDefaults();
         this.initializeElement();
     }
@@ -344,6 +349,10 @@ class BaseShape {
     updateHandles() {
         if (!this.handleElements)
             return;
+        if (this.isHiddenByAncestor()) {
+            this.hideHandles();
+            return;
+        }
         this.handleElements.forEach(handle => {
             handle.update(handle);
             this.applyHandleRotation(handle);
@@ -355,6 +364,10 @@ class BaseShape {
     showHandles() {
         if (!this.handleElements)
             return;
+        if (this.isHiddenByAncestor()) {
+            this.hideHandles();
+            return;
+        }
         this.handleElements.forEach(handle => {
             if (handle.classList.contains("rotation"))
                 handle.setAttribute("visibility", "visible");
@@ -1440,13 +1453,149 @@ class BaseShape {
         this.renderShapeOpacity(Number.isFinite(normalized) ? Math.min(1, Math.max(0, normalized)) : 1);
     }
 
+    // The slider fades what a shape shows, never what tells it apart from the board behind it: the
+    // border keeps its full strength, and so does the name written above it. So the fade is put on
+    // each layer the shape draws in instead of on the shape as a whole - the layer the border is
+    // painted on is faded through its fill alone, so the stroke around it stays crisp, and the name
+    // layer is left out of the fade entirely.
     renderShapeOpacity(opacity) {
         if (!this.element)
             return;
+        this.renderedOpacity = opacity;
+        const inherited = this.getInheritedShapeOpacity();
+        this.appliedInheritedOpacity = inherited;
+        const inheritedStyle = inherited < 1 ? String(inherited) : "";
+        this.element.style.opacity = inheritedStyle;
         const opacityStyle = opacity < 1 ? String(opacity) : "";
-        this.element.style.opacity = opacityStyle;
+        for (const layer of this.getShapeOpacityLayers()) {
+            if (layer.isFrame) {
+                layer.element.style.removeProperty("opacity");
+                layer.element.style.fillOpacity = opacityStyle;
+            }
+            else {
+                layer.element.style.removeProperty("fill-opacity");
+                layer.element.style.opacity = opacityStyle;
+            }
+        }
+        // The name is written inside the shape group, so it is left out of the shape's own fade and
+        // still goes through the fade the shape is seen behind. A shape that writes its name on the
+        // board instead is faded there by hand, to the same strength.
         if (this.shapeNameLayer && this.shapeNameLayer.parentNode !== this.element)
-            this.shapeNameLayer.style.opacity = opacityStyle;
+            this.shapeNameLayer.style.opacity = inheritedStyle;
+        else
+            this.shapeNameLayer?.style.removeProperty("opacity");
+        // The trail and the stroboscopy a shape leaves behind are drawn on the board's motion layer
+        // rather than inside the shape, so the whole of the fade has to be written on them by hand.
+        if (this.motionGroup) {
+            const drawn = inherited * opacity;
+            this.motionGroup.style.opacity = drawn < 1 ? String(drawn) : "";
+        }
+        this.updateShapeFrameOverlay();
+        this.board.selection?.refreshShapeSelectionVisuals?.(this);
+        for (const child of this.children)
+            child.refreshShapeOpacity();
+    }
+
+    // A shape drawn inside another is seen through it: a body inside a faded referential is faded by
+    // the referential as well, name and border included, on top of whatever fade it carries itself.
+    // A referential turned invisible therefore takes everything standing in it with it.
+    getInheritedShapeOpacity() {
+        let opacity = 1;
+        for (let ancestor = this.parent; ancestor; ancestor = ancestor.parent)
+            opacity *= ancestor.renderedOpacity ?? 1;
+        return Math.min(1, Math.max(0, opacity));
+    }
+
+    // A shape faded away by the one it stands in is not on the board as far as the eye is concerned.
+    // It is still there and still answers to the pointer, but there is nothing left to ring, so it is
+    // given neither handles nor a selection outline.
+    isHiddenByAncestor() {
+        return this.getInheritedShapeOpacity() <= 0;
+    }
+
+    // A redraw can hand the shape layers the fade has never been written on - a control that
+    // repainted, a card that was resized - so a faded shape writes it again over whatever it now
+    // draws in. A shape at full strength inside a parent at full strength has nothing to write and
+    // leaves the drawing alone.
+    refreshShapeOpacity() {
+        if (this.renderedOpacity >= 1 && this.appliedInheritedOpacity >= 1 && this.getInheritedShapeOpacity() >= 1 && !this.shapeFrameOverlay)
+            return;
+        this.renderShapeOpacity(this.renderedOpacity);
+    }
+
+    getShapeOpacityLayers() {
+        if (!this.element)
+            return [];
+        const control = this.getOpacityPaintControl();
+        const layers = [];
+        for (const child of this.element.children) {
+            if (child === this.shapeNameLayer || child === this.shapeFrameOverlay)
+                continue;
+            if (control?.rootElement === child)
+                layers.push(...this.getControlOpacityLayers(control));
+            else
+                layers.push({ element: child, isFrame: this.frameElements.has(child) });
+        }
+        return layers;
+    }
+
+    // A shape that lets a control paint for it - a chart, a table - hands over the whole group,
+    // frame included, so the fade goes on the control's own layers: the one it draws its frame in
+    // fades through its fill, and the rest fade whole.
+    getOpacityPaintControl() {
+        return null;
+    }
+
+    getControlOpacityLayers(control) {
+        return Array.from(control.rootElement.children).map(element => ({ element, isFrame: element === control.backgroundLayer }));
+    }
+
+    // The border is what the fade must leave alone, so every element it is painted on is remembered.
+    markShapeFrameElement(element) {
+        if (element)
+            this.frameElements.add(element);
+    }
+
+    // A border drawn in CSS is painted by the same box the content sits in, so it cannot be kept out
+    // of the fade the way a stroke can: the shape draws it again in SVG over the top, where the fade
+    // does not reach it.
+    updateShapeFrameOverlay() {
+        const width = Number(this.properties.width);
+        const height = Number(this.properties.height);
+        const borderWidth = this.cssBorderWidth;
+        if (borderWidth == null || this.renderedOpacity >= 1 || !Number.isFinite(width) || !Number.isFinite(height)) {
+            this.shapeFrameOverlay?.parentNode?.removeChild(this.shapeFrameOverlay);
+            this.shapeFrameOverlay = null;
+            return;
+        }
+        if (!this.shapeFrameOverlay) {
+            this.shapeFrameOverlay = this.board.createSvgElement("rect");
+            this.shapeFrameOverlay.setAttribute("class", "shape-frame-overlay");
+            this.shapeFrameOverlay.setAttribute("fill", "none");
+            this.shapeFrameOverlay.setAttribute("pointer-events", "none");
+            this.element.appendChild(this.shapeFrameOverlay);
+        }
+        // The frame traces the box the card is drawn in, and a CSS border is drawn inside that box,
+        // so the centre line of the stroke runs half a border width in.
+        const box = this.getShapeFrameOverlayBox(width, height);
+        this.shapeFrameOverlay.setAttribute("x", box.x + borderWidth / 2);
+        this.shapeFrameOverlay.setAttribute("y", box.y + borderWidth / 2);
+        this.shapeFrameOverlay.setAttribute("width", Math.max(0, box.width - borderWidth));
+        this.shapeFrameOverlay.setAttribute("height", Math.max(0, box.height - borderWidth));
+        this.shapeFrameOverlay.setAttribute("rx", this.getBorderRadius());
+        this.shapeFrameOverlay.setAttribute("stroke", this.getBorderColor());
+        this.shapeFrameOverlay.setAttribute("stroke-width", borderWidth);
+    }
+
+    getShapeFrameOverlayBox(width, height) {
+        if (!this.foreignObject)
+            return { x: 0, y: 0, width, height };
+        return {
+            x: Number(this.foreignObject.getAttribute("x")) || 0,
+            y: Number(this.foreignObject.getAttribute("y")) || 0,
+            width: Number(this.foreignObject.getAttribute("width")) || width,
+            height: Number(this.foreignObject.getAttribute("height")) || height
+        };
     }
 
     isPulseOnChangeEnabled() {
@@ -1613,6 +1762,7 @@ class BaseShape {
         this.drawTermDisplayLabels();
         this.drawShapeNameLabel();
         this.updatePulseState();
+        this.refreshShapeOpacity();
     }
 
     tick() {
@@ -2122,6 +2272,7 @@ class BaseShape {
     applyBorderStroke(element, strokeWidth = null) {
         if (!element)
             return;
+        this.markShapeFrameElement(element);
         element.setAttribute("stroke", this.getBorderColor());
         if (strokeWidth != null)
             element.setAttribute("stroke-width", `${strokeWidth}`);
@@ -2132,6 +2283,7 @@ class BaseShape {
     applyBorderStyle(element, borderWidth = 1) {
         if (!element)
             return;
+        this.cssBorderWidth = borderWidth;
         element.style.border = `${borderWidth}px solid ${this.getBorderColor()}`;
         element.style.boxSizing = "border-box";
         element.style.borderRadius = `${this.getBorderRadius()}px`;

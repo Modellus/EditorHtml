@@ -219,6 +219,7 @@ class SliderShape extends BaseShape {
         this.fillPart = this.board.createSvgElement("rect");
         this.bottomPart = this.board.createSvgElement("rect");
         this.container = this.board.createSvgElement("rect");
+        this.markShapeFrameElement(this.container);
         this.splitter = this.board.createSvgElement("line");
         this.thumb = this.board.createSvgElement("circle");
         this.zeroLine = this.board.createSvgElement("line");

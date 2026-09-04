@@ -112,6 +112,7 @@ class GaugeShape extends BaseShape {
         this.hitArea.setAttribute("pointer-events", "all");
         element.appendChild(this.hitArea);
         this.gaugeBg = this.board.createSvgElement("path");
+        this.markShapeFrameElement(this.gaugeBg);
         this.rangeLayer = this.board.createSvgElement("g");
         this.tickLayer = this.board.createSvgElement("g");
         this.labelLayer = this.board.createSvgElement("g");

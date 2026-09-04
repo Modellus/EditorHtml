@@ -497,6 +497,7 @@ class VectorShape extends ChildShape {
         this.componentGroup.appendChild(this.verticalComponentLine);
         element.appendChild(this.componentGroup);
         this.borderLine = this.board.createSvgElement("line");
+        this.markShapeFrameElement(this.borderLine);
         element.appendChild(this.borderLine);
         this.line = this.board.createSvgElement("line");
         element.appendChild(this.line);

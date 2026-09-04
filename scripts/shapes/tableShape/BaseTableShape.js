@@ -218,6 +218,12 @@ class BaseTableShape extends BaseShape {
 
     // ---- Table control hosting ------------------------------------------
 
+    // The table paints its own frame in its background layer, so the fade goes on the table's
+    // layers instead of the group they sit in.
+    getOpacityPaintControl() {
+        return this.table ?? null;
+    }
+
     createElement() {
         this.normalizeColumns();
         this._activeColumns = this.getSelectedColumns();

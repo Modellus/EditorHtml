@@ -409,7 +409,6 @@ var BaseShapeToolbarMixin = {
             step: 5,
             value: Math.round(resolveShapeToolbarOpacity(this) * 100),
             width: 120,
-            tooltip: { enabled: true, showMode: "onHover", position: "top" },
             onInitialized: e => { this._opacitySliderInstance = e.component; },
             onValueChanged: event => {
                 if (!event.event)

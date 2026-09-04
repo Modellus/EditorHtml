@@ -73,6 +73,7 @@ class MindMapNodeShape extends BaseShape {
     createElement() {
         const { group } = this.createForeignObjectGroup();
         this.bodyElement = this.board.createSvgElement(this.getBodyTag());
+        this.markShapeFrameElement(this.bodyElement);
         group.insertBefore(this.bodyElement, this.foreignObject);
         this.createTextElements();
         return group;

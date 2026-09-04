@@ -72,6 +72,7 @@ class Selection {
         this.clearHover();
         this.removeEditModeHighlight();
         this.selectedShape = shape;
+        shape._selectionVisualsHidden = shape.isHiddenByAncestor?.() === true;
         shape.createHandles();
         shape.showHandles();
         this.applyHighlight(shape);
@@ -355,6 +356,7 @@ class Selection {
             return;
         const previousHoveredShape = this.hoveredShape;
         this.hoveredShape = shape;
+        shape._selectionVisualsHidden = shape.isHiddenByAncestor?.() === true;
         shape.createHandles();
         this.applyHighlight(shape);
         shape.onHovered();
@@ -406,6 +408,10 @@ class Selection {
         if (!shape.element)
             return;
         this.removeHighlightProxy(shape);
+        // A shape the board draws at nothing at all, because the shape it stands in was faded away,
+        // is not ringed: there is nothing on the board for the outline to sit around.
+        if (shape.isHiddenByAncestor?.())
+            return;
         const proxy = this.selectionOutline.createProxy(shape, color, {
             bounds: this.getOutlineBounds(shape),
             rotation: this.getOutlineRotationDegrees(shape)
@@ -605,6 +611,26 @@ class Selection {
     update() {
         if (this.selectedShape)
             this.selectedShape.updateHandles();
+    }
+
+    // A shape can be faded away, or brought back, while it is selected or hovered, so what is drawn
+    // around it is put back in step with whether the shape itself is drawn at all. Only that change
+    // is acted on: a drag takes the outline down on purpose and moves the shape a property at a
+    // time, and putting the outline back under it would draw a ring the drag is not meant to show.
+    refreshShapeSelectionVisuals(shape) {
+        if (this.isDragging)
+            return;
+        if (shape !== this.selectedShape && shape !== this.hoveredShape)
+            return;
+        const hidden = shape.isHiddenByAncestor?.() === true;
+        if (hidden === shape._selectionVisualsHidden)
+            return;
+        shape._selectionVisualsHidden = hidden;
+        this.applyHighlight(shape);
+        if (shape === this.selectedShape) {
+            shape.updateHandles();
+            shape.showHandles();
+        }
     }
 }
 
