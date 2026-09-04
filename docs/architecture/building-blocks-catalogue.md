@@ -400,7 +400,7 @@ Capabilities: `interaction`, `writes-model`
 
 ### `drag-angle` — Drag angle
 
-Lets the user drag the node around an anchor point and writes the resulting angle back into a model variable, using the same angle-to-value mapping the node was bound with.
+Lets the user drag the node around an anchor point and writes the resulting angle back into a model variable, using the same angle-to-value mapping the node was bound with. Naming a length as well makes the node reach the pointer rather than only point at it: how far the pointer stands from the anchor is written as the length, in the units the node is drawn in, so one drag both turns the thing and stretches it.
 
 Capabilities: `interaction`, `angular`, `writes-model`
 
@@ -418,6 +418,11 @@ Capabilities: `interaction`, `angular`, `writes-model`
 | `minimum` | number | null |  |
 | `maximum` | number | null |  |
 | `wrapAt` | number | null |  |
+| `lengthVariable` | variable | "" |  |
+| `lengthProperty` | string | "" |  |
+| `pixelsPerUnit` | number | 1 |  |
+| `minimumLength` | number | null |  |
+| `maximumLength` | number | null |  |
 | `hoverFill` | colour | "none" |  |
 | `hoverOpacity` | number | 0.15 | min 0, max 1 |
 
@@ -1142,9 +1147,9 @@ Capabilities: `radial`, `angular`, `reads-model`
 
 ### `rotating-vector` — Rotating vector
 
-Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow can be dragged round its origin to write the angle back, so the direction it shows is the direction the reader points it in.
+Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow reaches the pointer that drags it: one drag both turns it and stretches it, writing the angle and the length back together, so where the reader leaves the tip is where the arrow points and how far it goes.
 
-Capabilities: `angular`, `reads-model`, `vector`, `interaction`, `writes-model`
+Capabilities: `angular`, `linear`, `reads-model`, `vector`, `interaction`, `writes-model`
 
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |

@@ -10555,7 +10555,7 @@ BlockDefinitionLoader.registerAll([
         "type": "rotating-vector",
         "category": "component",
         "displayName": "Rotating vector",
-        "description": "Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow can be dragged round its origin to write the angle back, so the direction it shows is the direction the reader points it in.",
+        "description": "Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow reaches the pointer that drags it: one drag both turns it and stretches it, writing the angle and the length back together, so where the reader leaves the tip is where the arrow points and how far it goes.",
         "icon": "fa-light fa-arrow-right-long",
         "tags": [
             "object",
@@ -10567,6 +10567,7 @@ BlockDefinitionLoader.registerAll([
         ],
         "capabilities": [
             "angular",
+            "linear",
             "reads-model",
             "vector",
             "interaction",
@@ -10709,6 +10710,10 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "pointerAngle",
                 "formula": "90-angle"
+            },
+            {
+                "id": "maxLength",
+                "formula": "\\frac{maxRadius}{\\max\\left(0.0001,lengthScale\\right)}"
             },
             {
                 "id": "grabTipX",
@@ -10951,7 +10956,18 @@ BlockDefinitionLoader.registerAll([
                             },
                             "degreesPerUnit": -1,
                             "offsetDegrees": 90,
-                            "wrapAt": 360
+                            "wrapAt": 360,
+                            "lengthVariable": {
+                                "parameter": "lengthVariable"
+                            },
+                            "lengthProperty": "lengthVariable",
+                            "pixelsPerUnit": {
+                                "parameter": "lengthScale"
+                            },
+                            "minimumLength": 0,
+                            "maximumLength": {
+                                "parameter": "maxLength"
+                            }
                         }
                     ]
                 },

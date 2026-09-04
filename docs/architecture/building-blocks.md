@@ -553,6 +553,23 @@ control holds is read again on every step: a gesture writing a property cannot r
 it was started with, because that one was resolved when the drawing was written and the gesture has
 already moved past it.
 
+**A drag can turn a thing and stretch it at once.** Pointing is only half of what a vector is: the
+reader who turns an arrow usually means to say how far it reaches as well, and asking for two
+gestures on two handles makes them say in two goes what they meant in one. So `drag-angle` names a
+**`lengthVariable`** beside the angle, and then the node reaches the pointer rather than only pointing
+at it — how far the pointer stands from the anchor is written as the length, divided by
+`pixelsPerUnit` so the definition says what one unit is worth on the drawing rather than counting
+pixels, and held between `minimumLength` and `maximumLength` so a tip stops where the drawing stops
+instead of letting the term run on past it. It is written on the way in as well as on every move, so
+the tip is under the pointer from the moment the arrow is caught.
+
+The two halves are asked for one at a time. An arrow whose length the model works out for itself is
+still turned by hand, and one whose angle the model works out is still pulled longer; only a node
+that can write neither refuses the pointer, and it refuses it with the cursor a locked handle uses.
+Each half writes through the same two paths every drag writes through — a model term through the
+calculator, the object's own parameter when the row holds a plain number — and the whole drag is a
+single undo entry however many of them it wrote.
+
 **An interaction refreshes the toolbar it is being watched from.** A value the reader writes by hand
 goes straight into the shape — `setProperty`, not a command — and the command path is the one place
 `Canvas.setShapeProperties` brings the selected shape's toolbar up to date. So `BaseShape.setProperty`

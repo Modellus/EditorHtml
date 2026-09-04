@@ -1343,56 +1343,88 @@ test.describe('rotating vector component', () => {
         });
     }
 
-    test('drags the arrow round to the direction it is pointed at', async ({ page }) => {
+    // The arrow reaches the pointer: 135 degrees round and 70 out from a vector scaled at 20 pixels a
+    // unit is an arrow pointing at 135 and standing at 3.5, both written by the one drag.
+    test('points the arrow and stretches it in one drag', async ({ page }) => {
         await setupBoard(page);
         await addVectorModel(page);
         await addRotatingVector(page);
         expect((await readVectorTerms(page)).angle).toBe(20);
         expect((await readVectorAffordance(page)).cursor).toBe('grab');
-        await dragOnVector(page, { radius: 50, degrees: 20 }, { radius: 60, degrees: 135 });
+        await dragOnVector(page, { radius: 60, degrees: 20 }, { radius: 70, degrees: 135 });
+        const terms = await readVectorTerms(page);
+        expect(terms.angle).toBeCloseTo(135, 1);
+        expect(terms.length).toBeCloseTo(3.5, 1);
+    });
+
+    // The reference circle is as far as the arrow reaches, so the tip stops there rather than letting
+    // the term run on and leaving the reader dragging back through nothing. The vector is 200 by 200,
+    // so the circle stands at 92 and the arrow is 92 / 20 units long against it.
+    test('stops the tip at the reference circle and at the origin', async ({ page }) => {
+        await setupBoard(page);
+        await addVectorModel(page);
+        await addRotatingVector(page);
+        await dragOnVector(page, { radius: 60, degrees: 20 }, { radius: 180, degrees: 20 });
+        expect((await readVectorTerms(page)).length).toBeCloseTo(4.6, 2);
+        await dragOnVector(page, { radius: 92, degrees: 20 }, { radius: 0, degrees: 20 });
+        expect((await readVectorTerms(page)).length).toBe(0);
+    });
+
+    // A vector straight from the palette shows plain numbers, so dragging it edits the object's own
+    // angle and length, and that edit belongs in the undo history the way any other property edit
+    // does. One drag wrote both, so one undo takes both back.
+    test('drags a vector holding plain numbers, writing the properties themselves', async ({ page }) => {
+        await setupBoard(page);
+        await addVectorModel(page);
+        await addRotatingVector(page, { angleVariable: '30', lengthVariable: '2' });
+        await dragOnVector(page, { radius: 40, degrees: 30 }, { radius: 60, degrees: 90 });
+        const drawnBy = () => page.evaluate(() => {
+            const properties = shell.board.shapes.getByName('Speed and direction').properties;
+            return { angle: Number(properties.angleVariable), length: Number(properties.lengthVariable) };
+        });
+        expect(await drawnBy()).toMatchObject({ angle: expect.closeTo(90, 1), length: expect.closeTo(3, 1) });
+        await page.evaluate(() => shell.commands.undo());
+        await page.waitForTimeout(300);
+        expect(await drawnBy()).toEqual({ angle: 30, length: 2 });
+        await page.evaluate(() => shell.commands.redo());
+        await page.waitForTimeout(300);
+        expect(await drawnBy()).toMatchObject({ angle: expect.closeTo(90, 1), length: expect.closeTo(3, 1) });
+    });
+
+    // The two halves are asked for one at a time, so an arrow the model gives a length to is still
+    // turned by hand — the drag writes the direction and leaves the length where the model put it.
+    test('turns the arrow when the model works the length out for itself', async ({ page }) => {
+        await setupBoard(page);
+        await addVectorModel(page, '\\displaylines{v=3\\\\v_x=v\\cdot\\cos\\left(\\theta\\right)}');
+        await addRotatingVector(page);
+        expect((await readVectorAffordance(page)).cursor).toBe('grab');
+        await dragOnVector(page, { radius: 60, degrees: 20 }, { radius: 80, degrees: 135 });
         const terms = await readVectorTerms(page);
         expect(terms.angle).toBeCloseTo(135, 1);
         expect(terms.length).toBe(3);
     });
 
-    // The arrow is turned, not stretched: how fast is the slider's business and the pedal's, so a
-    // drag that points the car somewhere else leaves the speed it is going at alone.
-    test('turns the arrow without changing the length it shows', async ({ page }) => {
-        await setupBoard(page);
-        await addVectorModel(page);
-        await addRotatingVector(page);
-        await dragOnVector(page, { radius: 30, degrees: 20 }, { radius: 88, degrees: 270 });
-        const terms = await readVectorTerms(page);
-        expect(terms.angle).toBeCloseTo(270, 1);
-        expect(terms.length).toBe(3);
-    });
-
-    // A vector straight from the palette shows plain numbers, so dragging it edits the object's own
-    // angle, and that edit belongs in the undo history the way any other property edit does.
-    test('drags a vector holding a plain number, writing the property itself', async ({ page }) => {
-        await setupBoard(page);
-        await addVectorModel(page);
-        await addRotatingVector(page, { angleVariable: '30', lengthVariable: '2' });
-        await dragOnVector(page, { radius: 40, degrees: 30 }, { radius: 60, degrees: 90 });
-        const angleOf = () => page.evaluate(() => Number(shell.board.shapes.getByName('Speed and direction').properties.angleVariable));
-        expect(await angleOf()).toBeCloseTo(90, 1);
-        await page.evaluate(() => shell.commands.undo());
-        await page.waitForTimeout(300);
-        expect(await angleOf()).toBe(30);
-        await page.evaluate(() => shell.commands.redo());
-        await page.waitForTimeout(300);
-        expect(await angleOf()).toBeCloseTo(90, 1);
-    });
-
-    // An angle the model works out for itself can never be written, and saying so with the cursor a
-    // locked handle uses beats an arrow that quietly refuses to move.
-    test('refuses the drag when the model works the angle out for itself', async ({ page }) => {
+    // And the other way round: an arrow the model points for itself is still pulled longer.
+    test('stretches the arrow when the model works the angle out for itself', async ({ page }) => {
         await setupBoard(page);
         await addVectorModel(page, '\\displaylines{\\theta=45\\\\v_x=v\\cdot\\cos\\left(\\theta\\right)}');
         await addRotatingVector(page);
+        expect((await readVectorAffordance(page)).cursor).toBe('grab');
+        await dragOnVector(page, { radius: 60, degrees: 45 }, { radius: 80, degrees: 45 });
+        const terms = await readVectorTerms(page);
+        expect(terms.angle).toBe(45);
+        expect(terms.length).toBeCloseTo(4, 1);
+    });
+
+    // Neither half can be written, so there is nothing the drag could do, and saying so with the
+    // cursor a locked handle uses beats an arrow that quietly refuses to move.
+    test('refuses the drag when the model works both the angle and the length out for itself', async ({ page }) => {
+        await setupBoard(page);
+        await addVectorModel(page, '\\displaylines{\\theta=45\\\\v=3\\\\v_x=v\\cdot\\cos\\left(\\theta\\right)}');
+        await addRotatingVector(page);
         expect((await readVectorAffordance(page)).cursor).toBe('not-allowed');
-        await dragOnVector(page, { radius: 50, degrees: 45 }, { radius: 60, degrees: 135 });
-        expect((await readVectorTerms(page)).angle).toBe(45);
+        await dragOnVector(page, { radius: 60, degrees: 45 }, { radius: 80, degrees: 135 });
+        expect(await readVectorTerms(page)).toEqual({ angle: 45, length: 3 });
     });
 });
 

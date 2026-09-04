@@ -89,7 +89,7 @@ var BlockBehaviours = {
         type: "drag-angle",
         category: "behaviour",
         displayName: "Drag angle",
-        description: "Lets the user drag the node around an anchor point and writes the resulting angle back into a model variable, using the same angle-to-value mapping the node was bound with.",
+        description: "Lets the user drag the node around an anchor point and writes the resulting angle back into a model variable, using the same angle-to-value mapping the node was bound with. Naming a length as well makes the node reach the pointer rather than only point at it: how far the pointer stands from the anchor is written as the length, in the units the node is drawn in, so one drag both turns the thing and stretches it.",
         tags: ["interaction", "angle", "input", "hand", "needle"],
         capabilities: ["interaction", "angular", "writes-model"],
         inputSchema: {
@@ -106,6 +106,11 @@ var BlockBehaviours = {
                 minimum: { valueType: "number", defaultValue: null, label: "Minimum" },
                 maximum: { valueType: "number", defaultValue: null, label: "Maximum" },
                 wrapAt: { valueType: "number", defaultValue: null, label: "Wrap at" },
+                lengthVariable: { valueType: "variable", defaultValue: "", label: "Length variable", bindable: false, description: "Names how far the node reaches, and then the drag stretches it as well as turning it: the length is written as the distance the pointer stands from the anchor. Left empty the node only turns, and how long it is stays the business of whatever drives it." },
+                lengthProperty: { valueType: "string", defaultValue: "", label: "Length property", description: "Property written for the length when that variable holds a plain number instead of naming a model term." },
+                pixelsPerUnit: { valueType: "number", defaultValue: 1, label: "Pixels per unit", description: "How many pixels one unit of the length covers, so the node is stretched in the units it is drawn in rather than in pixels. A node drawn at no scale at all cannot be stretched." },
+                minimumLength: { valueType: "number", defaultValue: null, label: "Minimum length" },
+                maximumLength: { valueType: "number", defaultValue: null, label: "Maximum length" },
                 hoverFill: { valueType: "colour", defaultValue: "none", label: "Hover fill", description: "Colour the node takes while the pointer rests on it, so an otherwise invisible grab area shows itself." },
                 hoverOpacity: { valueType: "number", defaultValue: 0.15, minimum: 0, maximum: 1, label: "Hover opacity" }
             }

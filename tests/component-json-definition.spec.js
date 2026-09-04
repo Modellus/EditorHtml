@@ -34,6 +34,10 @@ const BOARD_URL = '/pages/board/index.html';
 // The five rotating vector entries were re-recorded when the arrow became turnable: the arm the
 // pointer grabs draws in transparent ink, so the drawing is the captured one with an invisible line
 // laid over it, and the behaviour that line carries stands beside the signature.
+// The nine entries carrying an angle drag, and the five rotating vector ones, were re-recorded once
+// more when that drag gained the length it can stretch as well as turn: every drawing here is byte
+// for byte the one that was captured, and what grew is the five names standing empty in the
+// behaviour beside it.
 const BASELINES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'coded-component-baselines.json'), 'utf8'));
 
 const cases = [

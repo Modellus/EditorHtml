@@ -507,7 +507,7 @@
             </tbody>
         </table>
         <h3 id="block-drag-angle"><code>drag-angle</code> — Drag angle</h3>
-        <p>Lets the user drag the node around an anchor point and writes the resulting angle back into a model variable, using the same angle-to-value mapping the node was bound with.</p>
+        <p>Lets the user drag the node around an anchor point and writes the resulting angle back into a model variable, using the same angle-to-value mapping the node was bound with. Naming a length as well makes the node reach the pointer rather than only point at it: how far the pointer stands from the anchor is written as the length, in the units the node is drawn in, so one drag both turns the thing and stretches it.</p>
         <p class="block-meta">Capabilities: <code>interaction</code> <code>angular</code> <code>writes-model</code></p>
         <table class="docs-table">
             <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
@@ -524,6 +524,11 @@
                 <tr><td><code>minimum</code></td><td>number</td><td><code>null</code></td><td></td></tr>
                 <tr><td><code>maximum</code></td><td>number</td><td><code>null</code></td><td></td></tr>
                 <tr><td><code>wrapAt</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>lengthVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>lengthProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>pixelsPerUnit</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>minimumLength</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>maximumLength</code></td><td>number</td><td><code>null</code></td><td></td></tr>
                 <tr><td><code>hoverFill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
                 <tr><td><code>hoverOpacity</code></td><td>number</td><td><code>0.15</code></td><td>min 0, max 1</td></tr>
             </tbody>
@@ -1203,8 +1208,8 @@
             </tbody>
         </table>
         <h3 id="block-rotating-vector"><code>rotating-vector</code> — Rotating vector</h3>
-        <p>Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow can be dragged round its origin to write the angle back, so the direction it shows is the direction the reader points it in.</p>
-        <p class="block-meta">Capabilities: <code>angular</code> <code>reads-model</code> <code>vector</code> <code>interaction</code> <code>writes-model</code></p>
+        <p>Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow reaches the pointer that drags it: one drag both turns it and stretches it, writing the angle and the length back together, so where the reader leaves the tip is where the arrow points and how far it goes.</p>
+        <p class="block-meta">Capabilities: <code>angular</code> <code>linear</code> <code>reads-model</code> <code>vector</code> <code>interaction</code> <code>writes-model</code></p>
         <table class="docs-table">
             <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
             <tbody>

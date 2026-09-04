@@ -1621,7 +1621,7 @@ class ComponentShape extends BaseShape {
         // The gesture starts where this control can hold the value rather than where the value is: a
         // pedal that only presses one half of a term, and finds it on the other half, starts from the
         // end it shares with its neighbour instead of spending its travel getting back to it.
-        this._slideStartValue = this.clampPressAndSlideValue(this.readPressAndSlideValue(input), input);
+        this._slideStartValue = this.clampDragValue(this.readPressAndSlideValue(input), input);
         this._slideStartY = this.getComponentLocalPoint(event).y;
         this._slideWritesProperty = this.isAngleDragPropertyWrite(input);
         if (this._slideWritesProperty && !wasReturning)
@@ -1688,7 +1688,7 @@ class ComponentShape extends BaseShape {
     }
 
     writePressAndSlideValue(input, value) {
-        const pressed = this.clampPressAndSlideValue(value, input);
+        const pressed = this.clampDragValue(value, input);
         if (!this.isOrientationDrag(input)) {
             this.writeDragHalf(input.variable, input.property, pressed);
             return;
@@ -1747,7 +1747,7 @@ class ComponentShape extends BaseShape {
         return Number.isFinite(value) ? value : 0;
     }
 
-    clampPressAndSlideValue(value, input) {
+    clampDragValue(value, input) {
         const minimum = Number(input.minimum);
         const maximum = Number(input.maximum);
         if (Number.isFinite(minimum) && value < minimum)
@@ -1791,7 +1791,14 @@ class ComponentShape extends BaseShape {
     isAngleDragAllowed(input) {
         if (!this.isInteractable() || this.isLocked())
             return false;
-        return this.isPairWriteAllowed(input);
+        return this.isPairWriteAllowed(input) || this.isLengthDragAllowed(input);
+    }
+
+    // The two halves of a drag that both turns and stretches are asked for one at a time: an arrow
+    // whose angle the model works out for itself can still be pulled longer, and one whose length the
+    // model works out can still be turned. Only a node that can write neither refuses the pointer.
+    isLengthDragAllowed(input) {
+        return this.isDragHalfAllowed(input.lengthVariable, input.lengthProperty);
     }
 
     // A gesture that moves a pair has to be able to write both halves of it: one half the model works
@@ -1827,9 +1834,16 @@ class ComponentShape extends BaseShape {
     }
 
     // A drag that writes a property changes the drawing itself rather than the model, so it belongs
-    // in the undo history the way any other property edit does.
+    // in the undo history the way any other property edit does. Either half of a drag that both turns
+    // and stretches can be the one holding a plain number, so both are asked.
     isAngleDragPropertyWrite(input) {
-        return !this.board.calculator.isTerm(String(input.variable ?? "")) && this.getBehaviourProperty(input) !== null;
+        if (this.isDragHalfPropertyWrite(input.variable, input.property))
+            return true;
+        return this.isDragHalfPropertyWrite(input.lengthVariable, input.lengthProperty);
+    }
+
+    isDragHalfPropertyWrite(variableInput, propertyInput) {
+        return !this.board.calculator.isTerm(String(variableInput ?? "")) && this.getBehaviourProperty({ property: propertyInput }) !== null;
     }
 
     onAngleDragStart(event, input, relative = false) {
@@ -1842,6 +1856,8 @@ class ComponentShape extends BaseShape {
         this.board.pointerLocked = true;
         this._angleDragInput = input;
         this._angleDragTurn = relative ? this.startAngleDragTurn(event, input) : null;
+        this._angleDragWritesAngle = this.isPairWriteAllowed(input);
+        this._angleDragWritesLength = this.isLengthDragAllowed(input);
         this._angleDragRecordsUndo = this.isAngleDragPropertyWrite(input);
         if (this._angleDragRecordsUndo)
             this.dragStart();
@@ -1885,8 +1901,9 @@ class ComponentShape extends BaseShape {
     }
 
     onAngleDragMove(event, input) {
+        this.writeAngleDragLength(event, input);
         const rotationDegrees = this.getAngleDragDegrees(event, input);
-        if (rotationDegrees === null)
+        if (rotationDegrees === null || !this._angleDragWritesAngle)
             return;
         const degreesPerUnit = Number(input.degreesPerUnit) || 6;
         // How far the pointer stands from the zero direction. Read the long way round the circle it
@@ -1907,6 +1924,24 @@ class ComponentShape extends BaseShape {
         this.writeAngleDragValue(input, value);
     }
 
+    // The node reaches the pointer rather than only pointing at it: how far the pointer stands from
+    // the anchor is how long the thing is, in the units it is drawn in. It is written on the way in
+    // as well as on every move, so one press-and-drag both turns it and stretches it, and the tip
+    // stays under the pointer instead of trailing a gesture behind it.
+    writeAngleDragLength(event, input) {
+        if (!this._angleDragWritesLength)
+            return;
+        const pixelsPerUnit = Number(input.pixelsPerUnit);
+        // A node drawn at no scale at all reaches nowhere in particular, so there is no length the
+        // pointer could be read as: the drag turns it and writes no length rather than an infinity.
+        if (!Number.isFinite(pixelsPerUnit) || pixelsPerUnit === 0)
+            return;
+        const localPoint = this.getComponentLocalPoint(event);
+        const distance = Math.hypot(localPoint.x - Number(input.centerX), localPoint.y - Number(input.centerY));
+        const length = this.clampDragValue(distance / pixelsPerUnit, { minimum: input.minimumLength, maximum: input.maximumLength });
+        this.writeDragHalf(input.lengthVariable, input.lengthProperty, length);
+    }
+
     onAngleDragEnd() {
         window.removeEventListener("pointermove", this._angleDragMove);
         window.removeEventListener("pointerup", this._angleDragEnd);
@@ -1914,6 +1949,8 @@ class ComponentShape extends BaseShape {
         this._angleDragMove = null;
         this._angleDragEnd = null;
         this._angleDragTurn = null;
+        this._angleDragWritesAngle = false;
+        this._angleDragWritesLength = false;
         this.board.pointerLocked = false;
         if (this._angleDragRecordsUndo)
             this.dragEnd();
